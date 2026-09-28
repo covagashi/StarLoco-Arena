@@ -139,6 +139,7 @@ const OP_END_FIGHT_DONE := 26321  # C2S empty — server returns us to overworld
 const OP_ENTER_INSTANCE := 4600
 
 var _fight_over := false
+var _actor_cells := {}   # id -> Vector3i (debug overlay)
 
 
 func _exit_tree() -> void:
@@ -236,6 +237,8 @@ func _place_actor(a: Dictionary) -> void:
 		spr.load_action(COACH_SET, "%d_AnimStatique" % dir)
 	spr.position = _iso(a.x + 0.5, a.y + 0.5, a.z)
 	spr.z_index = clampi(int(a.x + a.y) * 4 + 1, -4096, 4096)
+	_actor_cells[a.id] = Vector3i(a.x, a.y, a.z)
+	queue_redraw()
 
 
 func _move_actor(id: int, p: Vector3i) -> void:
@@ -244,6 +247,8 @@ func _move_actor(id: int, p: Vector3i) -> void:
 		return
 	spr.position = _iso(p.x + 0.5, p.y + 0.5, p.z)
 	spr.z_index = clampi((p.x + p.y) * 4 + 1, -4096, 4096)
+	_actor_cells[id] = p
+	queue_redraw()
 
 
 ## 8104 — a fighter's turn started. Ours: auto-pass with 8105 until real
@@ -292,7 +297,16 @@ func _draw() -> void:
 	for c in _fmd.get("team1", []):
 		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.4, 0.3, 0.6))
 	for c in _fmd.get("coach", []):
+		if c.x <= -2047:
+			continue
 		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.85, 0.2, 0.5))
+	# debug: white crosshair at each live actor's cell center
+	for id in _actor_cells:
+		var p: Vector3i = _actor_cells[id]
+		var c := _iso(p.x + 0.5, p.y + 0.5, p.z)
+		draw_circle(c, 3.0, Color(1, 1, 1))
+		draw_line(c + Vector2(-8, 0), c + Vector2(8, 0), Color(1, 1, 1), 1.0)
+		draw_line(c + Vector2(0, -8), c + Vector2(0, 8), Color(1, 1, 1), 1.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:

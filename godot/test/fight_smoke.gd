@@ -80,7 +80,12 @@ func _show_fight() -> void:
 		fight_scene.queue_free()
 	fight_scene = load("res://src/fight/fight_view.tscn").instantiate()
 	root.add_child(fight_scene)
-	await create_timer(15.0).timeout  # phases advance + several turns
+	await create_timer(4.0).timeout   # fighters placed — mid-placement shot
+	var img2 := root.get_texture().get_image()
+	if img2 != null:
+		img2.save_png("/tmp/fight_combat.png")
+		print("[smoke] placement shot -> /tmp/fight_combat.png")
+	await create_timer(11.0).timeout # phases advance + several turns
 	var tex := root.get_texture()
 	var img := tex.get_image() if tex != null else null
 	if img != null:
@@ -134,8 +139,8 @@ func _on_message(opcode: int, payload) -> void:
 		4102:
 			print("[smoke] ACTOR_APPEAR: %s" % str(decoded.get("actors", [])))
 		8040:
-			print("[smoke] COMBAT STARTED — surrendering in 2s to test 8300")
-			create_timer(2.0).timeout.connect(func():
+			print("[smoke] COMBAT STARTED — surrender at +6s")
+			create_timer(6.0).timeout.connect(func():
 				client.send_message(8151, PackedByteArray(), 3))
 		8300:
 			print("[smoke] END FIGHT (8300)")

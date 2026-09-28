@@ -7,13 +7,14 @@ extends Node2D
 ## meta.json: {fps, frames:[{png, w, h, ox, oy}]} — ox/oy is the frame's
 ## top-left offset in scene space, preserving the authored pivot.
 
-var _frames: Array = []   # [{tex: Texture2D, off: Vector2, w: int, h: int}]
+var _frames: Array = []   # [{tex: Texture2D, off: Vector2, w: int, h: int, foot: int}]
 var _fps := 25.0
 var _time := 0.0
 var _cur := 0
 var playing := true
-## When true, the node origin pins each frame's bottom-center (feet on the
-## iso cell) instead of the authored scene anchor.
+## When true, the node origin pins each frame's bottom-center VISIBLE pixel
+## (feet on the iso cell) instead of the authored scene anchor — the alpha
+## margin under the feet is measured per frame at load.
 var foot_pivot := false
 
 
@@ -32,10 +33,24 @@ func load_action(set_dir: String, action: String) -> bool:
 		var img := Image.load_from_file("%s/%s" % [dir, fr.png])
 		if img == null:
 			continue
+		var w := int(fr.w)
+		var h := int(fr.h)
+		# lowest row containing visible pixels — the authored PNG bottom can
+		# carry a transparent margin that lifts the feet off the ground.
+		var foot := h - 1
+		for y in range(h - 1, -1, -1):
+			var found := false
+			for x in w:
+				if img.get_pixel(x, y).a > 0.15:
+					found = true
+					break
+			if found:
+				foot = y
+				break
 		_frames.append({
 			"tex": ImageTexture.create_from_image(img),
 			"off": Vector2(fr.ox, fr.oy),
-			"w": int(fr.w), "h": int(fr.h),
+			"w": w, "h": h, "foot": foot,
 		})
 	playing = true
 	queue_redraw()
@@ -58,6 +73,6 @@ func _draw() -> void:
 	var fr: Dictionary = _frames[_cur]
 	var pos: Vector2 = fr.off
 	if foot_pivot:
-		# pin bottom-center of the frame to the node origin
-		pos = Vector2(-fr.w * 0.5, -fr.h)
+		# pin the feet (lowest visible row), centered, to the node origin
+		pos = Vector2(-fr.w * 0.5, -float(fr.foot) - 1.0)
 	draw_texture(fr.tex, pos)
