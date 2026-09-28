@@ -56,9 +56,10 @@ func _ready() -> void:
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
 	_load()
-	for m in Session.drain():
-		_on_net_message(m.op, WireReader.new(m.raw))
-	Session.message.connect(_on_net_message)
+	if State.net != null:
+		for m in State.net.drain():
+			_on_net_message(m.op, WireReader.new(m.raw))
+		State.net.message_received.connect(_on_net_message)
 
 
 func _load() -> void:
@@ -119,12 +120,17 @@ const OP_PLACEMENT := 8022
 const OP_START_PRESENTATION := 8010
 const OP_END_PRESENTATION := 8014
 const OP_START_PLACEMENT := 8020
+const OP_READY_OBSERVATION := 8023
 const OP_END_PLACEMENT := 8028
 const OP_START_OBSERVATION := 8030
 const OP_START_ACTION := 8040
+const OP_READY_PLACEMENT := 8011
+const OP_READY_ACTION := 8031
 
 
 func _on_net_message(opcode: int, payload: WireReader) -> void:
+	if opcode >= 8010 and opcode <= 8040:
+		print("[fight] phase op %d" % opcode)
 	match opcode:
 		OP_ACTOR_APPEAR:
 			var d := Codec.decode(opcode, payload)
@@ -133,6 +139,24 @@ func _on_net_message(opcode: int, payload: WireReader) -> void:
 		OP_PLACEMENT:
 			var d := Codec.decode(opcode, payload)
 			_move_actor(int(d.id), Vector3i(int(d.x), int(d.y), int(d.z)))
+		OP_START_PRESENTATION:
+			# retail auto-acks presentation; server needs every coach's 8011
+			# (arch 3, empty payload) before advancing to placement.
+			if State.net != null:
+				State.net.send_message(OP_READY_PLACEMENT, PackedByteArray(), 3)
+			info.text += " | presentation"
+		OP_START_PLACEMENT:
+			# auto-accept the seeded start cells — real placement UI later
+			if State.net != null:
+				State.net.send_message(OP_READY_OBSERVATION, PackedByteArray(), 3)
+			info.text += " | placement"
+		OP_START_OBSERVATION:
+			# third gate: 8031 (arch 3, empty) advances to the action phase.
+			if State.net != null:
+				State.net.send_message(OP_READY_ACTION, PackedByteArray(), 3)
+			info.text += " | observation"
+		OP_START_ACTION:
+			info.text += " | combat!"
 
 
 ## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.

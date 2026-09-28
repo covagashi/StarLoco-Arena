@@ -20,6 +20,10 @@ static var fighters := {}
 ## Coach ids present in the fight (real coach ids, e.g. 1, 0x80000001).
 static var coach_ids := {}
 
+## Live ArenaClient — set by the Session autoload (app) or the test harness.
+## Scenes read `net.message_received` and `net.drain()`.
+static var net: Node = null
+
 ## Populate the fighter index from a decoded fight_creation dict.
 static func index_fighters(d: Dictionary) -> void:
 	fighters = {}

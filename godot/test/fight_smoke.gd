@@ -1,10 +1,9 @@
 extends SceneTree
 
-## Fight-entry smoke: login, then launch overworld challenge 34
-## (single-client fight — the server synthesizes the opponent side).
-## On FightCreation (8000) we decode the roster into State, instantiate
-## fight_view, then forward subsequent wire messages (4102 placements...)
-## to it — same as the real flow via Session.
+## Fight-entry smoke: login, launch overworld challenge 34 (single-client
+## fight), decode 8000 into State, then instantiate fight_view — which
+## consumes State.net.message_received itself: 4102 placements, phase
+## acks (8011/8023), everything after.
 ##   godot --headless --path godot -s test/fight_smoke.gd
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
@@ -16,13 +15,15 @@ const State := preload("res://src/state.gd")
 
 var client: ArenaClient
 var finished := false
-var last_world := -1
 var fight_scene: Node2D = null
 
 
 func _init() -> void:
 	client = ArenaClient.new()
 	root.add_child(client)
+	# NOTE: the Session autoload still gets instantiated under -s (only the
+	# global identifier fails to resolve) and its _ready overwrites State.net
+	# with its own idle client — so we re-assign before opening fight_view.
 	client.connected.connect(_send_login)
 	client.message_received.connect(_on_message)
 	client.disconnected.connect(_finish.bind(1, "disconnected"))
@@ -30,7 +31,7 @@ func _init() -> void:
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")
 		return
-	create_timer(20.0).timeout.connect(_finish.bind(1, "timeout"))
+	create_timer(25.0).timeout.connect(_finish.bind(1, "timeout"))
 
 
 func _send_login() -> void:
@@ -68,23 +69,22 @@ func _launch_challenge() -> void:
 
 
 func _show_fight() -> void:
+	# fight_view._ready drains client.pending itself, then hooks
+	# message_received — same path the real scene-change flow takes.
+	State.net = client
 	fight_scene = load("res://src/fight/fight_view.tscn").instantiate()
 	root.add_child(fight_scene)
-	await create_timer(1.5).timeout   # let 4102 placements land + frames draw
+	await create_timer(8.0).timeout   # phases advance; frames draw
 	var tex := root.get_texture()
 	var img := tex.get_image() if tex != null else null
 	if img != null:
 		img.save_png("/tmp/fight_live.png")
 		print("[smoke] screenshot -> /tmp/fight_live.png %dx%d"
 			% [img.get_width(), img.get_height()])
-	_finish(0, "8000 received — fight view rendered")
+	_finish(0, "fight rendered")
 
 
 func _on_message(opcode: int, payload) -> void:
-	# Once the fight view is up, every fight message also goes to it.
-	if fight_scene != null:
-		var raw: PackedByteArray = payload.buffer()
-		fight_scene._on_net_message(opcode, WireReader.new(raw))
 	var decoded := Codec.decode(opcode, WireReader.new(payload.buffer()))
 	match opcode:
 		1024:
@@ -98,9 +98,9 @@ func _on_message(opcode: int, payload) -> void:
 			print("[smoke] coach id=%s name='%s'" % [
 				decoded.get("id"), decoded.get("name")])
 		4600:
-			last_world = int(decoded.get("world_id", -1))
+			State.current_world = int(decoded.get("world_id", -1))
 			print("[smoke] enter instance world=%s pos=(%s,%s)" % [
-				last_world, decoded.get("x"), decoded.get("y")])
+				State.current_world, decoded.get("x"), decoded.get("y")])
 		4516:
 			_launch_challenge()
 		8000:
@@ -109,7 +109,7 @@ func _on_message(opcode: int, payload) -> void:
 			var fh := FileAccess.open("/tmp/fight8000.bin", FileAccess.WRITE)
 			fh.store_buffer(raw)
 			fh.close()
-			State.fight_world = last_world
+			State.fight_world = State.current_world
 			State.fight_data = decoded
 			State.index_fighters(decoded)
 			for t in decoded.get("teams", []):

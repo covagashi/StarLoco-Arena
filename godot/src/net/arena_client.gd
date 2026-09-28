@@ -22,6 +22,17 @@ var _recv_buf := PackedByteArray()
 var _connected := false
 var _established := false
 
+## Messages received before the current scene was ready to consume them
+## (e.g. ACTOR_APPEAR racing a scene change). Drained via drain().
+var pending: Array = []
+
+
+## Take everything buffered since the last drain.
+func drain() -> Array:
+	var out := pending
+	pending = []
+	return out
+
 
 func connect_to(host: String, port: int) -> Error:
 	_recv_buf.clear()
@@ -85,4 +96,7 @@ func _drain_frames() -> void:
 		var opcode := (_recv_buf[2] << 8) | _recv_buf[3]
 		var payload := _recv_buf.slice(HEADER_LEN, total)
 		_recv_buf = _recv_buf.slice(total)
+		pending.append({"op": opcode, "raw": payload})
+		if pending.size() > 512:
+			pending.pop_front()
 		message_received.emit(opcode, WireReader.new(payload))
