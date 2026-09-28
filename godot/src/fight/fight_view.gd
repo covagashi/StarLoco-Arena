@@ -134,6 +134,19 @@ const OP_TURN_BEGIN := 8104    # [i32][i32][i64 fighterId]
 const OP_END_TURN := 8105      # C2S [i64 fighterId]
 const OP_TURN_END := 8106      # S2C [i32][i32][i64 fighterId]
 const OP_FIGHTER_MOVE := 4524  # [i32][i32][i64 fighterId] + path i32x,i32y,i16z
+const OP_END_FIGHT := 8300     # S2C result screen — ack with 26321
+const OP_END_FIGHT_DONE := 26321  # C2S empty — server returns us to overworld
+const OP_ENTER_INSTANCE := 4600
+
+var _fight_over := false
+
+
+func _exit_tree() -> void:
+	# If we leave the tree without being freed (e.g. replaced by an explicit
+	# add_child in tests), drop the net subscription — a stale instance would
+	# keep consuming the shared WireReader and starve the new scene.
+	if State.net != null and State.net.message_received.is_connected(_on_net_message):
+		State.net.message_received.disconnect(_on_net_message)
 
 
 func _on_net_message(opcode: int, payload: WireReader) -> void:
@@ -183,6 +196,24 @@ func _on_net_message(opcode: int, payload: WireReader) -> void:
 				found = true
 			if found:
 				_move_actor(int(fid), last)
+		OP_END_FIGHT:
+			# Result screen — we ack (26321 empty); the server then sends a
+			# fresh 4600 to put the coach back into its overworld.
+			_fight_over = true
+			if State.net != null:
+				State.net.send_message(OP_END_FIGHT_DONE, PackedByteArray(), 3)
+			info.text = "map %s — fight over" % $UI/TopBar/MapId.text
+		OP_ENTER_INSTANCE:
+			# Post-fight re-entry (world != arena id) → back to the lobby scene.
+			# The fight-entry 4600 that drained during _ready has
+			# world == fight_world and is ignored.
+			if _fight_over:
+				State.fight_world = -1
+				State.fighters = {}
+				# get_tree() is null if a harness already removed us.
+				var tree := get_tree()
+				if tree != null:
+					tree.change_scene_to_file("res://src/main.tscn")
 
 
 ## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.

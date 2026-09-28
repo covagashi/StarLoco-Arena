@@ -47,6 +47,9 @@ func _ready() -> void:
 	Session.connected.connect(_on_connected)
 	Session.disconnected.connect(_on_disconnected)
 	Session.message.connect(_on_message)
+	# Re-entering after a fight: replay anything that arrived mid-scene-change.
+	for m in Session.client.drain():
+		_on_message(m.op, WireReader.new(m.raw))
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
 	$VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)

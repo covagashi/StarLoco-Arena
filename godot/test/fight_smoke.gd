@@ -72,6 +72,12 @@ func _show_fight() -> void:
 	# fight_view._ready drains client.pending itself, then hooks
 	# message_received — same path the real scene-change flow takes.
 	State.net = client
+	# We're root.add_child-ing, not change_scene_to_file — the previous
+	# instance survives a "scene change", so drop it ourselves (remove_child
+	# fires _exit_tree synchronously → its net subscription is released).
+	if fight_scene != null:
+		root.remove_child(fight_scene)
+		fight_scene.queue_free()
 	fight_scene = load("res://src/fight/fight_view.tscn").instantiate()
 	root.add_child(fight_scene)
 	await create_timer(15.0).timeout  # phases advance + several turns
@@ -102,6 +108,13 @@ func _on_message(opcode: int, payload) -> void:
 			State.current_world = int(decoded.get("world_id", -1))
 			print("[smoke] enter instance world=%s pos=(%s,%s)" % [
 				State.current_world, decoded.get("x"), decoded.get("y")])
+			# Post-fight return: world != arena → drop the fight view (the
+			# scene also self-transitions via change_scene_to_file, which only
+			# frees the tracked current_scene — none under -s).
+			if fight_scene != null and State.current_world != State.fight_world:
+				root.remove_child(fight_scene)
+				fight_scene.queue_free()
+				fight_scene = null
 		4516:
 			_launch_challenge()
 		8000:
@@ -120,6 +133,16 @@ func _on_message(opcode: int, payload) -> void:
 			_show_fight()
 		4102:
 			print("[smoke] ACTOR_APPEAR: %s" % str(decoded.get("actors", [])))
+		8040:
+			print("[smoke] COMBAT STARTED — surrendering in 2s to test 8300")
+			create_timer(2.0).timeout.connect(func():
+				client.send_message(8151, PackedByteArray(), 3))
+		8300:
+			print("[smoke] END FIGHT (8300)")
+		8100, 8104, 8106:
+			print("[smoke]   op %d raw=%dB hex=%s" % [
+				opcode, payload.buffer().size(),
+				payload.buffer().hex_encode()])
 		26310:
 			_finish(1, "challenge refused")
 		_:
