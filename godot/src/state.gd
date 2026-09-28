@@ -20,6 +20,10 @@ static var fighters := {}
 ## Coach ids present in the fight (real coach ids, e.g. 1, 0x80000001).
 static var coach_ids := {}
 
+## Our own coach id (from 2052 CoachInfo at login). Fighters with
+## fighter.coach == my_coach_id are ours — fight_view ends their turns.
+static var my_coach_id := -1
+
 ## Live ArenaClient — set by the Session autoload (app) or the test harness.
 ## Scenes read `net.message_received` and `net.drain()`.
 static var net: Node = null

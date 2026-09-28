@@ -12,6 +12,7 @@ const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
+const WireWriter := preload("res://src/net/wire_writer.gd")
 
 ## Placeholder coach sprite until fight-setup wire data gives the real
 ## per-pedestal coach anm id.
@@ -127,6 +128,13 @@ const OP_START_ACTION := 8040
 const OP_READY_PLACEMENT := 8011
 const OP_READY_ACTION := 8031
 
+## In-combat ops.
+const OP_TABLE_TURN := 8100    # [i32][i32][i8 turn][i32] — round counter
+const OP_TURN_BEGIN := 8104    # [i32][i32][i64 fighterId]
+const OP_END_TURN := 8105      # C2S [i64 fighterId]
+const OP_TURN_END := 8106      # S2C [i32][i32][i64 fighterId]
+const OP_FIGHTER_MOVE := 4524  # [i32][i32][i64 fighterId] + path i32x,i32y,i16z
+
 
 func _on_net_message(opcode: int, payload: WireReader) -> void:
 	if opcode >= 8010 and opcode <= 8040:
@@ -157,6 +165,24 @@ func _on_net_message(opcode: int, payload: WireReader) -> void:
 			info.text += " | observation"
 		OP_START_ACTION:
 			info.text += " | combat!"
+		OP_TABLE_TURN:
+			var d := Codec.decode(opcode, payload)
+			info.text = "map %s — turn %d" % [$UI/TopBar/MapId.text, int(d.get("f2", 0))]
+		OP_TURN_BEGIN:
+			var d := Codec.decode(opcode, payload)
+			_on_turn_begin(int(d.get("f2", -1)))
+		OP_FIGHTER_MOVE:
+			# [i32 uid][i32 -1][i64 fighterId] then path cells until end.
+			payload.get_i32()
+			payload.get_i32()
+			var fid := payload.get_i64()
+			var last := Vector3i.ZERO
+			var found := false
+			while payload.remaining() >= 10:
+				last = Vector3i(payload.get_i32(), payload.get_i32(), payload.get_i16())
+				found = true
+			if found:
+				_move_actor(int(fid), last)
 
 
 ## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.
@@ -187,6 +213,20 @@ func _move_actor(id: int, p: Vector3i) -> void:
 		return
 	spr.position = _iso(p.x + 0.5, p.y + 0.5, p.z)
 	spr.z_index = clampi((p.x + p.y) * 4 + 1, -4096, 4096)
+
+
+## 8104 — a fighter's turn started. Ours: auto-pass with 8105 until real
+## turn UI exists (the server would wait on us otherwise).
+func _on_turn_begin(fid: int) -> void:
+	var f: Dictionary = State.fighters.get(fid, {})
+	var who := "turn: %s" % f.get("name", str(fid))
+	if int(f.get("coach", -1)) == State.my_coach_id:
+		var w := WireWriter.new()
+		w.put_i64(fid)
+		if State.net != null:
+			State.net.send_message(OP_END_TURN, w.raw(), 3)
+		who += " (ours — passing)"
+	info.text = "map %s — %s" % [$UI/TopBar/MapId.text, who]
 
 
 static func _fighter_file(breed: int, sex: int) -> String:

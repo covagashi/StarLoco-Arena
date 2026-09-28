@@ -31,7 +31,7 @@ func _init() -> void:
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")
 		return
-	create_timer(25.0).timeout.connect(_finish.bind(1, "timeout"))
+	create_timer(35.0).timeout.connect(_finish.bind(1, "timeout"))
 
 
 func _send_login() -> void:
@@ -74,7 +74,7 @@ func _show_fight() -> void:
 	State.net = client
 	fight_scene = load("res://src/fight/fight_view.tscn").instantiate()
 	root.add_child(fight_scene)
-	await create_timer(8.0).timeout   # phases advance; frames draw
+	await create_timer(15.0).timeout  # phases advance + several turns
 	var tex := root.get_texture()
 	var img := tex.get_image() if tex != null else null
 	if img != null:
@@ -95,6 +95,7 @@ func _on_message(opcode: int, payload) -> void:
 		2048:
 			_send_coach("fightone")
 		2052:
+			State.my_coach_id = int(decoded.get("id", -1))
 			print("[smoke] coach id=%s name='%s'" % [
 				decoded.get("id"), decoded.get("name")])
 		4600:

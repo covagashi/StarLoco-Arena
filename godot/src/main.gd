@@ -109,6 +109,8 @@ func _on_message(opcode: int, payload: WireReader) -> void:
 		OP_COACH_CREATE_REQ:
 			_send_coach_creation()
 		OP_COACH_INFO:
+			var d := Codec.decode(opcode, payload)
+			State.my_coach_id = int(d.get("id", -1))
 			_log_line("[color=green]coach info received — in lobby[/color]")
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
