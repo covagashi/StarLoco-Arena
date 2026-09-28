@@ -2,16 +2,22 @@ extends SceneTree
 
 ## Fight-entry smoke: login, then launch overworld challenge 34
 ## (single-client fight — the server synthesizes the opponent side).
+## On FightCreation (8000) we decode the roster into State, instantiate
+## fight_view, then forward subsequent wire messages (4102 placements...)
+## to it — same as the real flow via Session.
 ##   godot --headless --path godot -s test/fight_smoke.gd
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
 const Codec := preload("res://src/net/codec.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
+const WireReader := preload("res://src/net/wire_reader.gd")
+const State := preload("res://src/state.gd")
 
 var client: ArenaClient
 var finished := false
 var last_world := -1
+var fight_scene: Node2D = null
 
 
 func _init() -> void:
@@ -24,7 +30,7 @@ func _init() -> void:
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")
 		return
-	create_timer(15.0).timeout.connect(_finish.bind(1, "timeout"))
+	create_timer(20.0).timeout.connect(_finish.bind(1, "timeout"))
 
 
 func _send_login() -> void:
@@ -62,12 +68,9 @@ func _launch_challenge() -> void:
 
 
 func _show_fight() -> void:
-	var scene: Node2D = load("res://src/fight/fight_view.tscn").instantiate()
-	root.add_child(scene)
-	await process_frame
-	scene.get_node("UI/TopBar/MapId").text = str(last_world)
-	scene._load()
-	await create_timer(1.0).timeout
+	fight_scene = load("res://src/fight/fight_view.tscn").instantiate()
+	root.add_child(fight_scene)
+	await create_timer(1.5).timeout   # let 4102 placements land + frames draw
 	var tex := root.get_texture()
 	var img := tex.get_image() if tex != null else null
 	if img != null:
@@ -78,7 +81,11 @@ func _show_fight() -> void:
 
 
 func _on_message(opcode: int, payload) -> void:
-	var decoded := Codec.decode(opcode, payload)
+	# Once the fight view is up, every fight message also goes to it.
+	if fight_scene != null:
+		var raw: PackedByteArray = payload.buffer()
+		fight_scene._on_net_message(opcode, WireReader.new(raw))
+	var decoded := Codec.decode(opcode, WireReader.new(payload.buffer()))
 	match opcode:
 		1024:
 			if decoded.get("result") == 0:
@@ -99,12 +106,23 @@ func _on_message(opcode: int, payload) -> void:
 		8000:
 			var raw: PackedByteArray = payload.buffer()
 			print("[smoke] FIGHT CREATION — %d bytes" % raw.size())
-			print("[smoke]   head: %s" % raw.slice(0, 32).hex_encode())
+			var fh := FileAccess.open("/tmp/fight8000.bin", FileAccess.WRITE)
+			fh.store_buffer(raw)
+			fh.close()
+			State.fight_world = last_world
+			State.fight_data = decoded
+			State.index_fighters(decoded)
+			for t in decoded.get("teams", []):
+				for f in t.get("fighters", []):
+					print("[smoke]   fighter '%s' breed=%d team=%d id=%d"
+						% [f.name, f.get("breed", -1), t.id, f.id])
 			_show_fight()
+		4102:
+			print("[smoke] ACTOR_APPEAR: %s" % str(decoded.get("actors", [])))
 		26310:
 			_finish(1, "challenge refused")
 		_:
-			print("[smoke]   op %d (%d b)" % [opcode, payload.remaining()])
+			print("[smoke]   op %d" % opcode)
 
 
 func _finish(code: int, msg: String) -> void:

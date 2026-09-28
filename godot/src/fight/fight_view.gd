@@ -10,10 +10,28 @@ const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const State := preload("res://src/state.gd")
+const Codec := preload("res://src/net/codec.gd")
+const WireReader := preload("res://src/net/wire_reader.gd")
 
 ## Placeholder coach sprite until fight-setup wire data gives the real
 ## per-pedestal coach anm id.
 const COACH_SET := "res://assets/anims/coach_805"
+const FIGHTER_SET := "res://assets/anims/fighter_%s"
+
+## Breed -> Players/<file>.anm (client zh_1.cdN): entry i = breed i/2+1,
+## sex i%2. 7000/7001 are special fighter skins appended at the end.
+const FIGHTER_FILES := [
+	"-110", "-111", "-120", "-121", "-130", "-131", "-140", "-141",
+	"-150", "-151", "-160", "-161", "-170", "-171", "-180", "-181",
+	"-190", "-191", "-1100", "-1101", "-1110", "-1111", "-1120", "-1121",
+	"7000", "7001",
+]
+
+## Server direction (Direction8) -> anm direction. The anm only ships
+## {0,1,2,5,6}; 3/4/7 are horizontal mirrors of 1/0/5 (gw_2.ao).
+const DIR_MAP := {0: 0, 1: 1, 2: 2, 3: 1, 4: 0, 5: 5, 6: 6, 7: 5}
+const DIR_FLIP := {0: false, 1: false, 2: false, 3: true,
+	4: true, 5: false, 6: false, 7: true}
 
 const HW := 43.0   # half cell width
 const HH := 21.5   # half cell height
@@ -23,6 +41,7 @@ var _cells := {}
 var _fmd := {}
 var _alt_min := 0
 var _alt_max := 0
+var _sprites := {}   # actor id -> AnmSprite
 
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
@@ -37,6 +56,9 @@ func _ready() -> void:
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
 	_load()
+	for m in Session.drain():
+		_on_net_message(m.op, WireReader.new(m.raw))
+	Session.message.connect(_on_net_message)
 
 
 func _load() -> void:
@@ -72,14 +94,81 @@ func _iso(x: float, y: float, alt: float) -> Vector2:
 func _spawn_actors() -> void:
 	for n in _actors.get_children():
 		n.queue_free()
+	_sprites = {}
+	# Preview mode only: with a live fight the real coach/fighter positions
+	# arrive via ACTOR_APPEAR (4102) and _place_actor owns the actors list.
+	if not State.fighters.is_empty():
+		return
 	for c in _fmd.get("coach", []):
+		if c.x <= -2047:
+			continue   # unused pedestal slot (arena.go emptyPedestalXY)
 		var spr := AnmSprite.new()
 		spr.foot_pivot = true
 		# coaches stand on top of the pedestal they are parked on
 		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z + 1.0)
-		spr.z_index = int(c.x + c.y) * 4 + 1
+		spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
 		_actors.add_child(spr)
 		spr.load_action(COACH_SET, "5_AnimStatique")
+
+
+## --- live fight wiring -----------------------------------------------------
+
+## Server opcodes consumed here after scene entry.
+const OP_ACTOR_APPEAR := 4102
+const OP_PLACEMENT := 8022
+const OP_START_PRESENTATION := 8010
+const OP_END_PRESENTATION := 8014
+const OP_START_PLACEMENT := 8020
+const OP_END_PLACEMENT := 8028
+const OP_START_OBSERVATION := 8030
+const OP_START_ACTION := 8040
+
+
+func _on_net_message(opcode: int, payload: WireReader) -> void:
+	match opcode:
+		OP_ACTOR_APPEAR:
+			var d := Codec.decode(opcode, payload)
+			for a in d.get("actors", []):
+				_place_actor(a)
+		OP_PLACEMENT:
+			var d := Codec.decode(opcode, payload)
+			_move_actor(int(d.id), Vector3i(int(d.x), int(d.y), int(d.z)))
+
+
+## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.
+func _place_actor(a: Dictionary) -> void:
+	var spr: AnmSprite = _sprites.get(a.id)
+	if spr == null:
+		spr = AnmSprite.new()
+		spr.foot_pivot = true
+		_sprites[a.id] = spr
+		_actors.add_child(spr)
+	var dir: int = DIR_MAP.get(a.dir, 1)
+	spr.scale.x = -abs(spr.scale.x) if DIR_FLIP.get(a.dir, false) else abs(spr.scale.x)
+	if State.fighters.has(a.id):
+		var f: Dictionary = State.fighters[a.id]
+		var file := _fighter_file(int(f.get("breed", 1)), int(f.get("sex", 0)))
+		var action := "%d_AnimStatique" % dir
+		if not spr.load_action(FIGHTER_SET % file, action):
+			spr.load_action(COACH_SET, "5_AnimStatique")
+	else:
+		spr.load_action(COACH_SET, "%d_AnimStatique" % dir)
+	spr.position = _iso(a.x + 0.5, a.y + 0.5, a.z)
+	spr.z_index = clampi(int(a.x + a.y) * 4 + 1, -4096, 4096)
+
+
+func _move_actor(id: int, p: Vector3i) -> void:
+	var spr: AnmSprite = _sprites.get(id)
+	if spr == null:
+		return
+	spr.position = _iso(p.x + 0.5, p.y + 0.5, p.z)
+	spr.z_index = clampi((p.x + p.y) * 4 + 1, -4096, 4096)
+
+
+static func _fighter_file(breed: int, sex: int) -> String:
+	if breed >= 1 and breed <= 12:
+		return FIGHTER_FILES[(breed - 1) * 2 + clampi(sex, 0, 1)]
+	return FIGHTER_FILES[24 + clampi(breed - 7000, 0, 1)]
 
 
 func _cell_poly(x: int, y: int, alt: float) -> PackedVector2Array:

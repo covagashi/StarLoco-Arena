@@ -18,6 +18,9 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"inventory": return _inventory(r)
 		"stat_map": return _stat_map(r)
 		"preset_list": return _preset_list(r)
+		"fight_creation": return _fight_creation(r)
+		"actor_appear": return _actor_appear(r)
+		"placement_move": return _placement_move(r)
 		_:
 			return {"_opcode": opcode, "_raw": r.get_rest(),
 					"_handler": handler}
@@ -146,3 +149,132 @@ static func _preset_list(r: WireReader) -> Dictionary:
 	for i in r.get_u8():
 		out.presets.append(r.get_bytes(r.get_u16()))
 	return out
+
+
+## Opcode 8000 — FightCreation. Mirrors aat_2.ac() in the decompiled client,
+## cross-checked byte-for-byte against server/internal/game/fight_packets.go.
+##
+##   i8 aV | i16 len + keyBlob | i32 fightType | i64 fightId | i8 |
+##   i64 + i32 | u8 nCoaches × coach{ i64 id, str8 name, u8×3, i16,
+##   i16-blob, i16-blob } + u16 len + reportBlob |
+##   u8 nTeams × team{ i8 id, str8 name, u8 nPlacements ×
+##     {i64 fid, i64 aj, i16 cell, u8 nd}, u8 nFighters ×
+##     u8 type + fighter + i64 coachLink } |
+##   u8 n × i64 timeline | u8 n × i32 specialCells |
+##   u8 n × {i64,i64,i32,i32,i16} specialDetail | i16 aI |
+##   i32 teamStats (0 → skip per-coach stats) | u8 dd | tail: fight params
+##
+## fighter type 0 (ee_2 player), order per fight_packets.go writeCombatFighterBlob:
+##   i64 wireId, u8 breed, str8 name, u8 sex, u8 ey, u8 hair, u8 skin,
+##   u8 eye, u8 summoned, i32 xp,
+##   i16 len + spellBlob(i32 ids), i16 len + cardBlob({i16 slot,i32 id}),
+##   i16 len + sphereBlob(u8 n), i16 n×i32 effects, i16 n×i16 conditions,
+##   i32 hpLost, i32 mpUsed, i32 apUsed
+## fighter type 1 (ta_0 monster):  i64 id, u8, i32 typeId, str8 name, u8, i32,i32
+## fighter else  (wo_1 summon):    i64 id, str8 name, u8 xq, u8, u8, i32, i32
+static func _fight_creation(r: WireReader) -> Dictionary:
+	var out := {"aV": r.get_i8()}
+	var key := r.get_bytes(r.get_u16())
+	out.key = key
+	out.fight_type = r.get_i32()
+	out.fight_id = r.get_i64()
+	out.unk8 = r.get_i8()
+	out.ca = r.get_i64()
+	out.f = r.get_i32()
+	out.coaches = []
+	for i in r.get_u8():
+		var c := {"id": r.get_i64(), "name": r.get_str("u8")}
+		c.look = [r.get_u8(), r.get_u8(), r.get_u8()]
+		c.levelish = r.get_i16()
+		c.w_blob = r.get_bytes(maxi(r.get_i16(), 0))
+		c.s_blob = r.get_bytes(maxi(r.get_i16(), 0))
+		c.report = r.get_bytes(r.get_u16())
+		out.coaches.append(c)
+	out.teams = []
+	for i in r.get_u8():
+		var t := {"id": r.get_i8(), "name": r.get_str("u8"),
+				"placements": [], "fighters": []}
+		for j in r.get_u8():
+			t.placements.append({"fighter": r.get_i64(), "aj": r.get_i64(),
+					"cell": r.get_i16(), "nd": r.get_u8()})
+		for j in r.get_u8():
+			var ft := r.get_u8()
+			var f := _fighter(r, ft)
+			f.coach = r.get_i64()
+			f.team = t.id
+			t.fighters.append(f)
+		out.teams.append(t)
+	out.timeline = []
+	for i in r.get_u8():
+		out.timeline.append(r.get_i64())
+	out.specials = []
+	for i in r.get_u8():
+		out.specials.append(r.get_i32())
+	out.special_detail = []
+	for i in r.get_u8():
+		out.special_detail.append({"a": r.get_i64(), "b": r.get_i64(),
+				"x": r.get_i32(), "y": r.get_i32(), "s": r.get_i16()})
+	out.ai = r.get_i16()
+	out.team_stats_n = r.get_i32()
+	if out.team_stats_n != 0:
+		for i in out.coaches.size():
+			out.coaches[i].stats = {"id": r.get_i64(),
+					"v": [r.get_i32(), r.get_i32(), r.get_i32(),
+							r.get_i32(), r.get_i32()]}
+	out.dd = r.get_u8()
+	out.tail = r.get_rest()
+	return out
+
+
+static func _fighter(r: WireReader, ft: int) -> Dictionary:
+	if ft == 0:
+		var f := {"type": "player", "id": r.get_i64(), "breed": r.get_u8(),
+				"name": r.get_str("u8"), "sex": r.get_u8(), "ey": r.get_u8(),
+				"hair": r.get_u8(), "skin": r.get_u8(), "eye": r.get_u8(),
+				"summoned": r.get_u8(), "xp": r.get_i32()}
+		var spells := r.get_bytes(maxi(r.get_i16(), 0))
+		var sr := WireReader.new(spells)
+		f.spells = []
+		while sr.remaining() >= 4:
+			f.spells.append(sr.get_i32())
+		var cards := r.get_bytes(maxi(r.get_i16(), 0))
+		var cr := WireReader.new(cards)
+		f.cards = []
+		while cr.remaining() >= 6:
+			f.cards.append({"slot": cr.get_i16(), "id": cr.get_i32()})
+		f.sphere_blob = r.get_bytes(maxi(r.get_i16(), 0))
+		f.effects = []
+		for j in maxi(r.get_i16(), 0):
+			f.effects.append(r.get_i32())
+		f.conditions = []
+		for j in maxi(r.get_i16(), 0):
+			f.conditions.append(r.get_i16())
+		f.hp_lost = r.get_i32()
+		f.mp_used = r.get_i32()
+		f.ap_used = r.get_i32()
+		return f
+	if ft == 1:
+		return {"type": "monster", "id": r.get_i64(), "unk0": r.get_u8(),
+				"type_id": r.get_i32(), "name": r.get_str("u8"),
+				"unk1": r.get_u8(), "p1": r.get_i32(), "p2": r.get_i32()}
+	return {"type": "summon", "id": r.get_i64(), "name": r.get_str("u8"),
+			"xq": r.get_u8(), "a": r.get_u8(), "b": r.get_u8(),
+			"p1": r.get_i32(), "p2": r.get_i32()}
+
+
+## Opcode 4102 — ACTOR_APPEAR: inserts fight actors into the render list.
+## [u8 n]{i64 id, i32 x, i32 y, i16 z, u8 dir} — fighter wire ids and coach
+## real ids share the same space (fight_packets.go buildActorAppear).
+static func _actor_appear(r: WireReader) -> Dictionary:
+	var out := {"actors": []}
+	for i in r.get_u8():
+		out.actors.append({"id": r.get_i64(), "x": r.get_i32(),
+				"y": r.get_i32(), "z": r.get_i16(), "dir": r.get_u8()})
+	return out
+
+
+## Opcode 8022 — MOVE_TO_FREE_PLACEMENT broadcast:
+## [i64 fighterId][i32 x][i32 y][i16 z].
+static func _placement_move(r: WireReader) -> Dictionary:
+	return {"id": r.get_i64(), "x": r.get_i32(), "y": r.get_i32(),
+			"z": r.get_i16()}

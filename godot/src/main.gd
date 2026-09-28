@@ -14,7 +14,6 @@ extends Control
 ##   2052 CoachInfos     login burst begins; 4600 EnterInstance; 4516 Ready
 ##   8   InvalidVersion  [u8 2][u16 70] — server keeps socket open; we close it.
 
-const ArenaClient := preload("res://src/net/arena_client.gd")
 const Codec := preload("res://src/net/codec.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
@@ -34,8 +33,6 @@ const OP_FIGHT_CREATION := 8000
 const OP_FIGHT_ERROR := 26310
 const OP_PONG := 108
 
-var client := ArenaClient.new()
-
 @onready var host_edit: LineEdit = $VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $VBox/ConnRow/Port
 @onready var connect_btn: Button = $VBox/ConnRow/ConnectBtn
@@ -47,21 +44,20 @@ var client := ArenaClient.new()
 
 
 func _ready() -> void:
-	add_child(client)
-	client.connected.connect(_on_connected)
-	client.disconnected.connect(_on_disconnected)
-	client.message_received.connect(_on_message)
+	Session.connected.connect(_on_connected)
+	Session.disconnected.connect(_on_disconnected)
+	Session.message.connect(_on_message)
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
 	$VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
 
 
 func _on_connect_pressed() -> void:
-	if client.is_online():
-		client.disconnect_from()
+	if Session.is_online():
+		Session.client.disconnect_from()
 		return
 	_log_line("connecting to %s:%s…" % [host_edit.text, port_edit.text])
-	var err := client.connect_to(host_edit.text, int(port_edit.text))
+	var err := Session.connect_to(host_edit.text, int(port_edit.text))
 	if err != OK:
 		_log_line("[color=red]connect failed: %s[/color]" % error_string(err))
 
@@ -86,7 +82,7 @@ func _on_login_pressed() -> void:
 	version.put_u16(70)           # the only field it validates
 	version.put_u8(5)
 	version.put_bytes("72909".to_ascii_buffer())
-	client.send_message(OP_CLIENT_VERSION, version.raw(), 0)
+	Session.send(OP_CLIENT_VERSION, version.raw(), 0)
 
 	var auth := WireWriter.new()
 	var login := CP1252.encode(login_edit.text)
@@ -95,7 +91,7 @@ func _on_login_pressed() -> void:
 	auth.put_bytes(login)
 	auth.put_u8(password.size())
 	auth.put_bytes(password)
-	client.send_message(OP_CLIENT_AUTH, auth.raw(), 1)
+	Session.send(OP_CLIENT_AUTH, auth.raw(), 1)
 	_log_line("sent version + auth for '%s'" % login_edit.text)
 
 
@@ -103,7 +99,7 @@ func _on_message(opcode: int, payload: WireReader) -> void:
 	match opcode:
 		OP_INVALID_VERSION:
 			_log_line("[color=red]server rejected client version — closing[/color]")
-			client.disconnect_from()
+			Session.client.disconnect_from()
 		OP_AUTH_RESULT:
 			var code := payload.get_u8()
 			if code == 0:
@@ -124,8 +120,10 @@ func _on_message(opcode: int, payload: WireReader) -> void:
 			$VBox/AuthRow/PracticeBtn.disabled = false
 		OP_FIGHT_CREATION:
 			State.fight_world = State.current_world
-			_log_line("[color=green]fight created on arena %d[/color]"
-				% State.fight_world)
+			State.fight_data = Codec.decode(opcode, payload)
+			State.index_fighters(State.fight_data)
+			_log_line("[color=green]fight created on arena %d — %d fighters[/color]"
+				% [State.fight_world, State.fighters.size()])
 			get_tree().change_scene_to_file("res://src/fight/fight_view.tscn")
 		OP_FIGHT_ERROR:
 			_log_line("[color=red]fight creation refused[/color]")
@@ -142,7 +140,7 @@ func _on_practice_pressed() -> void:
 	var w := WireWriter.new()
 	w.put_i32(34)
 	w.put_u16(99)
-	client.send_message(26330, w.raw(), 2)
+	Session.send(26330, w.raw(), 2)
 	_log_line("practice challenge 34 sent — waiting for fight…")
 
 
@@ -155,7 +153,7 @@ func _send_coach_creation() -> void:
 	w.put_u8(1)  # skin
 	w.put_u8(1)  # hair
 	w.put_u8(0)  # sex
-	client.send_message(OP_COACH_CREATE, w.raw(), 2)
+	Session.send(OP_COACH_CREATE, w.raw(), 2)
 	_log_line("server asked coach creation — sent name '%s'" % name)
 
 

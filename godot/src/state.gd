@@ -8,3 +8,24 @@ static var current_world := -1
 
 ## Set when FightCreation (8000) arrives — fight_view reads it on open.
 static var fight_world := -1
+
+## Decoded 8000 FightCreation (see codec_overrides._fight_creation):
+## {teams: [{id, name, fighters: [{id, breed, sex, name, coach, ...}]}],
+##  coaches: [...], timeline: [fighterId], ...}
+static var fight_data := {}
+
+## id -> {name, breed, sex, team, coach} for every fighter in the fight.
+static var fighters := {}
+
+## Coach ids present in the fight (real coach ids, e.g. 1, 0x80000001).
+static var coach_ids := {}
+
+## Populate the fighter index from a decoded fight_creation dict.
+static func index_fighters(d: Dictionary) -> void:
+	fighters = {}
+	coach_ids = {}
+	for c in d.get("coaches", []):
+		coach_ids[c.id] = c
+	for t in d.get("teams", []):
+		for f in t.get("fighters", []):
+			fighters[f.id] = f

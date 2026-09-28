@@ -322,11 +322,14 @@ def main():
     jar, entry = sys.argv[1], sys.argv[2]
     if len(sys.argv) > 3 and sys.argv[3] == "--export":
         out_dir = sys.argv[4] if len(sys.argv) > 4 else "out"
+        only = sys.argv[5] if len(sys.argv) > 5 else None
         z = zipfile.ZipFile(jar)
         anm, _ = load_anm_and_textures(z, entry)
         total = 0
         for a in anm["actions"]:
             if not a.get("name"):
+                continue
+            if only and only not in a["name"]:
                 continue
             n = export_action(z, entry, a, out_dir)
             total += n
