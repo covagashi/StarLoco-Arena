@@ -8,6 +8,11 @@ extends Node2D
 
 const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
+const AnmSprite := preload("res://src/anims/anm_sprite.gd")
+
+## Placeholder coach sprite until fight-setup wire data gives the real
+## per-pedestal coach anm id.
+const COACH_SET := "res://assets/anims/coach_805"
 
 const HW := 43.0   # half cell width
 const HH := 21.5   # half cell height
@@ -20,6 +25,7 @@ var _alt_max := 0
 
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
+@onready var _actors: Node2D = $Actors
 var _dragging := false
 
 
@@ -46,6 +52,7 @@ func _load() -> void:
 		map_id, _cells.size(), _alt_min, _alt_max,
 		_fmd.get("team0", []).size(), _fmd.get("team1", []).size(),
 		_fmd.get("coach", []).size()] if not _cells.is_empty() else "map %d: no arena data" % map_id
+	_spawn_actors()
 	queue_redraw()
 	if topo.has("bounds"):
 		var b: Rect2i = topo.bounds
@@ -56,6 +63,19 @@ func _load() -> void:
 
 func _iso(x: float, y: float, alt: float) -> Vector2:
 	return Vector2((x - y) * HW, (x + y) * HH - alt * EL)
+
+
+func _spawn_actors() -> void:
+	for n in _actors.get_children():
+		n.queue_free()
+	for c in _fmd.get("coach", []):
+		var spr := AnmSprite.new()
+		spr.foot_pivot = true
+		# coaches stand on top of the pedestal they are parked on
+		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z + 1.0)
+		spr.z_index = int(c.x + c.y) * 4 + 1
+		_actors.add_child(spr)
+		spr.load_action(COACH_SET, "5_AnimStatique")
 
 
 func _cell_poly(x: int, y: int, alt: float) -> PackedVector2Array:

@@ -98,3 +98,6 @@ __pycache__/
 # commit it (it is machine-local and huge).
 /godot/.godot/
 /godot/export/
+# Converted retail art (tools/asset-import output) — derived from
+# client/compiled/, same no-redistribution rule applies.
+/godot/assets/anims/
