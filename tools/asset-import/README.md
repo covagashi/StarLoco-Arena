@@ -51,3 +51,17 @@ python3 tools/asset-import/anm_render.py \
   coach `805.anm` renders a correct dark-bird sprite.
 - Known gaps: frame-part effects (particles, sound triggers, script hooks)
   are parsed but not rendered; external `.anmx` composition tables unused.
+
+## References
+
+- `client/decompiled/` — obfuscated 2.70 source (ground truth, byte-exact).
+- `hussein-aitlahcen/wakfu-src` (GitHub) — **unobfuscated** Wakfu client on
+  the same Ankama Java engine: `framework/graphics/engine/Anm2/*` maps 1:1
+  onto our classes (`AnmShape{,R,T,A,M,CR,CT,CRT,RTAM…}` = transform types,
+  `AnmActionTypes` = frame parts 1-10, `AnmTransformDataTable` = `aek_0`
+  color/skin table with `CUSTOM_COLOR_{SKIN,HAIR,CLOTHES,…}` recoloring).
+  Useful for naming and for the still-undecoded formats (`.dam` overworld
+  maps, `.xps` particle systems under `particleSystem/`).
+- `WakBox/WakfuBDataReader` — reference for the shared `.dat` record format.
+- Note: Dofus **1.x/2.x** tools (PyDofus, ArakneSwf, d2i/d2p/dlm/swl) do NOT
+  apply — DofusArena uses the Java engine; there are no `.swf` files.
