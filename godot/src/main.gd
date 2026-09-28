@@ -15,9 +15,11 @@ extends Control
 ##   8   InvalidVersion  [u8 2][u16 70] — server keeps socket open; we close it.
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
+const Codec := preload("res://src/net/codec.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
+const State := preload("res://src/state.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
@@ -28,6 +30,8 @@ const OP_COACH_CREATE := 2049
 const OP_COACH_INFO := 2052
 const OP_ENTER_INSTANCE := 4600
 const OP_INSTANCE_READY := 4516
+const OP_FIGHT_CREATION := 8000
+const OP_FIGHT_ERROR := 26310
 const OP_PONG := 108
 
 var client := ArenaClient.new()
@@ -49,6 +53,7 @@ func _ready() -> void:
 	client.message_received.connect(_on_message)
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
+	$VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
 
 
 func _on_connect_pressed() -> void:
@@ -110,13 +115,35 @@ func _on_message(opcode: int, payload: WireReader) -> void:
 		OP_COACH_INFO:
 			_log_line("[color=green]coach info received — in lobby[/color]")
 		OP_ENTER_INSTANCE:
-			_log_line("entering instance…")
+			var d := Codec.decode(opcode, payload)
+			State.current_world = int(d.get("world_id", -1))
+			_log_line("entering instance world=%d pos=(%s,%s)" % [
+				State.current_world, d.get("x"), d.get("y")])
 		OP_INSTANCE_READY:
 			_log_line("[color=green]instance ready — in world[/color]")
+			$VBox/AuthRow/PracticeBtn.disabled = false
+		OP_FIGHT_CREATION:
+			State.fight_world = State.current_world
+			_log_line("[color=green]fight created on arena %d[/color]"
+				% State.fight_world)
+			get_tree().change_scene_to_file("res://src/fight/fight_view.tscn")
+		OP_FIGHT_ERROR:
+			_log_line("[color=red]fight creation refused[/color]")
 		OP_PONG:
 			pass  # keepalive reply
 		_:
 			_log_line("S2C opcode [b]%d[/b] — %d bytes" % [opcode, payload.remaining()])
+
+
+func _on_practice_pressed() -> void:
+	# TeamTest 26330 doubles as overworld challenge launch:
+	# [i32 challengeId][i16 99] — 34 = "Démon de la 58ème minute" practice
+	# demon. The server fields the opponent side; one client suffices.
+	var w := WireWriter.new()
+	w.put_i32(34)
+	w.put_u16(99)
+	client.send_message(26330, w.raw(), 2)
+	_log_line("practice challenge 34 sent — waiting for fight…")
 
 
 func _send_coach_creation() -> void:

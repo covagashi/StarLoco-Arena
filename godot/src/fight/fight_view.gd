@@ -9,6 +9,7 @@ extends Node2D
 const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
+const State := preload("res://src/state.gd")
 
 ## Placeholder coach sprite until fight-setup wire data gives the real
 ## per-pedestal coach anm id.
@@ -32,6 +33,9 @@ var _dragging := false
 func _ready() -> void:
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
+	# When we arrived here from a live fight the world id is the arena id.
+	if State.fight_world >= 0:
+		$UI/TopBar/MapId.text = str(State.fight_world)
 	_load()
 
 

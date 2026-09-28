@@ -58,6 +58,10 @@ secret = true
 text = "Login"
 disabled = true
 
+[node name="PracticeBtn" type="Button" parent="VBox/AuthRow"]
+text = "Practice fight"
+disabled = true
+
 [node name="Log" type="RichTextLabel" parent="VBox"]
 size_flags_vertical = 3
 bbcode_enabled = true
