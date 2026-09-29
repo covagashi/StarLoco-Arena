@@ -79,6 +79,15 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 		4516:
 			# in world — kick off the bot login, then trade+challenge it
 			_login(_bot, "test2", "test123")
+		6028:
+			print("[smoke] main 6028 — duo formed")
+		6030:
+			var d := Codec.decode(op, WireReader.new(raw))
+			for pr in d.get("presets", []):
+				if pr.get("coaches", []).size() == 2:
+					print("[smoke] main got duo preset '%s' type=%d ally=%d"
+						% [pr.get("name", "?"), int(pr.type),
+							int(pr.coaches[0])])
 		5104:
 			var d := Codec.decode(op, WireReader.new(raw))
 			print("[smoke] main 5104 result=%d ex=%d other=%d" % [
@@ -182,9 +191,30 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 		4516:
 			if not _bot_in_world:
 				_bot_in_world = true
-				print("[smoke] bot in world — main invites it to trade")
+				print("[smoke] bot in world — main invites it to a 2v2 duo")
 				await create_timer(0.8).timeout
-				_main._invite_exchange_id(_bot_coach, "test2")
+				# real path needs test2 in the friend list — inject the
+				# row the server would have pushed
+				State.friends.append(
+					{"name": "test2", "id": _bot_coach, "online": true})
+				_main._open_duo_dlg()
+				_main.get_node("UI/DuoDlg/VBox/Name").text = "Duplico"
+				_main._on_duo_create()
+		6025:
+			var d := Codec.decode(op, p)
+			print("[smoke] bot got duo invite team='%s' from %s — join"
+				% [d.get("team", "?"), d.get("inviter_name", "?")])
+			var w := WireWriter.new()
+			w.put_u8(1)
+			w.put_str(String(d.get("team", "")), "u8")
+			w.put_i64(int(d.get("inviter", 0)))
+			w.put_i64(int(d.get("invited", 0)))
+			w.put_i16(0)
+			_bot.send_message(6026, w.raw(), 2)
+		6028:
+			print("[smoke] bot 6028 — duo formed, expect the duo preset")
+			await create_timer(1.0).timeout
+			_main._invite_exchange_id(_bot_coach, "test2")
 		5102:
 			var d := Codec.decode(op, p)
 			_bot_ex = int(d.ex_id)

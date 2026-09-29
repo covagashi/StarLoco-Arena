@@ -41,7 +41,7 @@
      "t": "u8"
     }
    ],
-   "note": "conditional i32 tail when result in {5,6} — left unread, payload-scoped"
+   "note": "conditional i32 tail when result in {5,6} \u2014 left unread, payload-scoped"
   },
   "1025": {
    "name": "ClientAuthentication",
@@ -141,7 +141,7 @@
   "2052": {
    "name": "CoachInformations",
    "handler": "coach_info",
-   "note": "sj_1.b(bb, 4014) bitmask blob — server impl handshake/coach.go:238-291"
+   "note": "sj_1.b(bb, 4014) bitmask blob \u2014 server impl handshake/coach.go:238-291"
   },
   "4600": {
    "name": "EnterInstance",
@@ -263,12 +263,12 @@
   "6006": {
    "name": "FighterInformationList",
    "handler": "fighter_list",
-   "note": "i64 lead + u8 count + {i64 id, u16 len, et_2 blob} — not a part-table"
+   "note": "i64 lead + u8 count + {i64 id, u16 len, et_2 blob} \u2014 not a part-table"
   },
   "200": {
    "name": "InteractiveElementSpawn",
    "handler": "element_spawn",
-   "note": "[i16 n]{i64 id, u16 len, part-table} — RU part carries x/y/z/desc"
+   "note": "[i16 n]{i64 id, u16 len, part-table} \u2014 RU part carries x/y/z/desc"
   },
   "204": {
    "name": "InteractiveElementUpdate",
@@ -309,22 +309,22 @@
   "510": {
    "name": "GuildRecord",
    "handler": "guild_record",
-   "note": "[u16 len]{i64 gid,str8 name,2x u16,2x i32,u16 demon,i32,u8 nRanks,[u16 len]{u16 lvl,i32 rights,str8 name}} — server guild_packets.go buildGuildRecord"
+   "note": "[u16 len]{i64 gid,str8 name,2x u16,2x i32,u16 demon,i32,u8 nRanks,[u16 len]{u16 lvl,i32 rights,str8 name}} \u2014 server guild_packets.go buildGuildRecord"
   },
   "512": {
    "name": "GuildMemberList",
    "handler": "guild_member_list",
-   "note": "[i32 n]{i32 len, ca_0 part-table} — part 0 = member row"
+   "note": "[i32 n]{i32 len, ca_0 part-table} \u2014 part 0 = member row"
   },
   "552": {
    "name": "GuildMembership",
    "handler": "guild_member_list",
-   "note": "same container as 512 — part 2 = own membership blob"
+   "note": "same container as 512 \u2014 part 2 = own membership blob"
   },
   "554": {
    "name": "GuildTags",
    "handler": "guild_member_list",
-   "note": "same container as 512 — part 1 = other coaches' clan tags"
+   "note": "same container as 512 \u2014 part 1 = other coaches' clan tags"
   },
   "556": {
    "name": "GuildMemberGone",
@@ -351,7 +351,7 @@
   "8000": {
    "name": "FightCreation",
    "handler": "fight_creation",
-   "note": "aat_2 giant presentation blob — see PROTOCOL-messages.md"
+   "note": "aat_2 giant presentation blob \u2014 see PROTOCOL-messages.md"
   },
   "8121": {
    "name": "FightEffectTimer",
@@ -394,7 +394,7 @@
      "t": "str_u8"
     }
    ],
-   "note": "missing from CSVs — cg_0.java:17-31; arch is (jr ? 8 : 2), defaulting 2"
+   "note": "missing from CSVs \u2014 cg_0.java:17-31; arch is (jr ? 8 : 2), defaulting 2"
   },
   "505": {
    "name": "GuildLeaveOrKick",
@@ -410,7 +410,7 @@
      "t": "i64"
     }
    ],
-   "note": "missing from CSVs — nP.java:12-20; arch (jr ? 8 : 2), defaulting 2"
+   "note": "missing from CSVs \u2014 nP.java:12-20; arch (jr ? 8 : 2), defaulting 2"
   },
   "515": {
    "name": "GuildField515",
@@ -426,7 +426,7 @@
      "t": "i64"
     }
    ],
-   "note": "sh_0 variant (arch 8); abn_2 subclass adds i16 + arch 2 — disambiguate later"
+   "note": "sh_0 variant (arch 8); abn_2 subclass adds i16 + arch 2 \u2014 disambiguate later"
   },
   "5105": {
    "name": "ExchangeAddCard",
@@ -470,17 +470,17 @@
   "4102": {
    "name": "ActorAppearMessage",
    "handler": "actor_appear",
-   "note": "[u8 n]{i64 id,i32 x,i32 y,i16 z,u8 dir} — inserts fight actors (coaches real ids at pedestals, fighters wire ids at start cells); fight_packets.go buildActorAppear"
+   "note": "[u8 n]{i64 id,i32 x,i32 y,i16 z,u8 dir} \u2014 inserts fight actors (coaches real ids at pedestals, fighters wire ids at start cells); fight_packets.go buildActorAppear"
   },
   "8022": {
    "name": "MoveToFreePlacementMessage",
    "handler": "placement_move",
-   "note": "[i64 fighterId][i32 x][i32 y][i16 z] — placement broadcast"
+   "note": "[i64 fighterId][i32 x][i32 y][i16 z] \u2014 placement broadcast"
   },
   "8120": {
    "name": "RunningEffectActionMessage",
    "handler": "running_effect",
-   "note": "[i32 uid][i32 -1][i8 now][i8 trig][i32 elapsed][i32 effectId][u16 len][BinarSerial] — blob parts: 0=[i64 caster][i64 target][i32 genEff][i32 x][i32 y][u16 z][i32 value], 1=caster i64, 2=target i64, 4=[i32 srcType][i64 spellId]; fight_combat_packets.go buildRunningEffect"
+   "note": "[i32 uid][i32 -1][i8 now][i8 trig][i32 elapsed][i32 effectId][u16 len][BinarSerial] \u2014 blob parts: 0=[i64 caster][i64 target][i32 genEff][i32 x][i32 y][u16 z][i32 value], 1=caster i64, 2=target i64, 4=[i32 srcType][i64 spellId]; fight_combat_packets.go buildRunningEffect"
   },
   "5401": {
    "name": "ShopCatalog",
@@ -581,12 +581,12 @@
   "15001": {
    "name": "MailList",
    "handler": "mail_list",
-   "note": "[i16 n]{mail record} — record = header + i32-len TLV extra + trailing flags (server mail_packets.go)"
+   "note": "[i16 n]{mail record} \u2014 record = header + i32-len TLV extra + trailing flags (server mail_packets.go)"
   },
   "15003": {
    "name": "MailSendResult",
    "handler": "mail_send_result",
-   "note": "[i64 result][mail record] — >0 accepted, -2 mailbox full/unknown receiver"
+   "note": "[i64 result][mail record] \u2014 >0 accepted, -2 mailbox full/unknown receiver"
   },
   "15005": {
    "name": "MailNewNotice",
@@ -749,7 +749,7 @@
      "t": "i32"
     }
    ],
-   "note": "mD — 403 created, 404 joined, 11 bad name, 20 full, 35 not found, 40 refused"
+   "note": "mD \u2014 403 created, 404 joined, 11 bad name, 20 full, 35 not found, 40 refused"
   },
   "558": {
    "name": "GuildCreatedFeed",
@@ -763,7 +763,7 @@
      "t": "str_u8"
     }
    ],
-   "note": "ahU world announcement — coachName + guildName"
+   "note": "ahU world announcement \u2014 coachName + guildName"
   },
   "28608": {
    "name": "TournamentRegisterReply",
@@ -777,7 +777,7 @@
      "t": "i8"
     }
    ],
-   "note": "dy_0 — 0 accepted, 2 full, else refused"
+   "note": "dy_0 \u2014 0 accepted, 2 full, else refused"
   },
   "28612": {
    "name": "TournamentSearchResult",
@@ -821,7 +821,7 @@
      "t": "i8"
     }
    ],
-   "note": "dg_0 — pushed when a search period opens/closes"
+   "note": "dg_0 \u2014 pushed when a search period opens/closes"
   },
   "28614": {
    "name": "TournamentFightStarting",
@@ -855,6 +855,27 @@
     {
      "n": "forfeit",
      "t": "i8"
+    }
+   ]
+  },
+  "6025": {
+   "name": "TeamUpInvitation",
+   "fields": [
+    {
+     "n": "team",
+     "t": "str_u8"
+    },
+    {
+     "n": "inviter_name",
+     "t": "str_u8"
+    },
+    {
+     "n": "inviter",
+     "t": "i64"
+    },
+    {
+     "n": "invited",
+     "t": "i64"
     }
    ]
   }

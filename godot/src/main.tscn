@@ -86,6 +86,10 @@ disabled = true
 text = "Cancel search"
 visible = false
 
+[node name="DuoBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "2v2…"
+disabled = true
+
 [node name="RosterTitle" type="Label" parent="UI/VBox"]
 text = "Fighters:"
 mouse_filter = 2
@@ -515,3 +519,42 @@ disabled = true
 
 [node name="CloseBtn" type="Button" parent="UI/KanodoDlg/VBox/Btns"]
 text = "Close"
+
+[node name="DuoDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -80.0
+offset_right = 160.0
+offset_bottom = 80.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/DuoDlg"]
+
+[node name="Title" type="Label" parent="UI/DuoDlg/VBox"]
+horizontal_alignment = 1
+text = "Create a 2v2 team"
+
+[node name="Name" type="LineEdit" parent="UI/DuoDlg/VBox"]
+placeholder_text = "team name"
+
+[node name="Friend" type="OptionButton" parent="UI/DuoDlg/VBox"]
+
+[node name="Btns" type="HBoxContainer" parent="UI/DuoDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="CreateBtn" type="Button" parent="UI/DuoDlg/VBox/Btns"]
+text = "Invite"
+
+[node name="CancelBtn" type="Button" parent="UI/DuoDlg/VBox/Btns"]
+text = "Cancel"
+
+[node name="DuoAskDlg" type="ConfirmationDialog" parent="UI"]
+title = "2v2 invitation"
+ok_button_text = "Join"
+cancel_button_text = "Decline"
+size = Vector2i(340, 120)

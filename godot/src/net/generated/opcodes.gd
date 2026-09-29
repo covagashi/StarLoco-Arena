@@ -186,7 +186,7 @@ const OP_SAVE_TEAM_PRESET_REQUEST_MESSAGE := 6021
 const OP_DELETION_TEAM_PRESET_MESSAGE := 6022
 const OP_DELETE_TEAM_PRESET_REQUEST_MESSAGE := 6023
 const OP_MSG6024 := 6024
-const OP_MSG6025 := 6025
+const OP_TEAM_UP_INVITATION := 6025
 const OP_MSG6026 := 6026
 const OP_MSG6027 := 6027
 const OP_MSG6028 := 6028
@@ -529,7 +529,7 @@ const NAMES := {
 	6022: "DeletionTeamPresetMessage",
 	6023: "DeleteTeamPresetRequestMessage",
 	6024: "Msg6024",
-	6025: "Msg6025",
+	6025: "TeamUpInvitation",
 	6026: "Msg6026",
 	6027: "Msg6027",
 	6028: "Msg6028",

@@ -188,7 +188,7 @@ const DEFS := {
 	6022: {"name": "DeletionTeamPresetMessage", "dir": "S2C", "fields": [{"n": "f0", "t": "i8"}, {"n": "f1", "t": "i16"}]},
 	6023: {"name": "DeleteTeamPresetRequestMessage", "dir": "C2S", "fields": [{"n": "f0", "t": "i64"}, {"n": "f1", "t": "i16"}, {"n": "f2", "t": "i16"}]},
 	6024: {"name": "Msg6024", "dir": "C2S", "handler": "unresolved"},
-	6025: {"name": "Msg6025", "dir": "S2C", "fields": [{"n": "f0", "t": "i8"}, {"n": "f1", "t": "i8"}, {"n": "f2", "t": "i64"}, {"n": "f3", "t": "i64"}]},
+	6025: {"name": "TeamUpInvitation", "dir": "S2C", "fields": [{"n": "team", "t": "str_u8"}, {"n": "inviter_name", "t": "str_u8"}, {"n": "inviter", "t": "i64"}, {"n": "invited", "t": "i64"}]},
 	6026: {"name": "Msg6026", "dir": "C2S", "handler": "unresolved"},
 	6027: {"name": "Msg6027", "dir": "S2C", "fields": []},
 	6028: {"name": "Msg6028", "dir": "S2C", "fields": []},

@@ -59,6 +59,12 @@ const OP_SEARCH_CANCEL := 23101          # [i64 coachId][i16 teamId]
 const OP_SEARCH_CANCEL_RESULT := 23102   # [u8 accepted]
 const OP_FIGHT_STARTING := 23106         # empty — "Lancement du combat"
 const OP_SEARCH_ERROR := 23108           # [u8 code]
+const OP_DUO_REQUEST := 6024             # C2S [str8 team][i64 me][i64 mate]
+const OP_DUO_INVITATION := 6025          # S2C [str8 team][str8 who][i64][i64]
+const OP_DUO_ANSWER := 6026              # C2S [i8 ok][str8 team][i64][i64][i16]
+const OP_DUO_REFUSED := 6027             # S2C empty
+const OP_DUO_ACCEPTED := 6028            # S2C empty — duo formed
+const OP_DUO_GONE := 6029                # S2C partner left
 const OP_CHALLENGE_INVITE := 26301       # [i64 target][u8 evo]
 const OP_CHALLENGE_INVITATION := 26300   # [i64 handle][u8 out][u8 evo][u8 n]{str32}
 const OP_CHALLENGE_ACCEPT := 26305       # [i64 handle][u8 evo]
@@ -163,6 +169,12 @@ func _ready() -> void:
 	login_btn.pressed.connect(_on_login_pressed)
 	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
 	$UI/VBox/AuthRow/FightBtn.pressed.connect(_on_fight_pressed)
+	$UI/VBox/AuthRow/DuoBtn.pressed.connect(_open_duo_dlg)
+	$UI/DuoDlg/VBox/Btns/CreateBtn.pressed.connect(_on_duo_create)
+	$UI/DuoDlg/VBox/Btns/CancelBtn.pressed.connect(
+		func(): $UI/DuoDlg.visible = false)
+	$UI/DuoAskDlg.confirmed.connect(_answer_duo.bind(true))
+	$UI/DuoAskDlg.canceled.connect(_answer_duo.bind(false))
 	$UI/VBox/AuthRow/CancelSearchBtn.pressed.connect(_on_cancel_search)
 	log.bubble.connect(world.chat_bubble)
 	log.emote.connect(world.emote)
@@ -311,6 +323,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line("[color=green]instance ready — in world[/color]")
 			$UI/VBox/AuthRow/PracticeBtn.disabled = false
 			$UI/VBox/AuthRow/FightBtn.disabled = false
+			$UI/VBox/AuthRow/DuoBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
 		OP_ACTOR_SPAWN:
 			_spawn_world_actors(payload)
@@ -410,6 +423,23 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_searching = false
 				$UI/VBox/AuthRow/CancelSearchBtn.visible = false
 			_log_line("[color=red]search error %d[/color]" % code)
+		OP_DUO_INVITATION:
+			# 6025 [str8 team][str8 inviterName][i64 inviter][i64 invited]
+			var team := payload.get_str("u8")
+			var who := payload.get_str("u8")
+			_duo_pending = {"team": team,
+				"inviter": int(payload.get_i64()),
+				"invited": int(payload.get_i64())}
+			$UI/DuoAskDlg.dialog_text = \
+				"%s invites you to 2v2 team '%s'." % [who, team]
+			$UI/DuoAskDlg.popup_centered()
+		OP_DUO_REFUSED:
+			_log_line("[color=red]2v2 refused or unavailable[/color]")
+		OP_DUO_ACCEPTED:
+			_log_line("[color=green]2v2 team formed — both press "
+				+ "Combattre[/color]")
+		OP_DUO_GONE:
+			_log_line("[i]your 2v2 partner left[/i]")
 		OP_CHALLENGE_INVITATION:
 			# 26300 [i64 handle][u8 outgoing][u8 evo][u8 n]{[i32 len][name]}
 			_challenge_handle = int(payload.get_i64())
@@ -868,11 +898,71 @@ func _on_practice_pressed() -> void:
 func _on_fight_pressed() -> void:
 	if _searching:
 		return
+	# The first i64 is the CLAIMED partner for duo presets (coaches[0] =
+	# ally, per the 6030 coach list order); solo sends the own coach id.
+	var partner := State.my_coach_id
+	var pid := _selected_preset_id()
+	for p in State.presets:
+		if int(p.id) == pid and p.get("coaches", []).size() >= 1:
+			partner = int(p.coaches[0])
 	var w := WireWriter.new()
-	w.put_i64(State.my_coach_id)
-	w.put_i16(_selected_preset_id())
+	w.put_i64(partner)
+	w.put_i16(pid)
 	Session.send(OP_COMBATTRE, w.raw(), 2)
-	_log_line("combattre sent — team %d" % _selected_preset_id())
+	_log_line("combattre sent — team %d%s" % [pid,
+		" (2v2 with ally %d)" % partner if partner != State.my_coach_id
+		else ""])
+
+
+## --- 2v2 duo (6024-6029) ------------------------------------------------------
+## "2v2…" opens the invite dialog (team name + friend pick, retail's
+## team2vs2NameDialog): 6024 [str8 team][i64 me][i64 mate]. The invited side
+## gets 6025 → DuoAskDlg → 6026. On 6028 both clients own a -6 duo preset
+## (pushed via 6030) whose coaches[0] is the ally — Combattre then sends it
+## as the claimed partner in 23103's first i64.
+func _open_duo_dlg() -> void:
+	var opt: OptionButton = $UI/DuoDlg/VBox/Friend
+	opt.clear()
+	for fr in State.friends:
+		var fid := int(fr.get("id", -1))
+		if fid <= 0:
+			continue   # offline/friendless rows carry id -1
+		opt.add_item(fr.get("name", "?"))
+		opt.set_item_metadata(opt.item_count - 1, fid)
+	if opt.item_count == 0:
+		_log_line("[i]no friends — /friend &lt;name&gt; first[/i]")
+		return
+	opt.select(0)
+	$UI/DuoDlg.visible = true
+
+
+func _on_duo_create() -> void:
+	var opt: OptionButton = $UI/DuoDlg/VBox/Friend
+	if opt.selected < 0:
+		return
+	var tname: String = $UI/DuoDlg/VBox/Name.text.strip_edges()
+	if tname.is_empty():
+		tname = "duo"
+	var w := WireWriter.new()
+	w.put_str(tname, "u8")
+	w.put_i64(State.my_coach_id)
+	w.put_i64(int(opt.get_item_metadata(opt.selected)))
+	Session.send(OP_DUO_REQUEST, w.raw(), 2)
+	$UI/DuoDlg.visible = false
+	_log_line("2v2 invitation sent")
+
+
+func _answer_duo(accept: bool) -> void:
+	if _duo_pending.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_u8(1 if accept else 0)
+	w.put_str(String(_duo_pending.team), "u8")
+	w.put_i64(int(_duo_pending.inviter))
+	w.put_i64(int(_duo_pending.invited))
+	w.put_i16(0 if accept else 2)   # reason 2 = refused/busy (client's own)
+	Session.send(OP_DUO_ANSWER, w.raw(), 2)
+	_duo_pending = {}
 
 
 ## 23101 [i64 coachId][i16 teamId] — the classic overlay's Cancel.
@@ -1161,6 +1251,7 @@ var _ex := {}                 # active exchange {id, my_side, other_name,
                               # staged:{0:{card:qty},1:{}}, ready:{0,1}}
 var _kanodo_fid := -1         # fighter id of the open Kanodo board
 var _kanodo_pick := {}        # sphere node selected on the board
+var _duo_pending := {}        # incoming 6025 {team, inviter, invited}
 
 
 func _use_element(id: int) -> void:
