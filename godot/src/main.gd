@@ -75,6 +75,18 @@ const OP_SHOP_RESULT := 5403             # [u8 result][u8 n]{u8, i32}
 const OP_SHOP_BUY := 5450                # C2S [i32 shopId][i16 n]{i32 cardId}
 const OP_SHOP_BARTER := 5400             # C2S [i32 shop][i16 n]{i32}[i16 m]{i32,u16}
 const OP_ZAAP := 4512                    # C2S [i32 cardTemplateId]
+const OP_TEAM_TEST := 26330              # C2S [i32 challengeOrType][i16 99|team]
+const OP_FUSION_REQ := 5490              # C2S [i32 n]{i32 ids… target last}
+const OP_FUSION_RESULT := 5491           # [u8 res][i32 got][i32 miss][i32 back]
+const OP_USE_ITEM := 22099               # C2S [i64 fighterId][i32 cardId]
+const OP_FIREWORK := 22095               # C2S [i32 card][i32 x][i32 y][i64 el]
+const OP_FIREWORK_SHOW := 22094          # [i32 card][i32 x][i32 y][i32 z][i64 el]
+const OP_DEMON_LADDER := 27510           # C2S [i16 demonId][i16 flag][i32 start]
+const OP_DEMON_LADDER_RES := 27511       # ladder rows — codec_overrides
+const OP_TOURN_CAL := 17002              # C2S empty
+const OP_TOURN_CALENDAR := 17003         # calendar events — codec_overrides
+const OP_TOURN_LIST := 28601             # C2S empty
+const OP_TOURN_LIST_RES := 28602         # tournament rows — codec_overrides
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
 const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
 const OP_FRIEND_ADDED := 3156            # [u8 name][u8 note][i64 id]…
@@ -160,6 +172,14 @@ func _ready() -> void:
 	$UI/BarterDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/BarterDlg.visible = false)
 	$UI/BarterDlg/VBox/Btns/TradeBtn.pressed.connect(_on_barter_trade)
+	$UI/ElementDlg/VBox/Btns/CloseBtn.pressed.connect(
+		func(): $UI/ElementDlg.visible = false)
+	$UI/ElementDlg/VBox/Btns/ActBtn.pressed.connect(_on_element_act)
+	$UI/ElementDlg/VBox/Btns/AltBtn.pressed.connect(_on_element_alt)
+	$UI/ElementDlg/VBox/Scroll/List.multi_selected.connect(
+		func(_i, _s): _on_fusion_inputs())
+	$UI/ElementDlg/VBox/Scroll2/List2.item_selected.connect(
+		func(_i): _on_fusion_inputs())
 
 
 func _exit_tree() -> void:
@@ -422,6 +442,51 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				0: _log_line("[color=green]shop: deal done[/color]")
 				1: _log_line("[color=red]shop: not enough tokens[/color]")
 				_: _log_line("[color=red]shop: refused (code %d)[/color]" % res)
+		OP_FUSION_RESULT:
+			var d := Codec.decode(opcode, payload)
+			if int(d.get("result", 0)) != 0:
+				_log_line("[color=red]fusion: request refused[/color]")
+			elif int(d.get("obtained", 0)) > 0:
+				_log_line("[color=green]fusion: got %s![/color]"
+					% Cards.name_of(int(d.obtained)))
+			elif int(d.get("not_obtained", 0)) > 0:
+				_log_line("[color=red]fusion: missed %s[/color]"
+					% Cards.name_of(int(d.not_obtained)))
+			elif int(d.get("recovered", 0)) > 0:
+				_log_line("fusion: leftovers returned (%s)"
+					% Cards.name_of(int(d.recovered)))
+			else:
+				_log_line("[color=red]fusion failed — cards consumed[/color]")
+		OP_DEMON_LADDER_RES:
+			var d := Codec.decode(opcode, payload)
+			if $UI/ElementDlg.visible and _elem_kind == 11:
+				var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+				list.clear()
+				for r0 in d.get("rows", []):
+					list.add_item("%s  — %d pts" % [
+						str(r0.get("name", "?")), int(r0.get("quarterly", 0))])
+				$UI/ElementDlg/VBox/Hint.text = \
+					"demon %d — %d clan(s), your affiliation: %d" % [
+						int(d.get("demon", -1)), d.get("rows", []).size(),
+						int(d.get("affiliation", 0))]
+			else:
+				_log_line("demon ladder: %d row(s)" % d.get("rows", []).size())
+		OP_TOURN_CALENDAR, OP_TOURN_LIST_RES:
+			var d := Codec.decode(opcode, payload)
+			var rows: Array = d.get("events", d.get("tournaments", []))
+			if $UI/ElementDlg.visible and _elem_kind == 13:
+				var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+				for r0 in rows:
+					list.add_item(str(r0.get("name", "?")))
+				$UI/ElementDlg/VBox/Hint.text = "%d tournament(s)" % [
+					$UI/ElementDlg/VBox/Scroll/List.item_count]
+			else:
+				_log_line("tournaments: %d" % rows.size())
+		OP_FIREWORK_SHOW:
+			var d := Codec.decode(opcode, payload)
+			_log_line("firework! %s at (%d,%d)" % [
+				Cards.name_of(int(d.get("card", 0))),
+				int(d.get("x", 0)), int(d.get("y", 0))])
 		OP_FRIEND_LIST:
 			var d := Codec.decode(opcode, payload)
 			State.friends = d.get("friends", [])
@@ -471,7 +536,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i](ignored) %s went offline[/i]" % d.name)
 		OP_FIGHT_ERROR:
-			_log_line("[color=red]fight creation refused[/color]")
+			var d := Codec.decode(opcode, payload)
+			_log_line("[color=red]fight refused (code %d)[/color]"
+				% int(d.get("f1", -1)))
 		OP_PONG:
 			pass  # keepalive reply
 		_:
@@ -838,6 +905,10 @@ func _log_line(s: String) -> void:
 ## Click on a world marker → INTERACTIVE_ELEMENT_ACTION 201 [i64 id][i16 ordinal]
 ## (arch 3). The server only answers for kinds with server-side follow-up
 ## (Card Master pushes the 5401 catalogue); the rest open client-local dialogs.
+var _elem_id := -1            # element the ElementDlg is showing
+var _elem_kind := -1          # env type of that element
+
+
 func _use_element(id: int) -> void:
 	var e: Dictionary = world.element_info(id)
 	var kind := int(e.get("kind", -1))
@@ -846,13 +917,269 @@ func _use_element(id: int) -> void:
 	w.put_i16(0)   # action ordinal — first action of the element's list
 	Session.send(OP_ELEMENT_ACTION, w.raw(), 3)
 	var label := Elements.kind_name(kind)
+	_elem_id = id
+	_elem_kind = kind
 	match kind:
-		4:   # Zaap — local dialog of owned Zaap cards (type 20) → 4512
-			_open_zaap()
 		1:   # Card Master — server pushes the 5401 catalogue
 			_log_line("%s — opening shop…" % label)
-		_:
-			_log_line("%s — dialog not implemented yet" % label)
+		4:   # Zaap — local dialog of owned Zaap cards (type 20) → 4512
+			_open_zaap()
+		2:   # Mailbox — contents are server-driven and unimplemented upstream
+			_element_text("Mailbox", "No letters.")
+		10:  # Graveyard — dead/interred fighters + resurrection cards
+			_open_graveyard()
+		14:  # Fusion altar — feed same-set cards at a target → 5490
+			_open_fusion()
+		3, 7: # Challenge / Demon challenge — accept bubble → 26330
+			_open_challenge_bubble(e)
+		5:   # Breed Master — recruit text; the "test" button runs 26330 too
+			_open_challenge_bubble(e)
+		11:  # Demon totem — ladder page requested with 27510, shown on 27511
+			_open_demon_totem(e)
+		13:  # Tournament totem — calendar (17002) + list (28601)
+			_open_tournament_totem()
+		12:  # Firework launcher — pick a card → 22095 → 22094 echo
+			_open_firework(e)
+		_:   # Demons (6/9), NPC talkers (15) — local text bubble
+			_element_text(label, "…")
+
+
+## Generic element dialog: title + hint + a list + two optional action
+## buttons. _elem_kind decides what ActBtn/AltBtn do.
+func _element_text(title: String, hint: String) -> void:
+	$UI/ElementDlg/VBox/Title.text = title
+	$UI/ElementDlg/VBox/Hint.text = hint
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	list.clear()
+	list.select_mode = ItemList.SELECT_SINGLE
+	$UI/ElementDlg/VBox/Scroll2.visible = false
+	$UI/ElementDlg/VBox/Btns/ActBtn.visible = false
+	$UI/ElementDlg/VBox/Btns/AltBtn.visible = false
+	$UI/ElementDlg.visible = true
+
+
+## desc is the element's ";" descriptor — decode the numeric fields.
+func _desc_fields(desc: String) -> Array:
+	var out := []
+	for f in desc.split(";"):
+		out.append(int(f) if f.is_valid_int() else -1)
+	return out
+
+
+## Graveyard: dead (2) / interred (3) fighters from the roster, plus the owned
+## resurrection cards (type with a resurrect% action). Pick a fighter, Act =
+## 22099 [i64 fighterId][i32 cardId] spending the first owned revive card.
+func _open_graveyard() -> void:
+	_element_text("Graveyard", "Dead fighters:")
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	var dead := 0
+	for f in State.roster:
+		var st := int(f.get("state", 0))
+		if st == 2 or st == 3:
+			dead += 1
+			list.add_item("%s  (breed %d, %s)" % [
+				f.get("name", "?"), int(f.get("breed", 0)),
+				"interred" if st == 3 else "dead"])
+			list.set_item_metadata(list.item_count - 1, int(f.get("id", -1)))
+	if dead == 0:
+		$UI/ElementDlg/VBox/Hint.text = "No dead fighters."
+		return
+	var revive := -1
+	for cid in State.inventory:
+		if int(Cards.meta(int(cid)).get("resurrect", 0)) > 0:
+			revive = int(cid)
+			break
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	if revive < 0:
+		$UI/ElementDlg/VBox/Hint.text += "  (no resurrection card owned)"
+	else:
+		act.text = "Resurrect (%s)" % Cards.name_of(revive)
+		act.disabled = true
+		act.visible = true
+		list.item_selected.connect(
+			func(_i): act.disabled = false, CONNECT_ONE_SHOT)
+
+
+## Fusion altar: multi-select inventory cards as inputs (≥2 of one set), pick
+## the target from List2 (every template in the inputs' set), Fuse → 5490.
+func _open_fusion() -> void:
+	_element_text("Fusion altar", "")
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	list.select_mode = ItemList.SELECT_MULTI
+	for cid in State.inventory:
+		var m := Cards.meta(int(cid))
+		if not m.get("tradable", false):
+			continue
+		list.add_item("%s  ×%d" % [
+			Cards.name_of(int(cid)), int(State.inventory[cid])])
+		list.set_item_metadata(list.item_count - 1, int(cid))
+	$UI/ElementDlg/VBox/Scroll2.visible = true
+	$UI/ElementDlg/VBox/Btns/ActBtn.visible = true
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	act.text = "Fuse"
+	act.disabled = true
+	_on_fusion_inputs()
+
+
+## Recompute the fusion target list + button state from the input selection.
+func _on_fusion_inputs() -> void:
+	if _elem_kind != 14:
+		return
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
+	var inputs := []
+	var set_id := -1
+	var mixed := false
+	for idx in list.get_selected_items():
+		var cid := int(list.get_item_metadata(idx))
+		inputs.append(cid)
+		var s := int(Cards.meta(cid).get("set", 0))
+		if set_id == -1:
+			set_id = s
+		elif s != set_id:
+			mixed = true
+	list2.clear()
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	act.disabled = true
+	if inputs.size() < 2:
+		$UI/ElementDlg/VBox/Hint.text = "Pick 2+ cards of one set to feed…"
+		return
+	if mixed or set_id <= 0:
+		$UI/ElementDlg/VBox/Hint.text = "Inputs must share a card set."
+		return
+	# Every template of the set is a legal target (need not be owned).
+	for cid in Cards.all_ids():
+		if int(Cards.meta(cid).get("set", 0)) == set_id:
+			list2.add_item("%s  (value %d)" % [
+				Cards.name_of(cid), Cards.value_of(cid)])
+			list2.set_item_metadata(list2.item_count - 1, cid)
+	$UI/ElementDlg/VBox/Hint.text = "Now pick the card to fuse toward…"
+
+
+## Challenge bubble (env 3/7 desc idx2 = challengeId; breed master idx4):
+## Accept → 26330 [i32 challengeId][i16 99] (arch 2 — challengeAcceptBreed).
+var _bubble_challenge := -1
+
+func _open_challenge_bubble(e: Dictionary) -> void:
+	var fields := _desc_fields(str(e.get("desc", "")))
+	# Demon challenge & plain challenge carry it at index 2; the Breed Master
+	# layout is name;txt;txt;breed;challenge → index 4.
+	_bubble_challenge = int(fields[4]) if _elem_kind == 5 \
+		and fields.size() > 4 else (int(fields[2]) if fields.size() > 2 else -1)
+	var title := Elements.kind_name(_elem_kind)
+	if _elem_kind == 5:
+		title = "Breed Master — test fight"
+	_element_text(title, "Challenge #%d — accept?"
+		% _bubble_challenge)
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	act.text = "Accept"
+	act.visible = true
+	act.disabled = _bubble_challenge < 0
+	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+	alt.text = "Refuse"
+	alt.visible = true
+
+
+## Demon totem → 27510 [i16 demon][i16 flag][i32 startRank]; desc = demon id.
+## The dialog fills in when 27511 lands (handled in _on_message).
+func _open_demon_totem(e: Dictionary) -> void:
+	var fields := _desc_fields(str(e.get("desc", "")))
+	var demon := int(fields[0]) if fields.size() > 0 else -1
+	_element_text("Demon totem %d" % demon, "Requesting ladder…")
+	var w := WireWriter.new()
+	w.put_i16(demon)
+	w.put_i16(0)
+	w.put_i32(0)
+	Session.send(OP_DEMON_LADDER, w.raw(), 2)
+
+
+## Tournament totem → 17002 (calendar) + 28601 (list), both empty, arch 3/2.
+func _open_tournament_totem() -> void:
+	_element_text("Tournament totem", "Requesting tournaments…")
+	Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
+	Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
+
+
+## Firework launcher — pick any owned card; launch → 22095 [i32 card][i32 x]
+## [i32 y][i64 elementId]; the server echoes 22094 for everyone nearby.
+func _open_firework(e: Dictionary) -> void:
+	_element_text("Fireworks", "Pick a card to launch:")
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	for cid in State.inventory:
+		list.add_item("%s  ×%d" % [
+			Cards.name_of(int(cid)), int(State.inventory[cid])])
+		list.set_item_metadata(list.item_count - 1, int(cid))
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	act.text = "Launch"
+	act.visible = true
+	act.disabled = true
+	list.item_selected.connect(
+		func(_i): act.disabled = false, CONNECT_ONE_SHOT)
+
+
+## ElementDlg primary button — dispatched on the element kind being shown.
+func _on_element_act() -> void:
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	match _elem_kind:
+		10:  # graveyard resurrect
+			var sel := list.get_selected_items()
+			if sel.is_empty():
+				return
+			var revive := -1
+			for cid in State.inventory:
+				if int(Cards.meta(int(cid)).get("resurrect", 0)) > 0:
+					revive = int(cid)
+					break
+			if revive < 0:
+				return
+			var w := WireWriter.new()
+			w.put_i64(int(list.get_item_metadata(sel[0])))
+			w.put_i32(revive)
+			Session.send(OP_USE_ITEM, w.raw(), 3)
+			$UI/ElementDlg.visible = false
+			_log_line("resurrect card used: %s" % Cards.name_of(revive))
+		14:  # fusion — inputs + the List2 target LAST (server reads it so)
+			var inputs := []
+			for idx in list.get_selected_items():
+				inputs.append(int(list.get_item_metadata(idx)))
+			var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
+			var sel2 := list2.get_selected_items()
+			if inputs.size() < 2 or sel2.is_empty():
+				return
+			var w := WireWriter.new()
+			w.put_i32(inputs.size() + 1)
+			for cid in inputs:
+				w.put_i32(cid)
+			w.put_i32(int(list2.get_item_metadata(sel2[0])))
+			Session.send(OP_FUSION_REQ, w.raw(), 3)
+			$UI/ElementDlg.visible = false
+			_log_line("fusion sent: %d cards → %s" % [inputs.size(),
+				Cards.name_of(int(list2.get_item_metadata(sel2[0])))])
+		3, 7, 5:  # challenge accepted
+			var w := WireWriter.new()
+			w.put_i32(_bubble_challenge)
+			w.put_u16(99)
+			Session.send(OP_TEAM_TEST, w.raw(), 2)
+			$UI/ElementDlg.visible = false
+			_log_line("challenge %d accepted" % _bubble_challenge)
+		12:  # firework
+			var sel := list.get_selected_items()
+			if sel.is_empty():
+				return
+			var e: Dictionary = world.element_info(_elem_id)
+			var pos: Vector3i = e.get("pos", Vector3i.ZERO)
+			var w := WireWriter.new()
+			w.put_i32(int(list.get_item_metadata(sel[0])))
+			w.put_i32(pos.x)
+			w.put_i32(pos.y)
+			w.put_i64(_elem_id)
+			Session.send(OP_FIREWORK, w.raw(), 3)
+			$UI/ElementDlg.visible = false
+
+
+func _on_element_alt() -> void:
+	# "Refuse" / secondary — just dismisses the bubble for now.
+	$UI/ElementDlg.visible = false
 
 
 ## Zaap dialog: reuse the shop panel in "teleport" mode — the stocked list is

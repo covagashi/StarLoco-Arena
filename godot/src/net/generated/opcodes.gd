@@ -171,7 +171,7 @@ const OP_SHOP_RESULT := 5403
 const OP_MSG5450 := 5450
 const OP_MSG5470 := 5470
 const OP_MSG5490 := 5490
-const OP_MSG5491 := 5491
+const OP_FUSION_RESULT := 5491
 const OP_FIGHTER_CREATE_RESULT := 6000
 const OP_FIGHTER_CREATE := 6001
 const OP_FIGHTER_DELETE_RESULT := 6002
@@ -239,7 +239,7 @@ const OP_MSG15007 := 15007
 const OP_MSG15506 := 15506
 const OP_MSG15507 := 15507
 const OP_MSG17002 := 17002
-const OP_MSG17003 := 17003
+const OP_TOURNAMENT_CALENDAR := 17003
 const OP_MSG17004 := 17004
 const OP_MSG17005 := 17005
 const OP_MSG17006 := 17006
@@ -252,7 +252,7 @@ const OP_MSG22003 := 22003
 const OP_MSG22004 := 22004
 const OP_MSG22092 := 22092
 const OP_MSG22093 := 22093
-const OP_MSG22094 := 22094
+const OP_FIREWORK_SHOW := 22094
 const OP_MSG22095 := 22095
 const OP_MSG22097 := 22097
 const OP_MSG22099 := 22099
@@ -303,7 +303,7 @@ const OP_MSG27507 := 27507
 const OP_MSG27508 := 27508
 const OP_MSG27509 := 27509
 const OP_MSG27510 := 27510
-const OP_MSG27511 := 27511
+const OP_DEMON_LADDER := 27511
 const OP_MSG27512 := 27512
 const OP_MSG27513 := 27513
 const OP_MSG27514 := 27514
@@ -316,7 +316,7 @@ const OP_MSG27529 := 27529
 const OP_MSG27551 := 27551
 const OP_MSG27552 := 27552
 const OP_MSG28601 := 28601
-const OP_MSG28602 := 28602
+const OP_TOURNAMENT_LIST := 28602
 const OP_MSG28603 := 28603
 const OP_MSG28604 := 28604
 const OP_MSG28605 := 28605
@@ -514,7 +514,7 @@ const NAMES := {
 	5450: "Msg5450",
 	5470: "Msg5470",
 	5490: "Msg5490",
-	5491: "Msg5491",
+	5491: "FusionResult",
 	6000: "FighterCreateResult",
 	6001: "FighterCreate",
 	6002: "FighterDeleteResult",
@@ -582,7 +582,7 @@ const NAMES := {
 	15506: "Msg15506",
 	15507: "Msg15507",
 	17002: "Msg17002",
-	17003: "Msg17003",
+	17003: "TournamentCalendar",
 	17004: "Msg17004",
 	17005: "Msg17005",
 	17006: "Msg17006",
@@ -595,7 +595,7 @@ const NAMES := {
 	22004: "Msg22004",
 	22092: "Msg22092",
 	22093: "Msg22093",
-	22094: "Msg22094",
+	22094: "FireworkShow",
 	22095: "Msg22095",
 	22097: "Msg22097",
 	22099: "Msg22099",
@@ -646,7 +646,7 @@ const NAMES := {
 	27508: "Msg27508",
 	27509: "Msg27509",
 	27510: "Msg27510",
-	27511: "Msg27511",
+	27511: "DemonLadder",
 	27512: "Msg27512",
 	27513: "Msg27513",
 	27514: "Msg27514",
@@ -659,7 +659,7 @@ const NAMES := {
 	27551: "Msg27551",
 	27552: "Msg27552",
 	28601: "Msg28601",
-	28602: "Msg28602",
+	28602: "TournamentList",
 	28603: "Msg28603",
 	28604: "Msg28604",
 	28605: "Msg28605",

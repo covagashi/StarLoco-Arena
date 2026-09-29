@@ -33,6 +33,7 @@ def main() -> None:
             "price": c.get("price") or {},
             "unique": c.get("unique", False),
             "tradable": c.get("tradable", True),
+            "resurrect": c.get("resurrect", 0),
         }
     json.dump(out, open(out_path, "w"))
     print("wrote", out_path, "cards:", len(out))

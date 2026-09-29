@@ -14,12 +14,13 @@ import (
 )
 
 type rec struct {
-	Type     int32           `json:"type"`
-	Set      int32           `json:"set"`
-	Value    int32           `json:"value"`
-	Price    map[uint8]int32 `json:"price"`
-	Unique   bool            `json:"unique,omitempty"`
-	Tradable bool            `json:"tradable"` // !Bound && !Undestructible
+	Type      int32           `json:"type"`
+	Set       int32           `json:"set"`
+	Value     int32           `json:"value"`
+	Price     map[uint8]int32 `json:"price"`
+	Unique    bool            `json:"unique,omitempty"`
+	Tradable  bool            `json:"tradable"`            // !Bound && !Undestructible
+	Resurrect int32           `json:"resurrect,omitempty"` // % chance (action 13)
 }
 
 func main() {
@@ -36,9 +37,10 @@ func main() {
 	for id, c := range cards.All() {
 		res[fmt.Sprint(id)] = rec{
 			Type: c.Type, Set: c.CardSet, Value: c.Value,
-			Price:    c.Price,
-			Unique:   c.IsUnique,
-			Tradable: !c.Bound && !c.Undestructible,
+			Price:     c.Price,
+			Unique:    c.IsUnique,
+			Tradable:  !c.Bound && !c.Undestructible,
+			Resurrect: c.ResurrectPercent,
 		}
 	}
 	b, _ := json.Marshal(res)

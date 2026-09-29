@@ -151,6 +151,24 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 		3150:
 			var d := Codec.decode(op, payload)
 			print("[smoke] FRIEND offline:", d.name)
+		27511:
+			var d := Codec.decode(op, payload)
+			print("[smoke] DEMON LADDER demon=", d.get("demon"),
+				" rows=", d.get("rows", []).size(),
+				" affiliation=", d.get("affiliation"))
+		17003:
+			var d := Codec.decode(op, payload)
+			print("[smoke] TOURNAMENT CALENDAR events=", d.get("events", []).size(),
+				" first=", d.events[0].name if not d.events.is_empty() else "-")
+		28602:
+			var d := Codec.decode(op, payload)
+			print("[smoke] TOURNAMENT LIST n=", d.get("tournaments", []).size(),
+				" first=", d.tournaments[0].name
+					if not d.tournaments.is_empty() else "-")
+		22094:
+			var d := Codec.decode(op, payload)
+			print("[smoke] FIREWORK show card=", d.get("card"),
+				" at=", d.get("x"), ",", d.get("y"))
 
 
 func _move_and_shoot() -> void:
@@ -270,6 +288,99 @@ func _move_and_shoot() -> void:
 	# delete the preset → 6022 + 6030 refresh
 	_main._on_del_team()
 	await create_timer(1.0).timeout
+	# --- element dialogs -----------------------------------------------------
+	# Island 25: mailbox(2) @33,36 — graveyard(10) @4,45 — fusion(14) @-45,-25.
+	# Dialogs are client-local; just check they open with the right title.
+	await _click_elem(2, Vector2i(33, 36), "Mailbox")
+	await _click_elem(10, Vector2i(4, 45), "Graveyard")
+	await _click_elem(14, Vector2i(-45, -25), "Fusion altar")
+	# Zaap (at spawn 40,-20): open the teleport list, card 255 → world 37's
+	# route totémique zaap (134,45) — the main landmass, where the demon
+	# totems/challenges live (the tournament islet is zaap-only on purpose).
+	var zid := await _goto_elem(4, Vector2i(40, -20))
+	if zid >= 0:
+		_main._use_element(zid)
+		await create_timer(0.3).timeout
+		var zlist: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
+		for i in zlist.item_count:
+			if int(zlist.get_item_metadata(i)) == 255:
+				zlist.select(i)
+				break
+		_main._on_shop_buy()
+		print("[smoke] zaap teleport sent (card 255 → world 37)")
+		var t := 0
+		while int(State.current_world) != 37 and t < 20:
+			await create_timer(0.5).timeout
+			t += 1
+		print("[smoke] now in world=", State.current_world)
+		await create_timer(1.5).timeout
+		# Demon totem 76 (108,64) is in the landing AoI → 27510 → 27511.
+		await _click_elem(11, Vector2i(108, 64), "Demon totem")
+		# World 37 is an archipelago of zaap-linked islets — hop again:
+		# zaap 138 → card 254 → Demon-I islet (zaap 70 at 132,126), where the
+		# challenge element 55 spawns right away.
+		var z2 := _elem_in_view(4)
+		if z2 >= 0:
+			_main._use_element(z2)
+			await create_timer(0.3).timeout
+			var zlist2: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
+			for i in zlist2.item_count:
+				if int(zlist2.get_item_metadata(i)) == 254:
+					zlist2.select(i)
+					break
+			_main._on_shop_buy()
+			print("[smoke] zaap hop sent (card 254 → demon islet)")
+			await create_timer(2.0).timeout
+			var cid := _elem_in_view(7)
+			if cid >= 0:
+				_main._use_element(cid)
+				await create_timer(0.3).timeout
+				print("[smoke] challenge bubble: kind=", _main._elem_kind,
+					" challenge=", _main._bubble_challenge)
+				_main.get_node("UI/ElementDlg").visible = false
+			else:
+				print("[smoke] no demon challenge in AoI — SKIP")
+		# Third hop: zaap → card 256 → tournament islet (totem 119 in AoI).
+		var z3 := _elem_in_view(4)
+		if z3 >= 0:
+			_main._use_element(z3)
+			await create_timer(0.3).timeout
+			var zlist3: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
+			for i in zlist3.item_count:
+				if int(zlist3.get_item_metadata(i)) == 256:
+					zlist3.select(i)
+					break
+			_main._on_shop_buy()
+			print("[smoke] zaap hop sent (card 256 → tournament islet)")
+			await create_timer(2.0).timeout
+			await _click_elem(13, Vector2i(121, 190), "Tournament totem")
+		# Fourth hop: zaap → card 208 → world 26 → firework launcher → 22095.
+		var z4 := _elem_in_view(4)
+		if z4 >= 0:
+			_main._use_element(z4)
+			await create_timer(0.3).timeout
+			var zlist4: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
+			for i in zlist4.item_count:
+				if int(zlist4.get_item_metadata(i)) == 208:
+					zlist4.select(i)
+					break
+			_main._on_shop_buy()
+			print("[smoke] zaap hop sent (card 208 → world 26)")
+			var t26 := 0
+			while int(State.current_world) != 26 and t26 < 20:
+				await create_timer(0.5).timeout
+				t26 += 1
+			var fid := await _goto_elem(12, Vector2i(39, 2))
+			if fid >= 0:
+				_main._use_element(fid)
+				await create_timer(0.3).timeout
+				var flist: ItemList = _main.get_node(
+					"UI/ElementDlg/VBox/Scroll/List")
+				if flist.item_count > 0:
+					flist.select(0)
+					_main._on_element_act()   # Launch → 22095 → 22094 echo
+					print("[smoke] firework launch sent — expecting 22094")
+					await create_timer(1.0).timeout
 	# The dummy/headless renderer has no viewport texture — skip the capture.
 	if DisplayServer.get_name() != "headless":
 		var tex := root.get_texture()
@@ -278,3 +389,51 @@ func _move_and_shoot() -> void:
 			img.save_png("/tmp/world_live.png")
 			print("[smoke] shot -> /tmp/world_live.png")
 	quit()
+
+
+## First spawned element id of `kind`, or -1 while it's still out of the AoI.
+func _elem_in_view(kind: int) -> int:
+	for id in State.elements:
+		if int(State.elements[id].get("kind", -1)) == kind:
+			return int(id)
+	return -1
+
+
+## Walk toward `target` until an element of `kind` enters the AoI (the server
+## pushes 200 spawns as chunks refresh). Returns the element id or -1.
+func _goto_elem(kind: int, target: Vector2i) -> int:
+	var w = _main.get_node("World")
+	var eid := _elem_in_view(kind)
+	var tries := 0
+	while eid < 0 and tries < 8:
+		var cp: Vector3i = w._pos.get(State.my_coach_id, Vector3i.ZERO)
+		var path: Array = w._find_path(Vector2i(cp.x, cp.y), target) \
+			if w._pos.has(State.my_coach_id) else []
+		print("[smoke] goto kind=", kind, " try=", tries,
+			" coach=", cp, " path=", path.size(),
+			" loaded=", w._loaded, " cells=", w._cells.size())
+		w.click_to(target)
+		await create_timer(2.5).timeout
+		eid = _elem_in_view(kind)
+		tries += 1
+	return eid
+
+
+## Walk to the element if needed, click it (201 + local dialog), and report the
+## dialog title so the log shows which pane opened.
+func _click_elem(kind: int, target: Vector2i, want_title: String) -> void:
+	var eid := await _goto_elem(kind, target)
+	if eid < 0:
+		print("[smoke] element kind=", kind, " never entered AoI — SKIP")
+		return
+	_main._use_element(eid)
+	await create_timer(0.4).timeout
+	var dlg = _main.get_node("UI/ElementDlg")
+	var shop = _main.get_node("UI/ShopDlg")
+	if dlg.visible:
+		print("[smoke] ELEM kind=", kind, " id=", eid,
+			" dialog='", dlg.get_node("VBox/Title").text, "'")
+	elif shop.visible:
+		print("[smoke] ELEM kind=", kind, " id=", eid, " → shop/zaap pane")
+	else:
+		print("[smoke] ELEM kind=", kind, " id=", eid, " — no dialog!")

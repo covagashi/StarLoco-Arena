@@ -33,6 +33,9 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"ignore_online": return _ignore_online(r)
 		"name_note": return _name_note(r)
 		"name_only": return _name_only(r)
+		"demon_ladder": return _demon_ladder(r)
+		"tournament_calendar": return _tournament_calendar(r)
+		"tournament_list": return _tournament_list(r)
 		_:
 			return {"_opcode": opcode, "_raw": r.get_rest(),
 					"_handler": handler}
@@ -580,3 +583,63 @@ static func _name_note(r: WireReader) -> Dictionary:
 ## [u8 name].
 static func _name_only(r: WireReader) -> Dictionary:
 	return {"name": r.get_str("u8")}
+
+
+## Opcode 27511 — DemonLadder (server buildDemonLadder):
+## [i16 demonId][i16 flag][i32 start][i32 n]{[i32 nameLen][name][i64 quarterly]
+## [i64 quarterlyCumul][i64 monthly]}[i64 viewerAffiliation].
+static func _demon_ladder(r: WireReader) -> Dictionary:
+	var out := {"demon": r.get_i16(), "flag": r.get_i16(),
+		"start": r.get_i32(), "rows": []}
+	for i in r.get_i32():
+		out.rows.append({"name": r.get_str("i32"),
+			"quarterly": r.get_i64(), "q_cumul": r.get_i64(),
+			"monthly": r.get_i64()})
+	if r.remaining() >= 8:
+		out.affiliation = r.get_i64()
+	return out
+
+
+## Opcode 17003 — TournamentCalendar (server writeTournamentEvent):
+## [i16 n]{[i32 typeId=4][i64 eventId][i64 start][i64 end][i64 recur]
+## [i32 label][i64 extra][i64 tid][u8 name][u16 desc][u8 short]
+## [u8 nPhases]{i64,i64}[u8 nReg]{i64,i64}}.
+static func _tournament_calendar(r: WireReader) -> Dictionary:
+	var out := {"events": []}
+	for i in r.get_i16():
+		r.get_i32()   # content type id (4 = qr_0)
+		var e := {"id": r.get_i64(), "runs_until": r.get_i64()}
+		r.get_i64()   # endDate mirror
+		r.get_i64()   # recurrence
+		r.get_i32()   # label index
+		r.get_i64()   # extraDate (started bound)
+		e.tid = r.get_i64()
+		e.name = r.get_str("u8")
+		e.desc = r.get_str("u16")
+		e.short = r.get_str("u8")
+		for j in r.get_u8():
+			r.get_i64()
+			r.get_i64()
+		for j in r.get_u8():
+			r.get_i64()
+			r.get_i64()
+		out.events.append(e)
+	return out
+
+
+## Opcode 28602 — TournamentList (server buildTournamentList):
+## [i32 n]{i64 id, u8 opened, i8 status, u16 defId, u8 regOpen, i32 nParams,
+## str32 name, str32 desc, str32 organizer, u8 kind}.
+static func _tournament_list(r: WireReader) -> Dictionary:
+	var out := {"tournaments": []}
+	for i in r.get_i32():
+		var t := {"id": r.get_i64(), "opened": r.get_u8(),
+			"status": r.get_i8(), "def_id": r.get_u16(),
+			"reg_open": r.get_u8()}
+		r.get_i32()   # fightParamCount (0)
+		t.name = r.get_str("u32")
+		t.desc = r.get_str("u32")
+		t.organizer = r.get_str("u32")
+		t.kind = r.get_u8()
+		out.tournaments.append(t)
+	return out

@@ -90,7 +90,7 @@ func get_str(len_t: String, enc: String = "cp1252") -> String:
 	match len_t:
 		"u8": n = get_u8()
 		"u16": n = get_u16()
-		"i32": n = get_i32()
+		"i32", "u32": n = get_i32()
 	var b := get_bytes(n)
 	return b.get_string_from_utf8() if enc == "utf8" else CP1252.decode(b)
 

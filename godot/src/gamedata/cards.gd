@@ -49,3 +49,11 @@ static func price_text(id: int) -> String:
 
 static func value_of(id: int) -> int:
 	return int(meta(id).get("value", 0))
+
+
+## Every known card template id (sorted) — fusion target pickers iterate it.
+static func all_ids() -> Array:
+	_ensure()
+	var ids := _by_id.keys()
+	ids.sort()
+	return ids

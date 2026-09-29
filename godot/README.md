@@ -28,7 +28,7 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `src/gamedata/spells.gd` | Breed spell tables + names (from `assets/gamedata/spells.json`) |
 | `src/gamedata/elements.gd` | Env element kinds/labels (`assets/gamedata/elements.json`) — the wire 200 carries position only; kind comes from this table |
 | `src/gamedata/cards.gd` | Card names/prices/values (`assets/gamedata/cards.json`) — shop + barter UI |
-| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101`, Card Master shop `5401`/`5450`/`5400`/`5403`, Zaap `4512`, wallet `4001`, inventory `5200`, friend/ignore lists `3144`/`3146` + acks/presence `3156`-`3166` |
+| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101`, Card Master shop `5401`/`5450`/`5400`/`5403`, Zaap `4512`, graveyard `22099`, fusion `5490`/`5491`, demon ladder `27510`/`27511`, tournaments `17002`/`17003` + `28601`/`28602`, fireworks `22095`/`22094`, wallet `4001`, inventory `5200`, friend/ignore lists `3144`/`3146` + acks/presence `3156`-`3166` |
 | `assets/anims/` | Generated sprite frames — **git-ignored**; regenerate with `tools/asset-import/anm_render.py --export` |
 | `assets/mapgfx/` | Painted-map sprites + atlases — **git-ignored**; regenerate with `tools/asset-import/map_gfx.py` |
 | `assets/gamedata/` | Derived tables — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py`, `server/cmd/dumpelements`, `server/cmd/dumpcards` + `card_names.py` |
@@ -70,7 +70,13 @@ delete `6023`, an emote round-trip `4701`→`4700`, the ranked queue
 entry + walking to a Card Master's chunk → `201` → `5401` catalogue →
 `5450` buy → `5403`), wallet `4001` + inventory `5200`, and the social
 flow (`/friend` `3156`, `/ignore` `3158`, removes `3160`/`3162`, ghost
-`3204`, `/friends` `/ignored` list echoes).
+`3204`, `/friends` `/ignored` list echoes), and the element dialogs:
+mailbox + graveyard + fusion altar panes on island 25, then a Zaap hop
+(`4512` card 255) to world 37 — demon totem `27510`→`27511`, another hop
+(card 254) to the demon islet for the challenge bubble (`26330` ready),
+a third hop (card 256) to the tournament islet for `17002`/`28601` →
+`17003`/`28602`, and a fourth (card 208) to world 26's firework launcher
+→ `22095` → `22094` echo.
 
 `pvp_smoke` runs the full two-coach loop: a second socket logs in as
 `test2`, the main client challenges it (`26301`→`26300` both ways →
@@ -91,7 +97,10 @@ Fighter sprites: breed+sex → `Players/-XYZ.anm` via the client's
 - Most island Card-Master stock is **barter-only** (zero token price in
   retail data — the server refuses `5450` with code 2); the Exchange pane
   (`5400` card-for-card by summed value) covers it.
-- Mailbox/fusion/graveyard/NPC dialogs are element clicks that open
-  client-local UI — the `201` goes out but the dialogs aren't built yet.
+- Graveyard `22099` and fusion `5490` dialogs are wired but the smoke
+  can't drive them end-to-end yet — the test coach has no dead fighters
+  and no tradable same-set card pairs (Zaap cards are bound).
+- World 37 is an archipelago: its islets connect only via Zaap cards —
+  matching retail (the tournament islet is teleport-access only).
 - Headless runs can't screenshot (dummy driver); use a windowed run for
   `/tmp/fight_live.png`.

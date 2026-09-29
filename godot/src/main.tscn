@@ -403,3 +403,60 @@ disabled = true
 
 [node name="CancelBtn" type="Button" parent="UI/BarterDlg/VBox/Btns"]
 text = "Cancel"
+
+[node name="ElementDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -210.0
+offset_right = 200.0
+offset_bottom = 210.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/ElementDlg"]
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="UI/ElementDlg/VBox"]
+text = "Element"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="Hint" type="Label" parent="UI/ElementDlg/VBox"]
+text = ""
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="UI/ElementDlg/VBox"]
+size_flags_vertical = 3
+
+[node name="List" type="ItemList" parent="UI/ElementDlg/VBox/Scroll"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+select_mode = 1
+
+[node name="Scroll2" type="ScrollContainer" parent="UI/ElementDlg/VBox"]
+visible = false
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 100)
+
+[node name="List2" type="ItemList" parent="UI/ElementDlg/VBox/Scroll2"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Btns" type="HBoxContainer" parent="UI/ElementDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="ActBtn" type="Button" parent="UI/ElementDlg/VBox/Btns"]
+text = "OK"
+disabled = true
+
+[node name="AltBtn" type="Button" parent="UI/ElementDlg/VBox/Btns"]
+text = ""
+visible = false
+
+[node name="CloseBtn" type="Button" parent="UI/ElementDlg/VBox/Btns"]
+text = "Close"
