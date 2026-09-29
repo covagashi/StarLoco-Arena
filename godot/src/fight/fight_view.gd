@@ -870,7 +870,8 @@ func _draw_overlays() -> void:
 		var hc: Dictionary = _cells[_hover]
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
 		draw_polyline(poly + PackedVector2Array([poly[0]]),
-			Color(1, 1, 1, 0.8), 2.0)
+			Color(1, 0.3, 0.25, 0.9) if _spell_mode != -1
+			else Color(1, 1, 1, 0.8), 2.0)
 	if debug_overlay:
 		# white crosshair at each live actor's cell center
 		for id in _actor_cells:

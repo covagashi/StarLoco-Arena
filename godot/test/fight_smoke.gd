@@ -129,37 +129,61 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 	if not ours or finished:
 		return
 	var cur: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
-	var moved := false
-	for d in [Vector2i(2, 0), Vector2i(0, 2), Vector2i(-2, 0), Vector2i(0, -2),
-			Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1)]:
-		if fight_scene.request_move_to(Vector2i(cur.x, cur.y) + d):
-			print("[smoke] scripted move fid=%d -> %s" % [fid, Vector2i(cur.x, cur.y) + d])
-			moved = true
-			break
-	if not moved:
-		print("[smoke] no move target for fid=%d at %s" % [fid, cur])
-	# exercise the cast path too: first known spell at the closest enemy
-	# cell, else the weapon attack (8111). Server validates range/LoS —
-	# silence means refused, which is fine for the harness.
+	# Exercise the cast path first (from the CURRENT cell — the 4503 below is
+	# still in flight). Weapon (8111) needs an orthogonally adjacent enemy;
+	# a known spell goes at the closest enemy cell. Server validates
+	# range/LoS — silence means refused, which is fine for the harness.
 	var f: Dictionary = State.fighters.get(fid, {})
 	var spells: Array = f.get("spells", [])
-	if true:
-		var best := Vector2i.ZERO
-		var best_d := 1 << 30
-		for id in fight_scene._actor_cells:
-			var e: Dictionary = State.fighters.get(id, {})
-			if e.is_empty() or int(e.get("coach", -1)) == State.my_coach_id:
-				continue
-			var p: Vector3i = fight_scene._actor_cells[id]
-			var dd := absi(p.x - cur.x) + absi(p.y - cur.y)
-			if dd < best_d:
-				best_d = dd
-				best = Vector2i(p.x, p.y)
-		if best_d < 1 << 30:
-			var sid: int = int(spells[0]) if not spells.is_empty() else -2
-			if fight_scene.request_cast_at(sid, best):
-				print("[smoke] scripted cast %s -> %s" % [
-					"spell %d" % sid if sid >= 0 else "weapon", best])
+	var sid: int = int(spells[0]) if not spells.is_empty() else -2
+	var target := Vector2i(-9999, -9999)
+	for id in fight_scene._actor_cells:
+		var e: Dictionary = State.fighters.get(id, {})
+		if e.is_empty() or int(e.get("coach", -1)) == State.my_coach_id:
+			continue
+		var p: Vector3i = fight_scene._actor_cells[id]
+		var dd := absi(p.x - cur.x) + absi(p.y - cur.y)
+		if sid >= 0:
+			# any enemy in sight — the server decides legality
+			if target.x == -9999 or dd < absi(target.x - cur.x) + absi(target.y - cur.y):
+				target = Vector2i(p.x, p.y)
+		elif dd == 1:
+			target = Vector2i(p.x, p.y)
+			break
+	if target.x != -9999 and fight_scene.request_cast_at(sid, target):
+		print("[smoke] scripted cast %s -> %s" % [
+			"spell %d" % sid if sid >= 0 else "weapon", target])
+	# move toward the closest enemy — reaches weapon adjacency in a few rounds
+	var enemy := Vector2i(-9999, -9999)
+	var ebest := 1 << 30
+	for id in fight_scene._actor_cells:
+		var e: Dictionary = State.fighters.get(id, {})
+		if e.is_empty() or int(e.get("coach", -1)) == State.my_coach_id:
+			continue
+		var p: Vector3i = fight_scene._actor_cells[id]
+		var dd := absi(p.x - cur.x) + absi(p.y - cur.y)
+		if dd < ebest:
+			ebest = dd
+			enemy = Vector2i(p.x, p.y)
+	var moved := false
+	if enemy.x != -9999:
+		# step order: whichever axis closes distance first
+		var sx := int(sign(enemy.x - cur.x))
+		var sy := int(sign(enemy.y - cur.y))
+		var opts: Array = []
+		if sx != 0:
+			opts.append(Vector2i(sx, 0))
+		if sy != 0:
+			opts.append(Vector2i(0, sy))
+		opts.append_array([Vector2i(1, 0), Vector2i(0, 1),
+			Vector2i(-1, 0), Vector2i(0, -1)])
+		for d in opts:
+			if fight_scene.request_move_to(Vector2i(cur.x, cur.y) + d):
+				print("[smoke] scripted move fid=%d -> %s" % [fid, Vector2i(cur.x, cur.y) + d])
+				moved = true
+				break
+	if not moved:
+		print("[smoke] no move target for fid=%d at %s" % [fid, cur])
 	# give the 4524 broadcast a beat to land, then pass the turn
 	create_timer(1.0).timeout.connect(func():
 		if fight_scene != null and not finished:
