@@ -578,6 +578,41 @@
    "name": "DemonLadder",
    "handler": "demon_ladder"
   },
+  "27501": {
+   "name": "Ladder1v1",
+   "handler": "ladder_1v1",
+   "note": "[i32 total][i32 start][i32 end][i32 myRank](end-start)x{str32 name,str32 guild,u16 rating,i32,i32,i32 streak,i32,i32 wins,i32 losses}[u8 search]"
+  },
+  "27503": {
+   "name": "LadderGuild",
+   "handler": "ladder_guild",
+   "note": "[i16 board][i32 start][i32 n]{str32 guild,str32 leader,i32 score}"
+  },
+  "27505": {
+   "name": "Ladder2v2",
+   "handler": "ladder_2v2",
+   "note": "[i32 total][i32 start][i32 end][i32 icons]{i32}(end-start)x{str32 coaches,str32 team,str32 guild,u16 rating,...}[i32 search]"
+  },
+  "27507": {
+   "name": "LadderTournament",
+   "handler": "ladder_tournament",
+   "note": "[u8 month][u8 trim][u16 year][i32x3 myPoints]3x{total,start,end,myRank,(end-start)x{str32 name,i32 pts},u8 search}"
+  },
+  "27509": {
+   "name": "LadderCoachRep",
+   "handler": "ladder_coach_rep",
+   "note": "[i32 total][i32 start][i32 end][i32 localIdx](end-start)x{i32 rep,str32 coach,str32 team,i32 wins,i32 losses,str32 guild,u16 demon}[u8 search]"
+  },
+  "27513": {
+   "name": "LadderDemons",
+   "handler": "ladder_demons",
+   "note": "[u16 flag][i32 start][i32 n]{u16 demon,i64 rep,str32 guild}"
+  },
+  "27515": {
+   "name": "LadderPro",
+   "handler": "ladder_pro",
+   "note": "[i32 total][i32 start][i32 end][i32 myRank][i32 league](end-start)x{str32 name,str32 guild,u16 rating}[u8 search]"
+  },
   "15001": {
    "name": "MailList",
    "handler": "mail_list",

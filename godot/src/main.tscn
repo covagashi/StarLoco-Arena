@@ -90,6 +90,10 @@ visible = false
 text = "2v2…"
 disabled = true
 
+[node name="RanksBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Ranks"
+disabled = true
+
 [node name="RosterTitle" type="Label" parent="UI/VBox"]
 text = "Fighters:"
 mouse_filter = 2
@@ -558,3 +562,48 @@ title = "2v2 invitation"
 ok_button_text = "Join"
 cancel_button_text = "Decline"
 size = Vector2i(340, 120)
+
+[node name="LadderDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -200.0
+offset_right = 240.0
+offset_bottom = 200.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/LadderDlg"]
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="UI/LadderDlg/VBox"]
+horizontal_alignment = 1
+text = "Rankings"
+theme_override_font_sizes/font_size = 16
+
+[node name="Tabs" type="OptionButton" parent="UI/LadderDlg/VBox"]
+
+[node name="Hint" type="Label" parent="UI/LadderDlg/VBox"]
+text = ""
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="UI/LadderDlg/VBox"]
+size_flags_vertical = 3
+
+[node name="List" type="ItemList" parent="UI/LadderDlg/VBox/Scroll"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Btns" type="HBoxContainer" parent="UI/LadderDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="MoreBtn" type="Button" parent="UI/LadderDlg/VBox/Btns"]
+text = "More"
+disabled = true
+
+[node name="CloseBtn" type="Button" parent="UI/LadderDlg/VBox/Btns"]
+text = "Close"

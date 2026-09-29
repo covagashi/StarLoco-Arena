@@ -293,21 +293,21 @@ const OP_MSG26332 := 26332
 const OP_RECONNECT_FIGHT_QUESTION := 26333
 const OP_RECONNECT_FIGHT_ANSWER := 26334
 const OP_MSG27500 := 27500
-const OP_MSG27501 := 27501
+const OP_LADDER1V1 := 27501
 const OP_MSG27502 := 27502
-const OP_MSG27503 := 27503
+const OP_LADDER_GUILD := 27503
 const OP_MSG27504 := 27504
-const OP_MSG27505 := 27505
+const OP_LADDER2V2 := 27505
 const OP_MSG27506 := 27506
-const OP_MSG27507 := 27507
+const OP_LADDER_TOURNAMENT := 27507
 const OP_MSG27508 := 27508
-const OP_MSG27509 := 27509
+const OP_LADDER_COACH_REP := 27509
 const OP_MSG27510 := 27510
 const OP_DEMON_LADDER := 27511
 const OP_MSG27512 := 27512
-const OP_MSG27513 := 27513
+const OP_LADDER_DEMONS := 27513
 const OP_MSG27514 := 27514
-const OP_MSG27515 := 27515
+const OP_LADDER_PRO := 27515
 const OP_MSG27525 := 27525
 const OP_MSG27526 := 27526
 const OP_MSG27527 := 27527
@@ -636,21 +636,21 @@ const NAMES := {
 	26333: "ReconnectFightQuestion",
 	26334: "ReconnectFightAnswer",
 	27500: "Msg27500",
-	27501: "Msg27501",
+	27501: "Ladder1v1",
 	27502: "Msg27502",
-	27503: "Msg27503",
+	27503: "LadderGuild",
 	27504: "Msg27504",
-	27505: "Msg27505",
+	27505: "Ladder2v2",
 	27506: "Msg27506",
-	27507: "Msg27507",
+	27507: "LadderTournament",
 	27508: "Msg27508",
-	27509: "Msg27509",
+	27509: "LadderCoachRep",
 	27510: "Msg27510",
 	27511: "DemonLadder",
 	27512: "Msg27512",
-	27513: "Msg27513",
+	27513: "LadderDemons",
 	27514: "Msg27514",
-	27515: "Msg27515",
+	27515: "LadderPro",
 	27525: "Msg27525",
 	27526: "Msg27526",
 	27527: "Msg27527",

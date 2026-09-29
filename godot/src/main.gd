@@ -69,6 +69,20 @@ const OP_SPECTATE_QUERY := 2260          # C2S [i64 coach] — spectatable?
 const OP_SPECTATE_REPLY := 2261          # S2C [i8 0/1]
 const OP_SPECTATE_JOIN := 26331          # C2S [i64 coach] arch 2
 const OP_SPECTATE_DOWN := 26332          # S2C empty — teardown
+const OP_LADDER_1V1_REQ := 27500         # C2S [i32 start] arch 2
+const OP_LADDER_1V1 := 27501
+const OP_LADDER_GUILD_REQ := 27502       # C2S [i16 board][i32 start]
+const OP_LADDER_GUILD := 27503
+const OP_LADDER_2V2_REQ := 27504         # C2S [i32 start]
+const OP_LADDER_2V2 := 27505
+const OP_LADDER_TOURN_REQ := 27506       # C2S [i32x3][u8 m][u8 t][u16 y]
+const OP_LADDER_TOURN := 27507
+const OP_LADDER_COACH_REQ := 27508       # C2S [i32 start]
+const OP_LADDER_COACH := 27509
+const OP_LADDER_DEMON_REQ := 27512       # C2S [i16 flag][i32 start]
+const OP_LADDER_DEMON := 27513
+const OP_LADDER_PRO_REQ := 27514         # C2S [i32 start][i32 lg][i32 pg]
+const OP_LADDER_PRO := 27515
 const OP_END_FIGHT := 8300               # S2C result screen — needs 26321 ack
 const OP_END_FIGHT_DONE := 26321         # C2S empty — returns coach to overworld
 const OP_CHALLENGE_INVITE := 26301       # [i64 target][u8 evo]
@@ -176,6 +190,14 @@ func _ready() -> void:
 	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
 	$UI/VBox/AuthRow/FightBtn.pressed.connect(_on_fight_pressed)
 	$UI/VBox/AuthRow/DuoBtn.pressed.connect(_open_duo_dlg)
+	$UI/VBox/AuthRow/RanksBtn.pressed.connect(_open_ladder)
+	$UI/LadderDlg/VBox/Tabs.item_selected.connect(_on_ladder_tab)
+	$UI/LadderDlg/VBox/Btns/MoreBtn.pressed.connect(_on_ladder_more)
+	$UI/LadderDlg/VBox/Btns/CloseBtn.pressed.connect(
+		func(): $UI/LadderDlg.hide())
+	var tabs: OptionButton = $UI/LadderDlg/VBox/Tabs
+	for t in LADDER_TABS:
+		tabs.add_item(t.label)
 	$UI/DuoDlg/VBox/Btns/CreateBtn.pressed.connect(_on_duo_create)
 	$UI/DuoDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/DuoDlg.visible = false)
@@ -331,6 +353,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/PracticeBtn.disabled = false
 			$UI/VBox/AuthRow/FightBtn.disabled = false
 			$UI/VBox/AuthRow/DuoBtn.disabled = false
+			$UI/VBox/AuthRow/RanksBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
 		OP_ACTOR_SPAWN:
 			_spawn_world_actors(payload)
@@ -461,6 +484,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_SPECTATE_DOWN:
 			_log_line("[i]spectator view closed[/i]")
 			State.spectating = false
+		OP_LADDER_1V1, OP_LADDER_GUILD, OP_LADDER_2V2, OP_LADDER_TOURN, \
+				OP_LADDER_COACH, OP_LADDER_DEMON, OP_LADDER_PRO:
+			_fill_ladder(Codec.decode(opcode, payload), opcode)
 		OP_END_FIGHT:
 			# A result screen arriving on the lobby scene means the user backed
 			# out of the fight view mid-fight — ack it (26321) so the server
@@ -960,6 +986,142 @@ func _watch_coach(cname: String) -> void:
 	Session.send(OP_SPECTATE_QUERY, w.raw(), 2)
 
 
+## --- Ranking window (27500-27515) ---------------------------------------------
+## "Ranks" opens the seven-tab board (retail ladderInformationDialog). Each
+## tab is a windowed request (start offset, server page 20 / demons 12); the
+## reply fills the list and "More" pulls the next window.
+func _open_ladder() -> void:
+	$UI/LadderDlg.show()
+	_ladder_start = 0
+	_ladder_request()
+
+
+func _on_ladder_tab(idx: int) -> void:
+	_ladder_tab = idx
+	_ladder_start = 0
+	_ladder_request()
+
+
+func _on_ladder_more() -> void:
+	_ladder_request()
+
+
+## Send the current tab's request at _ladder_start (arch 2).
+func _ladder_request() -> void:
+	var w := WireWriter.new()
+	match int(LADDER_TABS[_ladder_tab].op):
+		OP_LADDER_GUILD_REQ:
+			w.put_i16(1)                     # board id — must be 1
+			w.put_i32(_ladder_start)
+		OP_LADDER_TOURN_REQ:
+			w.put_i32(0)                     # month window start
+			w.put_i32(0)                     # trimester window start
+			w.put_i32(0)                     # year window start
+			w.put_u8(int(_ladder_tourn.m))
+			w.put_u8(int(_ladder_tourn.t))
+			w.put_i16(int(_ladder_tourn.y))
+		OP_LADDER_DEMON_REQ:
+			w.put_i16(1)                     # flag — 1 populates the list
+			w.put_i32(_ladder_start)
+		OP_LADDER_PRO_REQ:
+			w.put_i32(_ladder_start)
+			w.put_i32(1)                     # league id (1 = Arena Ligue Pro)
+			w.put_i32(20)                    # page size
+		_:
+			w.put_i32(_ladder_start)
+	Session.send(int(LADDER_TABS[_ladder_tab].op), w.raw(), 2)
+
+
+func _fill_ladder(d: Dictionary, opcode: int) -> void:
+	if not $UI/LadderDlg.visible:
+		return
+	var list: ItemList = $UI/LadderDlg/VBox/Scroll/List
+	var hint: Label = $UI/LadderDlg/VBox/Hint
+	var more: Button = $UI/LadderDlg/VBox/Btns/MoreBtn
+	match opcode:
+		OP_LADDER_1V1:
+			for r0 in d.get("rows", []):
+				var g := str(r0.get("guild", ""))
+				list.add_item("%s%s — rating %d · %dW/%dL · streak %d" % [
+					str(r0.get("name", "?")),
+					" [%s]" % g if g != "" else "",
+					int(r0.get("rating", 0)), int(r0.get("wins", 0)),
+					int(r0.get("losses", 0)), int(r0.get("streak", 0))])
+			hint.text = "%d ranked — your rank: %s" % [
+				int(d.get("total", 0)),
+				str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
+					else "unranked"]
+			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
+		OP_LADDER_GUILD:
+			for r0 in d.get("rows", []):
+				list.add_item("%s (leader %s) — %d pts" % [
+					str(r0.get("guild", "?")), str(r0.get("leader", "?")),
+					int(r0.get("score", 0))])
+			hint.text = "%d clan(s)" % d.get("rows", []).size()
+			more.disabled = d.get("rows", []).size() < 20
+		OP_LADDER_2V2:
+			for r0 in d.get("rows", []):
+				list.add_item("%s — %s [%s] rating %d · %dW/%dL" % [
+					str(r0.get("team", "?")), str(r0.get("coaches", "?")),
+					str(r0.get("guild", "")), int(r0.get("rating", 0)),
+					int(r0.get("wins", 0)), int(r0.get("losses", 0))])
+			hint.text = "%d teams" % int(d.get("total", 0))
+			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
+		OP_LADDER_TOURN:
+			_ladder_tourn = {"m": int(d.get("month", 0)),
+				"t": int(d.get("trimester", 0)),
+				"y": int(d.get("year", 0))}
+			var wins: Array = d.get("windows", [])
+			var labels := ["month", "trimester", "year"]
+			var pts: Array = d.get("my_points", [0, 0, 0])
+			for i in wins.size():
+				list.add_item("— %s —" % labels[i])
+				for r0 in wins[i].get("rows", []):
+					list.add_item("%s — %d pts" % [
+						str(r0.get("name", "?")),
+						int(r0.get("points", 0))])
+			hint.text = "your points — month %d · trimester %d · year %d" % [
+				int(pts[0]), int(pts[1]), int(pts[2])]
+			more.disabled = true
+		OP_LADDER_COACH:
+			for r0 in d.get("rows", []):
+				list.add_item("%s — %d rep · %dW/%dL · demon %d" % [
+					str(r0.get("coach", "?")), int(r0.get("rep", 0)),
+					int(r0.get("wins", 0)), int(r0.get("losses", 0)),
+					int(r0.get("demon", 0))])
+			hint.text = "%d coaches" % int(d.get("total", 0))
+			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
+		OP_LADDER_DEMON:
+			for r0 in d.get("rows", []):
+				list.add_item("Demon %d — %s · %d rep" % [
+					int(r0.get("demon", 0)),
+					str(r0.get("guild", "")) if str(r0.get("guild", "")) \
+						!= "" else "unaffiliated",
+					int(r0.get("rep", 0))])
+			hint.text = "24 demons"
+			more.disabled = d.get("rows", []).size() < 12
+		OP_LADDER_PRO:
+			for r0 in d.get("rows", []):
+				list.add_item("%s [%s] — rating %d" % [
+					str(r0.get("name", "?")), str(r0.get("guild", "")),
+					int(r0.get("rating", 0))])
+			hint.text = "league %d — your rank %s" % [
+				int(d.get("league", 0)),
+				str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
+					else "unranked"]
+			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
+	# window advance: the reply's `end` is the next start (demons: start+n)
+	match opcode:
+		OP_LADDER_DEMON:
+			_ladder_start = int(d.get("start", 0)) \
+				+ d.get("rows", []).size()
+		OP_LADDER_GUILD:
+			_ladder_start = int(d.get("start", 0)) \
+				+ d.get("rows", []).size()
+		_:
+			_ladder_start = int(d.get("end", _ladder_start))
+
+
 ## --- 2v2 duo (6024-6029) ------------------------------------------------------
 ## "2v2…" opens the invite dialog (team name + friend pick, retail's
 ## team2vs2NameDialog): 6024 [str8 team][i64 me][i64 mate]. The invited side
@@ -1299,6 +1461,21 @@ var _kanodo_fid := -1         # fighter id of the open Kanodo board
 var _kanodo_pick := {}        # sphere node selected on the board
 var _duo_pending := {}        # incoming 6025 {team, inviter, invited}
 var _watch_target := -1       # coach id asked in the pending 2260
+
+## Ranking window tabs (retail ladderInformationDialog order): the request
+## opcode and a payload builder; replies land in _on_message below.
+const LADDER_TABS := [
+	{"label": "1 vs 1", "op": OP_LADDER_1V1_REQ, "page": 20},
+	{"label": "Coach", "op": OP_LADDER_COACH_REQ, "page": 20},
+	{"label": "2 vs 2", "op": OP_LADDER_2V2_REQ, "page": 20},
+	{"label": "Clan", "op": OP_LADDER_GUILD_REQ, "page": 20},
+	{"label": "Tournoi", "op": OP_LADDER_TOURN_REQ, "page": 20},
+	{"label": "Ligue Pro", "op": OP_LADDER_PRO_REQ, "page": 20},
+	{"label": "Démon", "op": OP_LADDER_DEMON_REQ, "page": 12},
+]
+var _ladder_tab := 0          # current LADDER_TABS index
+var _ladder_start := 0        # window start of the next request
+var _ladder_tourn := {"m": 0, "t": 0, "y": 0}  # echoed tournament period
 
 
 func _use_element(id: int) -> void:

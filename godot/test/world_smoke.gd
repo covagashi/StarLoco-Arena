@@ -171,6 +171,12 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(op, payload)
 			print("[smoke] FIREWORK show card=", d.get("card"),
 				" at=", d.get("x"), ",", d.get("y"))
+		27501, 27503, 27505, 27507, 27509, 27513, 27515:
+			var d := Codec.decode(op, payload)
+			var rows: Array = d.get("rows", d.get("windows", []))
+			print("[smoke] LADDER ", op, " total=", d.get("total", "-"),
+				" rows=", rows.size(),
+				" myRank=", d.get("my_rank", "-"))
 		5491:
 			var d := Codec.decode(op, payload)
 			print("[smoke] FUSION result=", d.get("result"),
@@ -561,6 +567,20 @@ func _move_and_shoot() -> void:
 					_main._on_element_act()   # Launch → 22095 → 22094 echo
 					print("[smoke] firework launch sent — expecting 22094")
 					await create_timer(1.0).timeout
+	# Rankings window: open it and page through all seven tabs (each sends
+	# its 2750x request on arch 2; replies fill the list — logged above).
+	_main._open_ladder()
+	await create_timer(0.3).timeout
+	var tabs: OptionButton = _main.get_node("UI/LadderDlg/VBox/Tabs")
+	for i in tabs.item_count:
+		tabs.select(i)
+		_main._on_ladder_tab(i)
+		await create_timer(0.6).timeout
+	var more: Button = _main.get_node("UI/LadderDlg/VBox/Btns/MoreBtn")
+	if not more.disabled:
+		_main._on_ladder_more()      # demons page 2 (start 12 → demons 13-24)
+		await create_timer(0.6).timeout
+	_main.get_node("UI/LadderDlg").hide()
 	# The dummy/headless renderer has no viewport texture — skip the capture.
 	if DisplayServer.get_name() != "headless":
 		var tex := root.get_texture()

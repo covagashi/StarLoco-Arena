@@ -39,6 +39,13 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"name_note": return _name_note(r)
 		"name_only": return _name_only(r)
 		"demon_ladder": return _demon_ladder(r)
+		"ladder_1v1": return _ladder_1v1(r)
+		"ladder_guild": return _ladder_guild(r)
+		"ladder_2v2": return _ladder_2v2(r)
+		"ladder_tournament": return _ladder_tournament(r)
+		"ladder_coach_rep": return _ladder_coach_rep(r)
+		"ladder_demons": return _ladder_demons(r)
+		"ladder_pro": return _ladder_pro(r)
 		"tournament_calendar": return _tournament_calendar(r)
 		"tournament_list": return _tournament_list(r)
 		_:
@@ -729,6 +736,122 @@ static func _demon_ladder(r: WireReader) -> Dictionary:
 			"monthly": r.get_i64()})
 	if r.remaining() >= 8:
 		out.affiliation = r.get_i64()
+	return out
+
+
+## Opcode 27501 — Ladder1v1 (server buildLadderResponse):
+## [i32 total][i32 start][i32 end][i32 myRank](end-start)x{str32 name,
+## str32 guild, u16 rating, i32_, i32_, i32 streak, i32_, i32 wins,
+## i32 losses}[u8 search]. end MUST equal start+rows (client loop bound).
+static func _ladder_1v1(r: WireReader) -> Dictionary:
+	var out := {"total": r.get_i32(), "start": r.get_i32(),
+		"end": r.get_i32(), "my_rank": r.get_i32(), "rows": []}
+	for i in out.end - out.start:
+		out.rows.append({"name": r.get_str("i32"),
+			"guild": r.get_str("i32"), "rating": r.get_u16(),
+			"streak": _skip3(r), "wins": r.get_i32(),
+			"losses": r.get_i32()})
+	if r.remaining() >= 1:
+		out.search = r.get_u8()
+	return out
+
+
+## shared tail for the strength boards (1v1/2v2): after the rating the
+## wire is [i32 _][i32 _][i32 streak][i32 _] — skip two, read streak,
+## skip one (server buildLadderResponse/build2v2Ladder).
+static func _skip3(r: WireReader) -> int:
+	r.get_i32()
+	r.get_i32()
+	var streak := r.get_i32()
+	r.get_i32()
+	return streak
+
+
+## Opcode 27503 — LadderGuild: [i16 board][i32 start][i32 n]
+## {str32 guild, str32 leader, i32 score}.
+static func _ladder_guild(r: WireReader) -> Dictionary:
+	var out := {"board": r.get_i16(), "start": r.get_i32(), "rows": []}
+	for i in r.get_i32():
+		out.rows.append({"guild": r.get_str("i32"),
+			"leader": r.get_str("i32"), "score": r.get_i32()})
+	return out
+
+
+## Opcode 27505 — Ladder2v2: [i32 total][i32 start][i32 end]
+## [i32 nIcons]{i32}(end-start)x{str32 coaches, str32 team, str32 guild,
+## u16 rating, streak tail}[i32 search].
+static func _ladder_2v2(r: WireReader) -> Dictionary:
+	var out := {"total": r.get_i32(), "start": r.get_i32(),
+		"end": r.get_i32(), "icons": [], "rows": []}
+	for i in r.get_i32():
+		out.icons.append(r.get_i32())
+	for i in out.end - out.start:
+		out.rows.append({"coaches": r.get_str("i32"),
+			"team": r.get_str("i32"), "guild": r.get_str("i32"),
+			"rating": r.get_u16(), "streak": _skip3(r),
+			"wins": r.get_i32(), "losses": r.get_i32()})
+	if r.remaining() >= 4:
+		out.search = r.get_i32()
+	return out
+
+
+## Opcode 27507 — LadderTournament: [u8 month][u8 trim][u16 year]
+## [i32 myMonth][i32 myTrim][i32 myYear] then 3 windows, each
+## {i32 total, i32 start, i32 end, i32 myRank, (end-start)x{str32 name,
+## i32 pts}, u8 search}.
+static func _ladder_tournament(r: WireReader) -> Dictionary:
+	var out := {"month": r.get_u8(), "trimester": r.get_u8(),
+		"year": r.get_u16(), "my_points": [
+			r.get_i32(), r.get_i32(), r.get_i32()], "windows": []}
+	for w in 3:
+		var win := {"total": r.get_i32(), "start": r.get_i32(),
+			"end": r.get_i32(), "my_rank": r.get_i32(), "rows": []}
+		for i in win.end - win.start:
+			win.rows.append({"name": r.get_str("i32"),
+				"points": r.get_i32()})
+		if r.remaining() >= 1:
+			win.search = r.get_u8()
+		out.windows.append(win)
+	return out
+
+
+## Opcode 27509 — LadderCoachRep: [i32 total][i32 start][i32 end]
+## [i32 localIdx](end-start)x{i32 rep, str32 coach, str32 team, i32 wins,
+## i32 losses, str32 guild, u16 demon}[u8 search].
+static func _ladder_coach_rep(r: WireReader) -> Dictionary:
+	var out := {"total": r.get_i32(), "start": r.get_i32(),
+		"end": r.get_i32(), "local_idx": r.get_i32(), "rows": []}
+	for i in out.end - out.start:
+		out.rows.append({"rep": r.get_i32(),
+			"coach": r.get_str("i32"), "team": r.get_str("i32"),
+			"wins": r.get_i32(), "losses": r.get_i32(),
+			"guild": r.get_str("i32"), "demon": r.get_u16()})
+	if r.remaining() >= 1:
+		out.search = r.get_u8()
+	return out
+
+
+## Opcode 27513 — LadderDemons: [u16 flag][i32 start][i32 n]
+## {u16 demon, i64 rep, str32 guild}.
+static func _ladder_demons(r: WireReader) -> Dictionary:
+	var out := {"flag": r.get_i16(), "start": r.get_i32(), "rows": []}
+	for i in r.get_i32():
+		out.rows.append({"demon": r.get_u16(), "rep": r.get_i64(),
+			"guild": r.get_str("i32")})
+	return out
+
+
+## Opcode 27515 — LadderPro: [i32 total][i32 start][i32 end][i32 myRank]
+## [i32 league](end-start)x{str32 name, str32 guild, u16 rating}[u8 search].
+static func _ladder_pro(r: WireReader) -> Dictionary:
+	var out := {"total": r.get_i32(), "start": r.get_i32(),
+		"end": r.get_i32(), "my_rank": r.get_i32(),
+		"league": r.get_i32(), "rows": []}
+	for i in out.end - out.start:
+		out.rows.append({"name": r.get_str("i32"),
+			"guild": r.get_str("i32"), "rating": r.get_u16()})
+	if r.remaining() >= 1:
+		out.search = r.get_u8()
 	return out
 
 
