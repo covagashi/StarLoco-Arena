@@ -63,6 +63,9 @@ func _ready() -> void:
 	_end_turn.pressed.connect(_on_action_button)
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
 	$UI/Chat.bubble.connect(chat_bubble)
+	$UI/Chat.emote.connect(func(id, anim):
+		chat_bubble(id, "* %s *" % anim.trim_prefix("AnimEmote-")
+			.trim_suffix("-Debut").to_lower()))
 	_gfx = MapGfx.new()
 	_gfx.name = "MapGfx"
 	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside

@@ -96,6 +96,17 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 				" name=", d.get("fighter", {}).get("name"))
 		6010:
 			print("[smoke] LOADOUT result byte=", raw[8])
+		23104:
+			print("[smoke] SEARCH accepted — queue live")
+		23102:
+			print("[smoke] SEARCH cancel result=", raw[0])
+		6020:
+			print("[smoke] PRESET save status=", raw[0])
+		6022:
+			print("[smoke] PRESET deleted ack")
+		4700:
+			var p := WireReader.new(raw)
+			print("[smoke] EMOTE played actor=", p.get_i64(), " anim=", p.get_str("u8"))
 
 
 func _move_and_shoot() -> void:
@@ -133,7 +144,33 @@ func _move_and_shoot() -> void:
 		ticked += 1
 	_main._on_save_loadout()
 	print("[smoke] loadout sent — expecting 6010")
-	await create_timer(2.0).timeout
+	await create_timer(1.5).timeout
+	# team preset: save the whole roster as "Escuadra" → 6021 → 6030 re-push
+	_main._open_save_team()
+	_main.get_node("UI/SaveTeamDlg/VBox/Name").text = "Escuadra"
+	_main._on_save_team()
+	print("[smoke] preset save sent — expecting 6030 refresh")
+	await create_timer(1.0).timeout
+	# assign: move the selected fighter into the new preset via 6013
+	var preset_opt: OptionButton = _main.get_node("UI/VBox/TeamRow/Preset")
+	for i in preset_opt.item_count:
+		if preset_opt.get_item_text(i).begins_with("Escuadra"):
+			preset_opt.select(i)
+			break
+	_main._on_assign(true)
+	await create_timer(0.8).timeout
+	# emote → server relays 4700 back to us
+	chat._on_submit("/laugh")
+	print("[smoke] emote sent — expecting 4700")
+	# combattre queue: 23103 → expect 23104 searching, then 23101 → 23102
+	_main._on_fight_pressed()
+	await create_timer(1.0).timeout
+	_main._on_cancel_search()
+	print("[smoke] combattre + cancel sent — expecting 23104/23102")
+	await create_timer(1.0).timeout
+	# delete the preset → 6022 + 6030 refresh
+	_main._on_del_team()
+	await create_timer(1.0).timeout
 	var tex := root.get_texture()
 	var img = tex.get_image() if tex != null else null
 	if img != null:

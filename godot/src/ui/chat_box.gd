@@ -47,7 +47,37 @@ const CHAT_ERRORS := {
 func _ready() -> void:
 	_input.text_submitted.connect(_on_submit)
 	$Row/SendBtn.pressed.connect(func(): _on_submit(_input.text))
-	_input.placeholder_text = "chat — /w name, /t trade, /p group, /c clan"
+	_input.placeholder_text = "chat — /w name, /t trade, /p group, /c clan, emotes /clap /laugh…"
+
+
+## Retail emote table (server handlers_emote.go — up_0 in the client).
+## command -> [emoteId, animName]
+const EMOTES := {
+	"clap": [57, "AnimEmote-Applaudir"],
+	"applaudir": [57, "AnimEmote-Applaudir"],
+	"read": [59, "AnimEmote-Lire-Debut"],
+	"lire": [59, "AnimEmote-Lire-Debut"],
+	"declare": [60, "AnimEmote-Declaration"],
+	"angry": [62, "AnimEmote-Colere"],
+	"colere": [62, "AnimEmote-Colere"],
+	"music": [63, "AnimEmote-Guitare-Debut"],
+	"guitare": [63, "AnimEmote-Guitare-Debut"],
+	"show": [65, "AnimEmote-Pointer"],
+	"point": [65, "AnimEmote-Pointer"],
+	"laugh": [66, "AnimEmote-Rire"],
+	"rire": [66, "AnimEmote-Rire"],
+	"fear": [67, "AnimEmote-Effraye"],
+	"effraye": [67, "AnimEmote-Effraye"],
+	"cry": [68, "AnimEmote-Defaite"],
+	"defaite": [68, "AnimEmote-Defaite"],
+	"no": [69, "AnimEmote-Non"],
+	"non": [69, "AnimEmote-Non"],
+}
+
+const OP_EMOTE_PLAY := 4701
+const OP_EMOTE_PLAYED := 4700
+
+signal emote(actor_id: int, anim: String)
 
 
 ## Feed one S2C chat opcode. Returns true if the opcode was a chat message.
@@ -92,6 +122,10 @@ func feed(opcode: int, payload: WireReader) -> bool:
 			_line("server", "[b]SERVER:[/b] %s" % msg)
 		3206, 3210, 3212, 3214, 3216:
 			_line("error", "[i]%s[/i]" % CHAT_ERRORS.get(opcode, "chat error"))
+		OP_EMOTE_PLAYED:  # [i64 actor][u8 anim] — relay to the world view
+			var aid := int(payload.get_i64())
+			var anim := payload.get_str("u8")
+			emote.emit(aid, anim)
 		_:
 			return false
 	return true
@@ -103,6 +137,20 @@ func _on_submit(text: String) -> void:
 	if text.is_empty() or Session.client == null:
 		return
 	_input.release_focus()
+
+	# Emote commands (retail up_0 ids) — C2S 4701 [u8 name][i32 id], arch 3.
+	# The server relays its canonical anim name back to us via 4700, so no
+	# local echo is needed.
+	if text.begins_with("/"):
+		var cmd := text.substr(1).strip_edges().to_lower()
+		if EMOTES.has(cmd):
+			var ew := WireWriter.new()
+			var aname: String = EMOTES[cmd][1]
+			ew.put_u8(aname.length())
+			ew.put_bytes(aname.to_ascii_buffer())
+			ew.put_i32(EMOTES[cmd][0])
+			Session.send(OP_EMOTE_PLAY, ew.raw(), 3)
+			return
 
 	# Channel prefixes → dedicated pipes; unknown '/x' goes verbatim to the
 	# server's GM-command handler on the vicinity op.

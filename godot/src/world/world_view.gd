@@ -150,6 +150,33 @@ func chat_bubble(id: int, text: String) -> void:
 	tw.tween_callback(b.queue_free)
 
 
+## Hit-test for the challenge flow: coach id whose sprite overlaps pos,
+## -1 for none. Sprites are foot-pivoted so test a box around the body.
+func actor_at(pos: Vector2) -> int:
+	var best := -1
+	var best_d := 55.0
+	for id in _sprites:
+		if id == State.my_coach_id:
+			continue
+		var spr: AnmSprite = _sprites[id]
+		var d: float = (pos - (spr.position + Vector2(0, -30))).length()
+		if d < best_d:
+			best_d = d
+			best = id
+	return best
+
+
+func actor_name(id: int) -> String:
+	return _names.get(id, "coach %d" % id)
+
+
+## EmotePlayed (4700): the coach anm set has no AnimEmote-* actions, so show
+## the emote name as an italic bubble over the actor instead.
+func emote(id: int, anim: String) -> void:
+	var what := anim.trim_prefix("AnimEmote-").trim_suffix("-Debut").to_lower()
+	chat_bubble(id, "* %s *" % what)
+
+
 func actor_despawned(id: int) -> void:
 	_gfx.unregister_dynamic(id)
 	var spr: AnmSprite = _sprites.get(id)

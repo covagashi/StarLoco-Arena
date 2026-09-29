@@ -23,10 +23,13 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `src/maps/` | `.fmd` arena parser, world `.tplg` topology, `map_gfx.gd` — retail painted-map renderer |
 | `src/anims/` | `AnmSprite` — frames from `tools/asset-import/anm_render.py --export`; alpha-scan foot pivot, `draw_on()` for merged z-order |
 | `src/fight/fight_view.gd/.tscn` | Fight scene: painted map, spawn zones, placement clicks, turns, move/spell targeting, nameplates + damage floats |
-| `src/world/world_view.gd` | Overworld island: painted map, coach actors (4096), click-to-move (4501) |
-| `src/main.gd/.tscn` | Login/lobby UI over the island view; decodes roster `6006` and presets `6030` |
+| `src/world/world_view.gd` | Overworld island: painted map, coach actors (4096), click-to-move (4501), chat bubbles, coach hit-test for challenges |
+| `src/ui/chat_box.*` | Chat panel: vicinity/whisper/trade/group/clan + server announcements, `/command` emotes (4701→4700), world bubbles |
+| `src/gamedata/spells.gd` | Breed spell tables + names (from `assets/gamedata/spells.json`) |
+| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101` |
 | `assets/anims/` | Generated sprite frames — **git-ignored**; regenerate with `tools/asset-import/anm_render.py --export` |
 | `assets/mapgfx/` | Painted-map sprites + atlases — **git-ignored**; regenerate with `tools/asset-import/map_gfx.py` |
+| `assets/gamedata/` | Derived spell table — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py` |
 
 ## Retail map art
 
@@ -43,7 +46,8 @@ back to the volumetric topology renderer.
 ```bash
 godot --path godot -s test/fight_smoke.gd      # graphical (screenshots)
 godot --headless --path godot -s test/fight_smoke.gd
-godot --path godot -s test/world_smoke.gd      # island + roster decode
+godot --path godot -s test/world_smoke.gd      # island + roster + chat + presets + emote + combattre
+godot --path godot -s test/pvp_smoke.gd        # two-client challenge → real PvP fight
 godot --path godot -s test/fight_shot.gd -- 10 /tmp/arena.png   # offline map shot
 ```
 
@@ -56,15 +60,27 @@ turn loop (`8100` round, `8104` begin, `4503` move / `8109`/`8111` casts,
 `8151` surrender → `8300` end → `26321` ack → `4600` back to overworld →
 repeat.
 
+`world_smoke` also exercises: vicinity/whisper/trade chat (local echo +
+`3214`/`3204` replies), fighter create `6000` + loadout `6010`, team
+preset save `6021` (or `6020` status 25 on a name clash) + assign `6013` +
+delete `6023`, an emote round-trip `4701`→`4700`, and the ranked queue
+`23103`→`23104`→cancel `23101`→`23102`.
+
+`pvp_smoke` runs the full two-coach loop: a second socket logs in as
+`test2`, the main client challenges it (`26301`→`26300` both ways →
+`26305` accept → `26302` → both confirm teams `26303`), the fight
+spawns on both sockets and runs to surrender.
+
 Fighter sprites: breed+sex → `Players/-XYZ.anm` via the client's
 `zh_1.cdN` table (`-(100+breed*10+sex)`); anm directions are diagonal-only
 {0,1,2,5,6} with 3/4/7 as horizontal mirrors (`gw_2.ao`).
 
 ## Known limits / next steps
 
-- The test fighter owns no spells, so live casting exercises `8111`
-  (weapon/close-combat); `8109` shares the wire path and is decoded (`8110`).
+- Spell casting `8109`→`8110` is verified live when a fighter owns spells
+  (the smoke's loadout saves them first); weapon `8111` is the fallback.
 - Placement is click-a-spawn-cell (no drag preview like retail).
-- Roster/presets decode is wired (`6006`/`6030`) but the UI is a text label.
+- Challenge/coach interactions need a second client — `pvp_smoke` brings
+  its own bot.
 - Headless runs can't screenshot (dummy driver); use a windowed run for
   `/tmp/fight_live.png`.

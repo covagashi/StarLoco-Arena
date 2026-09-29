@@ -45,6 +45,24 @@ const OP_FIGHTER_DELETE := 6003
 const OP_FIGHTER_DELETE_RESULT := 6002
 const OP_FIGHTER_LOADOUT := 6011
 const OP_FIGHTER_LOADOUT_RESULT := 6010
+const OP_FIGHTER_ASSIGN := 6013          # [i64 fid][i16 src][i16 dst][i64 am]
+const OP_TEAM_PRESET_SAVE := 6021        # [sw_1 blob][u8 pad]
+const OP_TEAM_PRESET_SAVED := 6020       # [u8 status] — 0 ok / 25 name taken
+const OP_TEAM_PRESET_DELETE := 6023      # [i64 team][i16 gm][i16 fa]
+const OP_TEAM_PRESET_DELETED := 6022     # [u8 status][i16 teamId on ok]
+const OP_COMBATTRE := 23103              # [i64 coachId][i16 teamId] ready-up
+const OP_SEARCH_RESULT := 23104          # [i16 preset][u8 accepted]
+const OP_SEARCH_CANCEL := 23101          # [i64 coachId][i16 teamId]
+const OP_SEARCH_CANCEL_RESULT := 23102   # [u8 accepted]
+const OP_FIGHT_STARTING := 23106         # empty — "Lancement du combat"
+const OP_SEARCH_ERROR := 23108           # [u8 code]
+const OP_CHALLENGE_INVITE := 26301       # [i64 target][u8 evo]
+const OP_CHALLENGE_INVITATION := 26300   # [i64 handle][u8 out][u8 evo][u8 n]{str32}
+const OP_CHALLENGE_ACCEPT := 26305       # [i64 handle][u8 evo]
+const OP_CHALLENGE_ACCEPTED := 26302     # [i64 handle][u8 evo] → both confirm
+const OP_CHALLENGE_DECLINE := 26307      # [i64 handle] decline/cancel
+const OP_CHALLENGE_CANCELLED := 26304    # [i64 handle]
+const OP_TEAM_CONFIRM := 26303           # [i64 coachId][i16 teamId]
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
@@ -57,6 +75,10 @@ const OP_FIGHTER_LOADOUT_RESULT := 6010
 @onready var world: Node2D = $World
 
 var _my_pos := Vector3.ZERO   # last EnterInstance position
+var _challenge_handle := -1   # pending 26300 handle (-1 = none)
+var _challenge_target := -1   # coach id we clicked "challenge" on
+var _challenge_evo := 0       # evolution flag echoed back on accept
+var _searching := false       # combattre queue state (23104 ack)
 
 
 func _ready() -> void:
@@ -70,7 +92,23 @@ func _ready() -> void:
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
 	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
+	$UI/VBox/AuthRow/FightBtn.pressed.connect(_on_fight_pressed)
+	$UI/VBox/AuthRow/CancelSearchBtn.pressed.connect(_on_cancel_search)
 	log.bubble.connect(world.chat_bubble)
+	log.emote.connect(world.emote)
+	$UI/VBox/TeamRow/AssignBtn.pressed.connect(func(): _on_assign(true))
+	$UI/VBox/TeamRow/UnassignBtn.pressed.connect(func(): _on_assign(false))
+	$UI/VBox/TeamRow/SaveTeamBtn.pressed.connect(_open_save_team)
+	$UI/VBox/TeamRow/DelTeamBtn.pressed.connect(_on_del_team)
+	$UI/SaveTeamDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_team)
+	$UI/SaveTeamDlg/VBox/Btns/CancelBtn.pressed.connect(
+		func(): $UI/SaveTeamDlg.visible = false)
+	$UI/ChallengeAskDlg.confirmed.connect(_send_challenge)
+	$UI/ChallengeDlg.confirmed.connect(_answer_challenge.bind(true))
+	$UI/ChallengeDlg.canceled.connect(_answer_challenge.bind(false))
+	$UI/TeamPickDlg/VBox/Btns/GoBtn.pressed.connect(_on_team_confirmed)
+	$UI/TeamPickDlg/VBox/Btns/CancelBtn.pressed.connect(
+		func(): $UI/TeamPickDlg.visible = false)
 	var breed_sel: OptionButton = $UI/CreateDlg/VBox/Breed
 	for id in range(1, 13):
 		breed_sel.add_item(State.BREED_NAMES[id], id)
@@ -170,6 +208,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_INSTANCE_READY:
 			_log_line("[color=green]instance ready — in world[/color]")
 			$UI/VBox/AuthRow/PracticeBtn.disabled = false
+			$UI/VBox/AuthRow/FightBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
 		OP_ACTOR_SPAWN:
 			_spawn_world_actors(payload)
@@ -211,6 +250,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var real := State.presets.filter(func(p): return int(p.type) != -4)
 			_log_line("team presets: %d saved (%d shown incl. bench)" % [
 				real.size(), State.presets.size()])
+			_refresh_presets()
 		OP_FIGHTER_CREATE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
@@ -244,6 +284,68 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				$UI/LoadoutDlg.visible = false
 			else:
 				_log_line("[color=red]loadout refused, code %d[/color]" % res)
+		OP_SEARCH_RESULT:
+			# 23104 [i16 preset][u8 accepted] — the "Recherche en cours" ack
+			payload.get_i16()
+			if payload.get_u8() == 1:
+				_searching = true
+				$UI/VBox/AuthRow/CancelSearchBtn.visible = true
+				_log_line("searching for an opponent…")
+		OP_SEARCH_CANCEL_RESULT:
+			# 23102 [u8] — reply that closes the searching state
+			payload.get_u8()
+			_searching = false
+			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_log_line("search cancelled")
+		OP_FIGHT_STARTING:
+			# 23106 — paired, fight incoming (8000 follows)
+			_searching = false
+			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_log_line("[color=green]opponent found — fight starting![/color]")
+		OP_SEARCH_ERROR:
+			var code := payload.get_u8()
+			if code >= 3:
+				_searching = false
+				$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_log_line("[color=red]search error %d[/color]" % code)
+		OP_CHALLENGE_INVITATION:
+			# 26300 [i64 handle][u8 outgoing][u8 evo][u8 n]{[i32 len][name]}
+			_challenge_handle = int(payload.get_i64())
+			var outgoing := payload.get_u8()
+			_challenge_evo = payload.get_u8()
+			var cname := ""
+			for i in payload.get_u8():
+				cname = payload.get_str("i32")
+			if outgoing:
+				_log_line("challenge sent — waiting for %s…" % cname)
+			else:
+				$UI/ChallengeDlg.dialog_text = \
+					"%s challenges you to a training fight — accept?" % cname
+				$UI/ChallengeDlg.popup_centered()
+		OP_CHALLENGE_ACCEPTED:
+			# 26302 [i64 handle][u8 evo] — both sides now pick a team (26303)
+			payload.get_i64()
+			_challenge_evo = payload.get_u8()
+			_log_line("[color=green]challenge accepted — pick your team[/color]")
+			_open_team_pick()
+		OP_CHALLENGE_CANCELLED:
+			payload.get_i64()
+			_challenge_handle = -1
+			$UI/ChallengeDlg.hide()
+			$UI/TeamPickDlg.visible = false
+			_log_line("[i]challenge cancelled[/i]")
+		OP_TEAM_PRESET_SAVED:
+			# 6020 [u8 status] — only sent on failure (25 = name taken)
+			var st := payload.get_u8()
+			if st != 0:
+				_log_line("[color=red]preset save refused, code %d[/color]" % st)
+		OP_TEAM_PRESET_DELETED:
+			# 6022 [u8 status][i16 teamId on success]
+			if payload.get_u8() == 0:
+				var tid := int(payload.get_i16())
+				State.presets = State.presets.filter(
+					func(p): return int(p.id) != tid)
+				_refresh_presets()
 		OP_FIGHT_ERROR:
 			_log_line("[color=red]fight creation refused[/color]")
 		OP_PONG:
@@ -295,7 +397,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
-		var cell: Variant = world.screen_to_cell(world.get_global_mouse_position())
+		var mpos := world.get_global_mouse_position()
+		var who: int = world.actor_at(mpos)
+		if who >= 0:
+			_challenge_target = who
+			$UI/ChallengeAskDlg.dialog_text = \
+				"Challenge %s to a training fight?" % world.actor_name(who)
+			$UI/ChallengeAskDlg.popup_centered()
+			return
+		var cell: Variant = world.screen_to_cell(mpos)
 		if cell != null:
 			world.click_to(cell)
 	elif event is InputEventMouseMotion:
@@ -311,6 +421,175 @@ func _on_practice_pressed() -> void:
 	w.put_u16(99)
 	Session.send(26330, w.raw(), 2)
 	_log_line("practice challenge 34 sent — waiting for fight…")
+
+
+## --- Combattre: ranked search queue -------------------------------------
+## 23103 [i64 allyCoach][i16 teamId] — pairs with the next coach that
+## readies up; server replies 23104 (searching) then 23106 + 8000 on pair.
+func _on_fight_pressed() -> void:
+	if _searching:
+		return
+	var w := WireWriter.new()
+	w.put_i64(State.my_coach_id)
+	w.put_i16(_selected_preset_id())
+	Session.send(OP_COMBATTRE, w.raw(), 2)
+	_log_line("combattre sent — team %d" % _selected_preset_id())
+
+
+## 23101 [i64 coachId][i16 teamId] — the classic overlay's Cancel.
+func _on_cancel_search() -> void:
+	var w := WireWriter.new()
+	w.put_i64(State.my_coach_id)
+	w.put_i16(_selected_preset_id())
+	Session.send(OP_SEARCH_CANCEL, w.raw(), 2)
+
+
+## Preset id of the TeamRow selection, or -1 (server falls back to the
+## titular roster — tolerated on every team-carrying request).
+func _selected_preset_id() -> int:
+	var sel: int = $UI/VBox/TeamRow/Preset.selected
+	if sel <= 0:
+		return -1
+	return $UI/VBox/TeamRow/Preset.get_item_id(sel)
+
+
+func _refresh_presets() -> void:
+	for opt_path in ["UI/VBox/TeamRow/Preset", "UI/TeamPickDlg/VBox/Pick"]:
+		var opt: OptionButton = get_node(opt_path)
+		# keep the user's selection across server re-pushes (6030 lands after
+		# every roster/team mutation)
+		var keep := -1
+		if opt.selected > 0:
+			keep = opt.get_item_id(opt.selected)
+		opt.clear()
+		opt.add_item("(titular roster)", -1)
+		for p in State.presets:
+			if int(p.type) == -4:
+				continue  # synthetic bench row
+			opt.add_item("%s (%d fighters)" % [p.name, p.fighters.size()],
+				int(p.id))
+		for i in opt.item_count:
+			if opt.get_item_id(i) == keep:
+				opt.select(i)
+				break
+
+
+## --- Direct challenge (training fight between two coaches) --------------
+## 26301 [i64 target][u8 evo] → both sides get 26300; target accepts with
+## 26305, either side declines/cancels with 26307; on 26302 both send 26303.
+func _send_challenge() -> void:
+	if _challenge_target < 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(_challenge_target)
+	w.put_u8(0)   # evolution flag — classic training fight
+	Session.send(OP_CHALLENGE_INVITE, w.raw(), 2)
+
+
+func _answer_challenge(accept: bool) -> void:
+	if _challenge_handle < 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(_challenge_handle)
+	if accept:
+		w.put_u8(_challenge_evo)  # 26305 echoes the invite's flag; 26307 is bare
+	Session.send(OP_CHALLENGE_ACCEPT if accept
+		else OP_CHALLENGE_DECLINE, w.raw(), 2)
+	if not accept:
+		_challenge_handle = -1
+
+
+## After 26302 both coaches confirm a team with 26303 [i64 self][i16 team].
+func _open_team_pick() -> void:
+	$UI/TeamPickDlg.visible = true
+
+
+func _on_team_confirmed() -> void:
+	$UI/TeamPickDlg.visible = false
+	var pick: OptionButton = $UI/TeamPickDlg/VBox/Pick
+	var team_id := -1
+	if pick.selected > 0:
+		team_id = pick.get_item_id(pick.selected)
+	var w := WireWriter.new()
+	w.put_i64(State.my_coach_id)
+	w.put_i16(team_id)
+	Session.send(OP_TEAM_CONFIRM, w.raw(), 2)
+	_log_line("team confirmed (%d) — waiting for opponent…" % team_id)
+
+
+## --- Team presets ----------------------------------------------------------
+## 6013 [i64 fid][i16 srcTeam][i16 dstTeam][i64 am] — drag-drop wire form.
+func _on_assign(add: bool) -> void:
+	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
+	var sel := roster_list.get_selected_items()
+	var team_id := _selected_preset_id()
+	if sel.is_empty() or team_id <= 0:
+		_log_line("[i]select a roster fighter and a preset first[/i]")
+		return
+	var fid: int = roster_list.get_item_metadata(sel[0])
+	var w := WireWriter.new()
+	w.put_i64(fid)
+	w.put_i16(-1 if add else team_id)   # src: pool (-1) when adding
+	w.put_i16(team_id if add else -1)   # dst: pool (-1) when removing
+	w.put_i64(State.my_coach_id)
+	Session.send(OP_FIGHTER_ASSIGN, w.raw(), 2)
+	_log_line("assign %s sent (fid %d %s team %d)" % [
+		"6013", fid, "→" if add else "←", team_id])
+
+
+## 6023 [i64 teamId][i16 gm][i16 fa] — delete the selected preset.
+func _on_del_team() -> void:
+	var team_id := _selected_preset_id()
+	if team_id <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(team_id)
+	w.put_i16(0)
+	w.put_i16(0)
+	Session.send(OP_TEAM_PRESET_DELETE, w.raw(), 2)
+
+
+func _open_save_team() -> void:
+	var box: VBoxContainer = $UI/SaveTeamDlg/VBox/Scroll/Fighters
+	for c in box.get_children():
+		c.queue_free()
+	for f in State.roster:
+		var cb := CheckBox.new()
+		cb.text = "%s (%s)" % [f.get("name", "?"),
+			State.BREED_NAMES.get(int(f.get("breed", 0)), "?")]
+		cb.set_meta("id", int(f.get("id", 0)))
+		cb.button_pressed = true
+		box.add_child(cb)
+	$UI/SaveTeamDlg.visible = true
+
+
+## 6021 — sw_1 blob [i16 type=0][i16 teamId=0][i16 gameMode=1][str8 name]
+## [u8 n]{i64 fighter, i64 ownerCoach}[u8 0 coaches] + trailing u8 pad.
+func _on_save_team() -> void:
+	var tname: String = $UI/SaveTeamDlg/VBox/Name.text.strip_edges()
+	if tname.is_empty():
+		_log_line("[color=red]team needs a name[/color]")
+		return
+	var w := WireWriter.new()
+	w.put_i16(0)
+	w.put_i16(0)
+	w.put_i16(1)
+	var nb := CP1252.encode(tname)
+	w.put_u8(nb.size())
+	w.put_bytes(nb)
+	var members := []
+	for cb in $UI/SaveTeamDlg/VBox/Scroll/Fighters.get_children():
+		if cb.button_pressed:
+			members.append(int(cb.get_meta("id")))
+	w.put_u8(members.size())
+	for fid in members:
+		w.put_i64(fid)
+		w.put_i64(State.my_coach_id)
+	w.put_u8(0)   # coach list — solo preset
+	w.put_u8(0)   # trailing pad byte
+	Session.send(OP_TEAM_PRESET_SAVE, w.raw(), 2)
+	$UI/SaveTeamDlg.visible = false
+	_log_line("team preset '%s' sent (%d fighters)" % [tname, members.size()])
 
 
 ## 6001 FighterCreate [u8 flag][i16 slot][u16 blobLen][et_2 blob] (arch 2).

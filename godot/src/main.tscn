@@ -77,6 +77,14 @@ disabled = true
 text = "Practice fight"
 disabled = true
 
+[node name="FightBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Fight — search 1v1"
+disabled = true
+
+[node name="CancelSearchBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Cancel search"
+visible = false
+
 [node name="RosterTitle" type="Label" parent="UI/VBox"]
 text = "Fighters:"
 mouse_filter = 2
@@ -102,6 +110,33 @@ disabled = true
 [node name="LoadoutBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
 text = "Loadout"
 disabled = true
+
+[node name="TeamTitle" type="Label" parent="UI/VBox"]
+text = "Team preset:"
+mouse_filter = 2
+
+[node name="TeamRow" type="HBoxContainer" parent="UI/VBox"]
+theme_override_constants/separation = 6
+mouse_filter = 2
+
+[node name="Preset" type="OptionButton" parent="UI/VBox/TeamRow"]
+custom_minimum_size = Vector2(180, 0)
+
+[node name="AssignBtn" type="Button" parent="UI/VBox/TeamRow"]
+text = "+ fighter"
+tooltip_text = "assign selected roster fighter to the preset (6013)"
+
+[node name="UnassignBtn" type="Button" parent="UI/VBox/TeamRow"]
+text = "- fighter"
+tooltip_text = "remove selected fighter from the preset (6013)"
+
+[node name="SaveTeamBtn" type="Button" parent="UI/VBox/TeamRow"]
+text = "Save team…"
+tooltip_text = "save a new preset from checked roster fighters (6021)"
+
+[node name="DelTeamBtn" type="Button" parent="UI/VBox/TeamRow"]
+text = "Del team"
+tooltip_text = "delete the selected preset (6023)"
 
 [node name="Chat" parent="UI" instance=ExtResource("3")]
 
@@ -188,4 +223,88 @@ alignment = 1
 text = "Save"
 
 [node name="CancelBtn" type="Button" parent="UI/LoadoutDlg/VBox/Btns"]
+text = "Cancel"
+
+[node name="ChallengeAskDlg" type="ConfirmationDialog" parent="UI"]
+title = "Challenge"
+ok_button_text = "Challenge"
+cancel_button_text = "Cancel"
+size = Vector2i(300, 120)
+
+[node name="ChallengeDlg" type="ConfirmationDialog" parent="UI"]
+title = "Incoming challenge"
+ok_button_text = "Accept"
+cancel_button_text = "Decline"
+size = Vector2i(320, 120)
+
+[node name="TeamPickDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -80.0
+offset_right = 140.0
+offset_bottom = 80.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/TeamPickDlg"]
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="UI/TeamPickDlg/VBox"]
+text = "Pick your team"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="Pick" type="OptionButton" parent="UI/TeamPickDlg/VBox"]
+
+[node name="Btns" type="HBoxContainer" parent="UI/TeamPickDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="GoBtn" type="Button" parent="UI/TeamPickDlg/VBox/Btns"]
+text = "Combattre"
+
+[node name="CancelBtn" type="Button" parent="UI/TeamPickDlg/VBox/Btns"]
+text = "Back"
+
+[node name="SaveTeamDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -150.0
+offset_right = 140.0
+offset_bottom = 150.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/SaveTeamDlg"]
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="UI/SaveTeamDlg/VBox"]
+text = "Save team preset"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="Name" type="LineEdit" parent="UI/SaveTeamDlg/VBox"]
+placeholder_text = "team name"
+max_length = 24
+
+[node name="Scroll" type="ScrollContainer" parent="UI/SaveTeamDlg/VBox"]
+size_flags_vertical = 3
+
+[node name="Fighters" type="VBoxContainer" parent="UI/SaveTeamDlg/VBox/Scroll"]
+size_flags_horizontal = 3
+
+[node name="Btns" type="HBoxContainer" parent="UI/SaveTeamDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="SaveBtn" type="Button" parent="UI/SaveTeamDlg/VBox/Btns"]
+text = "Save"
+
+[node name="CancelBtn" type="Button" parent="UI/SaveTeamDlg/VBox/Btns"]
 text = "Cancel"
