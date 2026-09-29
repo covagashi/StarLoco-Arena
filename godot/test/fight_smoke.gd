@@ -93,11 +93,15 @@ func _show_fight() -> void:
 		await create_timer(0.25).timeout
 		deadline += 0.25
 	await create_timer(1.5).timeout   # let a couple of turns land
-	var img := root.get_texture().get_image() if root.get_texture() != null else null
-	if img != null:
-		img.save_png("/tmp/fight_live.png")
-		print("[smoke] combat shot -> /tmp/fight_live.png %dx%d"
-			% [img.get_width(), img.get_height()])
+	# The dummy/headless renderer has no viewport texture — skip the capture
+	# rather than error on root.get_texture().
+	if DisplayServer.get_name() != "headless":
+		var tex := root.get_texture()
+		var img := tex.get_image() if tex != null else null
+		if img != null:
+			img.save_png("/tmp/fight_live.png")
+			print("[smoke] combat shot -> /tmp/fight_live.png %dx%d"
+				% [img.get_width(), img.get_height()])
 	await create_timer(14.0).timeout # surrender fires inside; loop or finish
 	_finish(0, "fight rendered")
 

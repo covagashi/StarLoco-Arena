@@ -21,6 +21,8 @@ const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const State := preload("res://src/state.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
+const Elements := preload("res://src/gamedata/elements.gd")
+const Cards := preload("res://src/gamedata/cards.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
@@ -63,6 +65,27 @@ const OP_CHALLENGE_ACCEPTED := 26302     # [i64 handle][u8 evo] → both confirm
 const OP_CHALLENGE_DECLINE := 26307      # [i64 handle] decline/cancel
 const OP_CHALLENGE_CANCELLED := 26304    # [i64 handle]
 const OP_TEAM_CONFIRM := 26303           # [i64 coachId][i16 teamId]
+const OP_ELEMENT_SPAWN := 200            # [i16 n]{i64 id, u16 len, part-table}
+const OP_ELEMENT_DESPAWN := 206          # [i16 n]{i64 id}
+const OP_ELEMENT_ACTION := 201           # C2S [i64 id][i16 actionOrdinal]
+const OP_WALLET := 4001                  # [u8 n]{u8 ctype, i32 amount}
+const OP_INVENTORY := 5200               # 4 sections — codec_overrides
+const OP_SHOP_CATALOG := 5401            # [u8 mode][i32 shopId]{i32, u16}…
+const OP_SHOP_RESULT := 5403             # [u8 result][u8 n]{u8, i32}
+const OP_SHOP_BUY := 5450                # C2S [i32 shopId][i16 n]{i32 cardId}
+const OP_SHOP_BARTER := 5400             # C2S [i32 shop][i16 n]{i32}[i16 m]{i32,u16}
+const OP_ZAAP := 4512                    # C2S [i32 cardTemplateId]
+const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
+const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
+const OP_FRIEND_ADDED := 3156            # [u8 name][u8 note][i64 id]…
+const OP_IGNORE_ADDED := 3158            # [u8 name][u8 note]
+const OP_FRIEND_REMOVED := 3160          # [u8 name]
+const OP_IGNORE_REMOVED := 3162          # [u8 name]
+const OP_FRIEND_ONLINE := 3148           # [u8 name]…[i64 id]…
+const OP_FRIEND_OFFLINE := 3150          # [u8 name][u8 note]
+const OP_IGNORE_ONLINE := 3164           # [u8 name][i64 id]
+const OP_IGNORE_OFFLINE := 3166          # [u8 name]
+const OP_MAILBOX_REQ := 15000            # C2S empty — opens the mailbox dialog
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
@@ -79,6 +102,9 @@ var _challenge_handle := -1   # pending 26300 handle (-1 = none)
 var _challenge_target := -1   # coach id we clicked "challenge" on
 var _challenge_evo := 0       # evolution flag echoed back on accept
 var _searching := false       # combattre queue state (23104 ack)
+var _shop_id := -1            # catalogue id echoed back on buy/barter
+var _shop_cards := []         # [{id, qty}] of the open catalogue
+var _barter_wanted := -1      # card id picked for exchange
 
 
 func _ready() -> void:
@@ -126,6 +152,14 @@ func _ready() -> void:
 	$UI/LoadoutDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/LoadoutDlg.visible = false)
 	$UI/LoadoutDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_loadout)
+	$UI/ShopDlg/VBox/Btns/CloseBtn.pressed.connect(
+		func(): $UI/ShopDlg.visible = false)
+	$UI/ShopDlg/VBox/Btns/BuyBtn.pressed.connect(_on_shop_buy)
+	$UI/ShopDlg/VBox/Btns/TradeBtn.pressed.connect(_open_barter)
+	$UI/ShopDlg/VBox/Scroll/Cards.item_selected.connect(_on_shop_pick)
+	$UI/BarterDlg/VBox/Btns/CancelBtn.pressed.connect(
+		func(): $UI/BarterDlg.visible = false)
+	$UI/BarterDlg/VBox/Btns/TradeBtn.pressed.connect(_on_barter_trade)
 
 
 func _exit_tree() -> void:
@@ -201,6 +235,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
 			State.current_world = int(d.get("world_id", -1))
+			State.elements = {}   # registry drops with the old world
 			_my_pos = Vector3(float(d.get("x", 0.0)), float(d.get("y", 0.0)),
 				float(d.get("alt", 0)))
 			_log_line("entering instance world=%d pos=(%s,%s)" % [
@@ -346,6 +381,95 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				State.presets = State.presets.filter(
 					func(p): return int(p.id) != tid)
 				_refresh_presets()
+		OP_ELEMENT_SPAWN:
+			# 200 — world interactives entering the AoI: zaaps, card masters…
+			var d := Codec.decode(opcode, payload)
+			var table := Elements.for_world(State.current_world)
+			for e in d.get("elements", []):
+				var id := int(e.id)
+				var info: Variant = table.get(id)
+				e["kind"] = int(info.type) if info != null else -1
+				if e.get("desc", "") == "" and info != null:
+					e.desc = info.desc
+				State.elements[id] = e
+				world.element_spawned(e)
+		OP_ELEMENT_DESPAWN:
+			var d := Codec.decode(opcode, payload)
+			for id in d.get("ids", []):
+				State.elements.erase(int(id))
+			world.element_despawned(d.get("ids", []))
+		OP_WALLET:
+			var d := Codec.decode(opcode, payload)
+			for c in d.get("currencies", []):
+				State.wallet[int(c.type)] = int(c.amount)
+			_refresh_wallet_label()
+		OP_INVENTORY:
+			var d := Codec.decode(opcode, payload)
+			State.inventory = {}
+			for c in d.get("cards", []):
+				State.inventory[int(c.card_id)] = int(c.qty)
+			_log_line("inventory: %d card stack(s)" % State.inventory.size())
+		OP_SHOP_CATALOG:
+			var d := Codec.decode(opcode, payload)
+			_open_shop(d)
+		OP_SHOP_RESULT:
+			var d := Codec.decode(opcode, payload)
+			var res := int(d.result)
+			for c in d.get("currencies", []):
+				State.wallet[int(c.type)] = int(c.amount)
+			_refresh_wallet_label()
+			match res:
+				0: _log_line("[color=green]shop: deal done[/color]")
+				1: _log_line("[color=red]shop: not enough tokens[/color]")
+				_: _log_line("[color=red]shop: refused (code %d)[/color]" % res)
+		OP_FRIEND_LIST:
+			var d := Codec.decode(opcode, payload)
+			State.friends = d.get("friends", [])
+			if not State.friends.is_empty():
+				_log_line("friends: %s" % ", ".join(
+					State.friends.map(func(f): return str(f.name))))
+		OP_IGNORE_LIST:
+			var d := Codec.decode(opcode, payload)
+			State.ignored = d.get("names", [])
+			if not State.ignored.is_empty():
+				_log_line("ignored: %s" % ", ".join(State.ignored))
+		OP_FRIEND_ADDED:
+			var d := Codec.decode(opcode, payload)
+			State.friends.append({"name": d.name,
+				"id": int(d.get("id", -1)), "online": true, "notify": 1})
+			_log_line("[color=light_green]%s added to friends[/color]" % d.name)
+		OP_FRIEND_REMOVED:
+			var d := Codec.decode(opcode, payload)
+			State.friends = State.friends.filter(
+				func(f): return f.name != d.name)
+			_log_line("%s removed from friends" % d.name)
+		OP_IGNORE_ADDED:
+			var d := Codec.decode(opcode, payload)
+			State.ignored.append(d.name)
+			_log_line("[i]%s ignored[/i]" % d.name)
+		OP_IGNORE_REMOVED:
+			var d := Codec.decode(opcode, payload)
+			State.ignored.erase(d.name)
+			_log_line("%s un-ignored" % d.name)
+		OP_FRIEND_ONLINE:
+			var d := Codec.decode(opcode, payload)
+			for f in State.friends:
+				if f.name == d.name:
+					f.online = true
+					f.id = int(d.get("id", -1))
+			_log_line("[color=light_green]%s is online[/color]" % d.name)
+		OP_FRIEND_OFFLINE:
+			var d := Codec.decode(opcode, payload)
+			for f in State.friends:
+				if f.name == d.name:
+					f.online = false
+			_log_line("[i]%s went offline[/i]" % d.name)
+		OP_IGNORE_ONLINE:
+			var d := Codec.decode(opcode, payload)
+			_log_line("[i](ignored) %s is online[/i]" % d.name)
+		OP_IGNORE_OFFLINE:
+			var d := Codec.decode(opcode, payload)
+			_log_line("[i](ignored) %s went offline[/i]" % d.name)
 		OP_FIGHT_ERROR:
 			_log_line("[color=red]fight creation refused[/color]")
 		OP_PONG:
@@ -404,6 +528,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			$UI/ChallengeAskDlg.dialog_text = \
 				"Challenge %s to a training fight?" % world.actor_name(who)
 			$UI/ChallengeAskDlg.popup_centered()
+			return
+		var elem: int = world.element_at(mpos)
+		if elem >= 0:
+			_use_element(elem)
 			return
 		var cell: Variant = world.screen_to_cell(mpos)
 		if cell != null:
@@ -704,3 +832,193 @@ func _send_coach_creation() -> void:
 
 func _log_line(s: String) -> void:
 	log.log_line(s)
+
+
+## --- Interactive elements (200/201/206) -------------------------------------
+## Click on a world marker → INTERACTIVE_ELEMENT_ACTION 201 [i64 id][i16 ordinal]
+## (arch 3). The server only answers for kinds with server-side follow-up
+## (Card Master pushes the 5401 catalogue); the rest open client-local dialogs.
+func _use_element(id: int) -> void:
+	var e: Dictionary = world.element_info(id)
+	var kind := int(e.get("kind", -1))
+	var w := WireWriter.new()
+	w.put_i64(id)
+	w.put_i16(0)   # action ordinal — first action of the element's list
+	Session.send(OP_ELEMENT_ACTION, w.raw(), 3)
+	var label := Elements.kind_name(kind)
+	match kind:
+		4:   # Zaap — local dialog of owned Zaap cards (type 20) → 4512
+			_open_zaap()
+		1:   # Card Master — server pushes the 5401 catalogue
+			_log_line("%s — opening shop…" % label)
+		_:
+			_log_line("%s — dialog not implemented yet" % label)
+
+
+## Zaap dialog: reuse the shop panel in "teleport" mode — the stocked list is
+## our own type-20 cards (Zaap destinations); clicking one sends 4512.
+var _zaap_mode := false
+
+func _open_zaap() -> void:
+	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
+	list.clear()
+	var owned := []
+	for cid in State.inventory:
+		if int(Cards.meta(int(cid)).get("type", 0)) == 20:
+			owned.append(int(cid))
+	owned.sort()
+	_zaap_mode = true
+	_shop_cards = []
+	for cid in owned:
+		list.add_item("%s  ×%d" % [Cards.name_of(cid), State.inventory[cid]])
+		list.set_item_metadata(list.item_count - 1, cid)
+	$UI/ShopDlg/VBox/Title.text = "Zaap"
+	$UI/ShopDlg/VBox/Hint.text = "Pick a destination."
+	$UI/ShopDlg/VBox/Btns/BuyBtn.text = "Teleport"
+	$UI/ShopDlg/VBox/Btns/TradeBtn.visible = false
+	$UI/ShopDlg.visible = true
+	_on_shop_pick(-1)
+
+
+## --- Card Master shop --------------------------------------------------------
+## 5401 catalogue → list of cards w/ names+prices. Buy sends 5450
+## [i32 shopId][i16 n]{i32 cardId}; Exchange opens the barter pane (5400).
+func _open_shop(d: Dictionary) -> void:
+	_zaap_mode = false
+	_shop_id = int(d.get("shop_id", -1))
+	_shop_cards = d.get("cards", [])
+	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
+	list.clear()
+	for c in _shop_cards:
+		var cid := int(c.id)
+		var price := Cards.price_text(cid)
+		var line := "%s  ×%d" % [Cards.name_of(cid), int(c.qty)]
+		line += "  (%s)" % price if price != "" else "  (barter only)"
+		list.add_item(line)
+		list.set_item_metadata(list.item_count - 1, cid)
+	$UI/ShopDlg/VBox/Title.text = "Card Master"
+	$UI/ShopDlg/VBox/Hint.text = "Click a card — buy with tokens, or exchange yours."
+	$UI/ShopDlg/VBox/Btns/BuyBtn.text = "Buy (tokens)"
+	$UI/ShopDlg/VBox/Btns/TradeBtn.visible = true
+	_refresh_wallet_label()
+	$UI/ShopDlg.visible = true
+	_on_shop_pick(-1)
+
+
+func _on_shop_pick(_idx: int) -> void:
+	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
+	var sel := list.get_selected_items()
+	var has := not sel.is_empty()
+	$UI/ShopDlg/VBox/Btns/BuyBtn.disabled = not has
+	$UI/ShopDlg/VBox/Btns/TradeBtn.disabled = not has and not _zaap_mode
+	if _zaap_mode:
+		$UI/ShopDlg/VBox/Btns/BuyBtn.text = "Teleport"
+	elif has:
+		var cid := int(list.get_item_metadata(sel[0]))
+		$UI/ShopDlg/VBox/Btns/BuyBtn.disabled = \
+			not _priced(cid) or not _affordable(cid)
+
+
+func _priced(cid: int) -> bool:
+	for t in Cards.meta(cid).get("price", {}):
+		if int(Cards.meta(cid).price[t]) > 0:
+			return true
+	return false
+
+
+func _affordable(cid: int) -> bool:
+	for t in Cards.meta(cid).get("price", {}):
+		var amt := int(Cards.meta(cid).price[t])
+		if amt > 0 and int(State.wallet.get(int(t), 0)) < amt:
+			return false
+	return true
+
+
+func _on_shop_buy() -> void:
+	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
+	var sel := list.get_selected_items()
+	if sel.is_empty():
+		return
+	var cid := int(list.get_item_metadata(sel[0]))
+	if _zaap_mode:
+		var w := WireWriter.new()
+		w.put_i32(cid)
+		Session.send(OP_ZAAP, w.raw(), 3)
+		$UI/ShopDlg.visible = false
+		_log_line("zaap: %s" % Cards.name_of(cid))
+		return
+	var w := WireWriter.new()
+	w.put_i32(_shop_id)
+	w.put_u16(1)
+	w.put_i32(cid)
+	Session.send(OP_SHOP_BUY, w.raw(), 3)
+	_log_line("buy 5450 sent: %s" % Cards.name_of(cid))
+
+
+## Barter: offer owned tradable cards whose summed value ≥ wanted card's.
+func _open_barter() -> void:
+	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
+	var sel := list.get_selected_items()
+	if sel.is_empty():
+		return
+	_barter_wanted = int(list.get_item_metadata(sel[0]))
+	var wanted_value := Cards.value_of(_barter_wanted)
+	$UI/BarterDlg/VBox/Wanted.text = "wanted: %s (value %d)" % [
+		Cards.name_of(_barter_wanted), wanted_value]
+	var box: VBoxContainer = $UI/BarterDlg/VBox/Scroll/Mine
+	for c in box.get_children():
+		c.queue_free()
+	for cid in State.inventory:
+		var meta := Cards.meta(int(cid))
+		if not meta.get("tradable", false):
+			continue
+		for i in mini(int(State.inventory[cid]), 9):
+			var cb := CheckBox.new()
+			cb.text = "%s (value %d)" % [Cards.name_of(int(cid)),
+				Cards.value_of(int(cid))]
+			cb.set_meta("id", int(cid))
+			cb.toggled.connect(func(_on): _update_barter_sum())
+			box.add_child(cb)
+	$UI/BarterDlg.visible = true
+	_update_barter_sum()
+
+
+func _update_barter_sum() -> void:
+	var total := 0
+	for cb in $UI/BarterDlg/VBox/Scroll/Mine.get_children():
+		if cb.button_pressed:
+			total += Cards.value_of(int(cb.get_meta("id")))
+	$UI/BarterDlg/VBox/Sum.text = "offered value: %d / %d" % [
+		total, Cards.value_of(_barter_wanted)]
+	$UI/BarterDlg/VBox/Btns/TradeBtn.disabled = \
+		total < Cards.value_of(_barter_wanted) or total <= 0
+
+
+## 5400 [i32 shopId][i16 nWanted]{i32 cardId}[i16 nGiven]{i32 cardId, u16 qty}
+func _on_barter_trade() -> void:
+	var given := {}
+	for cb in $UI/BarterDlg/VBox/Scroll/Mine.get_children():
+		if cb.button_pressed:
+			var cid := int(cb.get_meta("id"))
+			given[cid] = int(given.get(cid, 0)) + 1
+	var w := WireWriter.new()
+	w.put_i32(_shop_id)
+	w.put_u16(1)
+	w.put_i32(_barter_wanted)
+	w.put_u16(given.size())
+	for cid in given:
+		w.put_i32(cid)
+		w.put_u16(given[cid])
+	Session.send(OP_SHOP_BARTER, w.raw(), 3)
+	$UI/BarterDlg.visible = false
+	_log_line("barter 5400 sent: %d cards for %s" % [
+		given.values().reduce(func(a, b): return a + b, 0),
+		Cards.name_of(_barter_wanted)])
+
+
+func _refresh_wallet_label() -> void:
+	var parts := []
+	for t in State.wallet:
+		parts.append("%d t%d" % [int(State.wallet[t]), int(t)])
+	var node: Label = $UI/ShopDlg/VBox/Wallet
+	node.text = "wallet: %s" % (", ".join(parts) if parts else "—")

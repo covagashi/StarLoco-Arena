@@ -84,21 +84,21 @@ const OP_CHANNEL_CONTENT_MESSAGE := 3140
 const OP_CHAT_USER_FLAGS_MESSAGE := 3142
 const OP_FRIEND_LIST := 3144
 const OP_IGNORE_LIST := 3146
-const OP_NOTIFICATION_FRIEND_ONLINE_MESSAGE := 3148
-const OP_NOTIFICATION_FRIEND_OFFLINE_MESSAGE := 3150
+const OP_NOTIFICATION_FRIEND_ONLINE := 3148
+const OP_NOTIFICATION_FRIEND_OFFLINE := 3150
 const OP_USER_CHANNEL_CONTENT_MESSAGE := 3151
 const OP_VICINITY_CONTENT_MESSAGE := 3152
 const OP_USER_VICINITY_CONTENT_MESSAGE := 3153
 const OP_PRIVATE_CONTENT_MESSAGE := 3154
 const OP_USER_PRIVATE_CONTENT_MESSAGE := 3155
-const OP_FRIEND_ADDED_MESSAGE := 3156
-const OP_IGNORE_ADDED_MESSAGE := 3158
+const OP_FRIEND_ADDED := 3156
+const OP_IGNORE_ADDED := 3158
 const OP_MSG3159 := 3159
-const OP_FRIEND_REMOVED_MESSAGE := 3160
+const OP_FRIEND_REMOVED := 3160
 const OP_MSG3161 := 3161
-const OP_IGNORE_REMOVED_MESSAGE := 3162
-const OP_NOTIFICATION_IGNORE_ONLINE_MESSAGE := 3164
-const OP_NOTIFICATION_IGNORE_OFFLINE_MESSAGE := 3166
+const OP_IGNORE_REMOVED := 3162
+const OP_NOTIFICATION_IGNORE_ONLINE := 3164
+const OP_NOTIFICATION_IGNORE_OFFLINE := 3166
 const OP_MSG3168 := 3168
 const OP_MSG3170 := 3170
 const OP_MSG3198 := 3198
@@ -166,8 +166,8 @@ const OP_COACH_INVENTORY_UPDATE_REQUEST_MESSAGE := 5203
 const OP_MSG5204 := 5204
 const OP_MSG5300 := 5300
 const OP_MSG5400 := 5400
-const OP_MSG5401 := 5401
-const OP_MSG5403 := 5403
+const OP_SHOP_CATALOG := 5401
+const OP_SHOP_RESULT := 5403
 const OP_MSG5450 := 5450
 const OP_MSG5470 := 5470
 const OP_MSG5490 := 5490
@@ -427,21 +427,21 @@ const NAMES := {
 	3142: "ChatUserFlagsMessage",
 	3144: "FriendList",
 	3146: "IgnoreList",
-	3148: "NotificationFriendOnlineMessage",
-	3150: "NotificationFriendOfflineMessage",
+	3148: "NotificationFriendOnline",
+	3150: "NotificationFriendOffline",
 	3151: "UserChannelContentMessage",
 	3152: "VicinityContentMessage",
 	3153: "UserVicinityContentMessage",
 	3154: "PrivateContentMessage",
 	3155: "UserPrivateContentMessage",
-	3156: "FriendAddedMessage",
-	3158: "IgnoreAddedMessage",
+	3156: "FriendAdded",
+	3158: "IgnoreAdded",
 	3159: "Msg3159",
-	3160: "FriendRemovedMessage",
+	3160: "FriendRemoved",
 	3161: "Msg3161",
-	3162: "IgnoreRemovedMessage",
-	3164: "NotificationIgnoreOnlineMessage",
-	3166: "NotificationIgnoreOfflineMessage",
+	3162: "IgnoreRemoved",
+	3164: "NotificationIgnoreOnline",
+	3166: "NotificationIgnoreOffline",
 	3168: "Msg3168",
 	3170: "Msg3170",
 	3198: "Msg3198",
@@ -509,8 +509,8 @@ const NAMES := {
 	5204: "Msg5204",
 	5300: "Msg5300",
 	5400: "Msg5400",
-	5401: "Msg5401",
-	5403: "Msg5403",
+	5401: "ShopCatalog",
+	5403: "ShopResult",
 	5450: "Msg5450",
 	5470: "Msg5470",
 	5490: "Msg5490",

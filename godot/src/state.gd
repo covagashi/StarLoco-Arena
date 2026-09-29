@@ -36,6 +36,22 @@ static var roster := []
 ## [{id, type, name, game_mode, fighters: [{id, owner}], coaches: [ids]}]
 static var presets := []
 
+## Interactive elements spawned in the current world (200/206):
+## {instanceId: {x, y, z, dir, flags, desc, kind}} — kind comes from the
+## exported env table (gamedata/elements.gd), the wire payload has position.
+static var elements := {}
+
+## Coach inventory from 5200 CoachInventoryUpdate: {cardTemplateId: qty}
+## (unequipped stacks only — section 3 of the push).
+static var inventory := {}
+
+## Wallet from 4001 WalletUpdate / 5403 ShopResult: {currencyType: amount}.
+static var wallet := {}
+
+## Social lists — friends: [{name, id, online, notify}], ignored: [names].
+static var friends := []
+static var ignored := []
+
 ## Breed id -> class name (Dofus 1.x order; Iop=8 / Sacrier=11 observed live).
 const BREED_NAMES := {1: "Feca", 2: "Osamoda", 3: "Enutrof", 4: "Sram",
 	5: "Xelor", 6: "Ecaflip", 7: "Eniripsa", 8: "Iop", 9: "Cra",

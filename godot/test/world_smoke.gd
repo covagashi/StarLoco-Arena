@@ -107,6 +107,50 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 		4700:
 			var p := WireReader.new(raw)
 			print("[smoke] EMOTE played actor=", p.get_i64(), " anim=", p.get_str("u8"))
+		200:
+			var d := Codec.decode(op, payload)
+			print("[smoke] ELEMENT spawn n=", d.elements.size(),
+				" first=", d.elements[0] if not d.elements.is_empty() else {})
+		206:
+			var d := Codec.decode(op, payload)
+			print("[smoke] ELEMENT despawn n=", d.ids.size())
+		4001:
+			var d := Codec.decode(op, payload)
+			print("[smoke] WALLET:", d.currencies)
+		5200:
+			var d := Codec.decode(op, payload)
+			print("[smoke] INVENTORY stacks=", d.cards.size())
+		5401:
+			var d := Codec.decode(op, payload)
+			print("[smoke] SHOP catalog shop=", d.shop_id, " cards=", d.cards.size())
+		5403:
+			var d := Codec.decode(op, payload)
+			print("[smoke] SHOP result=", d.result, " wallet=", d.currencies)
+		3144:
+			var d := Codec.decode(op, payload)
+			print("[smoke] FRIENDS:", d.friends.map(
+				func(f): return "%s(online=%s)" % [f.name, f.get("online", false)]))
+		3146:
+			var d := Codec.decode(op, payload)
+			print("[smoke] IGNORED:", d.names)
+		3156:
+			var d := Codec.decode(op, payload)
+			print("[smoke] FRIEND added:", d.name)
+		3158:
+			var d := Codec.decode(op, payload)
+			print("[smoke] IGNORE added:", d.name)
+		3160:
+			var d := Codec.decode(op, payload)
+			print("[smoke] FRIEND removed:", d.name)
+		3162:
+			var d := Codec.decode(op, payload)
+			print("[smoke] IGNORE removed:", d.name)
+		3148:
+			var d := Codec.decode(op, payload)
+			print("[smoke] FRIEND online:", d.name)
+		3150:
+			var d := Codec.decode(op, payload)
+			print("[smoke] FRIEND offline:", d.name)
 
 
 func _move_and_shoot() -> void:
@@ -168,12 +212,69 @@ func _move_and_shoot() -> void:
 	_main._on_cancel_search()
 	print("[smoke] combattre + cancel sent — expecting 23104/23102")
 	await create_timer(1.0).timeout
+	# interactive elements: the 200 burst arrives on entry + after our move.
+	# The lobby island's Card Masters sit far from spawn — walk toward one and
+	# let the AoI refresh (server sends 200s as it enters range).
+	print("[smoke] elements in view:", State.elements.size())
+	var w2 = _main.get_node("World")
+	var card_master := -1
+	for id in State.elements:
+		if int(State.elements[id].get("kind", -1)) == 1:
+			card_master = int(id)
+			break
+	if card_master < 0:
+		var table := preload("res://src/gamedata/elements.gd").for_world(
+			State.current_world)
+		var cm_pos := Vector2i.ZERO
+		for id in table:
+			if int(table[id].type) == 1:
+				cm_pos = Vector2i(int(table[id].x), int(table[id].y))
+				card_master = int(id)
+				break
+		if card_master >= 0:
+			# step inside the master's chunk AoI (range ~2 chunks of 18 cells)
+			var target := cm_pos + Vector2i(-6, 0)
+			w2.click_to(target)
+			print("[smoke] walking toward card master at ", cm_pos,
+				" (via ", target, ")")
+			await create_timer(2.5).timeout
+			print("[smoke] elements in view now:", State.elements.size())
+	if card_master >= 0 and State.elements.has(card_master):
+		_main._use_element(card_master)   # same path as a marker click (201)
+		print("[smoke] card master clicked (id ", card_master, ") — expecting 5401")
+		await create_timer(1.0).timeout
+		var shop_list: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
+		if shop_list.item_count > 0:
+			shop_list.select(0)
+			_main._on_shop_pick(0)
+			_main._on_shop_buy()   # island Card Masters are barter-only → 5403
+			print("[smoke] shop buy sent — expecting 5403")
+	elif card_master >= 0:
+		print("[smoke] card master %d still out of AoI — skipping shop" %
+			card_master)
+	else:
+		print("[smoke] no card master in view — skipping shop exercise")
+	await create_timer(1.0).timeout
+	# social: friend/ignore a real coach (3156/3158), ghost → 3204, list echoes
+	chat._on_submit("/friend test2")
+	chat._on_submit("/friend coach_fantasma_zz")
+	chat._on_submit("/ignore test2")
+	chat._on_submit("/friends")
+	chat._on_submit("/ignored")
+	print("[smoke] social commands sent — expecting 3156 + 3204 + 3158")
+	await create_timer(1.0).timeout
+	chat._on_submit("/unfriend test2")
+	chat._on_submit("/unignore test2")
+	print("[smoke] unfriend/unignore sent — expecting 3160 + 3162")
+	await create_timer(1.0).timeout
 	# delete the preset → 6022 + 6030 refresh
 	_main._on_del_team()
 	await create_timer(1.0).timeout
-	var tex := root.get_texture()
-	var img = tex.get_image() if tex != null else null
-	if img != null:
-		img.save_png("/tmp/world_live.png")
-		print("[smoke] shot -> /tmp/world_live.png")
+	# The dummy/headless renderer has no viewport texture — skip the capture.
+	if DisplayServer.get_name() != "headless":
+		var tex := root.get_texture()
+		var img = tex.get_image() if tex != null else null
+		if img != null:
+			img.save_png("/tmp/world_live.png")
+			print("[smoke] shot -> /tmp/world_live.png")
 	quit()

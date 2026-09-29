@@ -110,11 +110,11 @@ func (d *Deps) startChallengeFight(c *challenge) error {
 	fightArena := pickArena()
 	teamA, err := d.buildFightTeamFor(c.challenger, 0, fightArena.startCells(0), rosterA)
 	if err != nil {
-		return err
+		return refuseFightError(err, c.challenger, c.target)
 	}
 	teamB, err := d.buildFightTeamFor(c.target, 1, fightArena.startCells(1), rosterB)
 	if err != nil {
-		return err
+		return refuseFightError(err, c.challenger, c.target)
 	}
 	return d.startFightWithTeams(fightArena, teamA, teamB, false, 0, c.evolution)
 }

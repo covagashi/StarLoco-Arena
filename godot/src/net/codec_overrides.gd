@@ -24,6 +24,15 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"actor_appear": return _actor_appear(r)
 		"placement_move": return _placement_move(r)
 		"running_effect": return _running_effect(r)
+		"element_spawn": return _element_spawn(r)
+		"element_despawn": return _element_despawn(r)
+		"shop_catalog": return _shop_catalog(r)
+		"shop_result": return _shop_result(r)
+		"friend_added": return _friend_added(r)
+		"friend_online": return _friend_online(r)
+		"ignore_online": return _ignore_online(r)
+		"name_note": return _name_note(r)
+		"name_only": return _name_only(r)
 		_:
 			return {"_opcode": opcode, "_raw": r.get_rest(),
 					"_handler": handler}
@@ -66,7 +75,7 @@ static func _part_table(r: WireReader) -> Dictionary:
 	var parts := {}
 	for i in index.size():
 		var start: int = index[i].off + 1
-		var end: int = (index[i + 1].off - 1) if i + 1 < index.size() else buf.size() - 1
+		var end: int = index[i + 1].off if i + 1 < index.size() else buf.size()
 		parts[index[i].id] = buf.slice(start, end)
 	return {"parts": parts}
 
@@ -179,12 +188,26 @@ static func encode_fighter_blob(breed: int, fname: String, sex: int) -> PackedBy
 	return w.raw()
 
 
-## Opcode 3144 — [u8 n]{u16 len, friend blob}. Blob internals (presence,
-## status, guild) decode later.
+## Opcode 3144 — [u8 n]{u16 len, friend blob}. Blob layout (server
+## buildFriendList, client qm.b):
+##   [u8 name][u8 charName][u8 note][u8 notify][i64 coachId=-1 offline]
+##   [i16 adQ][u8 adR][i16 adS]
 static func _friend_list(r: WireReader) -> Dictionary:
 	var out := {"friends": []}
 	for i in r.get_u8():
-		out.friends.append(r.get_bytes(r.get_u16()))
+		var br := WireReader.new(r.get_bytes(r.get_u16()))
+		var f := {"name": br.get_str("u8"), "char_name": br.get_str("u8"),
+			"note": br.get_str("u8")}
+		if br.remaining() >= 1:
+			f.notify = br.get_u8()
+		if br.remaining() >= 8:
+			f.id = br.get_i64()
+			f.online = int(f.id) != -1
+		if br.remaining() >= 5:
+			br.get_i16()
+			br.get_u8()
+			br.get_i16()
+		out.friends.append(f)
 	return out
 
 
@@ -438,3 +461,122 @@ static func _running_effect(r: WireReader) -> Dictionary:
 				pr.get_i32()   # source type — 13 = spell
 				out.spell_id = pr.get_i64()
 	return out
+
+
+## Opcode 200 — INTERACTIVE_ELEMENT_SPAWN (server elements.go
+## buildInteractiveElementSpawn): [i16 count]{[i64 instanceId][u16 len]
+## [part-table payload]}. The payload is a BIG-endian part table (aJj.ad) —
+## position + descriptor live in the RU part (id 1, client RU.f):
+##   [i16 world][i32 x][i32 y][i16 z][i16 state][u8 visible][u8][u8 dir]
+##   [i16 flags][i16 nPaths]{i32 x, i32 y, i16 z}[u16 nameLen][name][u8 props]
+## The server rewrites z to the GROUND altitude before sending — wire z is
+## authoritative (envmaps.go calls the stored one the decoration height).
+static func _element_spawn(r: WireReader) -> Dictionary:
+	var out := {"elements": []}
+	for i in r.get_i16():
+		var e := {"id": r.get_i64()}
+		_element_ru(e, r.get_bytes(r.get_u16()))
+		out.elements.append(e)
+	return out
+
+
+static func _element_ru(e: Dictionary, blob: PackedByteArray) -> void:
+	var pr := WireReader.new(blob)
+	var n := pr.get_u8()
+	var ids := []
+	var offs := []
+	for i in n:
+		ids.append(pr.get_u8())
+		offs.append(pr.get_i32())
+	for i in ids.size():
+		if ids[i] != 1:
+			continue
+		var start: int = offs[i] + 1
+		var end: int = offs[i + 1] if i + 1 < ids.size() else blob.size()
+		if start < 0 or end > blob.size() or start >= end:
+			return
+		var ru := WireReader.new(blob.slice(start, end))
+		ru.get_i16()                       # world id
+		e.x = ru.get_i32()
+		e.y = ru.get_i32()
+		e.z = ru.get_i16()
+		ru.get_i16()                       # element state
+		ru.get_u8()                        # visible
+		ru.get_u8()                        # agj
+		e.dir = ru.get_u8()
+		e.flags = ru.get_i16()
+		for j in ru.get_i16():
+			ru.get_i32()
+			ru.get_i32()
+			ru.get_i16()
+		if ru.remaining() >= 2:
+			e.desc = ru.get_str("u16")
+		return
+
+
+## Opcode 206 — INTERACTIVE_ELEMENT_DESPAWN (acc_2): [i16 count]{[i64 id]}.
+static func _element_despawn(r: WireReader) -> Dictionary:
+	var out := {"ids": []}
+	for i in r.get_i16():
+		out.ids.append(r.get_i64())
+	return out
+
+
+## Opcode 5401 — ShopCatalog (server buildShopCatalog):
+## [u8 mode][i32 shopId] then per offered card [i32 cardId][u16 qty] to the end.
+## mode 0 = kardmaster buy tab, 1 = "démone II" exchanger variant.
+static func _shop_catalog(r: WireReader) -> Dictionary:
+	var out := {"mode": r.get_u8(), "shop_id": r.get_i32(), "cards": []}
+	while r.remaining() >= 6:
+		out.cards.append({"id": r.get_i32(), "qty": r.get_u16()})
+	return out
+
+
+## Opcode 5403 — ShopResult: [u8 result][u8 n]{u8 currencyType, i32 amount}.
+## result: 0 ok (wallet snapshot follows), 1 insufficient tokens, 2 error.
+static func _shop_result(r: WireReader) -> Dictionary:
+	var out := {"result": r.get_u8(), "currencies": []}
+	for i in r.get_u8():
+		out.currencies.append({"type": r.get_u8(), "amount": r.get_i32()})
+	return out
+
+
+## --- social (server handlers_social.go / packets.go) -----------------------
+
+## Opcode 3156 — FriendAdded: [u8 name][u8 note][i64 id][i16][i8 sex][i16].
+static func _friend_added(r: WireReader) -> Dictionary:
+	var out := {"name": r.get_str("u8"), "note": r.get_str("u8")}
+	if r.remaining() >= 8:
+		out.id = r.get_i64()
+	if r.remaining() >= 3:
+		r.get_i16()
+		out.sex = r.get_i8()
+	return out
+
+
+## Opcode 3148 — FriendOnline: [u8 name][u8 s2][u8 s3][i64 id][i16][i8 sex][i64].
+static func _friend_online(r: WireReader) -> Dictionary:
+	var out := {"name": r.get_str("u8"), "s2": r.get_str("u8"),
+		"s3": r.get_str("u8")}
+	if r.remaining() >= 8:
+		out.id = r.get_i64()
+	return out
+
+
+## Opcode 3164 — IgnoreOnline: [u8 name][i64 id].
+static func _ignore_online(r: WireReader) -> Dictionary:
+	var out := {"name": r.get_str("u8")}
+	if r.remaining() >= 8:
+		out.id = r.get_i64()
+	return out
+
+
+## Opcodes 3158 IgnoreAdded / 3150 FriendOffline: [u8 name][u8 note].
+static func _name_note(r: WireReader) -> Dictionary:
+	return {"name": r.get_str("u8"), "note": r.get_str("u8")}
+
+
+## Opcodes 3160 FriendRemoved / 3162 IgnoreRemoved / 3166 IgnoreOffline:
+## [u8 name].
+static func _name_only(r: WireReader) -> Dictionary:
+	return {"name": r.get_str("u8")}

@@ -113,7 +113,7 @@ func _drive_fight() -> void:
 		print("[smoke] WARN fight view never became current_scene")
 		return
 	# weakref: the view dies on scene change — capturing it raw errors.
-	var ref := weakref(fv)
+	var ref: WeakRef = weakref(fv)
 	fv.placement_began.connect(func():
 		create_timer(0.5).timeout.connect(func():
 			var s = ref.get_ref()

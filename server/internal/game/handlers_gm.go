@@ -422,7 +422,7 @@ func (s *Session) gmEvoFight() error {
 	}
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {
-		return err
+		return refuseFightError(err, s)
 	}
 	teamB := buildSparringTeam(1, fightArena.team1[0])
 	s.log.Info("GM evolution fight", "coach", s.Coach.Name, "fighters", len(roster))

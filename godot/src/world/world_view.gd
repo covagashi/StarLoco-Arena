@@ -36,6 +36,26 @@ var _walk := {}         # coach id -> {steps, seg, t}
 var _hover: Vector2i = Vector2i(-9999, -9999)
 var _gfx: Node2D
 var _gfx_active := false
+var _elems := {}          # instanceId -> {pos: Vector3i, kind, desc}
+
+## Kind colors for the map markers (env type ids — elements.gd KIND_NAMES).
+## Type 8 (zone trigger) is invisible in retail: fires on walk-on, not click.
+const ELEM_COLORS := {
+	1: Color(1.0, 0.8, 0.2),    # Card Master — gold
+	2: Color(0.7, 0.7, 0.75),   # Mailbox
+	3: Color(1.0, 0.45, 0.3),   # Challenge bubble
+	4: Color(0.35, 0.7, 1.0),   # Zaap
+	5: Color(0.6, 1.0, 0.4),    # Breed Master
+	6: Color(0.8, 0.4, 1.0),    # Demon
+	7: Color(1.0, 0.3, 0.5),    # Demon challenge
+	9: Color(0.8, 0.4, 1.0),    # Demon
+	10: Color(0.9, 0.9, 0.9),   # Graveyard
+	11: Color(1.0, 0.4, 0.8),   # Demon totem
+	12: Color(1.0, 0.65, 0.2),  # Firework dispenser
+	13: Color(0.95, 0.55, 0.95),# Tournament totem
+	14: Color(0.4, 0.9, 0.85),  # Fusion altar
+	15: Color(0.5, 0.9, 0.5),   # NPC
+}
 
 @onready var _cam: Camera2D = $Camera
 
@@ -50,6 +70,7 @@ func _ready() -> void:
 
 func show_world(world_id: int, my_pos: Vector3) -> void:
 	_gfx_active = _gfx.load_world(world_id)
+	_elems = {}
 	var topo := Topology.load_world(world_id, Topology.SCOPE_WORLD)
 	_cells = topo.get("cells", {})
 	_alt_min = 0
@@ -82,6 +103,7 @@ func hide_world() -> void:
 	_cells = {}
 	_sorted = []
 	_walk = {}
+	_elems = {}
 	for id in _sprites:
 		_sprites[id].queue_free()
 	_sprites = {}
@@ -175,6 +197,47 @@ func actor_name(id: int) -> String:
 func emote(id: int, anim: String) -> void:
 	var what := anim.trim_prefix("AnimEmote-").trim_suffix("-Debut").to_lower()
 	chat_bubble(id, "* %s *" % what)
+
+
+## Interactive elements (opcode 200 spawn / 206 despawn). kind comes from the
+## exported env table — the wire payload only carries position/descriptor.
+func element_spawned(e: Dictionary) -> void:
+	var x := int(e.get("x", 0))
+	var y := int(e.get("y", 0))
+	# ground altitude from topology beats the wire z only when present
+	var z := int(e.get("z", 0))
+	var c: Dictionary = _cells.get(Vector2i(x, y), {})
+	if c.get("ground", false):
+		z = int(c.alt)
+	_elems[int(e.id)] = {"pos": Vector3i(x, y, z),
+		"kind": int(e.get("kind", -1)), "desc": str(e.get("desc", ""))}
+	queue_redraw()
+
+
+func element_despawned(ids: Array) -> void:
+	for id in ids:
+		_elems.erase(int(id))
+	queue_redraw()
+
+
+## Hit-test for element clicks: instance id whose marker is near pos, -1 none.
+func element_at(pos: Vector2) -> int:
+	var best := -1
+	var best_d := 26.0
+	for id in _elems:
+		if _elems[id].kind == 8:
+			continue   # zone triggers are not clickable
+		var p: Vector3i = _elems[id].pos
+		var c := _iso(p.x + 0.5, p.y + 0.5, p.z)
+		var d: float = (pos - (c + Vector2(0, -HH - 14))).length()
+		if d < best_d:
+			best_d = d
+			best = id
+	return best
+
+
+func element_info(id: int) -> Dictionary:
+	return _elems.get(id, {})
 
 
 func actor_despawned(id: int) -> void:
@@ -278,6 +341,8 @@ func set_hover(pos: Vector2) -> void:
 func _process(delta: float) -> void:
 	if not _loaded:
 		return
+	if not _elems.is_empty():
+		queue_redraw()   # marker bob animation
 	for id in _walk.keys():
 		var w: Dictionary = _walk[id]
 		w.t += delta * WALK_SPEED
@@ -332,6 +397,20 @@ func _draw() -> void:
 					if d.x > 0 else [top[3], top[2], top[2] + down, top[3] + down])
 				var shade := 0.38 if d.x > 0 else 0.55
 				draw_colored_polygon(wall, _alt_color(c.alt).darkened(shade))
+	for id in _elems:
+		var e: Dictionary = _elems[id]
+		if e.kind == 8:
+			continue   # zone trigger — invisible in retail, fires on walk-on
+		var col: Color = ELEM_COLORS.get(e.kind, Color(1, 1, 1))
+		var p: Vector3i = e.pos
+		var c := _iso(p.x + 0.5, p.y + 0.5, p.z)
+		# floating marker: small diamond + dot, pulsing gently
+		var bob := sin(Time.get_ticks_msec() / 400.0 + float(id % 97)) * 3.0
+		var m := c + Vector2(0, -HH - 14 + bob)
+		draw_colored_polygon(PackedVector2Array([
+			m + Vector2(0, -7), m + Vector2(6, 0), m + Vector2(0, 7),
+			m + Vector2(-6, 0)]), col)
+		draw_circle(m, 2.5, Color(0.1, 0.1, 0.1))
 	if _cells.has(_hover):
 		var c: Dictionary = _cells[_hover]
 		if c.ground:

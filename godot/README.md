@@ -23,13 +23,15 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `src/maps/` | `.fmd` arena parser, world `.tplg` topology, `map_gfx.gd` — retail painted-map renderer |
 | `src/anims/` | `AnmSprite` — frames from `tools/asset-import/anm_render.py --export`; alpha-scan foot pivot, `draw_on()` for merged z-order |
 | `src/fight/fight_view.gd/.tscn` | Fight scene: painted map, spawn zones, placement clicks, turns, move/spell targeting, nameplates + damage floats |
-| `src/world/world_view.gd` | Overworld island: painted map, coach actors (4096), click-to-move (4501), chat bubbles, coach hit-test for challenges |
-| `src/ui/chat_box.*` | Chat panel: vicinity/whisper/trade/group/clan + server announcements, `/command` emotes (4701→4700), world bubbles |
+| `src/world/world_view.gd` | Overworld island: painted map, coach actors (4096), click-to-move (4501), chat bubbles, coach hit-test for challenges, **interactive-element markers** (200/206) with click → `201` |
+| `src/ui/chat_box.*` | Chat panel: vicinity/whisper/trade/group/clan + server announcements, `/command` emotes (4701→4700), `/friend` `/ignore` social ops (3129/3131/3133/3135), world bubbles |
 | `src/gamedata/spells.gd` | Breed spell tables + names (from `assets/gamedata/spells.json`) |
-| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101` |
+| `src/gamedata/elements.gd` | Env element kinds/labels (`assets/gamedata/elements.json`) — the wire 200 carries position only; kind comes from this table |
+| `src/gamedata/cards.gd` | Card names/prices/values (`assets/gamedata/cards.json`) — shop + barter UI |
+| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101`, Card Master shop `5401`/`5450`/`5400`/`5403`, Zaap `4512`, wallet `4001`, inventory `5200`, friend/ignore lists `3144`/`3146` + acks/presence `3156`-`3166` |
 | `assets/anims/` | Generated sprite frames — **git-ignored**; regenerate with `tools/asset-import/anm_render.py --export` |
 | `assets/mapgfx/` | Painted-map sprites + atlases — **git-ignored**; regenerate with `tools/asset-import/map_gfx.py` |
-| `assets/gamedata/` | Derived spell table — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py` |
+| `assets/gamedata/` | Derived tables — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py`, `server/cmd/dumpelements`, `server/cmd/dumpcards` + `card_names.py` |
 
 ## Retail map art
 
@@ -63,8 +65,12 @@ repeat.
 `world_smoke` also exercises: vicinity/whisper/trade chat (local echo +
 `3214`/`3204` replies), fighter create `6000` + loadout `6010`, team
 preset save `6021` (or `6020` status 25 on a name clash) + assign `6013` +
-delete `6023`, an emote round-trip `4701`→`4700`, and the ranked queue
-`23103`→`23104`→cancel `23101`→`23102`.
+delete `6023`, an emote round-trip `4701`→`4700`, the ranked queue
+`23103`→`23104`→cancel `23101`→`23102`, **element AoI** (`200` spawn on
+entry + walking to a Card Master's chunk → `201` → `5401` catalogue →
+`5450` buy → `5403`), wallet `4001` + inventory `5200`, and the social
+flow (`/friend` `3156`, `/ignore` `3158`, removes `3160`/`3162`, ghost
+`3204`, `/friends` `/ignored` list echoes).
 
 `pvp_smoke` runs the full two-coach loop: a second socket logs in as
 `test2`, the main client challenges it (`26301`→`26300` both ways →
@@ -82,5 +88,10 @@ Fighter sprites: breed+sex → `Players/-XYZ.anm` via the client's
 - Placement is click-a-spawn-cell (no drag preview like retail).
 - Challenge/coach interactions need a second client — `pvp_smoke` brings
   its own bot.
+- Most island Card-Master stock is **barter-only** (zero token price in
+  retail data — the server refuses `5450` with code 2); the Exchange pane
+  (`5400` card-for-card by summed value) covers it.
+- Mailbox/fusion/graveyard/NPC dialogs are element clicks that open
+  client-local UI — the `201` goes out but the dialogs aren't built yet.
 - Headless runs can't screenshot (dummy driver); use a windowed run for
   `/tmp/fight_live.png`.

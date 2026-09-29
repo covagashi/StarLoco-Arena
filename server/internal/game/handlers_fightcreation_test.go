@@ -200,3 +200,93 @@ func TestClassicReadyPairsTwoCoaches(t *testing.T) {
 		t.Error("pending match not discarded after pairing")
 	}
 }
+
+// TestTeamTestIllegalRosterAnswers26310 pins the refusal path end to end: a
+// "Tester" launch naming a preset that breaks the breed cap must be answered
+// with FIGHT_CREATION_ERROR (26310) carrying the violation's retail code, and
+// must NOT propagate — the session loop drops the connection on any returned
+// error, which turned an over-bred titular roster's challenge launch into a
+// silent disconnect (regression).
+func TestTeamTestIllegalRosterAnswers26310(t *testing.T) {
+	d, st := fightCreationDeps(t)
+	acc, err := st.Accounts.CreateAccount("breeds", "pw", false)
+	if err != nil {
+		t.Fatalf("create account: %v", err)
+	}
+	coach, err := st.Coaches.Create(acc.ID, "breedsC", 0, 0, 0)
+	if err != nil {
+		t.Fatalf("create coach: %v", err)
+	}
+	// Three titular fighters of ONE breed — over maxSameBreedPerTeam.
+	team := &domain.Team{CoachID: coach.ID, Name: "T", Type: -6, GameMode: 1}
+	if err := st.Teams.Upsert(team); err != nil {
+		t.Fatalf("upsert team: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		f := &domain.Fighter{CoachID: coach.ID, BreedID: 8, Name: "Iop", Budget: 400}
+		if err := st.Fighters.Create(f); err != nil {
+			t.Fatalf("create fighter: %v", err)
+		}
+		if err := st.Teams.AddMember(team.ID, f.ID); err != nil {
+			t.Fatalf("add member: %v", err)
+		}
+	}
+	s := fcSession(d, coach)
+
+	payload := protocol.NewWriter().I32(12).U16(uint16(team.ID)).Bytes()
+	if err := handleTeamTest(s, &protocol.C2SFrame{Payload: payload}); err != nil {
+		t.Fatalf("handleTeamTest propagated %v — that drops the session "+
+			"instead of answering 26310", err)
+	}
+	body := drainPayload(t, s, protocol.OpFightCreationError)
+	if body == nil {
+		t.Fatal("no 26310 queued for the refused launch")
+	}
+	r := protocol.NewReader(body)
+	if _, err := r.I64(); err != nil {
+		t.Fatalf("26310 fightId: %v", err)
+	}
+	code, err := r.U8()
+	if err != nil {
+		t.Fatalf("26310 code: %v", err)
+	}
+	if code != protocol.FightErrTooManySameBreed {
+		t.Errorf("26310 code = %d, want %d (tooManySameBreed)", code,
+			protocol.FightErrTooManySameBreed)
+	}
+	if f := d.Fights.ByCoach(coach.ID); f != nil {
+		t.Fatal("a refused launch must not leave a fight behind")
+	}
+}
+
+// TestTitularRosterCapsSameBreed: when the SERVER picks the lineup (overworld
+// challenges carry no preset id), a titular list holding more than
+// maxSameBreedPerTeam of one breed — a state the retail roster UI cannot reach
+// but a dev database can — must be trimmed to a legal team rather than refused
+// downstream at validateRoster.
+func TestTitularRosterCapsSameBreed(t *testing.T) {
+	d, st := fightCreationDeps(t)
+	acc, err := st.Accounts.CreateAccount("cap", "pw", false)
+	if err != nil {
+		t.Fatalf("create account: %v", err)
+	}
+	coach, err := st.Coaches.Create(acc.ID, "capC", 0, 0, 0)
+	if err != nil {
+		t.Fatalf("create coach: %v", err)
+	}
+	for i := 0; i < 4; i++ {
+		f := &domain.Fighter{CoachID: coach.ID, BreedID: 8, Name: "Iop", Budget: 400}
+		if err := st.Fighters.Create(f); err != nil {
+			t.Fatalf("create fighter: %v", err)
+		}
+	}
+	// A second breed interleaved proves the cap is per breed, not "first N".
+	f := &domain.Fighter{CoachID: coach.ID, BreedID: 1, Name: "Feca", Budget: 400}
+	if err := st.Fighters.Create(f); err != nil {
+		t.Fatalf("create fighter: %v", err)
+	}
+	got := d.titularRoster(coach.ID, 6)
+	if len(got) != 3 { // 2 Iops + 1 Feca
+		t.Fatalf("titularRoster = %v, want 3 ids (2 capped Iops + Feca)", got)
+	}
+}

@@ -333,11 +333,11 @@ func (d *Deps) startTournamentMatch(tid int64, a, b *Session, preset uint16) err
 
 	teamA, err := d.buildFightTeamFor(a, 0, arena.startCells(0), rosterA)
 	if err != nil {
-		return err
+		return refuseFightError(err, a, b)
 	}
 	teamB, err := d.buildFightTeamFor(b, 1, arena.startCells(1), rosterB)
 	if err != nil {
-		return err
+		return refuseFightError(err, a, b)
 	}
 	// Ranked: a tournament match is competitive, so it feeds stats and the ladder
 	// exactly like a Combattre pairing.

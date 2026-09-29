@@ -47,7 +47,7 @@ const CHAT_ERRORS := {
 func _ready() -> void:
 	_input.text_submitted.connect(_on_submit)
 	$Row/SendBtn.pressed.connect(func(): _on_submit(_input.text))
-	_input.placeholder_text = "chat — /w name, /t trade, /p group, /c clan, emotes /clap /laugh…"
+	_input.placeholder_text = "chat — /w, /t, /p, /c, /friend, /ignore, emotes /clap /laugh…"
 
 
 ## Retail emote table (server handlers_emote.go — up_0 in the client).
@@ -77,6 +77,11 @@ const EMOTES := {
 const OP_EMOTE_PLAY := 4701
 const OP_EMOTE_PLAYED := 4700
 
+## Social list commands — C2S [u8 len][name], arch 4 (server handlers_social).
+const SOCIAL_OPS := {
+	"friend": 3129, "ami": 3129, "unfriend": 3133, "enemie": 3133,
+	"ignore": 3131, "unignore": 3135,
+}
 signal emote(actor_id: int, anim: String)
 
 
@@ -138,18 +143,43 @@ func _on_submit(text: String) -> void:
 		return
 	_input.release_focus()
 
-	# Emote commands (retail up_0 ids) — C2S 4701 [u8 name][i32 id], arch 3.
-	# The server relays its canonical anim name back to us via 4700, so no
-	# local echo is needed.
+	# Slash commands: emotes, social lists, then channel prefixes.
 	if text.begins_with("/"):
-		var cmd := text.substr(1).strip_edges().to_lower()
+		var sp := text.find(" ")
+		var cmd := text.substr(1, sp - 1 if sp > 0 else -1).to_lower()
+		var rest := text.substr(sp + 1).strip_edges() if sp > 0 else ""
 		if EMOTES.has(cmd):
+			# Emote — C2S 4701 [u8 name][i32 id], arch 3; the server relays its
+			# canonical anim name back via 4700, so no local echo is needed.
 			var ew := WireWriter.new()
 			var aname: String = EMOTES[cmd][1]
 			ew.put_u8(aname.length())
 			ew.put_bytes(aname.to_ascii_buffer())
 			ew.put_i32(EMOTES[cmd][0])
 			Session.send(OP_EMOTE_PLAY, ew.raw(), 3)
+			return
+		if SOCIAL_OPS.has(cmd):
+			if rest.is_empty():
+				_line("error", "[i]/%s &lt;name&gt;[/i]" % cmd)
+				return
+			var sw := WireWriter.new()
+			var nb := CP1252.encode(rest)
+			sw.put_u8(nb.size())
+			sw.put_bytes(nb)
+			Session.send(SOCIAL_OPS[cmd], sw.raw(), 4)
+			return
+		if cmd == "friends":
+			if State.friends.is_empty():
+				_line("server", "[i]no friends yet — /friend &lt;name&gt;[/i]")
+			else:
+				_line("server", "friends: %s" % ", ".join(State.friends.map(
+					func(f): return "%s%s" % [f.name,
+						"" if f.get("online", false) else " (offline)"])))
+			return
+		if cmd == "ignored":
+			_line("server", "ignored: %s" % (
+				", ".join(State.ignored) if not State.ignored.is_empty()
+				else "none"))
 			return
 
 	# Channel prefixes → dedicated pipes; unknown '/x' goes verbatim to the

@@ -11,6 +11,28 @@ decompiled client, no runtime).
 
 ---
 
+### B-161 · Illegal roster on fight launch disconnected the coach
+
+- **Symptom (Godot smoke):** `26330` (Tester / overworld challenge) closed the
+  connection with no reply once the coach's roster held three fighters of one
+  breed — an easy state to reach in a dev database.
+- **Root cause:** `buildFightTeamFor` refuses an illegal roster with
+  `rosterError`, which carries a retail `26310` error code — but every call site
+  (`handleTeamTest`, `startPvEChallenge`, `startChallengeFight`, matchmaker
+  `startFight`, totem duels, the GM fight command) propagated it. `serve` drops
+  the session on any handler error, so a *gameplay* refusal became a disconnect;
+  in the two-session paths it would have dropped BOTH coaches.
+- **Fix:** `refuseFightError` converts a `rosterError` into
+  FIGHT_CREATION_ERROR (26310) on every waiting session; other errors still
+  propagate. Also `titularRoster` now enforces `maxSameBreedPerTeam` while
+  picking — for challenge launches the server picks the lineup, so it picks a
+  legal one instead of choosing a roster it then refuses.
+- **Verified:** `unit` (`TestTeamTestIllegalRosterAnswers26310`,
+  `TestTitularRosterCapsSameBreed`) + live Godot smoke: `26330` now yields
+  `8000` (two capped Iops fielded) instead of a disconnect.
+  (`internal/game/handlers_fightcreation.go`, `handlers_challenge.go`,
+  `handlers_fight.go`, `handlers_totems.go`, `handlers_gm.go`.)
+
 ### B-160 - SECURITY (second pass): the remaining Medium and Low findings
 
 Closed in one sweep; see `SECURITY.md` for the per-item table. The ones worth

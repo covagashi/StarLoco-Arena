@@ -1,6 +1,8 @@
 package game
 
 import (
+	"errors"
+
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
@@ -85,7 +87,7 @@ func handleTeamTest(s *Session, f *protocol.C2SFrame) error {
 	fightArena := pickArenaSeating(seats)
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {
-		return err
+		return refuseFightError(err, s)
 	}
 	if s.deps.joinDuoPartner(teamA, s.Coach.ID, fightArena.startCells(0)) {
 		s.log.Info("2v2 test fight", "coach", s.Coach.Name,
@@ -129,7 +131,7 @@ func (s *Session) startPvEChallenge(challengeID int32) error {
 	roster := s.deps.titularRoster(s.Coach.ID, len(fightArena.team0))
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {
-		return err
+		return refuseFightError(err, s)
 	}
 	teamB := s.deps.buildChallengeTeam(1, fightArena.startCells(1), challengeID, len(teamA.Fighters))
 	s.log.Info("challenge fight", "coach", s.Coach.Name, "challenge", challengeID,
@@ -148,6 +150,26 @@ func (s *Session) sendFightCreationError(code uint8) error {
 		return err
 	}
 	return s.Send(frame)
+}
+
+// refuseFightError converts a roster refusal into the retail
+// FIGHT_CREATION_ERROR (26310) on every session waiting for the fight and
+// reports it answered. An illegal roster is a gameplay answer, not a session
+// fault: the session loop drops the connection on any propagated error, so
+// letting rosterError escape turned a declined launch into a disconnect (for
+// every waiting coach, in the two-session paths). Non-roster errors pass
+// through unchanged — real infrastructure failures still propagate.
+func refuseFightError(err error, sessions ...*Session) error {
+	var re rosterError
+	if !errors.As(err, &re) {
+		return err
+	}
+	for _, s := range sessions {
+		if s != nil {
+			_ = s.sendFightCreationError(re.Code())
+		}
+	}
+	return nil
 }
 
 // handleClassicReadyForFight (23103 atj_0: [i64 coachId][i16 teamId]) is the
@@ -295,6 +317,7 @@ func (d *Deps) titularRoster(coachID uint, max int) []int64 {
 		return nil
 	}
 	ids := make([]int64, 0, max)
+	perBreed := map[uint8]int{}
 	for i := range fighters {
 		if fighters[i].State != domain.FighterStateTitular {
 			continue
@@ -302,6 +325,15 @@ func (d *Deps) titularRoster(coachID uint, max int) []int64 {
 		if len(ids) >= max {
 			break
 		}
+		// The SERVER picks this lineup, so pick a legal one: a titular list
+		// holding a third fighter of one breed is a state the retail client
+		// cannot reach (the roster UI enforces the cap), but a dev database
+		// can. Returning it wholesale makes every challenge launch refuse at
+		// validateRoster; leaving the extra fighters out lets the fight run.
+		if perBreed[fighters[i].BreedID] >= maxSameBreedPerTeam {
+			continue
+		}
+		perBreed[fighters[i].BreedID]++
 		ids = append(ids, int64(fighters[i].ID))
 	}
 	if len(ids) == 0 {

@@ -42,11 +42,11 @@ func (d *Deps) startFight(pm *pendingMatch) error {
 	a := pickArenaSeating(seats)
 	teamA, err := d.buildFightTeam(a, pm.a, 0)
 	if err != nil {
-		return err
+		return refuseFightError(err, pm.a.session, pm.b.session)
 	}
 	teamB, err := d.buildFightTeam(a, pm.b, 1)
 	if err != nil {
-		return err
+		return refuseFightError(err, pm.a.session, pm.b.session)
 	}
 	// Each side pulls in its ally, if it has one. Done after both sides exist so
 	// the partner's fighters land on the start cells its own side has left.
