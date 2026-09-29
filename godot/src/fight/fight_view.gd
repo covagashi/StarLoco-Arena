@@ -63,6 +63,7 @@ func _ready() -> void:
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
 	_gfx = MapGfx.new()
 	_gfx.name = "MapGfx"
+	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside
 	add_child(_gfx)
 	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
 	# When we arrived here from a live fight the world id is the arena id.
@@ -347,6 +348,13 @@ func _place_actor(a: Dictionary) -> void:
 	spr.position = _iso(a.x + 0.5, a.y + 0.5, a.z)
 	spr.z_index = clampi(int(a.x + a.y) * 4 + 1, -4096, 4096)
 	_actor_cells[a.id] = Vector3i(a.x, a.y, a.z)
+	if _gfx_active:
+		# merged painter: the map-gfx layer calls draw_on at our zkey slot
+		spr.external_draw = true
+		_gfx.register_dynamic(a.id,
+			func(): return MapGfx.actor_key_cell(
+				_actor_cells.get(a.id, Vector3i.ZERO)),
+			func(ci): spr.draw_on(ci, spr.position))
 	queue_redraw()
 
 
@@ -398,6 +406,10 @@ func _kill_actor(fid: int) -> void:
 	if spr != null:
 		spr.playing = false
 		spr.modulate = Color(0.55, 0.55, 0.6, 0.85)
+		# back to its own canvas item so the corpse greys out via modulate
+		_gfx.unregister_dynamic(fid)
+		spr.external_draw = false
+		spr.queue_redraw()
 	if _current_fid == fid:
 		_current_fid = -1
 		_end_turn.disabled = true

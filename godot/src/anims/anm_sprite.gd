@@ -16,6 +16,9 @@ var playing := true
 ## (feet on the iso cell) instead of the authored scene anchor — the alpha
 ## margin under the feet is measured per frame at load.
 var foot_pivot := false
+## When set, the sprite's own _draw is skipped — map_gfx's merged painter
+## calls draw_on() instead so the frame interleaves with map elements.
+var external_draw := false
 
 ## Decoded actions are shared read-only across sprites — direction flips
 ## during a walk reload the same action set many times per second.
@@ -80,11 +83,24 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	if _frames.is_empty():
+	if external_draw or _frames.is_empty():
 		return
+	_draw_frame(self, Vector2.ZERO)
+
+
+## Draw the current frame onto another canvas item at `world_pos` (the
+## sprite's own position, since the caller draws in the parent's space).
+## Honors foot_pivot and the horizontal mirror (negative scale.x).
+func draw_on(ci: CanvasItem, world_pos: Vector2) -> void:
+	ci.draw_set_transform(world_pos, 0.0, Vector2(scale.x, 1.0))
+	_draw_frame(ci, Vector2.ZERO)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_frame(ci: CanvasItem, at: Vector2) -> void:
 	var fr: Dictionary = _frames[_cur]
-	var pos: Vector2 = fr.off
+	var pos: Vector2 = at + fr.off
 	if foot_pivot:
 		# pin the feet (lowest visible row), centered, to the node origin
-		pos = Vector2(-fr.w * 0.5, -float(fr.foot) - 1.0)
-	draw_texture(fr.tex, pos)
+		pos = at + Vector2(-fr.w * 0.5, -float(fr.foot) - 1.0)
+	ci.draw_texture(fr.tex, pos)

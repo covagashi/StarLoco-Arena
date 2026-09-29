@@ -43,6 +43,7 @@ var _gfx_active := false
 func _ready() -> void:
 	_gfx = MapGfx.new()
 	_gfx.name = "MapGfx"
+	_gfx.show_behind_parent = true
 	add_child(_gfx)
 	move_child(_gfx, 0)   # painted island under the topology+coaches
 
@@ -99,6 +100,12 @@ func _spawn_coach(id: int, cname: String, x: int, y: int, z: int) -> void:
 	spr.position = _iso(x + 0.5, y + 0.5, z)
 	spr.z_index = clampi((x + y) * 4 + 1, -4096, 4096)
 	_pos[id] = Vector3i(x, y, z)
+	if _gfx_active:
+		spr.external_draw = true
+		_gfx.register_dynamic(id,
+			func(): return MapGfx.actor_key_cell(
+				_pos.get(id, Vector3i.ZERO)),
+			func(ci): spr.draw_on(ci, spr.position))
 	_names[id] = cname
 	var tag := spr.get_node_or_null("Tag")
 	if tag == null:
@@ -119,6 +126,7 @@ func actor_spawned(id: int, cname: String, x: int, y: int, z: int) -> void:
 
 
 func actor_despawned(id: int) -> void:
+	_gfx.unregister_dynamic(id)
 	var spr: AnmSprite = _sprites.get(id)
 	if spr != null:
 		spr.queue_free()
@@ -131,7 +139,7 @@ func actor_moved(id: int, path: Array) -> void:
 	# 4500 carries the full path (origin first) — animate over the steps.
 	if _pos.has(id) and path.size() > 1:
 		_walk[id] = {"steps": path, "seg": 1, "t": 0.0}
-		_pos[id] = path[path.size() - 1]
+		_pos[id] = path[0]   # _process advances the cell per segment
 
 
 func click_to(cell: Vector2i) -> void:
@@ -229,6 +237,7 @@ func _process(delta: float) -> void:
 		while w.seg < steps.size() and w.t >= 1.0:
 			w.t -= 1.0
 			w.seg += 1
+			_pos[id] = steps[w.seg - 1]   # keep the zkey cell current mid-walk
 		if w.seg >= steps.size():
 			spr.position = _iso(steps[-1].x + 0.5, steps[-1].y + 0.5, steps[-1].z)
 			spr.z_index = clampi((steps[-1].x + steps[-1].y) * 4 + 1, -4096, 4096)
