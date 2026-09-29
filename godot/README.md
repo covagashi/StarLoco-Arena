@@ -28,7 +28,7 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `src/gamedata/spells.gd` | Breed spell tables + names (from `assets/gamedata/spells.json`) |
 | `src/gamedata/elements.gd` | Env element kinds/labels (`assets/gamedata/elements.json`) — the wire 200 carries position only; kind comes from this table |
 | `src/gamedata/cards.gd` | Card names/prices/values (`assets/gamedata/cards.json`) — shop + barter UI |
-| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101`, Card Master shop `5401`/`5450`/`5400`/`5403`, Zaap `4512`, graveyard `22099`, fusion `5490`/`5491`, demon ladder `27510`/`27511`, tournaments `17002`/`17003` + `28601`/`28602` + register `4607`/`28608` + opponent search `28611`→`28612`/`28616`/`28648` + period `28630`, fireworks `22095`/`22094`, wallet `4001`, inventory `5200`, friend/ignore lists `3144`/`3146` + acks/presence `3156`-`3166`, guild create `509`/`504` + record/membership/roster `510`/`552`/`512` + tags `554` + feeds `558`/`560`, demon affiliation offering `5470`→`5403`, mailbox `15000`→`15001` + take `15006`/`15007` + delete `15004` + `/mail` compose `539`→`15003` + notice `15005` |
+| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101`, Card Master shop `5401`/`5450`/`5400`/`5403`, Zaap `4512`, graveyard `22099`, fusion `5490`/`5491`, demon ladder `27510`/`27511`, tournaments `17002`/`17003` + `28601`/`28602` + register `4607`/`28608` + opponent search `28611`→`28612`/`28616`/`28648` + period `28630`, fireworks `22095`/`22094`, wallet `4001`, inventory `5200`, friend/ignore lists `3144`/`3146` + acks/presence `3156`-`3166`, guild create `509`/`504` + record/membership/roster `510`/`552`/`512` + tags `554` + feeds `558`/`560`, demon affiliation offering `5470`→`5403`, mailbox `15000`→`15001` + take `15006`/`15007` + delete `15004` + `/mail` compose `539`→`15003` + notice `15005`, player trade `/trade` `5101`→`5102`/`5104` + stage `5105`/`5110` + unstage `5107`/`5112` + ready `5109`/`5116` + cancel `5111` + end `5114` + error `5113` |
 | `assets/anims/` | Generated sprite frames — **git-ignored**; regenerate with `tools/asset-import/anm_render.py --export` |
 | `assets/mapgfx/` | Painted-map sprites + atlases — **git-ignored**; regenerate with `tools/asset-import/map_gfx.py` |
 | `assets/gamedata/` | Derived tables — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py`, `server/cmd/dumpelements`, `server/cmd/dumpcards` + `card_names.py` |
@@ -85,10 +85,13 @@ firework launcher → `22095` → `22094` echo. It also creates a guild via
 "Offer cards" basket sends `5470`→`5403` — verified in SQLite
 (`guilds.demon_id`, `guild_demon_reputations`).
 
-`pvp_smoke` runs the full two-coach loop: a second socket logs in as
-`test2`, the main client challenges it (`26301`→`26300` both ways →
-`26305` accept → `26302` → both confirm teams `26303`), the fight
-spawns on both sockets and runs to surrender.
+`pvp_smoke` runs the two-coach trade + fight loop: a second socket logs
+in as `test2`, the main client trades with it first (`5101` invite → bot
+`5102` → `5103` accept → `5104` 3 → both stage via `5105`/`5110` → both
+ready `5109`/`5116` → `5114` commit — verified in `coach_cards`), then
+challenges it (`26301`→`26300` both ways → `26305` accept → `26302` →
+both confirm teams `26303`), the fight spawns on both sockets and runs
+to surrender.
 
 Fighter sprites: breed+sex → `Players/-XYZ.anm` via the client's
 `zh_1.cdN` table (`-(100+breed*10+sex)`); anm directions are diagonal-only

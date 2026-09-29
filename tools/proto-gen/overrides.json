@@ -611,6 +611,124 @@
     }
    ]
   },
+  "5102": {
+   "name": "ExchangeInvitation",
+   "fields": [
+    {
+     "n": "ex_id",
+     "t": "i64"
+    },
+    {
+     "n": "inviter_id",
+     "t": "i64"
+    },
+    {
+     "n": "inviter",
+     "t": "str_u8"
+    }
+   ]
+  },
+  "5104": {
+   "name": "ExchangeConfirmation",
+   "fields": [
+    {
+     "n": "result",
+     "t": "i8"
+    },
+    {
+     "n": "ex_id",
+     "t": "i64"
+    },
+    {
+     "n": "other_id",
+     "t": "i64"
+    }
+   ],
+   "note": "result: 0 pending, 2 refused, 3 accepted (server exchPending/Refused/Accepted)"
+  },
+  "5110": {
+   "name": "ExchangeCardAdded",
+   "fields": [
+    {
+     "n": "ex_id",
+     "t": "i64"
+    },
+    {
+     "n": "side",
+     "t": "u8"
+    },
+    {
+     "n": "card",
+     "t": "i32"
+    },
+    {
+     "n": "qty",
+     "t": "u16"
+    }
+   ]
+  },
+  "5112": {
+   "name": "ExchangeCardRemoved",
+   "fields": [
+    {
+     "n": "ex_id",
+     "t": "i64"
+    },
+    {
+     "n": "side",
+     "t": "u8"
+    },
+    {
+     "n": "card",
+     "t": "i32"
+    },
+    {
+     "n": "qty",
+     "t": "u16"
+    }
+   ]
+  },
+  "5113": {
+   "name": "ExchangeError",
+   "fields": [
+    {
+     "n": "code",
+     "t": "u8"
+    },
+    {
+     "n": "ex_id",
+     "t": "i64"
+    }
+   ],
+   "note": "code: 1 = unique already owned by receiver, 2 = linked card"
+  },
+  "5114": {
+   "name": "ExchangeEnd",
+   "fields": [
+    {
+     "n": "reason",
+     "t": "u8"
+    },
+    {
+     "n": "ex_id",
+     "t": "i64"
+    }
+   ],
+   "note": "reason FIRST: 0 = swap committed, 1 = cancelled"
+  },
+  "5116": {
+   "name": "ExchangeUserReady",
+   "fields": [
+    {
+     "n": "ex_id",
+     "t": "i64"
+    },
+    {
+     "n": "side",
+     "t": "u8"
+    }
+   ]
+  },
   "17003": {
    "name": "TournamentCalendar",
    "handler": "tournament_calendar"

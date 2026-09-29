@@ -14,6 +14,7 @@ const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const State := preload("res://src/state.gd")
+const Cards := preload("res://src/gamedata/cards.gd")
 
 var _sess: Node
 var _main
@@ -22,6 +23,8 @@ var _bot_coach := -1
 var _bot_in_world := false
 var _fight_seen := false
 var _done := false
+var _trade_seen := false
+var _bot_ex := -1          # exchange id on the bot side
 
 
 func _init() -> void:
@@ -74,8 +77,40 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 		2048:
 			_coach_create(_sess.client, "test")
 		4516:
-			# in world — kick off the bot login, then challenge when it's up
+			# in world — kick off the bot login, then trade+challenge it
 			_login(_bot, "test2", "test123")
+		5104:
+			var d := Codec.decode(op, WireReader.new(raw))
+			print("[smoke] main 5104 result=%d ex=%d other=%d" % [
+				int(d.result), int(d.ex_id), int(d.other_id)])
+			if int(d.result) == 3:
+				# trade accepted — the pane opened; stage our first
+				# tradable card via the real List2 row path, then ready.
+				await create_timer(0.4).timeout
+				var list2: ItemList = _main.get_node(
+					"UI/ElementDlg/VBox/Scroll2/List2")
+				if list2.item_count > 0:
+					_main._exchange_add(0)
+					print("[smoke] main staged %s"
+						% Cards.name_of(int(list2.get_item_metadata(0))))
+				await create_timer(0.4).timeout
+				_main._on_element_act()   # "Ready" → 5109
+				print("[smoke] main ready sent")
+		5110:
+			var d := Codec.decode(op, WireReader.new(raw))
+			print("[smoke] main 5110 side=%d card=%s qty=%d" % [
+				int(d.side), Cards.name_of(int(d.card)), int(d.qty)])
+		5114:
+			var d := Codec.decode(op, WireReader.new(raw))
+			print("[smoke] main 5114 reason=%d — %s" % [
+				int(d.reason),
+				"SWAP COMMITTED" if int(d.reason) == 0 else "cancelled"])
+			if int(d.reason) == 0:
+				_trade_seen = true
+				await create_timer(0.8).timeout
+				print("[smoke] trade done — now the challenge")
+				_main._challenge_target = _bot_coach
+				_main._send_challenge()
 		26300:
 			var p := WireReader.new(raw)
 			var handle := int(p.get_i64())
@@ -147,10 +182,34 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 		4516:
 			if not _bot_in_world:
 				_bot_in_world = true
-				print("[smoke] bot in world — main challenges it")
+				print("[smoke] bot in world — main invites it to trade")
 				await create_timer(0.8).timeout
-				_main._challenge_target = _bot_coach
-				_main._send_challenge()
+				_main._invite_exchange_id(_bot_coach, "test2")
+		5102:
+			var d := Codec.decode(op, p)
+			_bot_ex = int(d.ex_id)
+			print("[smoke] bot got trade invite from %s — accepting"
+				% d.inviter)
+			var w := WireWriter.new()
+			w.put_i64(_bot_ex)
+			w.put_u8(1)
+			_bot.send_message(5103, w.raw(), 3)
+		5110:
+			var d := Codec.decode(op, p)
+			print("[smoke] bot 5110 side=%d card=%d qty=%d" % [
+				int(d.side), int(d.card), int(d.qty)])
+			# after seeing main's first stage, bot stages card 7 too
+			if int(d.side) == 0:
+				var w := WireWriter.new()
+				w.put_i64(_bot_ex)
+				w.put_i32(7)
+				w.put_u16(1)
+				_bot.send_message(5105, w.raw(), 3)
+				await create_timer(0.3).timeout
+				var w2 := WireWriter.new()
+				w2.put_i64(_bot_ex)
+				_bot.send_message(5109, w2.raw(), 3)
+				print("[smoke] bot staged 7 + ready")
 		26300:
 			var handle := int(p.get_i64())
 			var outgoing := p.get_u8()
@@ -195,5 +254,5 @@ func _finish(code: int, msg: String) -> void:
 	if _done:
 		return
 	_done = true
-	print("[smoke] %s (fight_seen=%s)" % [msg, _fight_seen])
+	print("[smoke] %s (fight_seen=%s trade=%s)" % [msg, _fight_seen, _trade_seen])
 	quit(code)

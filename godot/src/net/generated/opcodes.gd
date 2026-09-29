@@ -147,18 +147,18 @@ const OP_MSG4901 := 4901
 const OP_MSG4902 := 4902
 const OP_NO_INSTANCE_SERVER_AVAILABLE_MESSAGE := 5000
 const OP_ITEM_EXCHANGE_INVITATION_REQUEST_MESSAGE := 5101
-const OP_ITEM_EXCHANGE_INVITATION_MESSAGE := 5102
+const OP_EXCHANGE_INVITATION := 5102
 const OP_ITEM_EXCHANGE_INVITATION_ANSWER_MESSAGE := 5103
-const OP_ITEM_EXCHANGE_INVITATION_CONFIRMATION_MESSAGE := 5104
+const OP_EXCHANGE_CONFIRMATION := 5104
 const OP_EXCHANGE_ADD_CARD := 5105
 const OP_EXCHANGE_REMOVE_CARD := 5107
 const OP_ITEM_EXCHANGE_CARD_ADDED_MESSAGE := 5109
-const OP_ITEM_EXCHANGE_CARD_REMOVED_MESSAGE := 5110
+const OP_EXCHANGE_CARD_ADDED := 5110
 const OP_ITEM_EXCHANGE_END_MESSAGE := 5111
-const OP_ITEM_EXCHANGE_USER_READY_MESSAGE := 5112
-const OP_MSG5113 := 5113
-const OP_MSG5114 := 5114
-const OP_MSG5116 := 5116
+const OP_EXCHANGE_CARD_REMOVED := 5112
+const OP_EXCHANGE_ERROR := 5113
+const OP_EXCHANGE_END := 5114
+const OP_EXCHANGE_USER_READY := 5116
 const OP_COACH_INVENTORY_UPDATE := 5200
 const OP_COACH_EQUIPMENT_UPDATE_REQUEST_MESSAGE := 5201
 const OP_COACH_EQUIPMENT_UPDATE_MESSAGE := 5202
@@ -490,18 +490,18 @@ const NAMES := {
 	4902: "Msg4902",
 	5000: "NoInstanceServerAvailableMessage",
 	5101: "ItemExchangeInvitationRequestMessage",
-	5102: "ItemExchangeInvitationMessage",
+	5102: "ExchangeInvitation",
 	5103: "ItemExchangeInvitationAnswerMessage",
-	5104: "ItemExchangeInvitationConfirmationMessage",
+	5104: "ExchangeConfirmation",
 	5105: "ExchangeAddCard",
 	5107: "ExchangeRemoveCard",
 	5109: "ItemExchangeCardAddedMessage",
-	5110: "ItemExchangeCardRemovedMessage",
+	5110: "ExchangeCardAdded",
 	5111: "ItemExchangeEndMessage",
-	5112: "ItemExchangeUserReadyMessage",
-	5113: "Msg5113",
-	5114: "Msg5114",
-	5116: "Msg5116",
+	5112: "ExchangeCardRemoved",
+	5113: "ExchangeError",
+	5114: "ExchangeEnd",
+	5116: "ExchangeUserReady",
 	5200: "CoachInventoryUpdate",
 	5201: "CoachEquipmentUpdateRequestMessage",
 	5202: "CoachEquipmentUpdateMessage",

@@ -192,6 +192,14 @@ func actor_name(id: int) -> String:
 	return _names.get(id, "coach %d" % id)
 
 
+## Coach id by display name (case-insensitive) — for /trade <name>.
+func coach_id_by_name(cname: String) -> int:
+	for id in _names:
+		if String(_names[id]).to_lower() == cname.to_lower():
+			return int(id)
+	return -1
+
+
 ## EmotePlayed (4700): the coach anm set has no AnimEmote-* actions, so show
 ## the emote name as an italic bubble over the actor instead.
 func emote(id: int, anim: String) -> void:

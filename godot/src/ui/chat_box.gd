@@ -83,6 +83,7 @@ const SOCIAL_OPS := {
 	"ignore": 3131, "unignore": 3135,
 }
 signal emote(actor_id: int, anim: String)
+signal trade(coach_name: String)
 
 
 ## Feed one S2C chat opcode. Returns true if the opcode was a chat message.
@@ -211,6 +212,13 @@ func _on_submit(text: String) -> void:
 			mw.put_i64(0); mw.put_u8(0); mw.put_u8(0); mw.put_u8(0)
 			mw.put_i32(0)
 			Session.send(539, mw.raw(), 3)
+			return
+		if cmd == "trade":
+			# Player exchange invite — the pane resolves name → coach id.
+			if rest.is_empty():
+				_line("error", "[i]/trade &lt;coach name&gt;[/i]")
+				return
+			trade.emit(rest)
 			return
 		if cmd == "guild":
 			# Guild creation — C2S 509 [u8 type][u8 len][name], arch 3.

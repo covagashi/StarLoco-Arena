@@ -114,6 +114,20 @@ const OP_MAIL_DELETE := 15004            # C2S [u8 n]{i64 ids}
 const OP_MAIL_NOTICE := 15005            # S2C [u8 newCount]
 const OP_MAIL_TAKE := 15006              # C2S [i64 mailId][u8 pad]
 const OP_MAIL_TAKEN := 15007             # S2C [i64 mail][i64 coach][u8 n]{i32}
+const OP_EX_INVITE := 5101               # C2S [i64 targetCoachId]
+const OP_EX_INVITATION := 5102           # S2C [i64 ex][i64 inviter][str8]
+const OP_EX_ANSWER := 5103               # C2S [i64 ex][u8 accept]
+const OP_EX_CONFIRM := 5104              # S2C [i8 result][i64 ex][i64 other]
+const OP_EX_ADD := 5105                  # C2S [i64 ex][i32 card][u16 qty]
+const OP_EX_REMOVE := 5107               # C2S same shape as 5105
+const OP_EX_READY := 5109                # C2S [i64 ex] ready toggle
+const OP_EX_CANCEL := 5111               # C2S [i64 ex]
+const OP_EX_ADDED := 5110                # S2C [i64 ex][u8 side][i32 card][u16]
+const OP_EX_REMOVED := 5112              # S2C same shape as 5110
+const OP_EX_ERROR := 5113                # S2C [u8 code][i64 ex]
+const OP_EX_END := 5114                  # S2C [u8 reason][i64 ex]
+const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
+const ELEM_EXCHANGE := 100               # pseudo kind: ElementDlg in trade mode
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
@@ -160,6 +174,9 @@ func _ready() -> void:
 	$UI/ChallengeAskDlg.confirmed.connect(_send_challenge)
 	$UI/ChallengeDlg.confirmed.connect(_answer_challenge.bind(true))
 	$UI/ChallengeDlg.canceled.connect(_answer_challenge.bind(false))
+	$UI/ExchangeAskDlg.confirmed.connect(_answer_exchange.bind(true))
+	$UI/ExchangeAskDlg.canceled.connect(_answer_exchange.bind(false))
+	$UI/Chat.trade.connect(_invite_exchange)
 	$UI/TeamPickDlg/VBox/Btns/GoBtn.pressed.connect(_on_team_confirmed)
 	$UI/TeamPickDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/TeamPickDlg.visible = false)
@@ -644,6 +661,63 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_mails[i]["cards"] = []
 			if $UI/ElementDlg.visible and _elem_kind == 2:
 				_fill_mails()
+		OP_EX_INVITATION:
+			var d := Codec.decode(opcode, payload)
+			_ex = {"id": int(d.ex_id), "my_side": 1,
+				"other_name": d.inviter, "accepted": false,
+				"staged": {0: {}, 1: {}}, "ready": {0: false, 1: false}}
+			$UI/ExchangeAskDlg.dialog_text = \
+				"%s wants to trade with you." % d.inviter
+			$UI/ExchangeAskDlg.popup_centered()
+		OP_EX_CONFIRM:
+			var d := Codec.decode(opcode, payload)
+			match int(d.result):
+				0:  # pending — we invited; keep the id, wait for the answer
+					if _ex.is_empty():
+						_ex = {"my_side": 0, "other_name": "?"}
+					_ex.id = int(d.ex_id)
+					_ex["staged"] = {0: {}, 1: {}}
+					_ex["ready"] = {0: false, 1: false}
+					_ex["accepted"] = false
+					_log_line("trade invitation sent…")
+				2:
+					_log_line("[color=red]trade refused[/color]")
+					_ex = {}
+					if _elem_kind == ELEM_EXCHANGE:
+						$UI/ElementDlg.visible = false
+				3:
+					_ex["accepted"] = true
+					_log_line("[color=green]trade accepted[/color]")
+					_open_exchange()
+		OP_EX_ADDED:
+			var d := Codec.decode(opcode, payload)
+			var side := int(d.side)
+			_ex.staged[side][int(d.card)] = int(d.qty)
+			_refresh_exchange()
+		OP_EX_REMOVED:
+			var d := Codec.decode(opcode, payload)
+			_ex.staged[int(d.side)].erase(int(d.card))
+			_refresh_exchange()
+		OP_EX_USER_READY:
+			var d := Codec.decode(opcode, payload)
+			_ex.ready[int(d.side)] = true
+			var who: String = "You" if int(d.side) == _ex.get("my_side", -1) \
+				else _ex.get("other_name", "?")
+			_log_line("%s %s ready" % [who,
+				"are" if int(d.side) == _ex.get("my_side", -1) else "is"])
+			_refresh_exchange()
+		OP_EX_ERROR:
+			var d := Codec.decode(opcode, payload)
+			_log_line("[color=red]trade error: %s[/color]" % (
+				"they already own that unique card" if int(d.code) == 1
+				else "card is linked / undestructible"))
+		OP_EX_END:
+			var d := Codec.decode(opcode, payload)
+			_log_line("[color=green]trade complete[/color]"
+				if int(d.reason) == 0 else "[i]trade cancelled[/i]")
+			_ex = {}
+			if _elem_kind == ELEM_EXCHANGE:
+				$UI/ElementDlg.visible = false
 		OP_FIREWORK_SHOW:
 			var d := Codec.decode(opcode, payload)
 			_log_line("firework! %s at (%d,%d)" % [
@@ -1075,6 +1149,8 @@ var _awaiting_offer := false  # a 5470 basket is in flight → next 5403 is its 
 var _search_open := {}        # tournament id -> opponent-search period open
 var _registered_tids := {}    # tournament ids this coach is registered in
 var _mails := []              # decoded mail records for the open mailbox
+var _ex := {}                 # active exchange {id, my_side, other_name,
+                              # staged:{0:{card:qty},1:{}}, ready:{0,1}}
 
 
 func _use_element(id: int) -> void:
@@ -1343,6 +1419,117 @@ func _on_mail_sel(i: int) -> void:
 	$UI/ElementDlg/VBox/Btns/AltBtn.disabled = false
 
 
+## --- Player exchange (5101-5116) --------------------------------------------
+## /trade <name> invites; 5102 asks the target; 5104 accepted opens the pane.
+## List (top) = the trade table ("You:/Name:" rows — click own row to unstage,
+## 5107); List2 (bottom) = own tradable inventory — click rows to stage (5105
+## qty 1). Act = ready toggle (5109), Alt = cancel (5111). Both-ready commits
+## server-side and ends with 5114.
+func _invite_exchange(cname: String) -> void:
+	var tid: int = world.coach_id_by_name(cname)
+	if tid < 0:
+		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
+		return
+	_invite_exchange_id(tid, cname)
+
+
+func _invite_exchange_id(tid: int, cname := "") -> void:
+	_ex = {"my_side": 0, "other_name": cname, "accepted": false}
+	var w := WireWriter.new()
+	w.put_i64(tid)
+	Session.send(OP_EX_INVITE, w.raw(), 3)
+
+
+func _answer_exchange(accept: bool) -> void:
+	if _ex.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_i64(int(_ex.id))
+	w.put_u8(1 if accept else 0)
+	Session.send(OP_EX_ANSWER, w.raw(), 3)
+	if not accept:
+		_ex = {}
+
+
+func _open_exchange() -> void:
+	_elem_kind = ELEM_EXCHANGE
+	_element_text("Exchange — %s" % _ex.get("other_name", "?"),
+		"Click your cards below to stage them.")
+	_elem_kind = ELEM_EXCHANGE   # _element_text does not reset the kind
+	var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
+	list2.clear()
+	list2.select_mode = ItemList.SELECT_SINGLE
+	for cid in State.inventory:
+		if not Cards.meta(int(cid)).get("tradable", false):
+			continue
+		list2.add_item("%s  ×%d" % [
+			Cards.name_of(int(cid)), int(State.inventory[cid])])
+		list2.set_item_metadata(list2.item_count - 1, int(cid))
+	$UI/ElementDlg/VBox/Scroll2.visible = true
+	if not list2.item_selected.is_connected(_exchange_add):
+		list2.item_selected.connect(_exchange_add)
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	if not list.item_selected.is_connected(_exchange_unstage_row):
+		list.item_selected.connect(_exchange_unstage_row)
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	act.text = "Ready"
+	act.visible = true
+	act.disabled = false
+	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+	alt.text = "Cancel trade"
+	alt.visible = true
+	alt.disabled = false
+	_refresh_exchange()
+
+
+func _exchange_add(i: int) -> void:
+	if _elem_kind != ELEM_EXCHANGE or _ex.is_empty() \
+			or not _ex.get("accepted", false):
+		return
+	var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
+	var w := WireWriter.new()
+	w.put_i64(int(_ex.id))
+	w.put_i32(int(list2.get_item_metadata(i)))
+	w.put_u16(1)
+	Session.send(OP_EX_ADD, w.raw(), 3)
+
+
+func _exchange_unstage_row(i: int) -> void:
+	if _elem_kind != ELEM_EXCHANGE or _ex.is_empty():
+		return
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	var meta: Variant = list.get_item_metadata(i)
+	if typeof(meta) != TYPE_DICTIONARY \
+			or int(meta.get("side", -1)) != int(_ex.my_side):
+		return   # only own staged rows come off the table
+	var w := WireWriter.new()
+	w.put_i64(int(_ex.id))
+	w.put_i32(int(meta.card))
+	w.put_u16(1)
+	Session.send(OP_EX_REMOVE, w.raw(), 3)
+
+
+func _refresh_exchange() -> void:
+	if _elem_kind != ELEM_EXCHANGE or not $UI/ElementDlg.visible:
+		return
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	list.clear()
+	for side in [int(_ex.get("my_side", 0)),
+			1 - int(_ex.get("my_side", 0))]:
+		var who: String = "You" if side == int(_ex.my_side) \
+			else _ex.get("other_name", "?")
+		for card in _ex.staged[side]:
+			list.add_item("%s: %s ×%d" % [
+				who, Cards.name_of(int(card)), int(_ex.staged[side][card])])
+			list.set_item_metadata(list.item_count - 1,
+				{"side": side, "card": int(card)})
+	var me_r: bool = _ex.ready.get(int(_ex.my_side), false)
+	var them_r: bool = _ex.ready.get(1 - int(_ex.my_side), false)
+	$UI/ElementDlg/VBox/Hint.text = "ready: you %s / %s %s" % [
+		"✓" if me_r else "·", _ex.get("other_name", "?"),
+		"✓" if them_r else "·"]
+
+
 ## Firework launcher — pick any owned card; launch → 22095 [i32 card][i32 x]
 ## [i32 y][i64 elementId]; the server echoes 22094 for everyone nearby.
 func _open_firework(e: Dictionary) -> void:
@@ -1436,6 +1623,10 @@ func _on_element_act() -> void:
 			$UI/ElementDlg.visible = false
 			_log_line("demon %d offering sent: %d card(s)" % [
 				_demon_id, offers.size()])
+		ELEM_EXCHANGE:  # "Ready" toggle → 5109
+			var w := WireWriter.new()
+			w.put_i64(int(_ex.id))
+			Session.send(OP_EX_READY, w.raw(), 3)
 		2:   # mailbox "Take cards" → 15006 [i64 id][u8 pad]
 			var sel := list.get_selected_items()
 			if sel.is_empty():
@@ -1465,6 +1656,12 @@ func _on_element_act() -> void:
 
 
 func _on_element_alt() -> void:
+	if _elem_kind == ELEM_EXCHANGE:
+		# "Cancel trade" → 5111; the server broadcasts 5114 reason 1.
+		var w := WireWriter.new()
+		w.put_i64(int(_ex.id))
+		Session.send(OP_EX_CANCEL, w.raw(), 3)
+		return
 	if _elem_kind == 2:
 		# "Delete" → 15004 [u8 n]{i64 ids} — the client drops the row at
 		# once; the server answers nothing.

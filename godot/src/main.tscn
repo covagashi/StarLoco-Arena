@@ -237,6 +237,12 @@ ok_button_text = "Accept"
 cancel_button_text = "Decline"
 size = Vector2i(320, 120)
 
+[node name="ExchangeAskDlg" type="ConfirmationDialog" parent="UI"]
+title = "Incoming trade"
+ok_button_text = "Accept"
+cancel_button_text = "Decline"
+size = Vector2i(320, 120)
+
 [node name="TeamPickDlg" type="PanelContainer" parent="UI"]
 visible = false
 anchors_preset = 8
