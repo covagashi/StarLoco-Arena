@@ -9,6 +9,7 @@ extends SceneTree
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
+const WireReader := preload("res://src/net/wire_reader.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const Codec := preload("res://src/net/codec.gd")
 const Opcodes := preload("res://src/net/generated/opcodes.gd")

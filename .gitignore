@@ -101,3 +101,4 @@ __pycache__/
 # Converted retail art (tools/asset-import output) — derived from
 # client/compiled/, same no-redistribution rule applies.
 /godot/assets/anims/
+/godot/assets/mapgfx/

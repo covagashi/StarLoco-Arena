@@ -9,6 +9,7 @@ extends Node2D
 const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
+const MapGfx := preload("res://src/maps/map_gfx.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -44,6 +45,8 @@ var _alt_min := 0
 var _alt_max := 0
 var _sorted := []    # ground cell positions, back-to-front (x+y, then x)
 var _sprites := {}   # actor id -> AnmSprite
+var _gfx: Node2D           # painted backdrop layer (created in _ready)
+var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
 
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
@@ -58,6 +61,10 @@ func _ready() -> void:
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
+	_gfx = MapGfx.new()
+	_gfx.name = "MapGfx"
+	add_child(_gfx)
+	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
 	# When we arrived here from a live fight the world id is the arena id.
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
@@ -71,6 +78,7 @@ func _ready() -> void:
 
 func _load() -> void:
 	var map_id := int($UI/TopBar/MapId.text)
+	_gfx_active = _gfx.load_world(map_id)
 	_fmd = FightMap.load(map_id)
 	var topo := Topology.load_world(map_id, Topology.SCOPE_ARENA)
 	_cells = topo.get("cells", {})
@@ -800,6 +808,11 @@ func _alt_color(alt: float) -> Color:
 
 
 func _draw() -> void:
+	if _gfx_active:
+		# painted backdrop already carries ground+walls — keep only the
+		# gameplay overlays (spawn zones, placement/hover rings)
+		_draw_overlays()
+		return
 	# pass 1: floor tops, back-to-front so lower rows paint over upper walls
 	for pos in _sorted:
 		var c: Dictionary = _cells[pos]
@@ -826,6 +839,10 @@ func _draw() -> void:
 				if d.x > 0 else [top[3], top[2], top[2] + down, top[3] + down])
 			var shade := 0.38 if d.x > 0 else 0.55
 			draw_colored_polygon(wall, _alt_color(c.alt).darkened(shade))
+	_draw_overlays()
+
+
+func _draw_overlays() -> void:
 	for pos in _cells:
 		var c = _cells[pos]
 		if not c.ground:

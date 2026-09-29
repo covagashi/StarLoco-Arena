@@ -35,7 +35,9 @@ def next_pow2(n):
 
 
 def load_tgam(data: bytes):
-    assert data[:4] == b"MAGT", "bad tgam magic"
+    # MAGT / mAGT both carry raw RGBA rows padded to pow2 (the lowercase-m
+    # variant only differs in a flags dword — pixel layout is identical)
+    assert data[:4] in (b"MAGT", b"mAGT"), "bad tgam magic"
     w, h = struct.unpack_from("<HH", data, 4)
     pixel_len = struct.unpack_from("<i", data, 8)[0]
     pw = next_pow2(w)

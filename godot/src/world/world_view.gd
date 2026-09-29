@@ -9,6 +9,7 @@ extends Node2D
 ## and rebroadcasts ACTOR_MOVEMENT (4500) to the other clients.
 
 const Topology := preload("res://src/maps/topology.gd")
+const MapGfx := preload("res://src/maps/map_gfx.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const State := preload("res://src/state.gd")
@@ -33,11 +34,21 @@ var _names := {}        # coach id -> String
 var _pos := {}          # coach id -> Vector3i
 var _walk := {}         # coach id -> {steps, seg, t}
 var _hover: Vector2i = Vector2i(-9999, -9999)
+var _gfx: Node2D
+var _gfx_active := false
 
 @onready var _cam: Camera2D = $Camera
 
 
+func _ready() -> void:
+	_gfx = MapGfx.new()
+	_gfx.name = "MapGfx"
+	add_child(_gfx)
+	move_child(_gfx, 0)   # painted island under the topology+coaches
+
+
 func show_world(world_id: int, my_pos: Vector3) -> void:
+	_gfx_active = _gfx.load_world(world_id)
 	var topo := Topology.load_world(world_id, Topology.SCOPE_WORLD)
 	_cells = topo.get("cells", {})
 	_alt_min = 0
@@ -65,6 +76,8 @@ func show_world(world_id: int, my_pos: Vector3) -> void:
 func hide_world() -> void:
 	visible = false
 	_loaded = false
+	_gfx_active = false
+	_gfx.clear()
 	_cells = {}
 	_sorted = []
 	_walk = {}
@@ -234,28 +247,30 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if not _loaded:
 		return
-	for pos in _sorted:
-		var c: Dictionary = _cells[pos]
-		var poly := _cell_poly(pos.x, pos.y, c.alt)
-		draw_colored_polygon(poly, _alt_color(c.alt))
-	const FRONT := [Vector2i(1, 0), Vector2i(0, 1)]
-	for pos in _sorted:
-		var c: Dictionary = _cells[pos]
-		var top := _cell_poly(pos.x, pos.y, c.alt)
-		for d in FRONT:
-			var n: Variant = _cells.get(pos + d)
-			var drop := 0.0
-			if n == null or not n.ground:
-				drop = minf(float(c.alt - _alt_min + 1) * EL, 4.0 * EL)
-			elif n.alt < c.alt:
-				drop = float(c.alt - n.alt) * EL
-			if drop <= 0.0:
-				continue
-			var down := Vector2(0, drop)
-			var wall := PackedVector2Array([top[2], top[1], top[1] + down, top[2] + down] \
-				if d.x > 0 else [top[3], top[2], top[2] + down, top[3] + down])
-			var shade := 0.38 if d.x > 0 else 0.55
-			draw_colored_polygon(wall, _alt_color(c.alt).darkened(shade))
+	if not _gfx_active:
+		# no painted art — fall back to the volumetric polygons
+		for pos in _sorted:
+			var c: Dictionary = _cells[pos]
+			var poly := _cell_poly(pos.x, pos.y, c.alt)
+			draw_colored_polygon(poly, _alt_color(c.alt))
+		const FRONT := [Vector2i(1, 0), Vector2i(0, 1)]
+		for pos in _sorted:
+			var c: Dictionary = _cells[pos]
+			var top := _cell_poly(pos.x, pos.y, c.alt)
+			for d in FRONT:
+				var n: Variant = _cells.get(pos + d)
+				var drop := 0.0
+				if n == null or not n.ground:
+					drop = minf(float(c.alt - _alt_min + 1) * EL, 4.0 * EL)
+				elif n.alt < c.alt:
+					drop = float(c.alt - n.alt) * EL
+				if drop <= 0.0:
+					continue
+				var down := Vector2(0, drop)
+				var wall := PackedVector2Array([top[2], top[1], top[1] + down, top[2] + down] \
+					if d.x > 0 else [top[3], top[2], top[2] + down, top[3] + down])
+				var shade := 0.38 if d.x > 0 else 0.55
+				draw_colored_polygon(wall, _alt_color(c.alt).darkened(shade))
 	if _cells.has(_hover):
 		var c: Dictionary = _cells[_hover]
 		if c.ground:
