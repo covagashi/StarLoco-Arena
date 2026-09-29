@@ -20,6 +20,7 @@ const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const State := preload("res://src/state.gd")
+const Spells := preload("res://src/gamedata/spells.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
@@ -42,6 +43,8 @@ const OP_FIGHTER_CREATE := 6001
 const OP_FIGHTER_CREATE_RESULT := 6000
 const OP_FIGHTER_DELETE := 6003
 const OP_FIGHTER_DELETE_RESULT := 6002
+const OP_FIGHTER_LOADOUT := 6011
+const OP_FIGHTER_LOADOUT_RESULT := 6010
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
@@ -78,7 +81,13 @@ func _ready() -> void:
 	$UI/CreateDlg/VBox/Btns/CreateBtn.pressed.connect(_on_create_fighter)
 	$UI/VBox/RosterBox/RosterBtns/DelBtn.pressed.connect(_on_delete_fighter)
 	$UI/VBox/RosterBox/Roster.item_selected.connect(
-		func(_i): $UI/VBox/RosterBox/RosterBtns/DelBtn.disabled = false)
+		func(_i):
+			$UI/VBox/RosterBox/RosterBtns/DelBtn.disabled = false
+			$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.disabled = false)
+	$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.pressed.connect(_open_loadout)
+	$UI/LoadoutDlg/VBox/Btns/CancelBtn.pressed.connect(
+		func(): $UI/LoadoutDlg.visible = false)
+	$UI/LoadoutDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_loadout)
 
 
 func _exit_tree() -> void:
@@ -218,6 +227,23 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			else:
 				_log_line("[color=red]fighter delete refused, code %d[/color]"
 					% int(d.result))
+		OP_FIGHTER_LOADOUT_RESULT:
+			# 6010: [i64 fid][u8 result][u16 spellsLen]{i32}[u16 cardsLen]{i32}
+			var fid := int(payload.get_i64())
+			var res := payload.get_u8()
+			if res == 0:
+				var spell_n := payload.get_u16()
+				var spells := []
+				for i in spell_n / 4:
+					spells.append(int(payload.get_i32()))
+				for f in State.roster:
+					if int(f.get("id", -1)) == fid:
+						f.spells = spells
+				_log_line("[color=green]loadout saved — %d spells[/color]"
+					% spells.size())
+				$UI/LoadoutDlg.visible = false
+			else:
+				_log_line("[color=red]loadout refused, code %d[/color]" % res)
 		OP_FIGHT_ERROR:
 			_log_line("[color=red]fight creation refused[/color]")
 		OP_PONG:
@@ -319,6 +345,69 @@ func _on_delete_fighter() -> void:
 	w.put_u16(0)
 	Session.send(OP_FIGHTER_DELETE, w.raw(), 2)
 	_log_line("fighter delete sent: %d" % fid)
+
+
+## Loadout editor — lists the fighter's breed-legal spells (from the exported
+## gamedata table), checks the current loadout, saves via 6011.
+var _loadout_fid := -1
+
+func _open_loadout() -> void:
+	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
+	var sel := roster_list.get_selected_items()
+	if sel.is_empty():
+		return
+	_loadout_fid = roster_list.get_item_metadata(sel[0])
+	var f: Variant = null
+	for fr in State.roster:
+		if int(fr.get("id", -1)) == _loadout_fid:
+			f = fr
+	if f == null:
+		return
+	var dlg := $UI/LoadoutDlg/VBox
+	dlg.get_node("Title").text = "Loadout — %s" % f.get("name", "?")
+	var box: VBoxContainer = dlg.get_node("Scroll/Spells")
+	for c in box.get_children():
+		c.queue_free()
+	var owned := {}
+	for s in f.get("spells", []):
+		owned[int(s)] = true
+	for s in Spells.for_breed(int(f.get("breed", 0))):
+		var cb := CheckBox.new()
+		cb.text = "%s — %d AP, %d-%d" % [s.name, s.ap, s.min, s.max]
+		cb.set_meta("id", int(s.id))
+		cb.button_pressed = owned.has(int(s.id))
+		box.add_child(cb)
+	$UI/LoadoutDlg.visible = true
+
+
+## 6011 [i64 fid][i16 teamId][u16 len]{i32 spells}[u16 len]{i16 slot,i32 card}
+func _on_save_loadout() -> void:
+	if _loadout_fid < 0:
+		return
+	var picked := []
+	for cb in $UI/LoadoutDlg/VBox/Scroll/Spells.get_children():
+		if cb.button_pressed:
+			picked.append(int(cb.get_meta("id")))
+	if picked.size() > 6:
+		_log_line("[color=red]max 6 spells[/color]")
+		return
+	# keep the fighter's existing card slots untouched
+	var cards := []
+	for f in State.roster:
+		if int(f.get("id", -1)) == _loadout_fid:
+			cards = f.get("cards", [])
+	var w := WireWriter.new()
+	w.put_i64(_loadout_fid)
+	w.put_u16(0)                        # teamId — unused server-side
+	w.put_u16(picked.size() * 4)
+	for s in picked:
+		w.put_i32(s)
+	w.put_u16(cards.size() * 6)
+	for c in cards:
+		w.put_u16(int(c.slot))
+		w.put_i32(int(c.id))
+	Session.send(OP_FIGHTER_LOADOUT, w.raw(), 2)
+	_log_line("loadout sent — %d spells" % picked.size())
 
 
 func _send_coach_creation() -> void:

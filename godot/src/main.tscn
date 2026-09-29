@@ -99,6 +99,10 @@ text = "New fighter"
 text = "Delete"
 disabled = true
 
+[node name="LoadoutBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
+text = "Loadout"
+disabled = true
+
 [node name="Chat" parent="UI" instance=ExtResource("3")]
 
 [node name="CreateDlg" type="PanelContainer" parent="UI"]
@@ -144,4 +148,44 @@ alignment = 1
 text = "Create"
 
 [node name="CancelBtn" type="Button" parent="UI/CreateDlg/VBox/Btns"]
+text = "Cancel"
+
+[node name="LoadoutDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -170.0
+offset_right = 160.0
+offset_bottom = 170.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/LoadoutDlg"]
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="UI/LoadoutDlg/VBox"]
+text = "Loadout"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="Hint" type="Label" parent="UI/LoadoutDlg/VBox"]
+text = "Pick up to 6 spells"
+theme_override_font_sizes/font_size = 12
+
+[node name="Scroll" type="ScrollContainer" parent="UI/LoadoutDlg/VBox"]
+size_flags_vertical = 3
+
+[node name="Spells" type="VBoxContainer" parent="UI/LoadoutDlg/VBox/Scroll"]
+size_flags_horizontal = 3
+
+[node name="Btns" type="HBoxContainer" parent="UI/LoadoutDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="SaveBtn" type="Button" parent="UI/LoadoutDlg/VBox/Btns"]
+text = "Save"
+
+[node name="CancelBtn" type="Button" parent="UI/LoadoutDlg/VBox/Btns"]
 text = "Cancel"

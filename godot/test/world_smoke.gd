@@ -94,6 +94,8 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(op, payload)
 			print("[smoke] CREATE result=", d.result, " fid=", d.get("fighter_id"),
 				" name=", d.get("fighter", {}).get("name"))
+		6010:
+			print("[smoke] LOADOUT result byte=", raw[8])
 
 
 func _move_and_shoot() -> void:
@@ -116,7 +118,22 @@ func _move_and_shoot() -> void:
 	_main.get_node("UI/CreateDlg/VBox/Breed").select(7)   # Iop
 	_main._on_create_fighter()
 	print("[smoke] fighter create sent — expecting 6000 + 6006 push")
-	await create_timer(3.0).timeout
+	await create_timer(1.5).timeout
+	# loadout: pick the new fighter, tick 3 spells, save via 6011
+	var roster_list: ItemList = _main.get_node("UI/VBox/RosterBox/Roster")
+	for i in roster_list.item_count:
+		if roster_list.get_item_text(i).begins_with("Humo"):
+			roster_list.select(i)
+			break
+	_main._open_loadout()
+	var sp_box = _main.get_node("UI/LoadoutDlg/VBox/Scroll/Spells")
+	var ticked := 0
+	for cb in sp_box.get_children():
+		cb.button_pressed = ticked < 3
+		ticked += 1
+	_main._on_save_loadout()
+	print("[smoke] loadout sent — expecting 6010")
+	await create_timer(2.0).timeout
 	var tex := root.get_texture()
 	var img = tex.get_image() if tex != null else null
 	if img != null:

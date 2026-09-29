@@ -12,6 +12,7 @@ const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
+const Spells := preload("res://src/gamedata/spells.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 
@@ -539,8 +540,11 @@ func _build_spell_bar(f: Dictionary) -> void:
 	var bar: HBoxContainer = $UI/SpellBar
 	for sid in f.get("spells", []):
 		var b := Button.new()
-		b.text = "S%d" % int(sid)
-		b.tooltip_text = "cast spell %d — click a target cell" % int(sid)
+		var sm := Spells.meta(int(sid))
+		b.text = sm.get("name", "S%d" % int(sid))
+		b.tooltip_text = "%s — %d AP, range %d-%d — click a target cell" % [
+			b.text, int(sm.get("ap", -1)), int(sm.get("min", 0)),
+			int(sm.get("max", 0))]
 		b.pressed.connect(_on_spell_button.bind(int(sid)))
 		bar.add_child(b)
 	var wb := Button.new()

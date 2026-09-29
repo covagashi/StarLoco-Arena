@@ -102,3 +102,4 @@ __pycache__/
 # client/compiled/, same no-redistribution rule applies.
 /godot/assets/anims/
 /godot/assets/mapgfx/
+/godot/assets/gamedata/

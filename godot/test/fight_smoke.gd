@@ -8,6 +8,7 @@ extends SceneTree
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
 const Codec := preload("res://src/net/codec.gd")
+const Spells := preload("res://src/gamedata/spells.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -135,7 +136,16 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 	# range/LoS — silence means refused, which is fine for the harness.
 	var f: Dictionary = State.fighters.get(fid, {})
 	var spells: Array = f.get("spells", [])
-	var sid: int = int(spells[0]) if not spells.is_empty() else -2
+	# prefer the longest-range spell we can afford — melee spells whiff silently
+	var sid := -2
+	var best_range := 0
+	for s in spells:
+		var sm := Spells.meta(int(s))
+		var rng := int(sm.get("max", 0))
+		var ap := int(sm.get("ap", 99))
+		if rng > best_range and ap <= fight_scene._ap_left:
+			best_range = rng
+			sid = int(s)
 	var target := Vector2i(-9999, -9999)
 	for id in fight_scene._actor_cells:
 		var e: Dictionary = State.fighters.get(id, {})
