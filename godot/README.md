@@ -28,7 +28,7 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `src/gamedata/spells.gd` | Breed spell tables + names (from `assets/gamedata/spells.json`) |
 | `src/gamedata/elements.gd` | Env element kinds/labels (`assets/gamedata/elements.json`) — the wire 200 carries position only; kind comes from this table |
 | `src/gamedata/cards.gd` | Card names/prices/values (`assets/gamedata/cards.json`) — shop + barter UI |
-| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101`, Card Master shop `5401`/`5450`/`5400`/`5403`, Zaap `4512`, graveyard `22099`, fusion `5490`/`5491`, demon ladder `27510`/`27511`, tournaments `17002`/`17003` + `28601`/`28602` + register `4607`/`28608` + opponent search `28611`→`28612`/`28616`/`28648` + period `28630`, fireworks `22095`/`22094`, wallet `4001`, inventory `5200`, friend/ignore lists `3144`/`3146` + acks/presence `3156`-`3166`, guild create `509`/`504` + feed `558`, demon affiliation offering `5470`→`5403` |
+| `src/main.gd/.tscn` | Login/lobby UI over the island view; roster `6006`, presets `6030`, create/delete `6001`/`6003`, loadout `6011`/`6010`, team presets `6021`/`6023`/`6013`, challenge `26300`-family, combattre `23103`/`23101`, Card Master shop `5401`/`5450`/`5400`/`5403`, Zaap `4512`, graveyard `22099`, fusion `5490`/`5491`, demon ladder `27510`/`27511`, tournaments `17002`/`17003` + `28601`/`28602` + register `4607`/`28608` + opponent search `28611`→`28612`/`28616`/`28648` + period `28630`, fireworks `22095`/`22094`, wallet `4001`, inventory `5200`, friend/ignore lists `3144`/`3146` + acks/presence `3156`-`3166`, guild create `509`/`504` + record/membership/roster `510`/`552`/`512` + tags `554` + feeds `558`/`560`, demon affiliation offering `5470`→`5403`, mailbox `15000`→`15001` + take `15006`/`15007` + delete `15004` + `/mail` compose `539`→`15003` + notice `15005` |
 | `assets/anims/` | Generated sprite frames — **git-ignored**; regenerate with `tools/asset-import/anm_render.py --export` |
 | `assets/mapgfx/` | Painted-map sprites + atlases — **git-ignored**; regenerate with `tools/asset-import/map_gfx.py` |
 | `assets/gamedata/` | Derived tables — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py`, `server/cmd/dumpelements`, `server/cmd/dumpcards` + `card_names.py` |
@@ -63,7 +63,9 @@ turn loop (`8100` round, `8104` begin, `4503` move / `8109`/`8111` casts,
 repeat.
 
 `world_smoke` also exercises: vicinity/whisper/trade chat (local echo +
-`3214`/`3204` replies), fighter create `6000` + loadout `6010`, team
+`3214`/`3204` replies), the real mailbox (`15000`→`15001` list → `15006`
+take → `15007`, `15004` delete, `/mail` compose → `539`→`15003` echo),
+fighter create `6000` + loadout `6010`, team
 preset save `6021` (or `6020` status 25 on a name clash) + assign `6013` +
 delete `6023`, an emote round-trip `4701`→`4700`, the ranked queue
 `23103`→`23104`→cancel `23101`→`23102`, **element AoI** (`200` spawn on

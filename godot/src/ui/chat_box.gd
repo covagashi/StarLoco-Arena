@@ -181,6 +181,37 @@ func _on_submit(text: String) -> void:
 				", ".join(State.ignored) if not State.ignored.is_empty()
 				else "none"))
 			return
+		if cmd == "mail":
+			# Compose a letter — C2S 539 mail record (arch 3):
+			# /mail <name> <title>|<body>. The whole family is UTF-8.
+			var sp2 := rest.find(" ")
+			var pipe := rest.find("|")
+			if sp2 <= 0 or pipe < 0:
+				_line("error", "[i]/mail &lt;name&gt; &lt;title&gt;|&lt;body&gt;[/i]")
+				return
+			var target := rest.substr(0, sp2)
+			var title := rest.substr(sp2 + 1, pipe - sp2 - 1).strip_edges()
+			var body := rest.substr(pipe + 1).strip_edges()
+			var ew := WireWriter.new()
+			var tb := title.to_utf8_buffer()
+			ew.put_u16(1); ew.put_i32(tb.size()); ew.put_bytes(tb)
+			var bb := body.to_utf8_buffer()
+			ew.put_u16(2); ew.put_i32(bb.size()); ew.put_bytes(bb)
+			var extra := ew.raw()
+			var mw := WireWriter.new()
+			mw.put_i64(0)                    # mail id — server assigns
+			mw.put_i64(State.my_coach_id)
+			var snb := State.my_coach_name.to_utf8_buffer()
+			mw.put_u8(snb.size()); mw.put_bytes(snb)
+			mw.put_i32(2)                    # senderGame — client sends 2
+			mw.put_i64(0)                    # receiver id — resolved by name
+			var rnb := target.to_utf8_buffer()
+			mw.put_u8(rnb.size()); mw.put_bytes(rnb)
+			mw.put_i32(extra.size()); mw.put_bytes(extra)
+			mw.put_i64(0); mw.put_u8(0); mw.put_u8(0); mw.put_u8(0)
+			mw.put_i32(0)
+			Session.send(539, mw.raw(), 3)
+			return
 		if cmd == "guild":
 			# Guild creation — C2S 509 [u8 type][u8 len][name], arch 3.
 			# The 504 result + 510/552/512 state pushes + 558 feed answer it.

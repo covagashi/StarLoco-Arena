@@ -578,6 +578,39 @@
    "name": "DemonLadder",
    "handler": "demon_ladder"
   },
+  "15001": {
+   "name": "MailList",
+   "handler": "mail_list",
+   "note": "[i16 n]{mail record} — record = header + i32-len TLV extra + trailing flags (server mail_packets.go)"
+  },
+  "15003": {
+   "name": "MailSendResult",
+   "handler": "mail_send_result",
+   "note": "[i64 result][mail record] — >0 accepted, -2 mailbox full/unknown receiver"
+  },
+  "15005": {
+   "name": "MailNewNotice",
+   "fields": [
+    {
+     "n": "new_count",
+     "t": "u8"
+    }
+   ]
+  },
+  "15007": {
+   "name": "MailCardsTaken",
+   "handler": "mail_cards_taken",
+   "note": "[i64 mailId][i64 coachId][u8 n]{i32 cardId}"
+  },
+  "15507": {
+   "name": "MailNameResult",
+   "fields": [
+    {
+     "n": "coach_id",
+     "t": "i64"
+    }
+   ]
+  },
   "17003": {
    "name": "TournamentCalendar",
    "handler": "tournament_calendar"

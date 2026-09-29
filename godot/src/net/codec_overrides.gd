@@ -13,6 +13,9 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"part_table": return _part_table(r)
 		"guild_record": return _guild_record(r)
 		"guild_member_list": return _guild_member_list(r)
+		"mail_list": return _mail_list(r)
+		"mail_send_result": return _mail_send_result(r)
+		"mail_cards_taken": return _mail_cards_taken(r)
 		"actor_spawn": return _actor_spawn(r)
 		"fighter_list": return _fighter_list(r)
 		"fighter_create_result": return _fighter_create_result(r)
@@ -155,6 +158,61 @@ static func _guild_member_list(r: WireReader) -> Dictionary:
 					pr.get_u16(); pr.get_i32(); pr.get_i32()
 					rows.back()["demon_id"] = pr.get_u16()
 	return {"rows": rows}
+
+
+## --- mailbox (server mail_packets.go) ----------------------------------------
+## Mail record: [i64 id][i64 senderId][str8 senderName][i32 senderGame]
+## [i64 receiverId][str8 receiverName][i32 extraLen][extra][i64 dateMs]
+## [u8 read][u8 delSender][u8 delReceiver][i32 state]. The extra blob is TLV:
+## tag 1 title [i32 len]bytes, tag 2 body [i32 len]bytes,
+## tag 3 cards [u16 n]{i32}, tag 4 systemMsgId [i32] (system mails).
+static func _mail_record(r: WireReader) -> Dictionary:
+	var m := {
+		"id": r.get_i64(), "sender_id": r.get_i64(),
+		"sender": r.get_str("u8", "utf8"), "sender_game": r.get_i32(),
+		"receiver_id": r.get_i64(), "receiver": r.get_str("u8", "utf8"),
+		"title": "", "body": "", "cards": [], "system_id": 0}
+	var extra := WireReader.new(r.get_bytes(r.get_i32()))
+	while extra.remaining() > 0:
+		var tag := extra.get_u16()
+		match tag:
+			1: m.title = extra.get_str("i32", "utf8")
+			2: m.body = extra.get_str("i32", "utf8")
+			3:
+				var n := extra.get_u16()
+				for i in n:
+					m.cards.append(extra.get_i32())
+			4: m.system_id = extra.get_i32()
+			_: break        # unknown tag — can't know its length, stop cleanly
+	m.date_ms = r.get_i64()
+	m.read = r.get_u8() != 0
+	m.deleted_sender = r.get_u8() != 0
+	m.deleted_receiver = r.get_u8() != 0
+	m.state = r.get_i32()
+	return m
+
+
+## Opcode 15001 — MAIL_LIST: [i16 n]{mail record}.
+static func _mail_list(r: WireReader) -> Dictionary:
+	var mails := []
+	var n := r.get_i16()
+	for i in n:
+		mails.append(_mail_record(r))
+	return {"mails": mails}
+
+
+## Opcode 15003 — MAIL_SEND_RESULT: [i64 result][mail record].
+static func _mail_send_result(r: WireReader) -> Dictionary:
+	return {"result": r.get_i64(), "mail": _mail_record(r)}
+
+
+## Opcode 15007 — MAIL_CARDS_TAKEN: [i64 mailId][i64 coachId][u8 n]{i32}.
+static func _mail_cards_taken(r: WireReader) -> Dictionary:
+	var out := {"mail_id": r.get_i64(), "coach_id": r.get_i64(), "cards": []}
+	var n := r.get_u8()
+	for i in n:
+		out.cards.append(r.get_i32())
+	return out
 
 
 ## Opcode 4096 — i32 prefix: negative = that many raw bytes follow;

@@ -191,6 +191,21 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 		554, 556, 560:
 			var d := Codec.decode(op, payload)
 			print("[smoke] GUILD push ", op, ": ", d)
+		15001:
+			var d := Codec.decode(op, payload)
+			print("[smoke] MAIL list n=", d.mails.size(),
+				" first=", d.mails[0] if not d.mails.is_empty() else "-")
+		15003:
+			var d := Codec.decode(op, payload)
+			print("[smoke] MAIL send result=", d.result,
+				" echo=", d.mail.get("title", "?"))
+		15005:
+			var d := Codec.decode(op, payload)
+			print("[smoke] MAIL notice new=", d.new_count)
+		15007:
+			var d := Codec.decode(op, payload)
+			print("[smoke] MAIL taken mail=", d.mail_id,
+				" coach=", d.coach_id, " cards=", d.cards)
 		28608:
 			var d := Codec.decode(op, payload)
 			print("[smoke] TOURNAMENT register tid=", d.get("tournament_id"),
@@ -335,6 +350,33 @@ func _move_and_shoot() -> void:
 	# Island 25: mailbox(2) @33,36 — graveyard(10) @4,45 — fusion(14) @-45,-25.
 	# Dialogs are client-local; just check they open with the right title.
 	await _click_elem(2, Vector2i(33, 36), "Mailbox")
+	await create_timer(1.2).timeout
+	# Read the seeded letter → take its attachments (15006) → delete (15004).
+	# Pick the row with cards — sent letters list too and carry none.
+	var mlist: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
+	var midx := -1
+	for i in _main._mails.size():
+		if not _main._mails[i].get("cards", []).is_empty():
+			midx = i
+			break
+	if midx >= 0:
+		mlist.select(midx)
+		mlist.item_selected.emit(midx)
+		_main._on_element_act()
+		print("[smoke] mail take sent — expecting 15007")
+		await create_timer(1.0).timeout
+		if mlist.item_count > 0:
+			mlist.select(0)
+			mlist.item_selected.emit(0)
+			_main._on_element_alt()
+			print("[smoke] mail delete sent")
+			await create_timer(0.5).timeout
+	else:
+		print("[smoke] mailbox empty — SKIP take/delete")
+	# Compose one to test2 → 539 → 15003 echo.
+	chat._on_submit("/mail test2 Re:Objet|Bien recu, merci !")
+	print("[smoke] mail send — expecting 15003")
+	await create_timer(1.0).timeout
 	# Graveyard: with a dead fighter + a resurrection card seeded, selecting
 	# the fighter sends 22099 (card 305 is 100% — the roster refresh that
 	# follows is the confirmation).

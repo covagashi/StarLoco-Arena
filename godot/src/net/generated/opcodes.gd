@@ -230,14 +230,14 @@ const OP_MSG8250 := 8250
 const OP_END_FIGHT_MESSAGE := 8300
 const OP_MSG8400 := 8400
 const OP_MSG15000 := 15000
-const OP_MSG15001 := 15001
-const OP_MSG15003 := 15003
+const OP_MAIL_LIST := 15001
+const OP_MAIL_SEND_RESULT := 15003
 const OP_MSG15004 := 15004
-const OP_MSG15005 := 15005
+const OP_MAIL_NEW_NOTICE := 15005
 const OP_MSG15006 := 15006
-const OP_MSG15007 := 15007
+const OP_MAIL_CARDS_TAKEN := 15007
 const OP_MSG15506 := 15506
-const OP_MSG15507 := 15507
+const OP_MAIL_NAME_RESULT := 15507
 const OP_MSG17002 := 17002
 const OP_TOURNAMENT_CALENDAR := 17003
 const OP_MSG17004 := 17004
@@ -573,14 +573,14 @@ const NAMES := {
 	8300: "EndFightMessage",
 	8400: "Msg8400",
 	15000: "Msg15000",
-	15001: "Msg15001",
-	15003: "Msg15003",
+	15001: "MailList",
+	15003: "MailSendResult",
 	15004: "Msg15004",
-	15005: "Msg15005",
+	15005: "MailNewNotice",
 	15006: "Msg15006",
-	15007: "Msg15007",
+	15007: "MailCardsTaken",
 	15506: "Msg15506",
-	15507: "Msg15507",
+	15507: "MailNameResult",
 	17002: "Msg17002",
 	17003: "TournamentCalendar",
 	17004: "Msg17004",

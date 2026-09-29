@@ -108,6 +108,12 @@ const OP_FRIEND_OFFLINE := 3150          # [u8 name][u8 note]
 const OP_IGNORE_ONLINE := 3164           # [u8 name][i64 id]
 const OP_IGNORE_OFFLINE := 3166          # [u8 name]
 const OP_MAILBOX_REQ := 15000            # C2S empty — opens the mailbox dialog
+const OP_MAIL_LIST := 15001              # S2C [i16 n]{mail record}
+const OP_MAIL_SEND_RES := 15003          # S2C [i64 result][mail record]
+const OP_MAIL_DELETE := 15004            # C2S [u8 n]{i64 ids}
+const OP_MAIL_NOTICE := 15005            # S2C [u8 newCount]
+const OP_MAIL_TAKE := 15006              # C2S [i64 mailId][u8 pad]
+const OP_MAIL_TAKEN := 15007             # S2C [i64 mail][i64 coach][u8 n]{i32}
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
@@ -604,6 +610,40 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line("[i]%s %s[/i]" % [d.coach,
 				"was kicked out of the guild" if int(d.removed) != 0
 				else "joined the guild"])
+		OP_MAIL_LIST:
+			var d := Codec.decode(opcode, payload)
+			_mails = d.mails
+			if $UI/ElementDlg.visible and _elem_kind == 2:
+				_fill_mails()
+			_log_line("mailbox: %d letter(s)" % _mails.size())
+		OP_MAIL_SEND_RES:
+			var d := Codec.decode(opcode, payload)
+			var res := int(d.result)
+			if res > 0:
+				_log_line("[color=green]mail %d sent to %s[/color]" % [
+					res, d.mail.get("receiver", "?")])
+			elif res == -2:
+				_log_line("[color=red]mail refused: mailbox full or "
+					+ "unknown recipient[/color]")
+			else:
+				_log_line("[color=red]mail send failed (%d)[/color]" % res)
+		OP_MAIL_NOTICE:
+			var d := Codec.decode(opcode, payload)
+			_log_line("[i]you have %d new letter(s)[/i]" % int(d.new_count))
+		OP_MAIL_TAKEN:
+			var d := Codec.decode(opcode, payload)
+			for cid in d.cards:
+				State.inventory[int(cid)] = int(
+					State.inventory.get(int(cid), 0)) + 1
+			if int(d.coach_id) == State.my_coach_id and not d.cards.is_empty():
+				_log_line("[color=green]collected: %s[/color]" % ", ".join(
+					d.cards.map(func(c): return Cards.name_of(int(c)))))
+			# Drop the emptied mail from the open mailbox.
+			for i in range(_mails.size() - 1, -1, -1):
+				if int(_mails[i].get("id", -1)) == int(d.mail_id):
+					_mails[i]["cards"] = []
+			if $UI/ElementDlg.visible and _elem_kind == 2:
+				_fill_mails()
 		OP_FIREWORK_SHOW:
 			var d := Codec.decode(opcode, payload)
 			_log_line("firework! %s at (%d,%d)" % [
@@ -1034,6 +1074,7 @@ var _demon_id := -1           # demon of the totem being offered to
 var _awaiting_offer := false  # a 5470 basket is in flight → next 5403 is its ack
 var _search_open := {}        # tournament id -> opponent-search period open
 var _registered_tids := {}    # tournament ids this coach is registered in
+var _mails := []              # decoded mail records for the open mailbox
 
 
 func _use_element(id: int) -> void:
@@ -1052,8 +1093,9 @@ func _use_element(id: int) -> void:
 			_log_line("%s — opening shop…" % label)
 		4:   # Zaap — local dialog of owned Zaap cards (type 20) → 4512
 			_open_zaap()
-		2:   # Mailbox — contents are server-driven and unimplemented upstream
-			_element_text("Mailbox", "No letters.")
+		2:   # Mailbox — the server answers 15000 with the full list (15001)
+			_element_text("Mailbox", "Loading letters…")
+			Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
 		10:  # Graveyard — dead/interred fighters + resurrection cards
 			_open_graveyard()
 		14:  # Fusion altar — feed same-set cards at a target → 5490
@@ -1244,16 +1286,61 @@ func _open_tournament_totem() -> void:
 
 
 func _on_tournament_sel(i: int) -> void:
+	# The List's item_selected is shared across element dialogs — ignore
+	# selections that aren't this totem's rows (stale callback, empty list).
+	if _elem_kind != 13:
+		return
 	$UI/ElementDlg/VBox/Btns/ActBtn.disabled = false
-	if _elem_kind == 13:
-		# "Find opponent" (retail "Combattre") only makes sense for a
-		# tournament we're in AND whose search window is open (28630).
-		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-		var tid := int(list.get_item_metadata(i))
-		var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-		alt.text = "Find opponent"
-		alt.visible = _registered_tids.has(tid) \
-			and _search_open.get(tid, false)
+	# "Find opponent" (retail "Combattre") only makes sense for a
+	# tournament we're in AND whose search window is open (28630).
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	var tid := int(list.get_item_metadata(i))
+	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+	alt.text = "Find opponent"
+	alt.visible = _registered_tids.has(tid) \
+		and _search_open.get(tid, false)
+
+
+## Mailbox pane — filled when MAIL_LIST (15001) lands: sender + title per
+## row, body preview in the hint, "Take cards" armed by attachments and
+## "Delete" always available.
+func _fill_mails() -> void:
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	list.clear()
+	for i in _mails.size():
+		var m: Dictionary = _mails[i]
+		var title: String = m.get("title", "")
+		var label := "%s: %s" % [m.get("sender", "?"),
+			title if title != "" else "(no subject)"]
+		if not m.get("cards", []).is_empty():
+			label += "  [%d card(s)]" % m.cards.size()
+		if not m.get("read", true):
+			label = "* " + label
+		list.add_item(label)
+		list.set_item_metadata(i, i)
+	$UI/ElementDlg/VBox/Hint.text = "%d letter(s) — select to read" % _mails.size()
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	act.text = "Take cards"
+	act.visible = true
+	act.disabled = true
+	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+	alt.text = "Delete"
+	alt.visible = true
+	alt.disabled = true
+	if not list.item_selected.is_connected(_on_mail_sel):
+		list.item_selected.connect(_on_mail_sel)
+
+
+func _on_mail_sel(i: int) -> void:
+	# Stale selections from other element dialogs would index into the
+	# (usually empty) _mails — guard on the open pane being the mailbox.
+	if _elem_kind != 2 or i >= _mails.size():
+		return
+	var m: Dictionary = _mails[i]
+	var body: String = m.get("body", "")
+	$UI/ElementDlg/VBox/Hint.text = body if body != "" else "(empty letter)"
+	$UI/ElementDlg/VBox/Btns/ActBtn.disabled = m.get("cards", []).is_empty()
+	$UI/ElementDlg/VBox/Btns/AltBtn.disabled = false
 
 
 ## Firework launcher — pick any owned card; launch → 22095 [i32 card][i32 x]
@@ -1349,6 +1436,19 @@ func _on_element_act() -> void:
 			$UI/ElementDlg.visible = false
 			_log_line("demon %d offering sent: %d card(s)" % [
 				_demon_id, offers.size()])
+		2:   # mailbox "Take cards" → 15006 [i64 id][u8 pad]
+			var sel := list.get_selected_items()
+			if sel.is_empty():
+				return
+			var m: Dictionary = _mails[int(list.get_item_metadata(sel[0]))]
+			if m.get("cards", []).is_empty():
+				return
+			var w := WireWriter.new()
+			w.put_i64(int(m.id))
+			w.put_u8(0)
+			Session.send(OP_MAIL_TAKE, w.raw(), 3)
+			_log_line("collecting %d card(s) from mail %d…" % [
+				m.cards.size(), int(m.id)])
 		12:  # firework
 			var sel := list.get_selected_items()
 			if sel.is_empty():
@@ -1365,6 +1465,23 @@ func _on_element_act() -> void:
 
 
 func _on_element_alt() -> void:
+	if _elem_kind == 2:
+		# "Delete" → 15004 [u8 n]{i64 ids} — the client drops the row at
+		# once; the server answers nothing.
+		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+		var sel := list.get_selected_items()
+		if sel.is_empty():
+			return
+		var idx := int(list.get_item_metadata(sel[0]))
+		var m: Dictionary = _mails[idx]
+		var w := WireWriter.new()
+		w.put_u8(1)
+		w.put_i64(int(m.id))
+		Session.send(OP_MAIL_DELETE, w.raw(), 3)
+		_mails.remove_at(idx)
+		_fill_mails()
+		_log_line("mail %d deleted" % int(m.id))
+		return
 	if _elem_kind == 13:
 		# Opponent search → 28611 [i64 tid][i64 coach][i16 preset], arch 2.
 		# Retail sends pseudo-preset 99 from the Tournois tab's Combattre.
