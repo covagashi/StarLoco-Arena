@@ -56,6 +56,10 @@ static var ignored := []
 ## {guild_id, guild, rank_level, rank_name, demon_id, rights, ranks[], members[]}
 static var guild := {}
 
+## Achievement criteria {criterionId: value} from the 2052 criteria_blob;
+## 22003 reports land here too (idempotent — the server persists anyway).
+static var criteria := {}
+
 ## True while this session watches a fight via 26331 — the fight view runs
 ## read-only (the server keeps us out of Fights.ByCoach so actions are refused
 ## anyway; this stops the client from even offering them).

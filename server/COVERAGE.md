@@ -37,8 +37,8 @@ Audit legend cross-refs the commit that did/verified it.
 | Opcode | Msg | Dir | Impl | Audit | Unit | E2E |
 |---|---|:---:|:---:|:---:|:---:|:---:|
 | 1 | Disconnect (`aqb`) | C2S | ✓ | A (empty) | — | — |
-| 4517 | TutorialChangeInstance (`aae_2`) | C2S | ✓ (no-op) | A (empty, arch 3) | — | — |
-| 22003 | StatisticUpdate (`nq`) | C2S | ✓ (persist) | A (i16 id, i8 flag, i16 val) | ✓ | — |
+| 4517 | TutorialChangeInstance (`aae_2`) | C2S | ✓ (no-op) | A (empty, arch 3) | — | ✓ (Godot aog_1 gate) |
+| 22003 | StatisticUpdate (`nq`) | C2S | ✓ (persist) | A (i16 id, i8 flag, i16 val) | ✓ | ✓ (229 live; 221 wired) |
 | 22000 | AchievementUnlocked (`ade_0`) | S2C | ✓ (evaluated from types 800/801/802) | A (i16 achievementId) | ✓ | ✓ **live** |
 | 22001 | StatisticRequest (`anp_0`) | C2S | ✓ | A (empty, arch 2) | ✓ | ✓ **live** |
 | 22002 | StatisticData (`ls_0`) | S2C | ✓ (reply to 22001 ONLY) | A (i32 byteLen, then i16/i16 pairs) | ✓ | ✓ **live** |
@@ -397,11 +397,22 @@ missing feature manifests to the client as a *hang*. Prioritized:
 - **Inventory invariant**: BuyCards/ConsumeAndGrant assume one unequipped
   (pos=0) row per (coach, template). All server grant paths stack to preserve
   this; only raw test seeding can create duplicate rows.
-- **5203 destructive/lock ops** — handler currently ignores its payload.
-- Ladder: the main 1v1 board (27500/27501) + compact page (27502/27503) are
-  done; still missing: the other sub-boards (evolution/team, 27504–27552).
-- Events (17000), tournaments (28600), XvX invites
-  (26300) — large `new-in-2.70` subsystems, each a client tab.
+- **5203 destructive/lock ops** — handler ignores its payload (uids are
+  client-local, unresolvable); Godot sends an empty count as a refresh
+  request on opening the gear pane and gets a `5200` re-push.
+- Ladder: all 7 boards (27500–27514) are exercised by the Godot client;
+  only secondary 275xx pages outside that family remain untouched.
+- Events 17002/17003 (tournament calendar) are wired; 17004+ are not
+  registered server-side. Tournaments (28601/28608/28611/28612/28648/
+  28649/28650) are exercised end-to-end by the Godot client.
+- Channel membership pushes (3128/3130/3132/3134/3136/3138/3202) are S2C
+  only — the server never emits them, so the Godot client has nothing to
+  consume yet.
+- **2308 alt match accept** — duplicate accept path (matchId+mode+roster);
+  the Godot client resolves matches through 23114/23116 instead.
+- **22003 criteria** — Godot reports criterion 229 on first world entry
+  (verified in coach_stats) and 221 on breedmaster dialogs; the demon-NPC
+  criteria (210/218/219) need real NPC dialogs first.
 - 2052 CoachInformations / 4096 coach-actor sub-blobs are still empty (guild,
   inventory, appearance — the `0x80` tome blob is now populated, see B-106)
   BUT this is now known to be low-impact for stats: the

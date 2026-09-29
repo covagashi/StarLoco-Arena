@@ -158,6 +158,8 @@ const OP_TOURN_CANCEL_RES := 28610       # S2C [i8 accepted]
 const OP_FIGHTER_SET_STATE := 23000      # C2S [i64 fid][u8 legendary] arch 2
 const OP_STAT_REQ := 22001               # C2S empty arch 2 — open criteria tab
 const OP_STAT_DATA := 22002              # S2C — codec_overrides stat_data
+const OP_STAT_UPD := 22003               # C2S [i16 id][u8 flag][i16 val] arch 2
+const OP_TUTORIAL_READY := 4517          # C2S empty arch 3 — aog_1 first-entry ack
 const OP_RESET_POS := 4514               # C2S empty arch 3 — /resetPosition
 const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
@@ -401,6 +403,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			State.my_coach_id = int(d.get("id", -1))
 			State.guild = d.get("guild", {})
+			# criteria_blob = raw {u16 id, u16 value} pairs — the field's u16
+			# length prefix already served as buildCriteriaBlob's byteLen.
+			var cb := WireReader.new(d.get("criteria_blob", PackedByteArray()))
+			State.criteria = {}
+			while cb.remaining() >= 4:
+				State.criteria[cb.get_u16()] = cb.get_u16()
 			if not State.guild.is_empty():
 				_log_line("guild: '%s' — rank %s, demon %d" % [
 					State.guild.get("guild", "?"),
@@ -426,6 +434,18 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/SearchBtn.disabled = false
 			$UI/VBox/AuthRow/EvoBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
+			# aog_1: while achievement "coach created" (criterion 229) is unset,
+			# retail acks the tutorial instance (4517) and reports criterion
+			# 229 done (22003) on every entry until the server persists it.
+			if not State.criteria.has(229):
+				State.criteria[229] = 1
+				State.net.send_message(OP_TUTORIAL_READY,
+					PackedByteArray(), 3)
+				var w := WireWriter.new()
+				w.put_i16(229)
+				w.put_u8(1)
+				w.put_i16(1)
+				State.net.send_message(OP_STAT_UPD, w.raw(), 2)
 		OP_ACTOR_SPAWN:
 			_spawn_world_actors(payload)
 		OP_ACTOR_DESPAWN:
@@ -710,6 +730,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for c in d.get("cards", []):
 				State.inventory[int(c.card_id)] = int(c.qty)
 			_log_line("inventory: %d card stack(s)" % State.inventory.size())
+			if $UI/EquipDlg.visible:
+				_fill_equip()
 		OP_SHOP_CATALOG:
 			var d := Codec.decode(opcode, payload)
 			_open_shop(d)
@@ -1979,6 +2001,11 @@ var _equip_slots: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 func _open_equip() -> void:
 	$UI/EquipDlg.visible = true
 	_fill_equip()
+	# 5203 asks for a fresh 5200 push (the uid list is client-local and
+	# unresolvable server-side — an empty count is a pure refresh request).
+	var w := WireWriter.new()
+	w.put_u16(0)
+	State.net.send_message(5203, w.raw(), 3)
 
 
 func _fill_equip() -> void:
@@ -2110,8 +2137,15 @@ func _use_element(id: int) -> void:
 			_open_fusion()
 		3, 7: # Challenge / Demon challenge — accept bubble → 26330
 			_open_challenge_bubble(e)
-		5:   # Breed Master — recruit text; the "test" button runs 26330 too
+		5:   # Breed Master — recruit text; the "test" button runs 26330 too.
+			# zs_1 also reports criterion 221 ("talked to a breedmaster") on
+			# every dialog open — a counter stat, value=1 each time.
 			_open_challenge_bubble(e)
+			w = WireWriter.new()
+			w.put_i16(221)
+			w.put_u8(1)
+			w.put_i16(1)
+			State.net.send_message(OP_STAT_UPD, w.raw(), 2)
 		11:  # Demon totem — ladder page requested with 27510, shown on 27511
 			_open_demon_totem(e)
 		13:  # Tournament totem — calendar (17002) + list (28601)
