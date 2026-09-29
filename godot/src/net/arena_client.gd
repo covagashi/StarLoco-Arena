@@ -22,9 +22,12 @@ var _recv_buf := PackedByteArray()
 var _connected := false
 var _established := false
 
-## Messages received before the current scene was ready to consume them
-## (e.g. ACTOR_APPEAR racing a scene change). Drained via drain().
+## Messages received while no scene consumes them (e.g. ACTOR_APPEAR racing
+## a scene change) buffer here; the entering scene drains them in _ready.
+## While scene_active is set, messages are emit-only — otherwise every new
+## scene would replay the whole session backlog.
 var pending: Array = []
+var scene_active := false
 
 
 ## Take everything buffered since the last drain.
@@ -96,7 +99,8 @@ func _drain_frames() -> void:
 		var opcode := (_recv_buf[2] << 8) | _recv_buf[3]
 		var payload := _recv_buf.slice(HEADER_LEN, total)
 		_recv_buf = _recv_buf.slice(total)
-		pending.append({"op": opcode, "raw": payload})
-		if pending.size() > 512:
-			pending.pop_front()
+		if not scene_active:
+			pending.append({"op": opcode, "raw": payload})
+			if pending.size() > 512:
+				pending.pop_front()
 		message_received.emit(opcode, WireReader.new(payload))

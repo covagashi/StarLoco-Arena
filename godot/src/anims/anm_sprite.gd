@@ -17,11 +17,22 @@ var playing := true
 ## margin under the feet is measured per frame at load.
 var foot_pivot := false
 
+## Decoded actions are shared read-only across sprites — direction flips
+## during a walk reload the same action set many times per second.
+static var _cache := {}   # "set/action" -> {fps, frames}
+
 
 func load_action(set_dir: String, action: String) -> bool:
 	_frames = []
 	_cur = 0
 	_time = 0.0
+	var key := "%s/%s" % [set_dir, action]
+	if _cache.has(key):
+		var c: Dictionary = _cache[key]
+		_fps = c.fps
+		_frames = c.frames
+		queue_redraw()
+		return not _frames.is_empty()
 	var meta_path := "%s/%s/meta.json" % [set_dir, action]
 	if not FileAccess.file_exists(meta_path):
 		return false
@@ -52,6 +63,7 @@ func load_action(set_dir: String, action: String) -> bool:
 			"off": Vector2(fr.ox, fr.oy),
 			"w": w, "h": h, "foot": foot,
 		})
+	_cache[key] = {"fps": _fps, "frames": _frames}
 	playing = true
 	queue_redraw()
 	return not _frames.is_empty()

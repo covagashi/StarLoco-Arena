@@ -47,11 +47,15 @@ var _sprites := {}   # actor id -> AnmSprite
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
 @onready var _actors: Node2D = $Actors
+@onready var _end_turn: Button = $UI/TopBar/EndTurnBtn
 var _dragging := false
+var _press_pos := Vector2.ZERO
+var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 
 
 func _ready() -> void:
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
+	_end_turn.pressed.connect(request_end_turn)
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
 	# When we arrived here from a live fight the world id is the arena id.
 	if State.fight_world >= 0:
@@ -61,6 +65,7 @@ func _ready() -> void:
 		for m in State.net.drain():
 			_on_net_message(m.op, WireReader.new(m.raw))
 		State.net.message_received.connect(_on_net_message)
+		State.net.scene_active = true
 
 
 func _load() -> void:
@@ -139,15 +144,34 @@ const OP_END_FIGHT_DONE := 26321  # C2S empty — server returns us to overworld
 const OP_ENTER_INSTANCE := 4600
 
 var _fight_over := false
-var _actor_cells := {}   # id -> Vector3i (debug overlay)
+var _actor_cells := {}   # id -> Vector3i
+var _current_fid := -1   # fighter whose turn is running (8104 → 8106)
+var _walk := {}          # actor id -> Array[Vector3i] remaining walk cells
+var _actor_dir := {}     # actor id -> last server dir (facing during walk)
+
+## Emitted on 8104 — a harness (fight_smoke's scripted policy) or the human
+## drives from here: request_move_to() then request_end_turn().
+signal turn_began(fid: int, ours: bool)
+
+## White crosshairs at each actor's cell center (placement debugging).
+var debug_overlay := false
+
+const WALK_SPEED := 160.0   # px/sec along the path
+## Orthogonal grid step -> server Direction8 (iso diagonals):
+## +x down-right=SE(1), +y down-left=SW(3), -x=NW(5), -y=NE(7).
+const STEP_DIR := {
+	Vector2i(1, 0): 1, Vector2i(0, 1): 3,
+	Vector2i(-1, 0): 5, Vector2i(0, -1): 7}
 
 
 func _exit_tree() -> void:
 	# If we leave the tree without being freed (e.g. replaced by an explicit
 	# add_child in tests), drop the net subscription — a stale instance would
 	# keep consuming the shared WireReader and starve the new scene.
-	if State.net != null and State.net.message_received.is_connected(_on_net_message):
-		State.net.message_received.disconnect(_on_net_message)
+	if State.net != null:
+		State.net.scene_active = false
+		if State.net.message_received.is_connected(_on_net_message):
+			State.net.message_received.disconnect(_on_net_message)
 
 
 func _on_net_message(opcode: int, payload: WireReader) -> void:
@@ -185,18 +209,25 @@ func _on_net_message(opcode: int, payload: WireReader) -> void:
 		OP_TURN_BEGIN:
 			var d := Codec.decode(opcode, payload)
 			_on_turn_begin(int(d.get("f2", -1)))
+		OP_TURN_END:
+			_current_fid = -1
+			_end_turn.disabled = true
 		OP_FIGHTER_MOVE:
-			# [i32 uid][i32 -1][i64 fighterId] then path cells until end.
+			# [i32 uid][i32 -1][i64 fighterId] + path — server prepends the
+			# origin cell (applyFighterMove), so path[0] is where the fighter
+			# already stands; the remaining cells are the walk steps.
 			payload.get_i32()
 			payload.get_i32()
-			var fid := payload.get_i64()
-			var last := Vector3i.ZERO
-			var found := false
+			var fid := int(payload.get_i64())
+			var path: Array = []
 			while payload.remaining() >= 10:
-				last = Vector3i(payload.get_i32(), payload.get_i32(), payload.get_i16())
-				found = true
-			if found:
-				_move_actor(int(fid), last)
+				path.append(Vector3i(payload.get_i32(), payload.get_i32(), payload.get_i16()))
+			if path.size() > 1:
+				path.pop_front()   # drop the origin cell
+				_walk[fid] = path
+				_face_step(fid)
+			elif path.size() == 1:
+				_move_actor(fid, path[0])
 		OP_END_FIGHT:
 			# Result screen — we ack (26321 empty); the server then sends a
 			# fresh 4600 to put the coach back into its overworld.
@@ -211,10 +242,9 @@ func _on_net_message(opcode: int, payload: WireReader) -> void:
 			if _fight_over:
 				State.fight_world = -1
 				State.fighters = {}
-				# get_tree() is null if a harness already removed us.
-				var tree := get_tree()
-				if tree != null:
-					tree.change_scene_to_file("res://src/main.tscn")
+				# a test harness may have removed us from the tree already.
+				if is_inside_tree():
+					get_tree().change_scene_to_file("res://src/main.tscn")
 
 
 ## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.
@@ -226,6 +256,7 @@ func _place_actor(a: Dictionary) -> void:
 		_sprites[a.id] = spr
 		_actors.add_child(spr)
 	var dir: int = DIR_MAP.get(a.dir, 1)
+	_actor_dir[a.id] = int(a.dir)
 	spr.scale.x = -abs(spr.scale.x) if DIR_FLIP.get(a.dir, false) else abs(spr.scale.x)
 	if State.fighters.has(a.id):
 		var f: Dictionary = State.fighters[a.id]
@@ -251,18 +282,163 @@ func _move_actor(id: int, p: Vector3i) -> void:
 	queue_redraw()
 
 
-## 8104 — a fighter's turn started. Ours: auto-pass with 8105 until real
-## turn UI exists (the server would wait on us otherwise).
+## 8104 — a fighter's turn started. Ours: click a cell to move (4503),
+## End turn sends 8105. The turn_began signal lets a harness drive instead.
 func _on_turn_begin(fid: int) -> void:
+	_current_fid = fid
 	var f: Dictionary = State.fighters.get(fid, {})
-	var who := "turn: %s" % f.get("name", str(fid))
-	if int(f.get("coach", -1)) == State.my_coach_id:
-		var w := WireWriter.new()
-		w.put_i64(fid)
-		if State.net != null:
-			State.net.send_message(OP_END_TURN, w.raw(), 3)
-		who += " (ours — passing)"
-	info.text = "map %s — %s" % [$UI/TopBar/MapId.text, who]
+	var ours := int(f.get("coach", -1)) == State.my_coach_id
+	_end_turn.disabled = not ours
+	info.text = "map %s — turn: %s%s" % [$UI/TopBar/MapId.text,
+		f.get("name", str(fid)),
+		" (yours — click a cell to move)" if ours else ""]
+	turn_began.emit(fid, ours)
+
+
+func request_end_turn() -> void:
+	_end_turn.disabled = true
+	if _current_fid < 0 or State.net == null:
+		return
+	var w := WireWriter.new()
+	w.put_i64(_current_fid)
+	State.net.send_message(OP_END_TURN, w.raw(), 3)
+
+
+## --- interactive movement --------------------------------------------------
+## 4503 C2S: [i64 fighterId] + step cells {i32 x, i32 y, i16 z} — the retail
+## client sends the steps EXCLUDING the origin (server comment, verified).
+## Server validates each step: adjacent, walkable, unoccupied, within MP.
+
+const OP_MOVE_REQ := 4503
+
+
+func _process(delta: float) -> void:
+	if _walk.is_empty():
+		return
+	for fid in _walk.keys():
+		var path: Array = _walk[fid]
+		var spr: AnmSprite = _sprites.get(fid)
+		if spr == null or path.is_empty():
+			_walk.erase(fid)
+			continue
+		var c: Vector3i = path[0]
+		var target := _iso(c.x + 0.5, c.y + 0.5, c.z)
+		var d := target - spr.position
+		if d.length() <= WALK_SPEED * delta:
+			path.pop_front()
+			spr.position = target
+			spr.z_index = clampi((c.x + c.y) * 4 + 1, -4096, 4096)
+			_actor_cells[fid] = c
+			if path.is_empty():
+				_walk.erase(fid)
+			else:
+				_face_step(fid)
+		else:
+			spr.position += d / d.length() * WALK_SPEED * delta
+	queue_redraw()
+
+
+## Face the fighter toward its next path cell.
+func _face_step(fid: int) -> void:
+	var path: Array = _walk.get(fid, [])
+	var cur: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
+	if path.is_empty():
+		return
+	var d := Vector2i(path[0].x - cur.x, path[0].y - cur.y)
+	var dir: int = STEP_DIR.get(d, -1)
+	if dir < 0 or _actor_dir.get(fid, -1) == dir:
+		return
+	_actor_dir[fid] = dir
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr == null or not State.fighters.has(fid):
+		return
+	spr.scale.x = -abs(spr.scale.x) if DIR_FLIP.get(dir, false) else abs(spr.scale.x)
+	var f: Dictionary = State.fighters[fid]
+	spr.load_action(FIGHTER_SET % _fighter_file(
+		int(f.get("breed", 1)), int(f.get("sex", 0))),
+		"%d_AnimStatique" % DIR_MAP.get(dir, 1))
+
+
+## World pixel -> grid cell: nearest ground-cell center within a cell diag.
+func _cell_at(world: Vector2) -> Variant:
+	var best := Vector2i.ZERO
+	var best_d := HW * HW + HH * HH   # ~half-cell radius
+	var found := false
+	for pos in _cells:
+		var c: Dictionary = _cells[pos]
+		if not c.ground:
+			continue
+		var d := world.distance_squared_to(_iso(pos.x + 0.5, pos.y + 0.5, c.alt))
+		if d < best_d:
+			best_d = d
+			best = pos
+			found = true
+	return best if found else null
+
+
+## BFS over ground cells, 4-connected, sidestepping occupied cells.
+## Returns the step list EXCLUDING `from` (the 4503 format), or [].
+func _find_path(from: Vector2i, to: Vector2i, ignore_fid: int) -> Array:
+	var blocked := {}
+	for id in _actor_cells:
+		if id == ignore_fid:
+			continue
+		var p: Vector3i = _actor_cells[id]
+		blocked[Vector2i(p.x, p.y)] = true
+	var prev := {from: from}
+	var queue := [from]
+	var qi := 0
+	const DIRS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	while qi < queue.size():
+		var c: Vector2i = queue[qi]
+		qi += 1
+		if c == to:
+			break
+		for d in DIRS:
+			var n: Vector2i = c + d
+			if prev.has(n) or blocked.has(n):
+				continue
+			var cell: Variant = _cells.get(n)
+			if cell == null or not cell.ground:
+				continue
+			prev[n] = c
+			queue.append(n)
+	if not prev.has(to):
+		return []
+	var path := []
+	var cur := to
+	while cur != from:
+		var cell: Dictionary = _cells[cur]
+		path.push_front(Vector3i(cur.x, cur.y, int(cell.alt)))
+		cur = prev[cur]
+	return path
+
+
+func _try_move() -> void:
+	var cell: Variant = _cell_at(cam.get_global_mouse_position())
+	if cell != null:
+		request_move_to(cell)
+
+
+## Public move entry — click handler and scripted drivers both land here.
+## Returns true if a 4503 went out (the 4524 broadcast confirms it).
+func request_move_to(cell: Vector2i) -> bool:
+	if not _is_my_turn() or State.net == null:
+		return false
+	var cur: Vector3i = _actor_cells.get(_current_fid, Vector3i.ZERO)
+	var path := _find_path(Vector2i(cur.x, cur.y), cell, _current_fid)
+	if path.is_empty():
+		return false
+	var w := WireWriter.new()
+	w.put_i64(_current_fid)
+	for p in path:
+		w.put_i32(p.x)
+		w.put_i32(p.y)
+		w.put_i16(p.z)
+	State.net.send_message(OP_MOVE_REQ, w.raw(), 3)
+	print("[fight] move req fid=%d -> (%d,%d) %d steps" % [
+		_current_fid, cell.x, cell.y, path.size()])
+	return true
 
 
 static func _fighter_file(breed: int, sex: int) -> String:
@@ -300,13 +476,19 @@ func _draw() -> void:
 		if c.x <= -2047:
 			continue
 		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.85, 0.2, 0.5))
-	# debug: white crosshair at each live actor's cell center
-	for id in _actor_cells:
-		var p: Vector3i = _actor_cells[id]
-		var c := _iso(p.x + 0.5, p.y + 0.5, p.z)
-		draw_circle(c, 3.0, Color(1, 1, 1))
-		draw_line(c + Vector2(-8, 0), c + Vector2(8, 0), Color(1, 1, 1), 1.0)
-		draw_line(c + Vector2(0, -8), c + Vector2(0, 8), Color(1, 1, 1), 1.0)
+	if _is_my_turn() and _cells.has(_hover):
+		var hc: Dictionary = _cells[_hover]
+		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
+		draw_polyline(poly + PackedVector2Array([poly[0]]),
+			Color(1, 1, 1, 0.8), 2.0)
+	if debug_overlay:
+		# white crosshair at each live actor's cell center
+		for id in _actor_cells:
+			var p: Vector3i = _actor_cells[id]
+			var c := _iso(p.x + 0.5, p.y + 0.5, p.z)
+			draw_circle(c, 3.0, Color(1, 1, 1))
+			draw_line(c + Vector2(-8, 0), c + Vector2(8, 0), Color(1, 1, 1), 1.0)
+			draw_line(c + Vector2(0, -8), c + Vector2(0, 8), Color(1, 1, 1), 1.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -315,7 +497,30 @@ func _unhandled_input(event: InputEvent) -> void:
 			cam.zoom *= 1.15
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
 			cam.zoom *= 0.87
-		elif event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_MIDDLE:
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				_press_pos = event.position
+				_dragging = true
+			else:
+				_dragging = false
+				# a press+release under ~6px is a click, not a camera drag
+				if event.position.distance_to(_press_pos) < 6.0:
+					_try_move()
+		elif event.button_index == MOUSE_BUTTON_MIDDLE:
 			_dragging = event.pressed
-	elif event is InputEventMouseMotion and _dragging:
-		cam.position -= event.relative / cam.zoom
+	elif event is InputEventMouseMotion:
+		if _dragging:
+			cam.position -= event.relative / cam.zoom
+		elif _is_my_turn():
+			var cell: Variant = _cell_at(get_global_mouse_position())
+			var h: Vector2i = cell if cell != null else Vector2i(-9999, -9999)
+			if h != _hover:
+				_hover = h
+				queue_redraw()
+
+
+func _is_my_turn() -> bool:
+	if _current_fid < 0:
+		return false
+	var f: Dictionary = State.fighters.get(_current_fid, {})
+	return int(f.get("coach", -1)) == State.my_coach_id

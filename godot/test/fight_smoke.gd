@@ -16,6 +16,7 @@ const State := preload("res://src/state.gd")
 var client: ArenaClient
 var finished := false
 var fight_scene: Node2D = null
+var _combat_seen := false
 
 
 func _init() -> void:
@@ -31,7 +32,7 @@ func _init() -> void:
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")
 		return
-	create_timer(35.0).timeout.connect(_finish.bind(1, "timeout"))
+	create_timer(55.0).timeout.connect(_finish.bind(1, "timeout"))
 
 
 func _send_login() -> void:
@@ -79,20 +80,44 @@ func _show_fight() -> void:
 		root.remove_child(fight_scene)
 		fight_scene.queue_free()
 	fight_scene = load("res://src/fight/fight_view.tscn").instantiate()
+	# Scripted policy: on our turns try a short move (exercises the real
+	# 4503 path + 4524 walk animation), then end the turn.
+	fight_scene.turn_began.connect(_on_fight_turn)
 	root.add_child(fight_scene)
-	await create_timer(4.0).timeout   # fighters placed — mid-placement shot
-	var img2 := root.get_texture().get_image()
-	if img2 != null:
-		img2.save_png("/tmp/fight_combat.png")
-		print("[smoke] placement shot -> /tmp/fight_combat.png")
-	await create_timer(11.0).timeout # phases advance + several turns
-	var tex := root.get_texture()
-	var img := tex.get_image() if tex != null else null
+	# Capture mid-combat: first turn means actors placed + phases done.
+	_combat_seen = false
+	var deadline := 0.0
+	while not _combat_seen and deadline < 12.0:
+		await create_timer(0.25).timeout
+		deadline += 0.25
+	await create_timer(1.5).timeout   # let a couple of turns land
+	var img := root.get_texture().get_image() if root.get_texture() != null else null
 	if img != null:
 		img.save_png("/tmp/fight_live.png")
-		print("[smoke] screenshot -> /tmp/fight_live.png %dx%d"
+		print("[smoke] combat shot -> /tmp/fight_live.png %dx%d"
 			% [img.get_width(), img.get_height()])
+	await create_timer(14.0).timeout # surrender fires inside; loop or finish
 	_finish(0, "fight rendered")
+
+
+## turn_began policy for the harness: one short move request, then pass.
+func _on_fight_turn(fid: int, ours: bool) -> void:
+	if not ours or finished:
+		return
+	var cur: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
+	var moved := false
+	for d in [Vector2i(2, 0), Vector2i(0, 2), Vector2i(-2, 0), Vector2i(0, -2),
+			Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1)]:
+		if fight_scene.request_move_to(Vector2i(cur.x, cur.y) + d):
+			print("[smoke] scripted move fid=%d -> %s" % [fid, Vector2i(cur.x, cur.y) + d])
+			moved = true
+			break
+	if not moved:
+		print("[smoke] no move target for fid=%d at %s" % [fid, cur])
+	# give the 4524 broadcast a beat to land, then pass the turn
+	create_timer(1.0).timeout.connect(func():
+		if fight_scene != null and not finished:
+			fight_scene.request_end_turn())
 
 
 func _on_message(opcode: int, payload) -> void:
@@ -120,6 +145,10 @@ func _on_message(opcode: int, payload) -> void:
 				root.remove_child(fight_scene)
 				fight_scene.queue_free()
 				fight_scene = null
+				# Late combat ops (8104s still in flight at 8300) sit in
+				# pending — flush so the NEXT fight's _ready doesn't drain
+				# stale turn_begins and fire bogus scripted moves.
+				client.drain()
 		4516:
 			_launch_challenge()
 		8000:
@@ -139,8 +168,9 @@ func _on_message(opcode: int, payload) -> void:
 		4102:
 			print("[smoke] ACTOR_APPEAR: %s" % str(decoded.get("actors", [])))
 		8040:
-			print("[smoke] COMBAT STARTED — surrender at +6s")
-			create_timer(6.0).timeout.connect(func():
+			_combat_seen = true
+			print("[smoke] COMBAT STARTED — surrender at +8s")
+			create_timer(8.0).timeout.connect(func():
 				client.send_message(8151, PackedByteArray(), 3))
 		8300:
 			print("[smoke] END FIGHT (8300)")

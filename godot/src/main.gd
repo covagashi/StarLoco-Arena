@@ -50,9 +50,16 @@ func _ready() -> void:
 	# Re-entering after a fight: replay anything that arrived mid-scene-change.
 	for m in Session.client.drain():
 		_on_message(m.op, WireReader.new(m.raw))
+	Session.client.scene_active = true
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
 	$VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
+
+
+func _exit_tree() -> void:
+	# Fight transition: buffer until the next scene drains in its _ready.
+	if Session.client != null:
+		Session.client.scene_active = false
 
 
 func _on_connect_pressed() -> void:
