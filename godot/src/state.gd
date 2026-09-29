@@ -56,6 +56,11 @@ static var ignored := []
 ## {guild_id, guild, rank_level, rank_name, demon_id, rights, ranks[], members[]}
 static var guild := {}
 
+## True while this session watches a fight via 26331 — the fight view runs
+## read-only (the server keeps us out of Fights.ByCoach so actions are refused
+## anyway; this stops the client from even offering them).
+static var spectating := false
+
 ## Breed id -> class name (Dofus 1.x order; Iop=8 / Sacrier=11 observed live).
 const BREED_NAMES := {1: "Feca", 2: "Osamoda", 3: "Enutrof", 4: "Sram",
 	5: "Xelor", 6: "Ecaflip", 7: "Eniripsa", 8: "Iop", 9: "Cra",

@@ -25,6 +25,10 @@ var _fight_seen := false
 var _done := false
 var _trade_seen := false
 var _bot_ex := -1          # exchange id on the bot side
+var _spec: ArenaClient
+var _spec_coach := -1
+var _spec_fight_seen := false
+var _spec_world_back := false
 
 
 func _init() -> void:
@@ -36,8 +40,12 @@ func _init() -> void:
 	_bot = ArenaClient.new()
 	root.add_child(_bot)
 	_bot.message_received.connect(_on_bot_msg)
+	_spec = ArenaClient.new()
+	root.add_child(_spec)
+	_spec.message_received.connect(_on_spec_msg)
 	_sess.connect_to("127.0.0.1", 5555)
 	_bot.connect_to("127.0.0.1", 5555)
+	_spec.connect_to("127.0.0.1", 5555)
 	await create_timer(0.5).timeout
 	_login(_sess.client, "test", "test123")
 	create_timer(60.0).timeout.connect(_finish.bind(1, "timeout"))
@@ -77,8 +85,9 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 		2048:
 			_coach_create(_sess.client, "test")
 		4516:
-			# in world — kick off the bot login, then trade+challenge it
+			# in world — kick off the bot + spectator logins
 			_login(_bot, "test2", "test123")
+			_login(_spec, "test3", "test123")
 		6028:
 			print("[smoke] main 6028 — duo formed")
 		6030:
@@ -137,6 +146,12 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 		8000:
 			print("[smoke] MAIN 8000 — challenge fight created")
 			_fight_seen = true
+			# the spectator queries coach 1's fight, then joins it
+			var w := WireWriter.new()
+			w.put_i64(State.my_coach_id)
+			_spec.send_message(2260, w.raw(), 2)
+			print("[smoke] spec queried spectate on coach %d"
+				% State.my_coach_id)
 			# the scene change is deferred — poll for the fight view, then
 			# auto-ready its placement so combat can start.
 			_drive_fight()
@@ -280,9 +295,41 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 			print("[smoke] bot fight done")
 
 
+## ---- spectator client: test3 watches coach 1's fight read-only ----
+func _on_spec_msg(op: int, raw: PackedByteArray) -> void:
+	var p := WireReader.new(raw)
+	match op:
+		2048:
+			_coach_create(_spec, "spec")
+		2052:
+			_spec_coach = int(p.get_i64())
+			print("[smoke] spec coach id=%d" % _spec_coach)
+		4516:
+			# world enter — after spectate this is the return to overworld
+			if _spec_fight_seen:
+				_spec_world_back = true
+				print("[smoke] spec back in overworld after the fight")
+		2261:
+			var yes := p.get_u8()
+			print("[smoke] spec 2261 spectatable=%d" % yes)
+			if yes == 1:
+				var w := WireWriter.new()
+				w.put_i64(State.my_coach_id)
+				_spec.send_message(26331, w.raw(), 2)
+				print("[smoke] spec joins the fight (26331)")
+		8000:
+			_spec_fight_seen = true
+			print("[smoke] SPEC 8000 — fight replayed to the spectator")
+		8300:
+			print("[smoke] spec 8300 — acking result screen")
+			_spec.send_message(26321, PackedByteArray(), 3)
+
+
 func _finish(code: int, msg: String) -> void:
 	if _done:
 		return
 	_done = true
-	print("[smoke] %s (fight_seen=%s trade=%s)" % [msg, _fight_seen, _trade_seen])
+	print("[smoke] %s (fight_seen=%s trade=%s spec=%s back=%s)" % [
+		msg, _fight_seen, _trade_seen, _spec_fight_seen,
+		_spec_world_back])
 	quit(code)

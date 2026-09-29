@@ -61,6 +61,12 @@ var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 func _ready() -> void:
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
+	if State.spectating:
+		# Read-only viewer: no actions leave the client, but the phase acks
+		# (8011/8031) still fire — the fight actor ignores them for
+		# non-combatants either way.
+		_end_turn.disabled = true
+		_end_turn.text = "Spectating"
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
 	$UI/Chat.bubble.connect(chat_bubble)
 	$UI/Chat.emote.connect(func(id, anim):
@@ -316,6 +322,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# Result screen — we ack (26321 empty); the server then sends a
 			# fresh 4600 to put the coach back into its overworld.
 			_fight_over = true
+			State.spectating = false
 			if State.net != null:
 				State.net.send_message(OP_END_FIGHT_DONE, PackedByteArray(), 3)
 			info.text = "map %s — fight over" % $UI/TopBar/MapId.text
@@ -618,6 +625,8 @@ func request_end_turn() -> void:
 
 ## The top-bar action button is "Ready" during placement, "End turn" in combat.
 func _on_action_button() -> void:
+	if State.spectating:
+		return
 	if _placement:
 		confirm_placement()
 	else:
@@ -632,7 +641,7 @@ const OP_PLACE_REQ := 8021
 
 
 func confirm_placement() -> void:
-	if not _placement:
+	if not _placement or State.spectating:
 		return
 	_placement = false
 	_end_turn.disabled = true
@@ -805,6 +814,8 @@ func _find_path(from: Vector2i, to: Vector2i, ignore_fid: int) -> Array:
 
 
 func _try_move() -> void:
+	if State.spectating:
+		return   # read-only viewer: clicks only pan/zoom
 	var cell: Variant = _cell_at(cam.get_global_mouse_position())
 	if cell == null:
 		return

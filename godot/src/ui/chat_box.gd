@@ -84,6 +84,7 @@ const SOCIAL_OPS := {
 }
 signal emote(actor_id: int, anim: String)
 signal trade(coach_name: String)
+signal watch(coach_name: String)
 
 
 ## Feed one S2C chat opcode. Returns true if the opcode was a chat message.
@@ -212,6 +213,13 @@ func _on_submit(text: String) -> void:
 			mw.put_i64(0); mw.put_u8(0); mw.put_u8(0); mw.put_u8(0)
 			mw.put_i32(0)
 			Session.send(539, mw.raw(), 3)
+			return
+		if cmd == "watch":
+			# Spectate — resolve name → coach id, then 2260/26331.
+			if rest.is_empty():
+				_line("error", "[i]/watch &lt;coach name&gt;[/i]")
+				return
+			watch.emit(rest)
 			return
 		if cmd == "trade":
 			# Player exchange invite — the pane resolves name → coach id.

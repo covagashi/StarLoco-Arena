@@ -65,6 +65,12 @@ const OP_DUO_ANSWER := 6026              # C2S [i8 ok][str8 team][i64][i64][i16]
 const OP_DUO_REFUSED := 6027             # S2C empty
 const OP_DUO_ACCEPTED := 6028            # S2C empty — duo formed
 const OP_DUO_GONE := 6029                # S2C partner left
+const OP_SPECTATE_QUERY := 2260          # C2S [i64 coach] — spectatable?
+const OP_SPECTATE_REPLY := 2261          # S2C [i8 0/1]
+const OP_SPECTATE_JOIN := 26331          # C2S [i64 coach] arch 2
+const OP_SPECTATE_DOWN := 26332          # S2C empty — teardown
+const OP_END_FIGHT := 8300               # S2C result screen — needs 26321 ack
+const OP_END_FIGHT_DONE := 26321         # C2S empty — returns coach to overworld
 const OP_CHALLENGE_INVITE := 26301       # [i64 target][u8 evo]
 const OP_CHALLENGE_INVITATION := 26300   # [i64 handle][u8 out][u8 evo][u8 n]{str32}
 const OP_CHALLENGE_ACCEPT := 26305       # [i64 handle][u8 evo]
@@ -191,6 +197,7 @@ func _ready() -> void:
 	$UI/ExchangeAskDlg.confirmed.connect(_answer_exchange.bind(true))
 	$UI/ExchangeAskDlg.canceled.connect(_answer_exchange.bind(false))
 	$UI/Chat.trade.connect(_invite_exchange)
+	$UI/Chat.watch.connect(_watch_coach)
 	$UI/TeamPickDlg/VBox/Btns/GoBtn.pressed.connect(_on_team_confirmed)
 	$UI/TeamPickDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/TeamPickDlg.visible = false)
@@ -440,6 +447,29 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				+ "Combattre[/color]")
 		OP_DUO_GONE:
 			_log_line("[i]your 2v2 partner left[/i]")
+		OP_SPECTATE_REPLY:
+			# 2261 [i8 1/0] — 1 = coach is in a live fight; join as viewer.
+			if _watch_target >= 0 and payload.get_u8() == 1:
+				var w := WireWriter.new()
+				w.put_i64(_watch_target)
+				Session.send(OP_SPECTATE_JOIN, w.raw(), 2)
+				State.spectating = true
+				_log_line("joining the fight as spectator…")
+			else:
+				_log_line("[i]that coach is not fighting[/i]")
+				_watch_target = -1
+		OP_SPECTATE_DOWN:
+			_log_line("[i]spectator view closed[/i]")
+			State.spectating = false
+		OP_END_FIGHT:
+			# A result screen arriving on the lobby scene means the user backed
+			# out of the fight view mid-fight — ack it (26321) so the server
+			# detaches the spectator link and returns the coach to overworld.
+			State.spectating = false
+			State.fight_world = -1
+			State.fighters = {}
+			Session.send(OP_END_FIGHT_DONE, PackedByteArray(), 3)
+			_log_line("[i]fight over — back to the island[/i]")
 		OP_CHALLENGE_INVITATION:
 			# 26300 [i64 handle][u8 outgoing][u8 evo][u8 n]{[i32 len][name]}
 			_challenge_handle = int(payload.get_i64())
@@ -914,6 +944,22 @@ func _on_fight_pressed() -> void:
 		else ""])
 
 
+## --- Spectate (2260/2261/26331) ------------------------------------------------
+## /watch <name> queries whether that coach is in a live fight (2260); a 1
+## reply auto-joins (26331) — the server replays the resync (4516 + 8000 with
+## the spectator deck + actor appear + timeline), which the normal fight
+## handlers already decode. 8300 → 26321 ack returns us to the overworld.
+func _watch_coach(cname: String) -> void:
+	var tid: int = world.coach_id_by_name(cname)
+	if tid < 0:
+		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
+		return
+	_watch_target = tid
+	var w := WireWriter.new()
+	w.put_i64(tid)
+	Session.send(OP_SPECTATE_QUERY, w.raw(), 2)
+
+
 ## --- 2v2 duo (6024-6029) ------------------------------------------------------
 ## "2v2…" opens the invite dialog (team name + friend pick, retail's
 ## team2vs2NameDialog): 6024 [str8 team][i64 me][i64 mate]. The invited side
@@ -1252,6 +1298,7 @@ var _ex := {}                 # active exchange {id, my_side, other_name,
 var _kanodo_fid := -1         # fighter id of the open Kanodo board
 var _kanodo_pick := {}        # sphere node selected on the board
 var _duo_pending := {}        # incoming 6025 {team, inviter, invited}
+var _watch_target := -1       # coach id asked in the pending 2260
 
 
 func _use_element(id: int) -> void:
