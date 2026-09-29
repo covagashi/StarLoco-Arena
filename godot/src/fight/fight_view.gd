@@ -42,6 +42,7 @@ var _cells := {}
 var _fmd := {}
 var _alt_min := 0
 var _alt_max := 0
+var _sorted := []    # ground cell positions, back-to-front (x+y, then x)
 var _sprites := {}   # actor id -> AnmSprite
 
 @onready var cam: Camera2D = $Camera
@@ -80,6 +81,12 @@ func _load() -> void:
 			continue
 		_alt_min = mini(_alt_min, c.alt)
 		_alt_max = maxi(_alt_max, c.alt)
+	_sorted = []
+	for pos in _cells:
+		if _cells[pos].ground:
+			_sorted.append(pos)
+	_sorted.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return a.x + a.y < b.x + b.y or (a.x + a.y == b.x + b.y and a.x < b.x))
 	var n_teams: int = _fmd.get("team0", []).size() + _fmd.get("team1", []).size()
 	info.text = "map %d — %d cells, alt %d..%d, spawns t0=%d t1=%d coach=%d" % [
 		map_id, _cells.size(), _alt_min, _alt_max,
@@ -674,14 +681,37 @@ func _alt_color(alt: float) -> Color:
 
 
 func _draw() -> void:
+	# pass 1: floor tops, back-to-front so lower rows paint over upper walls
+	for pos in _sorted:
+		var c: Dictionary = _cells[pos]
+		var poly := _cell_poly(pos.x, pos.y, c.alt)
+		draw_colored_polygon(poly, _alt_color(c.alt))
+		draw_polyline(poly + PackedVector2Array([poly[0]]), Color(0, 0, 0, 0.25), 1.0)
+	# pass 2: wall faces where a cell drops toward a lower/void +x or +y
+	# neighbour — the "aba" drop height retail draws as a cliff skirt.
+	const FRONT := [Vector2i(1, 0), Vector2i(0, 1)]
+	for pos in _sorted:
+		var c: Dictionary = _cells[pos]
+		var top := _cell_poly(pos.x, pos.y, c.alt)
+		for d in FRONT:
+			var n: Variant = _cells.get(pos + d)
+			var drop := 0.0
+			if n == null or not n.ground:
+				drop = minf(float(c.alt - _alt_min + 1) * EL, 4.0 * EL)
+			elif n.alt < c.alt:
+				drop = float(c.alt - n.alt) * EL
+			if drop <= 0.0:
+				continue
+			var down := Vector2(0, drop)
+			var wall := PackedVector2Array([top[2], top[1], top[1] + down, top[2] + down] \
+				if d.x > 0 else [top[3], top[2], top[2] + down, top[3] + down])
+			var shade := 0.38 if d.x > 0 else 0.55
+			draw_colored_polygon(wall, _alt_color(c.alt).darkened(shade))
 	for pos in _cells:
 		var c = _cells[pos]
-		var poly := _cell_poly(pos.x, pos.y, c.alt if c.ground else 0)
-		if c.ground:
-			draw_colored_polygon(poly, _alt_color(c.alt))
-			draw_polyline(poly + PackedVector2Array([poly[0]]), Color(0, 0, 0, 0.25), 1.0)
-		else:
-			draw_polyline(poly + PackedVector2Array([poly[0]]), Color(1, 0, 0, 0.15), 1.0)
+		if not c.ground:
+			draw_polyline(_cell_poly(pos.x, pos.y, 0) + PackedVector2Array([
+				_cell_poly(pos.x, pos.y, 0)[0]]), Color(1, 1, 1, 0.06), 1.0)
 	for c in _fmd.get("team0", []):
 		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(0.3, 0.5, 1.0, 0.6))
 	for c in _fmd.get("team1", []):
