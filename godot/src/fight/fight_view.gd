@@ -64,7 +64,7 @@ func _ready() -> void:
 	_load()
 	if State.net != null:
 		for m in State.net.drain():
-			_on_net_message(m.op, WireReader.new(m.raw))
+			_on_net_message(m.op, m.raw)
 		State.net.message_received.connect(_on_net_message)
 		State.net.scene_active = true
 
@@ -190,7 +190,8 @@ func _exit_tree() -> void:
 			State.net.message_received.disconnect(_on_net_message)
 
 
-func _on_net_message(opcode: int, payload: WireReader) -> void:
+func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
+	var payload := WireReader.new(raw)
 	if opcode >= 8010 and opcode <= 8040:
 		print("[fight] phase op %d" % opcode)
 	match opcode:

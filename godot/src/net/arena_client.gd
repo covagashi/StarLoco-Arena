@@ -13,7 +13,7 @@ const Opcodes := preload("res://src/net/generated/opcodes.gd")
 
 signal connected
 signal disconnected
-signal message_received(opcode: int, payload: WireReader)
+signal message_received(opcode: int, payload: PackedByteArray)
 
 const HEADER_LEN := 4
 
@@ -103,4 +103,4 @@ func _drain_frames() -> void:
 			pending.append({"op": opcode, "raw": payload})
 			if pending.size() > 512:
 				pending.pop_front()
-		message_received.emit(opcode, WireReader.new(payload))
+		message_received.emit(opcode, payload)

@@ -29,6 +29,9 @@ const OP_COACH_CREATE := 2049
 const OP_COACH_INFO := 2052
 const OP_ENTER_INSTANCE := 4600
 const OP_INSTANCE_READY := 4516
+const OP_ACTOR_SPAWN := 4096
+const OP_ACTOR_DESPAWN := 4098
+const OP_ACTOR_MOVEMENT := 4500
 const OP_FIGHT_CREATION := 8000
 const OP_FIGHT_ERROR := 26310
 const OP_PONG := 108
@@ -40,7 +43,10 @@ const OP_PONG := 108
 @onready var login_edit: LineEdit = $VBox/AuthRow/Login
 @onready var password_edit: LineEdit = $VBox/AuthRow/Password
 @onready var login_btn: Button = $VBox/AuthRow/LoginBtn
-@onready var log: RichTextLabel = $VBox/Log
+@onready var log: RichTextLabel = $Log
+@onready var world: Node2D = $World
+
+var _my_pos := Vector3.ZERO   # last EnterInstance position
 
 
 func _ready() -> void:
@@ -49,7 +55,7 @@ func _ready() -> void:
 	Session.message.connect(_on_message)
 	# Re-entering after a fight: replay anything that arrived mid-scene-change.
 	for m in Session.client.drain():
-		_on_message(m.op, WireReader.new(m.raw))
+		_on_message(m.op, m.raw)
 	Session.client.scene_active = true
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
@@ -105,7 +111,8 @@ func _on_login_pressed() -> void:
 	_log_line("sent version + auth for '%s'" % login_edit.text)
 
 
-func _on_message(opcode: int, payload: WireReader) -> void:
+func _on_message(opcode: int, raw: PackedByteArray) -> void:
+	var payload := WireReader.new(raw)
 	match opcode:
 		OP_INVALID_VERSION:
 			_log_line("[color=red]server rejected client version — closing[/color]")
@@ -125,11 +132,27 @@ func _on_message(opcode: int, payload: WireReader) -> void:
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
 			State.current_world = int(d.get("world_id", -1))
+			_my_pos = Vector3(float(d.get("x", 0.0)), float(d.get("y", 0.0)),
+				float(d.get("alt", 0)))
 			_log_line("entering instance world=%d pos=(%s,%s)" % [
 				State.current_world, d.get("x"), d.get("y")])
 		OP_INSTANCE_READY:
 			_log_line("[color=green]instance ready — in world[/color]")
 			$VBox/AuthRow/PracticeBtn.disabled = false
+			world.show_world(State.current_world, _my_pos)
+		OP_ACTOR_SPAWN:
+			_spawn_world_actors(payload)
+		OP_ACTOR_DESPAWN:
+			var n := payload.get_i32()
+			for i in n:
+				world.actor_despawned(int(payload.get_i64()))
+		OP_ACTOR_MOVEMENT:
+			var aid := int(payload.get_i64())
+			var path := []
+			while payload.remaining() >= 10:
+				path.append(Vector3i(int(payload.get_i32()),
+					int(payload.get_i32()), int(payload.get_i16())))
+			world.actor_moved(aid, path)
 		OP_FIGHT_CREATION:
 			State.fight_world = State.current_world
 			State.fight_data = Codec.decode(opcode, payload)
@@ -143,6 +166,52 @@ func _on_message(opcode: int, payload: WireReader) -> void:
 			pass  # keepalive reply
 		_:
 			_log_line("S2C opcode [b]%d[/b] — %d bytes" % [opcode, payload.remaining()])
+
+
+## ActorSpawn inner body: [i32 count]{u8 type=1 coach: i64 id, str8 name,
+## i32 x, i32 y, i16 z, u8 dir, u8 skin, u8 hair, u8 sex, i16 look, i32
+## standing, u8 sit, i16 guild, i16 desc, u8 strPairs, i32 adminRight}
+## (server writeCoachActor — aez_0.b flags 3179 source order)
+func _spawn_world_actors(payload: WireReader) -> void:
+	var d := Codec.decode(OP_ACTOR_SPAWN, payload)
+	var body := WireReader.new(d.get("actors_raw", PackedByteArray()))
+	var count := body.get_i32()
+	for i in count:
+		var atype := body.get_u8()
+		if atype != 1:
+			_log_line("[color=red]actor spawn: unknown type %d[/color]" % atype)
+			return
+		var id := int(body.get_i64())
+		var cname := body.get_str("u8")
+		var x := int(body.get_i32())
+		var y := int(body.get_i32())
+		var z := int(body.get_i16())
+		body.get_u8()  # dir
+		body.get_u8()  # skin
+		body.get_u8()  # hair
+		body.get_u8()  # sex
+		body.get_u16() # look
+		body.get_i32() # standing
+		body.get_u8()  # sit
+		body.get_u16() # guild blob len
+		body.get_u16() # descriptor blob len
+		body.get_u8()  # strength pairs
+		body.get_i32() # admin right
+		if id == State.my_coach_id:
+			continue   # we already render ourselves from the 4600 position
+		world.actor_spawned(id, cname, x, y, z)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not world.visible:
+		return
+	if event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		var cell: Variant = world.screen_to_cell(world.get_global_mouse_position())
+		if cell != null:
+			world.click_to(cell)
+	elif event is InputEventMouseMotion:
+		world.set_hover(world.get_global_mouse_position())
 
 
 func _on_practice_pressed() -> void:

@@ -9,7 +9,7 @@ const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const State := preload("res://src/state.gd")
 
-signal message(opcode: int, payload: WireReader)
+signal message(opcode: int, payload: PackedByteArray)
 signal connected
 signal disconnected
 

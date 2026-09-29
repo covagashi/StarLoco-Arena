@@ -59,7 +59,7 @@ func _send_login(login: String, password: String) -> void:
 
 func _on_message(opcode: int, payload) -> void:
 	saw[opcode] = true
-	var decoded := Codec.decode(opcode, payload)
+	var decoded := Codec.decode(opcode, WireReader.new(payload))
 	var msg_name: String = Opcodes.NAMES.get(opcode, "?")
 	match opcode:
 		8:

@@ -145,7 +145,7 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 
 
 func _on_message(opcode: int, payload) -> void:
-	var decoded := Codec.decode(opcode, WireReader.new(payload.buffer()))
+	var decoded := Codec.decode(opcode, WireReader.new(payload))
 	match opcode:
 		1024:
 			if decoded.get("result") == 0:
@@ -176,7 +176,7 @@ func _on_message(opcode: int, payload) -> void:
 		4516:
 			_launch_challenge()
 		8000:
-			var raw: PackedByteArray = payload.buffer()
+			var raw: PackedByteArray = payload
 			print("[smoke] FIGHT CREATION — %d bytes" % raw.size())
 			var fh := FileAccess.open("/tmp/fight8000.bin", FileAccess.WRITE)
 			fh.store_buffer(raw)
@@ -200,8 +200,7 @@ func _on_message(opcode: int, payload) -> void:
 			print("[smoke] END FIGHT (8300)")
 		8100, 8104, 8106:
 			print("[smoke]   op %d raw=%dB hex=%s" % [
-				opcode, payload.buffer().size(),
-				payload.buffer().hex_encode()])
+				opcode, payload.size(), payload.hex_encode()])
 		26310:
 			_finish(1, "challenge refused")
 		_:

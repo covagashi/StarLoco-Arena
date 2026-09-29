@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://starena_main"]
+[gd_scene load_steps=3 format=3 uid="uid://starena_main"]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1"]
+[ext_resource type="Script" path="res://src/world/world_view.gd" id="2"]
 
 [node name="Main" type="Control"]
 anchors_preset = 15
@@ -8,22 +9,31 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
 
+[node name="World" type="Node2D" parent="."]
+visible = false
+script = ExtResource("2")
+
+[node name="Camera" type="Camera2D" parent="World"]
+zoom = Vector2(1, 1)
+
 [node name="VBox" type="VBoxContainer" parent="."]
-anchors_preset = 15
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
 offset_left = 16.0
-offset_top = 16.0
+offset_top = 12.0
 offset_right = -16.0
-offset_bottom = -16.0
+offset_bottom = 96.0
 theme_override_constants/separation = 8
+mouse_filter = 2
 
 [node name="Title" type="Label" parent="VBox"]
 text = "StarLoco Arena — Godot client (wire test)"
 theme_override_font_sizes/font_size = 20
+mouse_filter = 2
 
 [node name="ConnRow" type="HBoxContainer" parent="VBox"]
 theme_override_constants/separation = 8
+mouse_filter = 2
 
 [node name="Host" type="LineEdit" parent="VBox/ConnRow"]
 custom_minimum_size = Vector2(160, 0)
@@ -41,9 +51,11 @@ text = "Connect"
 [node name="Status" type="Label" parent="VBox/ConnRow"]
 text = "offline"
 vertical_alignment = 1
+mouse_filter = 2
 
 [node name="AuthRow" type="HBoxContainer" parent="VBox"]
 theme_override_constants/separation = 8
+mouse_filter = 2
 
 [node name="Login" type="LineEdit" parent="VBox/AuthRow"]
 custom_minimum_size = Vector2(160, 0)
@@ -62,7 +74,14 @@ disabled = true
 text = "Practice fight"
 disabled = true
 
-[node name="Log" type="RichTextLabel" parent="VBox"]
+[node name="Log" type="RichTextLabel" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -170.0
+offset_right = 480.0
+offset_bottom = -16.0
 size_flags_vertical = 3
 bbcode_enabled = true
 scroll_following = true
