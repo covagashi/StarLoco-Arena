@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://starena_fight"]
+[gd_scene load_steps=3 format=3 uid="uid://starena_fight"]
 
 [ext_resource type="Script" path="res://src/fight/fight_view.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://starena_chatbox" path="res://src/ui/chat_box.tscn" id="2"]
 
 [node name="FightView" type="Node2D"]
 script = ExtResource("1")
@@ -41,3 +42,7 @@ theme_override_constants/separation = 4
 offset_left = 10.0
 offset_top = 78.0
 text = "iso grid — drag to pan, wheel to zoom"
+
+[node name="Chat" parent="UI" instance=ExtResource("2")]
+offset_top = -150.0
+offset_bottom = -12.0

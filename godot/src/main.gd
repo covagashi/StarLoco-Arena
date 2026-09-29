@@ -38,14 +38,14 @@ const OP_PONG := 108
 const OP_FIGHTER_LIST := 6006
 const OP_TEAM_PRESETS := 6030
 
-@onready var host_edit: LineEdit = $VBox/ConnRow/Host
-@onready var port_edit: LineEdit = $VBox/ConnRow/Port
-@onready var connect_btn: Button = $VBox/ConnRow/ConnectBtn
-@onready var status_lbl: Label = $VBox/ConnRow/Status
-@onready var login_edit: LineEdit = $VBox/AuthRow/Login
-@onready var password_edit: LineEdit = $VBox/AuthRow/Password
-@onready var login_btn: Button = $VBox/AuthRow/LoginBtn
-@onready var log: RichTextLabel = $Log
+@onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
+@onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
+@onready var connect_btn: Button = $UI/VBox/ConnRow/ConnectBtn
+@onready var status_lbl: Label = $UI/VBox/ConnRow/Status
+@onready var login_edit: LineEdit = $UI/VBox/AuthRow/Login
+@onready var password_edit: LineEdit = $UI/VBox/AuthRow/Password
+@onready var login_btn: Button = $UI/VBox/AuthRow/LoginBtn
+@onready var log := $UI/Chat
 @onready var world: Node2D = $World
 
 var _my_pos := Vector3.ZERO   # last EnterInstance position
@@ -61,7 +61,8 @@ func _ready() -> void:
 	Session.client.scene_active = true
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
-	$VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
+	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
+	log.bubble.connect(world.chat_bubble)
 
 
 func _exit_tree() -> void:
@@ -110,11 +111,14 @@ func _on_login_pressed() -> void:
 	auth.put_u8(password.size())
 	auth.put_bytes(password)
 	Session.send(OP_CLIENT_AUTH, auth.raw(), 1)
+	State.my_coach_name = login_edit.text.strip_edges()
 	_log_line("sent version + auth for '%s'" % login_edit.text)
 
 
 func _on_message(opcode: int, raw: PackedByteArray) -> void:
 	var payload := WireReader.new(raw)
+	if log.feed(opcode, payload):
+		return  # chat family handled by the chat box
 	match opcode:
 		OP_INVALID_VERSION:
 			_log_line("[color=red]server rejected client version — closing[/color]")
@@ -140,7 +144,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				State.current_world, d.get("x"), d.get("y")])
 		OP_INSTANCE_READY:
 			_log_line("[color=green]instance ready — in world[/color]")
-			$VBox/AuthRow/PracticeBtn.disabled = false
+			$UI/VBox/AuthRow/PracticeBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
 		OP_ACTOR_SPAWN:
 			_spawn_world_actors(payload)
@@ -170,7 +174,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for f in State.roster:
 				names.append("%s (%s)" % [f.get("name", "?"),
 					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0)))])
-			$VBox/Roster.text = "Fighters: " + (", ".join(names) if names else "—")
+			$UI/VBox/Roster.text = "Fighters: " + (", ".join(names) if names else "—")
 			_log_line("roster: %s" % (", ".join(names) if names else "empty"))
 		OP_TEAM_PRESETS:
 			var d := Codec.decode(opcode, payload)
@@ -221,6 +225,10 @@ func _spawn_world_actors(payload: WireReader) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed \
+			and event.keycode == KEY_ENTER and world.visible:
+		log.grab_chat_focus()
+		return
 	if not world.visible:
 		return
 	if event is InputEventMouseButton and event.pressed \
@@ -257,4 +265,4 @@ func _send_coach_creation() -> void:
 
 
 func _log_line(s: String) -> void:
-	log.append_text(s + "\n")
+	log.log_line(s)

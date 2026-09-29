@@ -125,6 +125,31 @@ func actor_spawned(id: int, cname: String, x: int, y: int, z: int) -> void:
 	_spawn_coach(id, cname, x, y, z)
 
 
+## Vicinity chat bubble over a coach's head, fading after a few seconds —
+## retail shows the line both in the chat panel and as a bubble in-world.
+func chat_bubble(id: int, text: String) -> void:
+	var spr: AnmSprite = _sprites.get(id)
+	if spr == null:
+		return
+	var old := spr.get_node_or_null("Bubble")
+	if old != null:
+		old.queue_free()
+	var b := Label.new()
+	b.name = "Bubble"
+	b.text = text.left(120)
+	b.add_theme_font_size_override("font_size", 11)
+	b.add_theme_color_override("font_color", Color(1, 1, 0.85))
+	b.add_theme_color_override("font_shadow_color", Color(0, 0, 0))
+	b.add_theme_constant_override("shadow_offset_x", 1)
+	b.add_theme_constant_override("shadow_offset_y", 1)
+	b.position = Vector2(-b.size.x / 2.0, -92)
+	spr.add_child(b)
+	var tw := create_tween()
+	tw.tween_interval(4.0)
+	tw.tween_property(b, "modulate:a", 0.0, 1.2)
+	tw.tween_callback(b.queue_free)
+
+
 func actor_despawned(id: int) -> void:
 	_gfx.unregister_dynamic(id)
 	var spr: AnmSprite = _sprites.get(id)

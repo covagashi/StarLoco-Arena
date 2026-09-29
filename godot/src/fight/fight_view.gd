@@ -61,6 +61,7 @@ func _ready() -> void:
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
+	$UI/Chat.bubble.connect(chat_bubble)
 	_gfx = MapGfx.new()
 	_gfx.name = "MapGfx"
 	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside
@@ -214,6 +215,8 @@ func _exit_tree() -> void:
 
 func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 	var payload := WireReader.new(raw)
+	if $UI/Chat.feed(opcode, payload):
+		return  # chat family handled by the chat box
 	if opcode >= 8010 and opcode <= 8040:
 		print("[fight] phase op %d" % opcode)
 	match opcode:
@@ -397,6 +400,38 @@ func _on_running_effect(d: Dictionary) -> void:
 	elif int(d.effect_id) == 92 and target == _current_fid:
 		_mp_left -= value
 		_refresh_apmp()
+
+
+## Vicinity chat bubble over a fighter's head — chat actor ids are coach ids;
+## map them to that coach's fighter sprite.
+func chat_bubble(coach_id: int, text: String) -> void:
+	var fid := -1
+	for id in State.fighters:
+		if int(State.fighters[id].get("coach", -2)) == coach_id:
+			fid = int(id)
+			break
+	var spr: AnmSprite = _sprites.get(fid if fid >= 0 else coach_id)
+	if spr == null:
+		return
+	var old := spr.get_node_or_null("Bubble")
+	if old != null:
+		old.queue_free()
+	var b := Label.new()
+	b.name = "Bubble"
+	b.text = text.left(120)
+	b.add_theme_font_size_override("font_size", 11)
+	b.add_theme_color_override("font_color", Color(1, 1, 0.85))
+	b.add_theme_color_override("font_shadow_color", Color(0, 0, 0))
+	b.add_theme_constant_override("shadow_offset_x", 1)
+	b.add_theme_constant_override("shadow_offset_y", 1)
+	b.position = Vector2(-b.size.x / 2.0, -150)
+	if spr.scale.x < 0:
+		b.scale.x = -1.0   # counter the mirrored flip so text stays readable
+	spr.add_child(b)
+	var tw := create_tween()
+	tw.tween_interval(4.0)
+	tw.tween_property(b, "modulate:a", 0.0, 1.2)
+	tw.tween_callback(b.queue_free)
 
 
 ## 4520 — grey out the corpse; its cell stays occupied for pathing.
@@ -895,6 +930,10 @@ func _draw_overlays() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed \
+			and event.keycode == KEY_ENTER:
+		$UI/Chat.grab_chat_focus()
+		return
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
 			cam.zoom *= 1.15

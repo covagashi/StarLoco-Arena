@@ -84,6 +84,12 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 			var body := WireReader.new(d.get("actors_raw", PackedByteArray()))
 			var n := body.get_i32()
 			print("[smoke] actor spawn n=", n)
+		3152:
+			print("[smoke] CHAT vicinity arrived")
+		3204:
+			print("[smoke] CHAT user-not-found reply")
+		3214:
+			print("[smoke] CHAT target-is-yourself reply")
 
 
 func _move_and_shoot() -> void:
@@ -93,6 +99,14 @@ func _move_and_shoot() -> void:
 		var p: Vector3i = w._pos[State.my_coach_id]
 		w.click_to(Vector2i(p.x + 4, p.y + 2))
 		print("[smoke] scripted world move -> ", p.x + 4, ",", p.y + 2)
+	# chat exercise: real ChatBox submit path — vicinity (local echo + bubble),
+	# whisper-to-self (server -> 3214), whisper to a ghost (-> 3204), trade send.
+	var chat = _main.get_node("UI/Chat")
+	chat._on_submit("hola isla")
+	chat._on_submit("/w test mensaje para mi")
+	chat._on_submit("/w coach_fantasma_zz hola")
+	chat._on_submit("/t vendo cartas")
+	print("[smoke] chat lines sent (vicinity + /w self + /w ghost + /t)")
 	await create_timer(3.0).timeout
 	var tex := root.get_texture()
 	var img = tex.get_image() if tex != null else null

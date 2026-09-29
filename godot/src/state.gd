@@ -24,6 +24,10 @@ static var coach_ids := {}
 ## fighter.coach == my_coach_id are ours — fight_view ends their turns.
 static var my_coach_id := -1
 
+## Our coach display name (login name — the server uses it for the coach
+## record). Used for local chat echo.
+static var my_coach_name := "me"
+
 ## Fighter roster from the lobby burst (6006 FighterInformationList):
 ## [{id, name, breed, sex, type, spells, cards, ...}] — et_2 blobs decoded.
 static var roster := []
