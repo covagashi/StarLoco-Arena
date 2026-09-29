@@ -29,23 +29,23 @@ const OP_GUILD_INVITE_ANSWER := 503
 const OP_GUILD_RESULT := 504
 const OP_GUILD_LEAVE_OR_KICK := 505
 const OP_MSG509 := 509
-const OP_MSG510 := 510
+const OP_GUILD_RECORD := 510
 const OP_MSG511 := 511
-const OP_GUILD_BLOB512 := 512
+const OP_GUILD_MEMBER_LIST := 512
 const OP_MSG513 := 513
 const OP_GUILD_FIELD515 := 515
 const OP_MSG517 := 517
 const OP_MSG519 := 519
 const OP_MSG539 := 539
 const OP_MSG551 := 551
-const OP_GUILD_BLOB552 := 552
+const OP_GUILD_MEMBERSHIP := 552
 const OP_MSG553 := 553
-const OP_GUILD_BLOB554 := 554
+const OP_GUILD_TAGS := 554
 const OP_MSG555 := 555
-const OP_MSG556 := 556
+const OP_GUILD_MEMBER_GONE := 556
 const OP_MSG557 := 557
 const OP_GUILD_CREATED_FEED := 558
-const OP_MSG560 := 560
+const OP_GUILD_MEMBER_FEED := 560
 const OP_AUTHENTICATION_RESULT := 1024
 const OP_CLIENT_AUTHENTICATION := 1025
 const OP_WORLD_SERVER_UNAVAILABLE_MESSAGE := 1026
@@ -327,7 +327,7 @@ const OP_MSG28609 := 28609
 const OP_MSG28610 := 28610
 const OP_MSG28611 := 28611
 const OP_TOURNAMENT_SEARCH_RESULT := 28612
-const OP_MSG28614 := 28614
+const OP_TOURNAMENT_FIGHT_STARTING := 28614
 const OP_TOURNAMENT_SEARCH_ERROR := 28616
 const OP_MSG28617 := 28617
 const OP_MSG28618 := 28618
@@ -372,23 +372,23 @@ const NAMES := {
 	504: "GuildResult",
 	505: "GuildLeaveOrKick",
 	509: "Msg509",
-	510: "Msg510",
+	510: "GuildRecord",
 	511: "Msg511",
-	512: "GuildBlob512",
+	512: "GuildMemberList",
 	513: "Msg513",
 	515: "GuildField515",
 	517: "Msg517",
 	519: "Msg519",
 	539: "Msg539",
 	551: "Msg551",
-	552: "GuildBlob552",
+	552: "GuildMembership",
 	553: "Msg553",
-	554: "GuildBlob554",
+	554: "GuildTags",
 	555: "Msg555",
-	556: "Msg556",
+	556: "GuildMemberGone",
 	557: "Msg557",
 	558: "GuildCreatedFeed",
-	560: "Msg560",
+	560: "GuildMemberFeed",
 	1024: "AuthenticationResult",
 	1025: "ClientAuthentication",
 	1026: "WorldServerUnavailableMessage",
@@ -670,7 +670,7 @@ const NAMES := {
 	28610: "Msg28610",
 	28611: "Msg28611",
 	28612: "TournamentSearchResult",
-	28614: "Msg28614",
+	28614: "TournamentFightStarting",
 	28616: "TournamentSearchError",
 	28617: "Msg28617",
 	28618: "Msg28618",

@@ -261,6 +261,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_COACH_INFO:
 			var d := Codec.decode(opcode, payload)
 			State.my_coach_id = int(d.get("id", -1))
+			State.guild = d.get("guild", {})
+			if not State.guild.is_empty():
+				_log_line("guild: '%s' — rank %s, demon %d" % [
+					State.guild.get("guild", "?"),
+					State.guild.get("rank_name", "?"),
+					int(State.guild.get("demon_id", 0))])
 			_log_line("[color=green]coach info received — in lobby[/color]")
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
@@ -558,6 +564,46 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_GUILD_FEED:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i]%s founded the guild '%s'[/i]" % [d.coach, d.guild])
+		510:  # GuildRecord — guild name/demon/rank table for our guild
+			var d := Codec.decode(opcode, payload)
+			State.guild["guild_id"] = int(d.guild_id)
+			State.guild["guild"] = d.name
+			State.guild["demon_id"] = int(d.demon_id)
+			State.guild["ranks"] = d.ranks
+		552:  # GuildMembership — my own rank/demon row (part 2)
+			var d := Codec.decode(opcode, payload)
+			for row in d.rows:
+				State.guild.merge(row, true)
+			if not State.guild.is_empty():
+				_log_line("guild membership: '%s' — %s (demon %d)" % [
+					State.guild.get("guild", "?"),
+					State.guild.get("rank_name", "?"),
+					int(State.guild.get("demon_id", 0))])
+		512:  # GuildMembers — the roster (part 0 rows)
+			var d := Codec.decode(opcode, payload)
+			State.guild["members"] = d.rows
+			var names := []
+			for m in d.rows:
+				names.append("%s%s" % [m.get("name", "?"),
+					"*" if m.get("online", false) else ""])
+			_log_line("guild roster: %s" % ", ".join(names))
+		554:  # GuildTags — clan tags for nearby coaches (name labels)
+			var d := Codec.decode(opcode, payload)
+			for row in d.rows:
+				if world.has_method("set_coach_guild"):
+					world.set_coach_guild(int(row.coach_id), row.guild)
+		556:  # GuildMemberGone — a coach left/was kicked
+			var d := Codec.decode(opcode, payload)
+			if int(d.coach_id) == State.my_coach_id:
+				State.guild = {}
+				_log_line("[i]you are no longer in a guild[/i]")
+			else:
+				_log_line("[i]coach %d left the guild[/i]" % int(d.coach_id))
+		560:  # GuildMemberFeed — "X joined / X was thrown out"
+			var d := Codec.decode(opcode, payload)
+			_log_line("[i]%s %s[/i]" % [d.coach,
+				"was kicked out of the guild" if int(d.removed) != 0
+				else "joined the guild"])
 		OP_FIREWORK_SHOW:
 			var d := Codec.decode(opcode, payload)
 			_log_line("firework! %s at (%d,%d)" % [
@@ -1169,10 +1215,17 @@ func _open_demon_totem(e: Dictionary) -> void:
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var demon := int(fields[0]) if fields.size() > 0 else -1
 	_demon_id = demon
-	_element_text("Demon totem %d" % demon, "Requesting ladder…")
+	var hint := "Requesting ladder…"
+	if int(State.guild.get("demon_id", 0)) != 0:
+		hint += " — guild already serves demon %d" % \
+			int(State.guild.get("demon_id"))
+	_element_text("Demon totem %d" % demon, hint)
+	# Retail gates the affiliate control on rank 1 AND demon_id == 0
+	# (pq_1.java:56 guildCanAffiliate) — mirror it on the Alt button.
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
 	alt.text = "Offer cards"
-	alt.visible = true
+	alt.visible = int(State.guild.get("rank_level", 0)) == 1 \
+		and int(State.guild.get("demon_id", 0)) == 0
 	var w := WireWriter.new()
 	w.put_i16(demon)
 	w.put_i16(0)

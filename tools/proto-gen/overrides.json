@@ -306,17 +306,47 @@
    "name": "TeamPresetList",
    "handler": "preset_list"
   },
+  "510": {
+   "name": "GuildRecord",
+   "handler": "guild_record",
+   "note": "[u16 len]{i64 gid,str8 name,2x u16,2x i32,u16 demon,i32,u8 nRanks,[u16 len]{u16 lvl,i32 rights,str8 name}} — server guild_packets.go buildGuildRecord"
+  },
   "512": {
-   "name": "GuildBlob512",
-   "handler": "part_table"
+   "name": "GuildMemberList",
+   "handler": "guild_member_list",
+   "note": "[i32 n]{i32 len, ca_0 part-table} — part 0 = member row"
   },
   "552": {
-   "name": "GuildBlob552",
-   "handler": "part_table"
+   "name": "GuildMembership",
+   "handler": "guild_member_list",
+   "note": "same container as 512 — part 2 = own membership blob"
   },
   "554": {
-   "name": "GuildBlob554",
-   "handler": "part_table"
+   "name": "GuildTags",
+   "handler": "guild_member_list",
+   "note": "same container as 512 — part 1 = other coaches' clan tags"
+  },
+  "556": {
+   "name": "GuildMemberGone",
+   "fields": [
+    {
+     "n": "coach_id",
+     "t": "i64"
+    }
+   ]
+  },
+  "560": {
+   "name": "GuildMemberFeed",
+   "fields": [
+    {
+     "n": "coach",
+     "t": "str_u8"
+    },
+    {
+     "n": "removed",
+     "t": "u8"
+    }
+   ]
   },
   "8000": {
    "name": "FightCreation",
@@ -641,6 +671,15 @@
     }
    ],
    "note": "dg_0 — pushed when a search period opens/closes"
+  },
+  "28614": {
+   "name": "TournamentFightStarting",
+   "fields": [
+    {
+     "n": "tournament_id",
+     "t": "i64"
+    }
+   ]
   },
   "28644": {
    "name": "TournamentSearchUpcoming",

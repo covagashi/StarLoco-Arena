@@ -11,6 +11,8 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 	match handler:
 		"coach_info": return _coach_info(r)
 		"part_table": return _part_table(r)
+		"guild_record": return _guild_record(r)
+		"guild_member_list": return _guild_member_list(r)
 		"actor_spawn": return _actor_spawn(r)
 		"fighter_list": return _fighter_list(r)
 		"fighter_create_result": return _fighter_create_result(r)
@@ -55,7 +57,22 @@ static func _coach_info(r: WireReader) -> Dictionary:
 	out.tournament_points = r.get_i32()
 	out.ladder_blob = r.get_bytes(r.get_u16())
 	out.standing = r.get_i32()
-	out.guild_blob = r.get_bytes(r.get_u16())
+	var guild_blob := r.get_bytes(r.get_u16())
+	out.guild_blob = guild_blob
+	# The login guild blob is the same ca_0 part-table 552 carries — part 2
+	# holds my membership (server handshake/coach.go → guildMembership).
+	if not guild_blob.is_empty():
+		var parts: Dictionary = _part_table(
+			WireReader.new(guild_blob)).parts
+		if parts.has(2):
+			var pr := WireReader.new(parts[2])
+			var g := {"guild_id": pr.get_i64(), "rights": pr.get_i32(),
+				"rank_level": pr.get_u16(), "rank_name": pr.get_str("u8")}
+			pr.get_u16()
+			g["guild"] = pr.get_str("u8")
+			pr.get_u16(); pr.get_i32(); pr.get_i32()
+			g["demon_id"] = pr.get_u16()
+			out.guild = g
 	out.tome_blob = r.get_bytes(r.get_u16())
 	out.card_inv_blob = r.get_bytes(r.get_u16())
 	out.equip_blob = r.get_bytes(r.get_u16())
@@ -81,6 +98,63 @@ static func _part_table(r: WireReader) -> Dictionary:
 		var end: int = index[i + 1].off if i + 1 < index.size() else buf.size()
 		parts[index[i].id] = buf.slice(start, end)
 	return {"parts": parts}
+
+
+## Opcode 510 — GuildRecord (server guild_packets.go buildGuildRecord):
+## [u16 len]{i64 guildId, str8 name, u16,u16, i32,i32, u16 demonId, i32,
+## u8 nRanks, nRanks x [u16 len]{u16 level,i32 rights,str8 name}}
+static func _guild_record(r: WireReader) -> Dictionary:
+	var body := r.get_bytes(r.get_u16())
+	var br := WireReader.new(body)
+	var out := {"guild_id": br.get_i64(), "name": br.get_str("u8")}
+	br.get_u16(); br.get_u16(); br.get_i32(); br.get_i32()
+	out.demon_id = br.get_u16()
+	br.get_i32()
+	var ranks := []
+	var n := br.get_u8()
+	for i in n:
+		var inner := WireReader.new(br.get_bytes(br.get_u16()))
+		ranks.append({"level": inner.get_u16(), "rights": inner.get_i32(),
+			"name": inner.get_str("u8")})
+	out.ranks = ranks
+	return out
+
+
+## Opcodes 512 / 552 / 554 — the kf_1 member-list container:
+## [i32 n] n x { [i32 len][ca_0 part-table blob] }. The part index inside
+## each blob selects the row shape:
+##   0 (512): i64 id, i32 rights, u16 rankLevel, str8 rank, str8 name, u8 online
+##   1 (554): str8 guild, i64 player, u16,u16, i32,i32, u16 demon   (clan tag)
+##   2 (552): i64 guild, i32 rights, u16 rankLevel, str8 rank, u16,
+##            str8 guild, u16, i32, i32, u16 demon                  (membership)
+static func _guild_member_list(r: WireReader) -> Dictionary:
+	var rows := []
+	var n := r.get_i32()
+	for i in n:
+		var blob := r.get_bytes(r.get_i32())
+		var br := WireReader.new(blob)
+		var parts: Dictionary = _part_table(br).parts
+		for idx in parts:
+			var pr := WireReader.new(parts[idx])
+			match int(idx):
+				0:
+					rows.append({"part": 0, "coach_id": pr.get_i64(),
+						"rights": pr.get_i32(), "rank_level": pr.get_u16(),
+						"rank_name": pr.get_str("u8"),
+						"name": pr.get_str("u8"),
+						"online": pr.get_u8() != 0})
+				1:
+					rows.append({"part": 1, "guild": pr.get_str("u8"),
+						"coach_id": pr.get_i64()})
+				2:
+					rows.append({"part": 2, "guild_id": pr.get_i64(),
+						"rights": pr.get_i32(), "rank_level": pr.get_u16(),
+						"rank_name": pr.get_str("u8")})
+					pr.get_u16()
+					rows.back()["guild"] = pr.get_str("u8")
+					pr.get_u16(); pr.get_i32(); pr.get_i32()
+					rows.back()["demon_id"] = pr.get_u16()
+	return {"rows": rows}
 
 
 ## Opcode 4096 — i32 prefix: negative = that many raw bytes follow;

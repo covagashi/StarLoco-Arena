@@ -60,7 +60,9 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 		2052:
 			var d := Codec.decode(op, payload)
 			State.my_coach_id = int(d.get("id", -1))
-			print("[smoke] coach id=", State.my_coach_id)
+			State.guild = d.get("guild", {})
+			print("[smoke] coach id=", State.my_coach_id,
+				" guild=", State.guild)
 		4600:
 			var d := Codec.decode(op, payload)
 			print("[smoke] enter world=", d.get("world_id"), " pos=",
@@ -184,8 +186,11 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 			print("[smoke] GUILD feed:", d.get("coach"),
 				"founded", d.get("guild"))
 		510, 552, 512:
-			print("[smoke] GUILD state push op=", op,
-				" bytes=", raw.size() - 3)
+			var d := Codec.decode(op, payload)
+			print("[smoke] GUILD push ", op, ": ", d)
+		554, 556, 560:
+			var d := Codec.decode(op, payload)
+			print("[smoke] GUILD push ", op, ": ", d)
 		28608:
 			var d := Codec.decode(op, payload)
 			print("[smoke] TOURNAMENT register tid=", d.get("tournament_id"),

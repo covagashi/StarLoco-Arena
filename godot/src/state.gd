@@ -52,6 +52,10 @@ static var wallet := {}
 static var friends := []
 static var ignored := []
 
+## Guild membership (coach_info guild_blob at login, then 510/552/512 pushes):
+## {guild_id, guild, rank_level, rank_name, demon_id, rights, ranks[], members[]}
+static var guild := {}
+
 ## Breed id -> class name (Dofus 1.x order; Iop=8 / Sacrier=11 observed live).
 const BREED_NAMES := {1: "Feca", 2: "Osamoda", 3: "Enutrof", 4: "Sram",
 	5: "Xelor", 6: "Ecaflip", 7: "Eniripsa", 8: "Iop", 9: "Cra",
