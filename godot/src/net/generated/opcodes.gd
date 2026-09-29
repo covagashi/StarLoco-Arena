@@ -26,7 +26,7 @@ const OP_INTERACTIVE_ELEMENT_DESPAWN := 206
 const OP_MSG501 := 501
 const OP_MSG502 := 502
 const OP_GUILD_INVITE_ANSWER := 503
-const OP_MSG504 := 504
+const OP_GUILD_RESULT := 504
 const OP_GUILD_LEAVE_OR_KICK := 505
 const OP_MSG509 := 509
 const OP_MSG510 := 510
@@ -44,7 +44,7 @@ const OP_GUILD_BLOB554 := 554
 const OP_MSG555 := 555
 const OP_MSG556 := 556
 const OP_MSG557 := 557
-const OP_MSG558 := 558
+const OP_GUILD_CREATED_FEED := 558
 const OP_MSG560 := 560
 const OP_AUTHENTICATION_RESULT := 1024
 const OP_CLIENT_AUTHENTICATION := 1025
@@ -322,25 +322,25 @@ const OP_MSG28604 := 28604
 const OP_MSG28605 := 28605
 const OP_MSG28606 := 28606
 const OP_MSG28607 := 28607
-const OP_MSG28608 := 28608
+const OP_TOURNAMENT_REGISTER_REPLY := 28608
 const OP_MSG28609 := 28609
 const OP_MSG28610 := 28610
 const OP_MSG28611 := 28611
-const OP_MSG28612 := 28612
+const OP_TOURNAMENT_SEARCH_RESULT := 28612
 const OP_MSG28614 := 28614
-const OP_MSG28616 := 28616
+const OP_TOURNAMENT_SEARCH_ERROR := 28616
 const OP_MSG28617 := 28617
 const OP_MSG28618 := 28618
 const OP_MSG28620 := 28620
 const OP_MSG28622 := 28622
-const OP_MSG28630 := 28630
+const OP_TOURNAMENT_SEARCH_PERIOD := 28630
 const OP_MSG28633 := 28633
 const OP_MSG28634 := 28634
 const OP_MSG28635 := 28635
 const OP_MSG28636 := 28636
-const OP_MSG28644 := 28644
+const OP_TOURNAMENT_SEARCH_UPCOMING := 28644
 const OP_MSG28646 := 28646
-const OP_MSG28648 := 28648
+const OP_TOURNAMENT_SEARCH_ENDED := 28648
 const OP_MSG28649 := 28649
 const OP_MSG28650 := 28650
 
@@ -369,7 +369,7 @@ const NAMES := {
 	501: "Msg501",
 	502: "Msg502",
 	503: "GuildInviteAnswer",
-	504: "Msg504",
+	504: "GuildResult",
 	505: "GuildLeaveOrKick",
 	509: "Msg509",
 	510: "Msg510",
@@ -387,7 +387,7 @@ const NAMES := {
 	555: "Msg555",
 	556: "Msg556",
 	557: "Msg557",
-	558: "Msg558",
+	558: "GuildCreatedFeed",
 	560: "Msg560",
 	1024: "AuthenticationResult",
 	1025: "ClientAuthentication",
@@ -665,25 +665,25 @@ const NAMES := {
 	28605: "Msg28605",
 	28606: "Msg28606",
 	28607: "Msg28607",
-	28608: "Msg28608",
+	28608: "TournamentRegisterReply",
 	28609: "Msg28609",
 	28610: "Msg28610",
 	28611: "Msg28611",
-	28612: "Msg28612",
+	28612: "TournamentSearchResult",
 	28614: "Msg28614",
-	28616: "Msg28616",
+	28616: "TournamentSearchError",
 	28617: "Msg28617",
 	28618: "Msg28618",
 	28620: "Msg28620",
 	28622: "Msg28622",
-	28630: "Msg28630",
+	28630: "TournamentSearchPeriod",
 	28633: "Msg28633",
 	28634: "Msg28634",
 	28635: "Msg28635",
 	28636: "Msg28636",
-	28644: "Msg28644",
+	28644: "TournamentSearchUpcoming",
 	28646: "Msg28646",
-	28648: "Msg28648",
+	28648: "TournamentSearchEnded",
 	28649: "Msg28649",
 	28650: "Msg28650",
 }

@@ -181,6 +181,19 @@ func _on_submit(text: String) -> void:
 				", ".join(State.ignored) if not State.ignored.is_empty()
 				else "none"))
 			return
+		if cmd == "guild":
+			# Guild creation — C2S 509 [u8 type][u8 len][name], arch 3.
+			# The 504 result + 510/552/512 state pushes + 558 feed answer it.
+			if rest.is_empty():
+				_line("error", "[i]/guild &lt;name&gt;[/i]")
+				return
+			var gw := WireWriter.new()
+			var nb := CP1252.encode(rest)
+			gw.put_u8(0)
+			gw.put_u8(nb.size())
+			gw.put_bytes(nb)
+			Session.send(509, gw.raw(), 3)
+			return
 
 	# Channel prefixes → dedicated pipes; unknown '/x' goes verbatim to the
 	# server's GM-command handler on the vicinity op.

@@ -175,6 +175,32 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 				" obtained=", d.get("obtained"),
 				" missed=", d.get("not_obtained"),
 				" recovered=", d.get("recovered"))
+		504:
+			var d := Codec.decode(op, payload)
+			print("[smoke] GUILD result type=", d.get("type"),
+				" code=", d.get("code"))
+		558:
+			var d := Codec.decode(op, payload)
+			print("[smoke] GUILD feed:", d.get("coach"),
+				"founded", d.get("guild"))
+		510, 552, 512:
+			print("[smoke] GUILD state push op=", op,
+				" bytes=", raw.size() - 3)
+		28608:
+			var d := Codec.decode(op, payload)
+			print("[smoke] TOURNAMENT register tid=", d.get("tournament_id"),
+				" code=", d.get("code"))
+		28630:
+			var d := Codec.decode(op, payload)
+			print("[smoke] TOURNAMENT search period tid=",
+				d.get("tournament_id"), " open=", d.get("open"))
+		28612:
+			var d := Codec.decode(op, payload)
+			print("[smoke] TOURNAMENT search result tid=",
+				d.get("tournament_id"), " accepted=", d.get("accepted"))
+		28616:
+			var d := Codec.decode(op, payload)
+			print("[smoke] TOURNAMENT search error ", d)
 
 
 func _move_and_shoot() -> void:
@@ -294,6 +320,12 @@ func _move_and_shoot() -> void:
 	# delete the preset → 6022 + 6030 refresh
 	_main._on_del_team()
 	await create_timer(1.0).timeout
+	# guild creation → 504 (403) + 510/552/512 pushes + 558 feed; needs a
+	# unique name across runs.
+	chat._on_submit("/guild Hermandad%d" % (randi() % 9000 + 1000))
+	print("[smoke] guild create sent — expecting 504 "
+		+ "(403 first run, 11 once 'test' already leads a guild)")
+	await create_timer(1.5).timeout
 	# --- element dialogs -----------------------------------------------------
 	# Island 25: mailbox(2) @33,36 — graveyard(10) @4,45 — fusion(14) @-45,-25.
 	# Dialogs are client-local; just check they open with the right title.
@@ -361,6 +393,23 @@ func _move_and_shoot() -> void:
 		await create_timer(1.5).timeout
 		# Demon totem 76 (108,64) is in the landing AoI → 27510 → 27511.
 		await _click_elem(11, Vector2i(108, 64), "Demon totem")
+		await create_timer(0.8).timeout
+		# "Offer cards" → affiliate basket → 5470 → 5403 (guild leader gate —
+		# the /guild call above makes 'test' a leader of an unaffiliated clan).
+		_main._on_element_alt()
+		var offer_list: ItemList = _main.get_node(
+			"UI/ElementDlg/VBox/Scroll/List")
+		var offered := 0
+		for i in offer_list.item_count:
+			if offered < 2:
+				offer_list.select(i, false)
+				offered += 1
+		if offered > 0:
+			_main._on_element_act()
+			print("[smoke] demon offering sent — expecting 5403")
+			await create_timer(1.0).timeout
+		else:
+			print("[smoke] no tradable cards to offer — SKIP")
 		# World 37 is an archipelago of zaap-linked islets — hop again:
 		# zaap 138 → card 254 → Demon-I islet (zaap 70 at 132,126), where the
 		# challenge element 55 spawns right away.
@@ -399,6 +448,24 @@ func _move_and_shoot() -> void:
 			print("[smoke] zaap hop sent (card 256 → tournament islet)")
 			await create_timer(2.0).timeout
 			await _click_elem(13, Vector2i(121, 190), "Tournament totem")
+			await create_timer(0.8).timeout
+			# Register for the first listed tournament → 4607 → 28608.
+			var tlist: ItemList = _main.get_node(
+				"UI/ElementDlg/VBox/Scroll/List")
+			if tlist.item_count > 0:
+				tlist.select(0)
+				tlist.item_selected.emit(0)
+				_main._on_element_act()
+				print("[smoke] tournament register sent — expecting 28608")
+				await create_timer(1.0).timeout
+				# "Find opponent" — only armed when registered + period open.
+				if not _main.get_node(
+						"UI/ElementDlg/VBox/Btns/AltBtn").visible:
+					print("[smoke] AltBtn hidden — re-selecting row")
+					tlist.item_selected.emit(0)
+				_main._on_element_alt()
+				print("[smoke] tournament search sent — expecting 28612")
+				await create_timer(1.0).timeout
 		# Fourth hop: zaap → card 208 → world 26 → firework launcher → 22095.
 		var z4 := _elem_in_view(4)
 		if z4 >= 0:

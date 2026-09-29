@@ -87,6 +87,16 @@ const OP_TOURN_CAL := 17002              # C2S empty
 const OP_TOURN_CALENDAR := 17003         # calendar events — codec_overrides
 const OP_TOURN_LIST := 28601             # C2S empty
 const OP_TOURN_LIST_RES := 28602         # tournament rows — codec_overrides
+const OP_TOURN_REGISTER := 4607          # C2S [i64 t][i64 coach][i16 -1][i32 0]
+const OP_TOURN_REG_RES := 28608          # [i64 tid][i8 code]
+const OP_TOURN_SEARCH_PERIOD := 28630    # [i64 tid][i8 open]
+const OP_TOURN_SEARCH_RES := 28612       # [i64 tid][i16 preset][i8 accepted]
+const OP_TOURN_SEARCH_ERR := 28616       # [i8 code][i8 sub]
+const OP_TOURN_SEARCH_END := 28648       # [i64 tid][i8 forfeit]
+const OP_GUILD_CREATE := 509             # C2S [u8 type][str8 name] arch 3
+const OP_GUILD_RESULT := 504             # [i8 type][i32 code]
+const OP_GUILD_FEED := 558               # [str8 coach][str8 guild]
+const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
 const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
 const OP_FRIEND_ADDED := 3156            # [u8 name][u8 note][i64 id]…
@@ -435,13 +445,24 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_SHOP_RESULT:
 			var d := Codec.decode(opcode, payload)
 			var res := int(d.result)
-			for c in d.get("currencies", []):
-				State.wallet[int(c.type)] = int(c.amount)
-			_refresh_wallet_label()
-			match res:
-				0: _log_line("[color=green]shop: deal done[/color]")
-				1: _log_line("[color=red]shop: not enough tokens[/color]")
-				_: _log_line("[color=red]shop: refused (code %d)[/color]" % res)
+			if _awaiting_offer:
+				# 5403 doubles as the demon-affiliation ack (server sends an
+				# empty detail list) — label it as the offering result.
+				_awaiting_offer = false
+				if res == 0:
+					_log_line("[color=green]demon accepted the offering[/color]")
+				else:
+					_log_line("[color=red]demon offering failed "
+						+ "(guild leader + unaffiliated required)[/color]")
+			else:
+				for c in d.get("currencies", []):
+					State.wallet[int(c.type)] = int(c.amount)
+				_refresh_wallet_label()
+				match res:
+					0: _log_line("[color=green]shop: deal done[/color]")
+					1: _log_line("[color=red]shop: not enough tokens[/color]")
+					_: _log_line("[color=red]shop: refused (code %d)[/color]"
+						% res)
 		OP_FUSION_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.get("result", 0)) != 0:
@@ -477,11 +498,66 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if $UI/ElementDlg.visible and _elem_kind == 13:
 				var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 				for r0 in rows:
-					list.add_item(str(r0.get("name", "?")))
+					var tid := int(r0.get("id", r0.get("tid", -1)))
+					var label := str(r0.get("name", "?"))
+					if r0.get("reg_open", 1) == 0:
+						label += "  (closed)"
+					list.add_item(label)
+					list.set_item_metadata(list.item_count - 1, tid)
 				$UI/ElementDlg/VBox/Hint.text = "%d tournament(s)" % [
 					$UI/ElementDlg/VBox/Scroll/List.item_count]
+				var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+				act.text = "Register"
+				act.visible = true
+				act.disabled = true
 			else:
 				_log_line("tournaments: %d" % rows.size())
+		OP_TOURN_REG_RES:
+			var d := Codec.decode(opcode, payload)
+			var tid := int(d.tournament_id)
+			var msg := "registration accepted" if int(d.code) == 0 \
+				else ("tournament full" if int(d.code) == 2
+					else "registration refused (%d)" % int(d.code))
+			if int(d.code) == 0:
+				_registered_tids[tid] = true
+			_log_line("tournament %d: %s" % [tid, msg])
+			if $UI/ElementDlg.visible and _elem_kind == 13:
+				$UI/ElementDlg/VBox/Hint.text = msg
+		OP_TOURN_SEARCH_PERIOD:
+			var d := Codec.decode(opcode, payload)
+			_search_open[int(d.tournament_id)] = int(d.open) != 0
+			_log_line("tournament %d opponent search %s" % [
+				int(d.tournament_id),
+				"OPEN" if int(d.open) != 0 else "closed"])
+		OP_TOURN_SEARCH_RES:
+			var d := Codec.decode(opcode, payload)
+			_log_line("tournament %d search %s" % [int(d.tournament_id),
+				"accepted — waiting for opponents"
+				if int(d.accepted) != 0 else "refused"])
+		OP_TOURN_SEARCH_ERR:
+			var d := Codec.decode(opcode, payload)
+			_log_line("[color=red]tournament search error %d/%d[/color]" % [
+				int(d.code), int(d.sub_code)])
+		OP_TOURN_SEARCH_END:
+			var d := Codec.decode(opcode, payload)
+			_log_line("tournament %d search ended%s" % [int(d.tournament_id),
+				" — winner by forfeit" if int(d.forfeit) != 0 else ""])
+		28614:  # TournamentFightStarting [i64 tid] — bracket match launching
+			var d := Codec.decode(opcode, payload)
+			_log_line("tournament %d: fight starting!" % int(d.f0))
+		OP_GUILD_RESULT:
+			var d := Codec.decode(opcode, payload)
+			match int(d.code):
+				403: _log_line("[color=green]guild created[/color]")
+				404: _log_line("[color=green]joined the guild[/color]")
+				11: _log_line("[color=red]guild name invalid or taken[/color]")
+				20: _log_line("[color=red]guild is full[/color]")
+				35: _log_line("[color=red]guild: coach not found[/color]")
+				40: _log_line("[color=red]guild invite refused[/color]")
+				_: _log_line("guild result %d" % int(d.code))
+		OP_GUILD_FEED:
+			var d := Codec.decode(opcode, payload)
+			_log_line("[i]%s founded the guild '%s'[/i]" % [d.coach, d.guild])
 		OP_FIREWORK_SHOW:
 			var d := Codec.decode(opcode, payload)
 			_log_line("firework! %s at (%d,%d)" % [
@@ -907,6 +983,11 @@ func _log_line(s: String) -> void:
 ## (Card Master pushes the 5401 catalogue); the rest open client-local dialogs.
 var _elem_id := -1            # element the ElementDlg is showing
 var _elem_kind := -1          # env type of that element
+var _elem_offer := false      # kind-11 dialog switched to card-offer mode
+var _demon_id := -1           # demon of the totem being offered to
+var _awaiting_offer := false  # a 5470 basket is in flight → next 5403 is its ack
+var _search_open := {}        # tournament id -> opponent-search period open
+var _registered_tids := {}    # tournament ids this coach is registered in
 
 
 func _use_element(id: int) -> void:
@@ -919,6 +1000,7 @@ func _use_element(id: int) -> void:
 	var label := Elements.kind_name(kind)
 	_elem_id = id
 	_elem_kind = kind
+	_elem_offer = false
 	match kind:
 		1:   # Card Master — server pushes the 5401 catalogue
 			_log_line("%s — opening shop…" % label)
@@ -949,6 +1031,7 @@ func _use_element(id: int) -> void:
 func _element_text(title: String, hint: String) -> void:
 	$UI/ElementDlg/VBox/Title.text = title
 	$UI/ElementDlg/VBox/Hint.text = hint
+	_elem_offer = false
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 	list.clear()
 	list.select_mode = ItemList.SELECT_SINGLE
@@ -1085,7 +1168,11 @@ func _open_challenge_bubble(e: Dictionary) -> void:
 func _open_demon_totem(e: Dictionary) -> void:
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var demon := int(fields[0]) if fields.size() > 0 else -1
+	_demon_id = demon
 	_element_text("Demon totem %d" % demon, "Requesting ladder…")
+	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+	alt.text = "Offer cards"
+	alt.visible = true
 	var w := WireWriter.new()
 	w.put_i16(demon)
 	w.put_i16(0)
@@ -1096,8 +1183,24 @@ func _open_demon_totem(e: Dictionary) -> void:
 ## Tournament totem → 17002 (calendar) + 28601 (list), both empty, arch 3/2.
 func _open_tournament_totem() -> void:
 	_element_text("Tournament totem", "Requesting tournaments…")
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	if not list.item_selected.is_connected(_on_tournament_sel):
+		list.item_selected.connect(_on_tournament_sel)
 	Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
 	Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
+
+
+func _on_tournament_sel(i: int) -> void:
+	$UI/ElementDlg/VBox/Btns/ActBtn.disabled = false
+	if _elem_kind == 13:
+		# "Find opponent" (retail "Combattre") only makes sense for a
+		# tournament we're in AND whose search window is open (28630).
+		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+		var tid := int(list.get_item_metadata(i))
+		var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+		alt.text = "Find opponent"
+		alt.visible = _registered_tids.has(tid) \
+			and _search_open.get(tid, false)
 
 
 ## Firework launcher — pick any owned card; launch → 22095 [i32 card][i32 x]
@@ -1162,6 +1265,37 @@ func _on_element_act() -> void:
 			Session.send(OP_TEAM_TEST, w.raw(), 2)
 			$UI/ElementDlg.visible = false
 			_log_line("challenge %d accepted" % _bubble_challenge)
+		13:  # tournament register → 4607 [tid][coach][preset=-1][card=0]
+			var sel := list.get_selected_items()
+			if sel.is_empty():
+				return
+			var w := WireWriter.new()
+			w.put_i64(int(list.get_item_metadata(sel[0])))
+			w.put_i64(State.my_coach_id)
+			w.put_i16(-1)
+			w.put_i32(0)
+			Session.send(OP_TOURN_REGISTER, w.raw(), 3)
+			_log_line("tournament register sent (tid %d)"
+				% int(list.get_item_metadata(sel[0])))
+		11:  # demon offering — only meaningful in offer mode
+			if not _elem_offer:
+				return
+			var offers := []
+			for idx in list.get_selected_items():
+				offers.append(int(list.get_item_metadata(idx)))
+			if offers.is_empty() or _demon_id < 0:
+				return
+			var w := WireWriter.new()
+			w.put_i16(_demon_id)
+			w.put_i16(offers.size())
+			for cid in offers:
+				w.put_i32(cid)
+				w.put_i16(1)
+			_awaiting_offer = true
+			Session.send(OP_DEMON_OFFER, w.raw(), 3)
+			$UI/ElementDlg.visible = false
+			_log_line("demon %d offering sent: %d card(s)" % [
+				_demon_id, offers.size()])
 		12:  # firework
 			var sel := list.get_selected_items()
 			if sel.is_empty():
@@ -1178,7 +1312,42 @@ func _on_element_act() -> void:
 
 
 func _on_element_alt() -> void:
-	# "Refuse" / secondary — just dismisses the bubble for now.
+	if _elem_kind == 13:
+		# Opponent search → 28611 [i64 tid][i64 coach][i16 preset], arch 2.
+		# Retail sends pseudo-preset 99 from the Tournois tab's Combattre.
+		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+		var sel := list.get_selected_items()
+		if sel.is_empty():
+			return
+		var w := WireWriter.new()
+		w.put_i64(int(list.get_item_metadata(sel[0])))
+		w.put_i64(State.my_coach_id)
+		w.put_i16(99)
+		Session.send(28611, w.raw(), 2)
+		_log_line("tournament search sent (tid %d)"
+			% int(list.get_item_metadata(sel[0])))
+		return
+	if _elem_kind == 11 and not _elem_offer:
+		# "Offer cards" — the affiliate basket: multi-pick tradable cards,
+		# Act sends 5470 [demon][n]{id, qty=1}. Guild leaders only per server.
+		_elem_offer = true
+		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+		list.clear()
+		list.select_mode = ItemList.SELECT_MULTI
+		for cid in State.inventory:
+			if not Cards.meta(int(cid)).get("tradable", false):
+				continue
+			list.add_item("%s  ×%d" % [
+				Cards.name_of(int(cid)), int(State.inventory[cid])])
+			list.set_item_metadata(list.item_count - 1, int(cid))
+		$UI/ElementDlg/VBox/Title.text = "Demon %d — offering" % _demon_id
+		$UI/ElementDlg/VBox/Hint.text = \
+			"Pick cards to give (reputation = their value):"
+		var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+		act.text = "Offer"
+		act.visible = true
+		act.disabled = false
+		return
 	$UI/ElementDlg.visible = false
 
 
