@@ -70,6 +70,15 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 				_entered = true
 				print("[smoke] instance ready — world shown")
 				_move_and_shoot()
+		6006:
+			var d := Codec.decode(op, payload)
+			print("[smoke] roster:", d.fighters.map(func(f): return "%s breed=%d spells=%d cards=%d" % [
+				f.get("name", "?"), int(f.get("breed", 0)),
+				f.get("spells", []).size(), f.get("cards", []).size()]))
+		6030:
+			var d := Codec.decode(op, payload)
+			print("[smoke] presets:", d.presets.map(func(p): return "type=%d '%s' f=%d c=%d" % [
+				int(p.type), p.name, p.fighters.size(), p.coaches.size()]))
 		4096:
 			var d := Codec.decode(op, payload)
 			var body := WireReader.new(d.get("actors_raw", PackedByteArray()))

@@ -35,6 +35,8 @@ const OP_ACTOR_MOVEMENT := 4500
 const OP_FIGHT_CREATION := 8000
 const OP_FIGHT_ERROR := 26310
 const OP_PONG := 108
+const OP_FIGHTER_LIST := 6006
+const OP_TEAM_PRESETS := 6030
 
 @onready var host_edit: LineEdit = $VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $VBox/ConnRow/Port
@@ -160,6 +162,22 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line("[color=green]fight created on arena %d — %d fighters[/color]"
 				% [State.fight_world, State.fighters.size()])
 			get_tree().change_scene_to_file("res://src/fight/fight_view.tscn")
+		OP_FIGHTER_LIST:
+			# Lobby roster (et_2 blobs) — shown in the roster line.
+			var d := Codec.decode(opcode, payload)
+			State.roster = d.get("fighters", [])
+			var names := []
+			for f in State.roster:
+				names.append("%s (%s)" % [f.get("name", "?"),
+					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0)))])
+			$VBox/Roster.text = "Fighters: " + (", ".join(names) if names else "—")
+			_log_line("roster: %s" % (", ".join(names) if names else "empty"))
+		OP_TEAM_PRESETS:
+			var d := Codec.decode(opcode, payload)
+			State.presets = d.get("presets", [])
+			var real := State.presets.filter(func(p): return int(p.type) != -4)
+			_log_line("team presets: %d saved (%d shown incl. bench)" % [
+				real.size(), State.presets.size()])
 		OP_FIGHT_ERROR:
 			_log_line("[color=red]fight creation refused[/color]")
 		OP_PONG:

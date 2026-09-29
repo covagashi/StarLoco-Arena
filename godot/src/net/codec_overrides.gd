@@ -81,14 +81,66 @@ static func _actor_spawn(r: WireReader) -> Dictionary:
 
 
 ## Opcode 6006 — [i64 leadId][u8 count]{i64 id, u16 len, et_2 blob}.
+## et_2 layout (server fighter_codec.go, decodeFighterBlob):
+##   [u8 type][i16 budget][u8 breed](i32 custom if breed==0)[str8 name]
+##   [u8 sex][i8 ey](u8 hair,skin,eye only if ey<0)
+##   [i16 len]{i32 spells}[i16 len]{i16 slot, i32 cardId}
+##   if type==2 evolution tail:
+##   [i32 board][i32 xp][i32 totalXp][u8 tired][u8 morale][u8 state]
+##   [i16 sx][i16 sy][i16 n]{i32 sphere}[u8 n]{i16 cond,u8 lvl}
+##   [i16 n]{i32 passive}[i16 n]{i32 passiveSet}
 static func _fighter_list(r: WireReader) -> Dictionary:
 	var out := {"lead_id": r.get_i64(), "fighters": []}
 	var count := r.get_u8()
 	for i in count:
 		var fid := r.get_i64()
 		var blob := r.get_bytes(r.get_u16())
-		out.fighters.append({"id": fid, "blob": blob})
+		var f := _et2_fighter(blob)
+		f["id"] = fid
+		out.fighters.append(f)
 	return out
+
+
+static func _et2_fighter(blob: PackedByteArray) -> Dictionary:
+	var br := WireReader.new(blob)
+	var f := {"type": br.get_u8(), "budget": br.get_i16(),
+		"breed": br.get_u8(), "spells": [], "cards": []}
+	if f.breed == 0:
+		br.get_i32()
+	f.name = br.get_str("u8")
+	f.sex = br.get_u8()
+	if br.get_i8() < 0:      # ey<0 → appearance colors present
+		f.hair = br.get_u8()
+		f.skin = br.get_u8()
+		f.eye = br.get_u8()
+	var spell_bytes := br.get_i16()
+	for i in spell_bytes / 4:
+		f.spells.append(br.get_i32())
+	var card_bytes := br.get_i16()
+	for i in card_bytes / 6:
+		f.cards.append({"slot": br.get_i16(), "id": br.get_i32()})
+	if f.type == 2 and br.remaining() >= 18:
+		f.board = br.get_i32()
+		f.xp = br.get_i32()
+		f.total_xp = br.get_i32()
+		f.tiredness = br.get_u8()
+		f.morale = br.get_u8()
+		f.state = br.get_u8()
+		f.sphere_x = br.get_i16()
+		f.sphere_y = br.get_i16()
+		f.spheres = []
+		for i in br.get_i16():
+			f.spheres.append(br.get_i32())
+		f.conditions = []
+		for i in br.get_u8():
+			f.conditions.append({"id": br.get_i16(), "level": br.get_u8()})
+		f.passives = []
+		for i in br.get_i16():
+			f.passives.append(br.get_i32())
+		f.passive_sets = []
+		for i in br.get_i16():
+			f.passive_sets.append(br.get_i32())
+	return f
 
 
 ## Opcode 3144 — [u8 n]{u16 len, friend blob}. Blob internals (presence,
@@ -143,12 +195,34 @@ static func _stat_map(r: WireReader) -> Dictionary:
 	return out
 
 
-## Opcode 6030 — [u8 n]{u16 len, sw_1 preset blob}. Preset internals are
-## conditional (appearance block); captured raw for now.
+## Opcode 6030 — [u8 n]{u16 len, sw_1 preset blob}[u8 n]{coaches}.
+## sw_1 (server team_codec.go, encodeTeamPreset):
+##   [i16 type][i16 teamId][i16 gameMode][str8 name]
+##   [u8 app×4 only if type in -5,-6,-7]
+##   [u8 n]{i64 fighterId, i64 ownerCoachId}
+##   [u8 n]{i64 coachId}
 static func _preset_list(r: WireReader) -> Dictionary:
 	var out := {"presets": []}
 	for i in r.get_u8():
-		out.presets.append(r.get_bytes(r.get_u16()))
+		# presets are RAW sw_1 blobs back-to-back (no length prefix) —
+		# each self-delimits via its u8 counts
+		var p := {"type": r.get_i16(), "id": r.get_i16(),
+			"game_mode": r.get_i16(), "name": r.get_str("u8")}
+		if p.type in [-5, -6, -7]:
+			p.appearance = [r.get_u8(), r.get_u8(), r.get_u8(), r.get_u8()]
+		p.fighters = []
+		for j in r.get_u8():
+			p.fighters.append({"id": r.get_i64(), "owner": r.get_i64()})
+		p.coaches = []
+		for j in r.get_u8():
+			p.coaches.append(r.get_i64())
+		out.presets.append(p)
+	out.coaches = []
+	if r.remaining() > 0:
+		# trailing coach block (ar_0): [u8 n]{i64 id, u8 len, blob}
+		for i in r.get_u8():
+			out.coaches.append({"id": r.get_i64(),
+				"blob": r.get_bytes(r.get_u8())})
 	return out
 
 

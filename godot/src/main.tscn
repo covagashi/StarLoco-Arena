@@ -74,6 +74,10 @@ disabled = true
 text = "Practice fight"
 disabled = true
 
+[node name="Roster" type="Label" parent="VBox"]
+text = "Fighters: —"
+mouse_filter = 2
+
 [node name="Log" type="RichTextLabel" parent="."]
 anchors_preset = 2
 anchor_top = 1.0

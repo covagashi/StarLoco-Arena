@@ -24,6 +24,19 @@ static var coach_ids := {}
 ## fighter.coach == my_coach_id are ours — fight_view ends their turns.
 static var my_coach_id := -1
 
+## Fighter roster from the lobby burst (6006 FighterInformationList):
+## [{id, name, breed, sex, type, spells, cards, ...}] — et_2 blobs decoded.
+static var roster := []
+
+## Team presets from 6030 TeamPresetList:
+## [{id, type, name, game_mode, fighters: [{id, owner}], coaches: [ids]}]
+static var presets := []
+
+## Breed id -> class name (Dofus 1.x order; Iop=8 / Sacrier=11 observed live).
+const BREED_NAMES := {1: "Feca", 2: "Osamoda", 3: "Enutrof", 4: "Sram",
+	5: "Xelor", 6: "Ecaflip", 7: "Eniripsa", 8: "Iop", 9: "Cra",
+	10: "Sadida", 11: "Sacrier", 12: "Pandawa"}
+
 ## Live ArenaClient — set by the Session autoload (app) or the test harness.
 ## Scenes read `net.message_received` and `net.drain()`.
 static var net: Node = null
