@@ -169,6 +169,12 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(op, payload)
 			print("[smoke] FIREWORK show card=", d.get("card"),
 				" at=", d.get("x"), ",", d.get("y"))
+		5491:
+			var d := Codec.decode(op, payload)
+			print("[smoke] FUSION result=", d.get("result"),
+				" obtained=", d.get("obtained"),
+				" missed=", d.get("not_obtained"),
+				" recovered=", d.get("recovered"))
 
 
 func _move_and_shoot() -> void:
@@ -292,8 +298,47 @@ func _move_and_shoot() -> void:
 	# Island 25: mailbox(2) @33,36 — graveyard(10) @4,45 — fusion(14) @-45,-25.
 	# Dialogs are client-local; just check they open with the right title.
 	await _click_elem(2, Vector2i(33, 36), "Mailbox")
+	# Graveyard: with a dead fighter + a resurrection card seeded, selecting
+	# the fighter sends 22099 (card 305 is 100% — the roster refresh that
+	# follows is the confirmation).
 	await _click_elem(10, Vector2i(4, 45), "Graveyard")
+	var glist: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
+	var gact: Button = _main.get_node("UI/ElementDlg/VBox/Btns/ActBtn")
+	if glist.item_count > 0 and gact.visible:
+		glist.select(0)
+		glist.item_selected.emit(0)
+		_main._on_element_act()
+		print("[smoke] resurrect 22099 sent — expecting 6006 refresh")
+		await create_timer(1.0).timeout
+	else:
+		print("[smoke] no dead fighter/revive card — graveyard flow skipped")
+	# Fusion altar: pick two same-set inputs + a target, then 5490 → 5491.
 	await _click_elem(14, Vector2i(-45, -25), "Fusion altar")
+	var fus_list: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
+	var by_set := {}
+	for i in fus_list.item_count:
+		var cid := int(fus_list.get_item_metadata(i))
+		var s := int(preload("res://src/gamedata/cards.gd")
+			.meta(cid).get("set", 0))
+		by_set[s] = by_set.get(s, []) + [i]
+	var fused := false
+	for s in by_set:
+		var idxs: Array = by_set[s]
+		if idxs.size() >= 2:
+			fus_list.select(idxs[0], false)
+			fus_list.select(idxs[1], false)
+			_main._on_fusion_inputs()
+			var list2: ItemList = _main.get_node(
+				"UI/ElementDlg/VBox/Scroll2/List2")
+			if list2.item_count > 0:
+				list2.select(0)
+				_main._on_element_act()
+				print("[smoke] fusion 5490 sent (set ", s, ") — expecting 5491")
+				fused = true
+				await create_timer(1.0).timeout
+			break
+	if not fused:
+		print("[smoke] no same-set tradable pair — fusion send skipped")
 	# Zaap (at spawn 40,-20): open the teleport list, card 255 → world 37's
 	# route totémique zaap (134,45) — the main landmass, where the demon
 	# totems/challenges live (the tournament islet is zaap-only on purpose).

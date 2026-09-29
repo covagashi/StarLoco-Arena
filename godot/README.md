@@ -97,9 +97,9 @@ Fighter sprites: breed+sex → `Players/-XYZ.anm` via the client's
 - Most island Card-Master stock is **barter-only** (zero token price in
   retail data — the server refuses `5450` with code 2); the Exchange pane
   (`5400` card-for-card by summed value) covers it.
-- Graveyard `22099` and fusion `5490` dialogs are wired but the smoke
-  can't drive them end-to-end yet — the test coach has no dead fighters
-  and no tradable same-set card pairs (Zaap cards are bound).
+- Graveyard `22099` and fusion `5490`→`5491` verified end-to-end on the
+  seeded test coach (a dead evolution fighter + resurrection card 305,
+  and tradable same-set pairs); without the seed the smoke skips them.
 - World 37 is an archipelago: its islets connect only via Zaap cards —
   matching retail (the tournament islet is teleport-access only).
 - Headless runs can't screenshot (dummy driver); use a windowed run for
