@@ -24,7 +24,7 @@ const OP_MSG202 := 202
 const OP_INTERACTIVE_ELEMENT_UPDATE := 204
 const OP_INTERACTIVE_ELEMENT_DESPAWN := 206
 const OP_MSG501 := 501
-const OP_MSG502 := 502
+const OP_GUILD_INVITATION := 502
 const OP_GUILD_INVITE_ANSWER := 503
 const OP_GUILD_RESULT := 504
 const OP_GUILD_LEAVE_OR_KICK := 505
@@ -69,7 +69,7 @@ const OP_PLAYER_STATISTICS_REPORT := 2400
 const OP_PLAYER_STATISTICS := 2401
 const OP_MSG2411 := 2411
 const OP_MSG2600 := 2600
-const OP_MSG2601 := 2601
+const OP_GUILD_MEMBER_REPORT := 2601
 const OP_CHANNEL_FLAGS_MESSAGE := 3128
 const OP_ADD_FRIEND_MESSAGE := 3129
 const OP_CHANNEL_JOIN_MESSAGE := 3130
@@ -367,7 +367,7 @@ const NAMES := {
 	204: "InteractiveElementUpdate",
 	206: "InteractiveElementDespawn",
 	501: "Msg501",
-	502: "Msg502",
+	502: "GuildInvitation",
 	503: "GuildInviteAnswer",
 	504: "GuildResult",
 	505: "GuildLeaveOrKick",
@@ -412,7 +412,7 @@ const NAMES := {
 	2401: "PlayerStatistics",
 	2411: "Msg2411",
 	2600: "Msg2600",
-	2601: "Msg2601",
+	2601: "GuildMemberReport",
 	3128: "ChannelFlagsMessage",
 	3129: "AddFriendMessage",
 	3130: "ChannelJoinMessage",

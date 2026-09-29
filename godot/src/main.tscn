@@ -94,6 +94,10 @@ disabled = true
 text = "Ranks"
 disabled = true
 
+[node name="ClanBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Clan"
+disabled = true
+
 [node name="RosterTitle" type="Label" parent="UI/VBox"]
 text = "Fighters:"
 mouse_filter = 2
@@ -607,3 +611,102 @@ disabled = true
 
 [node name="CloseBtn" type="Button" parent="UI/LadderDlg/VBox/Btns"]
 text = "Close"
+
+[node name="GuildDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -210.0
+offset_right = 250.0
+offset_bottom = 210.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/GuildDlg"]
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="UI/GuildDlg/VBox"]
+horizontal_alignment = 1
+text = "Clan"
+theme_override_font_sizes/font_size = 16
+
+[node name="Hint" type="Label" parent="UI/GuildDlg/VBox"]
+text = ""
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="UI/GuildDlg/VBox"]
+size_flags_vertical = 3
+
+[node name="List" type="ItemList" parent="UI/GuildDlg/VBox/Scroll"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="RankEdit" type="HBoxContainer" parent="UI/GuildDlg/VBox"]
+visible = false
+theme_override_constants/separation = 4
+
+[node name="Name" type="LineEdit" parent="UI/GuildDlg/VBox/RankEdit"]
+size_flags_horizontal = 3
+placeholder_text = "rank name"
+
+[node name="RInvite" type="CheckBox" parent="UI/GuildDlg/VBox/RankEdit"]
+text = "invite"
+
+[node name="RKick" type="CheckBox" parent="UI/GuildDlg/VBox/RankEdit"]
+text = "kick"
+
+[node name="RPromote" type="CheckBox" parent="UI/GuildDlg/VBox/RankEdit"]
+text = "promote"
+
+[node name="RDemote" type="CheckBox" parent="UI/GuildDlg/VBox/RankEdit"]
+text = "demote"
+
+[node name="ApplyBtn" type="Button" parent="UI/GuildDlg/VBox/RankEdit"]
+text = "Apply"
+
+[node name="InviteRow" type="HBoxContainer" parent="UI/GuildDlg/VBox"]
+theme_override_constants/separation = 4
+
+[node name="Name" type="LineEdit" parent="UI/GuildDlg/VBox/InviteRow"]
+size_flags_horizontal = 3
+placeholder_text = "invite coach…"
+
+[node name="InviteBtn" type="Button" parent="UI/GuildDlg/VBox/InviteRow"]
+text = "Invite"
+
+[node name="Btns" type="HBoxContainer" parent="UI/GuildDlg/VBox"]
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="StatsBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "Stats"
+
+[node name="KickBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "Kick"
+
+[node name="PromoteBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "+Rank"
+
+[node name="DemoteBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "-Rank"
+
+[node name="RanksBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "Ranks"
+
+[node name="LeaveBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "Leave"
+
+[node name="DisbandBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "Disband"
+
+[node name="CloseBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
+text = "Close"
+
+[node name="GuildAskDlg" type="ConfirmationDialog" parent="UI"]
+title = "Clan invitation"
+ok_button_text = "Join"
+cancel_button_text = "Decline"
+size = Vector2i(340, 120)

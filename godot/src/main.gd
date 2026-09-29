@@ -123,6 +123,18 @@ const OP_TOURN_SEARCH_END := 28648       # [i64 tid][i8 forfeit]
 const OP_GUILD_CREATE := 509             # C2S [u8 type][str8 name] arch 3
 const OP_GUILD_RESULT := 504             # [i8 type][i32 code]
 const OP_GUILD_FEED := 558               # [str8 coach][str8 guild]
+const OP_GUILD_INVITE := 501             # C2S [u8 type][u8 mode][str8|i64][i64 gid] arch 8
+const OP_GUILD_INVITATION := 502         # S2C [u8 type][str8 i][str8 g]
+const OP_GUILD_INV_ANSWER := 503         # C2S [u8 type][u8 yes][str8 i][str8 g] arch 8
+const OP_GUILD_LEAVE := 505              # C2S [i64 gid][i64 member] arch 8 — self=leave
+const OP_GUILD_DESTROY := 511            # C2S [i64 gid] arch 2
+const OP_GUILD_SET_RANK := 515           # C2S [i64 gid][i64 member][u16 lvl] arch 8
+const OP_GUILD_GET := 517                # C2S [i64 player] arch 2 — refresh own guild
+const OP_GUILD_RANK_ADD := 553           # C2S [i64 gid][i32 rights][str8 name] arch 2
+const OP_GUILD_RANK_MOD := 555           # C2S [i64 gid][i32 rights][u16 lvl x2][str8 name] arch 2
+const OP_GUILD_RANK_DEL := 557           # C2S [i64 gid][u16 lvl] arch 2
+const OP_GUILD_MEMBER_STATS := 2600      # C2S [i64 member] arch 2
+const OP_GUILD_MEMBER_REPORT := 2601     # S2C [i64][str16 name][u16 len][stats]
 const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
 const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
@@ -198,6 +210,23 @@ func _ready() -> void:
 	var tabs: OptionButton = $UI/LadderDlg/VBox/Tabs
 	for t in LADDER_TABS:
 		tabs.add_item(t.label)
+	$UI/VBox/AuthRow/ClanBtn.pressed.connect(_open_guild)
+	$UI/GuildDlg/VBox/InviteRow/InviteBtn.pressed.connect(_on_guild_invite)
+	$UI/GuildDlg/VBox/Btns/StatsBtn.pressed.connect(_on_guild_stats)
+	$UI/GuildDlg/VBox/Btns/KickBtn.pressed.connect(_on_guild_kick)
+	$UI/GuildDlg/VBox/Btns/PromoteBtn.pressed.connect(
+		_on_guild_set_rank.bind(-1))
+	$UI/GuildDlg/VBox/Btns/DemoteBtn.pressed.connect(
+		_on_guild_set_rank.bind(1))
+	$UI/GuildDlg/VBox/Btns/RanksBtn.pressed.connect(_on_guild_ranks_mode)
+	$UI/GuildDlg/VBox/RankEdit/ApplyBtn.pressed.connect(
+		_on_guild_rank_apply)
+	$UI/GuildDlg/VBox/Btns/LeaveBtn.pressed.connect(_on_guild_leave)
+	$UI/GuildDlg/VBox/Btns/DisbandBtn.pressed.connect(_on_guild_disband)
+	$UI/GuildDlg/VBox/Btns/CloseBtn.pressed.connect(
+		func(): $UI/GuildDlg.hide())
+	$UI/GuildAskDlg.confirmed.connect(_answer_guild_invite.bind(true))
+	$UI/GuildAskDlg.canceled.connect(_answer_guild_invite.bind(false))
 	$UI/DuoDlg/VBox/Btns/CreateBtn.pressed.connect(_on_duo_create)
 	$UI/DuoDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/DuoDlg.visible = false)
@@ -354,6 +383,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/FightBtn.disabled = false
 			$UI/VBox/AuthRow/DuoBtn.disabled = false
 			$UI/VBox/AuthRow/RanksBtn.disabled = false
+			$UI/VBox/AuthRow/ClanBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
 		OP_ACTOR_SPAWN:
 			_spawn_world_actors(payload)
@@ -681,12 +711,28 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_GUILD_FEED:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i]%s founded the guild '%s'[/i]" % [d.coach, d.guild])
+		OP_GUILD_INVITATION:
+			# 502 [u8 type][str8 inviter][str8 guild] — ask before answering.
+			var d := Codec.decode(opcode, payload)
+			_guild_invite = {"type": int(d.type), "inviter": d.inviter,
+				"guild": d.guild}
+			$UI/GuildAskDlg.dialog_text = \
+				"%s invites you to join '%s'" % [d.inviter, d.guild]
+			$UI/GuildAskDlg.popup_centered()
+		OP_GUILD_MEMBER_REPORT:
+			var d := Codec.decode(opcode, payload)
+			var lines := ["%s — %d stat(s):" % [d.name, d.stats.size()]]
+			for s in d.stats:
+				lines.append("  stat %d (type %d) = %s" % [
+					int(s.id), int(s.type), str(s.value)])
+			_log_line("\n".join(lines))
 		510:  # GuildRecord — guild name/demon/rank table for our guild
 			var d := Codec.decode(opcode, payload)
 			State.guild["guild_id"] = int(d.guild_id)
 			State.guild["guild"] = d.name
 			State.guild["demon_id"] = int(d.demon_id)
 			State.guild["ranks"] = d.ranks
+			_fill_guild()
 		552:  # GuildMembership — my own rank/demon row (part 2)
 			var d := Codec.decode(opcode, payload)
 			for row in d.rows:
@@ -704,6 +750,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				names.append("%s%s" % [m.get("name", "?"),
 					"*" if m.get("online", false) else ""])
 			_log_line("guild roster: %s" % ", ".join(names))
+			_fill_guild()
 		554:  # GuildTags — clan tags for nearby coaches (name labels)
 			var d := Codec.decode(opcode, payload)
 			for row in d.rows:
@@ -716,6 +763,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_log_line("[i]you are no longer in a guild[/i]")
 			else:
 				_log_line("[i]coach %d left the guild[/i]" % int(d.coach_id))
+			_fill_guild()
 		560:  # GuildMemberFeed — "X joined / X was thrown out"
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i]%s %s[/i]" % [d.coach,
@@ -1122,6 +1170,265 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 			_ladder_start = int(d.get("end", _ladder_start))
 
 
+## --- Clan panel (501-557, 2600/2601) ------------------------------------------
+## "Clan" opens the guild dialog: members view (invite/stats/kick/rank ops)
+## and a ranks editor (add/modify/delete, right-gated like retail — the
+## server re-derives every right server-side anyway). Membership-changing
+## opcodes (501/503/505/515) go on arch 8; admin ops (511/517/553/555/557/
+## 2600) on arch 2 — mirrors the retail `a((byte)N)` table.
+const GUILD_RIGHT_LEADER := 1
+const GUILD_RIGHT_INVITE := 2
+const GUILD_RIGHT_REMOVE := 4
+const GUILD_RIGHT_PROMOTE := 8
+const GUILD_RIGHT_DEMOTE := 16
+
+func _open_guild() -> void:
+	$UI/GuildDlg.show()
+	_guild_ranks_mode = false
+	_guild_mode_ui()
+	_fill_guild()
+	if not State.guild.is_empty():
+		var w := WireWriter.new()
+		w.put_i64(State.my_coach_id)
+		Session.send(OP_GUILD_GET, w.raw(), 2)
+
+
+## My rights mask (from the 552 membership row).
+func _my_rights() -> int:
+	return int(State.guild.get("rights", 0))
+
+
+func _has_right(bit: int) -> bool:
+	var r := _my_rights()
+	return r & GUILD_RIGHT_LEADER != 0 or r & bit != 0
+
+
+## Selected member row in members mode (the list stores the member dict
+## itself as item metadata).
+func _guild_sel_member() -> Variant:
+	if _guild_ranks_mode:
+		return null
+	var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
+	var sel := list.get_selected_items()
+	if sel.is_empty():
+		return null
+	return list.get_item_metadata(sel[0])
+
+
+func _fill_guild() -> void:
+	if not $UI/GuildDlg.visible:
+		return
+	var title: Label = $UI/GuildDlg/VBox/Title
+	var hint: Label = $UI/GuildDlg/VBox/Hint
+	var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
+	list.clear()
+	if State.guild.is_empty():
+		title.text = "Clan"
+		hint.text = "no clan — found one with /guild <name>"
+		return
+	title.text = "Clan — %s" % str(State.guild.get("guild", "?"))
+	hint.text = "you: %s · demon %d · %d member(s)" % [
+		str(State.guild.get("rank_name", "?")),
+		int(State.guild.get("demon_id", 0)),
+		State.guild.get("members", []).size()]
+	if _guild_ranks_mode:
+		for rk in State.guild.get("ranks", []):
+			list.add_item("rank %d — %s (rights %d)" % [
+				int(rk.get("level", 0)), str(rk.get("name", "?")),
+				int(rk.get("rights", 0))])
+	else:
+		for m in State.guild.get("members", []):
+			if int(m.get("part", -1)) != 0:
+				continue
+			list.add_item("%s — %s%s" % [
+				str(m.get("name", "?")), str(m.get("rank_name", "?")),
+				" · online" if m.get("online", false) else ""])
+			list.set_item_metadata(list.item_count - 1, m)
+
+
+## Swap member/rank button enablement for the current mode + rights.
+func _guild_mode_ui() -> void:
+	var edit: HBoxContainer = $UI/GuildDlg/VBox/RankEdit
+	var invite: HBoxContainer = $UI/GuildDlg/VBox/InviteRow
+	var btns := $UI/GuildDlg/VBox/Btns
+	edit.visible = _guild_ranks_mode
+	invite.visible = not _guild_ranks_mode
+	btns.get_node("StatsBtn").visible = not _guild_ranks_mode
+	btns.get_node("PromoteBtn").visible = not _guild_ranks_mode
+	btns.get_node("DemoteBtn").visible = not _guild_ranks_mode
+	var kick: Button = btns.get_node("KickBtn")
+	kick.text = "Delete" if _guild_ranks_mode else "Kick"
+	var ranks: Button = btns.get_node("RanksBtn")
+	ranks.text = "Members" if _guild_ranks_mode else "Ranks"
+	# right-gating mirrors retail's hidden entries (server rechecks anyway)
+	var in_guild := not State.guild.is_empty()
+	$UI/GuildDlg/VBox/InviteRow/InviteBtn.disabled = \
+		not in_guild or not _has_right(GUILD_RIGHT_INVITE)
+	btns.get_node("LeaveBtn").disabled = not in_guild
+	btns.get_node("DisbandBtn").disabled = \
+		not _has_right(GUILD_RIGHT_LEADER)
+
+
+func _on_guild_invite() -> void:
+	var edit: LineEdit = $UI/GuildDlg/VBox/InviteRow/Name
+	var cname := edit.text.strip_edges()
+	if cname.is_empty():
+		return
+	var tid: int = world.coach_id_by_name(cname)
+	if tid < 0:
+		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
+		return
+	var w := WireWriter.new()
+	w.put_u8(0)                                  # guild type (clan)
+	w.put_u8(1)                                  # mode 1 = by coach id
+	w.put_i64(tid)
+	w.put_i64(int(State.guild.get("guild_id", 0)))
+	Session.send(OP_GUILD_INVITE, w.raw(), 8)
+	edit.clear()
+
+
+func _on_guild_stats() -> void:
+	var m: Variant = _guild_sel_member()
+	if m == null:
+		return
+	var w := WireWriter.new()
+	w.put_i64(int(m.get("coach_id", 0)))
+	Session.send(OP_GUILD_MEMBER_STATS, w.raw(), 2)
+
+
+func _on_guild_kick() -> void:
+	if _guild_ranks_mode:
+		# delete the selected rank
+		var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
+		var sel := list.get_selected_items()
+		var ranks: Array = State.guild.get("ranks", [])
+		if sel.is_empty() or sel[0] >= ranks.size():
+			return
+		var w := WireWriter.new()
+		w.put_i64(int(State.guild.get("guild_id", 0)))
+		w.put_i16(int(ranks[sel[0]].get("level", 0)))
+		Session.send(OP_GUILD_RANK_DEL, w.raw(), 2)
+		return
+	var m: Variant = _guild_sel_member()
+	if m == null:
+		return
+	var w := WireWriter.new()
+	w.put_i64(int(State.guild.get("guild_id", 0)))
+	w.put_i64(int(m.get("coach_id", 0)))
+	Session.send(OP_GUILD_LEAVE, w.raw(), 8)
+
+
+## delta -1 = promote (smaller level number), +1 = demote. Picks the
+## nearest EXISTING rank in that direction — levels are sparse (leader 1,
+## members join at 10, customs land in between).
+func _on_guild_set_rank(delta: int) -> void:
+	var m: Variant = _guild_sel_member()
+	if m == null:
+		return
+	var cur: int = int(m.get("rank_level", 0))
+	var want := -1
+	for rk in State.guild.get("ranks", []):
+		var lvl: int = int(rk.get("level", 0))
+		if delta < 0 and lvl < cur and (want < 0 or lvl > want):
+			want = lvl    # promote → highest level below current
+		elif delta > 0 and lvl > cur and (want < 0 or lvl < want):
+			want = lvl    # demote → lowest level above current
+	if want < 0:
+		_log_line("[i]no rank to %s to[/i]" % [
+			"promote" if delta < 0 else "demote"])
+		return
+	var w := WireWriter.new()
+	w.put_i64(int(State.guild.get("guild_id", 0)))
+	w.put_i64(int(m.get("coach_id", 0)))
+	w.put_i16(want)
+	Session.send(OP_GUILD_SET_RANK, w.raw(), 8)
+
+
+func _on_guild_leave() -> void:
+	if State.guild.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_i64(int(State.guild.get("guild_id", 0)))
+	w.put_i64(State.my_coach_id)               # self = leave
+	Session.send(OP_GUILD_LEAVE, w.raw(), 8)
+
+
+func _on_guild_disband() -> void:
+	var w := WireWriter.new()
+	w.put_i64(int(State.guild.get("guild_id", 0)))
+	Session.send(OP_GUILD_DESTROY, w.raw(), 2)
+
+
+func _on_guild_ranks_mode() -> void:
+	_guild_ranks_mode = not _guild_ranks_mode
+	_guild_mode_ui()
+	_fill_guild()
+	if _guild_ranks_mode:
+		# seed the editor with the selected rank if any
+		var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
+		var sel := list.get_selected_items()
+		var ranks: Array = State.guild.get("ranks", [])
+		if not sel.is_empty() and sel[0] < ranks.size():
+			_fill_rank_edit(ranks[sel[0]])
+
+
+func _fill_rank_edit(rk: Dictionary) -> void:
+	var edit := $UI/GuildDlg/VBox/RankEdit
+	edit.get_node("Name").text = str(rk.get("name", ""))
+	var r := int(rk.get("rights", 0))
+	edit.get_node("RInvite").button_pressed = r & GUILD_RIGHT_INVITE != 0
+	edit.get_node("RKick").button_pressed = r & GUILD_RIGHT_REMOVE != 0
+	edit.get_node("RPromote").button_pressed = r & GUILD_RIGHT_PROMOTE != 0
+	edit.get_node("RDemote").button_pressed = r & GUILD_RIGHT_DEMOTE != 0
+
+
+## Apply = modify the selected rank (555) or add a new one (553).
+func _on_guild_rank_apply() -> void:
+	var edit := $UI/GuildDlg/VBox/RankEdit
+	var name := str(edit.get_node("Name").text).strip_edges()
+	if name.is_empty():
+		return
+	var rights := 0
+	if edit.get_node("RInvite").button_pressed: rights |= GUILD_RIGHT_INVITE
+	if edit.get_node("RKick").button_pressed: rights |= GUILD_RIGHT_REMOVE
+	if edit.get_node("RPromote").button_pressed: rights |= GUILD_RIGHT_PROMOTE
+	if edit.get_node("RDemote").button_pressed: rights |= GUILD_RIGHT_DEMOTE
+	var w := WireWriter.new()
+	w.put_i64(int(State.guild.get("guild_id", 0)))
+	w.put_i32(rights)
+	var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
+	var sel := list.get_selected_items()
+	var ranks: Array = State.guild.get("ranks", [])
+	var nb: PackedByteArray = name.to_utf8_buffer()
+	if not sel.is_empty() and sel[0] < ranks.size():
+		# modify: [i32 rights][u16 lvl][u16 lvl][str8 name]
+		var lvl: int = int(ranks[sel[0]].get("level", 0))
+		w.put_i16(lvl)
+		w.put_i16(lvl)
+		w.put_u8(nb.size())
+		w.put_bytes(nb)
+		Session.send(OP_GUILD_RANK_MOD, w.raw(), 2)
+	else:
+		w.put_u8(nb.size())
+		w.put_bytes(nb)
+		Session.send(OP_GUILD_RANK_ADD, w.raw(), 2)
+
+
+## Answer the pending 502 clan invitation (503, arch 8).
+func _answer_guild_invite(accepted: bool) -> void:
+	if _guild_invite.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_u8(int(_guild_invite.get("type", 0)))
+	w.put_u8(1 if accepted else 0)
+	for k in ["inviter", "guild"]:
+		var nb: PackedByteArray = str(_guild_invite[k]).to_utf8_buffer()
+		w.put_u8(nb.size())
+		w.put_bytes(nb)
+	Session.send(OP_GUILD_INV_ANSWER, w.raw(), 8)
+	_guild_invite = {}
+
+
 ## --- 2v2 duo (6024-6029) ------------------------------------------------------
 ## "2v2…" opens the invite dialog (team name + friend pick, retail's
 ## team2vs2NameDialog): 6024 [str8 team][i64 me][i64 mate]. The invited side
@@ -1476,6 +1783,8 @@ const LADDER_TABS := [
 var _ladder_tab := 0          # current LADDER_TABS index
 var _ladder_start := 0        # window start of the next request
 var _ladder_tourn := {"m": 0, "t": 0, "y": 0}  # echoed tournament period
+var _guild_ranks_mode := false  # GuildDlg list shows ranks instead of members
+var _guild_invite := {}         # pending 502 {type, inviter, guild}
 
 
 func _use_element(id: int) -> void:

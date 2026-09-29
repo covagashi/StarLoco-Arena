@@ -46,6 +46,7 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"ladder_coach_rep": return _ladder_coach_rep(r)
 		"ladder_demons": return _ladder_demons(r)
 		"ladder_pro": return _ladder_pro(r)
+		"guild_member_report": return _guild_member_report(r)
 		"tournament_calendar": return _tournament_calendar(r)
 		"tournament_list": return _tournament_list(r)
 		_:
@@ -165,6 +166,15 @@ static func _guild_member_list(r: WireReader) -> Dictionary:
 					pr.get_u16(); pr.get_i32(); pr.get_i32()
 					rows.back()["demon_id"] = pr.get_u16()
 	return {"rows": rows}
+
+
+## Opcode 2601 — GuildMemberReport (server buildGuildMemberReport):
+## [i64 coachId][str16 name][u16 len][PlayerStatistics blob — the same
+## model 2400 carries].
+static func _guild_member_report(r: WireReader) -> Dictionary:
+	var out := {"coach": r.get_i64(), "name": r.get_str("u16")}
+	out.stats = _stat_map(r).stats
+	return out
 
 
 ## --- mailbox (server mail_packets.go) ----------------------------------------

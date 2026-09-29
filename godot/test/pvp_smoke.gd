@@ -90,6 +90,7 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 			_login(_spec, "test3", "test123")
 		6028:
 			print("[smoke] main 6028 — duo formed")
+			_guild_phase()
 		6030:
 			var d := Codec.decode(op, WireReader.new(raw))
 			for pr in d.get("presets", []):
@@ -155,6 +156,10 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 			# the scene change is deferred — poll for the fight view, then
 			# auto-ready its placement so combat can start.
 			_drive_fight()
+		2601:
+			var d := Codec.decode(op, WireReader.new(raw))
+			print("[smoke] member report %s — %d stats"
+				% [d.name, d.stats.size()])
 		8300:
 			print("[smoke] MAIN 8300 — fight over")
 
@@ -228,8 +233,23 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 			_bot.send_message(6026, w.raw(), 2)
 		6028:
 			print("[smoke] bot 6028 — duo formed, expect the duo preset")
-			await create_timer(1.0).timeout
-			_main._invite_exchange_id(_bot_coach, "test2")
+		502:
+			var d := Codec.decode(op, p)
+			print("[smoke] bot got guild invite from %s to '%s' — join"
+				% [d.inviter, d.guild])
+			var w := WireWriter.new()
+			w.put_u8(int(d.type))
+			w.put_u8(1)
+			w.put_str(String(d.inviter), "u8")
+			w.put_str(String(d.guild), "u8")
+			_bot.send_message(503, w.raw(), 8)
+		504:
+			var d := Codec.decode(op, p)
+			print("[smoke] bot guild result=%d" % int(d.code))
+		556:
+			var d := Codec.decode(op, p)
+			print("[smoke] bot guild gone (self=%s)"
+				% (int(d.coach_id) == _bot_coach))
 		5102:
 			var d := Codec.decode(op, p)
 			_bot_ex = int(d.ex_id)
@@ -293,6 +313,73 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 		8300:
 			_bot.send_message(26321, PackedByteArray(), 3)
 			print("[smoke] bot fight done")
+
+
+## ---- guild phase: invite → stats → rank CRUD → promote/demote → kick ----
+## Runs on the main client (guild leader); the bot auto-accepts the 502.
+func _sel_member(name: String) -> bool:
+	var list: ItemList = _main.get_node("UI/GuildDlg/VBox/Scroll/List")
+	for i in list.item_count:
+		if name in list.get_item_text(i):
+			list.select(i)
+			return true
+	return false
+
+
+func _guild_phase() -> void:
+	await create_timer(0.5).timeout
+	_main._open_guild()                    # 517 → fresh 510/552/512 pushes
+	await create_timer(0.8).timeout
+	_main.get_node("UI/GuildDlg/VBox/InviteRow/Name").text = "test2"
+	_main._on_guild_invite()
+	print("[smoke] guild invite sent (501) — bot should answer 503")
+	await create_timer(1.2).timeout
+	if _sel_member("test2"):
+		_main._on_guild_stats()            # 2600 → 2601 report
+		print("[smoke] member-stats sent (2600)")
+		await create_timer(0.8).timeout
+	# ranks editor: add "Oficial" with the invite right
+	_main._on_guild_ranks_mode()
+	_main.get_node("UI/GuildDlg/VBox/RankEdit/Name").text = "Oficial"
+	_main.get_node("UI/GuildDlg/VBox/RankEdit/RInvite").button_pressed = true
+	_main._on_guild_rank_apply()
+	print("[smoke] rank-add sent (553)")
+	await create_timer(1.0).timeout
+	# modify that rank (555): rename + same rights
+	var list: ItemList = _main.get_node("UI/GuildDlg/VBox/Scroll/List")
+	for i in list.item_count:
+		if "Oficial" in list.get_item_text(i):
+			list.select(i)
+	_main.get_node("UI/GuildDlg/VBox/RankEdit/Name").text = "Oficial Mayor"
+	_main._on_guild_rank_apply()
+	print("[smoke] rank-modify sent (555)")
+	await create_timer(1.0).timeout
+	_main._on_guild_ranks_mode()           # back to members
+	if _sel_member("test2"):
+		_main._on_guild_set_rank(-1)       # promote 10 → 2
+		print("[smoke] promote sent (515)")
+		await create_timer(0.8).timeout
+	if _sel_member("test2"):
+		_main._on_guild_set_rank(1)        # demote 2 → 10
+		print("[smoke] demote sent (515)")
+		await create_timer(0.8).timeout
+	if _sel_member("test2"):
+		_main._on_guild_kick()             # 505 [gid][member]
+		print("[smoke] kick sent (505)")
+		await create_timer(0.8).timeout
+	# delete the custom rank (ranks mode Kick→557)
+	_main._on_guild_ranks_mode()
+	list = _main.get_node("UI/GuildDlg/VBox/Scroll/List")
+	for i in list.item_count:
+		if "Oficial" in list.get_item_text(i):
+			list.select(i)
+	_main._on_guild_kick()
+	print("[smoke] rank-delete sent (557)")
+	await create_timer(0.6).timeout
+	_main._on_guild_ranks_mode()
+	_main.get_node("UI/GuildDlg").hide()
+	# continue to the exchange phase
+	_main._invite_exchange_id(_bot_coach, "test2")
 
 
 ## ---- spectator client: test3 watches coach 1's fight read-only ----

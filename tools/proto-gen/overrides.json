@@ -613,6 +613,28 @@
    "handler": "ladder_pro",
    "note": "[i32 total][i32 start][i32 end][i32 myRank][i32 league](end-start)x{str32 name,str32 guild,u16 rating}[u8 search]"
   },
+  "502": {
+   "name": "GuildInvitation",
+   "fields": [
+    {
+     "n": "type",
+     "t": "u8"
+    },
+    {
+     "n": "inviter",
+     "t": "str_u8"
+    },
+    {
+     "n": "guild",
+     "t": "str_u8"
+    }
+   ]
+  },
+  "2601": {
+   "name": "GuildMemberReport",
+   "handler": "guild_member_report",
+   "note": "[i64 coach][str16 name][u16 len][PlayerStatistics blob — same shape as 2400]"
+  },
   "15001": {
    "name": "MailList",
    "handler": "mail_list",
