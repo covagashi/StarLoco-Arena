@@ -29,8 +29,8 @@ Audit legend cross-refs the commit that did/verified it.
 | 1024 | ClientAuthResult | S2C | ✓ | A | — | ✓ |
 | 1026 | WorldServerUnavailable | S2C | ✓ | A | — | — |
 | 8 | InvalidClientVersion | S2C | ✓ | A | — | — |
-| 107 | Ping request (asg_0) | C2S | ✓ | A | — | ✓ | client keepalive request |
-| 108 | Ping reply (abj_0) | S2C | ✓ | **A*** (was wrongly 107) | — | live | credits client nW.sL() every 60s |
+| 107 | Ping request (asg_0) | C2S | ✓ | A | — | ✓ | client keepalive request; Godot sends per-arch {1,2} every 60s (ping_smoke) |
+| 108 | Ping reply (abj_0) | S2C | ✓ | **A*** (was wrongly 107) | — | live ✓ (ping_smoke: flag+key echo, 29B) | credits client nW.sL() every 60s |
 
 ## Lifecycle (session / coach)
 

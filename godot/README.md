@@ -52,6 +52,7 @@ godot --path godot -s test/fight_smoke.gd      # graphical (screenshots)
 godot --headless --path godot -s test/fight_smoke.gd
 godot --path godot -s test/world_smoke.gd      # island + roster + chat + presets + emote + combattre
 godot --path godot -s test/pvp_smoke.gd        # two-client challenge → real PvP fight
+godot --headless --path godot -s test/ping_smoke.gd   # keepalive 107→108 (66s)
 godot --path godot -s test/fight_shot.gd -- 10 /tmp/arena.png   # offline map shot
 ```
 

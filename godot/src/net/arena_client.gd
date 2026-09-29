@@ -29,6 +29,13 @@ var _established := false
 var pending: Array = []
 var scene_active := false
 
+## Keepalive: the server drops a silent socket at idle_timeout (300s default).
+## Retail's pl_2 keepalive fires one 107 per arch in {1,2} every 60s
+## (nW.PX, kl_0) — flag field = the arch it's sent on.
+const PING_INTERVAL := 60.0
+const PING_ARCHES := [1, 2]
+var _ping_clock := 0.0
+
 
 ## Take everything buffered since the last drain.
 func drain() -> Array:
@@ -71,7 +78,7 @@ func send(opcode: int, values: Dictionary = {}) -> void:
 	send_message(opcode, payload, arch)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not _connected:
 		return
 	_peer.poll()
@@ -80,6 +87,15 @@ func _process(_delta: float) -> void:
 		if not _established:
 			_established = true
 			connected.emit()
+		_ping_clock += delta
+		if _ping_clock >= PING_INTERVAL:
+			_ping_clock = 0.0
+			for arch in PING_ARCHES:
+				var w := WireWriter.new()
+				w.put_u8(arch)        # flag = the arch it rides on
+				w.put_i32(0)          # key
+				w.put_i64(Time.get_ticks_usec() * 1000)
+				send_message(107, w.raw(), arch)
 		var avail := _peer.get_available_bytes()
 		if avail > 0:
 			var res := _peer.get_data(avail)
