@@ -342,6 +342,10 @@ result dialog.
 | 2261 | SpectateReply | S2C | ✓ | A (i8 0/1) | — | ✓ |
 | 26331 | SpectateJoin | C2S | ✓ | A (i64 target, arch 2; resync replay) | — | ✓ |
 | 26332 | SpectateTeardown | S2C | defined, unused | — | — | — (teardown goes through 8300+26321) |
+| 26333 | ReconnectFightQuestion | S2C | ✓ | A (empty) | — | ✓ (godot pvp_smoke mid-fight drop) |
+| 26334 | ReconnectFightAnswer | C2S | ✓ | A (u8 accept) | — | ✓ |
+| 28649 | TournamentTreeReq | C2S | ✓ | A (i64 tid, i32 page, str32 name) | — | ✓ (godot world_smoke) |
+| 28650 | TournamentTree | S2C | ✓ | A (i32 page, i32 n, slot/name pairs, i32 unread) | — | ✓ |
 
 ---
 

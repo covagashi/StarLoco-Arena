@@ -135,6 +135,23 @@ const OP_GUILD_RANK_MOD := 555           # C2S [i64 gid][i32 rights][u16 lvl x2]
 const OP_GUILD_RANK_DEL := 557           # C2S [i64 gid][u16 lvl] arch 2
 const OP_GUILD_MEMBER_STATS := 2600      # C2S [i64 member] arch 2
 const OP_GUILD_MEMBER_REPORT := 2601     # S2C [i64][str16 name][u16 len][stats]
+const OP_QUICK_SEARCH := 2301            # C2S [i16 1][i16 type][i32 0] arch 2
+const OP_QUICK_SEARCH_ACK := 2304        # S2C empty — search live
+const OP_QUICK_CANCEL := 2303            # C2S empty arch 2
+const OP_QUICK_CANCEL_RES := 2306        # S2C [u8 result]
+const OP_MATCH_FOUND := 23110            # S2C — codec_overrides
+const OP_MATCH_ACCEPT := 23114           # C2S [i64 m][i64 opp][i16][i16][i32 n][i64xn][u8]
+const OP_MATCH_CONFIRM := 23116          # S2C [i32 n] — 0 = fell through
+const OP_EVO_CANCEL := 23001             # C2S [i64 me][i16 99] arch 2
+const OP_EVO_CANCEL_RES := 23002         # S2C [i8 accepted]
+const OP_EVO_SEARCH := 23003             # C2S [i64 me][i16 99] arch 2
+const OP_EVO_SEARCH_RES := 23004         # S2C [i16 preset][u8 accepted]
+const OP_EVO_STARTING := 23006           # S2C empty — fight incoming
+const OP_EVO_ERROR := 23008              # S2C [i8 code]
+const OP_RECONNECT_Q := 26333            # S2C empty — resume fight?
+const OP_RECONNECT_A := 26334            # C2S [u8 accept] arch 2
+const OP_TOURN_TREE_REQ := 28649         # C2S [i64 tid][i32 page][str32 name]
+const OP_TOURN_TREE := 28650             # S2C — codec_overrides
 const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
 const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
@@ -184,6 +201,8 @@ var _challenge_handle := -1   # pending 26300 handle (-1 = none)
 var _challenge_target := -1   # coach id we clicked "challenge" on
 var _challenge_evo := 0       # evolution flag echoed back on accept
 var _searching := false       # combattre queue state (23104 ack)
+var _search_kind := 0         # 1=classic 2=quick 3=evolution (for cancel)
+var _match := {}              # pending 23110 MatchFound row
 var _shop_id := -1            # catalogue id echoed back on buy/barter
 var _shop_cards := []         # [{id, qty}] of the open catalogue
 var _barter_wanted := -1      # card id picked for exchange
@@ -201,6 +220,10 @@ func _ready() -> void:
 	login_btn.pressed.connect(_on_login_pressed)
 	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
 	$UI/VBox/AuthRow/FightBtn.pressed.connect(_on_fight_pressed)
+	$UI/VBox/AuthRow/SearchBtn.pressed.connect(_on_quick_search)
+	$UI/VBox/AuthRow/EvoBtn.pressed.connect(_on_evo_search)
+	$UI/MatchAskDlg.confirmed.connect(_answer_match.bind(true))
+	$UI/MatchAskDlg.canceled.connect(_answer_match.bind(false))
 	$UI/VBox/AuthRow/DuoBtn.pressed.connect(_open_duo_dlg)
 	$UI/VBox/AuthRow/RanksBtn.pressed.connect(_open_ladder)
 	$UI/LadderDlg/VBox/Tabs.item_selected.connect(_on_ladder_tab)
@@ -384,6 +407,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/DuoBtn.disabled = false
 			$UI/VBox/AuthRow/RanksBtn.disabled = false
 			$UI/VBox/AuthRow/ClanBtn.disabled = false
+			$UI/VBox/AuthRow/SearchBtn.disabled = false
+			$UI/VBox/AuthRow/EvoBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
 		OP_ACTOR_SPAWN:
 			_spawn_world_actors(payload)
@@ -464,25 +489,97 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			payload.get_i16()
 			if payload.get_u8() == 1:
 				_searching = true
+				_search_kind = 1
 				$UI/VBox/AuthRow/CancelSearchBtn.visible = true
 				_log_line("searching for an opponent…")
 		OP_SEARCH_CANCEL_RESULT:
 			# 23102 [u8] — reply that closes the searching state
 			payload.get_u8()
 			_searching = false
+			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
 			_log_line("search cancelled")
 		OP_FIGHT_STARTING:
 			# 23106 — paired, fight incoming (8000 follows)
 			_searching = false
+			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
 			_log_line("[color=green]opponent found — fight starting![/color]")
 		OP_SEARCH_ERROR:
 			var code := payload.get_u8()
 			if code >= 3:
 				_searching = false
+				_search_kind = 0
 				$UI/VBox/AuthRow/CancelSearchBtn.visible = false
 			_log_line("[color=red]search error %d[/color]" % code)
+		OP_QUICK_SEARCH_ACK:
+			# 2304 empty — the random-fight search is live
+			_searching = true
+			_search_kind = 2
+			$UI/VBox/AuthRow/CancelSearchBtn.visible = true
+			_log_line("searching for an opponent…")
+		OP_QUICK_CANCEL_RES:
+			# 2306 [u8 result] — quick-search cancelled (or was idempotent)
+			payload.get_u8()
+			_searching = false
+			_search_kind = 0
+			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_log_line("search cancelled")
+		OP_MATCH_FOUND:
+			# 23110 — paired pending match; retail asks before the accept.
+			var d := Codec.decode(opcode, payload)
+			_match = d
+			$UI/MatchAskDlg.dialog_text = \
+				"Fight against %s?" % str(d.get("opp_name", "?"))
+			$UI/MatchAskDlg.popup_centered()
+		OP_MATCH_CONFIRM:
+			# 23116 [i32 n] — 0 rows means our match fell through
+			if payload.get_i32() == 0:
+				_log_line("[i]the match fell through[/i]")
+		OP_EVO_SEARCH_RES:
+			# 23004 [i16 preset][u8 accepted]
+			payload.get_i16()
+			if payload.get_u8() == 1:
+				_searching = true
+				_search_kind = 3
+				$UI/VBox/AuthRow/CancelSearchBtn.visible = true
+				_log_line("searching an evolution opponent…")
+		OP_EVO_CANCEL_RES:
+			payload.get_i8()
+			_searching = false
+			_search_kind = 0
+			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_log_line("search cancelled")
+		OP_EVO_STARTING:
+			_searching = false
+			_search_kind = 0
+			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_log_line("[color=green]evolution fight starting![/color]")
+		OP_EVO_ERROR:
+			var code := payload.get_i8()
+			_searching = false
+			_search_kind = 0
+			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_log_line("[color=red]evolution search refused (%d)[/color]"
+				% code)
+		OP_RECONNECT_Q:
+			# 26333 — a dropped fight is still alive; resume it (26334).
+			var w := WireWriter.new()
+			w.put_u8(1)
+			Session.send(OP_RECONNECT_A, w.raw(), 2)
+			_log_line("resuming the dropped fight…")
+		OP_TOURN_TREE:
+			# 28650 bracket — render slot→name into the pane's second list.
+			var d := Codec.decode(opcode, payload)
+			if $UI/ElementDlg.visible and _elem_kind == 13:
+				var l2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
+				$UI/ElementDlg/VBox/Scroll2.visible = true
+				l2.clear()
+				var slots: Array = d.get("slots", {}).keys()
+				slots.sort()
+				for s in slots:
+					l2.add_item("slot %d — %s" % [
+						int(s), str(d.slots[s])])
 		OP_DUO_INVITATION:
 			# 6025 [str8 team][str8 inviterName][i64 inviter][i64 invited]
 			var team := payload.get_str("u8")
@@ -1018,6 +1115,62 @@ func _on_fight_pressed() -> void:
 		else ""])
 
 
+## --- Random matchmaking (2301) + evolution queue (23003) --------------------
+## Two more search lanes next to the classic Combattre: the quick-search
+## button opens a random-fight queue (2301), the Evo button queues the
+## evolution team (23003, pseudo-preset 99). Cancels differ per lane.
+func _on_quick_search() -> void:
+	if _searching:
+		return
+	# 2301 [i16 1][i16 teamType][i32 0] — retail's "random fight" request;
+	# mode 1, subMode = the selected preset's type (0 classic, -6 duo).
+	var sub_mode := 0
+	var pid := _selected_preset_id()
+	for p in State.presets:
+		if int(p.id) == pid:
+			sub_mode = int(p.get("type", 0))
+	var w := WireWriter.new()
+	w.put_i16(1)
+	w.put_i16(sub_mode)
+	w.put_i32(0)
+	Session.send(OP_QUICK_SEARCH, w.raw(), 2)
+
+
+func _on_evo_search() -> void:
+	if _searching:
+		return
+	# 23003 [i64 coachId][i16 99] — 99 is the evolution pseudo-preset.
+	var w := WireWriter.new()
+	w.put_i64(State.my_coach_id)
+	w.put_i16(99)
+	Session.send(OP_EVO_SEARCH, w.raw(), 2)
+
+
+## 23110 landed and the user answered the confirmation dialog.
+## Accept → 23114 [i64 match][i64 opp][i16 mode][i16 type][i32 n][i64 x n][u8 1]
+## with our own roster ids reversed (the server consumes, retail echoes them).
+## Decline → 2303 frees the pending search.
+func _answer_match(yes: bool) -> void:
+	if _match.is_empty():
+		return
+	if yes:
+		var w := WireWriter.new()
+		w.put_i64(int(_match.get("match", 0)))
+		w.put_i64(int(_match.get("opp", 0)))
+		w.put_i16(int(_match.get("mode", 0)))
+		w.put_i16(int(_match.get("fight_type", 0)))
+		var ids := State.roster.map(func(f): return int(f.get("id", 0)))
+		w.put_i32(ids.size())
+		for i in range(ids.size() - 1, -1, -1):
+			w.put_i64(int(ids[i]))
+		w.put_u8(1)
+		Session.send(OP_MATCH_ACCEPT, w.raw(), 2)
+		_log_line("accepted match vs %s" % str(_match.get("opp_name", "?")))
+	else:
+		Session.send(OP_QUICK_CANCEL, PackedByteArray(), 2)
+	_match = {}
+
+
 ## --- Spectate (2260/2261/26331) ------------------------------------------------
 ## /watch <name> queries whether that coach is in a live fight (2260); a 1
 ## reply auto-joins (26331) — the server replays the resync (4516 + 8000 with
@@ -1482,10 +1635,21 @@ func _answer_duo(accept: bool) -> void:
 
 ## 23101 [i64 coachId][i16 teamId] — the classic overlay's Cancel.
 func _on_cancel_search() -> void:
-	var w := WireWriter.new()
-	w.put_i64(State.my_coach_id)
-	w.put_i16(_selected_preset_id())
-	Session.send(OP_SEARCH_CANCEL, w.raw(), 2)
+	# Cancel the kind of search actually running: classic ready-up (23101),
+	# the random quick-search (2303, empty) or the evolution queue (23001).
+	match _search_kind:
+		2:
+			Session.send(OP_QUICK_CANCEL, PackedByteArray(), 2)
+		3:
+			var w := WireWriter.new()
+			w.put_i64(State.my_coach_id)
+			w.put_i16(99)                # evolution pseudo-preset
+			Session.send(OP_EVO_CANCEL, w.raw(), 2)
+		_:
+			var w := WireWriter.new()
+			w.put_i64(State.my_coach_id)
+			w.put_i16(_selected_preset_id())
+			Session.send(OP_SEARCH_CANCEL, w.raw(), 2)
 
 
 ## Preset id of the TeamRow selection, or -1 (server falls back to the
@@ -2009,6 +2173,14 @@ func _on_tournament_sel(i: int) -> void:
 	alt.text = "Find opponent"
 	alt.visible = _registered_tids.has(tid) \
 		and _search_open.get(tid, false)
+	# Entrants get the bracket straight away (retail opens the tree with the
+	# tournament): 28649 → 28650 fills the second list with slot→name rows.
+	if _registered_tids.has(tid):
+		var w := WireWriter.new()
+		w.put_i64(tid)
+		w.put_i32(0)
+		w.put_str(State.my_coach_name, "i32")
+		Session.send(OP_TOURN_TREE_REQ, w.raw(), 2)
 
 
 ## Mailbox pane — filled when MAIL_LIST (15001) lands: sender + title per

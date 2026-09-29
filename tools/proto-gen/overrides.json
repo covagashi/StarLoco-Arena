@@ -635,6 +635,25 @@
    "handler": "guild_member_report",
    "note": "[i64 coach][str16 name][u16 len][PlayerStatistics blob — same shape as 2400]"
   },
+  "2306": {
+   "name": "OpponentSearchCancelResult",
+   "fields": [
+    {
+     "n": "result",
+     "t": "u8"
+    }
+   ]
+  },
+  "23110": {
+   "name": "MatchFound",
+   "handler": "match_found",
+   "note": "[i64 matchId][str32 oppName][str32 label][i64 oppId][i16 mode][i16 type][i32 n][i64 x n opp team]"
+  },
+  "28650": {
+   "name": "TournamentTree",
+   "handler": "tournament_tree",
+   "note": "[i32 page][i32 n]{i32 slot, str32 name}[i32 unread]"
+  },
   "15001": {
    "name": "MailList",
    "handler": "mail_list",

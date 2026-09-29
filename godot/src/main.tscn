@@ -78,6 +78,14 @@ disabled = true
 text = "Practice fight"
 disabled = true
 
+[node name="SearchBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Search"
+disabled = true
+
+[node name="EvoBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Evo"
+disabled = true
+
 [node name="FightBtn" type="Button" parent="UI/VBox/AuthRow"]
 text = "Fight — search 1v1"
 disabled = true
@@ -708,5 +716,11 @@ text = "Close"
 [node name="GuildAskDlg" type="ConfirmationDialog" parent="UI"]
 title = "Clan invitation"
 ok_button_text = "Join"
+cancel_button_text = "Decline"
+size = Vector2i(340, 120)
+
+[node name="MatchAskDlg" type="ConfirmationDialog" parent="UI"]
+title = "Opponent found"
+ok_button_text = "Fight"
 cancel_button_text = "Decline"
 size = Vector2i(340, 120)

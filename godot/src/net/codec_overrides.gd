@@ -47,6 +47,8 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"ladder_demons": return _ladder_demons(r)
 		"ladder_pro": return _ladder_pro(r)
 		"guild_member_report": return _guild_member_report(r)
+		"match_found": return _match_found(r)
+		"tournament_tree": return _tournament_tree(r)
 		"tournament_calendar": return _tournament_calendar(r)
 		"tournament_list": return _tournament_list(r)
 		_:
@@ -174,6 +176,32 @@ static func _guild_member_list(r: WireReader) -> Dictionary:
 static func _guild_member_report(r: WireReader) -> Dictionary:
 	var out := {"coach": r.get_i64(), "name": r.get_str("u16")}
 	out.stats = _stat_map(r).stats
+	return out
+
+
+## Opcode 23110 — MatchFound (server sendMatchFound): [i64 matchId]
+## [str32 oppName][str32 label][i64 oppId][i16 mode][i16 fightType]
+## [i32 n][i64 x n opponent team ids].
+static func _match_found(r: WireReader) -> Dictionary:
+	var out := {"match": r.get_i64(), "opp_name": r.get_str("i32"),
+		"label": r.get_str("i32"), "opp": r.get_i64(),
+		"mode": r.get_i16(), "fight_type": r.get_i16(), "team": []}
+	for i in r.get_i32():
+		out.team.append(r.get_i64())
+	return out
+
+
+## Opcode 28650 — TournamentTree (server encodeTournamentTree): [i32 page]
+## [i32 n]{i32 slot, str32 name}[i32 unread].
+static func _tournament_tree(r: WireReader) -> Dictionary:
+	var out := {"page": r.get_i32(), "slots": {}}
+	for i in r.get_i32():
+		# NOTE: the dict-key expression must come before the value call —
+		# `d[k()] = v()` evaluates the RHS first in GDScript, desyncing r.
+		var slot: int = r.get_i32()
+		out.slots[slot] = r.get_str("i32")
+	if r.remaining() >= 4:
+		out.unread = r.get_i32()
 	return out
 
 

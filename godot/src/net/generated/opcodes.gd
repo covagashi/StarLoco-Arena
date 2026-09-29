@@ -61,7 +61,7 @@ const OP_OPPONENT_SEARCH_REQUEST_MESSAGE := 2301
 const OP_OPPONENT_SEARCH_ERROR_MESSAGE := 2302
 const OP_OPPONENT_SEARCH_CANCEL_MESSAGE := 2303
 const OP_OPPONENT_SEARCH_IN_PROGRESS_MESSAGE := 2304
-const OP_OPPONENT_SEARCH_CANCEL_RESULT_MESSAGE := 2306
+const OP_OPPONENT_SEARCH_CANCEL_RESULT := 2306
 const OP_MSG2307 := 2307
 const OP_MSG2308 := 2308
 const OP_MSG2309 := 2309
@@ -270,7 +270,7 @@ const OP_MSG23103 := 23103
 const OP_MSG23104 := 23104
 const OP_MSG23106 := 23106
 const OP_MSG23108 := 23108
-const OP_MSG23110 := 23110
+const OP_MATCH_FOUND := 23110
 const OP_MSG23112 := 23112
 const OP_MSG23114 := 23114
 const OP_MSG23116 := 23116
@@ -342,7 +342,7 @@ const OP_TOURNAMENT_SEARCH_UPCOMING := 28644
 const OP_MSG28646 := 28646
 const OP_TOURNAMENT_SEARCH_ENDED := 28648
 const OP_MSG28649 := 28649
-const OP_MSG28650 := 28650
+const OP_TOURNAMENT_TREE := 28650
 
 const NAMES := {
 	1: "DisconnectionNotificationMessage",
@@ -404,7 +404,7 @@ const NAMES := {
 	2302: "OpponentSearchErrorMessage",
 	2303: "OpponentSearchCancelMessage",
 	2304: "OpponentSearchInProgressMessage",
-	2306: "OpponentSearchCancelResultMessage",
+	2306: "OpponentSearchCancelResult",
 	2307: "Msg2307",
 	2308: "Msg2308",
 	2309: "Msg2309",
@@ -613,7 +613,7 @@ const NAMES := {
 	23104: "Msg23104",
 	23106: "Msg23106",
 	23108: "Msg23108",
-	23110: "Msg23110",
+	23110: "MatchFound",
 	23112: "Msg23112",
 	23114: "Msg23114",
 	23116: "Msg23116",
@@ -685,7 +685,7 @@ const NAMES := {
 	28646: "Msg28646",
 	28648: "TournamentSearchEnded",
 	28649: "Msg28649",
-	28650: "Msg28650",
+	28650: "TournamentTree",
 }
 
 ## C2S archTarget per opcode (-1 = conditional/unknown;

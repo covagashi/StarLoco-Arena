@@ -19,6 +19,9 @@ const Cards := preload("res://src/gamedata/cards.gd")
 var _sess: Node
 var _main
 var _bot: ArenaClient
+var _bot2: ArenaClient          # bot's relogin socket (reconnect test)
+var _drop_done := false         # mid-fight disconnect already triggered
+var _reconnect_seen := false    # bot2 got the resync after 26334
 var _bot_coach := -1
 var _bot_in_world := false
 var _fight_seen := false
@@ -199,6 +202,50 @@ func _drive_fight() -> void:
 	_finish(0, "pvp challenge loop complete")
 
 
+## Reconnect path: second socket for the same account, mid-fight. The server
+## pushes the resume question (26333) during the login burst; answering
+## 26334=1 replays the resync, from there the fight proceeds normally.
+func _reconnect_bot() -> void:
+	_bot2 = ArenaClient.new()
+	root.add_child(_bot2)
+	_bot2.message_received.connect(_on_bot2_msg)
+	_bot2.connect_to("127.0.0.1", 5555)
+	await create_timer(1.0).timeout
+	_login(_bot2, "test2", "test123")
+
+
+func _on_bot2_msg(op: int, raw: PackedByteArray) -> void:
+	var p := WireReader.new(raw)
+	match op:
+		2048:
+			_coach_create(_bot2, "test2")
+		26333:
+			print("[smoke] BOT2 26333 — resume-fight question, accept")
+			var w := WireWriter.new()
+			w.put_u8(1)
+			_bot2.send_message(26334, w.raw(), 2)
+		8000:
+			print("[smoke] BOT2 8000 — resynced back into the fight")
+			_reconnect_seen = true
+		8010:
+			_bot2.send_message(8011, PackedByteArray(), 3)
+		8020:
+			_bot2.send_message(8023, PackedByteArray(), 3)
+		8030:
+			_bot2.send_message(8031, PackedByteArray(), 3)
+		8104:
+			p.get_i32()
+			p.get_i32()
+			var w := WireWriter.new()
+			w.put_i64(p.get_i64())
+			_bot2.send_message(8105, w.raw(), 3)
+		8300:
+			print("[smoke] BOT2 8300 — fight over on the relogin socket")
+			_bot2.send_message(26321, PackedByteArray(), 3)
+		_:
+			pass
+
+
 ## ---- bot client: login, accept challenge, ack fight phases ----
 func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 	var p := WireReader.new(raw)
@@ -296,6 +343,13 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 			print("[smoke] bot confirmed team")
 		8000:
 			print("[smoke] BOT 8000 — same fight on the other socket")
+			if not _drop_done:
+				_drop_done = true
+				# drop this socket BEFORE the phase acks, then relogin —
+				# the server must offer to resume (26333 → 26334).
+				print("[smoke] bot drops the socket mid-fight — relogin")
+				_bot.disconnect_from()
+				_reconnect_bot()
 		8010:
 			_bot.send_message(8011, PackedByteArray(), 3)
 		8020:
@@ -416,7 +470,7 @@ func _finish(code: int, msg: String) -> void:
 	if _done:
 		return
 	_done = true
-	print("[smoke] %s (fight_seen=%s trade=%s spec=%s back=%s)" % [
+	print("[smoke] %s (fight_seen=%s trade=%s spec=%s back=%s reconn=%s)" % [
 		msg, _fight_seen, _trade_seen, _spec_fight_seen,
-		_spec_world_back])
+		_spec_world_back, _reconnect_seen])
 	quit(code)

@@ -227,6 +227,19 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 		28616:
 			var d := Codec.decode(op, payload)
 			print("[smoke] TOURNAMENT search error ", d)
+		28650:
+			var d := Codec.decode(op, payload)
+			print("[smoke] TOURNAMENT bracket page=",
+				d.get("page"), " slots=", d.get("slots", {}).size())
+		2304:
+			print("[smoke] SEARCH 2304 — quick-search live")
+		2306:
+			print("[smoke] SEARCH 2306 cancel result=", payload.get_u8())
+		23004:
+			print("[smoke] SEARCH 23004 evo accepted=",
+				payload.get_i16(), ",", payload.get_u8())
+		23002:
+			print("[smoke] SEARCH 23002 evo cancel=", payload.get_i8())
 
 
 func _move_and_shoot() -> void:
@@ -540,6 +553,13 @@ func _move_and_shoot() -> void:
 				_main._on_element_alt()
 				print("[smoke] tournament search sent — expecting 28612")
 				await create_timer(1.0).timeout
+				# Bracket — re-selecting the registered tournament asks
+				# 28649; 28650 fills the pane's second list.
+				tlist.item_selected.emit(0)
+				await create_timer(0.8).timeout
+				var l2: ItemList = _main.get_node(
+					"UI/ElementDlg/VBox/Scroll2/List2")
+				print("[smoke] bracket rows=%d" % l2.item_count)
 		# Fourth hop: zaap → card 208 → world 26 → firework launcher → 22095.
 		var z4 := _elem_in_view(4)
 		if z4 >= 0:
@@ -581,6 +601,16 @@ func _move_and_shoot() -> void:
 		_main._on_ladder_more()      # demons page 2 (start 12 → demons 13-24)
 		await create_timer(0.6).timeout
 	_main.get_node("UI/LadderDlg").hide()
+	# Search lanes: quick-search (2301 → 2304 → 2303 → 2306) and the
+	# evolution queue (23003 → 23004 → 23001 → 23002), each ack+cancel.
+	_main._on_quick_search()
+	await create_timer(0.8).timeout
+	_main._on_cancel_search()
+	await create_timer(0.8).timeout
+	_main._on_evo_search()
+	await create_timer(0.8).timeout
+	_main._on_cancel_search()
+	await create_timer(0.8).timeout
 	# The dummy/headless renderer has no viewport texture — skip the capture.
 	if DisplayServer.get_name() != "headless":
 		var tex := root.get_texture()
