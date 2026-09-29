@@ -36,4 +36,5 @@ static func index_fighters(d: Dictionary) -> void:
 		coach_ids[c.id] = c
 	for t in d.get("teams", []):
 		for f in t.get("fighters", []):
+			f["team"] = t.id
 			fighters[f.id] = f

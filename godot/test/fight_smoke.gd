@@ -83,6 +83,7 @@ func _show_fight() -> void:
 	# Scripted policy: on our turns try a short move (exercises the real
 	# 4503 path + 4524 walk animation), then end the turn.
 	fight_scene.turn_began.connect(_on_fight_turn)
+	fight_scene.placement_began.connect(_on_placement)
 	root.add_child(fight_scene)
 	# Capture mid-combat: first turn means actors placed + phases done.
 	_combat_seen = false
@@ -98,6 +99,29 @@ func _show_fight() -> void:
 			% [img.get_width(), img.get_height()])
 	await create_timer(14.0).timeout # surrender fires inside; loop or finish
 	_finish(0, "fight rendered")
+
+
+## placement_began policy: hop the selected fighter to another of our own
+## start cells (exercises 8021 -> 8022), then confirm ready (8023).
+func _on_placement() -> void:
+	if finished or fight_scene == null:
+		return
+	await create_timer(0.4).timeout
+	if finished or fight_scene == null:
+		return
+	var t: int = fight_scene._my_team()
+	var cur: Vector3i = fight_scene._actor_cells.get(
+		fight_scene._selected, Vector3i.ZERO)
+	for c in fight_scene._fmd.get("team%d" % t, []):
+		var cell := Vector2i(int(c.x), int(c.y))
+		if cur.x == cell.x and cur.y == cell.y:
+			continue
+		if fight_scene.request_place_at(cell):
+			print("[smoke] scripted placement -> %s" % cell)
+			break
+	create_timer(0.6).timeout.connect(func():
+		if fight_scene != null and not finished:
+			fight_scene.confirm_placement())
 
 
 ## turn_began policy for the harness: one short move request, then pass.

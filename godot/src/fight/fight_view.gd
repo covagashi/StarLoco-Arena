@@ -55,7 +55,7 @@ var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 
 func _ready() -> void:
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
-	_end_turn.pressed.connect(request_end_turn)
+	_end_turn.pressed.connect(_on_action_button)
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
 	# When we arrived here from a live fight the world id is the arena id.
 	if State.fight_world >= 0:
@@ -152,10 +152,15 @@ var _walk := {}          # actor id -> Array[Vector3i] remaining walk cells
 var _actor_dir := {}     # actor id -> last server dir (facing during walk)
 var _hp_lost := {}       # fighter id -> accumulated damage (8000 + 8120)
 var _dead := {}          # fighter id -> true once 4520 arrives
+var _placement := false  # 8020 → 8028 window: 8021 moves are legal
+var _selected := -1      # our fighter selected for placement
 
 ## Emitted on 8104 — a harness (fight_smoke's scripted policy) or the human
 ## drives from here: request_move_to() then request_end_turn().
 signal turn_began(fid: int, ours: bool)
+## Emitted on 8020 — placement window is open until confirm_placement()
+## sends 8023. The human version finishes by pressing the Ready button.
+signal placement_began
 
 ## White crosshairs at each actor's cell center (placement debugging).
 var debug_overlay := false
@@ -196,12 +201,27 @@ func _on_net_message(opcode: int, payload: WireReader) -> void:
 				State.net.send_message(OP_READY_PLACEMENT, PackedByteArray(), 3)
 			info.text += " | presentation"
 		OP_START_PLACEMENT:
-			# auto-accept the seeded start cells — real placement UI later
-			if State.net != null:
-				State.net.send_message(OP_READY_OBSERVATION, PackedByteArray(), 3)
-			info.text += " | placement"
+			# Placement window: our team's start cells light up; clicking one
+			# sends 8021 for the selected fighter. Ready = 8023.
+			_placement = true
+			_end_turn.text = "Ready"
+			_end_turn.disabled = false
+			for fid in State.fighters:
+				var f: Dictionary = State.fighters[fid]
+				if int(f.get("coach", -1)) == State.my_coach_id:
+					_selected = int(fid)
+					break
+			info.text += " | placement — click a spawn cell"
+			placement_began.emit()
+			queue_redraw()
+		OP_END_PLACEMENT:
+			_placement = false
+			_end_turn.text = "End turn"
+			_end_turn.disabled = true
 		OP_START_OBSERVATION:
 			# third gate: 8031 (arch 3, empty) advances to the action phase.
+			_placement = false
+			_end_turn.text = "End turn"
 			if State.net != null:
 				State.net.send_message(OP_READY_ACTION, PackedByteArray(), 3)
 			info.text += " | observation"
@@ -410,6 +430,84 @@ func request_end_turn() -> void:
 	State.net.send_message(OP_END_TURN, w.raw(), 3)
 
 
+## The top-bar action button is "Ready" during placement, "End turn" in combat.
+func _on_action_button() -> void:
+	if _placement:
+		confirm_placement()
+	else:
+		request_end_turn()
+
+
+## --- placement phase -------------------------------------------------------
+## 8021 C2S: [i64 fighterId][i32 x][i32 y][i16 z] — server validates the cell
+## is one of OUR team's start cells, walkable and unoccupied (8022 confirms).
+
+const OP_PLACE_REQ := 8021
+
+
+func confirm_placement() -> void:
+	if not _placement:
+		return
+	_placement = false
+	_end_turn.disabled = true
+	if State.net != null:
+		State.net.send_message(OP_READY_OBSERVATION, PackedByteArray(), 3)
+
+
+## Our team's id from the fighter index (-1 when ours aren't indexed yet).
+func _my_team() -> int:
+	for fid in State.fighters:
+		var f: Dictionary = State.fighters[fid]
+		if int(f.get("coach", -1)) == State.my_coach_id:
+			return int(f.get("team", -1))
+	return -1
+
+
+func request_place_at(cell: Vector2i) -> bool:
+	if not _placement or _selected < 0 or State.net == null:
+		return false
+	var t := _my_team()
+	var cells: Array = _fmd.get("team%d" % t, [])
+	var legal := false
+	var z := 0
+	for c in cells:
+		if c.x == cell.x and c.y == cell.y:
+			legal = true
+			z = int(c.z)
+	# .fmd spawn z can be a sentinel (-1): fall back to the terrain altitude
+	var gc: Variant = _cells.get(cell)
+	if z < 0 and gc != null:
+		z = int(gc.alt)
+	if not legal:
+		return false
+	for id in _actor_cells:
+		if id == _selected:
+			continue
+		var p: Vector3i = _actor_cells[id]
+		if p.x == cell.x and p.y == cell.y:
+			return false   # occupied
+	var w := WireWriter.new()
+	w.put_i64(_selected)
+	w.put_i32(cell.x)
+	w.put_i32(cell.y)
+	w.put_i16(z)
+	State.net.send_message(OP_PLACE_REQ, w.raw(), 3)
+	print("[fight] place req fid=%d -> (%d,%d,%d)" % [_selected, cell.x, cell.y, z])
+	return true
+
+
+## Our (living) fighter standing on `cell`, for click-to-select in placement.
+func _own_fighter_at(cell: Vector2i) -> int:
+	for id in _actor_cells:
+		var p: Vector3i = _actor_cells[id]
+		if p.x != cell.x or p.y != cell.y:
+			continue
+		var f: Dictionary = State.fighters.get(id, {})
+		if int(f.get("coach", -1)) == State.my_coach_id and not _dead.get(id, false):
+			return int(id)
+	return -1
+
+
 ## --- interactive movement --------------------------------------------------
 ## 4503 C2S: [i64 fighterId] + step cells {i32 x, i32 y, i16 z} — the retail
 ## client sends the steps EXCLUDING the origin (server comment, verified).
@@ -522,7 +620,17 @@ func _find_path(from: Vector2i, to: Vector2i, ignore_fid: int) -> Array:
 
 func _try_move() -> void:
 	var cell: Variant = _cell_at(cam.get_global_mouse_position())
-	if cell != null:
+	if cell == null:
+		return
+	if _placement:
+		# click own fighter -> select; click a free spawn cell -> 8021
+		var who := _own_fighter_at(cell)
+		if who >= 0:
+			_selected = who
+			queue_redraw()
+		else:
+			request_place_at(cell)
+	else:
 		request_move_to(cell)
 
 
@@ -582,7 +690,17 @@ func _draw() -> void:
 		if c.x <= -2047:
 			continue
 		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.85, 0.2, 0.5))
-	if _is_my_turn() and _cells.has(_hover):
+	if _placement:
+		# our start cells glow; selected fighter gets a ring
+		var t := _my_team()
+		for c in _fmd.get("team%d" % t, []):
+			draw_colored_polygon(_cell_poly(c.x, c.y, c.z),
+				Color(0.4, 0.9, 1.0, 0.55))
+		if _selected >= 0 and _actor_cells.has(_selected):
+			var p: Vector3i = _actor_cells[_selected]
+			draw_arc(_iso(p.x + 0.5, p.y + 0.5, p.z), 14.0, 0, TAU, 24,
+				Color(1, 1, 1), 2.0)
+	elif _is_my_turn() and _cells.has(_hover):
 		var hc: Dictionary = _cells[_hover]
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
 		draw_polyline(poly + PackedVector2Array([poly[0]]),
@@ -617,7 +735,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion:
 		if _dragging:
 			cam.position -= event.relative / cam.zoom
-		elif _is_my_turn():
+		elif _is_my_turn() or _placement:
 			var cell: Variant = _cell_at(get_global_mouse_position())
 			var h: Vector2i = cell if cell != null else Vector2i(-9999, -9999)
 			if h != _hover:
