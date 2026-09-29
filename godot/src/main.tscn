@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://starena_main"]
+[gd_scene load_steps=5 format=3 uid="uid://starena_main"]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1"]
 [ext_resource type="Script" path="res://src/world/world_view.gd" id="2"]
 [ext_resource type="PackedScene" uid="uid://starena_chatbox" path="res://src/ui/chat_box.tscn" id="3"]
+[ext_resource type="Script" path="res://src/ui/kanodo_board.gd" id="4"]
 
 [node name="Main" type="Control"]
 anchors_preset = 15
@@ -109,6 +110,10 @@ disabled = true
 
 [node name="LoadoutBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
 text = "Loadout"
+disabled = true
+
+[node name="KanodoBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
+text = "Kanodo"
 disabled = true
 
 [node name="TeamTitle" type="Label" parent="UI/VBox"]
@@ -465,4 +470,48 @@ text = ""
 visible = false
 
 [node name="CloseBtn" type="Button" parent="UI/ElementDlg/VBox/Btns"]
+text = "Close"
+
+[node name="KanodoDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -260.0
+offset_right = 320.0
+offset_bottom = 260.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/KanodoDlg"]
+
+[node name="Title" type="Label" parent="UI/KanodoDlg/VBox"]
+horizontal_alignment = 1
+text = "Kanodo"
+
+[node name="XP" type="Label" parent="UI/KanodoDlg/VBox"]
+horizontal_alignment = 1
+text = ""
+
+[node name="Scroll" type="ScrollContainer" parent="UI/KanodoDlg/VBox"]
+size_flags_vertical = 3
+
+[node name="Board" type="Control" parent="UI/KanodoDlg/VBox/Scroll"]
+custom_minimum_size = Vector2(1536, 1536)
+script = ExtResource("4")
+
+[node name="Hint" type="Label" parent="UI/KanodoDlg/VBox"]
+autowrap_mode = 2
+text = "Click a lit sphere."
+
+[node name="Btns" type="HBoxContainer" parent="UI/KanodoDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="BuyBtn" type="Button" parent="UI/KanodoDlg/VBox/Btns"]
+text = "Buy"
+disabled = true
+
+[node name="CloseBtn" type="Button" parent="UI/KanodoDlg/VBox/Btns"]
 text = "Close"

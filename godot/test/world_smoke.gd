@@ -259,6 +259,27 @@ func _move_and_shoot() -> void:
 	_main._on_save_loadout()
 	print("[smoke] loadout sent — expecting 6010")
 	await create_timer(1.5).timeout
+	# kanodo: fighter 1 is the seeded evolution fighter (5000 xp, board 20
+	# root (29,4)). Its only lit frontier node is 14739 (bonus, 2 xp) —
+	# buy through the real pick path and verify in SQLite afterwards.
+	for i in roster_list.item_count:
+		if int(roster_list.get_item_metadata(i)) == 1:
+			roster_list.select(i)
+			break
+	_main._open_kanodo()
+	if _main._kanodo_fid > 0:
+		var n = _main.Kanodo.nodes.get(14739, {})
+		if not n.is_empty() and _main.get_node(
+				"UI/KanodoDlg/VBox/Scroll/Board")._lit.has(14739):
+			_main._on_sphere_pick(n)
+			_main._on_sphere_buy()
+			print("[smoke] kanodo buy sent — 23009 for sphere 14739 "
+				+ "(silent; check fighter_spheres in DB)")
+		else:
+			print("[smoke] kanodo: sphere 14739 not lit (already bought?)")
+		_main.get_node("UI/KanodoDlg").visible = false
+	else:
+		print("[smoke] kanodo skipped — no evolution fighter selected")
 	# team preset: save the whole roster as "Escuadra" → 6021 → 6030 re-push
 	_main._open_save_team()
 	_main.get_node("UI/SaveTeamDlg/VBox/Name").text = "Escuadra"

@@ -23,6 +23,7 @@ const State := preload("res://src/state.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const Elements := preload("res://src/gamedata/elements.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
+const Kanodo := preload("res://src/gamedata/kanodo.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
@@ -128,6 +129,7 @@ const OP_EX_ERROR := 5113                # S2C [u8 code][i64 ex]
 const OP_EX_END := 5114                  # S2C [u8 reason][i64 ex]
 const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
 const ELEM_EXCHANGE := 100               # pseudo kind: ElementDlg in trade mode
+const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 card]
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
@@ -192,8 +194,14 @@ func _ready() -> void:
 	$UI/VBox/RosterBox/Roster.item_selected.connect(
 		func(_i):
 			$UI/VBox/RosterBox/RosterBtns/DelBtn.disabled = false
-			$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.disabled = false)
+			$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.disabled = false
+			$UI/VBox/RosterBox/RosterBtns/KanodoBtn.disabled = false)
 	$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.pressed.connect(_open_loadout)
+	$UI/VBox/RosterBox/RosterBtns/KanodoBtn.pressed.connect(_open_kanodo)
+	$UI/KanodoDlg/VBox/Btns/CloseBtn.pressed.connect(
+		func(): $UI/KanodoDlg.visible = false)
+	$UI/KanodoDlg/VBox/Btns/BuyBtn.pressed.connect(_on_sphere_buy)
+	$UI/KanodoDlg/VBox/Scroll/Board.sphere_clicked.connect(_on_sphere_pick)
 	$UI/LoadoutDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/LoadoutDlg.visible = false)
 	$UI/LoadoutDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_loadout)
@@ -1151,6 +1159,8 @@ var _registered_tids := {}    # tournament ids this coach is registered in
 var _mails := []              # decoded mail records for the open mailbox
 var _ex := {}                 # active exchange {id, my_side, other_name,
                               # staged:{0:{card:qty},1:{}}, ready:{0,1}}
+var _kanodo_fid := -1         # fighter id of the open Kanodo board
+var _kanodo_pick := {}        # sphere node selected on the board
 
 
 func _use_element(id: int) -> void:
@@ -1405,6 +1415,123 @@ func _fill_mails() -> void:
 	alt.disabled = true
 	if not list.item_selected.is_connected(_on_mail_sel):
 		list.item_selected.connect(_on_mail_sel)
+
+
+## --- Kanodo (sphere board) --------------------------------------------------
+## Roster → Kanodo opens the board of the selected EVOLUTION fighter (type 2 —
+## classic fighters carry no sphere tail on the wire). Buying is optimistic
+## like retail: 23009 is fire-and-forget; the server validates reachability,
+## XP and barrier cards and persists silently. We mirror the same rules for
+## what can be clicked (lit frontier = server's Reachable flood).
+const KIND_LABEL := {
+	"spell": "new spell", "bonus": "bonus", "malus": "malus (a sacrifice)",
+	"summon": "summon mastery", "barrier": "barrier — needs a card",
+	"teleport": "portal", "item": "equipment set", "deadend": "dead end",
+	"empty": "path",
+}
+
+func _open_kanodo() -> void:
+	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
+	var sel := roster_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var f: Variant = _fighter_by_id(
+		roster_list.get_item_metadata(sel[0]))
+	if f == null or int(f.get("type", 1)) != 2:
+		_log_line("[i]Kanodo is for evolution fighters only[/i]")
+		return
+	_kanodo_fid = int(f.id)
+	_kanodo_pick = {}
+	$UI/KanodoDlg/VBox/Title.text = "Kanodo — %s" % f.get("name", "?")
+	$UI/KanodoDlg/VBox/Hint.text = "Click a lit sphere."
+	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = true
+	_refresh_kanodo()
+	$UI/KanodoDlg.visible = true
+
+
+func _fighter_by_id(fid: int) -> Variant:
+	for fr in State.roster:
+		if int(fr.get("id", -1)) == fid:
+			return fr
+	return null
+
+
+func _refresh_kanodo() -> void:
+	var f: Variant = _fighter_by_id(_kanodo_fid)
+	if f == null:
+		$UI/KanodoDlg.visible = false
+		return
+	var board := int(f.get("board", 0))
+	if board == 0:
+		board = Kanodo.board_id_for_breed(int(f.get("breed", 0)))
+	var cursor := Vector2i(int(f.get("sphere_x", 0)),
+		int(f.get("sphere_y", 0)))
+	if cursor == Vector2i.ZERO:
+		var root: Array = Kanodo.boards.get(board, {}).get("root", [0, 0])
+		cursor = Vector2i(int(root[0]), int(root[1]))
+	$UI/KanodoDlg/VBox/XP.text = "xp %d / %d total" % [
+		int(f.get("xp", 0)), int(f.get("total_xp", 0))]
+	$UI/KanodoDlg/VBox/Scroll/Board.set_state(board,
+		f.get("spheres", []), cursor)
+
+
+func _on_sphere_pick(n: Dictionary) -> void:
+	_kanodo_pick = n
+	var kind := String(n.get("kind", "empty"))
+	var lines := ["sphere %d  (%d,%d) — %s" % [
+		int(n.id), int(n.x), int(n.y), KIND_LABEL.get(kind, kind)]]
+	if int(n.get("spell", 0)) != 0:
+		lines.append("→ %s" % Spells.name_of(int(n.spell)))
+	if int(n.get("pool", 0)) != 0:
+		lines.append("→ equipment set %d" % int(n.pool))
+	if n.get("barrier", []).size() > 0:
+		var names := []
+		for c in n.barrier:
+			names.append(Cards.name_of(int(c)))
+		lines.append("needs one of: %s" % ", ".join(names))
+	if n.get("fx", []).size() > 0:
+		lines.append("effect %s" % str(n.fx))
+	lines.append("cost %d xp" % int(n.get("xp", 0)))
+	$UI/KanodoDlg/VBox/Hint.text = "\n".join(lines)
+	var board := $UI/KanodoDlg/VBox/Scroll/Board
+	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = \
+		not board._lit.has(int(n.id)) or not Kanodo.has_payload(n)
+
+
+func _on_sphere_buy() -> void:
+	var f: Variant = _fighter_by_id(_kanodo_fid)
+	if f == null or _kanodo_pick.is_empty():
+		return
+	var card := 0
+	if String(_kanodo_pick.get("kind", "")) == "barrier":
+		for c in _kanodo_pick.get("barrier", []):
+			if int(State.inventory.get(int(c), 0)) > 0:
+				card = int(c)
+				break
+		if card == 0:
+			$UI/KanodoDlg/VBox/Hint.text += \
+				"\n[color=red]no accepted card in inventory[/color]"
+			return
+	var cost := int(_kanodo_pick.get("xp", 0))
+	if f.spheres.has(int(_kanodo_pick.id)):
+		cost /= 10   # re-purchase discount (afb_1 case 16926)
+	if int(f.get("xp", 0)) < cost:
+		$UI/KanodoDlg/VBox/Hint.text += "\n[color=red]not enough xp[/color]"
+		return
+	var w := WireWriter.new()
+	w.put_i64(_kanodo_fid)
+	w.put_i32(int(_kanodo_pick.id))
+	w.put_i32(card)
+	Session.send(OP_SPHERE_BUY, w.raw(), 3)
+	# optimistic apply (retail awu_0): cursor walks onto the node
+	f.sphere_x = int(_kanodo_pick.x)
+	f.sphere_y = int(_kanodo_pick.y)
+	if not f.spheres.has(int(_kanodo_pick.id)):
+		f.spheres.append(int(_kanodo_pick.id))
+	f.xp = int(f.xp) - cost
+	_log_line("Kanodo: sphere %d bought (-%d xp)" % [
+		int(_kanodo_pick.id), cost])
+	_refresh_kanodo()
 
 
 func _on_mail_sel(i: int) -> void:
