@@ -32,7 +32,12 @@ text = "End turn"
 [node name="BackBtn" type="Button" parent="UI/TopBar"]
 text = "Back"
 
-[node name="Info" type="Label" parent="UI"]
+[node name="SpellBar" type="HBoxContainer" parent="UI"]
 offset_left = 10.0
 offset_top = 44.0
+theme_override_constants/separation = 4
+
+[node name="Info" type="Label" parent="UI"]
+offset_left = 10.0
+offset_top = 78.0
 text = "iso grid — drag to pan, wheel to zoom"

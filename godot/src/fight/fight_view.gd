@@ -151,10 +151,23 @@ const OP_RUNNING_EFFECT := 8120  # header + BinarSerial blob (see codec)
 const OP_END_FIGHT := 8300     # S2C result screen — ack with 26321
 const OP_END_FIGHT_DONE := 26321  # C2S empty — server returns us to overworld
 const OP_ENTER_INSTANCE := 4600
+const OP_SPELL_CAST_REQ := 8109  # C2S [i64 fid][i32 spell][i32 x][i32 y][i16 z]
+const OP_SPELL_CAST := 8110      # S2C header+[i64 caster][i32 spell][i8 miss]
+const OP_CLOSE_COMBAT_REQ := 8111  # C2S [i64 fid][i32 x][i32 y][i16 z] (weapon)
+const OP_CLOSE_COMBAT := 8112    # S2C header+[i64 attacker][i8 miss]
+
+## Breed base stats (server breed.go): [HP, AP, MP] — AP/MP refill each turn.
+const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
+	4: [70, 6, 3], 5: [60, 6, 3], 6: [70, 6, 3], 7: [60, 6, 3],
+	8: [75, 6, 3], 9: [65, 6, 3], 10: [65, 6, 3], 11: [80, 6, 3],
+	12: [75, 6, 3]}
 
 var _fight_over := false
 var _actor_cells := {}   # id -> Vector3i
 var _current_fid := -1   # fighter whose turn is running (8104 → 8106)
+var _spell_mode := -1    # >=0: next click targets this spell id (8109)
+var _ap_left := 0        # current fighter AP/MP, debited by 8120 fx 91/92
+var _mp_left := 0
 var _walk := {}          # actor id -> Array[Vector3i] remaining walk cells
 var _actor_dir := {}     # actor id -> last server dir (facing during walk)
 var _hp_lost := {}       # fighter id -> accumulated damage (8000 + 8120)
@@ -244,6 +257,23 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TURN_END:
 			_current_fid = -1
 			_end_turn.disabled = true
+			_clear_spell_bar()
+		OP_SPELL_CAST:
+			# [i32 uid][i32 -1][i64 caster][i32 spell][i8 miss](+crit+target)
+			payload.get_i32()
+			payload.get_i32()
+			var caster := int(payload.get_i64())
+			var sid := int(payload.get_i32())
+			var miss := int(payload.get_i8())
+			_float_text(caster, "miss!" if miss else "spell %d" % sid,
+				Color(0.6, 0.8, 1.0) if not miss else Color(1, 1, 0.4))
+		OP_CLOSE_COMBAT:
+			payload.get_i32()
+			payload.get_i32()
+			var atk := int(payload.get_i64())
+			var wmiss := int(payload.get_i8()) if payload.remaining() > 0 else 0
+			_float_text(atk, "miss!" if wmiss else "hit!",
+				Color(1, 1, 0.4) if wmiss else Color(1.0, 0.7, 0.3))
 		OP_FIGHTER_MOVE:
 			# [i32 uid][i32 -1][i64 fighterId] + path — server prepends the
 			# origin cell (applyFighterMove), so path[0] is where the fighter
@@ -345,6 +375,12 @@ func _on_running_effect(d: Dictionary) -> void:
 		_hp_lost[target] = int(_hp_lost.get(target, 0)) - value
 		_refresh_nameplate(target)
 		_float_text(target, "+%d" % value, Color(0.45, 1.0, 0.45))
+	elif int(d.effect_id) == 91 and target == _current_fid:
+		_ap_left -= value
+		_refresh_apmp()
+	elif int(d.effect_id) == 92 and target == _current_fid:
+		_mp_left -= value
+		_refresh_apmp()
 
 
 ## 4520 — grey out the corpse; its cell stays occupied for pathing.
@@ -416,17 +452,97 @@ func _float_text(fid: int, text: String, color: Color) -> void:
 	tw.chain().tween_callback(lbl.queue_free)
 
 
-## 8104 — a fighter's turn started. Ours: click a cell to move (4503),
-## End turn sends 8105. The turn_began signal lets a harness drive instead.
+## 8104 — a fighter's turn started. Ours: spell bar (8109 casts / 8111
+## weapon), click a cell to move (4503), End turn sends 8105. The
+## turn_began signal lets a harness drive instead.
 func _on_turn_begin(fid: int) -> void:
 	_current_fid = fid
+	_spell_mode = -1
 	var f: Dictionary = State.fighters.get(fid, {})
 	var ours := int(f.get("coach", -1)) == State.my_coach_id
 	_end_turn.disabled = not ours
+	if ours:
+		var stats: Array = BREED_STATS.get(int(f.get("breed", 1)), [60, 6, 3])
+		_ap_left = int(stats[1])
+		_mp_left = int(stats[2])
+		_build_spell_bar(f)
+	else:
+		_clear_spell_bar()
 	info.text = "map %s — turn: %s%s" % [$UI/TopBar/MapId.text,
 		f.get("name", str(fid)),
 		" (yours — click a cell to move)" if ours else ""]
 	turn_began.emit(fid, ours)
+
+
+## --- spell casting ---------------------------------------------------------
+## 8109 C2S [i64 fid][i32 spellId][i32 x][i32 y][i16 z] arch 3 — the server
+## validates AP, ownership, range, LoS; silence = refused. 8111 is the weapon
+## attack (same shape minus the spell id).
+
+func _build_spell_bar(f: Dictionary) -> void:
+	_clear_spell_bar()
+	var bar: HBoxContainer = $UI/SpellBar
+	for sid in f.get("spells", []):
+		var b := Button.new()
+		b.text = "S%d" % int(sid)
+		b.tooltip_text = "cast spell %d — click a target cell" % int(sid)
+		b.pressed.connect(_on_spell_button.bind(int(sid)))
+		bar.add_child(b)
+	var wb := Button.new()
+	wb.text = "Wpn"
+	wb.tooltip_text = "weapon attack — click an adjacent cell"
+	wb.pressed.connect(_on_spell_button.bind(-2))
+	bar.add_child(wb)
+	var res := Label.new()
+	res.name = "APMP"
+	res.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	bar.add_child(res)
+	_refresh_apmp()
+
+
+func _clear_spell_bar() -> void:
+	for c in $UI/SpellBar.get_children():
+		c.queue_free()
+
+
+func _refresh_apmp() -> void:
+	var res := $UI/SpellBar.get_node_or_null("APMP") as Label
+	if res != null:
+		res.text = "  AP %d  MP %d" % [_ap_left, _mp_left]
+
+
+func _on_spell_button(sid: int) -> void:
+	_spell_mode = -2 if _spell_mode == sid else sid
+	info.text = "map %s — %s: click a target" % [$UI/TopBar/MapId.text,
+		"weapon" if sid == -2 else "spell %d" % sid]
+	queue_redraw()
+
+
+func _is_my_turn() -> bool:
+	if _current_fid < 0 or _dead.get(_current_fid, false):
+		return false
+	var f: Dictionary = State.fighters.get(_current_fid, {})
+	return int(f.get("coach", -1)) == State.my_coach_id
+
+
+## Send 8109 (spell) or sid=-2 → 8111 (weapon) at `cell`.
+func request_cast_at(sid: int, cell: Vector2i) -> bool:
+	if not _is_my_turn() or State.net == null or sid == -1:
+		return false
+	var c: Dictionary = _cells.get(cell, {})
+	var w := WireWriter.new()
+	w.put_i64(_current_fid)
+	if sid >= 0:
+		w.put_i32(sid)
+	w.put_i32(cell.x)
+	w.put_i32(cell.y)
+	w.put_i16(int(c.get("alt", 0)))
+	State.net.send_message(
+		OP_SPELL_CAST_REQ if sid >= 0 else OP_CLOSE_COMBAT_REQ, w.raw(), 3)
+	print("[fight] %s fid=%d -> (%d,%d)" % [
+		"cast %d" % sid if sid >= 0 else "weapon", _current_fid, cell.x, cell.y])
+	_spell_mode = -1
+	return true
 
 
 func request_end_turn() -> void:
@@ -638,6 +754,8 @@ func _try_move() -> void:
 			queue_redraw()
 		else:
 			request_place_at(cell)
+	elif _spell_mode != -1:
+		request_cast_at(_spell_mode, cell)
 	else:
 		request_move_to(cell)
 
@@ -772,10 +890,3 @@ func _unhandled_input(event: InputEvent) -> void:
 			if h != _hover:
 				_hover = h
 				queue_redraw()
-
-
-func _is_my_turn() -> bool:
-	if _current_fid < 0 or _dead.get(_current_fid, false):
-		return false
-	var f: Dictionary = State.fighters.get(_current_fid, {})
-	return int(f.get("coach", -1)) == State.my_coach_id
