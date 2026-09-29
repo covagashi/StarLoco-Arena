@@ -141,6 +141,8 @@ markup, and Trade carries the client's own 30 s cooldown. See BUGS.md B-104.
 | 3144 | FriendList | S2C | ✓ | **A*** (nil-join desync fixed) | ✓ | — |
 | 3146 | IgnoreList | S2C | ✓ | **A*** (nil-join desync fixed) | ✓ | — |
 | 3204 | UserNotFound | S2C | ✓ | A | — | ✓ (whisper) |
+| 15506 | MailCheckName | C2S | ✓ | A (u8 utf8 name) | — | ✓ (godot /mail gate) |
+| 15507 | MailNameResult | S2C | ✓ | A (i64 coachId) | — | ✓ |
 
 ## Inventory & equipment
 
@@ -335,6 +337,8 @@ result dialog.
 | 8109 | SpellCastRequest | C2S | ✓ | A | — | ✓ |
 | 8110 | SpellCast | S2C | ✓ | A | — | ✓ |
 | 8111/8112 | CloseCombatReq/CloseCombat | C2S+S2C | ✓ | A | — | ✓ (godot fallback path) |
+| 4521 | FighterDirChangeReq | C2S | ✓ | A (i64 fid, u8 dir, arch 3) | — | ✓ (godot fight_smoke) |
+| 4522 | FighterDirectionChange | S2C | ✓ | A | — | ✓ |
 | 8120 | RunningEffect (AP/MP/HP) | S2C | ✓ | A | ✓ | ✓ (blob parts 0-4; 3=displacement, 4=source spell) |
 | 4520 | FighterDies | S2C | ✓ | A | — | ✓ (forfeit) |
 | 8200 | ActionSequenceExecute | S2C | ✓ | A | — | ✓ |

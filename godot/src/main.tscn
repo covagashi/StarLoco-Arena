@@ -106,6 +106,11 @@ disabled = true
 text = "Clan"
 disabled = true
 
+[node name="GearBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Gear"
+disabled = true
+tooltip_text = "coach equipment (5201) — set bonuses"
+
 [node name="RosterTitle" type="Label" parent="UI/VBox"]
 text = "Fighters:"
 mouse_filter = 2
@@ -248,6 +253,47 @@ alignment = 1
 text = "Save"
 
 [node name="CancelBtn" type="Button" parent="UI/LoadoutDlg/VBox/Btns"]
+text = "Cancel"
+
+[node name="EquipDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -190.0
+offset_right = 180.0
+offset_bottom = 190.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/EquipDlg"]
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="UI/EquipDlg/VBox"]
+text = "Coach equipment"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="Hint" type="Label" parent="UI/EquipDlg/VBox"]
+text = "Equipped sets grant bonuses in fights. Click a card to wear it; click a slot to clear."
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 2
+
+[node name="Slots" type="ItemList" parent="UI/EquipDlg/VBox"]
+custom_minimum_size = Vector2(0, 150)
+
+[node name="Cards" type="ItemList" parent="UI/EquipDlg/VBox"]
+custom_minimum_size = Vector2(0, 110)
+
+[node name="Btns" type="HBoxContainer" parent="UI/EquipDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="WearBtn" type="Button" parent="UI/EquipDlg/VBox/Btns"]
+text = "Wear"
+
+[node name="CancelBtn" type="Button" parent="UI/EquipDlg/VBox/Btns"]
 text = "Cancel"
 
 [node name="ChallengeAskDlg" type="ConfirmationDialog" parent="UI"]

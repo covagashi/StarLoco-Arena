@@ -20,6 +20,7 @@ var finished := false
 var fight_scene: Node2D = null
 var _combat_seen := false
 var _card_landed := false
+var _faced := false
 
 
 func _init() -> void:
@@ -175,6 +176,11 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 					break
 			if target.x != -9999 and fight_scene.request_card_at(cid, target):
 				print("[smoke] scripted card %d -> %s" % [cid, target])
+	# facing (4521) — free action, once per fight
+	if not _faced:
+		_faced = true
+		fight_scene._on_face_pressed()
+		print("[smoke] face-change sent — expecting 4522")
 	var spells: Array = f.get("spells", [])
 	# prefer the longest-range spell we can afford — melee spells whiff silently
 	var sid := -2
@@ -293,6 +299,8 @@ func _on_message(opcode: int, payload) -> void:
 			_try_surrender(0)
 		8300:
 			print("[smoke] END FIGHT (8300)")
+		4522:
+			print("[smoke]   4522 facing hex=%s" % payload.hex_encode())
 		8108:
 			_card_landed = true
 			print("[smoke]   8108 card ability raw=%dB hex=%s" % [

@@ -97,6 +97,7 @@ const OP_ELEMENT_DESPAWN := 206          # [i16 n]{i64 id}
 const OP_ELEMENT_ACTION := 201           # C2S [i64 id][i16 actionOrdinal]
 const OP_WALLET := 4001                  # [u8 n]{u8 ctype, i32 amount}
 const OP_INVENTORY := 5200               # 4 sections — codec_overrides
+const OP_EQUIP_REQ := 5201               # C2S 14×i32 coach equip layout, arch 3
 const OP_SHOP_CATALOG := 5401            # [u8 mode][i32 shopId]{i32, u16}…
 const OP_SHOP_RESULT := 5403             # [u8 result][u8 n]{u8, i32}
 const OP_SHOP_BUY := 5450                # C2S [i32 shopId][i16 n]{i32 cardId}
@@ -256,6 +257,12 @@ func _ready() -> void:
 		func(): $UI/GuildDlg.hide())
 	$UI/GuildAskDlg.confirmed.connect(_answer_guild_invite.bind(true))
 	$UI/GuildAskDlg.canceled.connect(_answer_guild_invite.bind(false))
+	$UI/VBox/AuthRow/GearBtn.pressed.connect(_open_equip)
+	$UI/EquipDlg/VBox/Btns/WearBtn.pressed.connect(_on_equip_wear)
+	$UI/EquipDlg/VBox/Btns/CancelBtn.pressed.connect(
+		func(): $UI/EquipDlg.hide())
+	$UI/EquipDlg/VBox/Slots.item_selected.connect(_on_equip_slot_sel)
+	$UI/EquipDlg/VBox/Cards.item_selected.connect(_on_equip_card_sel)
 	$UI/DuoDlg/VBox/Btns/CreateBtn.pressed.connect(_on_duo_create)
 	$UI/DuoDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/DuoDlg.visible = false)
@@ -415,6 +422,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/DuoBtn.disabled = false
 			$UI/VBox/AuthRow/RanksBtn.disabled = false
 			$UI/VBox/AuthRow/ClanBtn.disabled = false
+			$UI/VBox/AuthRow/GearBtn.disabled = false
 			$UI/VBox/AuthRow/SearchBtn.disabled = false
 			$UI/VBox/AuthRow/EvoBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
@@ -1953,6 +1961,72 @@ func _on_save_loadout() -> void:
 		w.put_i32(int(c.id))
 	Session.send(OP_FIGHTER_LOADOUT, w.raw(), 2)
 	_log_line("loadout sent — %d spells" % picked.size())
+
+
+## --- Coach equipment (5201) -------------------------------------------------
+## 14 client slots; only the 12 wearable types map to one (server
+## coachcard_slots.go — type -> 0-based position). The layout echoes nowhere:
+## the client owns the state and re-sends all 14 slots on Wear.
+const COACH_SLOT_FOR_TYPE := {2: 5, 3: 2, 4: 1, 5: 4, 6: 10, 7: 3,
+	8: 8, 9: 6, 10: 11, 11: 0, 12: 7, 13: 9}
+const COACH_SLOT_NAMES := {0: "Chapeau", 1: "Tatouages", 2: "Coiffure",
+	3: "Epaulette", 4: "Brassard", 5: "Culotte", 6: "Pantalon",
+	7: "Baton", 8: "Cape", 9: "Familier", 10: "Bottes", 11: "Chemise"}
+
+var _equip_slots: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+
+func _open_equip() -> void:
+	$UI/EquipDlg.visible = true
+	_fill_equip()
+
+
+func _fill_equip() -> void:
+	var slots: ItemList = $UI/EquipDlg/VBox/Slots
+	var cards: ItemList = $UI/EquipDlg/VBox/Cards
+	slots.clear()
+	for i in 14:
+		var label: String = COACH_SLOT_NAMES.get(i, "slot %d" % i)
+		var cid := int(_equip_slots[i])
+		slots.add_item("%d %s — %s" % [i, label,
+			Cards.name_of(cid) if cid != 0 else "(empty)"])
+		slots.set_item_disabled(i, not COACH_SLOT_NAMES.has(i))
+	cards.clear()
+	var owned := []
+	for cid in State.inventory:
+		var t := int(Cards.meta(int(cid)).get("type", -1))
+		if COACH_SLOT_FOR_TYPE.has(t) and int(cid) not in _equip_slots:
+			owned.append(int(cid))
+	owned.sort()
+	for cid in owned:
+		var idx := cards.add_item("%s  (x%d)" % [
+			Cards.name_of(cid), int(State.inventory[cid])])
+		cards.set_item_metadata(idx, cid)
+
+
+func _on_equip_card_sel(idx: int) -> void:
+	var cards: ItemList = $UI/EquipDlg/VBox/Cards
+	var cid := int(cards.get_item_metadata(idx))
+	var slot: int = COACH_SLOT_FOR_TYPE.get(
+		int(Cards.meta(cid).get("type", -1)), -1)
+	if slot >= 0:
+		_equip_slots[slot] = cid
+		_fill_equip()
+
+
+func _on_equip_slot_sel(idx: int) -> void:
+	if _equip_slots[idx] != 0:
+		_equip_slots[idx] = 0
+		_fill_equip()
+
+
+func _on_equip_wear() -> void:
+	var w := WireWriter.new()
+	for i in 14:
+		w.put_i32(int(_equip_slots[i]))
+	Session.send(OP_EQUIP_REQ, w.raw(), 3)
+	_log_line("equipment layout sent — %d card(s) worn" %
+		(14 - _equip_slots.count(0)))
 
 
 func _send_coach_creation() -> void:

@@ -86,6 +86,8 @@ signal emote(actor_id: int, anim: String)
 signal trade(coach_name: String)
 signal watch(coach_name: String)
 
+var _pending_mails := []  # FIFO of {frame, to} — 15506 replies arrive in order
+
 
 ## Feed one S2C chat opcode. Returns true if the opcode was a chat message.
 func feed(opcode: int, payload: WireReader) -> bool:
@@ -133,6 +135,14 @@ func feed(opcode: int, payload: WireReader) -> bool:
 			var aid := int(payload.get_i64())
 			var anim := payload.get_str("u8")
 			emote.emit(aid, anim)
+		15507:  # MailNameResult — [i64 coachId], 0 = no such coach
+			var rid := int(payload.get_i64())
+			var pm: Dictionary = _pending_mails.pop_front() \
+				if not _pending_mails.is_empty() else {}
+			if rid != 0 and not pm.is_empty():
+				Session.send(539, pm.frame, 3)
+			elif not pm.is_empty():
+				_line("error", "[i]no coach named '%s'[/i]" % pm.to)
 		_:
 			return false
 	return true
@@ -212,7 +222,13 @@ func _on_submit(text: String) -> void:
 			mw.put_i32(extra.size()); mw.put_bytes(extra)
 			mw.put_i64(0); mw.put_u8(0); mw.put_u8(0); mw.put_u8(0)
 			mw.put_i32(0)
-			Session.send(539, mw.raw(), 3)
+			# Retail validates the recipient first: 15506 [u8 len][utf8 name]
+			# (arch 2) → 15507 [i64 coachId]; 0 refuses the send.
+			_pending_mails.append({"frame": mw.raw(), "to": target})
+			var ck := WireWriter.new()
+			var cnb := target.to_utf8_buffer()
+			ck.put_u8(cnb.size()); ck.put_bytes(cnb)
+			Session.send(15506, ck.raw(), 2)
 			return
 		if cmd == "watch":
 			# Spectate — resolve name → coach id, then 2260/26331.

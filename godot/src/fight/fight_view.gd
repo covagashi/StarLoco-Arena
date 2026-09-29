@@ -54,6 +54,7 @@ var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
 @onready var info: Label = $UI/Info
 @onready var _actors: Node2D = $Actors
 @onready var _end_turn: Button = $UI/TopBar/EndTurnBtn
+@onready var _face_btn: Button = $UI/TopBar/FaceBtn
 var _dragging := false
 var _press_pos := Vector2.ZERO
 var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
@@ -62,11 +63,13 @@ var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 func _ready() -> void:
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
+	_face_btn.pressed.connect(_on_face_pressed)
 	if State.spectating:
 		# Read-only viewer: no actions leave the client, but the phase acks
 		# (8011/8031) still fire — the fight actor ignores them for
 		# non-combatants either way.
 		_end_turn.disabled = true
+		_face_btn.disabled = true
 		_end_turn.text = "Spectating"
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
 	$UI/Chat.bubble.connect(chat_bubble)
@@ -178,6 +181,8 @@ const OP_CLOSE_COMBAT_REQ := 8111  # C2S [i64 fid][i32 x][i32 y][i16 z] (weapon)
 const OP_CLOSE_COMBAT := 8112    # S2C header+[i64 attacker][i8 miss]
 const OP_CARD_USE_REQ := 8107    # C2S [i64 fid][i32 card][i32 x][i32 y][i16 z]
 const OP_CARD_USE := 8108        # S2C header+[i64 user][i32 card][i8 miss]
+const OP_DIR_CHANGE_REQ := 4521  # C2S [i64 fid][u8 dir] — facing (free action)
+const OP_DIR_CHANGE := 4522      # S2C header+[i64 fid][u8 dir]
 
 ## Breed base stats (server breed.go): [HP, AP, MP] — AP/MP refill each turn.
 const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
@@ -283,6 +288,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TURN_END:
 			_current_fid = -1
 			_end_turn.disabled = true
+			_face_btn.disabled = true
 			_clear_spell_bar()
 		OP_SPELL_CAST:
 			# [i32 uid][i32 -1][i64 caster][i32 spell][i8 miss](+crit+target)
@@ -326,6 +332,14 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_face_step(fid)
 			elif path.size() == 1:
 				_move_actor(fid, path[0])
+		OP_DIR_CHANGE:
+			# [i32 uid][i32 -1][i64 fid][u8 dir] — re-face the sprite.
+			payload.get_i32()
+			payload.get_i32()
+			var rfid := int(payload.get_i64())
+			var rdir := payload.get_u8()
+			_actor_dir[rfid] = rdir
+			_reface(rfid, rdir)
 		OP_FIGHTER_DIES:
 			payload.get_i32()
 			payload.get_i32()
@@ -542,6 +556,7 @@ func _on_turn_begin(fid: int) -> void:
 	var f: Dictionary = State.fighters.get(fid, {})
 	var ours := int(f.get("coach", -1)) == State.my_coach_id
 	_end_turn.disabled = not ours
+	_face_btn.disabled = not ours
 	if ours:
 		var stats: Array = BREED_STATS.get(int(f.get("breed", 1)), [60, 6, 3])
 		_ap_left = int(stats[1])
@@ -813,6 +828,32 @@ func _face_step(fid: int) -> void:
 	spr.load_action(FIGHTER_SET % _fighter_file(
 		int(f.get("breed", 1)), int(f.get("sex", 0))),
 		"%d_AnimStatique" % DIR_MAP.get(dir, 1))
+
+
+## Re-face one actor to a server direction (4522 or 4521-driven).
+func _reface(fid: int, dir: int) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr == null or not State.fighters.has(fid):
+		return
+	_set_flip(spr, DIR_FLIP.get(dir, false))
+	var f: Dictionary = State.fighters[fid]
+	spr.load_action(FIGHTER_SET % _fighter_file(
+		int(f.get("breed", 1)), int(f.get("sex", 0))),
+		"%d_AnimStatique" % DIR_MAP.get(dir, 1))
+
+
+## Face button: cycle the acting fighter's facing one diagonal clockwise and
+## send 4521 — a free action the server broadcasts back as 4522.
+func _on_face_pressed() -> void:
+	if not _is_my_turn() or State.net == null:
+		return
+	var cur: int = _actor_dir.get(_current_fid, 1)
+	var dirs := [1, 3, 5, 7]
+	var nxt: int = dirs[(dirs.find(cur) + 1) % dirs.size()]
+	var w := WireWriter.new()
+	w.put_i64(_current_fid)
+	w.put_u8(nxt)
+	State.net.send_message(OP_DIR_CHANGE_REQ, w.raw(), 3)
 
 
 ## World pixel -> grid cell: nearest ground-cell center within a cell diag.

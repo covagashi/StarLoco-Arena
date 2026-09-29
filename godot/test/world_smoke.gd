@@ -305,6 +305,19 @@ func _move_and_shoot() -> void:
 		_main.get_node("UI/KanodoDlg").visible = false
 	else:
 		print("[smoke] kanodo skipped — no evolution fighter selected")
+	# coach equipment: open the Gear pane, wear the first equippable card at
+	# its fixed slot, send the 14-slot layout (5201) — verify pos in SQLite.
+	_main._open_equip()
+	var eq_cards: ItemList = _main.get_node("UI/EquipDlg/VBox/Cards")
+	if eq_cards.item_count > 0:
+		eq_cards.select(0)
+		_main._on_equip_card_sel(0)
+		_main._on_equip_wear()
+		print("[smoke] equipment layout sent — expecting coach_cards.pos in DB")
+	else:
+		print("[smoke] no equippable cards in inventory — skipping gear")
+	await create_timer(1.0).timeout
+	_main.get_node("UI/EquipDlg").visible = false
 	# team preset: save the whole roster as "Escuadra" → 6021 → 6030 re-push
 	_main._open_save_team()
 	_main.get_node("UI/SaveTeamDlg/VBox/Name").text = "Escuadra"
@@ -377,6 +390,10 @@ func _move_and_shoot() -> void:
 	chat._on_submit("/ignore test2")
 	chat._on_submit("/friends")
 	chat._on_submit("/ignored")
+	# mail with name-check: 15506 -> 15507 gates the 539 send
+	chat._on_submit("/mail test2 asunto|cuerpo del chequeo")
+	chat._on_submit("/mail coach_fantasma_zz asunto|cuerpo")
+	print("[smoke] /mail sent — expecting 15507 gate + mailbox refresh")
 	print("[smoke] social commands sent — expecting 3156 + 3204 + 3158")
 	await create_timer(1.0).timeout
 	chat._on_submit("/unfriend test2")
