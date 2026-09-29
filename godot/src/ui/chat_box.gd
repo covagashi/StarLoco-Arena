@@ -249,6 +249,17 @@ func _on_submit(text: String) -> void:
 			# coach back to its spawn point (retail console command).
 			Session.send(4514, PackedByteArray(), 3)
 			return
+		if cmd == "deletecoach":
+			# 27529 (bl) — delete the whole coach; retail's confirm button
+			# (jv_2) sends it then disconnects the session. Two-step: ask
+			# for /deletecoach CONFIRM to keep it deliberate.
+			if rest != "CONFIRM":
+				_line("error", "[i]destroys the coach + roster — /deletecoach CONFIRM[/i]")
+				return
+			_line("server", "[b]deleting coach…[/b]")
+			Session.send(27529, PackedByteArray(), 2)
+			Session.client.disconnect_from()
+			return
 		if cmd == "guild":
 			# Guild creation — C2S 509 [u8 type][u8 len][name], arch 3.
 			# The 504 result + 510/552/512 state pushes + 558 feed answer it.
@@ -296,10 +307,22 @@ func _on_submit(text: String) -> void:
 		op = 3199
 		arch = 2
 		label = "clan"
+	elif text.begins_with("/g "):
+		# 3151 = the named-channel pipe; "*" is the global channel the
+		# server fans out to every online coach (test channel_test.go).
+		body = text.substr(3)
+		op = 3151
+		arch = 4
+		label = "channel"
 	elif text.begins_with("/s "):
 		body = text.substr(3)
 
 	match op:
+		3151:
+			w.put_u8(1)
+			w.put_bytes("*".to_ascii_buffer())
+			w.put_u8(CP1252.encode(body).size())
+			w.put_bytes(CP1252.encode(body))
 		3153, 3159:
 			w.put_u16(CP1252.encode(body).size())
 			w.put_bytes(CP1252.encode(body))
@@ -327,6 +350,8 @@ func _on_submit(text: String) -> void:
 			bubble.emit(State.my_coach_id, body)
 		"whisper":
 			_line("whisper", "[i]to %s:[/i] %s" % [priv_target, body])
+		"channel":
+			_line("channel", "[*] %s: %s" % [me, body])
 		_:
 			_line(label, "%s: %s" % [me, body])
 

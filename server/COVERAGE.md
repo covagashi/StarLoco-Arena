@@ -42,7 +42,7 @@ Audit legend cross-refs the commit that did/verified it.
 | 22000 | AchievementUnlocked (`ade_0`) | S2C | ✓ (evaluated from types 800/801/802) | A (i16 achievementId) | ✓ | ✓ **live** |
 | 22001 | StatisticRequest (`anp_0`) | C2S | ✓ | A (empty, arch 2) | ✓ | ✓ **live** |
 | 22002 | StatisticData (`ls_0`) | S2C | ✓ (reply to 22001 ONLY) | A (i32 byteLen, then i16/i16 pairs) | ✓ | ✓ **live** |
-| 27529 | DestroyCoach (`bl`) | C2S | ✓ (delete coach + data) | A (empty, arch 2) | ✓ (DeleteCoach) | — |
+| 27529 | DestroyCoach (`bl`) | C2S | ✓ (delete coach + data) | A (empty, arch 2) | ✓ (DeleteCoach) | wired (`/deletecoach CONFIRM`) |
 
 ## Coach creation & world entry
 
@@ -81,7 +81,7 @@ BUGS.md B-108.
 | 3152 | VicinityContent | S2C | ✓ | A | — | ✓ |
 | 3155 | UserPrivateContent | C2S | ✓ | A | — | ✓ (whisper) |
 | 3154 | PrivateContent | S2C | ✓ | A | — | ✓ (whisper) |
-| 3151 | UserChannelContent | C2S | ✓ | A (acS: channel+msg) | — | ✓ |
+| 3151 | UserChannelContent | C2S | ✓ | A (acS: channel+msg) | — | ✓ (+Godot `/g`, channel `*`) |
 | 3140 | ChannelContent | S2C | ✓ | A (xb_1: channel+sender+msg) | — | ✓ |
 | 3159 | UserTradeContent (`/t`) | C2S | ✓ | A (afq_0, arch 3) | — | ✓ **live** |
 | 3168 | TradeContent | S2C | ✓ | A (ayy — byte-identical to 3152) | — | ✓ **live** |
@@ -113,11 +113,12 @@ BUGS.md B-108.
 | 3161 | UserGroupContent (`/p`) | C2S | ✓ | A (aux_, arch 3) | — | ✓ **live** |
 | 3170 | GroupContent | S2C | ✓ | A (aik_1) | — | — |
 
-**The channel pair 3151/3140 is vestigial**, not merely unscoped: the retail
-client cannot send 3151 (`ChannelContentCommand` is referenced by nothing in any
-shipped jar), and a 3140 routes to pipe 3, which `du_1` never registers - so the
-client nulls out and swallows it. It is kept for protocol preservation and is
-exercised by e2e only, which is the only way it CAN be exercised.
+**The channel pair 3151/3140 is vestigial in the RETAIL client**: it cannot
+send 3151 (`ChannelContentCommand` is referenced by nothing in any shipped
+jar), and a 3140 routes to pipe 3, which `du_1` never registers - so the
+retail client nulls out and swallows it. The Godot client surfaces it as a
+global `/g` chat on channel `*` (wire format identical to `acS`), so it is
+exercised by e2e AND by the replacement client.
 
 All four live pipes are served. **Trade** is global. **Group** resolves its
 audience from the sender's own fight rather than the client-supplied coach id -
@@ -253,7 +254,7 @@ pieces: the other sub-boards (evolution/team/etc., 27504–27552).
 | 6013 | FighterAssignTeam | C2S | ✓ | A (qp_1: [i64 f][i16 src][i16 dst][i64 am], dst=-1 removes) | ✓ | — |
 | 6021 | TeamPresetSave | C2S | ✓ | A | ✓ | ✓ |
 | 6023 | TeamPresetDelete | C2S | ✓ | **A*** (i64 not u16 fixed) | — | ✓ (regression) |
-| 6031 | TeamPresetListRequest | C2S | ✓ | A | — | — |
+| 6031 | TeamPresetListRequest | C2S | ✓ | A | — | ✓ (Godot graveyard open) |
 | 6030 | TeamPresetList | S2C | ✓ | **A*** (member guard) | ✓ | — |
 
 ## Matchmaking

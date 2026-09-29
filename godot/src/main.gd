@@ -131,6 +131,7 @@ const OP_GUILD_LEAVE := 505              # C2S [i64 gid][i64 member] arch 8 — 
 const OP_GUILD_DESTROY := 511            # C2S [i64 gid] arch 2
 const OP_GUILD_SET_RANK := 515           # C2S [i64 gid][i64 member][u16 lvl] arch 8
 const OP_GUILD_GET := 517                # C2S [i64 player] arch 2 — refresh own guild
+const OP_GUILD_MEMBERS := 519            # C2S [i64 guild] arch 2 — 512 roster re-push
 const OP_GUILD_RANK_ADD := 553           # C2S [i64 gid][i32 rights][str8 name] arch 2
 const OP_GUILD_RANK_MOD := 555           # C2S [i64 gid][i32 rights][u16 lvl x2][str8 name] arch 2
 const OP_GUILD_RANK_DEL := 557           # C2S [i64 gid][u16 lvl] arch 2
@@ -485,6 +486,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				roster_list.add_item(label)
 				roster_list.set_item_metadata(roster_list.item_count - 1, int(f.id))
 			_log_line("roster: %s" % (", ".join(names) if names else "empty"))
+			if _elem_kind == 10 and $UI/ElementDlg.visible:
+				_fill_graveyard()
 		OP_TEAM_PRESETS:
 			var d := Codec.decode(opcode, payload)
 			State.presets = d.get("presets", [])
@@ -1432,6 +1435,9 @@ func _open_guild() -> void:
 		var w := WireWriter.new()
 		w.put_i64(State.my_coach_id)
 		Session.send(OP_GUILD_GET, w.raw(), 2)
+		w = WireWriter.new()
+		w.put_i64(int(State.guild.get("guild_id", 0)))
+		Session.send(OP_GUILD_MEMBERS, w.raw(), 2)
 
 
 ## My rights mask (from the 552 membership row).
@@ -2183,8 +2189,16 @@ func _desc_fields(desc: String) -> Array:
 ## resurrection cards (type with a resurrect% action). Pick a fighter, Act =
 ## 22099 [i64 fighterId][i32 cardId] spending the first owned revive card.
 func _open_graveyard() -> void:
+	# Retail sends 6031 on graveyard AND team-panel open — the server
+	# re-pushes the roster (6006) + presets (6030) so the list is fresh.
+	Session.send(6031, PackedByteArray(), 2)
 	_element_text("Graveyard", "Dead fighters:")
+	_fill_graveyard()
+
+
+func _fill_graveyard() -> void:
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	list.clear()
 	var dead := 0
 	for f in State.roster:
 		var st := int(f.get("state", 0))

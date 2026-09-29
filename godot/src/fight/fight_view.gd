@@ -71,6 +71,11 @@ func _ready() -> void:
 		_end_turn.disabled = true
 		_face_btn.disabled = true
 		_end_turn.text = "Spectating"
+		$UI/TopBar/SurrenderBtn.disabled = true
+	else:
+		$UI/TopBar/SurrenderBtn.pressed.connect(func():
+			if State.net != null:
+				State.net.send_message(8151, PackedByteArray(), 3))
 	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
 	$UI/Chat.bubble.connect(chat_bubble)
 	$UI/Chat.emote.connect(func(id, anim):
