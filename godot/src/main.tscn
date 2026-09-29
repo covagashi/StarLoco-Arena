@@ -77,8 +77,71 @@ disabled = true
 text = "Practice fight"
 disabled = true
 
-[node name="Roster" type="Label" parent="UI/VBox"]
-text = "Fighters: —"
+[node name="RosterTitle" type="Label" parent="UI/VBox"]
+text = "Fighters:"
 mouse_filter = 2
 
+[node name="RosterBox" type="HBoxContainer" parent="UI/VBox"]
+theme_override_constants/separation = 6
+mouse_filter = 2
+
+[node name="Roster" type="ItemList" parent="UI/VBox/RosterBox"]
+custom_minimum_size = Vector2(260, 64)
+size_flags_horizontal = 3
+
+[node name="RosterBtns" type="VBoxContainer" parent="UI/VBox/RosterBox"]
+theme_override_constants/separation = 4
+
+[node name="NewBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
+text = "New fighter"
+
+[node name="DelBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
+text = "Delete"
+disabled = true
+
 [node name="Chat" parent="UI" instance=ExtResource("3")]
+
+[node name="CreateDlg" type="PanelContainer" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -130.0
+offset_top = -90.0
+offset_right = 130.0
+offset_bottom = 90.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/CreateDlg"]
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="UI/CreateDlg/VBox"]
+text = "New fighter"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="BreedLbl" type="Label" parent="UI/CreateDlg/VBox"]
+text = "Class"
+
+[node name="Breed" type="OptionButton" parent="UI/CreateDlg/VBox"]
+
+[node name="NameLbl" type="Label" parent="UI/CreateDlg/VBox"]
+text = "Name"
+
+[node name="Name" type="LineEdit" parent="UI/CreateDlg/VBox"]
+placeholder_text = "fighter name"
+max_length = 20
+
+[node name="Sex" type="CheckBox" parent="UI/CreateDlg/VBox"]
+text = "Female"
+
+[node name="Btns" type="HBoxContainer" parent="UI/CreateDlg/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="CreateBtn" type="Button" parent="UI/CreateDlg/VBox/Btns"]
+text = "Create"
+
+[node name="CancelBtn" type="Button" parent="UI/CreateDlg/VBox/Btns"]
+text = "Cancel"

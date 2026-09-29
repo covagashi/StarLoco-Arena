@@ -172,14 +172,14 @@ const OP_MSG5450 := 5450
 const OP_MSG5470 := 5470
 const OP_MSG5490 := 5490
 const OP_MSG5491 := 5491
-const OP_CREATION_FIGHTER_INFORMATION_MESSAGE := 6000
-const OP_CREATE_FIGHTER_INFORMATION_REQUEST_MESSAGE := 6001
-const OP_DELETION_FIGHTER_INFORMATION_MESSAGE := 6002
-const OP_DELETE_FIGHTER_INFORMATION_REQUEST_MESSAGE := 6003
+const OP_FIGHTER_CREATE_RESULT := 6000
+const OP_FIGHTER_CREATE := 6001
+const OP_FIGHTER_DELETE_RESULT := 6002
+const OP_FIGHTER_DELETE := 6003
 const OP_FIGHTER_INFORMATION_LIST := 6006
 const OP_UPDATED_FIGHTER_INFORMATION_INVENTORY_MESSAGE := 6010
 const OP_UPDATE_FIGHTER_INVENTORY_REQUEST_MESSAGE := 6011
-const OP_MSG6013 := 6013
+const OP_FIGHTER_ASSIGN_TEAM := 6013
 const OP_MSG6014 := 6014
 const OP_SAVE_TEAM_PRESET_MESSAGE := 6020
 const OP_SAVE_TEAM_PRESET_REQUEST_MESSAGE := 6021
@@ -515,14 +515,14 @@ const NAMES := {
 	5470: "Msg5470",
 	5490: "Msg5490",
 	5491: "Msg5491",
-	6000: "CreationFighterInformationMessage",
-	6001: "CreateFighterInformationRequestMessage",
-	6002: "DeletionFighterInformationMessage",
-	6003: "DeleteFighterInformationRequestMessage",
+	6000: "FighterCreateResult",
+	6001: "FighterCreate",
+	6002: "FighterDeleteResult",
+	6003: "FighterDelete",
 	6006: "FighterInformationList",
 	6010: "UpdatedFighterInformationInventoryMessage",
 	6011: "UpdateFighterInventoryRequestMessage",
-	6013: "Msg6013",
+	6013: "FighterAssignTeam",
 	6014: "Msg6014",
 	6020: "SaveTeamPresetMessage",
 	6021: "SaveTeamPresetRequestMessage",

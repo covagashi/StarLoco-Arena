@@ -4,6 +4,7 @@ extends RefCounted
 ## Dispatch is by handler name; each returns a Dictionary of decoded fields.
 
 const WireReader := preload("res://src/net/wire_reader.gd")
+const WireWriter := preload("res://src/net/wire_writer.gd")
 
 
 static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
@@ -12,6 +13,7 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"part_table": return _part_table(r)
 		"actor_spawn": return _actor_spawn(r)
 		"fighter_list": return _fighter_list(r)
+		"fighter_create_result": return _fighter_create_result(r)
 		"friend_list": return _friend_list(r)
 		"ignore_list": return _ignore_list(r)
 		"wallet": return _wallet(r)
@@ -141,6 +143,40 @@ static func _et2_fighter(blob: PackedByteArray) -> Dictionary:
 		for i in br.get_i16():
 			f.passive_sets.append(br.get_i32())
 	return f
+
+
+## Opcode 6000 — [u8 result]; on success (0): [i64 coachId][i64 fighterId]
+## [u16 len][et_2 blob][u8 flag][i16 slot]. Failure results carry only the
+## status byte (1 generic, 20 roster full, …).
+static func _fighter_create_result(r: WireReader) -> Dictionary:
+	var out := {"result": r.get_u8()}
+	if out.result != 0 or r.remaining() < 8:
+		return out
+	out.coach_id = r.get_i64()
+	out.fighter_id = r.get_i64()
+	out.fighter = _et2_fighter(r.get_bytes(r.get_u16()))
+	if r.remaining() >= 3:
+		out.flag = r.get_u8()
+		out.slot = r.get_i16()
+	return out
+
+
+## Encode the et_2 blob for a fighter-create request (aNb.java → 6001):
+## minimal classic fighter — type 1, no spells/cards, default colors.
+static func encode_fighter_blob(breed: int, fname: String, sex: int) -> PackedByteArray:
+	var w := WireWriter.new()
+	w.put_u8(1)                # classic (2 = evolution roster)
+	w.put_i16(400)             # budget — server recomputes from loadout anyway
+	w.put_u8(breed)
+	w.put_str(fname, "u8")
+	w.put_u8(sex & 1)
+	w.put_i8(-1)               # ey < 0 → color triple follows
+	w.put_u8(0)                # hair
+	w.put_u8(0)                # skin
+	w.put_u8(0)                # eye
+	w.put_i16(0)               # spell blob: empty (creation without purchases)
+	w.put_i16(0)               # card blob: empty
+	return w.raw()
 
 
 ## Opcode 3144 — [u8 n]{u16 len, friend blob}. Blob internals (presence,

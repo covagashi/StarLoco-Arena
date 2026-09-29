@@ -15,6 +15,7 @@ extends Control
 ##   8   InvalidVersion  [u8 2][u16 70] — server keeps socket open; we close it.
 
 const Codec := preload("res://src/net/codec.gd")
+const Overrides := preload("res://src/net/codec_overrides.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
@@ -37,6 +38,10 @@ const OP_FIGHT_ERROR := 26310
 const OP_PONG := 108
 const OP_FIGHTER_LIST := 6006
 const OP_TEAM_PRESETS := 6030
+const OP_FIGHTER_CREATE := 6001
+const OP_FIGHTER_CREATE_RESULT := 6000
+const OP_FIGHTER_DELETE := 6003
+const OP_FIGHTER_DELETE_RESULT := 6002
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
 @onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
@@ -63,6 +68,17 @@ func _ready() -> void:
 	login_btn.pressed.connect(_on_login_pressed)
 	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
 	log.bubble.connect(world.chat_bubble)
+	var breed_sel: OptionButton = $UI/CreateDlg/VBox/Breed
+	for id in range(1, 13):
+		breed_sel.add_item(State.BREED_NAMES[id], id)
+	$UI/VBox/RosterBox/RosterBtns/NewBtn.pressed.connect(
+		func(): $UI/CreateDlg.visible = true)
+	$UI/CreateDlg/VBox/Btns/CancelBtn.pressed.connect(
+		func(): $UI/CreateDlg.visible = false)
+	$UI/CreateDlg/VBox/Btns/CreateBtn.pressed.connect(_on_create_fighter)
+	$UI/VBox/RosterBox/RosterBtns/DelBtn.pressed.connect(_on_delete_fighter)
+	$UI/VBox/RosterBox/Roster.item_selected.connect(
+		func(_i): $UI/VBox/RosterBox/RosterBtns/DelBtn.disabled = false)
 
 
 func _exit_tree() -> void:
@@ -167,14 +183,18 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				% [State.fight_world, State.fighters.size()])
 			get_tree().change_scene_to_file("res://src/fight/fight_view.tscn")
 		OP_FIGHTER_LIST:
-			# Lobby roster (et_2 blobs) — shown in the roster line.
+			# Lobby roster (et_2 blobs) — fills the selectable fighter list.
 			var d := Codec.decode(opcode, payload)
 			State.roster = d.get("fighters", [])
+			var roster_list: ItemList = $UI/VBox/RosterBox/Roster
+			roster_list.clear()
 			var names := []
 			for f in State.roster:
-				names.append("%s (%s)" % [f.get("name", "?"),
-					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0)))])
-			$UI/VBox/Roster.text = "Fighters: " + (", ".join(names) if names else "—")
+				var label := "%s (%s)" % [f.get("name", "?"),
+					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0)))]
+				names.append(label)
+				roster_list.add_item(label)
+				roster_list.set_item_metadata(roster_list.item_count - 1, int(f.id))
 			_log_line("roster: %s" % (", ".join(names) if names else "empty"))
 		OP_TEAM_PRESETS:
 			var d := Codec.decode(opcode, payload)
@@ -182,6 +202,22 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var real := State.presets.filter(func(p): return int(p.type) != -4)
 			_log_line("team presets: %d saved (%d shown incl. bench)" % [
 				real.size(), State.presets.size()])
+		OP_FIGHTER_CREATE_RESULT:
+			var d := Codec.decode(opcode, payload)
+			if int(d.result) == 0:
+				_log_line("[color=green]fighter created: %s[/color]"
+					% d.fighter.get("name", "?"))
+				$UI/CreateDlg.visible = false
+			else:
+				_log_line("[color=red]fighter create refused, code %d[/color]"
+					% int(d.result))
+		OP_FIGHTER_DELETE_RESULT:
+			var d := Codec.decode(opcode, payload)
+			if int(d.result) == 0:
+				_log_line("fighter %d deleted" % int(d.fighter_id))
+			else:
+				_log_line("[color=red]fighter delete refused, code %d[/color]"
+					% int(d.result))
 		OP_FIGHT_ERROR:
 			_log_line("[color=red]fight creation refused[/color]")
 		OP_PONG:
@@ -249,6 +285,40 @@ func _on_practice_pressed() -> void:
 	w.put_u16(99)
 	Session.send(26330, w.raw(), 2)
 	_log_line("practice challenge 34 sent — waiting for fight…")
+
+
+## 6001 FighterCreate [u8 flag][i16 slot][u16 blobLen][et_2 blob] (arch 2).
+## The roster list refresh arrives as a fresh 6006 push — no local mutation.
+func _on_create_fighter() -> void:
+	var dlg := $UI/CreateDlg/VBox
+	var fname: String = dlg.get_node("Name").text.strip_edges()
+	if fname.is_empty():
+		_log_line("[color=red]fighter needs a name[/color]")
+		return
+	var blob: PackedByteArray = Overrides.encode_fighter_blob(
+		dlg.get_node("Breed").get_selected_id(), fname,
+		1 if dlg.get_node("Sex").button_pressed else 0)
+	var w := WireWriter.new()
+	w.put_u8(0)                       # flag: 0 = classic roster
+	w.put_u16(0)                      # slot
+	w.put_u16(blob.size())
+	w.put_bytes(blob)
+	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
+	_log_line("fighter create sent: %s" % fname)
+
+
+## 6003 FighterDelete [i64 fighterId][i16 slot] (arch 2).
+func _on_delete_fighter() -> void:
+	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
+	var sel := roster_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var fid: int = roster_list.get_item_metadata(sel[0])
+	var w := WireWriter.new()
+	w.put_i64(fid)
+	w.put_u16(0)
+	Session.send(OP_FIGHTER_DELETE, w.raw(), 2)
+	_log_line("fighter delete sent: %d" % fid)
 
 
 func _send_coach_creation() -> void:

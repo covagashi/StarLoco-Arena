@@ -90,6 +90,10 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 			print("[smoke] CHAT user-not-found reply")
 		3214:
 			print("[smoke] CHAT target-is-yourself reply")
+		6000:
+			var d := Codec.decode(op, payload)
+			print("[smoke] CREATE result=", d.result, " fid=", d.get("fighter_id"),
+				" name=", d.get("fighter", {}).get("name"))
 
 
 func _move_and_shoot() -> void:
@@ -107,6 +111,11 @@ func _move_and_shoot() -> void:
 	chat._on_submit("/w coach_fantasma_zz hola")
 	chat._on_submit("/t vendo cartas")
 	print("[smoke] chat lines sent (vicinity + /w self + /w ghost + /t)")
+	# fighter creation: drive the real dialog path
+	_main.get_node("UI/CreateDlg/VBox/Name").text = "Humo"
+	_main.get_node("UI/CreateDlg/VBox/Breed").select(7)   # Iop
+	_main._on_create_fighter()
+	print("[smoke] fighter create sent — expecting 6000 + 6006 push")
 	await create_timer(3.0).timeout
 	var tex := root.get_texture()
 	var img = tex.get_image() if tex != null else null

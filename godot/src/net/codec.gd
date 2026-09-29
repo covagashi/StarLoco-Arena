@@ -51,6 +51,7 @@ static func _read_field(r: WireReader, f: Dictionary):
 		"str_u8": return r.get_str("u8", f.get("enc", "cp1252"))
 		"str_u16": return r.get_str("u16", f.get("enc", "cp1252"))
 		"str_i32": return r.get_str("i32", f.get("enc", "cp1252"))
+		"bytes": return r.get_rest()
 		_:
 			push_warning("codec: unknown field type %s" % f.t)
 			return null
@@ -69,5 +70,6 @@ static func _write_field(w: WireWriter, f: Dictionary, v) -> void:
 		"str_u8": w.put_str(v, "u8", f.get("enc", "cp1252"))
 		"str_u16": w.put_str(v, "u16", f.get("enc", "cp1252"))
 		"str_i32": w.put_str(v, "i32", f.get("enc", "cp1252"))
+		"bytes": w.put_bytes(v)
 		_:
 			push_warning("codec: cannot write field type %s" % f.t)

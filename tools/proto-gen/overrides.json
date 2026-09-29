@@ -177,6 +177,50 @@
    "handler": "actor_spawn",
    "note": "i32 prefix: negative = raw byte count, positive = zlib-inflated length"
   },
+  "6000": {
+   "name": "FighterCreateResult",
+   "handler": "fighter_create_result",
+   "note": "[u8 result]; on 0: [i64 coach][i64 fighter][u16 len][et_2 blob][u8 flag][i16 slot]"
+  },
+  "6001": {
+   "name": "FighterCreate",
+   "dir": "C2S",
+   "arch": 2,
+   "fields": [
+    {"n": "flag", "t": "u8"},
+    {"n": "slot", "t": "u16"},
+    {"n": "blob_len", "t": "u16"},
+    {"n": "blob", "t": "bytes"}
+   ]
+  },
+  "6002": {
+   "name": "FighterDeleteResult",
+   "fields": [
+    {"n": "result", "t": "u8"},
+    {"n": "fighter_id", "t": "i64"},
+    {"n": "secondary_id", "t": "i64"}
+   ]
+  },
+  "6003": {
+   "name": "FighterDelete",
+   "dir": "C2S",
+   "arch": 2,
+   "fields": [
+    {"n": "fighter_id", "t": "i64"},
+    {"n": "slot", "t": "u16"}
+   ]
+  },
+  "6013": {
+   "name": "FighterAssignTeam",
+   "dir": "C2S",
+   "arch": 2,
+   "fields": [
+    {"n": "fighter_id", "t": "i64"},
+    {"n": "src_team", "t": "i16"},
+    {"n": "dst_team", "t": "i16"},
+    {"n": "amount", "t": "i64"}
+   ]
+  },
   "6006": {
    "name": "FighterInformationList",
    "handler": "fighter_list",
