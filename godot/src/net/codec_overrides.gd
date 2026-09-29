@@ -21,6 +21,7 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"fight_creation": return _fight_creation(r)
 		"actor_appear": return _actor_appear(r)
 		"placement_move": return _placement_move(r)
+		"running_effect": return _running_effect(r)
 		_:
 			return {"_opcode": opcode, "_raw": r.get_rest(),
 					"_handler": handler}
@@ -278,3 +279,52 @@ static func _actor_appear(r: WireReader) -> Dictionary:
 static func _placement_move(r: WireReader) -> Dictionary:
 	return {"id": r.get_i64(), "x": r.get_i32(), "y": r.get_i32(),
 			"z": r.get_i16()}
+
+
+## Opcode 8120 — RUNNING_EFFECT (fight_combat_packets.go buildRunningEffect):
+##   [i32 uid][i32 -1][i8 now][i8 triggered][i32 elapsedTurns]
+##   [i32 runningEffectId][u16 blobLen][BinarSerial blob]
+## BinarSerial = part table (protocol/parttable.go):
+##   [u8 count]{u8 partIdx, i32 absOffset}* then {u8 partIdx, payload}*
+##   — absOffset points AT the part's own idx byte inside the blob.
+##   part 0 (34B): [i64 caster][i64 target][i32 genEffect][i32 x][i32 y][u16 z][i32 value]
+##   part 2: [i64 target]   part 4: [i32 sourceType(13=spell)][i64 spellId]
+## Effect ids (mh_2): 1=HP loss, 91=AP use (silent), 92=MP use (silent).
+static func _running_effect(r: WireReader) -> Dictionary:
+	var out := {}
+	out.uid = r.get_i32()
+	r.get_i32()                    # triggering id (-1)
+	out.now = r.get_i8()
+	out.triggered = r.get_i8()
+	out.elapsed = r.get_i32()
+	out.effect_id = r.get_i32()
+	var blob := r.get_bytes(maxi(r.get_u16(), 0))
+	var br := WireReader.new(blob)
+	var offsets := {}
+	var order := []
+	for i in br.get_u8():
+		var idx := br.get_u8()
+		offsets[idx] = br.get_i32()
+		order.append(idx)
+	for i in order.size():
+		var idx: int = order[i]
+		var start: int = offsets.get(idx, blob.size())
+		var end: int = offsets.get(order[i + 1], blob.size()) if i + 1 < order.size() else blob.size()
+		var pr := WireReader.new(blob.slice(mini(start, blob.size()), mini(end, blob.size())))
+		if pr.remaining() <= 0 or pr.get_u8() != idx:
+			continue
+		match idx:
+			0:
+				out.caster = pr.get_i64()
+				out.target = pr.get_i64()
+				out.gen_effect = pr.get_i32()
+				out.x = pr.get_i32()
+				out.y = pr.get_i32()
+				out.z = pr.get_u16()
+				out.value = pr.get_i32()
+			2:
+				out.target = pr.get_i64()
+			4:
+				pr.get_i32()   # source type — 13 = spell
+				out.spell_id = pr.get_i64()
+	return out

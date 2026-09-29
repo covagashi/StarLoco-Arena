@@ -139,6 +139,8 @@ const OP_TURN_BEGIN := 8104    # [i32][i32][i64 fighterId]
 const OP_END_TURN := 8105      # C2S [i64 fighterId]
 const OP_TURN_END := 8106      # S2C [i32][i32][i64 fighterId]
 const OP_FIGHTER_MOVE := 4524  # [i32][i32][i64 fighterId] + path i32x,i32y,i16z
+const OP_FIGHTER_DIES := 4520  # [i32][i32][i64 fighterId]
+const OP_RUNNING_EFFECT := 8120  # header + BinarSerial blob (see codec)
 const OP_END_FIGHT := 8300     # S2C result screen — ack with 26321
 const OP_END_FIGHT_DONE := 26321  # C2S empty — server returns us to overworld
 const OP_ENTER_INSTANCE := 4600
@@ -148,6 +150,8 @@ var _actor_cells := {}   # id -> Vector3i
 var _current_fid := -1   # fighter whose turn is running (8104 → 8106)
 var _walk := {}          # actor id -> Array[Vector3i] remaining walk cells
 var _actor_dir := {}     # actor id -> last server dir (facing during walk)
+var _hp_lost := {}       # fighter id -> accumulated damage (8000 + 8120)
+var _dead := {}          # fighter id -> true once 4520 arrives
 
 ## Emitted on 8104 — a harness (fight_smoke's scripted policy) or the human
 ## drives from here: request_move_to() then request_end_turn().
@@ -228,6 +232,12 @@ func _on_net_message(opcode: int, payload: WireReader) -> void:
 				_face_step(fid)
 			elif path.size() == 1:
 				_move_actor(fid, path[0])
+		OP_FIGHTER_DIES:
+			payload.get_i32()
+			payload.get_i32()
+			_kill_actor(int(payload.get_i64()))
+		OP_RUNNING_EFFECT:
+			_on_running_effect(Codec.decode(opcode, payload))
 		OP_END_FIGHT:
 			# Result screen — we ack (26321 empty); the server then sends a
 			# fresh 4600 to put the coach back into its overworld.
@@ -257,13 +267,15 @@ func _place_actor(a: Dictionary) -> void:
 		_actors.add_child(spr)
 	var dir: int = DIR_MAP.get(a.dir, 1)
 	_actor_dir[a.id] = int(a.dir)
-	spr.scale.x = -abs(spr.scale.x) if DIR_FLIP.get(a.dir, false) else abs(spr.scale.x)
+	_set_flip(spr, DIR_FLIP.get(a.dir, false))
 	if State.fighters.has(a.id):
 		var f: Dictionary = State.fighters[a.id]
 		var file := _fighter_file(int(f.get("breed", 1)), int(f.get("sex", 0)))
 		var action := "%d_AnimStatique" % dir
 		if not spr.load_action(FIGHTER_SET % file, action):
 			spr.load_action(COACH_SET, "5_AnimStatique")
+		_hp_lost[a.id] = int(f.get("hp_lost", 0))
+		_nameplate(spr, a.id)
 	else:
 		spr.load_action(COACH_SET, "%d_AnimStatique" % dir)
 	spr.position = _iso(a.x + 0.5, a.y + 0.5, a.z)
@@ -280,6 +292,100 @@ func _move_actor(id: int, p: Vector3i) -> void:
 	spr.z_index = clampi((p.x + p.y) * 4 + 1, -4096, 4096)
 	_actor_cells[id] = p
 	queue_redraw()
+
+
+## Running-effect ids that mean "target loses HP" (mh_2 table):
+## 1-5 direct damage by element, 6-10 life steal, 125 %-loss,
+## 130-134 the same five elements "par sort".
+const FX_HP_LOSS := {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0,
+	9: 0, 10: 0, 125: 0, 130: 0, 131: 0, 132: 0, 133: 0, 134: 0}
+const FX_HP_GAIN := {11: 0}   # "Boost de HP"
+
+
+## 8120 — apply a running effect visually: HP effects float text and update
+## the nameplate counter; AP/MP debits (91/92) and upkeep are silent.
+func _on_running_effect(d: Dictionary) -> void:
+	if not d.has("value"):
+		return
+	var target := int(d.get("target", -1))
+	var value := int(d.value)
+	if FX_HP_LOSS.has(int(d.effect_id)):
+		_hp_lost[target] = int(_hp_lost.get(target, 0)) + value
+		_refresh_nameplate(target)
+		_float_text(target, "-%d" % value, Color(1.0, 0.35, 0.3))
+	elif FX_HP_GAIN.has(int(d.effect_id)):
+		_hp_lost[target] = int(_hp_lost.get(target, 0)) - value
+		_refresh_nameplate(target)
+		_float_text(target, "+%d" % value, Color(0.45, 1.0, 0.45))
+
+
+## 4520 — grey out the corpse; its cell stays occupied for pathing.
+func _kill_actor(fid: int) -> void:
+	_dead[fid] = true
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr != null:
+		spr.playing = false
+		spr.modulate = Color(0.55, 0.55, 0.6, 0.85)
+	if _current_fid == fid:
+		_current_fid = -1
+		_end_turn.disabled = true
+
+
+## Name + cumulative damage label above each fighter, childed to the sprite
+## so it follows walks. Coaches stay unlabeled.
+func _nameplate(spr: AnmSprite, fid: int) -> void:
+	var lbl := Label.new()
+	lbl.name = "Plate"
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.position = Vector2(-60, -96)
+	lbl.size = Vector2(120, 16)
+	lbl.add_theme_font_size_override("font_size", 11)
+	lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	lbl.add_theme_constant_override("shadow_offset_x", 1)
+	lbl.add_theme_constant_override("shadow_offset_y", 1)
+	spr.add_child(lbl)
+	_refresh_nameplate(fid)
+
+
+## Mirror the sprite; child Labels counter-flip so text stays readable.
+func _set_flip(spr: AnmSprite, flip: bool) -> void:
+	spr.scale.x = -absf(spr.scale.x) if flip else absf(spr.scale.x)
+	for c in spr.get_children():
+		if c is Label:
+			c.scale.x = -1.0 if flip else 1.0
+
+
+func _refresh_nameplate(fid: int) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr == null:
+		return
+	var lbl := spr.get_node_or_null("Plate") as Label
+	var f: Dictionary = State.fighters.get(fid, {})
+	if lbl == null:
+		return
+	var lost := int(_hp_lost.get(fid, 0))
+	lbl.text = str(f.get("name", fid)) + ("" if lost == 0 else "  -%d" % lost)
+
+
+## Floating combat text — rises ~26px over ~0.9s and fades out.
+func _float_text(fid: int, text: String, color: Color) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr == null or not is_inside_tree():
+		return
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.position = Vector2(-40, -104)
+	lbl.size = Vector2(80, 16)
+	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	spr.add_child(lbl)
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(lbl, "position:y", lbl.position.y - 26.0, 0.9)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.9)
+	tw.chain().tween_callback(lbl.queue_free)
 
 
 ## 8104 — a fighter's turn started. Ours: click a cell to move (4503),
@@ -352,7 +458,7 @@ func _face_step(fid: int) -> void:
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr == null or not State.fighters.has(fid):
 		return
-	spr.scale.x = -abs(spr.scale.x) if DIR_FLIP.get(dir, false) else abs(spr.scale.x)
+	_set_flip(spr, DIR_FLIP.get(dir, false))
 	var f: Dictionary = State.fighters[fid]
 	spr.load_action(FIGHTER_SET % _fighter_file(
 		int(f.get("breed", 1)), int(f.get("sex", 0))),
@@ -520,7 +626,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _is_my_turn() -> bool:
-	if _current_fid < 0:
+	if _current_fid < 0 or _dead.get(_current_fid, false):
 		return false
 	var f: Dictionary = State.fighters.get(_current_fid, {})
 	return int(f.get("coach", -1)) == State.my_coach_id

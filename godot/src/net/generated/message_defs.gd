@@ -223,7 +223,7 @@ const DEFS := {
 	8110: {"name": "SpellCastMessage", "dir": "S2C", "fields": [{"n": "apt", "t": "i32"}, {"n": "apu", "t": "i32"}, {"n": "f2", "t": "i64"}, {"n": "f3", "t": "i32"}, {"n": "f4", "t": "i8"}, {"n": "f5", "t": "i8"}, {"n": "f6", "t": "i32"}, {"n": "f7", "t": "i32"}, {"n": "f8", "t": "i16"}]},
 	8111: {"name": "CloseCombatRequestMessage", "dir": "C2S", "fields": [{"n": "f0", "t": "i64"}, {"n": "f1", "t": "i32"}, {"n": "f2", "t": "i32"}, {"n": "f3", "t": "i16"}]},
 	8112: {"name": "CloseCombatMessage", "dir": "S2C", "fields": [{"n": "apt", "t": "i32"}, {"n": "apu", "t": "i32"}, {"n": "f2", "t": "i64"}, {"n": "f3", "t": "i8"}, {"n": "f4", "t": "i8"}, {"n": "f5", "t": "i32"}, {"n": "f6", "t": "i32"}, {"n": "f7", "t": "i16"}]},
-	8120: {"name": "RunningEffectActionMessage", "dir": "S2C", "fields": [{"n": "apt", "t": "i32"}, {"n": "apu", "t": "i32"}, {"n": "f2", "t": "i8"}, {"n": "f3", "t": "i8"}, {"n": "f4", "t": "i32"}, {"n": "f5", "t": "i32"}, {"n": "f6", "t": "i16"}]},
+	8120: {"name": "RunningEffectActionMessage", "dir": "S2C", "handler": "running_effect"},
 	8121: {"name": "FightEffectTimer", "dir": "S2C", "handler": "hand"},
 	8122: {"name": "Msg8122", "dir": "S2C", "fields": [{"n": "f0", "t": "i64"}, {"n": "f1", "t": "i64"}]},
 	8151: {"name": "GiveUpFightRequestMessage", "dir": "C2S", "fields": []},

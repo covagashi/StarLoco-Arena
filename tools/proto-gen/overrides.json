@@ -1,431 +1,436 @@
 {
-  "_comment": "Hand-curated annotations for gen_messages.py. fields[] replaces the CSV-derived schema; 'handler' marks the message as hand-coded in codec_overrides.gd; 'arch' fixes C2S archTarget when the source mining is ambiguous. Verified against client/decompiled source + server/internal handlers.",
-  "opcodes": {
-    "7": {
-      "name": "ClientVersion",
-      "dir": "C2S",
-      "arch": 0,
-      "fields": [
-        {
-          "n": "marker",
-          "t": "u8"
-        },
-        {
-          "n": "version",
-          "t": "u16"
-        },
-        {
-          "n": "build",
-          "t": "str_u8"
-        }
-      ]
+ "_comment": "Hand-curated annotations for gen_messages.py. fields[] replaces the CSV-derived schema; 'handler' marks the message as hand-coded in codec_overrides.gd; 'arch' fixes C2S archTarget when the source mining is ambiguous. Verified against client/decompiled source + server/internal handlers.",
+ "opcodes": {
+  "7": {
+   "name": "ClientVersion",
+   "dir": "C2S",
+   "arch": 0,
+   "fields": [
+    {
+     "n": "marker",
+     "t": "u8"
     },
-    "8": {
-      "name": "InvalidClientVersion",
-      "fields": [
-        {
-          "n": "code",
-          "t": "u8"
-        },
-        {
-          "n": "required",
-          "t": "u16"
-        }
-      ]
+    {
+     "n": "version",
+     "t": "u16"
     },
-    "1024": {
-      "name": "AuthenticationResult",
-      "fields": [
-        {
-          "n": "result",
-          "t": "u8"
-        }
-      ],
-      "note": "conditional i32 tail when result in {5,6} — left unread, payload-scoped"
-    },
-    "1025": {
-      "name": "ClientAuthentication",
-      "dir": "C2S",
-      "arch": 1,
-      "fields": [
-        {
-          "n": "login",
-          "t": "str_u8"
-        },
-        {
-          "n": "password",
-          "t": "str_u8"
-        }
-      ]
-    },
-    "107": {
-      "name": "Ping",
-      "dir": "C2S",
-      "arch": "payload0",
-      "fields": [
-        {
-          "n": "flag",
-          "t": "i8"
-        },
-        {
-          "n": "key",
-          "t": "i32"
-        },
-        {
-          "n": "nanos",
-          "t": "i64"
-        }
-      ]
-    },
-    "108": {
-      "name": "Pong",
-      "fields": [
-        {
-          "n": "flag",
-          "t": "i8"
-        },
-        {
-          "n": "key",
-          "t": "i32"
-        },
-        {
-          "n": "t1",
-          "t": "i64"
-        },
-        {
-          "n": "t2",
-          "t": "i64"
-        },
-        {
-          "n": "t3",
-          "t": "i64"
-        }
-      ]
-    },
-    "2048": {
-      "name": "CoachCreationRequest",
-      "fields": []
-    },
-    "2049": {
-      "name": "CoachCreation",
-      "dir": "C2S",
-      "arch": 2,
-      "fields": [
-        {
-          "n": "name",
-          "t": "str_u8"
-        },
-        {
-          "n": "skin",
-          "t": "u8"
-        },
-        {
-          "n": "hair",
-          "t": "u8"
-        },
-        {
-          "n": "sex",
-          "t": "u8"
-        }
-      ]
-    },
-    "2050": {
-      "name": "CoachCreationResult",
-      "fields": [
-        {
-          "n": "code",
-          "t": "u8"
-        }
-      ]
-    },
-    "2052": {
-      "name": "CoachInformations",
-      "handler": "coach_info",
-      "note": "sj_1.b(bb, 4014) bitmask blob — server impl handshake/coach.go:238-291"
-    },
-    "4600": {
-      "name": "EnterInstance",
-      "fields": [
-        {
-          "n": "x",
-          "t": "f32"
-        },
-        {
-          "n": "y",
-          "t": "f32"
-        },
-        {
-          "n": "alt",
-          "t": "i16"
-        },
-        {
-          "n": "world_id",
-          "t": "i16"
-        },
-        {
-          "n": "dynamic",
-          "t": "u8"
-        }
-      ]
-    },
-    "4516": {
-      "name": "InstanceReady",
-      "fields": []
-    },
-    "4096": {
-      "name": "ActorSpawn",
-      "handler": "actor_spawn",
-      "note": "i32 prefix: negative = raw byte count, positive = zlib-inflated length"
-    },
-    "6006": {
-      "name": "FighterInformationList",
-      "handler": "fighter_list",
-      "note": "i64 lead + u8 count + {i64 id, u16 len, et_2 blob} — not a part-table"
-    },
-    "200": {
-      "name": "InteractiveElementSpawn",
-      "handler": "part_table"
-    },
-    "204": {
-      "name": "InteractiveElementUpdate",
-      "handler": "part_table"
-    },
-    "206": {
-      "name": "InteractiveElementDespawn",
-      "handler": "part_table"
-    },
-    "3144": {
-      "name": "FriendList",
-      "handler": "friend_list"
-    },
-    "3146": {
-      "name": "IgnoreList",
-      "handler": "ignore_list"
-    },
-    "4001": {
-      "name": "WalletUpdate",
-      "handler": "wallet"
-    },
-    "5200": {
-      "name": "CoachInventoryUpdate",
-      "handler": "inventory"
-    },
-    "2400": {
-      "name": "PlayerStatisticsReport",
-      "handler": "stat_map"
-    },
-    "2401": {
-      "name": "PlayerStatistics",
-      "handler": "stat_map"
-    },
-    "6030": {
-      "name": "TeamPresetList",
-      "handler": "preset_list"
-    },
-    "512": {
-      "name": "GuildBlob512",
-      "handler": "part_table"
-    },
-    "552": {
-      "name": "GuildBlob552",
-      "handler": "part_table"
-    },
-    "554": {
-      "name": "GuildBlob554",
-      "handler": "part_table"
-    },
-    "8000": {
-      "name": "FightCreation",
-      "handler": "fight_creation",
-      "note": "aat_2 giant presentation blob — see PROTOCOL-messages.md"
-    },
-    "8121": {
-      "name": "FightEffectTimer",
-      "handler": "hand"
-    },
-    "26333": {
-      "name": "ReconnectFightQuestion",
-      "fields": []
-    },
-    "26334": {
-      "name": "ReconnectFightAnswer",
-      "dir": "C2S",
-      "arch": 2,
-      "fields": [
-        {
-          "n": "accept",
-          "t": "u8"
-        }
-      ]
-    },
-    "503": {
-      "name": "GuildInviteAnswer",
-      "dir": "C2S",
-      "arch": 2,
-      "fields": [
-        {
-          "n": "b",
-          "t": "i8"
-        },
-        {
-          "n": "accepted",
-          "t": "u8"
-        },
-        {
-          "n": "s1",
-          "t": "str_u8"
-        },
-        {
-          "n": "s2",
-          "t": "str_u8"
-        }
-      ],
-      "note": "missing from CSVs — cg_0.java:17-31; arch is (jr ? 8 : 2), defaulting 2"
-    },
-    "505": {
-      "name": "GuildLeaveOrKick",
-      "dir": "C2S",
-      "arch": 2,
-      "fields": [
-        {
-          "n": "a",
-          "t": "i64"
-        },
-        {
-          "n": "b",
-          "t": "i64"
-        }
-      ],
-      "note": "missing from CSVs — nP.java:12-20; arch (jr ? 8 : 2), defaulting 2"
-    },
-    "515": {
-      "name": "GuildField515",
-      "dir": "C2S",
-      "arch": 8,
-      "fields": [
-        {
-          "n": "a",
-          "t": "i64"
-        },
-        {
-          "n": "b",
-          "t": "i64"
-        }
-      ],
-      "note": "sh_0 variant (arch 8); abn_2 subclass adds i16 + arch 2 — disambiguate later"
-    },
-    "5105": {
-      "name": "ExchangeAddCard",
-      "dir": "C2S",
-      "arch": 3,
-      "fields": [
-        {
-          "n": "exchange_id",
-          "t": "i64"
-        },
-        {
-          "n": "card_ref_id",
-          "t": "i32"
-        },
-        {
-          "n": "qty",
-          "t": "i16"
-        }
-      ]
-    },
-    "5107": {
-      "name": "ExchangeRemoveCard",
-      "dir": "C2S",
-      "arch": 3,
-      "fields": [
-        {
-          "n": "exchange_id",
-          "t": "i64"
-        },
-        {
-          "n": "card_ref_id",
-          "t": "i32"
-        },
-        {
-          "n": "qty",
-          "t": "i16"
-        }
-      ],
-      "note": "opcode_map mislabels this SetReady; it is RemoveCard per OPCODE-INVENTORY.md:316"
-    },
-    "4102": {
-      "name": "ActorAppearMessage",
-      "handler": "actor_appear",
-      "note": "[u8 n]{i64 id,i32 x,i32 y,i16 z,u8 dir} — inserts fight actors (coaches real ids at pedestals, fighters wire ids at start cells); fight_packets.go buildActorAppear"
-    },
-    "8022": {
-      "name": "MoveToFreePlacementMessage",
-      "handler": "placement_move",
-      "note": "[i64 fighterId][i32 x][i32 y][i16 z] — placement broadcast"
+    {
+     "n": "build",
+     "t": "str_u8"
     }
+   ]
   },
-  "arch_fixes": {
-    "_comment": "opcode -> archTarget for C2S sends where source mining fails or is conditional. Server ignores arch; emitted for capture-parity. 4 = social C2S family (3129/3131/3133/3135/3151/3155), 8 = guild moderation.",
-    "3129": 4,
-    "3131": 4,
-    "3133": 4,
-    "3135": 4,
-    "3151": 4,
-    "3155": 4
+  "8": {
+   "name": "InvalidClientVersion",
+   "fields": [
+    {
+     "n": "code",
+     "t": "u8"
+    },
+    {
+     "n": "required",
+     "t": "u16"
+    }
+   ]
   },
-  "hand_coded": {
-    "_comment": "opcodes routed to codec_overrides.gd regardless of CSV shape",
-    "list": [
-      11,
-      105,
-      501,
-      2411,
-      4098,
-      4102,
-      4104,
-      4106,
-      4500,
-      4501,
-      4503,
-      4524,
-      4800,
-      5201,
-      5203,
-      5400,
-      5401,
-      5403,
-      5450,
-      5470,
-      5490,
-      6020,
-      6032,
-      8300,
-      15001,
-      15004,
-      15007,
-      17003,
-      17005,
-      17008,
-      17010,
-      22002,
-      23110,
-      23114,
-      23116,
-      26300,
-      26313,
-      26330,
-      27501,
-      27503,
-      27505,
-      27507,
-      27509,
-      27511,
-      27513,
-      27515,
-      28602,
-      28620,
-      28622,
-      28650
-    ]
+  "1024": {
+   "name": "AuthenticationResult",
+   "fields": [
+    {
+     "n": "result",
+     "t": "u8"
+    }
+   ],
+   "note": "conditional i32 tail when result in {5,6} — left unread, payload-scoped"
+  },
+  "1025": {
+   "name": "ClientAuthentication",
+   "dir": "C2S",
+   "arch": 1,
+   "fields": [
+    {
+     "n": "login",
+     "t": "str_u8"
+    },
+    {
+     "n": "password",
+     "t": "str_u8"
+    }
+   ]
+  },
+  "107": {
+   "name": "Ping",
+   "dir": "C2S",
+   "arch": "payload0",
+   "fields": [
+    {
+     "n": "flag",
+     "t": "i8"
+    },
+    {
+     "n": "key",
+     "t": "i32"
+    },
+    {
+     "n": "nanos",
+     "t": "i64"
+    }
+   ]
+  },
+  "108": {
+   "name": "Pong",
+   "fields": [
+    {
+     "n": "flag",
+     "t": "i8"
+    },
+    {
+     "n": "key",
+     "t": "i32"
+    },
+    {
+     "n": "t1",
+     "t": "i64"
+    },
+    {
+     "n": "t2",
+     "t": "i64"
+    },
+    {
+     "n": "t3",
+     "t": "i64"
+    }
+   ]
+  },
+  "2048": {
+   "name": "CoachCreationRequest",
+   "fields": []
+  },
+  "2049": {
+   "name": "CoachCreation",
+   "dir": "C2S",
+   "arch": 2,
+   "fields": [
+    {
+     "n": "name",
+     "t": "str_u8"
+    },
+    {
+     "n": "skin",
+     "t": "u8"
+    },
+    {
+     "n": "hair",
+     "t": "u8"
+    },
+    {
+     "n": "sex",
+     "t": "u8"
+    }
+   ]
+  },
+  "2050": {
+   "name": "CoachCreationResult",
+   "fields": [
+    {
+     "n": "code",
+     "t": "u8"
+    }
+   ]
+  },
+  "2052": {
+   "name": "CoachInformations",
+   "handler": "coach_info",
+   "note": "sj_1.b(bb, 4014) bitmask blob — server impl handshake/coach.go:238-291"
+  },
+  "4600": {
+   "name": "EnterInstance",
+   "fields": [
+    {
+     "n": "x",
+     "t": "f32"
+    },
+    {
+     "n": "y",
+     "t": "f32"
+    },
+    {
+     "n": "alt",
+     "t": "i16"
+    },
+    {
+     "n": "world_id",
+     "t": "i16"
+    },
+    {
+     "n": "dynamic",
+     "t": "u8"
+    }
+   ]
+  },
+  "4516": {
+   "name": "InstanceReady",
+   "fields": []
+  },
+  "4096": {
+   "name": "ActorSpawn",
+   "handler": "actor_spawn",
+   "note": "i32 prefix: negative = raw byte count, positive = zlib-inflated length"
+  },
+  "6006": {
+   "name": "FighterInformationList",
+   "handler": "fighter_list",
+   "note": "i64 lead + u8 count + {i64 id, u16 len, et_2 blob} — not a part-table"
+  },
+  "200": {
+   "name": "InteractiveElementSpawn",
+   "handler": "part_table"
+  },
+  "204": {
+   "name": "InteractiveElementUpdate",
+   "handler": "part_table"
+  },
+  "206": {
+   "name": "InteractiveElementDespawn",
+   "handler": "part_table"
+  },
+  "3144": {
+   "name": "FriendList",
+   "handler": "friend_list"
+  },
+  "3146": {
+   "name": "IgnoreList",
+   "handler": "ignore_list"
+  },
+  "4001": {
+   "name": "WalletUpdate",
+   "handler": "wallet"
+  },
+  "5200": {
+   "name": "CoachInventoryUpdate",
+   "handler": "inventory"
+  },
+  "2400": {
+   "name": "PlayerStatisticsReport",
+   "handler": "stat_map"
+  },
+  "2401": {
+   "name": "PlayerStatistics",
+   "handler": "stat_map"
+  },
+  "6030": {
+   "name": "TeamPresetList",
+   "handler": "preset_list"
+  },
+  "512": {
+   "name": "GuildBlob512",
+   "handler": "part_table"
+  },
+  "552": {
+   "name": "GuildBlob552",
+   "handler": "part_table"
+  },
+  "554": {
+   "name": "GuildBlob554",
+   "handler": "part_table"
+  },
+  "8000": {
+   "name": "FightCreation",
+   "handler": "fight_creation",
+   "note": "aat_2 giant presentation blob — see PROTOCOL-messages.md"
+  },
+  "8121": {
+   "name": "FightEffectTimer",
+   "handler": "hand"
+  },
+  "26333": {
+   "name": "ReconnectFightQuestion",
+   "fields": []
+  },
+  "26334": {
+   "name": "ReconnectFightAnswer",
+   "dir": "C2S",
+   "arch": 2,
+   "fields": [
+    {
+     "n": "accept",
+     "t": "u8"
+    }
+   ]
+  },
+  "503": {
+   "name": "GuildInviteAnswer",
+   "dir": "C2S",
+   "arch": 2,
+   "fields": [
+    {
+     "n": "b",
+     "t": "i8"
+    },
+    {
+     "n": "accepted",
+     "t": "u8"
+    },
+    {
+     "n": "s1",
+     "t": "str_u8"
+    },
+    {
+     "n": "s2",
+     "t": "str_u8"
+    }
+   ],
+   "note": "missing from CSVs — cg_0.java:17-31; arch is (jr ? 8 : 2), defaulting 2"
+  },
+  "505": {
+   "name": "GuildLeaveOrKick",
+   "dir": "C2S",
+   "arch": 2,
+   "fields": [
+    {
+     "n": "a",
+     "t": "i64"
+    },
+    {
+     "n": "b",
+     "t": "i64"
+    }
+   ],
+   "note": "missing from CSVs — nP.java:12-20; arch (jr ? 8 : 2), defaulting 2"
+  },
+  "515": {
+   "name": "GuildField515",
+   "dir": "C2S",
+   "arch": 8,
+   "fields": [
+    {
+     "n": "a",
+     "t": "i64"
+    },
+    {
+     "n": "b",
+     "t": "i64"
+    }
+   ],
+   "note": "sh_0 variant (arch 8); abn_2 subclass adds i16 + arch 2 — disambiguate later"
+  },
+  "5105": {
+   "name": "ExchangeAddCard",
+   "dir": "C2S",
+   "arch": 3,
+   "fields": [
+    {
+     "n": "exchange_id",
+     "t": "i64"
+    },
+    {
+     "n": "card_ref_id",
+     "t": "i32"
+    },
+    {
+     "n": "qty",
+     "t": "i16"
+    }
+   ]
+  },
+  "5107": {
+   "name": "ExchangeRemoveCard",
+   "dir": "C2S",
+   "arch": 3,
+   "fields": [
+    {
+     "n": "exchange_id",
+     "t": "i64"
+    },
+    {
+     "n": "card_ref_id",
+     "t": "i32"
+    },
+    {
+     "n": "qty",
+     "t": "i16"
+    }
+   ],
+   "note": "opcode_map mislabels this SetReady; it is RemoveCard per OPCODE-INVENTORY.md:316"
+  },
+  "4102": {
+   "name": "ActorAppearMessage",
+   "handler": "actor_appear",
+   "note": "[u8 n]{i64 id,i32 x,i32 y,i16 z,u8 dir} — inserts fight actors (coaches real ids at pedestals, fighters wire ids at start cells); fight_packets.go buildActorAppear"
+  },
+  "8022": {
+   "name": "MoveToFreePlacementMessage",
+   "handler": "placement_move",
+   "note": "[i64 fighterId][i32 x][i32 y][i16 z] — placement broadcast"
+  },
+  "8120": {
+   "name": "RunningEffectActionMessage",
+   "handler": "running_effect",
+   "note": "[i32 uid][i32 -1][i8 now][i8 trig][i32 elapsed][i32 effectId][u16 len][BinarSerial] — blob parts: 0=[i64 caster][i64 target][i32 genEff][i32 x][i32 y][u16 z][i32 value], 1=caster i64, 2=target i64, 4=[i32 srcType][i64 spellId]; fight_combat_packets.go buildRunningEffect"
   }
+ },
+ "arch_fixes": {
+  "_comment": "opcode -> archTarget for C2S sends where source mining fails or is conditional. Server ignores arch; emitted for capture-parity. 4 = social C2S family (3129/3131/3133/3135/3151/3155), 8 = guild moderation.",
+  "3129": 4,
+  "3131": 4,
+  "3133": 4,
+  "3135": 4,
+  "3151": 4,
+  "3155": 4
+ },
+ "hand_coded": {
+  "_comment": "opcodes routed to codec_overrides.gd regardless of CSV shape",
+  "list": [
+   11,
+   105,
+   501,
+   2411,
+   4098,
+   4102,
+   4104,
+   4106,
+   4500,
+   4501,
+   4503,
+   4524,
+   4800,
+   5201,
+   5203,
+   5400,
+   5401,
+   5403,
+   5450,
+   5470,
+   5490,
+   6020,
+   6032,
+   8300,
+   15001,
+   15004,
+   15007,
+   17003,
+   17005,
+   17008,
+   17010,
+   22002,
+   23110,
+   23114,
+   23116,
+   26300,
+   26313,
+   26330,
+   27501,
+   27503,
+   27505,
+   27507,
+   27509,
+   27511,
+   27513,
+   27515,
+   28602,
+   28620,
+   28622,
+   28650
+  ]
+ }
 }
