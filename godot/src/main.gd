@@ -152,6 +152,12 @@ const OP_RECONNECT_Q := 26333            # S2C empty — resume fight?
 const OP_RECONNECT_A := 26334            # C2S [u8 accept] arch 2
 const OP_TOURN_TREE_REQ := 28649         # C2S [i64 tid][i32 page][str32 name]
 const OP_TOURN_TREE := 28650             # S2C — codec_overrides
+const OP_TOURN_CANCEL := 28609           # C2S [i64 tid][i64 me][i16 preset] arch 2
+const OP_TOURN_CANCEL_RES := 28610       # S2C [i8 accepted]
+const OP_FIGHTER_SET_STATE := 23000      # C2S [i64 fid][u8 legendary] arch 2
+const OP_STAT_REQ := 22001               # C2S empty arch 2 — open criteria tab
+const OP_STAT_DATA := 22002              # S2C — codec_overrides stat_data
+const OP_RESET_POS := 4514               # C2S empty arch 3 — /resetPosition
 const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
 const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
@@ -288,9 +294,11 @@ func _ready() -> void:
 		func(_i):
 			$UI/VBox/RosterBox/RosterBtns/DelBtn.disabled = false
 			$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.disabled = false
-			$UI/VBox/RosterBox/RosterBtns/KanodoBtn.disabled = false)
+			$UI/VBox/RosterBox/RosterBtns/KanodoBtn.disabled = false
+			$UI/VBox/RosterBox/RosterBtns/BenchBtn.disabled = false)
 	$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.pressed.connect(_open_loadout)
 	$UI/VBox/RosterBox/RosterBtns/KanodoBtn.pressed.connect(_open_kanodo)
+	$UI/VBox/RosterBox/RosterBtns/BenchBtn.pressed.connect(_on_bench_fighter)
 	$UI/KanodoDlg/VBox/Btns/CloseBtn.pressed.connect(
 		func(): $UI/KanodoDlg.visible = false)
 	$UI/KanodoDlg/VBox/Btns/BuyBtn.pressed.connect(_on_sphere_buy)
@@ -438,8 +446,13 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			roster_list.clear()
 			var names := []
 			for f in State.roster:
-				var label := "%s (%s)" % [f.get("name", "?"),
-					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0)))]
+				# state: 0 titular, 1 bench, 2 dead, 3 graveyard, 4/5 legendary
+				var st := int(f.get("state", 0))
+				var tag: String = {1: " [bench]", 2: " [dead]",
+					3: " [graveyard]", 4: " [legendary]",
+					5: " [legendary bench]"}.get(st, "")
+				var label := "%s (%s)%s" % [f.get("name", "?"),
+					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0))), tag]
 				names.append(label)
 				roster_list.add_item(label)
 				roster_list.set_item_metadata(roster_list.item_count - 1, int(f.id))
@@ -784,16 +797,27 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line("tournament %d search %s" % [int(d.tournament_id),
 				"accepted — waiting for opponents"
 				if int(d.accepted) != 0 else "refused"])
+			if int(d.accepted) != 0:
+				_tourn_search_tid = int(d.tournament_id)
+			else:
+				_tourn_search_tid = -1
+		OP_TOURN_CANCEL_RES:
+			# 28610 [i8 accepted] — the search we cancelled is dead
+			_tourn_search_tid = -1
+			_log_line("tournament search cancelled")
 		OP_TOURN_SEARCH_ERR:
 			var d := Codec.decode(opcode, payload)
+			_tourn_search_tid = -1
 			_log_line("[color=red]tournament search error %d/%d[/color]" % [
 				int(d.code), int(d.sub_code)])
 		OP_TOURN_SEARCH_END:
 			var d := Codec.decode(opcode, payload)
+			_tourn_search_tid = -1
 			_log_line("tournament %d search ended%s" % [int(d.tournament_id),
 				" — winner by forfeit" if int(d.forfeit) != 0 else ""])
 		28614:  # TournamentFightStarting [i64 tid] — bracket match launching
 			var d := Codec.decode(opcode, payload)
+			_tourn_search_tid = -1
 			_log_line("tournament %d: fight starting!" % int(d.f0))
 		OP_GUILD_RESULT:
 			var d := Codec.decode(opcode, payload)
@@ -823,6 +847,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				lines.append("  stat %d (type %d) = %s" % [
 					int(s.id), int(s.type), str(s.value)])
 			_log_line("\n".join(lines))
+		OP_STAT_DATA:
+			# 22002 — reply to opening the criteria/achievements tab.
+			_fill_ladder(Codec.decode(opcode, payload), opcode)
 		510:  # GuildRecord — guild name/demon/rank table for our guild
 			var d := Codec.decode(opcode, payload)
 			State.guild["guild_id"] = int(d.guild_id)
@@ -1171,6 +1198,28 @@ func _answer_match(yes: bool) -> void:
 	_match = {}
 
 
+## Roster bench/titular toggle — 23000 [i64 fid][u8 legendary]. The server
+## flips the state itself (titular↔bench, dead→graveyard, leg↔leg-bench) and
+## pushes a fresh 6006; the flag mirrors what retail sends for legendaries.
+func _on_bench_fighter() -> void:
+	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
+	var sel := roster_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var fid := int(roster_list.get_item_metadata(sel[0]))
+	var f: Variant = _fighter_by_id(fid)
+	if f == null:
+		return
+	var st := int(f.get("state", 0))
+	if st == 3:   # graveyard — only a resurrection item brings it back
+		return
+	var w := WireWriter.new()
+	w.put_i64(fid)
+	w.put_u8(1 if st >= 4 else 0)
+	Session.send(OP_FIGHTER_SET_STATE, w.raw(), 2)
+	_log_line("state toggle sent for %s" % str(f.get("name", "?")))
+
+
 ## --- Spectate (2260/2261/26331) ------------------------------------------------
 ## /watch <name> queries whether that coach is in a live fight (2260); a 1
 ## reply auto-joins (26331) — the server replays the resync (4516 + 8000 with
@@ -1228,6 +1277,8 @@ func _ladder_request() -> void:
 			w.put_i32(_ladder_start)
 			w.put_i32(1)                     # league id (1 = Arena Ligue Pro)
 			w.put_i32(20)                    # page size
+		OP_STAT_REQ:
+			pass                           # 22001 is an empty ask
 		_:
 			w.put_i32(_ladder_start)
 	Session.send(int(LADDER_TABS[_ladder_tab].op), w.raw(), 2)
@@ -1240,6 +1291,13 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 	var hint: Label = $UI/LadderDlg/VBox/Hint
 	var more: Button = $UI/LadderDlg/VBox/Btns/MoreBtn
 	match opcode:
+		OP_STAT_DATA:
+			# criteria pairs — no client-side names; raw id = value rows
+			for r0 in d.get("rows", []):
+				list.add_item("criterion %d = %d" % [
+					int(r0.get("crit", 0)), int(r0.get("val", 0))])
+			hint.text = "%d criteria" % d.get("rows", []).size()
+			more.disabled = true
 		OP_LADDER_1V1:
 			for r0 in d.get("rows", []):
 				var g := str(r0.get("guild", ""))
@@ -1943,7 +2001,9 @@ const LADDER_TABS := [
 	{"label": "Tournoi", "op": OP_LADDER_TOURN_REQ, "page": 20},
 	{"label": "Ligue Pro", "op": OP_LADDER_PRO_REQ, "page": 20},
 	{"label": "Démon", "op": OP_LADDER_DEMON_REQ, "page": 12},
+	{"label": "Stats", "op": OP_STAT_REQ, "page": 0},
 ]
+var _tourn_search_tid := -1  # tournament whose opponent-search is live
 var _ladder_tab := 0          # current LADDER_TABS index
 var _ladder_start := 0        # window start of the next request
 var _ladder_tourn := {"m": 0, "t": 0, "y": 0}  # echoed tournament period
@@ -2170,9 +2230,9 @@ func _on_tournament_sel(i: int) -> void:
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 	var tid := int(list.get_item_metadata(i))
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Find opponent"
+	alt.text = "Cancel search" if _tourn_search_tid == tid else "Find opponent"
 	alt.visible = _registered_tids.has(tid) \
-		and _search_open.get(tid, false)
+		and (_search_open.get(tid, false) or _tourn_search_tid == tid)
 	# Entrants get the bracket straight away (retail opens the tree with the
 	# tournament): 28649 → 28650 fills the second list with slot→name rows.
 	if _registered_tids.has(tid):
@@ -2610,12 +2670,17 @@ func _on_element_alt() -> void:
 		if sel.is_empty():
 			return
 		var w := WireWriter.new()
-		w.put_i64(int(list.get_item_metadata(sel[0])))
+		var tid := int(list.get_item_metadata(sel[0]))
+		w.put_i64(tid)
 		w.put_i64(State.my_coach_id)
 		w.put_i16(99)
-		Session.send(28611, w.raw(), 2)
-		_log_line("tournament search sent (tid %d)"
-			% int(list.get_item_metadata(sel[0])))
+		if _tourn_search_tid == tid:
+			# The same button cancels a live search (retail toggles it).
+			Session.send(OP_TOURN_CANCEL, w.raw(), 2)
+			_log_line("tournament search cancel sent (tid %d)" % tid)
+		else:
+			Session.send(28611, w.raw(), 2)
+			_log_line("tournament search sent (tid %d)" % tid)
 		return
 	if _elem_kind == 11 and not _elem_offer:
 		# "Offer cards" — the affiliate basket: multi-pick tradable cards,

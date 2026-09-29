@@ -9,6 +9,7 @@ extends SceneTree
 const ArenaClient := preload("res://src/net/arena_client.gd")
 const Codec := preload("res://src/net/codec.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
+const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -18,6 +19,7 @@ var client: ArenaClient
 var finished := false
 var fight_scene: Node2D = null
 var _combat_seen := false
+var _card_landed := false
 
 
 func _init() -> void:
@@ -33,7 +35,7 @@ func _init() -> void:
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")
 		return
-	create_timer(55.0).timeout.connect(_finish.bind(1, "timeout"))
+	create_timer(75.0).timeout.connect(_finish.bind(1, "timeout"))
 
 
 func _send_login() -> void:
@@ -102,7 +104,12 @@ func _show_fight() -> void:
 			img.save_png("/tmp/fight_live.png")
 			print("[smoke] combat shot -> /tmp/fight_live.png %dx%d"
 				% [img.get_width(), img.get_height()])
-	await create_timer(14.0).timeout # surrender fires inside; loop or finish
+	# Surrender fires inside _try_surrender once the card lands (≤ ~36s).
+	var wait := 0.0
+	while not _card_landed and wait < 40.0:
+		await create_timer(1.0).timeout
+		wait += 1.0
+	await create_timer(3.0).timeout
 	_finish(0, "fight rendered")
 
 
@@ -139,6 +146,35 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 	# a known spell goes at the closest enemy cell. Server validates
 	# range/LoS — silence means refused, which is fine for the harness.
 	var f: Dictionary = State.fighters.get(fid, {})
+	# Fire the equipped card's ACTIVE ability (8107) at an enemy inside its
+	# range band — mirrors the equipment button on the spell bar. Retried on
+	# every own turn until the broadcast (8108) lands.
+	if not _card_landed:
+		for ec in f.get("cards", []):
+			var cid := int(ec.get("id", -1))
+			if not FighterCards.usable(cid):
+				continue
+			var ab: Dictionary = FighterCards.ability(cid)
+			var rmin := int(ab.get("min", 0))
+			var rmax := int(ab.get("max", 0))
+			var target := Vector2i(-9999, -9999)
+			for id in fight_scene._actor_cells:
+				var e: Dictionary = State.fighters.get(id, {})
+				if e.is_empty() or int(e.get("coach", -1)) == State.my_coach_id:
+					continue
+				var p: Vector3i = fight_scene._actor_cells[id]
+				var dist := absi(p.x - cur.x) + absi(p.y - cur.y)
+				if dist >= rmin and dist <= rmax:
+					target = Vector2i(p.x, p.y)
+					break
+			if target.x == -9999:
+				# The effects resolve at the cell — an empty in-band cell still
+				# fires the 8107 -> 8108 round-trip (nothing to hit is fine).
+				for dx in range(rmin, rmax + 1):
+					target = Vector2i(cur.x + dx, cur.y)
+					break
+			if target.x != -9999 and fight_scene.request_card_at(cid, target):
+				print("[smoke] scripted card %d -> %s" % [cid, target])
 	var spells: Array = f.get("spells", [])
 	# prefer the longest-range spell we can afford — melee spells whiff silently
 	var sid := -2
@@ -253,11 +289,14 @@ func _on_message(opcode: int, payload) -> void:
 			print("[smoke] ACTOR_APPEAR: %s" % str(decoded.get("actors", [])))
 		8040:
 			_combat_seen = true
-			print("[smoke] COMBAT STARTED — surrender at +8s")
-			create_timer(8.0).timeout.connect(func():
-				client.send_message(8151, PackedByteArray(), 3))
+			print("[smoke] COMBAT STARTED — surrender once the card lands")
+			_try_surrender(0)
 		8300:
 			print("[smoke] END FIGHT (8300)")
+		8108:
+			_card_landed = true
+			print("[smoke]   8108 card ability raw=%dB hex=%s" % [
+				payload.size(), payload.hex_encode()])
 		8100, 8104, 8106:
 			print("[smoke]   op %d raw=%dB hex=%s" % [
 				opcode, payload.size(), payload.hex_encode()])
@@ -265,6 +304,18 @@ func _on_message(opcode: int, payload) -> void:
 			_finish(1, "challenge refused")
 		_:
 			print("[smoke]   op %d" % opcode)
+
+
+## Surrenders once the equipment ability has landed (or after ~32s, so the
+## smoke cannot hang if the card never reaches range).
+func _try_surrender(elapsed: float) -> void:
+	create_timer(4.0).timeout.connect(func():
+		if finished or fight_scene == null:
+			return
+		if not _card_landed and elapsed < 32.0:
+			_try_surrender(elapsed + 4.0)
+			return
+		client.send_message(8151, PackedByteArray(), 3))
 
 
 func _finish(code: int, msg: String) -> void:

@@ -228,6 +228,11 @@ func _on_submit(text: String) -> void:
 				return
 			trade.emit(rest)
 			return
+		if cmd == "reset":
+			# /resetPosition — 4514 empty (arch 3); the server teleports the
+			# coach back to its spawn point (retail console command).
+			Session.send(4514, PackedByteArray(), 3)
+			return
 		if cmd == "guild":
 			# Guild creation — C2S 509 [u8 type][u8 len][name], arch 3.
 			# The 504 result + 510/552/512 state pushes + 558 feed answer it.

@@ -49,6 +49,7 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"guild_member_report": return _guild_member_report(r)
 		"match_found": return _match_found(r)
 		"tournament_tree": return _tournament_tree(r)
+		"stat_data": return _stat_data(r)
 		"tournament_calendar": return _tournament_calendar(r)
 		"tournament_list": return _tournament_list(r)
 		_:
@@ -202,6 +203,18 @@ static func _tournament_tree(r: WireReader) -> Dictionary:
 		out.slots[slot] = r.get_str("i32")
 	if r.remaining() >= 4:
 		out.unread = r.get_i32()
+	return out
+
+
+## Opcode 22002 — StatisticData (server handshake.EncodeStatisticData):
+## [i32 byteLen]{u16 criterion, u16 value} — the achievements snapshot the
+## client pops its criteria tab with (server handlers_lifecycle.go).
+static func _stat_data(r: WireReader) -> Dictionary:
+	var out := {"rows": []}
+	var n: int = r.get_i32()
+	while n >= 4 and r.remaining() >= 4:
+		out.rows.append({"crit": r.get_u16(), "val": r.get_u16()})
+		n -= 4
 	return out
 
 

@@ -113,6 +113,8 @@ Fighter sprites: breed+sex → `Players/-XYZ.anm` via the client's
 
 - Spell casting `8109`→`8110` is verified live when a fighter owns spells
   (the smoke's loadout saves them first); weapon `8111` is the fallback.
+- Equipment actives `8107`→`8108` (the fighter's weapon card) are verified
+  live — `fight_smoke` fires card 1 at a seeded equipped fighter.
 - Placement is click-a-spawn-cell (no drag preview like retail).
 - Challenge/coach interactions need a second client — `pvp_smoke` brings
   its own bot.

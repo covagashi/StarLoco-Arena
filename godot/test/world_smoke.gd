@@ -240,6 +240,12 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 				payload.get_i16(), ",", payload.get_u8())
 		23002:
 			print("[smoke] SEARCH 23002 evo cancel=", payload.get_i8())
+		28610:
+			print("[smoke] TOURNAMENT cancel result=", payload.get_i8())
+		22002:
+			var d := Codec.decode(op, payload)
+			print("[smoke] STATS 22002 — ", d.get("rows", []).size(),
+				" criteria")
 
 
 func _move_and_shoot() -> void:
@@ -553,6 +559,10 @@ func _move_and_shoot() -> void:
 				_main._on_element_alt()
 				print("[smoke] tournament search sent — expecting 28612")
 				await create_timer(1.0).timeout
+				# Same button again = cancel (28609 → 28610).
+				_main._on_element_alt()
+				print("[smoke] tournament cancel sent — expecting 28610")
+				await create_timer(0.8).timeout
 				# Bracket — re-selecting the registered tournament asks
 				# 28649; 28650 fills the pane's second list.
 				tlist.item_selected.emit(0)
@@ -610,6 +620,21 @@ func _move_and_shoot() -> void:
 	_main._on_evo_search()
 	await create_timer(0.8).timeout
 	_main._on_cancel_search()
+	await create_timer(0.8).timeout
+	# Roster bench/titular toggle (23000) — flips state 0↔1, server
+	# pushes a fresh 6006 with the [bench] tag on the row.
+	var roster: ItemList = _main.get_node("UI/VBox/RosterBox/Roster")
+	if roster.item_count > 0:
+		roster.select(0)
+		roster.item_selected.emit(0)
+		_main._on_bench_fighter()
+		await create_timer(0.8).timeout
+		roster.select(0)            # the 6006 refresh cleared the selection
+		roster.item_selected.emit(0)
+		_main._on_bench_fighter()   # and back
+		await create_timer(0.8).timeout
+	# /resetPosition — real chat command path → 4514 (spawn teleport).
+	_main.log._on_submit("/reset")
 	await create_timer(0.8).timeout
 	# The dummy/headless renderer has no viewport texture — skip the capture.
 	if DisplayServer.get_name() != "headless":

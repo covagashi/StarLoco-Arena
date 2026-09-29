@@ -330,8 +330,11 @@ result dialog.
 | 8105 | FighterEndTurnReq | C2S | ✓ | A | — | ✓ |
 | 4503 | FighterMoveInFightReq | C2S | ✓ | A | — | ✓ |
 | 4524 | FighterMoveInFight | S2C | ✓ | A | — | ✓ |
+| 8107 | FighterCardUseRequest | C2S | ✓ | A (sg_2: i64 fid, i32 card, x, y, z) | — | ✓ (godot fight_smoke) |
+| 8108 | FighterCardUse | S2C | ✓ | A | — | ✓ |
 | 8109 | SpellCastRequest | C2S | ✓ | A | — | ✓ |
 | 8110 | SpellCast | S2C | ✓ | A | — | ✓ |
+| 8111/8112 | CloseCombatReq/CloseCombat | C2S+S2C | ✓ | A | — | ✓ (godot fallback path) |
 | 8120 | RunningEffect (AP/MP/HP) | S2C | ✓ | A | ✓ | ✓ (blob parts 0-4; 3=displacement, 4=source spell) |
 | 4520 | FighterDies | S2C | ✓ | A | — | ✓ (forfeit) |
 | 8200 | ActionSequenceExecute | S2C | ✓ | A | — | ✓ |

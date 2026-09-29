@@ -724,3 +724,7 @@ title = "Opponent found"
 ok_button_text = "Fight"
 cancel_button_text = "Decline"
 size = Vector2i(340, 120)
+
+[node name="BenchBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
+text = "Bench"
+disabled = true
