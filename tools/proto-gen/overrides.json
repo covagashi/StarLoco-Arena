@@ -654,6 +654,41 @@
    "handler": "tournament_tree",
    "note": "[i32 page][i32 n]{i32 slot, str32 name}[i32 unread]"
   },
+  "28609": {
+   "name": "TournamentSearchCancel",
+   "fields": [
+    {
+     "n": "tournament_id",
+     "t": "i64"
+    },
+    {
+     "n": "coach_id",
+     "t": "i64"
+    },
+    {
+     "n": "preset",
+     "t": "i16"
+    }
+   ]
+  },
+  "28610": {
+   "name": "TournamentSearchCancelResult",
+   "fields": [
+    {
+     "n": "accepted",
+     "t": "i8"
+    }
+   ]
+  },
+  "22001": {
+   "name": "StatisticRequest",
+   "fields": []
+  },
+  "22002": {
+   "name": "StatisticData",
+   "handler": "stat_data",
+   "note": "[i32 byteLen]{i16 crit, i16 val}"
+  },
   "15001": {
    "name": "MailList",
    "handler": "mail_list",

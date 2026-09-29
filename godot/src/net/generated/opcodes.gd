@@ -246,8 +246,8 @@ const OP_MSG17006 := 17006
 const OP_MSG17008 := 17008
 const OP_MSG17010 := 17010
 const OP_MSG22000 := 22000
-const OP_MSG22001 := 22001
-const OP_MSG22002 := 22002
+const OP_STATISTIC_REQUEST := 22001
+const OP_STATISTIC_DATA := 22002
 const OP_MSG22003 := 22003
 const OP_MSG22004 := 22004
 const OP_MSG22092 := 22092
@@ -323,8 +323,8 @@ const OP_MSG28605 := 28605
 const OP_MSG28606 := 28606
 const OP_MSG28607 := 28607
 const OP_TOURNAMENT_REGISTER_REPLY := 28608
-const OP_MSG28609 := 28609
-const OP_MSG28610 := 28610
+const OP_TOURNAMENT_SEARCH_CANCEL := 28609
+const OP_TOURNAMENT_SEARCH_CANCEL_RESULT := 28610
 const OP_MSG28611 := 28611
 const OP_TOURNAMENT_SEARCH_RESULT := 28612
 const OP_TOURNAMENT_FIGHT_STARTING := 28614
@@ -589,8 +589,8 @@ const NAMES := {
 	17008: "Msg17008",
 	17010: "Msg17010",
 	22000: "Msg22000",
-	22001: "Msg22001",
-	22002: "Msg22002",
+	22001: "StatisticRequest",
+	22002: "StatisticData",
 	22003: "Msg22003",
 	22004: "Msg22004",
 	22092: "Msg22092",
@@ -666,8 +666,8 @@ const NAMES := {
 	28606: "Msg28606",
 	28607: "Msg28607",
 	28608: "TournamentRegisterReply",
-	28609: "Msg28609",
-	28610: "Msg28610",
+	28609: "TournamentSearchCancel",
+	28610: "TournamentSearchCancelResult",
 	28611: "Msg28611",
 	28612: "TournamentSearchResult",
 	28614: "TournamentFightStarting",

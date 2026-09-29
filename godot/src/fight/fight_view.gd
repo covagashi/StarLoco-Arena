@@ -13,6 +13,7 @@ const MapGfx := preload("res://src/maps/map_gfx.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
+const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 
@@ -175,6 +176,8 @@ const OP_SPELL_CAST_REQ := 8109  # C2S [i64 fid][i32 spell][i32 x][i32 y][i16 z]
 const OP_SPELL_CAST := 8110      # S2C header+[i64 caster][i32 spell][i8 miss]
 const OP_CLOSE_COMBAT_REQ := 8111  # C2S [i64 fid][i32 x][i32 y][i16 z] (weapon)
 const OP_CLOSE_COMBAT := 8112    # S2C header+[i64 attacker][i8 miss]
+const OP_CARD_USE_REQ := 8107    # C2S [i64 fid][i32 card][i32 x][i32 y][i16 z]
+const OP_CARD_USE := 8108        # S2C header+[i64 user][i32 card][i8 miss]
 
 ## Breed base stats (server breed.go): [HP, AP, MP] — AP/MP refill each turn.
 const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
@@ -186,6 +189,7 @@ var _fight_over := false
 var _actor_cells := {}   # id -> Vector3i
 var _current_fid := -1   # fighter whose turn is running (8104 → 8106)
 var _spell_mode := -1    # >=0: next click targets this spell id (8109)
+var _card_mode := -1     # >=0: next click fires this equipment card (8107)
 var _ap_left := 0        # current fighter AP/MP, debited by 8120 fx 91/92
 var _mp_left := 0
 var _walk := {}          # actor id -> Array[Vector3i] remaining walk cells
@@ -296,6 +300,16 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var wmiss := int(payload.get_i8()) if payload.remaining() > 0 else 0
 			_float_text(atk, "miss!" if wmiss else "hit!",
 				Color(1, 1, 0.4) if wmiss else Color(1.0, 0.7, 0.3))
+		OP_CARD_USE:
+			# [i32 uid][i32 -1][i64 user][i32 card][i8 miss](+crit+target)
+			payload.get_i32()
+			payload.get_i32()
+			var user := int(payload.get_i64())
+			var cid := int(payload.get_i32())
+			var cmiss := int(payload.get_i8()) if payload.remaining() > 0 else 0
+			_float_text(user, "miss!" if cmiss else
+				FighterCards.label(cid),
+				Color(1, 1, 0.4) if cmiss else Color(0.9, 0.6, 1.0))
 		OP_FIGHTER_MOVE:
 			# [i32 uid][i32 -1][i64 fighterId] + path — server prepends the
 			# origin cell (applyFighterMove), so path[0] is where the fighter
@@ -524,6 +538,7 @@ func _float_text(fid: int, text: String, color: Color) -> void:
 func _on_turn_begin(fid: int) -> void:
 	_current_fid = fid
 	_spell_mode = -1
+	_card_mode = -1
 	var f: Dictionary = State.fighters.get(fid, {})
 	var ours := int(f.get("coach", -1)) == State.my_coach_id
 	_end_turn.disabled = not ours
@@ -562,6 +577,20 @@ func _build_spell_bar(f: Dictionary) -> void:
 	wb.tooltip_text = "weapon attack — click an adjacent cell"
 	wb.pressed.connect(_on_spell_button.bind(-2))
 	bar.add_child(wb)
+	# Equipped fighter cards with an ACTIVE ability (server jb_2.isUsable)
+	# join the bar too — retail shows them as equipment icons feeding 8107.
+	for ec in f.get("cards", []):
+		var cid := int(ec.get("id", -1))
+		if not FighterCards.usable(cid):
+			continue
+		var eb := Button.new()
+		var ab := FighterCards.ability(cid)
+		eb.text = FighterCards.label(cid)
+		eb.tooltip_text = "%s — %d AP, range %d-%d (equipment)" % [
+			eb.text, int(ab.get("ap", -1)), int(ab.get("min", 0)),
+			int(ab.get("max", 0))]
+		eb.pressed.connect(_on_card_button.bind(cid))
+		bar.add_child(eb)
 	var res := Label.new()
 	res.name = "APMP"
 	res.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -582,8 +611,17 @@ func _refresh_apmp() -> void:
 
 func _on_spell_button(sid: int) -> void:
 	_spell_mode = -2 if _spell_mode == sid else sid
+	_card_mode = -1
 	info.text = "map %s — %s: click a target" % [$UI/TopBar/MapId.text,
 		"weapon" if sid == -2 else "spell %d" % sid]
+	queue_redraw()
+
+
+func _on_card_button(cid: int) -> void:
+	_card_mode = -1 if _card_mode == cid else cid
+	_spell_mode = -1
+	info.text = "map %s — card %s: click a target" % [
+		$UI/TopBar/MapId.text, FighterCards.label(cid)]
 	queue_redraw()
 
 
@@ -611,6 +649,25 @@ func request_cast_at(sid: int, cell: Vector2i) -> bool:
 	print("[fight] %s fid=%d -> (%d,%d)" % [
 		"cast %d" % sid if sid >= 0 else "weapon", _current_fid, cell.x, cell.y])
 	_spell_mode = -1
+	return true
+
+
+## Send 8107 (fighter-equipment active) at `cell` — same target shape as the
+## weapon attack plus the card id; the server validates AP/range/equipped.
+func request_card_at(cid: int, cell: Vector2i) -> bool:
+	if not _is_my_turn() or State.net == null or cid < 0:
+		return false
+	var c: Dictionary = _cells.get(cell, {})
+	var w := WireWriter.new()
+	w.put_i64(_current_fid)
+	w.put_i32(cid)
+	w.put_i32(cell.x)
+	w.put_i32(cell.y)
+	w.put_i16(int(c.get("alt", 0)))
+	State.net.send_message(OP_CARD_USE_REQ, w.raw(), 3)
+	print("[fight] card %d fid=%d -> (%d,%d)" % [cid, _current_fid,
+		cell.x, cell.y])
+	_card_mode = -1
 	return true
 
 
@@ -829,6 +886,8 @@ func _try_move() -> void:
 			request_place_at(cell)
 	elif _spell_mode != -1:
 		request_cast_at(_spell_mode, cell)
+	elif _card_mode != -1:
+		request_card_at(_card_mode, cell)
 	else:
 		request_move_to(cell)
 
