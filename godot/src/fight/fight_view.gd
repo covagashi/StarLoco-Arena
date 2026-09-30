@@ -926,6 +926,13 @@ func _nameplate(spr: AnmSprite, fid: int) -> void:
 	lbl.add_theme_constant_override("shadow_offset_x", 1)
 	lbl.add_theme_constant_override("shadow_offset_y", 1)
 	spr.add_child(lbl)
+	var hp := ProgressBar.new()
+	hp.name = "HP"
+	hp.position = Vector2(-28, -78)
+	hp.size = Vector2(56, 5)
+	hp.show_percentage = false
+	hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spr.add_child(hp)
 	_refresh_nameplate(fid)
 
 
@@ -933,7 +940,7 @@ func _nameplate(spr: AnmSprite, fid: int) -> void:
 func _set_flip(spr: AnmSprite, flip: bool) -> void:
 	spr.scale.x = -absf(spr.scale.x) if flip else absf(spr.scale.x)
 	for c in spr.get_children():
-		if c is Label:
+		if c is Label or c is ProgressBar:
 			c.scale.x = -1.0 if flip else 1.0
 
 
@@ -947,6 +954,31 @@ func _refresh_nameplate(fid: int) -> void:
 		return
 	var lost := int(_hp_lost.get(fid, 0))
 	lbl.text = str(f.get("name", fid)) + ("" if lost == 0 else "  -%d" % lost)
+	var hp := spr.get_node_or_null("HP") as ProgressBar
+	if hp != null:
+		var mx := _hp_max(f)
+		if mx <= 0:
+			hp.visible = false      # monsters carry no max on the wire
+		else:
+			hp.visible = true
+			hp.max_value = mx
+			hp.value = clampi(mx - lost, 0, mx)
+			var ratio := float(hp.value) / float(mx)
+			var fill := StyleBoxFlat.new()
+			fill.bg_color = Color(0.85, 0.15, 0.1).lerp(
+				Color(0.3, 0.9, 0.35), ratio)
+			hp.add_theme_stylebox_override("fill", fill)
+
+
+## Max HP is data-side, never on the wire — players use the fixed breed
+## stat (DofusArena fighters don't level), summons carry theirs from the
+## type-300 template. 0 = unknown (monster records keep it hidden).
+func _hp_max(f: Dictionary) -> int:
+	if int(f.get("hp", 0)) > 0:
+		return int(f.hp)
+	if str(f.get("type", "player")) == "player":
+		return int(BREED_STATS.get(int(f.get("breed", 1)), [0, 0, 0])[0])
+	return 0
 
 
 ## Floating combat text — rises ~26px over ~0.9s and fades out.
