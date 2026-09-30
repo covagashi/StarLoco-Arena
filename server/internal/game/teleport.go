@@ -48,6 +48,12 @@ func (s *Session) teleportWithinWorld(x, y int32, z int16) bool {
 
 	d := s.deps.World.ApplyMove(s.Coach.ID, x, y, z)
 
+	// ApplyMove only diffs the ACTOR AoI — interactive elements have their own
+	// per-session registry, which handleCoachMove keeps in step. A teleport must
+	// do the same or the coach lands somewhere its client never spawned the
+	// elements of (zone triggers included).
+	s.refreshWorldElements(s.currentWorld, x, y)
+
 	// Coaches that entered view: spawn them to the mover.
 	if len(d.SpawnToMover) > 0 {
 		if frame, err := buildActorSpawn(d.SpawnToMover); err == nil {

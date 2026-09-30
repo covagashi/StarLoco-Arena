@@ -63,6 +63,7 @@ Audit legend cross-refs the commit that did/verified it.
 | 4098 | ActorDespawn | S2C | ✓ | A | — | ✓ (AoI) |
 | 4501 | CoachMovementRequest | C2S | ✓ | A | — | ✓ (AoI) |
 | 4500 | ActorMovement | S2C | ✓ | A | — | ✓ (AoI) |
+| 4510 | ActorTeleports (`xp_0`) | S2C | ✓ (`/tp` same-world) | A (i64 id, i32 x, i32 y, u16 z) | — | ✓ **live** (element AoI diff + zone triggers) |
 | 200 | InteractiveElementSpawn (`rz_2`) | S2C | ✓ (streamed per chunk) | A | ✓ | ✓ (element AoI) |
 | 206 | InteractiveElementDespawn (`acc_2`) | S2C | ✓ | A (i16 count, i64 ids) | ✓ | ✓ (element AoI) |
 | 201 | InteractiveElementAction (`bd_2`) | C2S | ✓ | A | — | ✓ **live** (right-click; Zaap + graveyard) |

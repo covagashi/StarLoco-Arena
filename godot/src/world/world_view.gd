@@ -59,6 +59,10 @@ const ELEM_COLORS := {
 
 @onready var _cam: Camera2D = $Camera
 
+## Emitted each time the LOCAL coach crosses into a new cell mid-walk (and
+## once for its spawn cell on world entry). main.gd polls zone triggers off it.
+signal cell_entered(cell: Vector2i)
+
 
 func _ready() -> void:
 	_gfx = MapGfx.new()
@@ -92,6 +96,8 @@ func show_world(world_id: int, my_pos: Vector3) -> void:
 	_cam.zoom = Vector2(0.7, 0.7)
 	_cam.position = _sprites[State.my_coach_id].position
 	visible = true
+	var sp: Vector3i = _pos[State.my_coach_id]
+	cell_entered.emit(Vector2i(sp.x, sp.y))   # spawn cell counts as entry
 	queue_redraw()
 
 
@@ -218,8 +224,23 @@ func element_spawned(e: Dictionary) -> void:
 	if c.get("ground", false):
 		z = int(c.alt)
 	_elems[int(e.id)] = {"pos": Vector3i(x, y, z),
-		"kind": int(e.get("kind", -1)), "desc": str(e.get("desc", ""))}
+		"kind": int(e.get("kind", -1)), "desc": str(e.get("desc", "")),
+		"cells": e.get("cells", [])}
 	queue_redraw()
+
+
+## Zone triggers (kind 8, client `oq`): element ids whose cell list contains
+## `cell`. They fire on walk-on (action `avr_0.dgp`) — the client polls this
+## whenever the local coach crosses into a new cell.
+func zone_triggers_at(cell: Vector2i) -> Array:
+	var out := []
+	for id in _elems:
+		var e: Dictionary = _elems[id]
+		if e.kind != 8:
+			continue
+		if Vector2i(e.pos.x, e.pos.y) == cell or e.cells.has(cell):
+			out.append(id)
+	return out
 
 
 func element_despawned(ids: Array) -> void:
@@ -246,6 +267,27 @@ func element_at(pos: Vector2) -> int:
 
 func element_info(id: int) -> Dictionary:
 	return _elems.get(id, {})
+
+
+## The local coach's current cell (last step walked or the spawn point).
+func my_cell() -> Vector2i:
+	var p: Vector3i = _pos.get(State.my_coach_id, Vector3i.ZERO)
+	return Vector2i(p.x, p.y)
+
+
+## ActorTeleports (4510): snap an actor to a cell — no walk animation, and
+## the local coach's camera recentres on the landing cell.
+func actor_teleported(id: int, x: int, y: int, z: int) -> void:
+	var cell := Vector3i(x, y, z)
+	_pos[id] = cell
+	var spr: AnmSprite = _sprites.get(id)
+	if spr != null:
+		spr.position = _iso(x + 0.5, y + 0.5, z)
+		spr.z_index = clampi((x + y) * 4 + 1, -4096, 4096)
+	_walk.erase(id)
+	if id == State.my_coach_id:
+		_cam.position = _iso(x + 0.5, y + 0.5, z)
+		cell_entered.emit(Vector2i(x, y))
 
 
 func actor_despawned(id: int) -> void:
@@ -363,6 +405,9 @@ func _process(delta: float) -> void:
 			w.t -= 1.0
 			w.seg += 1
 			_pos[id] = steps[w.seg - 1]   # keep the zkey cell current mid-walk
+			if id == State.my_coach_id:
+				var st: Vector3i = steps[w.seg - 1]
+				cell_entered.emit(Vector2i(st.x, st.y))
 		if w.seg >= steps.size():
 			spr.position = _iso(steps[-1].x + 0.5, steps[-1].y + 0.5, steps[-1].z)
 			spr.z_index = clampi((steps[-1].x + steps[-1].y) * 4 + 1, -4096, 4096)

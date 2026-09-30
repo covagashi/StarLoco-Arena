@@ -703,10 +703,28 @@ func _move_and_shoot() -> void:
 			"' accept=", dlg.get_node("VBox/Btns/ActBtn").visible)
 		_main._on_element_alt()   # Refuse — a fight here would end the scene
 
-	# World 35 — Demon III (kind 6). First visit reports criterion 210 and
-	# pages the intro; the picker tail needs achievements we haven't earned.
+	# World 35 — zone triggers first (kind 8: standing on their cell list
+	# fires a client-side tutorial scenario) BEFORE Demon III — trigger 60's
+	# script 100 is blocked once achievement 275 (criteria 210+219) completes.
 	_main.log._on_submit("/world 35")
 	await create_timer(1.5).timeout
+	for cell in [Vector2i(179, 194), Vector2i(81, 115), Vector2i(115, 136)]:
+		_main.log._on_submit("/tp %d %d" % [cell.x, cell.y])
+		await create_timer(1.6).timeout       # 4600 re-enter + 200 element spawn
+		var k8 := 0
+		for id in _main.world._elems:
+			if _main.world._elems[id].kind == 8:
+				k8 += 1
+		print("[smoke]   tp ", cell, " my_cell=", _main.world.my_cell(),
+			" triggers=", _main.world.zone_triggers_at(_main.world.my_cell()),
+			" kind8-in-aoi=", k8)
+		await _dismiss_pages(dlg)
+	print("[smoke] ZONE TRIGGERS — criteria221=", State.criteria.get(221, 0),
+		" 219=", State.criteria.get(219, 0),
+		" fired=", _main._fired_triggers.keys())
+
+	# Demon III (kind 6). First visit reports criterion 210 and pages the
+	# intro; the picker tail needs achievements we haven't earned.
 	var d3 := await _goto_elem(6, Vector2i(116, 133))
 	if d3 >= 0:
 		_main._use_element(d3)
@@ -802,3 +820,15 @@ func _click_elem(kind: int, target: Vector2i, want_title: String) -> void:
 		print("[smoke] ELEM kind=", kind, " id=", eid, " → shop/zaap pane")
 	else:
 		print("[smoke] ELEM kind=", kind, " id=", eid, " — no dialog!")
+
+
+## Page through any open ElementDlg (zone-trigger scenario / NPC pages)
+## until it closes — Next/OK via ActBtn, bounded so a stuck dialog can't hang.
+func _dismiss_pages(dlg: PanelContainer) -> void:
+	var guard := 0
+	while dlg.visible and guard < 16:
+		var hint: String = dlg.get_node("VBox/Hint").text
+		print("[smoke]   page '", hint.substr(0, 42).replace("\n", " "), "'")
+		_main._on_element_act()
+		await create_timer(0.3).timeout
+		guard += 1

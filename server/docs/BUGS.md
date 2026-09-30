@@ -11,6 +11,32 @@ decompiled client, no runtime).
 
 ---
 
+### B-162 · `/TP` moved the coach but never its element AoI — zone triggers silently absent
+
+- **Symptom (Godot smoke):** after `/tp 179 194` the client correctly snapped
+  to the cell, but `zone_triggers_at` found nothing — the kind-8 element
+  sitting exactly there never existed in the client's registry, even though it
+  was inside the env-chunk radius.
+- **Root cause:** `teleportWithinWorld` calls `World.ApplyMove`, which only
+  diffs the *actor* AoI. Interactive elements live in a separate per-session
+  registry (`spawnedElements`) kept in step by `refreshWorldElements` — wired
+  into `EnterAoI` and `handleCoachMove`, but never into the teleport path. The
+  coach landed surrounded by elements its client was never told about; the
+  stale set still claimed whatever surrounded the previous cell.
+- **Fix:** `teleportWithinWorld` now calls
+  `s.refreshWorldElements(s.currentWorld, x, y)` right after `ApplyMove` — the
+  same call the walk path makes — so a 4510 lands with the correct 200/206
+  element diff.
+- **Verified:** live Godot smoke: `tp (179,194)` now receives a 200 spawn for
+  element 60 (`cells=[(179,193)..(179,196)]`, desc `100;0;275`) and its
+  scenario fires — `triggers=[60]`, 11-page tutorial monologue, criterion 221
+  persisted. (`internal/game/teleport.go`.)
+- **Client-side companions (Godot):** `main.gd` had no 4510 handler at all —
+  added `OP_ACTOR_TELEPORTS` decode + `WorldView.actor_teleported` (snap
+  position, drop walk state, recentre camera, emit `cell_entered`). Also fixed
+  `cell_entered` emitting `Vector3i` into a `Vector2i` slot on both the world
+  load and walk-step paths.
+
 ### B-161 · Illegal roster on fight launch disconnected the coach
 
 - **Symptom (Godot smoke):** `26330` (Tester / overworld challenge) closed the

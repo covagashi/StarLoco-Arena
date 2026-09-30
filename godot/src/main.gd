@@ -25,6 +25,7 @@ const Elements := preload("res://src/gamedata/elements.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
+const Scenarios := preload("res://src/gamedata/scenarios.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
@@ -38,6 +39,7 @@ const OP_INSTANCE_READY := 4516
 const OP_ACTOR_SPAWN := 4096
 const OP_ACTOR_DESPAWN := 4098
 const OP_ACTOR_MOVEMENT := 4500
+const OP_ACTOR_TELEPORTS := 4510         # S2C [i64 id][i32 x][i32 y][i16 z]
 const OP_FIGHT_CREATION := 8000
 const OP_FIGHT_ERROR := 26310
 const OP_PONG := 108
@@ -195,6 +197,7 @@ const OP_EX_ERROR := 5113                # S2C [u8 code][i64 ex]
 const OP_EX_END := 5114                  # S2C [u8 reason][i64 ex]
 const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
 const ELEM_EXCHANGE := 100               # pseudo kind: ElementDlg in trade mode
+const ELEM_SCENARIO := -2                # pseudo kind: tutorial monologue (zone trigger)
 const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 card]
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
@@ -275,6 +278,7 @@ func _ready() -> void:
 	$UI/VBox/AuthRow/CancelSearchBtn.pressed.connect(_on_cancel_search)
 	log.bubble.connect(world.chat_bubble)
 	log.emote.connect(world.emote)
+	world.cell_entered.connect(_check_zone_trigger)
 	$UI/VBox/TeamRow/AssignBtn.pressed.connect(func(): _on_assign(true))
 	$UI/VBox/TeamRow/UnassignBtn.pressed.connect(func(): _on_assign(false))
 	$UI/VBox/TeamRow/SaveTeamBtn.pressed.connect(_open_save_team)
@@ -461,6 +465,11 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				path.append(Vector3i(int(payload.get_i32()),
 					int(payload.get_i32()), int(payload.get_i16())))
 			world.actor_moved(aid, path)
+		OP_ACTOR_TELEPORTS:
+			# 4510 — actor snapped to a cell (GM /tp, zaap arrival effects).
+			var tp := Codec.decode(opcode, payload)
+			world.actor_teleported(
+				int(tp.f0), int(tp.f1), int(tp.f2), int(tp.f3))
 		OP_FIGHT_CREATION:
 			State.fight_world = State.current_world
 			State.fight_data = Codec.decode(opcode, payload)
@@ -718,6 +727,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					e.desc = info.desc
 				State.elements[id] = e
 				world.element_spawned(e)
+				# Zone triggers spawn AFTER the coach — re-check so a coach
+				# already standing inside the zone still fires it.
+				if e.get("kind") == 8:
+					_check_zone_trigger(world.my_cell())
 		OP_ELEMENT_DESPAWN:
 			var d := Codec.decode(opcode, payload)
 			for id in d.get("ids", []):
@@ -2099,6 +2112,9 @@ var _kanodo_pick := {}        # sphere node selected on the board
 var _duo_pending := {}        # incoming 6025 {team, inviter, invited}
 var _watch_target := -1       # coach id asked in the pending 2260
 var _npc := {}                # open NPC dialog {name, replies}
+var _fired_triggers := {}     # zone-trigger element ids already run this session
+var _scenario_queue := []     # pending tutorial monologues (overlapping zones)
+var _pending_zaap_page := 0   # scenario 108 follow-up: show once the Zaap opens
 
 ## Ranking window tabs (retail ladderInformationDialog order): the request
 ## opcode and a payload builder; replies land in _on_message below.
@@ -2380,6 +2396,9 @@ func _npc_page_next() -> void:
 	var chals: Array = _npc.get("chals", [])
 	if chals.is_empty():
 		$UI/ElementDlg.visible = false
+		# Queued zone-trigger scenarios run one monologue at a time.
+		if _elem_kind == ELEM_SCENARIO and not _scenario_queue.is_empty():
+			_run_scenario(_scenario_queue.pop_front())
 	else:
 		_npc_fill_challenges(chals)
 		$UI/ElementDlg/VBox/Btns/ActBtn.visible = false
@@ -2388,6 +2407,55 @@ func _npc_page_next() -> void:
 ## Achievement check against the coach's live criteria + tome (aau_1.a).
 func _ach_done(id: int) -> bool:
 	return NpcDialogs.achievement_done(id, State.criteria, State.inventory)
+
+
+## Zone triggers (kind 8, client `oq`): desc "script;requireAch;blockAch".
+## Fires once per element per session when the coach walks into its zone —
+## the required achievement must be done, the blocking one NOT. The script is
+## a client-side Lua scenario (anr_0) — the tutorial monologues.
+func _check_zone_trigger(cell: Vector2i) -> void:
+	for id in world.zone_triggers_at(cell):
+		if _fired_triggers.has(id):
+			continue
+		var e: Dictionary = world.element_info(id)
+		var fields := _desc_fields(str(e.get("desc", "")))
+		var script := int(fields[0]) if fields.size() > 0 else -1
+		var req := int(fields[1]) if fields.size() > 1 else 0
+		var block := int(fields[2]) if fields.size() > 2 else 0
+		if req > 0 and not _ach_done(req):
+			continue
+		if block > 0 and _ach_done(block):
+			continue
+		_fired_triggers[id] = true
+		_elem_id = id
+		# Overlapping zones queue their scenarios like the retail Lua VM's
+		# event loop — one monologue at a time.
+		if _elem_kind == ELEM_SCENARIO and $UI/ElementDlg.visible:
+			_scenario_queue.append(script)
+		else:
+			_run_scenario(script)
+
+
+## Play a scenario as a paged floating monologue (the retail BubbleText
+## content is intact; the actor walk-in / widget-particle choreography is
+## not reproduced). `ach` criteria go out as 22003 like Context.updateAch.
+func _run_scenario(id: int) -> void:
+	var s := Scenarios.script(id)
+	if s.is_empty():
+		return
+	var ach := int(s.get("ach", 0))
+	if ach > 0:
+		var w := WireWriter.new()
+		w.put_i16(ach)
+		w.put_u8(1)
+		w.put_i16(1)
+		State.net.send_message(OP_STAT_UPD, w.raw(), 2)
+		State.criteria[ach] = 1   # local shadow for same-session gates
+	_pending_zaap_page = int(s.get("zaap", 0))
+	_npc = {"pages": s.get("pages", []), "page": 0, "chals": []}
+	_elem_kind = ELEM_SCENARIO
+	_npc_page_show("Tutorial")
+	_log_line("tutorial scenario %d fired" % id)
 
 
 ## Generic element dialog: title + hint + a list + two optional action
@@ -2928,7 +2996,7 @@ func _on_element_act() -> void:
 			Session.send(OP_TEAM_TEST, w.raw(), 2)
 			$UI/ElementDlg.visible = false
 			_log_line("challenge %d accepted" % chal)
-		6, 9:  # demon monologue — Next advances, last page closes/pickers
+		6, 9, ELEM_SCENARIO:  # monologue — Next advances, last closes/pickers
 			_npc_page_next()
 		13:  # tournament register → 4607 [tid][coach][preset=-1][card=0]
 			var sel := list.get_selected_items()
@@ -3059,6 +3127,9 @@ func _on_element_alt() -> void:
 		act.disabled = false
 		return
 	$UI/ElementDlg.visible = false
+	# Closing a queued-up scenario monologue starts the next one.
+	if _elem_kind == ELEM_SCENARIO and not _scenario_queue.is_empty():
+		_run_scenario(_scenario_queue.pop_front())
 
 
 ## Zaap dialog: reuse the shop panel in "teleport" mode — the stocked list is
@@ -3084,6 +3155,14 @@ func _open_zaap() -> void:
 	$UI/ShopDlg/VBox/Btns/TradeBtn.visible = false
 	$UI/ShopDlg.visible = true
 	_on_shop_pick(-1)
+	# Scenario 108's useZaap step: once the Zaap dialog is open the tutorial
+	# shows one more floating page explaining the teleport click.
+	if _pending_zaap_page > 0:
+		var page := _pending_zaap_page
+		_pending_zaap_page = 0
+		_npc = {"pages": [page], "page": 0, "chals": []}
+		_elem_kind = ELEM_SCENARIO
+		_npc_page_show("Tutorial")
 
 
 ## --- Card Master shop --------------------------------------------------------

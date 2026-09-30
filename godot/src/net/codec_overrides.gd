@@ -698,10 +698,13 @@ static func _element_ru(e: Dictionary, blob: PackedByteArray) -> void:
 		ru.get_u8()                        # agj
 		e.dir = ru.get_u8()
 		e.flags = ru.get_i16()
-		for j in ru.get_i16():
-			ru.get_i32()
-			ru.get_i32()
-			ru.get_i16()
+		e.cells = []
+		var n_paths := ru.get_i16()
+		for j in n_paths:
+			var cx := ru.get_i32()
+			var cy := ru.get_i32()
+			ru.get_i16()                   # cell altitude
+			e.cells.append(Vector2i(cx, cy))
 		if ru.remaining() >= 2:
 			e.desc = ru.get_str("u16")
 		return
