@@ -422,6 +422,12 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var tackled := int(payload.get_i64())
 			_walk.erase(tackled)
 			_float_text(tackled, "tackled!", Color(1.0, 0.5, 0.3))
+			# Retail also logs "[name] has been tackled." to the fight info
+			# channel and plays AnimTacle (skeletal — unrenderable
+			# standalone, so the float carries the visual cue).
+			var tn := str(State.fighters.get(tackled, {}).get("name", ""))
+			$UI/Chat.log_line("%s has been tackled." % tn
+				if not tn.is_empty() else "Fighter tackled.")
 		OP_FIGHTER_OUCH:
 			# [i32][i32][i64 fid] — retail pops "ouch !" over the fighter who
 			# just lost HP to a CRITICAL cast (B-138).

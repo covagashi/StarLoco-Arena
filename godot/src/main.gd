@@ -907,6 +907,19 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				lines.append("  stat %d (type %d) = %s" % [
 					int(s.id), int(s.type), str(s.value)])
 			_log_line("\n".join(lines))
+		22000:
+			# AchievementUnlocked — retail zN raises the achievementDialog
+			# toast, gated on !isHidden() (the server already skips hidden
+			# ones, but the client-side gate is part of the contract).
+			var aid := int(payload.get_i16())
+			var ainfo := NpcDialogs.achievement_info(aid)
+			if not bool(ainfo.get("hid", false)):
+				var pts := int(ainfo.get("pts", 0))
+				var aname := NpcDialogs.achievement_name(aid)
+				_toast("Achievement unlocked — %s%s" % [aname,
+					" (+%d pts)" % pts if pts > 0 else ""])
+				_log_line("[color=yellow]achievement unlocked: %s[/color]"
+					% aname)
 		OP_STAT_DATA:
 			# 22002 — reply to opening the achievements tab; the pairs also
 			# refresh the local criterion map the pane evaluates against.
@@ -2203,6 +2216,25 @@ func _send_coach_creation() -> void:
 
 func _log_line(s: String) -> void:
 	log.log_line(s)
+
+
+## Bottom-centre toast — retail's achievementDialog style: a small card that
+## stacks upward and fades out after a few seconds.
+func _toast(text: String) -> void:
+	var box := $UI/ToastBox
+	var card := PanelContainer.new()
+	var lab := Label.new()
+	lab.text = text
+	lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lab.add_theme_font_size_override("font_size", 12)
+	card.add_child(lab)
+	box.add_child(card)
+	while box.get_child_count() > 3:
+		box.get_child(0).queue_free()
+	var tw := create_tween()
+	tw.tween_interval(3.5)
+	tw.tween_property(card, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(card.queue_free)
 
 
 ## --- Interactive elements (200/201/206) -------------------------------------

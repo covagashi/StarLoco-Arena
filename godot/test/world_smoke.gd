@@ -675,6 +675,20 @@ func _move_and_shoot() -> void:
 	if cslist.item_count == 0 or not cs0.begins_with("fights:"):
 		_fail("coach stats pane empty or wrong")
 	_main.get_node("UI/ElementDlg").visible = false
+	# Achievement-unlock toast — fabricate the 22000 push ([i16 id]); a card
+	# must land in ToastBox (id 1 "Winning Streak" is not hidden).
+	var av := WireWriter.new()
+	av.put_i16(1)
+	_main._on_message(22000, av.raw())
+	await create_timer(0.2).timeout
+	var tbox: VBoxContainer = _main.get_node("UI/ToastBox")
+	var ttxt := ""
+	if tbox.get_child_count() > 0:
+		ttxt = (tbox.get_child(0).get_child(0) as Label).text
+	print("[smoke] ACHIEVEMENT TOAST cards=%d text='%s'" % [
+		tbox.get_child_count(), ttxt])
+	if tbox.get_child_count() == 0 or not ttxt.contains("Winning Streak"):
+		_fail("achievement toast missing or unnamed")
 	# Search lanes: quick-search (2301 → 2304 → 2303 → 2306) and the
 	# evolution queue (23003 → 23004 → 23001 → 23002), each ack+cancel.
 	_main._on_quick_search()
