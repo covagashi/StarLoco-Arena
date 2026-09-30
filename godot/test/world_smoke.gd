@@ -674,11 +674,52 @@ func _move_and_shoot() -> void:
 			img.save_png("/tmp/world_live.png")
 			print("[smoke] shot -> /tmp/world_live.png")
 
-	# --- NPC dialog (record 1500, kind 15) ---------------------------------
-	# GM /WORLD 85 re-sends 4600 for Baan's tutorial island (the 'test'
-	# account is admin). Baan = element 143 at cell (7,9).
-	# NOTE: this must run LAST — the défi reply starts a fight, which swaps
-	# the whole scene (this _main instance is freed).
+	# --- NPC / demon element tour -------------------------------------------
+	# GM /WORLD <id> re-sends 4600 for the island (the 'test' account is admin).
+	# NOTE: the défi launch at the end starts a fight, which swaps the whole
+	# scene (this _main instance is freed) — it must run LAST.
+	var dlg: PanelContainer = _main.get_node("UI/ElementDlg")
+
+	# World 37 — Demon I (kind 9, paged monologue) + a DemonChallenge (kind 7).
+	_main.log._on_submit("/world 37")
+	await create_timer(1.5).timeout
+	var d1 := await _goto_elem(9, Vector2i(136, 124))
+	if d1 >= 0:
+		_main._use_element(d1)
+		await create_timer(0.3).timeout
+		print("[smoke] DEMON I '", dlg.get_node("VBox/Title").text,
+			"' p0='", dlg.get_node("VBox/Hint").text.substr(0, 40), "'")
+		# page through the monologue (Next ×2 → OK on the last page)
+		for _i in 3:
+			_main._on_element_act()
+			await create_timer(0.25).timeout
+		print("[smoke] DEMON I done — dialog visible:", dlg.visible)
+	var d7 := await _goto_elem(7, Vector2i(137, 137))
+	if d7 >= 0:
+		_main._use_element(d7)
+		await create_timer(0.3).timeout
+		print("[smoke] DEMON-CHALLENGE '", dlg.get_node("VBox/Title").text,
+			"' text='", dlg.get_node("VBox/Hint").text.substr(0, 40),
+			"' accept=", dlg.get_node("VBox/Btns/ActBtn").visible)
+		_main._on_element_alt()   # Refuse — a fight here would end the scene
+
+	# World 35 — Demon III (kind 6). First visit reports criterion 210 and
+	# pages the intro; the picker tail needs achievements we haven't earned.
+	_main.log._on_submit("/world 35")
+	await create_timer(1.5).timeout
+	var d3 := await _goto_elem(6, Vector2i(116, 133))
+	if d3 >= 0:
+		_main._use_element(d3)
+		await create_timer(0.3).timeout
+		print("[smoke] DEMON III '", dlg.get_node("VBox/Title").text,
+			"' p0='", dlg.get_node("VBox/Hint").text.substr(0, 40), "'")
+		for _i in 3:
+			_main._on_element_act()
+			await create_timer(0.25).timeout
+		print("[smoke] DEMON III done — visible:", dlg.visible,
+			" criteria210=", State.criteria.get(210, 0))
+
+	# World 85 — Baan (kind 15, record-1500 tree) then the défi reply → 26330.
 	_main.log._on_submit("/world 85")
 	await create_timer(1.5).timeout
 	var npc := await _goto_elem(15, Vector2i(7, 9))
@@ -688,15 +729,15 @@ func _move_and_shoot() -> void:
 		_main._use_element(npc)
 		await create_timer(0.4).timeout
 		var npc_list: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
-		print("[smoke] NPC '", _main.get_node("UI/ElementDlg/VBox/Title").text,
-			"' speech='", _main.get_node("UI/ElementDlg/VBox/Hint").text.substr(0, 45),
+		print("[smoke] NPC '", dlg.get_node("VBox/Title").text,
+			"' speech='", dlg.get_node("VBox/Hint").text.substr(0, 45),
 			"' replies=", npc_list.item_count)
 		# Baan group 7: a single act=2 reply (criterion 219 → 22003) → next 8.
 		if npc_list.item_count > 0:
 			npc_list.item_selected.emit(0)
 			await create_timer(0.4).timeout
 			print("[smoke] NPC node 8 speech='",
-				_main.get_node("UI/ElementDlg/VBox/Hint").text.substr(0, 45), "'")
+				dlg.get_node("VBox/Hint").text.substr(0, 45), "'")
 		# Group 48 carries the two "Lancer un défi" rows (act=1 → 26330
 		# [challengeId][mode]) — drive it directly to exercise the wire path.
 		_main._npc_node(48)

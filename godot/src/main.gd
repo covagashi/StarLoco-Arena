@@ -2143,8 +2143,14 @@ func _use_element(id: int) -> void:
 			_open_graveyard()
 		14:  # Fusion altar — feed same-set cards at a target → 5490
 			_open_fusion()
-		3, 7: # Challenge / Demon challenge — accept bubble → 26330
-			_open_challenge_bubble(e)
+		3:   # Challenge (uk_0) — name;textId;challengeIds… → picker → cj_0 26330
+			_open_challenge_picker(e)
+		7:   # Demon challenge (pn_0) — gated on achievement 278
+			_open_demon_challenge(e)
+		6:   # Demon III (acn_0) — paged talk → criterion 210 → challenge picker
+			_open_demon3(e)
+		9:   # Demon I (aac_2) — paged monologue gated on achievement 277
+			_open_demon1(e)
 		5:   # Breed Master — recruit text; the "test" button runs 26330 too.
 			# zs_1 also reports criterion 221 ("talked to a breedmaster") on
 			# every dialog open — a counter stat, value=1 each time.
@@ -2201,11 +2207,24 @@ func _npc_node(group_id: int) -> void:
 		list.set_item_metadata(i, i)
 	if not list.item_selected.is_connected(_on_npc_reply):
 		list.item_selected.connect(_on_npc_reply)
+	_elem_close_btn()
 
 
 ## Reply click = client ao_2 case 17001: run the action, then navigate to the
-## reply's `next` group (0 = close the dialog).
+## reply's `next` group (0 = close the dialog). For kinds 3/6 the list rows
+## are the défi picker — a click accepts the challenge (cj_0 → 26330 {id, 99}).
 func _on_npc_reply(i: int) -> void:
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	if _elem_kind == 3 or _elem_kind == 6:
+		var chal := int(list.get_item_metadata(i))
+		if chal > 0:
+			var w := WireWriter.new()
+			w.put_i32(chal)
+			w.put_u16(99)
+			Session.send(OP_TEAM_TEST, w.raw(), 2)
+			_log_line("challenge %d accepted" % chal)
+		$UI/ElementDlg.visible = false
+		return
 	if _elem_kind != 15:
 		return
 	var replies: Array = _npc.get("replies", [])
@@ -2220,16 +2239,155 @@ func _on_npc_reply(i: int) -> void:
 			w.put_u16(NpcDialogs.challenge_mode(chal))
 			Session.send(OP_TEAM_TEST, w.raw(), 2)
 		2: # Donne un exploit — 22003 {i16 criterionId, u8 1, i16 1}
+			var crit := int(r.get("params", [0])[0])
 			var w := WireWriter.new()
-			w.put_i16(int(r.get("params", [0])[0]))
+			w.put_i16(crit)
 			w.put_u8(1)
 			w.put_i16(1)
 			State.net.send_message(OP_STAT_UPD, w.raw(), 2)
+			State.criteria[crit] = 1   # local shadow for same-session gates
 	var next := int(r.get("next", 0))
 	if next != 0:
 		_npc_node(next)
 	else:
 		$UI/ElementDlg.visible = false
+
+
+## Fill the ElementDlg list with one row per challenge (content.30 names);
+## clicking a row sends 26330 [i32 challengeId][i16 99] — the wire shape every
+## picker accept produces (cj_0's bM is hardcoded 99 for env 3/6/7 elements).
+func _npc_fill_challenges(chals: Array) -> void:
+	_npc["chals"] = chals
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	list.clear()
+	for c in chals:
+		list.add_item(NpcDialogs.challenge_name(int(c)))
+		list.set_item_metadata(list.item_count - 1, int(c))
+	if not list.item_selected.is_connected(_on_npc_reply):
+		list.item_selected.connect(_on_npc_reply)
+
+
+## uk_0 Challenge (kind 3): desc "nameId;speechId;challengeId;…" — accept shows
+## the challenge picker (cj_0); each row launches 26330 {id, 99}.
+func _open_challenge_picker(e: Dictionary) -> void:
+	var fields := _desc_fields(str(e.get("desc", "")))
+	_npc = {}
+	_element_text(
+		NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else "Challenge",
+		NpcDialogs.npc_name(fields[1]) if fields.size() > 1 else "")
+	_npc_fill_challenges(fields.slice(2))
+	_elem_close_btn()
+
+
+## Show AltBtn as a plain "Close" — _on_element_alt's fallthrough hides the
+## dialog for every kind that has no specific alt action.
+func _elem_close_btn() -> void:
+	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+	alt.text = "Close"
+	alt.visible = true
+
+
+## pn_0 DemonChallenge (kind 7): desc "nameId;taskId;challengeId;acceptText;
+## refuseText". taskId != 0 drives a client-side scenario we don't run — we go
+## straight to the challenge offer. taskId == 0 gates the accept bubble on
+## achievement 278 ("all four minute-demon challenges"): refuse text otherwise.
+func _open_demon_challenge(e: Dictionary) -> void:
+	var fields := _desc_fields(str(e.get("desc", "")))
+	var task := int(fields[1]) if fields.size() > 1 else 0
+	var chal := int(fields[2]) if fields.size() > 2 else -1
+	var accept_txt := int(fields[3]) if fields.size() > 3 else -1
+	var refuse_txt := int(fields[4]) if fields.size() > 4 else -1
+	_npc = {}
+	_element_text(NpcDialogs.npc_name(fields[0]),
+		NpcDialogs.npc_name(
+			accept_txt if task != 0 or _ach_done(278) else refuse_txt))
+	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
+	alt.text = "Refuse"
+	alt.visible = true
+	if task != 0 or _ach_done(278):
+		var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+		act.text = "Accept"
+		act.visible = true
+		act.disabled = chal < 0
+		_npc["chal"] = chal
+
+
+## aac_2 Demon I (kind 9): desc "nameId;t0;t1;t2;alt0;alt1" — a paged
+## monologue. Achievement 277 (all minute-demon challenges) picks the alt
+## two-page set; the "Next" button advances, last page closes.
+func _open_demon1(e: Dictionary) -> void:
+	var fields := _desc_fields(str(e.get("desc", "")))
+	var pages := fields.slice(4) if _ach_done(277) else fields.slice(1, 4)
+	_npc = {"pages": pages, "page": 0, "chals": []}
+	_npc_page_show(NpcDialogs.npc_name(fields[0]))
+
+
+## acn_0 Demon III (kind 6): desc "nameId;t0..t5;challengeId×3". First contact
+## (achievement 275 pending) reports criterion 210 then pages t0→t2; the tail
+## picks t3 (needs 3 recruits, ach 276), t5 (evo challenges done, ach 284) or
+## t4 + the challenge picker.
+func _open_demon3(e: Dictionary) -> void:
+	var fields := _desc_fields(str(e.get("desc", "")))
+	var texts := fields.slice(1, 7)
+	var chals := fields.slice(7)
+	_npc = {"chals": chals}
+	if not _ach_done(275):
+		var w := WireWriter.new()
+		w.put_i16(210)
+		w.put_u8(1)
+		w.put_i16(1)
+		State.net.send_message(OP_STAT_UPD, w.raw(), 2)
+		State.criteria[210] = 1   # local shadow — achievement 275's gate reads it
+		_npc["pages"] = texts.slice(0, 3)
+		_npc["page"] = 0
+		_npc["chals"] = []
+		_npc_page_show(NpcDialogs.npc_name(fields[0]))
+	elif not _ach_done(276):
+		_element_text(NpcDialogs.npc_name(fields[0]),
+			NpcDialogs.npc_name(texts[3]))
+	elif _ach_done(284):
+		_element_text(NpcDialogs.npc_name(fields[0]),
+			NpcDialogs.npc_name(texts[5]))
+	else:
+		_element_text(NpcDialogs.npc_name(fields[0]),
+			NpcDialogs.npc_name(texts[4]))
+		_npc_fill_challenges(chals)
+	_elem_close_btn()
+
+
+## Show one monologue page; ActBtn = Next / OK.
+func _npc_page_show(title: String) -> void:
+	var pages: Array = _npc.get("pages", [])
+	var page := int(_npc.get("page", 0))
+	var last := page >= pages.size() - 1
+	_element_text(title, NpcDialogs.npc_name(int(pages[page]))
+		if pages.size() > page else "")
+	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
+	act.text = "OK" if last else "Next"
+	act.visible = true
+	act.disabled = false
+	_elem_close_btn()
+
+
+## ActBtn on kinds 6/9 advances the monologue; at the last page it either
+## closes (no challenges) or reveals the défi picker.
+func _npc_page_next() -> void:
+	_npc["page"] = int(_npc.get("page", 0)) + 1
+	var pages: Array = _npc.get("pages", [])
+	if int(_npc.page) < pages.size():
+		_npc_page_show($UI/ElementDlg/VBox/Title.text)
+		return
+	var chals: Array = _npc.get("chals", [])
+	if chals.is_empty():
+		$UI/ElementDlg.visible = false
+	else:
+		_npc_fill_challenges(chals)
+		$UI/ElementDlg/VBox/Btns/ActBtn.visible = false
+
+
+## Achievement check against the coach's live criteria + tome (aau_1.a).
+func _ach_done(id: int) -> bool:
+	return NpcDialogs.achievement_done(id, State.criteria, State.inventory)
 
 
 ## Generic element dialog: title + hint + a list + two optional action
@@ -2760,13 +2918,18 @@ func _on_element_act() -> void:
 			$UI/ElementDlg.visible = false
 			_log_line("fusion sent: %d cards → %s" % [inputs.size(),
 				Cards.name_of(int(list2.get_item_metadata(sel2[0])))])
-		3, 7, 5:  # challenge accepted
+		5, 7:  # breedmaster/demon challenge accepted → 26330 {id, 99}
+			var chal := int(_npc.get("chal", _bubble_challenge))
+			if chal < 0:
+				return
 			var w := WireWriter.new()
-			w.put_i32(_bubble_challenge)
+			w.put_i32(chal)
 			w.put_u16(99)
 			Session.send(OP_TEAM_TEST, w.raw(), 2)
 			$UI/ElementDlg.visible = false
-			_log_line("challenge %d accepted" % _bubble_challenge)
+			_log_line("challenge %d accepted" % chal)
+		6, 9:  # demon monologue — Next advances, last page closes/pickers
+			_npc_page_next()
 		13:  # tournament register → 4607 [tid][coach][preset=-1][card=0]
 			var sel := list.get_selected_items()
 			if sel.is_empty():

@@ -46,9 +46,17 @@ def main() -> None:
         groups[gid] = {"text": speech.get(int(gid), ""), "replies": replies}
 
     out = {
+        # content.29 doubles as the NPC/demon dialog TEXT table (names AND
+        # speech bodies both index it); content.30 holds challenge names for
+        # the défi picker lists on env 3/6 elements.
         "names": {str(k): v for k, v in names.items()},
+        "challengeNames": {str(k): v for k, v in table(texts, 30).items()},
         "groups": groups,
         "challengeModes": raw.get("challengeModes") or {},
+        # type-800 achievements: {id: {stats: {statId: thr}, cards: [id]}} —
+        # the demon elements' gate checks (aau_1.a: every stat >= threshold
+        # AND every card in the tome).
+        "achievements": raw.get("achievements") or {},
     }
     json.dump(out, open(out_path, "w"), ensure_ascii=False)
     print("wrote", out_path, "groups:", len(groups), "names:", len(names))

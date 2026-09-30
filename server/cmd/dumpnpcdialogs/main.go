@@ -95,7 +95,34 @@ func main() {
 	for id, m := range challengeModes {
 		modes[fmt.Sprint(id)] = m
 	}
-	blob := map[string]any{"groups": jsonGroups, "challengeModes": modes}
+
+	// Achievements (type 800) gate the named-demon elements (env 6/9/7): the
+	// client evaluates "achievement done" locally as every stat condition met
+	// AND every required card in the tome (aau_1.a / sj_1.c). The dialog code
+	// needs the whole table — ids 275..284 drive the demon pages.
+	achievements := map[string]any{}
+	if ach, err := st.LoadAchievements(); err == nil && ach != nil {
+		for _, id := range ach.IDs() {
+			a := ach.Get(id)
+			if a == nil {
+				continue
+			}
+			stats := map[string]int16{}
+			for _, c := range a.Conditions {
+				stats[fmt.Sprint(c.StatID)] = c.Threshold
+			}
+			achievements[fmt.Sprint(a.ID)] = map[string]any{
+				"stats": stats,
+				"cards": a.Cards,
+			}
+		}
+	}
+
+	blob := map[string]any{
+		"groups":         jsonGroups,
+		"challengeModes": modes,
+		"achievements":   achievements,
+	}
 
 	buf, err := json.MarshalIndent(blob, "", "  ")
 	if err != nil {

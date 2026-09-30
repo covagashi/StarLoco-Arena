@@ -18,9 +18,11 @@ extends RefCounted
 
 const PATH := "res://assets/gamedata/npcdialogs.json"
 
-static var _names := {}       # nameId int -> String
+static var _names := {}       # nameId int -> String (content.29: names + texts)
+static var _chal_names := {}  # challenge id int -> String (content.30)
 static var _groups := {}      # groupId int -> {text, replies:[…]}
 static var _modes := {}       # challenge id int -> i16 mode
+static var _ach := {}         # achievement id int -> {stats:{sid:thr}, cards:[]}
 static var _loaded := false
 
 
@@ -36,15 +38,26 @@ static func _ensure() -> void:
 		return
 	for nid in data.get("names", {}):
 		_names[int(nid)] = data.names[nid]
+	for cid in data.get("challengeNames", {}):
+		_chal_names[int(cid)] = data.challengeNames[cid]
 	for gid in data.get("groups", {}):
 		_groups[int(gid)] = data.groups[gid]
 	for cid in data.get("challengeModes", {}):
 		_modes[int(cid)] = int(data.challengeModes[cid])
+	for aid in data.get("achievements", {}):
+		_ach[int(aid)] = data.achievements[aid]
 
 
+## content.29 text — used for NPC names AND the demon/Challenge speech bodies.
 static func npc_name(id: int) -> String:
 	_ensure()
 	return str(_names.get(id, ""))
+
+
+## content.30 challenge display name (the défi picker rows).
+static func challenge_name(id: int) -> String:
+	_ensure()
+	return str(_chal_names.get(id, "Challenge %d" % id))
 
 
 ## The dialog node: {"text", "replies":[{label, next, act?, params?}]}.
@@ -59,3 +72,23 @@ static func group(id: int) -> Dictionary:
 static func challenge_mode(challenge_id: int) -> int:
 	_ensure()
 	return int(_modes.get(challenge_id, 99))
+
+
+## Client `aau_1.a` / `sj_1.c`: an achievement is complete when EVERY stat
+## condition meets its threshold AND every required card is in the tome.
+## `criteria` is State.criteria {statId: value}, `inventory` State.inventory
+## {cardId: qty}. Unknown ids read as not-done (the client returns null the
+## same way — avq_0.ce(absent) never satisfies).
+static func achievement_done(id: int, criteria: Dictionary,
+		inventory: Dictionary) -> bool:
+	_ensure()
+	var a: Variant = _ach.get(id)
+	if a == null:
+		return false
+	for sid in a.get("stats", {}):
+		if int(criteria.get(int(sid), 0)) < int(a.stats[sid]):
+			return false
+	for cid in a.get("cards", []):
+		if int(inventory.get(int(cid), 0)) <= 0:
+			return false
+	return true
