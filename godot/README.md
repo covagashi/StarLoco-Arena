@@ -22,7 +22,7 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `src/state.gd` | `State` static holder — worlds, `fight_data`, `fighters`, `roster` (6006), `presets` (6030), `breed_name` |
 | `src/maps/` | `.fmd` arena parser, world `.tplg` topology, `map_gfx.gd` — retail painted-map renderer |
 | `src/anims/` | `AnmSprite` — frames from `tools/asset-import/anm_render.py --export`; alpha-scan foot pivot, `draw_on()` for merged z-order |
-| `src/fight/fight_view.gd/.tscn` | Fight scene: painted map, spawn zones, placement clicks, turns, move/spell targeting, nameplates + damage floats, turn timeline (8000 initiative order — team-tinted chips, acting fighter highlighted, dead dimmed, click centres the camera) |
+| `src/fight/fight_view.gd/.tscn` | Fight scene: painted map, spawn zones, placement clicks, turns, move/spell targeting, nameplates + damage floats, turn timeline (8000 initiative order — team-tinted chips, acting fighter highlighted, dead dimmed, click centres the camera), mid-fight summons (8120 action 67/75/97 spawn the creature from the type-300 template — name via content.10, stats for the plate, timeline slot right after the caster, AI-driven so never ours to control) |
 | `src/world/world_view.gd` | Overworld island: painted map, coach actors (4096), click-to-move (4501), chat bubbles, coach hit-test for challenges, **interactive-element markers** (200/206) with click → `201` |
 | `src/ui/chat_box.*` | Chat panel: vicinity/whisper/trade/group/clan + server announcements, `/command` emotes (4701→4700), `/friend` `/ignore` social ops (3129/3131/3133/3135), world bubbles |
 | `src/gamedata/spells.gd` | Breed spell tables + names (from `assets/gamedata/spells.json`) |
@@ -54,6 +54,7 @@ godot --path godot -s test/fight_smoke.gd      # graphical (screenshots)
 godot --headless --path godot -s test/fight_smoke.gd
 godot --path godot -s test/world_smoke.gd      # island + roster + chat + presets + emote + combattre
 godot --path godot -s test/pvp_smoke.gd        # two-client challenge → real PvP fight
+godot --headless --path godot -s test/summon_smoke.gd  # mid-fight summon: breed-2 fighter + spell 51 → real cast → 8120 spawn
 godot --headless --path godot -s test/ping_smoke.gd   # keepalive 107→108 (66s)
 godot --path godot -s test/fight_shot.gd -- 10 /tmp/arena.png   # offline map shot
 ```

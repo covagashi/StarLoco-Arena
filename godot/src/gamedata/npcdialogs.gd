@@ -26,6 +26,8 @@ static var _ach := {}         # achievement id int -> {stats, cards, prev, super
 static var _ach_names := {}   # achievement id int -> String (content.37)
 static var _ach_descs := {}   # achievement id int -> String (content.49)
 static var _crit_names := {}  # criterion id int -> String (content.48)
+static var _summons := {}     # summon template id int -> {hp, ap, mp, look}
+static var _summon_names := {} # summon id int -> String (content.10)
 static var _loaded := false
 
 
@@ -66,6 +68,10 @@ static func _ensure() -> void:
 		_ach_descs[int(aid)] = data.achievementDescs[aid]
 	for cid in _dict(data.get("criterionNames")):
 		_crit_names[int(cid)] = data.criterionNames[cid]
+	for sid in _dict(data.get("summons")):
+		_summons[int(sid)] = data.summons[sid]
+	for sid in _dict(data.get("summonNames")):
+		_summon_names[int(sid)] = data.summonNames[sid]
 
 
 ## content.29 text — used for NPC names AND the demon/Challenge speech bodies.
@@ -92,6 +98,21 @@ static func group(id: int) -> Dictionary:
 static func challenge_mode(challenge_id: int) -> int:
 	_ensure()
 	return int(_modes.get(challenge_id, 99))
+
+
+## Summon template (type-300 jz_2 -> aJt): {hp, ap, mp, look} or {} when the
+## id is unknown. A summon running-effect (action 67/75/97) carries only the
+## template id — the client builds the fighter's stat sheet locally.
+static func summon(id: int) -> Dictionary:
+	_ensure()
+	var s: Variant = _summons.get(id)
+	return s if s != null else {}
+
+
+## Summon display name (content.10 — aJt.getName). Empty for unknown ids.
+static func summon_name(id: int) -> String:
+	_ensure()
+	return str(_summon_names.get(id, ""))
 
 
 ## Client `aau_1.a` / `sj_1.c`: an achievement is complete when EVERY stat

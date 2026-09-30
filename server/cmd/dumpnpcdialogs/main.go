@@ -126,10 +126,25 @@ func main() {
 		}
 	}
 
+	// Summon templates (type 300, client jz_2 -> aJt SummoningDefinition): the
+	// client builds the mid-fight spawned fighter from the effect's template id
+	// — name via content.10.<id> (aJt.getName), stats/gfx for the nameplate and
+	// sprite choice. The wire running-effect only carries the id; this map is
+	// what makes a summon renderable.
+	summons := map[string]any{}
+	if sums, err := st.LoadSummonings(); err == nil && sums != nil {
+		for id, sm := range sums.All() {
+			summons[fmt.Sprint(id)] = map[string]any{
+				"hp": sm.HP, "ap": sm.AP, "mp": sm.MP, "look": sm.Look,
+			}
+		}
+	}
+
 	blob := map[string]any{
 		"groups":         jsonGroups,
 		"challengeModes": modes,
 		"achievements":   achievements,
+		"summons":        summons,
 	}
 
 	buf, err := json.MarshalIndent(blob, "", "  ")

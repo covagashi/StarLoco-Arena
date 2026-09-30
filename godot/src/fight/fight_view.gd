@@ -14,6 +14,7 @@ const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
+const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 
@@ -427,10 +428,20 @@ const FX_HP_LOSS := {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0,
 	9: 0, 10: 0, 125: 0, 130: 0, 131: 0, 132: 0, 133: 0, 134: 0}
 const FX_HP_GAIN := {11: 0}   # "Boost de HP"
 
+## Running-effect action ids that spawn a summon fighter mid-fight
+## (gamedata KindSummon / client hy_1 + gn_0.d): 67 "invoque une créature"
+## (adT — creature from the type-300 template), 75 "un double" (wo_1 — a
+## copy of the caster), 97 "un miroir" (aad_0 — template, mirrored skin).
+const FX_SUMMON := {67: 0, 75: 0, 97: 0}
+
 
 ## 8120 — apply a running effect visually: HP effects float text and update
-## the nameplate counter; AP/MP debits (91/92) and upkeep are silent.
+## the nameplate counter; AP/MP debits (91/92) and upkeep are silent. The
+## summon actions create a whole new fighter instead.
 func _on_running_effect(d: Dictionary) -> void:
+	if FX_SUMMON.has(int(d.get("effect_id", -1))):
+		_spawn_summon(d)
+		return
 	if not d.has("value"):
 		return
 	var target := int(d.get("target", -1))
@@ -451,12 +462,64 @@ func _on_running_effect(d: Dictionary) -> void:
 		_refresh_apmp()
 
 
+## Summon spawn (8120 action 67/75/97 → hy_1.gn_0.d): the wire carries the new
+## fighter's wire id in `target`, the type-300 template id in `value`, and the
+## spawn cell in x/y/z — everything else (name/stats/look, team, timeline slot)
+## resolves locally. The summon inherits the caster's coach+team, is AI-driven
+## (never ours to control), and joins the timeline right after its caster and
+## the caster's older summons (insertSummonIntoTimeline, summon.go).
+func _spawn_summon(d: Dictionary) -> void:
+	var fid := int(d.get("target", -1))
+	var caster_fid := int(d.get("caster", -1))
+	if fid <= 0 or _sprites.has(fid) or State.fighters.has(fid):
+		return
+	var cf: Dictionary = State.fighters.get(caster_fid, {})
+	var tpl := int(d.get("value", 0))
+	var meta: Dictionary = NpcDialogs.summon(tpl)
+	var is_double := int(d.get("effect_id", -1)) == 75
+	# retail names: creatures/mirrors are "Gobball (Humo)" — template name plus
+	# the summoner in parens (adT.setName); a double is the caster's own name.
+	var tpl_name := NpcDialogs.summon_name(tpl)
+	if tpl_name.is_empty():
+		tpl_name = "Summon %d" % tpl
+	var sname := str(cf.get("name", caster_fid)) if is_double \
+		else "%s (%s)" % [tpl_name, str(cf.get("name", caster_fid))]
+	var f := {"id": fid, "type": "summon", "summon": true,
+		"summon_of": caster_fid, "name": sname,
+		"coach": int(cf.get("coach", -1)), "team": int(cf.get("team", 0)),
+		"hp": int(meta.get("hp", 0)), "ap": int(meta.get("ap", 0)),
+		"mp": int(meta.get("mp", 0)), "spells": [],
+		# the double mirrors its caster's sprite; creatures have their own
+		# gfx ids we don't ship — they fall back to the coach anm.
+		"breed": int(cf.get("breed", 1)) if is_double else -1,
+		"sex": int(cf.get("sex", 0))}
+	State.fighters[fid] = f
+	_hp_lost[fid] = 0
+	_place_actor({"id": fid, "x": int(d.get("x", 0)),
+		"y": int(d.get("y", 0)), "z": int(d.get("z", 0)),
+		"dir": int(_actor_dir.get(caster_fid, 5))})
+	var tl: Array = State.fight_data.get("timeline", [])
+	var at := tl.find(caster_fid) + 1
+	if at <= 0:
+		tl.append(fid)
+	else:
+		while at < tl.size() and int(State.fighters.get(tl[at], {})
+				.get("summon_of", -1)) == caster_fid:
+			at += 1
+		tl.insert(at, fid)
+	_build_timeline()
+	_float_text(fid, sname, Color(0.7, 0.9, 1.0))
+	print("[fight] summon %d '%s' spawned by %d at (%d,%d)" % [
+		fid, sname, caster_fid, int(d.get("x", 0)), int(d.get("y", 0))])
+
+
 ## Vicinity chat bubble over a fighter's head — chat actor ids are coach ids;
 ## map them to that coach's fighter sprite.
 func chat_bubble(coach_id: int, text: String) -> void:
 	var fid := -1
 	for id in State.fighters:
-		if int(State.fighters[id].get("coach", -2)) == coach_id:
+		var f: Dictionary = State.fighters[id]
+		if int(f.get("coach", -2)) == coach_id and not f.get("summon", false):
 			fid = int(id)
 			break
 	var spr: AnmSprite = _sprites.get(fid if fid >= 0 else coach_id)
@@ -565,7 +628,10 @@ func _on_turn_begin(fid: int) -> void:
 	_spell_mode = -1
 	_card_mode = -1
 	var f: Dictionary = State.fighters.get(fid, {})
-	var ours := int(f.get("coach", -1)) == State.my_coach_id
+	# Summons share their caster's coach id but are server-AI-driven
+	# (Father set, ai.go) — no bar, no End turn for them.
+	var ours: bool = int(f.get("coach", -1)) == State.my_coach_id \
+		and not f.get("summon", false)
 	_end_turn.disabled = not ours
 	_face_btn.disabled = not ours
 	if ours:
@@ -702,7 +768,10 @@ func _is_my_turn() -> bool:
 	if _current_fid < 0 or _dead.get(_current_fid, false):
 		return false
 	var f: Dictionary = State.fighters.get(_current_fid, {})
-	return int(f.get("coach", -1)) == State.my_coach_id
+	# our own coach's summon is AI-driven server-side (Father set) — the UI
+	# never sends its inputs.
+	return int(f.get("coach", -1)) == State.my_coach_id \
+		and not f.get("summon", false)
 
 
 ## Send 8109 (spell) or sid=-2 → 8111 (weapon) at `cell`.

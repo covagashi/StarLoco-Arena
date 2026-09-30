@@ -62,10 +62,16 @@ def main() -> None:
         "achievementNames": {str(k): v for k, v in table(texts, 37).items()},
         "achievementDescs": {str(k): v for k, v in table(texts, 49).items()},
         "criterionNames": {str(k): v for k, v in table(texts, 48).items()},
+        # type-300 summon templates (jz_2 -> aJt): {id: {hp, ap, mp, look}} —
+        # the running-effect spawn carries only the template id; the client
+        # builds name/stats locally. Names index content.10 (aJt.getName).
+        "summons": raw.get("summons") or {},
+        "summonNames": {str(k): v for k, v in table(texts, 10).items()},
     }
     json.dump(out, open(out_path, "w"), ensure_ascii=False)
     print("wrote", out_path, "groups:", len(groups), "names:", len(names),
-          "achievements:", len(out["achievements"]))
+          "achievements:", len(out["achievements"]),
+          "summons:", len(out["summons"]))
 
 
 if __name__ == "__main__":

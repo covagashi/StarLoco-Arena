@@ -94,4 +94,6 @@ static func index_fighters(d: Dictionary) -> void:
 	for t in d.get("teams", []):
 		for f in t.get("fighters", []):
 			f["team"] = t.id
+			if str(f.get("type", "")) == "summon":
+				f["summon"] = true
 			fighters[f.id] = f
