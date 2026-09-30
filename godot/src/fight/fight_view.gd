@@ -441,6 +441,51 @@ const FX_SUMMON := {67: 0, 75: 0, 97: 0}
 ## lands on the part-0 cell).
 const FX_DISPLACE := {37: 0, 38: 0, 39: 0, 64: 0, 58: 0, 59: 0, 153: 0}
 
+## Stat/resource floats — action id -> [sign, label]. The wire `value` is
+## the real applied amount; the sign is baked into the id (a loss action
+## carries a positive magnitude). Element families are generated below.
+const FX_RES_ID := {
+	15: [1, "AP"], 16: [-1, "AP"], 19: [1, "MP"], 20: [-1, "MP"],
+	85: [-1, "AP"], 103: [-1, "MP"],   # steals float on the drained side
+	99: [1, "AP"], 100: [-1, "AP"], 101: [1, "MP"], 102: [-1, "MP"],
+	13: [1, "AP"], 14: [-1, "AP"], 17: [1, "MP"], 18: [-1, "MP"],
+	11: [1, "HP"], 12: [-1, "HP"],
+	72: [1, "RG"], 73: [-1, "RG"], 74: [1, "SUM"],
+	76: [1, "INI"], 77: [-1, "INI"], 78: [1, "HEAL"], 79: [-1, "HEAL"],
+	70: [1, "CRIT"], 147: [-1, "CRIT"], 71: [1, "FUMB"], 148: [-1, "FUMB"],
+	86: [1, "AP-res"], 87: [1, "MP-res"], 89: [1, "REFL"],
+	120: [1, "BLOCK"], 121: [-1, "BLOCK"],
+	122: [1, "DODGE"], 123: [-1, "DODGE"],
+	135: [1, "DMG"], 136: [1, "DMG"], 137: [1, "DMG"], 138: [1, "DMG"],
+	141: [1, "LEECH"], 154: [1, "ZONE-res"], 164: [-1, "ZONE-res"],
+}
+const ELEM_ABBR := ["FR", "ER", "WT", "AR"]   # fire/earth/water/air
+
+## Elemental res/dmg buff ids are +/- pairs per element (server
+## elementalStatOps): res 21-28, res% 29-36, dmg 40-47, dmg% 48-55;
+## 80/81 all-res%, 82/83 all-dmg%. Returns [sign, label] or [].
+static func _elem_fx(id: int) -> Array:
+	for fam in [[21, "res"], [29, "res%"], [40, "dmg"], [48, "dmg%"]]:
+		var span := id - int(fam[0])
+		if span >= 0 and span < 8:
+			return [1 if span % 2 == 0 else -1,
+				"%s %s" % [ELEM_ABBR[span / 2], fam[1]]]
+	match id:
+		80: return [1, "res% all"]
+		81: return [-1, "res% all"]
+		82: return [1, "dmg% all"]
+		83: return [-1, "dmg% all"]
+	return []
+
+
+## Status states (server stateByAction) — a pale float over the target.
+const FX_STATE := {
+	65: "Rooted", 96: "Petrified", 94: "Stabilised", 127: "Anchored",
+	128: "Intransposable", 57: "Invisible", 95: "Immune", 124: "Immune",
+	56: "Skip turn", 111: "Skip turn", 126: "Drunk",
+	173: "Class mask", 174: "Cowardly mask", 175: "Berzerk mask",
+}
+
 
 ## 8120 — apply a running effect visually: HP effects float text and update
 ## the nameplate counter; AP/MP debits (91/92) and upkeep are silent. The
@@ -471,6 +516,32 @@ func _on_running_effect(d: Dictionary) -> void:
 	elif int(d.effect_id) == 92 and target == _current_fid:
 		_mp_left -= value
 		_refresh_apmp()
+	elif FX_RES_ID.has(int(d.effect_id)) or not _elem_fx(int(d.effect_id)).is_empty():
+		var e: Array = FX_RES_ID.get(int(d.effect_id), _elem_fx(int(d.effect_id)))
+		_float_text(target, "%s%d %s" % ["-" if int(e[0]) < 0 else "+",
+			value, e[1]],
+			Color(0.55, 0.85, 1.0) if int(e[0]) > 0 else Color(1.0, 0.75, 0.35))
+		if target == _current_fid:
+			match int(d.effect_id):
+				15:
+					_ap_left += value
+				16, 85:
+					_ap_left -= value
+				19:
+					_mp_left += value
+				20, 103:
+					_mp_left -= value
+			_refresh_apmp()
+	elif FX_STATE.has(int(d.effect_id)):
+		_float_text(target, FX_STATE[int(d.effect_id)], Color(0.9, 0.9, 1.0))
+		var spr: AnmSprite = _sprites.get(target)
+		if int(d.effect_id) == 57 and spr != null:
+			spr.modulate.a = 0.35      # invisible — retail fades the sprite
+	elif int(d.effect_id) == 62:      # dispel — clears the invisibility tint
+		_float_text(target, "Dispelled", Color(0.9, 0.9, 1.0))
+		var spr: AnmSprite = _sprites.get(target)
+		if spr != null:
+			spr.modulate.a = 1.0
 
 
 ## Summon spawn (8120 action 67/75/97 → hy_1.gn_0.d): the wire carries the new
