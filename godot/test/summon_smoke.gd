@@ -36,7 +36,8 @@ var _created_fid := -1        # real fighter id from the 6000 result
 var _preset_id := -1
 var _caster_fid := -1         # wire id of our breed-2 fighter in the fight
 var _summon_fid := -1
-var _cast_sent := false
+var _refused := {}            # cast cells the server already refused
+var _pending_cell := Vector2i(-9999, -9999)
 var _summon_turn_seen := false
 var _combat_seen := false
 
@@ -94,7 +95,9 @@ func _create_fighter() -> void:
 		SUMMON_BREED, SUMMON_SPELL])
 
 
-## 6021 save a preset holding exactly that fighter (main.gd sw_1 shape).
+## 6021 save a preset holding exactly that fighter. sw_1 wire layout
+## (team_codec.go): [i16 type][i16 teamId][i16 gameMode][u8 nameLen][name]
+## then [u8 n]{i64 fighterId, i64 owningCoachId} then [u8 n]{i64 coachId}.
 func _save_preset() -> void:
 	var w := WireWriter.new()
 	w.put_i16(0)
@@ -106,8 +109,8 @@ func _save_preset() -> void:
 	w.put_u8(1)
 	w.put_i64(_created_fid)
 	w.put_i64(State.my_coach_id)
-	w.put_u8(0)
-	w.put_u8(0)
+	w.put_u8(0)                       # coach list — solo preset
+	w.put_u8(0)                       # trailing pad byte
 	client.send_message(6021, w.raw(), 2)
 	print("[smoke] preset save sent (fighter %d)" % _created_fid)
 
@@ -170,18 +173,23 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		if ours or not fight_scene._end_turn.disabled:
 			push_error("summon turn must not be ours")
 		return
-	if not ours or _cast_sent:
+	if not ours or _summon_fid >= 0:
 		return
 	var f: Dictionary = State.fighters.get(fid, {})
 	if int(f.get("breed", -1)) != SUMMON_BREED:
 		return   # a teammate's turn — not our caster
 	_caster_fid = fid
 	var cur: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
-	# spell 51 is range 1-1 — pick an adjacent floor cell nobody stands on.
+	# spell 51 is range 1-1 + needs a WALKABLE free cell + LoS — pick an
+	# adjacent ground cell nobody stands on and nobody refused yet.
 	var free := Vector2i(-9999, -9999)
 	for dxy in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 		var cell := Vector2i(cur.x + dxy.x, cur.y + dxy.y)
+		if _refused.has(cell):
+			continue
 		if not fight_scene._cells.has(cell):
+			continue
+		if not fight_scene._cells[cell].get("ground", false):
 			continue
 		var occupied := false
 		for p in fight_scene._actor_cells.values():
@@ -195,11 +203,12 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		print("[smoke] no free adjacent cell for the summon")
 		fight_scene.request_end_turn()
 		return
-	_cast_sent = true
+	_pending_cell = free
 	if not fight_scene.request_cast_at(SUMMON_SPELL, free):
 		push_error("summon cast request refused")
 	print("[smoke] summon cast %d -> %s — awaiting 8120" % [SUMMON_SPELL, free])
-	# give the summon broadcast + spawn a beat, then check it landed
+	# give the summon broadcast + spawn a beat; on a refused cast mark the
+	# cell tried and let the next turn pick another one.
 	create_timer(1.2).timeout.connect(_check_summon_spawned)
 	create_timer(1.8).timeout.connect(func():
 		if fight_scene != null and not finished:
@@ -216,7 +225,10 @@ func _check_summon_spawned() -> void:
 		_summon_fid = int(id)
 		break
 	if _summon_fid < 0:
-		push_error("no summon fighter after cast")
+		# cast refused server-side (cell not summonable / no LoS) — mark it
+		# tried; the next turn picks another adjacent ground cell.
+		_refused[_pending_cell] = true
+		print("[smoke] summon cast at %s refused — will retry" % _pending_cell)
 		return
 	var spr = fight_scene._sprites.get(_summon_fid)
 	var tl: Array = State.fight_data.get("timeline", [])

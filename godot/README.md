@@ -55,6 +55,7 @@ godot --headless --path godot -s test/fight_smoke.gd
 godot --path godot -s test/world_smoke.gd      # island + roster + chat + presets + emote + combattre
 godot --path godot -s test/pvp_smoke.gd        # two-client challenge → real PvP fight
 godot --headless --path godot -s test/summon_smoke.gd  # mid-fight summon: breed-2 fighter + spell 51 → real cast → 8120 spawn
+godot --headless --path godot -s test/displace_smoke.gd # displacement: teleport 12 / push 67 / swap 135 → 8120 moves the sprites
 godot --headless --path godot -s test/ping_smoke.gd   # keepalive 107→108 (66s)
 godot --path godot -s test/fight_shot.gd -- 10 /tmp/arena.png   # offline map shot
 ```

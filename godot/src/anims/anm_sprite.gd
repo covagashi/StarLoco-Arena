@@ -26,19 +26,21 @@ static var _cache := {}   # "set/action" -> {fps, frames}
 
 
 func load_action(set_dir: String, action: String) -> bool:
-	_frames = []
-	_cur = 0
-	_time = 0.0
 	var key := "%s/%s" % [set_dir, action]
 	if _cache.has(key):
 		var c: Dictionary = _cache[key]
 		_fps = c.fps
 		_frames = c.frames
+		_cur = 0
+		_time = 0.0
 		queue_redraw()
 		return not _frames.is_empty()
 	var meta_path := "%s/%s/meta.json" % [set_dir, action]
 	if not FileAccess.file_exists(meta_path):
-		return false
+		return false   # keep the previous animation rather than going blank
+	_frames = []
+	_cur = 0
+	_time = 0.0
 	var meta: Dictionary = JSON.parse_string(
 		FileAccess.get_file_as_string(meta_path))
 	_fps = float(meta.get("fps", 25))
@@ -92,6 +94,8 @@ func _draw() -> void:
 ## sprite's own position, since the caller draws in the parent's space).
 ## Honors foot_pivot and the horizontal mirror (negative scale.x).
 func draw_on(ci: CanvasItem, world_pos: Vector2) -> void:
+	if _frames.is_empty():
+		return
 	ci.draw_set_transform(world_pos, 0.0, Vector2(scale.x, 1.0))
 	_draw_frame(ci, Vector2.ZERO)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

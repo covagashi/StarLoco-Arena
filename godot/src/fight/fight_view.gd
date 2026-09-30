@@ -209,6 +209,7 @@ var _walk := {}          # actor id -> Array[Vector3i] remaining walk cells
 var _actor_dir := {}     # actor id -> last server dir (facing during walk)
 var _hp_lost := {}       # fighter id -> accumulated damage (8000 + 8120)
 var _dead := {}          # fighter id -> true once 4520 arrives
+var _carried_by := {}    # carried fighter id -> carrier fighter id (58/59)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
 var _selected := -1      # our fighter selected for placement
 
@@ -335,6 +336,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var path: Array = []
 			while payload.remaining() >= 10:
 				path.append(Vector3i(payload.get_i32(), payload.get_i32(), payload.get_i16()))
+			_carried_by.erase(fid)   # walking breaks a carry (dismountIfCarried)
 			if path.size() > 1:
 				path.pop_front()   # drop the origin cell
 				_walk[fid] = path
@@ -390,10 +392,7 @@ func _place_actor(a: Dictionary) -> void:
 	_set_flip(spr, DIR_FLIP.get(a.dir, false))
 	if State.fighters.has(a.id):
 		var f: Dictionary = State.fighters[a.id]
-		var file := _fighter_file(int(f.get("breed", 1)), int(f.get("sex", 0)))
-		var action := "%d_AnimStatique" % dir
-		if not spr.load_action(FIGHTER_SET % file, action):
-			spr.load_action(COACH_SET, "5_AnimStatique")
+		_load_fighter_anim(spr, a.id, a.dir)
 		_hp_lost[a.id] = int(f.get("hp_lost", 0))
 		_nameplate(spr, a.id)
 	else:
@@ -434,13 +433,25 @@ const FX_HP_GAIN := {11: 0}   # "Boost de HP"
 ## copy of the caster), 97 "un miroir" (aad_0 — template, mirrored skin).
 const FX_SUMMON := {67: 0, 75: 0, 97: 0}
 
+## Running-effect action ids that displace a fighter mid-fight
+## (gamedata effect kinds / client classes): 37 push + 38 pull (na_2 moves
+## the target to the part-3 dest), 39 teleport (moves the caster to the
+## part-0 cell), 64 swap (aox_1 exchanges both live cells), 153 self-push
+## (azw_0 moves the CASTER to the part-3 dest), 58 carry + 59 throw (target
+## lands on the part-0 cell).
+const FX_DISPLACE := {37: 0, 38: 0, 39: 0, 64: 0, 58: 0, 59: 0, 153: 0}
+
 
 ## 8120 — apply a running effect visually: HP effects float text and update
 ## the nameplate counter; AP/MP debits (91/92) and upkeep are silent. The
-## summon actions create a whole new fighter instead.
+## summon actions create a whole new fighter instead, and the displacement
+## actions move an existing one.
 func _on_running_effect(d: Dictionary) -> void:
 	if FX_SUMMON.has(int(d.get("effect_id", -1))):
 		_spawn_summon(d)
+		return
+	if FX_DISPLACE.has(int(d.get("effect_id", -1))):
+		_apply_displacement(d)
 		return
 	if not d.has("value"):
 		return
@@ -513,6 +524,46 @@ func _spawn_summon(d: Dictionary) -> void:
 		fid, sname, caster_fid, int(d.get("x", 0)), int(d.get("y", 0))])
 
 
+## Displacement effects (push 37, pull 38, teleport 39, swap 64, carry 58,
+## throw 59, self-push 153): who moves and where to comes straight from the
+## client's own classes — na_2/azw_0 trust the part-3 destination verbatim
+## (the compute path is skipped on wire effects), aox_1 swaps the two live
+## cells itself. Server-side collision damage is NOT broadcast (it rides in
+## the client's own float), so a blocked shove's HP loss is invisible here.
+func _apply_displacement(d: Dictionary) -> void:
+	var act := int(d.get("effect_id", -1))
+	var caster := int(d.get("caster", -1))
+	var target := int(d.get("target", -1))
+	if act == 64:  # swap — both cells taken from the live positions
+		var a: Vector3i = _actor_cells.get(caster, Vector3i(-1, -1, -1))
+		var b: Vector3i = _actor_cells.get(target, Vector3i(-1, -1, -1))
+		if a.x >= 0 and b.x >= 0:
+			_move_actor(caster, b)
+			_move_actor(target, a)
+		return
+	var mover := caster if act == 39 or act == 153 else target
+	# part-3 (dx/dy/dz) is the forced destination for shoves; teleport/carry/
+	# throw land on the part-0 cell.
+	var dest := Vector3i(int(d.get("dx", 0)), int(d.get("dy", 0)),
+		int(d.get("dz", 0))) if d.has("dx") else Vector3i(
+		int(d.get("x", 0)), int(d.get("y", 0)), int(d.get("z", 0)))
+	if mover > 0 and _actor_cells.has(mover):
+		_move_actor(mover, dest)
+		for cid in _carried_by.keys():   # a displaced carrier takes its cargo
+			if _carried_by[cid] == mover:
+				_move_actor(cid, dest)
+		if _carried_by.has(mover):       # a carried fighter teleported/thrown?
+			_carried_by.erase(mover)     # it lands on its own cell — link broken
+	match act:
+		58:                       # carry — the target rides on the caster's cell
+			if mover > 0:
+				_carried_by[mover] = caster
+		59:                       # throw — the carried lands, link broken
+			_carried_by.erase(mover)
+		_:
+			pass
+
+
 ## Vicinity chat bubble over a fighter's head — chat actor ids are coach ids;
 ## map them to that coach's fighter sprite.
 func chat_bubble(coach_id: int, text: String) -> void:
@@ -549,6 +600,10 @@ func chat_bubble(coach_id: int, text: String) -> void:
 ## 4520 — grey out the corpse; its cell stays occupied for pathing.
 func _kill_actor(fid: int) -> void:
 	_dead[fid] = true
+	_carried_by.erase(fid)             # dying breaks both carry directions
+	for cid in _carried_by.keys():     # (breakCarryLinks) — the carried drops
+		if _carried_by[cid] == fid:      # onto the carrier's cell, where it is
+			_carried_by.erase(cid)
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr != null:
 		spr.playing = false
@@ -933,7 +988,20 @@ func _process(delta: float) -> void:
 				_face_step(fid)
 		else:
 			spr.position += d / d.length() * WALK_SPEED * delta
+		_carry_follow(fid, spr)
 	queue_redraw()
+
+
+## A carried fighter rides on its carrier (58): it glides with the carrier's
+## sprite, offset upward so both stay visible, and tracks its cell.
+func _carry_follow(fid: int, spr: AnmSprite) -> void:
+	for cid in _carried_by:
+		if _carried_by[cid] != fid:
+			continue
+		var cspr: AnmSprite = _sprites.get(cid)
+		if cspr != null:
+			cspr.position = spr.position + Vector2(0, -70)
+			_actor_cells[cid] = _actor_cells.get(fid, Vector3i.ZERO)
 
 
 ## Face the fighter toward its next path cell.
@@ -951,10 +1019,7 @@ func _face_step(fid: int) -> void:
 	if spr == null or not State.fighters.has(fid):
 		return
 	_set_flip(spr, DIR_FLIP.get(dir, false))
-	var f: Dictionary = State.fighters[fid]
-	spr.load_action(FIGHTER_SET % _fighter_file(
-		int(f.get("breed", 1)), int(f.get("sex", 0))),
-		"%d_AnimStatique" % DIR_MAP.get(dir, 1))
+	_load_fighter_anim(spr, fid, dir)
 
 
 ## Re-face one actor to a server direction (4522 or 4521-driven).
@@ -963,10 +1028,20 @@ func _reface(fid: int, dir: int) -> void:
 	if spr == null or not State.fighters.has(fid):
 		return
 	_set_flip(spr, DIR_FLIP.get(dir, false))
+	_load_fighter_anim(spr, fid, dir)
+
+
+## Load the idle animation for a fighter in a given wire direction, falling
+## back to the coach sprite when the breed's fighter set has no asset —
+## summons carry breed -1 and never have a fighter file.
+func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int) -> void:
 	var f: Dictionary = State.fighters[fid]
-	spr.load_action(FIGHTER_SET % _fighter_file(
-		int(f.get("breed", 1)), int(f.get("sex", 0))),
-		"%d_AnimStatique" % DIR_MAP.get(dir, 1))
+	var breed := int(f.get("breed", 1))
+	var action := "%d_AnimStatique" % DIR_MAP.get(wire_dir, 1)
+	if breed >= 1 and spr.load_action(FIGHTER_SET % _fighter_file(
+			breed, int(f.get("sex", 0))), action):
+		return
+	spr.load_action(COACH_SET, action)
 
 
 ## Face button: cycle the acting fighter's facing one diagonal clockwise and

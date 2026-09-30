@@ -620,6 +620,8 @@ static func _placement_move(r: WireReader) -> Dictionary:
 ##   — absOffset points AT the part's own idx byte inside the blob.
 ##   part 0 (34B): [i64 caster][i64 target][i32 genEffect][i32 x][i32 y][u16 z][i32 value]
 ##   part 2: [i64 target]   part 4: [i32 sourceType(13=spell)][i64 spellId]
+##   part 3 (18B, displacementPart — push/pull/self-push only):
+##   [i32 destX][i32 destY][u16 destZ][i64 collidedFighterId]
 ## Effect ids (mh_2): 1=HP loss, 91=AP use (silent), 92=MP use (silent).
 static func _running_effect(r: WireReader) -> Dictionary:
 	var out := {}
@@ -655,6 +657,11 @@ static func _running_effect(r: WireReader) -> Dictionary:
 				out.value = pr.get_i32()
 			2:
 				out.target = pr.get_i64()
+			3:
+				out.dx = pr.get_i32()
+				out.dy = pr.get_i32()
+				out.dz = pr.get_u16()
+				out.collided = pr.get_i64()
 			4:
 				pr.get_i32()   # source type — 13 = spell
 				out.spell_id = pr.get_i64()
