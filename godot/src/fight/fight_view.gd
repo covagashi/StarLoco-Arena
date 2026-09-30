@@ -217,6 +217,9 @@ var _dead := {}          # fighter id -> true once 4520 arrives
 var _carried_by := {}    # carried fighter id -> carrier fighter id (58/59)
 var _buffs := {}         # fighter id -> [{label,left,inf,src}] effect chips
 var _areas := []         # placed traps/glyphs/auras {tpl,ctr,caster,aura,left,turns}
+var _cast_hist := {}     # fid -> {limitKey: {last,n,tgt}} — client sH history
+var _table_turn := 0     # last 8100 round counter (cooldowns compare it)
+var _spell_btns := {}    # spell id -> Button (for the cooldown lock refresh)
 var _turns_taken := {}   # fighter id -> own-turn count (client alh_1.NC)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
 var _selected := -1      # our fighter selected for placement
@@ -308,7 +311,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			info.text += " | combat!"
 		OP_TABLE_TURN:
 			var d := Codec.decode(opcode, payload)
-			info.text = "map %s — turn %d" % [$UI/TopBar/MapId.text, int(d.get("f2", 0))]
+			_table_turn = int(d.get("f2", 0))
+			info.text = "map %s — turn %d" % [$UI/TopBar/MapId.text, _table_turn]
 			_age_buffs()
 			_age_areas()
 		OP_TURN_BEGIN:
@@ -330,11 +334,17 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var sid := int(payload.get_i32())
 			var miss := int(payload.get_i8())
 			var crit := int(payload.get_i8()) if not miss and payload.remaining() > 0 else 0
+			var aimed := Vector2i(-9999, -9999)
+			if not miss and payload.remaining() >= 10:
+				aimed = Vector2i(payload.get_i32(), payload.get_i32())
 			_float_text(caster,
 				"miss!" if miss else
 				("critical! " if crit else "") + Spells.name_of(sid),
 				Color(1, 1, 0.4) if miss else
 				Color(1.0, 0.6, 0.2) if crit else Color(0.6, 0.8, 1.0))
+			# even a fumble counts against the frequency limits (the server
+			# storeCasts after the roll); a bare-cell cast has no target
+			_note_cast(caster, sid, aimed)
 		OP_CLOSE_COMBAT:
 			payload.get_i32()
 			payload.get_i32()
@@ -772,6 +782,62 @@ func _note_area_fire(d: Dictionary) -> void:
 		break
 
 
+## 8110 — record the cast in the client's own cast-frequency history (sH).
+## The server storeCasts after the fumble/crit roll, so even a miss counts;
+## limits key on LimitKeyID (a variant shares its parent's budget). Only the
+## fields the spell actually constrains are written — a zero limit is
+## unconstrained and stays absent.
+func _note_cast(caster: int, sid: int, aimed: Vector2i) -> void:
+	var sm := Spells.meta(sid)
+	var cd := int(sm.get("cd", 0))
+	var mpt := int(sm.get("mpt", 0))
+	var mptt := int(sm.get("mptt", 0))
+	if cd == 0 and mpt == 0 and mptt == 0:
+		return
+	var lk := int(sm.get("lk", sid))
+	var h: Dictionary = _cast_hist.get_or_add(caster, {})
+	var rec: Dictionary = h.get_or_add(lk, {"last": -1, "n": 0, "tgt": {}})
+	if cd > 0:
+		rec.last = _table_turn
+	if mpt > 0:
+		rec.n = int(rec.n) + 1
+	var tf := _occupied_fighter(aimed) if aimed.x > -9000 else -1
+	if mptt > 0 and tf >= 0:
+		var tgt: Dictionary = rec.get("tgt", {})
+		tgt[tf] = int(tgt.get(tf, 0)) + 1
+		rec.tgt = tgt
+	if caster == _current_fid:
+		_refresh_spell_locks()
+
+
+## Is the spell locked for the acting fighter? Mirrors canCast: cooldown
+## counts TABLE turns since the last cast (63 = once per fight); the per-turn
+## cap resets on the fighter's own turn begin (onNewTurn).
+func _spell_locked(sid: int) -> bool:
+	var sm := Spells.meta(sid)
+	var lk := int(sm.get("lk", sid))
+	var rec: Dictionary = _cast_hist.get(_current_fid, {}).get(lk, {})
+	if rec.is_empty():
+		return false
+	var cd := int(sm.get("cd", 0))
+	if cd > 0 and int(rec.get("last", -1)) >= 0 and \
+			(cd == 63 or _table_turn - int(rec.last) < cd):
+		return true
+	var mpt := int(sm.get("mpt", 0))
+	return mpt > 0 and int(rec.get("n", 0)) >= mpt
+
+
+## Per-target cap — the aimed cell's fighter may already be at its casts-per-
+## target count this turn (CastMaxPerTarget, field 7).
+func _target_capped(pos: Vector2i, meta: Dictionary) -> bool:
+	var fid := _occupied_fighter(pos)
+	if fid < 0:
+		return false
+	var lk := int(meta.get("lk", meta.get("id", -1)))
+	var rec: Dictionary = _cast_hist.get(_current_fid, {}).get(lk, {})
+	return int(rec.get("tgt", {}).get(fid, 0)) >= int(meta.get("mptt", 0))
+
+
 ## 8100 — auras age one table turn (server tickEffectAreas); traps don't age.
 func _age_areas() -> void:
 	for a in _areas.duplicate():
@@ -995,6 +1061,10 @@ func _on_turn_begin(fid: int) -> void:
 	# the client's per-fighter timeline counter (alh_1.aAw) bumps here —
 	# 8121 buff expiries are absolute marks against it
 	_turns_taken[fid] = int(_turns_taken.get(fid, 0)) + 1
+	# onNewTurn — the fighter's own turn resets its per-turn cast counters
+	for rec in _cast_hist.get(fid, {}).values():
+		rec.n = 0
+		rec.tgt = {}
 	# mv_1.byv — the 8000 carries turnClockMs; retail floors it at 31s.
 	_turn_left = maxf(31.0, float(State.fight_data.get("ca", 0)) / 1000.0)
 	var f: Dictionary = State.fighters.get(fid, {})
@@ -1079,8 +1149,10 @@ func _build_spell_bar(f: Dictionary) -> void:
 		b.tooltip_text = "%s — %d AP, range %d-%d — click a target cell" % [
 			b.text, int(sm.get("ap", -1)), int(sm.get("min", 0)),
 			int(sm.get("max", 0))]
+		b.disabled = _spell_locked(int(sid))
 		b.pressed.connect(_on_spell_button.bind(int(sid)))
 		bar.add_child(b)
+		_spell_btns[int(sid)] = b
 	var wb := Button.new()
 	wb.text = "Wpn"
 	wb.tooltip_text = "weapon attack — click an adjacent cell"
@@ -1110,6 +1182,16 @@ func _build_spell_bar(f: Dictionary) -> void:
 func _clear_spell_bar() -> void:
 	for c in $UI/SpellBar.get_children():
 		c.queue_free()
+	_spell_btns.clear()
+
+
+## Re-evaluate every spell button's lock after a cast lands (8110) — the
+## per-turn cap and cooldown kick in immediately, retail greys the icon.
+func _refresh_spell_locks() -> void:
+	for sid in _spell_btns:
+		var b: Button = _spell_btns[sid]
+		if is_instance_valid(b):
+			b.disabled = _spell_locked(int(sid))
 
 
 func _refresh_apmp() -> void:
@@ -1174,6 +1256,8 @@ func _refresh_range_overlay() -> void:
 		elif meta.get("free", false) and _occupied_fighter(pos) >= 0:
 			castable = false
 		elif not _mask_passes(meta.get("mask", []), pos):
+			castable = false
+		elif int(meta.get("mptt", 0)) > 0 and _target_capped(pos, meta):
 			castable = false
 		_range_overlay[pos] = 2 if castable else 1
 	queue_redraw()

@@ -46,6 +46,11 @@ def main() -> None:
             }
             if s.get("mask"):
                 row["mask"] = s["mask"]
+            # cast-frequency limits (client sH history): parent key, effective
+            # cooldown (63 = once per fight), per-turn and per-target caps
+            for k in ("lk", "cd", "mpt", "mptt"):
+                if s.get(k):
+                    row[k] = s[k]
             rows.append(row)
         out[breed] = rows
     with open(out_path, "w") as f:

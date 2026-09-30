@@ -32,6 +32,13 @@ func main() {
 		Free    bool    `json:"free"`           // NeedFreeCell — empty target cell
 		NoBoost bool    `json:"noboost"`        // RangeNotBoostable
 		Masks   []int64 `json:"mask,omitempty"` // cast-level TargetMasks (only when enforced)
+		// Cast-frequency limits for the Godot spell-bar lock — the client
+		// tracks its own sH history: parent key, effective cooldown (63 =
+		// once per fight), per-turn and per-target caps (0 = unconstrained).
+		LimitKey int32 `json:"lk,omitempty"`
+		Cooldown uint8 `json:"cd,omitempty"`
+		PerTurn  uint8 `json:"mpt,omitempty"`
+		PerTarget uint8 `json:"mptt,omitempty"`
 	}
 	byBreed := map[int32][]rec{}
 	for _, s := range sp.All() {
@@ -44,6 +51,12 @@ func main() {
 		if s.EnforceTargetMasks {
 			r.Masks = s.TargetMasks
 		}
+		r.LimitKey = s.LimitKeyID()
+		if ec := s.EffectiveCooldown(); ec > 0 {
+			r.Cooldown = ec
+		}
+		r.PerTurn = s.CastMaxPerTurn
+		r.PerTarget = s.CastMaxPerTarget
 		byBreed[s.BreedID] = append(byBreed[s.BreedID], r)
 	}
 	b, _ := json.Marshal(byBreed)

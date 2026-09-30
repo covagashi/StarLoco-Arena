@@ -27,6 +27,7 @@ var _range_seen := false
 var _path_seen := false
 var _buff_seen := false
 var _area_seen := false
+var _cd_seen := false
 
 
 func _init() -> void:
@@ -298,6 +299,29 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		print("[smoke] AREAS after fire=%d" % fight_scene._areas.size())
 		if fight_scene._areas.size() != 1:
 			push_error("effect areas: one-shot trap should die after firing")
+	# Cast-frequency locks — fabricate an 8110 for spell 32 (cd=5): the button
+	# must lock immediately and unlock only once _table_turn advances 5.
+	if not _cd_seen:
+		_cd_seen = true
+		var cc: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
+		var w := WireWriter.new()
+		w.put_i32(0); w.put_i32(-1)
+		w.put_i64(fid)
+		w.put_i32(32)
+		w.put_u8(0); w.put_u8(0)
+		w.put_i32(cc.x); w.put_i32(cc.y); w.put_u16(0)
+		var t0: int = fight_scene._table_turn
+		fight_scene._on_net_message(8110, w.raw())
+		var locked: bool = fight_scene._spell_locked(32)
+		fight_scene._table_turn = t0 + 4
+		var still: bool = fight_scene._spell_locked(32)
+		fight_scene._table_turn = t0 + 5
+		var open: bool = not fight_scene._spell_locked(32)
+		fight_scene._table_turn = t0
+		print("[smoke] COOLDOWN locked=%s @+4=%s @+5open=%s" % [
+			locked, still, open])
+		if not (locked and still and open):
+			push_error("spell cooldown: expected lock→+4 held→+5 open")
 	# Exercise the cast path first (from the CURRENT cell — the 4503 below is
 	# still in flight). Weapon (8111) needs an orthogonally adjacent enemy;
 	# a known spell goes at the closest enemy cell. Server validates
