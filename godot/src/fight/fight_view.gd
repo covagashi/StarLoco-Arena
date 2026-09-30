@@ -1783,12 +1783,12 @@ func _face_step(fid: int) -> void:
 		_actor_dir[fid] = dir
 		_set_flip(spr, DIR_FLIP.get(dir, false))
 	# mid-walk steps gesture the march cycle where the fighter's own set has
-	# one; player files lack it entirely, so keep the current frame gliding
-	# rather than swapping the sprite to the coach set for the walk
+	# one; once marching, keep that cycle instead of restarting it per step
 	if not changed and "AnimMarche" in str(spr.current):
 		return
 	_anim_probe(spr, _anim_set(State.fighters[fid]),
-		dir if dir >= 0 else int(_actor_dir.get(fid, 5)), "AnimMarche")
+		dir if dir >= 0 else int(_actor_dir.get(fid, 5)), "AnimMarche",
+		false, false, true)   # AnimMarche02 first where authored (qg_2)
 
 
 ## Re-face one actor to a server direction (4522 or 4521-driven).
@@ -1818,11 +1818,16 @@ func _anim_set(f: Dictionary) -> String:
 ## Exported sets repack to {0,1,2,5,6}, but AnimSort sets only carry {1,5}
 ## and a few anms keep wire dirs — probe the wire dir, then the packed one,
 ## then any side. First hit wins; DIR_FLIP's mirror still applies on top.
+## prefer02 puts the retail combat variants first (qg_2: the in-fight idle
+## is AnimStatique02, the walk AnimMarche02 when the set carries them).
 func _anim_probe(spr: AnmSprite, set_dir: String, wire_dir: int, base: String,
-		once := false, hold := false) -> bool:
+		once := false, hold := false, prefer02 := false) -> bool:
+	var bases := [base, "%s02" % base, "%s-02" % base]
+	if prefer02:
+		bases = ["%s02" % base, "%s-02" % base, base]
 	var dirs := [wire_dir, int(DIR_MAP.get(wire_dir, 1)), 1, 5, 3, 7]
 	for d in dirs:
-		for b in [base, "%s02" % base, "%s-02" % base]:   # idle suffix variants
+		for b in bases:
 			if once:
 				if spr.play_once(set_dir, "%d_%s" % [d, b], hold):
 					return true
@@ -1838,7 +1843,8 @@ func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int,
 		base := "AnimStatique") -> void:
 	var f: Dictionary = State.fighters[fid]
 	var set_dir := _anim_set(f)
-	if set_dir != COACH_SET and _anim_probe(spr, set_dir, wire_dir, base):
+	if set_dir != COACH_SET and _anim_probe(spr, set_dir, wire_dir, base,
+			false, false, true):   # combat stance: Statique02 first (qg_2)
 		return
 	spr.load_action(COACH_SET, "%d_%s" % [DIR_MAP.get(wire_dir, 1), base])
 
