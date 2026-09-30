@@ -827,6 +827,12 @@ func _spell_locked(sid: int) -> bool:
 	return mpt > 0 and int(rec.get("n", 0)) >= mpt
 
 
+## Spell affordable right now? The AP debit (91) lands per cast, so the bar
+## must grey anything over the live budget — same gate as effectiveAP.
+func _spell_affordable(sid: int) -> bool:
+	return _ap_left >= int(Spells.meta(sid).get("ap", 0))
+
+
 ## Per-target cap — the aimed cell's fighter may already be at its casts-per-
 ## target count this turn (CastMaxPerTarget, field 7).
 func _target_capped(pos: Vector2i, meta: Dictionary) -> bool:
@@ -1149,7 +1155,7 @@ func _build_spell_bar(f: Dictionary) -> void:
 		b.tooltip_text = "%s — %d AP, range %d-%d — click a target cell" % [
 			b.text, int(sm.get("ap", -1)), int(sm.get("min", 0)),
 			int(sm.get("max", 0))]
-		b.disabled = _spell_locked(int(sid))
+		b.disabled = _spell_locked(int(sid)) or not _spell_affordable(int(sid))
 		b.pressed.connect(_on_spell_button.bind(int(sid)))
 		bar.add_child(b)
 		_spell_btns[int(sid)] = b
@@ -1191,13 +1197,14 @@ func _refresh_spell_locks() -> void:
 	for sid in _spell_btns:
 		var b: Button = _spell_btns[sid]
 		if is_instance_valid(b):
-			b.disabled = _spell_locked(int(sid))
+			b.disabled = _spell_locked(int(sid)) or not _spell_affordable(int(sid))
 
 
 func _refresh_apmp() -> void:
 	var res := $UI/SpellBar.get_node_or_null("APMP") as Label
 	if res != null:
 		res.text = "  AP %d  MP %d" % [_ap_left, _mp_left]
+	_refresh_spell_locks()   # AP debit may have priced spells out
 
 
 ## --- cast-range overlay -----------------------------------------------------
