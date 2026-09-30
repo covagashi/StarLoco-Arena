@@ -55,6 +55,18 @@ offset_left = 10.0
 offset_top = 44.0
 theme_override_constants/separation = 4
 
+[node name="EventCards" type="HBoxContainer" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -10.0
+offset_top = 44.0
+offset_right = -10.0
+offset_bottom = 72.0
+grow_horizontal = 0
+theme_override_constants/separation = 6
+alignment = 2
+
 [node name="Info" type="Label" parent="UI"]
 offset_left = 10.0
 offset_top = 78.0

@@ -11,6 +11,7 @@ const Codec := preload("res://src/net/codec.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const Areas := preload("res://src/gamedata/areas.gd")
+const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -18,6 +19,7 @@ const State := preload("res://src/state.gd")
 
 var client: ArenaClient
 var finished := false
+var _done_ok := false
 var fight_scene: Node2D = null
 var _combat_seen := false
 var _card_landed := false
@@ -38,7 +40,8 @@ func _init() -> void:
 	# with its own idle client — so we re-assign before opening fight_view.
 	client.connected.connect(_send_login)
 	client.message_received.connect(_on_message)
-	client.disconnected.connect(_finish.bind(1, "disconnected"))
+	client.disconnected.connect(func():
+		_finish(0 if _done_ok else 1, "disconnected"))
 	print("[smoke] connecting 127.0.0.1:5555")
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")
@@ -118,6 +121,7 @@ func _show_fight() -> void:
 		await create_timer(1.0).timeout
 		wait += 1.0
 	await create_timer(3.0).timeout
+	_done_ok = true
 	_finish(0, "fight rendered")
 
 
@@ -250,6 +254,23 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		print("[smoke] BUFFS after 8100 chips=%s" % [bl2])
 		if bl2.size() != 1 or not bool(bl2[0].inf):
 			push_error("buff strip: finite chip did not expire / infinite aged")
+		# Event-card strip — a second 8100 carrying a real event id (14)
+		# must add one card to $UI/EventCards, highlighted as newest.
+		var t2 := WireWriter.new()
+		t2.put_i32(0)
+		t2.put_i32(0)
+		t2.put_u8(10)
+		t2.put_i32(14)
+		fight_scene._on_net_message(8100, t2.raw())
+		var strip := fight_scene.get_node("UI/EventCards")
+		var nc := strip.get_child_count()
+		var last_txt: String = ""
+		if nc > 0:
+			last_txt = (strip.get_child(nc - 1).get_child(0) as Label).text
+		print("[smoke] EVENT CARDS n=%d last='%s'" % [nc, last_txt])
+		if nc == 0 or last_txt != NpcDialogs.event_name(14):
+			push_error("event card strip: expected '%s', got n=%d '%s'" % [
+				NpcDialogs.event_name(14), nc, last_txt])
 	# Effect areas — fabricate the 8120 creation broadcasts (action 66): a
 	# one-shot trap (tpl 1, maxExec 1) on the caster's cell and a r2 glyph
 	# (tpl 1015, unlimited). The trap's inner-effect 8120 (gen 9670, same

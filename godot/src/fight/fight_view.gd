@@ -183,6 +183,7 @@ const OP_READY_ACTION := 8031
 
 ## In-combat ops.
 const OP_TABLE_TURN := 8100    # [i32][i32][i8 turn][i32] — round counter
+const EVENT_STRIP_MAX := 4     # retail keeps a short card strip (fight.eventCards)
 const OP_TURN_BEGIN := 8104    # [i32][i32][i64 fighterId]
 const OP_END_TURN := 8105      # C2S [i64 fighterId]
 const OP_TURN_END := 8106      # S2C [i32][i32][i64 fighterId]
@@ -227,6 +228,7 @@ var _buffs := {}         # fighter id -> [{label,left,inf,src}] effect chips
 var _areas := []         # placed traps/glyphs/auras {tpl,ctr,caster,aura,left,turns}
 var _cast_hist := {}     # fid -> {limitKey: {last,n,tgt}} — client sH history
 var _table_turn := 0     # last 8100 round counter (cooldowns compare it)
+
 var _spell_btns := {}    # spell id -> Button (for the cooldown lock refresh)
 var _turns_taken := {}   # fighter id -> own-turn count (client alh_1.NC)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
@@ -328,6 +330,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			info.text = "map %s — turn %d%s" % [$UI/TopBar/MapId.text,
 				_table_turn,
 				" — %s" % evname if not evname.is_empty() else ""]
+			_add_event_card(ev, evname)
 			_age_buffs()
 			_age_areas()
 		OP_TURN_BEGIN:
@@ -1045,6 +1048,30 @@ func _float_text(fid: int, text: String, color: Color) -> void:
 	tw.tween_property(lbl, "position:y", lbl.position.y - 26.0, 0.9)
 	tw.tween_property(lbl, "modulate:a", 0.0, 0.9)
 	tw.chain().tween_callback(lbl.queue_free)
+
+
+## --- Event-card strip ------------------------------------------------
+## Retail binds `fight.eventCards` to a short card row — one card per drawn
+## round event (the 8100 tail's f3). We keep up to EVENT_STRIP_MAX cards,
+## newest highlighted; the event is display-only (the server applies it).
+
+func _add_event_card(ev: int, evname: String) -> void:
+	var strip := $UI/EventCards
+	if ev == 0 or strip == null:
+		return
+	var card := PanelContainer.new()
+	var lab := Label.new()
+	lab.text = evname if not evname.is_empty() else "Event %d" % ev
+	lab.add_theme_font_size_override("font_size", 11)
+	card.add_child(lab)
+	strip.add_child(card)
+	for i in strip.get_child_count():
+		var c := strip.get_child(i) as PanelContainer
+		if c != null:
+			c.modulate = Color(1.0, 1.0, 1.0, 0.55)
+	card.modulate = Color(1.0, 0.95, 0.6, 1.0)
+	while strip.get_child_count() > EVENT_STRIP_MAX:
+		strip.get_child(0).queue_free()
 
 
 ## --- Buff strip ------------------------------------------------------

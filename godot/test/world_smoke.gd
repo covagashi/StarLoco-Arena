@@ -16,6 +16,12 @@ var _main
 var _entered := false
 var _npc_fight := false        # 8000 seen after the NPC "défi" reply
 var _npc_fight_done := false   # 8300 seen + 26321 acked
+var _errors := 0               # failed checks — decides the exit code
+
+
+func _fail(msg: String) -> void:
+	_errors += 1
+	push_error(msg)
 
 
 func _init() -> void:
@@ -644,7 +650,7 @@ func _move_and_shoot() -> void:
 			print("[smoke] ACHIEVEMENTS rows=%d row0='%s'" % [
 				alist.item_count, row0])
 			if alist.item_count == 0 or row0.begins_with("criterion"):
-				push_error("achievements tab empty or raw rows")
+				_fail("achievements tab empty or raw rows")
 			# detail select: hint picks up the achievement's description +
 			# per-condition progress line
 			alist.select(0)
@@ -667,7 +673,7 @@ func _move_and_shoot() -> void:
 		cslist.item_count, cs0,
 		_main.get_node("UI/ElementDlg/VBox/Hint").text])
 	if cslist.item_count == 0 or not cs0.begins_with("fights:"):
-		push_error("coach stats pane empty or wrong")
+		_fail("coach stats pane empty or wrong")
 	_main.get_node("UI/ElementDlg").visible = false
 	# Search lanes: quick-search (2301 → 2304 → 2303 → 2306) and the
 	# evolution queue (23003 → 23004 → 23001 → 23002), each ack+cancel.
@@ -817,7 +823,9 @@ func _move_and_shoot() -> void:
 		if rdlg.visible:
 			found = true
 	print("[smoke] RESULT PANEL shown=", found)
-	quit()
+	if not found:
+		_fail("result panel never shown")
+	quit(0 if _errors == 0 else 1)
 
 
 ## First spawned element id of `kind`, or -1 while it's still out of the AoI.

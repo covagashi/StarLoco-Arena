@@ -50,7 +50,9 @@ func _init() -> void:
 	root.add_child(client)
 	client.connected.connect(_send_login)
 	client.message_received.connect(_on_message)
-	client.disconnected.connect(_finish.bind(1, "disconnected"))
+	client.disconnected.connect(func():
+		_finish(0 if (_tp_ok and _push_ok and _swap_ok) else 1,
+			"disconnected"))
 	print("[smoke] connecting 127.0.0.1:5555")
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")

@@ -31,6 +31,7 @@ var FIGHTER_NAME := "zzsmn%d" % (Time.get_unix_time_from_system() as int % 10000
 
 var client: ArenaClient
 var finished := false
+var _done_ok := false
 var fight_scene: Node2D = null
 var _created_fid := -1        # real fighter id from the 6000 result
 var _preset_id := -1
@@ -47,7 +48,8 @@ func _init() -> void:
 	root.add_child(client)
 	client.connected.connect(_send_login)
 	client.message_received.connect(_on_message)
-	client.disconnected.connect(_finish.bind(1, "disconnected"))
+	client.disconnected.connect(func():
+		_finish(0 if _done_ok else 1, "disconnected"))
 	print("[smoke] connecting 127.0.0.1:5555")
 	if client.connect_to("127.0.0.1", 5555) != OK:
 		_finish(1, "connect failed")
@@ -320,6 +322,7 @@ func _cleanup() -> void:
 	client.send_message(6003, w2.raw(), 2)
 	print("[smoke] cleanup: preset %d + fighter %d deleted" % [
 		_preset_id, _created_fid])
+	_done_ok = true
 	_finish(0, "summon smoke complete")
 
 
