@@ -20,8 +20,11 @@ const HW := 43.0
 const HH := 21.5
 const EL := 10.0
 const WALK_SPEED := 3.0
-const DIR_MAP := {1: 2, 3: 1, 5: 0, 7: 5}
-const DIR_FLIP := {1: false, 3: false, 5: false, 7: true}
+## Orthogonal grid step -> coach anm direction (coach sets carry all 8
+## dirs natively — no mirror needed, unlike the fighter files' 5-dir pack).
+const STEP_DIR := {
+	Vector2i(1, 0): 1, Vector2i(0, 1): 3,
+	Vector2i(-1, 0): 5, Vector2i(0, -1): 7}
 const COACH_SET := "res://assets/anims/coach_805"
 
 var _cells := {}
@@ -305,6 +308,17 @@ func actor_moved(id: int, path: Array) -> void:
 	if _pos.has(id) and path.size() > 1:
 		_walk[id] = {"steps": path, "seg": 1, "t": 0.0}
 		_pos[id] = path[0]   # _process advances the cell per segment
+		_face_step(id, path[0], path[1])
+
+
+## Switch the coach sprite into the march cycle facing the step direction.
+func _face_step(id: int, a: Vector3i, b: Vector3i) -> void:
+	var spr: AnmSprite = _sprites.get(id)
+	if spr == null:
+		return
+	var dir: int = STEP_DIR.get(Vector2i(b.x - a.x, b.y - a.y), -1)
+	if dir >= 0 and str(spr.current) != "%d_AnimMarche" % dir:
+		spr.load_action(COACH_SET, "%d_AnimMarche" % dir)
 
 
 func click_to(cell: Vector2i) -> void:
@@ -319,6 +333,7 @@ func click_to(cell: Vector2i) -> void:
 		steps.append(Vector3i(p.x, p.y, int(c.get("alt", 0))))
 	_walk[State.my_coach_id] = {"steps": steps, "seg": 1, "t": 0.0}
 	_pos[State.my_coach_id] = steps[steps.size() - 1]
+	_face_step(State.my_coach_id, steps[0], steps[1])
 	var w := WireWriter.new()
 	for s in steps:
 		w.put_i32(s.x)
@@ -405,12 +420,23 @@ func _process(delta: float) -> void:
 			w.t -= 1.0
 			w.seg += 1
 			_pos[id] = steps[w.seg - 1]   # keep the zkey cell current mid-walk
+			# facing follows the step direction — retail walks the coach in
+			# AnimMarche, back to AnimStatique when the path runs out
+			if w.seg < steps.size():
+				_face_step(id, steps[w.seg - 1], steps[w.seg])
 			if id == State.my_coach_id:
 				var st: Vector3i = steps[w.seg - 1]
 				cell_entered.emit(Vector2i(st.x, st.y))
 		if w.seg >= steps.size():
 			spr.position = _iso(steps[-1].x + 0.5, steps[-1].y + 0.5, steps[-1].z)
 			spr.z_index = clampi((steps[-1].x + steps[-1].y) * 4 + 1, -4096, 4096)
+			var last_dir := -1
+			if steps.size() >= 2:
+				var dl := Vector2i(steps[-1].x - steps[-2].x,
+					steps[-1].y - steps[-2].y)
+				last_dir = STEP_DIR.get(dl, -1)
+			spr.load_action(COACH_SET, "%d_AnimStatique" % (last_dir
+				if last_dir >= 0 else 2))
 			_walk.erase(id)
 			continue
 		var a: Vector3i = steps[w.seg - 1]

@@ -809,9 +809,20 @@ func _move_and_shoot() -> void:
 		_main._npc_node(48)
 		await create_timer(0.2).timeout
 		if npc_list.item_count > 0:
-			print("[smoke] NPC défi replies=", npc_list.item_count,
-				" — launching", npc_list.get_item_text(0).substr(0, 40))
-			npc_list.item_selected.emit(0)
+			# The défi launch row is the reply with act=1 — not necessarily
+			# row 0 once unlocked criteria grow the subject list.
+			var launch := -1
+			for ri in _main._npc.get("replies", []).size():
+				if int(_main._npc["replies"][ri].get("act", 0)) == 1:
+					launch = ri
+					break
+			if launch < 0:
+				print("[smoke] no défi reply in node 48 — SKIP")
+			else:
+				print("[smoke] NPC défi replies=", npc_list.item_count,
+					" — launching", npc_list.get_item_text(launch)
+					.substr(0, 40))
+				npc_list.item_selected.emit(launch)
 			# 8000 arrives → _on_msg surrenders; wait for the 8300 + world return.
 			var w8 := 0
 			while not _npc_fight_done and w8 < 30:
