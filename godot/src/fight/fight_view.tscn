@@ -48,6 +48,8 @@ size_flags_horizontal = 3
 [node name="Timeline" type="HBoxContainer" parent="UI/TopBar"]
 theme_override_constants/separation = 3
 
+[node name="TurnTimer" type="Label" parent="UI/TopBar"]
+
 [node name="SpellBar" type="HBoxContainer" parent="UI"]
 offset_left = 10.0
 offset_top = 44.0

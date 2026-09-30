@@ -58,6 +58,7 @@ var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
 @onready var _end_turn: Button = $UI/TopBar/EndTurnBtn
 @onready var _face_btn: Button = $UI/TopBar/FaceBtn
 @onready var _timeline: HBoxContainer = $UI/TopBar/Timeline
+@onready var _turn_timer: Label = $UI/TopBar/TurnTimer
 var _dragging := false
 var _press_pos := Vector2.ZERO
 var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
@@ -216,6 +217,7 @@ var _buffs := {}         # fighter id -> [{label,left,inf,src}] effect chips
 var _turns_taken := {}   # fighter id -> own-turn count (client alh_1.NC)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
 var _selected := -1      # our fighter selected for placement
+var _turn_left := -1.0   # countdown of the acting fighter's clock (−1 off)
 
 ## Emitted on 8104 — a harness (fight_smoke's scripted policy) or the human
 ## drives from here: request_move_to() then request_end_turn().
@@ -228,6 +230,10 @@ signal placement_began
 var debug_overlay := false
 
 const WALK_SPEED := 160.0   # px/sec along the path
+## Server turnClock (internal/game/fight.go) — the per-fighter turn budget;
+## tournament TurnDurationMS params can shift it, but they only ride the
+## fight-params tail, so the display assumes the standard 30s.
+const TURN_CLOCK := 30.0
 ## Orthogonal grid step -> server Direction8 (iso diagonals):
 ## +x down-right=SE(1), +y down-left=SW(3), -x=NW(5), -y=NE(7).
 const STEP_DIR := {
@@ -269,6 +275,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# Placement window: our team's start cells light up; clicking one
 			# sends 8021 for the selected fighter. Ready = 8023.
 			_placement = true
+			_turn_left = TURN_CLOCK          # placementClock is the same 30s
 			_end_turn.text = "Ready"
 			_end_turn.disabled = false
 			for fid in State.fighters:
@@ -281,11 +288,15 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			queue_redraw()
 		OP_END_PLACEMENT:
 			_placement = false
+			_turn_left = -1.0
+			_turn_timer.text = ""
 			_end_turn.text = "End turn"
 			_end_turn.disabled = true
 		OP_START_OBSERVATION:
 			# third gate: 8031 (arch 3, empty) advances to the action phase.
 			_placement = false
+			_turn_left = -1.0
+			_turn_timer.text = ""
 			_end_turn.text = "End turn"
 			if State.net != null:
 				State.net.send_message(OP_READY_ACTION, PackedByteArray(), 3)
@@ -301,6 +312,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_on_turn_begin(int(d.get("f2", -1)))
 		OP_TURN_END:
 			_current_fid = -1
+			_turn_left = -1.0
+			_turn_timer.text = ""
 			_end_turn.disabled = true
 			_face_btn.disabled = true
 			_clear_spell_bar()
@@ -379,6 +392,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# server answers with a fresh 4600 back to the overworld.
 			State.fight_result = Codec.decode(opcode, payload)
 			_fight_over = true
+			_turn_left = -1.0
+			_turn_timer.text = ""
 			State.spectating = false
 			if State.net != null:
 				State.net.send_message(OP_END_FIGHT_DONE, PackedByteArray(), 3)
@@ -877,6 +892,7 @@ func _on_turn_begin(fid: int) -> void:
 	# the client's per-fighter timeline counter (alh_1.aAw) bumps here —
 	# 8121 buff expiries are absolute marks against it
 	_turns_taken[fid] = int(_turns_taken.get(fid, 0)) + 1
+	_turn_left = TURN_CLOCK              # the server auto-ends at 0 (fight.go)
 	var f: Dictionary = State.fighters.get(fid, {})
 	# Summons share their caster's coach id but are server-AI-driven
 	# (Father set, ai.go) — no bar, no End turn for them.
@@ -1333,6 +1349,11 @@ const OP_MOVE_REQ := 4503
 
 
 func _process(delta: float) -> void:
+	if _turn_left >= 0.0:
+		_turn_left = maxf(_turn_left - delta, 0.0)
+		_turn_timer.text = "%d" % ceili(_turn_left)
+		_turn_timer.modulate = Color(1.0, 0.45, 0.3) if _turn_left <= 5.5 \
+			else Color(0.9, 0.9, 0.9)
 	if _spell_mode != -1 or _card_mode != -1:
 		# the reach ring follows the acting fighter — recompute after a move
 		var at: Vector3i = _actor_cells.get(_current_fid,

@@ -159,6 +159,10 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			push_error("timeline chips missing")
 		if pressed != 1:
 			push_error("timeline: acting chip not highlighted")
+	# Turn clock — every 8104 (re)starts the 30s countdown (server turnClock);
+	# the label itself paints next frame so we only check the counter here.
+	if fight_scene != null and fight_scene._turn_left <= 0.0:
+		push_error("turn timer not started on turn begin")
 	if not ours or finished:
 		return
 	var cur: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
@@ -171,10 +175,14 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			var ap: Vector3i = fight_scene._actor_cells[id]
 			occupied[Vector2i(ap.x, ap.y)] = true
 		var dest := Vector2i(-9999, -9999)
+		# Manhattan ≤3 does not imply reachable (ground pockets, walls) —
+		# keep the first candidate the BFS itself can path to.
 		for pos in fight_scene._cells:
 			var c: Dictionary = fight_scene._cells[pos]
 			var dd := absi(pos.x - cur.x) + absi(pos.y - cur.y)
-			if c.ground and dd >= 1 and dd <= 3 and not occupied.has(pos):
+			if not c.ground or dd < 1 or dd > 3 or occupied.has(pos):
+				continue
+			if not fight_scene._find_path(Vector2i(cur.x, cur.y), pos, fid).is_empty():
 				dest = pos
 				break
 		fight_scene._hover = dest
