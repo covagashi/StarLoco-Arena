@@ -428,7 +428,12 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var path: Array = []
 			while payload.remaining() >= 10:
 				path.append(Vector3i(payload.get_i32(), payload.get_i32(), payload.get_i16()))
-			_carried_by.erase(fid)   # walking breaks a carry (dismountIfCarried)
+			var carrier := int(_carried_by.get(fid, -1))
+			_drop_cargo(fid)         # walking breaks a carry (dismountIfCarried)
+			if carrier > 0:          # a dismounted carrier drops the Porte pose
+				var cspr: AnmSprite = _sprites.get(carrier)
+				if cspr != null:
+					_restore_idle(cspr, carrier)
 			if path.size() > 1:
 				path.pop_front()   # drop the origin cell
 				_walk[fid] = path
@@ -808,13 +813,22 @@ func _apply_displacement(d: Dictionary) -> void:
 			if _carried_by[cid] == mover:
 				_move_actor(cid, dest)
 		if _carried_by.has(mover):       # a carried fighter teleported/thrown?
-			_carried_by.erase(mover)     # it lands on its own cell — link broken
+			_drop_cargo(mover)           # it lands on its own cell — link broken
 	match act:
 		58:                       # carry — the target rides on the caster's cell
 			if mover > 0:
 				_carried_by[mover] = caster
+				_play_combat(caster, "Anim01Porte")   # the lift gesture
+				var cspr: AnmSprite = _sprites.get(caster)
+				if cspr != null:     # mount the cargo on its carrier at once
+					_carry_follow(caster, cspr)
 		59:                       # throw — the carried lands, link broken
-			_carried_by.erase(mover)
+			_drop_cargo(mover)
+			# ee_2: the release gesture is Anim03Porte when the target lands
+			# at range, Anim02Porte for an adjacent drop
+			var cpos: Vector3i = _actor_cells.get(caster, Vector3i.ZERO)
+			var dd := absi(dest.x - cpos.x) + absi(dest.y - cpos.y)
+			_play_combat(caster, "Anim03Porte" if dd > 1 else "Anim02Porte")
 		_:
 			pass
 
@@ -983,23 +997,20 @@ func _kill_actor(fid: int) -> void:
 	_dead[fid] = true
 	_buffs.erase(fid)                  # a dead fighter's icons are moot
 	_refresh_buffs(fid)
-	_carried_by.erase(fid)             # dying breaks both carry directions
-	for cid in _carried_by.keys():     # (breakCarryLinks) — the carried drops
-		if _carried_by[cid] == fid:      # onto the carrier's cell, where it is
-			_carried_by.erase(cid)
-	for a in _areas.duplicate():       # a dead caster's aura dies with it
-		if a.aura and int(a.caster) == fid:
-			_areas.erase(a)
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr != null:
 		# AnimMort where the set has one (NPC summon anms) — holds the last
 		# frame as the corpse; player fighter files carry the KO sequence
-		# instead (AnimKO-Debut once → AnimKO-Boucle held loop).
+		# instead (AnimKO-Debut once → AnimKO-Boucle held loop). A carrier
+		# dies still holding its cargo: the AnimPorte-Mort/AnimPorte-KO-*
+		# family — flag it BEFORE the carry links break below so both the
+		# _play_combat suffix map and the KO chain see the Porte variants.
+		var set_dir := _anim_set(State.fighters.get(fid, {}))
+		var dir := int(_actor_dir.get(fid, 5))
+		var ko := "AnimPorte-KO-" if _is_carrier(fid) else "AnimKO-"
 		if not _play_combat(fid, "AnimMort", true):
-			var set_dir := _anim_set(State.fighters.get(fid, {}))
-			var dir := int(_actor_dir.get(fid, 5))
-			if _anim_probe(spr, set_dir, dir, "AnimKO-Debut", true, true):
-				spr.action_finished.connect(_ko_loop.bind(spr, set_dir, dir),
+			if _anim_probe(spr, set_dir, dir, ko + "Debut", true, true):
+				spr.action_finished.connect(_ko_loop.bind(spr, set_dir, dir, ko),
 					CONNECT_ONE_SHOT)
 			else:
 				spr.playing = false
@@ -1008,6 +1019,18 @@ func _kill_actor(fid: int) -> void:
 		_gfx.unregister_dynamic(fid)
 		spr.external_draw = false
 		spr.queue_redraw()
+	var carrier := int(_carried_by.get(fid, -1))  # fid was the cargo — its
+	_drop_cargo(fid)                   # dying breaks both carry directions
+	for cid in _carried_by.keys():     # (breakCarryLinks) — the carried drops
+		if _carried_by[cid] == fid:      # onto the carrier's cell, where it is
+			_drop_cargo(cid)
+	if carrier > 0 and not _dead.get(carrier, false):  # the carrier stands
+		var cspr: AnmSprite = _sprites.get(carrier)    # back up off Porte
+		if cspr != null:
+			_restore_idle(cspr, carrier)
+	for a in _areas.duplicate():       # a dead caster's aura dies with it
+		if a.aura and int(a.caster) == fid:
+			_areas.erase(a)
 	if _current_fid == fid:
 		_current_fid = -1
 		_end_turn.disabled = true
@@ -1773,6 +1796,17 @@ func _carry_follow(fid: int, spr: AnmSprite) -> void:
 			_actor_cells[cid] = _actor_cells.get(fid, Vector3i.ZERO)
 
 
+## A broken carry (walk/throw/death) drops the cargo onto its own cell —
+## re-seat the sprite there; it had been riding at carrier.position - 70px.
+func _drop_cargo(cid: int) -> void:
+	_carried_by.erase(cid)
+	var p: Vector3i = _actor_cells.get(cid, Vector3i(-9999, -9999, -9999))
+	var spr: AnmSprite = _sprites.get(cid)
+	if spr != null and p.x > -9999:
+		spr.position = _iso(p.x + 0.5, p.y + 0.5, p.z)
+		spr.z_index = clampi((p.x + p.y) * 4 + 1, -4096, 4096)
+
+
 ## Face the fighter toward its next path cell.
 func _face_step(fid: int) -> void:
 	var path: Array = _walk.get(fid, [])
@@ -1793,8 +1827,13 @@ func _face_step(fid: int) -> void:
 	# one; once marching, keep that cycle instead of restarting it per step
 	if not changed and "AnimMarche" in str(spr.current):
 		return
-	_anim_probe(spr, _anim_set(State.fighters[fid]),
-		dir if dir >= 0 else int(_actor_dir.get(fid, 5)), "AnimMarche",
+	var set_dir := _anim_set(State.fighters[fid])
+	var step_dir: int = dir if dir >= 0 else int(_actor_dir.get(fid, 5))
+	# a carrier walks with AnimMarchePorte when authored (ee_2)
+	if _is_carrier(fid) and _anim_probe(spr, set_dir, step_dir,
+			"AnimMarchePorte"):
+		return
+	_anim_probe(spr, set_dir, step_dir, "AnimMarche",
 		false, false, true)   # AnimMarche02 first where authored (qg_2)
 
 
@@ -1850,17 +1889,33 @@ func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int,
 		base := "AnimStatique") -> void:
 	var f: Dictionary = State.fighters[fid]
 	var set_dir := _anim_set(f)
+	# a carrier idles on the Porte pose (ee_2: ls("Porte") swaps the gesture
+	# bank until the throw); only the carrier breeds' sets author it
+	if base == "AnimStatique" and set_dir != COACH_SET and _is_carrier(fid) \
+			and _anim_probe(spr, set_dir, wire_dir, "AnimStatiquePorte"):
+		return
 	if set_dir != COACH_SET and _anim_probe(spr, set_dir, wire_dir, base,
 			false, false, true):   # combat stance: Statique02 first (qg_2)
 		return
 	spr.load_action(COACH_SET, "%d_%s" % [DIR_MAP.get(wire_dir, 1), base])
 
 
+## True while `fid` carries another fighter (inverse lookup over the small
+## _carried_by map) — gates the Anim*Porte pose family.
+func _is_carrier(fid: int) -> bool:
+	for cid in _carried_by:
+		if _carried_by[cid] == fid:
+			return true
+	return false
+
+
 ## AnimKO-Debut done — chain into the held Boucle corpse loop; if the set
-## lacks it the one-shot already holds its last frame.
-func _ko_loop(spr: AnmSprite, set_dir: String, dir: int) -> void:
+## lacks it the one-shot already holds its last frame. `ko` carries the
+## family prefix — "AnimPorte-KO-" for a fighter that died mid-carry.
+func _ko_loop(spr: AnmSprite, set_dir: String, dir: int,
+		ko := "AnimKO-") -> void:
 	if is_instance_valid(spr):
-		_anim_probe(spr, set_dir, dir, "AnimKO-Boucle")
+		_anim_probe(spr, set_dir, dir, ko + "Boucle")
 
 
 ## Back to idle once a one-shot gesture ends — unless the fighter died
@@ -1883,16 +1938,25 @@ func _play_combat(fid: int, base: String, hold := false) -> bool:
 	var dir := int(_actor_dir.get(fid, 5))
 	var sets := [set_dir] if set_dir != COACH_SET else []
 	sets.append(COACH_SET)
-	for s in sets:
-		if _anim_probe(spr, s, dir, base, true, hold):
-			if not hold:
-				# a pre-empted gesture may never emit finished — the
-				# pending ONE_SHOT connection survives, so re-arming
-				# it would double-connect
-				var cb := _restore_idle.bind(spr, fid)
-				if not spr.action_finished.is_connected(cb):
-					spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
-			return true
+	# a carrier hit/tackled/killed while holding somebody plays the Porte
+	# variant (ee_2 swaps the gesture bank while ls("Porte") is set)
+	var bases := [base]
+	if _is_carrier(fid):
+		match base:
+			"AnimHit":   bases = ["AnimHitPorte", base]
+			"AnimTacle": bases = ["AnimTaclePorte", base]
+			"AnimMort":  bases = ["AnimPorte-Mort", base]
+	for b in bases:
+		for s in sets:
+			if _anim_probe(spr, s, dir, b, true, hold):
+				if not hold:
+					# a pre-empted gesture may never emit finished — the
+					# pending ONE_SHOT connection survives, so re-arming
+					# it would double-connect
+					var cb := _restore_idle.bind(spr, fid)
+					if not spr.action_finished.is_connected(cb):
+						spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
+				return true
 	return false
 
 
