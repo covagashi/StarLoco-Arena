@@ -43,6 +43,11 @@ var _placed := false
 var _tp_ok := false
 var _push_ok := false
 var _swap_ok := false
+# fid -> {state action id: true} — live state effects seen on 8120, cleared
+# on each 8100 table turn (round-card states are round-scoped). The round-1
+# card makes the arena intransposable+stabilised, so displacement casts must
+# wait out the state rather than burn the spell's cooldown on a refusal.
+var _states := {}
 
 
 func _init() -> void:
@@ -185,34 +190,42 @@ func _on_placement() -> void:
 	_wire_fids = ours
 	print("[smoke] placement: our fighters=%s team=%d spawns=%d" % [
 		ours, team, cells.size()])
-	# pick cA/cB/cC from the spawn list: dist(cB,cA)==1, dist(cC,cA)∈[1,3]
+	# pick cA/cB/cC from the spawn list: ideally dist(cB,cA)==1 (push is
+	# range 1-1) and dist(cC,cA)∈[1,3] (swap is 1-3). Arenas rotate and not
+	# every spawn zone has that geometry, so score every triple and take
+	# the best available instead of giving up — a legal placement in a bad
+	# layout still beats a refused one.
 	var va: Variant = null
 	var vb: Variant = null
 	var vc: Variant = null
+	var best := -1
+	# Skip cells a teammate already sits on — request_place_at refuses an
+	# occupied target and the fighter would stay on its default spawn.
 	for ca in cells:
+		if _spawn_occupied(ca):
+			continue
 		var pa := Vector3i(int(ca.x), int(ca.y), 0)
 		for cb in cells:
-			if cb == ca:
+			if cb == ca or _spawn_occupied(cb):
 				continue
 			var pb := Vector3i(int(cb.x), int(cb.y), 0)
-			if _cell_dist(pa, pb) != 1:
-				continue
+			var dab := _cell_dist(pa, pb)
 			for cc in cells:
-				if cc == ca or cc == cb:
+				if cc == ca or cc == cb or _spawn_occupied(cc):
 					continue
 				var pc := Vector3i(int(cc.x), int(cc.y), 0)
-				if _cell_dist(pa, pc) < 1 or _cell_dist(pa, pc) > 3:
-					continue
-				va = ca
-				vb = cb
-				vc = cc
-				break
-			if vb != null:
-				break
-		if vb != null:
-			break
+				var dac := _cell_dist(pa, pc)
+				var score: int = dab * (1 if dab == 1 else 10) \
+					+ (0 if (dac >= 1 and dac <= 3) else abs(dac - 2) * 10)
+				if best < 0 or score < best:
+					best = score
+					va = ca
+					vb = cb
+					vc = cc
+	if vb == null or best > 9:
+		print("[smoke] placement relaxed — spawn geometry lacks the ideal "
+			+ "triple (score=%d); casts may refuse" % best)
 	if vb == null:
-		push_error("no usable spawn-cell triple")
 		fight_scene.confirm_placement()
 		return
 	# place A, B, C — sequential with a beat each so the 8022 acks land
@@ -288,6 +301,12 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			if ally < 0:
 				fight_scene.request_end_turn()
 				return
+			# A stabilised victim cannot be pushed (server applyPushPull gate —
+			# the round-1 event card grants it arena-wide). Do not waste the
+			# cast: skip the turn and retry once the state expires.
+			if _states.get(ally, {}).has(94):
+				fight_scene.request_end_turn()
+				return
 			var before: Vector3i = fight_scene._actor_cells.get(
 				ally, Vector3i.ZERO)
 			_push_ok = true
@@ -315,11 +334,33 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			# fight view's own gate so a covered ally isn't cast at.
 			var ally2 := _ally_in_range(me, 1, 3, fid, true)
 			if ally2 < 0:
-				print("[smoke] SWAP: no ally in range — ending turn")
-				fight_scene.request_end_turn()
+				print("[smoke] SWAP diag: me=%s mp=%d cells=%d allies=%s" % [
+					me, fight_scene._mp_left, fight_scene._cells.size(),
+					_ally_dists(me, fid)])
+				# spread-out arenas place nobody in 1-3 — walk toward the
+				# nearest own ally instead of wasting the turn
+				var dest := _approach_cell(me, fid)
+				if dest.x < 0:
+					print("[smoke] SWAP: no ally in range — ending turn")
+					fight_scene.request_end_turn()
+					return
+				print("[smoke] SWAP: no ally in range — moving to (%d,%d)"
+					% [dest.x, dest.y])
+				if fight_scene.request_move_to(dest):
+					create_timer(2.2).timeout.connect(func():
+						if fight_scene != null and not finished:
+							fight_scene.request_end_turn())
+				else:
+					fight_scene.request_end_turn()
 				return
 			var c0: Vector3i = fight_scene._actor_cells.get(
 				ally2, Vector3i.ZERO)
+			# An intransposable victim cannot be swapped (server applySwap
+			# gate, granted arena-wide by the round-1 card). Skip rather than
+			# burn the 4-round cooldown on a cast whose effect is refused.
+			if _states.get(ally2, {}).has(128):
+				fight_scene.request_end_turn()
+				return
 			_swap_ok = true
 			fight_scene.request_cast_at(SWAP_SPELL, Vector2i(c0.x, c0.y))
 			var me0 := me
@@ -345,6 +386,16 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			fight_scene.request_end_turn()
 
 
+## Any fighter currently standing on this spawn cell — placement refuses an
+## occupied target, so the triple-scoring loop must skip taken cells.
+func _spawn_occupied(cell) -> bool:
+	for id in fight_scene._actor_cells:
+		var p: Vector3i = fight_scene._actor_cells[id]
+		if p.x == int(cell.x) and p.y == int(cell.y):
+			return true
+	return false
+
+
 func _occupied(cell: Vector2i, except_fid: int) -> bool:
 	for id in fight_scene._actor_cells:
 		if int(id) == except_fid:
@@ -353,6 +404,57 @@ func _occupied(cell: Vector2i, except_fid: int) -> bool:
 		if p.x == cell.x and p.y == cell.y:
 			return true
 	return false
+
+
+## Temporary diagnostic — own-fighter Manhattan distances from `me`.
+func _ally_dists(me: Vector3i, fid: int) -> String:
+	var out := []
+	for id in fight_scene._actor_cells:
+		var iid := int(id)
+		if iid == fid or fight_scene._dead.get(iid, false):
+			continue
+		var f: Dictionary = State.fighters.get(iid, {})
+		if int(f.get("coach", -1)) != State.my_coach_id:
+			continue
+		var p: Vector3i = fight_scene._actor_cells[id]
+		out.append("%s@d%d" % [iid % 1000, _cell_dist(me, p)])
+	return ",".join(out)
+
+
+## Best reachable cell that puts `fid` in Sacrifice range (Manhattan 1-3
+## + LoS) of a living own ally, or (-1,-1) when nothing qualifies. MP
+## bound so the 4503 isn't sent for a path the server would truncate.
+func _approach_cell(me: Vector3i, fid: int) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_len := 1 << 30
+	for c in fight_scene._cells.keys():
+		var cell := Vector2i(c)
+		if not fight_scene._cells[c].get("ground", false):
+			continue
+		if _occupied(cell, fid):
+			continue
+		for id in fight_scene._actor_cells:
+			var iid := int(id)
+			if iid == fid or fight_scene._dead.get(iid, false):
+				continue
+			var f: Dictionary = State.fighters.get(iid, {})
+			if int(f.get("coach", -1)) != State.my_coach_id:
+				continue
+			var p: Vector3i = fight_scene._actor_cells[id]
+			var dd := _cell_dist(Vector3i(cell.x, cell.y, 0),
+				Vector3i(p.x, p.y, 0))
+			if dd < 1 or dd > 3:
+				continue
+			if not fight_scene._los_clear(cell, Vector2i(p.x, p.y)):
+				continue
+			var path: Array = fight_scene._find_path(
+				Vector2i(me.x, me.y), cell, fid)
+			if path.is_empty() or path.size() > fight_scene._mp_left:
+				continue
+			if path.size() < best_len:
+				best_len = path.size()
+				best = cell
+	return best
 
 
 ## A living teammate's fighter at Manhattan range [rmin,rmax] from `me`.
@@ -388,9 +490,21 @@ func _fighter_in_range(me: Vector3i, rmin: int, rmax: int, except_fid: int) -> i
 	return -1
 
 
+## 8120 state actions the displacement spells care about — tracked per
+## fighter so a cast can be deferred while the victim is immune.
+const WATCH_STATES := [94, 128]
+
+
 func _on_message(opcode: int, payload) -> void:
 	var decoded := Codec.decode(opcode, WireReader.new(payload))
 	match opcode:
+		8100:
+			_states.clear()
+		8120:
+			var act := int(decoded.get("effect_id", -1))
+			if act in WATCH_STATES:
+				var tgt := int(decoded.get("target", -1))
+				_states.get_or_add(tgt, {})[act] = true
 		1024:
 			if decoded.get("result") == 0:
 				print("[smoke] auth OK")

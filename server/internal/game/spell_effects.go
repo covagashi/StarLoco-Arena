@@ -913,13 +913,27 @@ func (f *Fight) applyTeleport(caster *FightFighter, ef gamedata.Effect, target P
 	f.checkEffectAreasMove(from, dest, caster)
 }
 
+// logfDebug reports a routine gameplay rejection (a refused cast or a
+// state-blocked effect) at Debug level — useful when diagnosing cast flows,
+// silent in normal operation. Tests build bare Fights with a nil logger.
+func (f *Fight) logfDebug(msg string, args ...any) {
+	if f.deps != nil && f.deps.Log != nil {
+		f.deps.Log.Debug(msg, args...)
+	}
+}
+
 // applySwap exchanges the caster's and target fighter's cells.
 func (f *Fight) applySwap(caster *FightFighter, ef gamedata.Effect, target Pos) {
 	victim := f.fighterAtCell(target)
 	if victim == nil || victim == caster {
+		f.logfDebug("swap refused: no victim",
+			"caster", caster.WireID, "target", target,
+			"victimNil", victim == nil)
 		return
 	}
 	if victim.hasState(stateIntransposable) {
+		f.logfDebug("swap refused: intransposable",
+			"caster", caster.WireID, "victim", victim.WireID)
 		return // "Rendre intransposable" (128 → property deB) blocks aox_1 swaps
 	}
 	casterCell := caster.Pos
@@ -929,6 +943,8 @@ func (f *Fight) applySwap(caster *FightFighter, ef gamedata.Effect, target Pos) 
 	// needs the compute path, so mustExecNow is set.
 	eff, _ := buildRunningEffect(f.nextActionUID(), ef.ActionID, ef.EffectID,
 		caster.WireID, victim.WireID, casterCell, 0, 0, true)
+	f.logfDebug("swap applied", "caster", caster.WireID,
+		"victim", victim.WireID, "cell", casterCell)
 	f.broadcast(eff)
 	// BOTH fighters changed cell, and the client notifies the area manager twice
 	// for exactly that reason (aox_1 calls gX().a(...) once per swapped fighter).

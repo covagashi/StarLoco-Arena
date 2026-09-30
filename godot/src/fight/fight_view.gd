@@ -791,6 +791,8 @@ func _apply_displacement(d: Dictionary) -> void:
 		if a.x >= 0 and b.x >= 0:
 			_move_actor(caster, b)
 			_move_actor(target, a)
+			_play_combat(caster, "AnimSaut")   # both jump across
+			_play_combat(target, "AnimSaut")
 		return
 	var mover := caster if act == 39 or act == 153 else target
 	# part-3 (dx/dy/dz) is the forced destination for shoves; teleport/carry/
@@ -800,6 +802,8 @@ func _apply_displacement(d: Dictionary) -> void:
 		int(d.get("x", 0)), int(d.get("y", 0)), int(d.get("z", 0)))
 	if mover > 0 and _actor_cells.has(mover):
 		_move_actor(mover, dest)
+		if act == 39 or act == 153:      # teleports land in a jump pose
+			_play_combat(mover, "AnimSaut")
 		for cid in _carried_by.keys():   # a displaced carrier takes its cargo
 			if _carried_by[cid] == mover:
 				_move_actor(cid, dest)
@@ -1743,9 +1747,12 @@ func _process(delta: float) -> void:
 			_actor_cells[fid] = c
 			if path.is_empty():
 				_walk.erase(fid)
-				# walk done — back to idle (NPC sets carry a real AnimMarche;
-				# fighter files only have Statique so this is a no-op for them)
+				# walk done — back to the combat stance
 				_load_fighter_anim(spr, fid, int(_actor_dir.get(fid, 5)))
+			elif path[0].z != c.z:
+				# next step crosses a height change — retail's run state
+				# plays AnimSaut for lM/lN/lO step kinds (ama_2/bj_0)
+				_play_combat(fid, "AnimSaut", true)
 			else:
 				_face_step(fid)
 		else:

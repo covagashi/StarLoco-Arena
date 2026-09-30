@@ -529,10 +529,8 @@ func (f *Fight) castSpellByFighter(caster *FightFighter, spellID int32, target P
 	// spell. The equipment path (8107) has always checked ownership this way
 	// (fighterHasEquipped); this closes the same hole on the spell path.
 	if !fighterKnowsSpell(caster, spellID) {
-		if f.deps != nil && f.deps.Log != nil {
-			f.deps.Log.Debug("spell cast refused: caster does not know this spell",
-				"fight", f.ID, "wireID", caster.WireID, "spell", spellID)
-		}
+		f.logfDebug("spell cast refused: caster does not know this spell",
+			"fight", f.ID, "wireID", caster.WireID, "spell", spellID)
 		return false
 	}
 	// Resolve AP cost + spell template (fallback for an unknown spell / absent
@@ -550,6 +548,12 @@ func (f *Fight) castSpellByFighter(caster *FightFighter, spellID int32, target P
 		// server's validateCast; the client enforces the same, so a genuine cast
 		// passes.
 		if !f.spellTargetValid(caster, sp, target) {
+			f.logfDebug("cast refused: target invalid",
+				"spell", spellID, "from", caster.Pos, "to", target,
+				"walkable", f.Arena().walkable(target.X, target.Y),
+				"dist", manhattanDist(caster.Pos, target),
+				"los", f.Arena().hasLineOfSight(caster.Pos, target),
+				"occ", f.cellOccupied(target))
 			return false
 		}
 	}
@@ -559,6 +563,8 @@ func (f *Fight) castSpellByFighter(caster *FightFighter, spellID int32, target P
 	// that don't carry cantCastWhenCarried). The effect-level applyCarry/applyThrow
 	// guards remain a safety net for spells with missing/covering tokens.
 	if sp != nil && !f.meetsCastCriteria(caster, sp.Criterion) {
+		f.logfDebug("cast refused: criteria", "spell", spellID,
+			"crit", sp.Criterion)
 		return false
 	}
 	// Cast-frequency limits (min interval / max per turn / max per target). The
@@ -570,9 +576,13 @@ func (f *Fight) castSpellByFighter(caster *FightFighter, spellID int32, target P
 	}
 	if sp != nil && !caster.CastHistory.canCast(sp.LimitKeyID(), sp.EffectiveCooldown(),
 		sp.CastMaxPerTurn, sp.CastMaxPerTarget, f.tableTurn, targetID, hasTarget) {
+		f.logfDebug("cast refused: frequency", "spell", spellID,
+			"cd", sp.EffectiveCooldown(), "turn", f.tableTurn)
 		return false
 	}
 	if caster.effectiveAP() < apCost {
+		f.logfDebug("cast refused: AP", "spell", spellID,
+			"ap", caster.effectiveAP(), "cost", apCost)
 		return false // not enough AP
 	}
 
