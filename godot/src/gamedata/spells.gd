@@ -39,6 +39,14 @@ static func name_of(id: int) -> String:
 	return str(s.get("name", "Spell %d" % id)) if s != null else "Spell %d" % id
 
 
+## French display name (content.3 texts_fr) — the retail AnimSort-<name>
+## cast actions are keyed on it; empty when the export lacks the column.
+static func fr_name(id: int) -> String:
+	_ensure()
+	var s: Variant = _by_id.get(id)
+	return str(s.get("nfr", "")) if s != null else ""
+
+
 static func meta(id: int) -> Dictionary:
 	_ensure()
 	return _by_id.get(id, {})

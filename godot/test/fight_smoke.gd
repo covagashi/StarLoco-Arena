@@ -312,6 +312,22 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		w.put_i32(cc.x); w.put_i32(cc.y); w.put_u16(0)
 		var t0: int = fight_scene._table_turn
 		fight_scene._on_net_message(8110, w.raw())
+		# Cast gesture — player sets are skeletal (AnimSort_* exports render
+		# zero frames standalone), only npc_* summon anms carry a rasterized
+		# AnimCast. Assert the gesture only when the actor's own set is npc_.
+		var cspr = fight_scene._sprites.get(fid)
+		var cown: String = fight_scene._anim_set(
+			State.fighters.get(fid, {}))
+		if cspr != null and "npc_" in cown \
+				and DirAccess.dir_exists_absolute(cown):
+			var in_cast := "AnimSort" in str(cspr.current) \
+				or "AnimCast" in str(cspr.current)
+			print("[smoke] CASTANIM current=%s ok=%s" % [cspr.current, in_cast])
+			if not in_cast:
+				push_error("cast anim: npc sprite not in a cast action")
+		elif cspr != null:
+			print("[smoke] CASTANIM current=%s (no authored action — ok)" \
+				% cspr.current)
 		var locked: bool = fight_scene._spell_locked(32)
 		fight_scene._table_turn = t0 + 4
 		var still: bool = fight_scene._spell_locked(32)

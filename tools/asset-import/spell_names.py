@@ -25,8 +25,13 @@ def main() -> None:
 
     with zipfile.ZipFile(i18n_jar) as z:
         texts = z.read("i18n/texts_en.properties").decode("utf-8", "replace")
+        texts_fr = z.read("i18n/texts_fr.properties").decode("utf-8", "replace")
     names = {int(m.group(1)): m.group(2).strip()
              for m in re.finditer(r"^content\.3\.(\d+)=(.*)$", texts, re.M)}
+    # French names feed the AnimSort-<name> action lookup — the retail anm
+    # actions are keyed on the FR string (accent-stripped on the Godot side).
+    names_fr = {int(m.group(1)): m.group(2).strip()
+                for m in re.finditer(r"^content\.3\.(\d+)=(.*)$", texts_fr, re.M)}
 
     out = {}
     for breed, lst in spells.items():
@@ -35,6 +40,7 @@ def main() -> None:
             row = {
                 "id": s["id"],
                 "name": names.get(s["id"], "Spell %d" % s["id"]),
+                "nfr": names_fr.get(s["id"], ""),
                 "ap": s["ap"],
                 "min": s["min"],
                 "max": s["max"],

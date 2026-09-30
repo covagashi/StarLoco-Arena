@@ -265,9 +265,10 @@ class FrameRenderer:
                     inv = 255 - a
                     for c in range(3):
                         src = int(px4[c] * cm[c]) * a // 255
-                        canvas[di + c] = min(255, src +
-                                             canvas[di + c] * inv // 255)
-                    canvas[di + 3] = min(255, a + canvas[di + 3] * inv // 255)
+                        canvas[di + c] = max(0, min(255, src +
+                                             canvas[di + c] * inv // 255))
+                    canvas[di + 3] = max(0, min(255, a +
+                                             canvas[di + 3] * inv // 255))
         return W, H, bytes(canvas), (x0, y0)
 
 

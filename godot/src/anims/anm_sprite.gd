@@ -12,6 +12,13 @@ var _fps := 25.0
 var _time := 0.0
 var _cur := 0
 var playing := true
+## One-shot mode (cast/hit/death gestures): plays to the last frame, stops,
+## emits action_finished. `hold_last` keeps that frame (death); otherwise the
+## caller usually reloads the idle action.
+var once := false
+var hold_last := false
+var current := ""       # "<set>/<action>" of the loaded action — tests hook
+signal action_finished
 ## When true, the node origin pins each frame's bottom-center VISIBLE pixel
 ## (feet on the iso cell) instead of the authored scene anchor — the alpha
 ## margin under the feet is measured per frame at load.
@@ -33,6 +40,10 @@ func load_action(set_dir: String, action: String) -> bool:
 		_frames = c.frames
 		_cur = 0
 		_time = 0.0
+		once = false
+		hold_last = false
+		current = key
+		playing = true
 		queue_redraw()
 		return not _frames.is_empty()
 	var meta_path := "%s/%s/meta.json" % [set_dir, action]
@@ -69,15 +80,44 @@ func load_action(set_dir: String, action: String) -> bool:
 			"w": w, "h": h, "foot": foot,
 		})
 	_cache[key] = {"fps": _fps, "frames": _frames}
+	once = false
+	hold_last = false
+	current = key
 	playing = true
 	queue_redraw()
 	return not _frames.is_empty()
 
 
+## Load + play a gesture once (cast/hit/death). Returns false when the set
+## lacks the action — callers fall back silently, assets are optional.
+func play_once(set_dir: String, action: String, hold := false) -> bool:
+	if not load_action(set_dir, action):
+		return false
+	once = true
+	hold_last = hold
+	return true
+
+
 func _process(delta: float) -> void:
+	if not playing or _frames.is_empty():
+		return
+	if once and _frames.size() < 2:
+		playing = false            # single-frame gesture: hold + finish now
+		action_finished.emit()
+		return
 	if not playing or _frames.size() < 2:
 		return
 	_time += delta * _fps
+	if once:
+		# clamp to the last frame instead of wrapping; hold freezes there
+		var f := mini(int(_time), _frames.size() - 1)
+		if f != _cur:
+			_cur = f
+			queue_redraw()
+		if int(_time) >= _frames.size():
+			playing = false
+			action_finished.emit()
+		return
 	var f := int(_time) % _frames.size()
 	if f != _cur:
 		_cur = f

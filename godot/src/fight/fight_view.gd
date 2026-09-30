@@ -96,6 +96,12 @@ func _ready() -> void:
 		$UI/TopBar/MapId.text = str(State.fight_world)
 	_load()
 	_build_timeline()
+	# Challenge fights (kind 5, aKl) name themselves via the second i64 —
+	# retail's ahy_1.axg().dC(asy()) resolves the same content.30 table.
+	# It rides the persistent TopBar label, not `info` (rewritten per turn).
+	if int(State.fight_data.get("fight_type", 0)) == 5:
+		$UI/TopBar/MapId.text += " — défi: %s" % NpcDialogs.challenge_name(
+			int(State.fight_data.get("fight_id", 0)))
 	if State.net != null:
 		for m in State.net.drain():
 			_on_net_message(m.op, m.raw)
@@ -345,6 +351,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# even a fumble counts against the frequency limits (the server
 			# storeCasts after the roll); a bare-cell cast has no target
 			_note_cast(caster, sid, aimed)
+			if not miss:
+				_play_cast(caster, sid)
 		OP_CLOSE_COMBAT:
 			payload.get_i32()
 			payload.get_i32()
@@ -583,6 +591,7 @@ func _on_running_effect(d: Dictionary) -> void:
 		_hp_lost[target] = int(_hp_lost.get(target, 0)) + value
 		_refresh_nameplate(target)
 		_float_text(target, "-%d" % value, Color(1.0, 0.35, 0.3))
+		_play_combat(target, "AnimHit")    # NPC sets carry it; players skip
 	elif FX_HP_GAIN.has(int(d.effect_id)):
 		_hp_lost[target] = int(_hp_lost.get(target, 0)) - value
 		_refresh_nameplate(target)
@@ -664,10 +673,12 @@ func _spawn_summon(d: Dictionary) -> void:
 		"coach": int(cf.get("coach", -1)), "team": int(cf.get("team", 0)),
 		"hp": int(meta.get("hp", 0)), "ap": int(meta.get("ap", 0)),
 		"mp": int(meta.get("mp", 0)), "spells": [],
-		# the double mirrors its caster's sprite; creatures have their own
-		# gfx ids we don't ship — they fall back to the coach anm.
+		# the double mirrors its caster's sprite; creatures render through
+		# their own `look` anm id (type-300): negative → Players fighter file,
+		# positive → NPCs set (they carry AnimHit/AnimMort too).
 		"breed": int(cf.get("breed", 1)) if is_double else -1,
-		"sex": int(cf.get("sex", 0))}
+		"sex": int(cf.get("sex", 0)),
+		"look": int(meta.get("look", 0))}
 	State.fighters[fid] = f
 	_hp_lost[fid] = 0
 	_place_actor({"id": fid, "x": int(d.get("x", 0)),
@@ -901,7 +912,10 @@ func _kill_actor(fid: int) -> void:
 			_areas.erase(a)
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr != null:
-		spr.playing = false
+		# AnimMort where the set has one (NPC summon anms) — holds the last
+		# frame as the corpse; player fighter files carry no death anim.
+		if not _play_combat(fid, "AnimMort", true):
+			spr.playing = false
 		spr.modulate = Color(0.55, 0.55, 0.6, 0.85)
 		# back to its own canvas item so the corpse greys out via modulate
 		_gfx.unregister_dynamic(fid)
@@ -1606,6 +1620,9 @@ func _process(delta: float) -> void:
 			_actor_cells[fid] = c
 			if path.is_empty():
 				_walk.erase(fid)
+				# walk done — back to idle (NPC sets carry a real AnimMarche;
+				# fighter files only have Statique so this is a no-op for them)
+				_load_fighter_anim(spr, fid, int(_actor_dir.get(fid, 5)))
 			else:
 				_face_step(fid)
 		else:
@@ -1634,14 +1651,21 @@ func _face_step(fid: int) -> void:
 		return
 	var d := Vector2i(path[0].x - cur.x, path[0].y - cur.y)
 	var dir: int = STEP_DIR.get(d, -1)
-	if dir < 0 or _actor_dir.get(fid, -1) == dir:
-		return
-	_actor_dir[fid] = dir
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr == null or not State.fighters.has(fid):
 		return
-	_set_flip(spr, DIR_FLIP.get(dir, false))
-	_load_fighter_anim(spr, fid, dir)
+	var changed := false
+	if dir >= 0:
+		changed = _actor_dir.get(fid, -1) != dir
+		_actor_dir[fid] = dir
+		_set_flip(spr, DIR_FLIP.get(dir, false))
+	# mid-walk steps gesture the march cycle where the fighter's own set has
+	# one; player files lack it entirely, so keep the current frame gliding
+	# rather than swapping the sprite to the coach set for the walk
+	if not changed and "AnimMarche" in str(spr.current):
+		return
+	_anim_probe(spr, _anim_set(State.fighters[fid]),
+		dir if dir >= 0 else int(_actor_dir.get(fid, 5)), "AnimMarche")
 
 
 ## Re-face one actor to a server direction (4522 or 4521-driven).
@@ -1653,17 +1677,123 @@ func _reface(fid: int, dir: int) -> void:
 	_load_fighter_anim(spr, fid, dir)
 
 
+## Sprite set for a fighter record: summon `look` points straight at an anm
+## (negative → Players fighter file, positive → NPCs set); players resolve
+## through the breed/sex table; anything unresolvable falls back to coach.
+func _anim_set(f: Dictionary) -> String:
+	var look := int(f.get("look", 0))
+	if look > 0:
+		return "res://assets/anims/npc_%d" % look
+	if look < 0:
+		return FIGHTER_SET % str(look)
+	var breed := int(f.get("breed", 1))
+	if breed >= 1:
+		return FIGHTER_SET % _fighter_file(breed, int(f.get("sex", 0)))
+	return COACH_SET
+
+
+## Exported sets repack to {0,1,2,5,6}, but AnimSort sets only carry {1,5}
+## and a few anms keep wire dirs — probe the wire dir, then the packed one,
+## then any side. First hit wins; DIR_FLIP's mirror still applies on top.
+func _anim_probe(spr: AnmSprite, set_dir: String, wire_dir: int, base: String,
+		once := false, hold := false) -> bool:
+	var dirs := [wire_dir, int(DIR_MAP.get(wire_dir, 1)), 1, 5, 3, 7]
+	for d in dirs:
+		for b in [base, "%s02" % base, "%s-02" % base]:   # idle suffix variants
+			if once:
+				if spr.play_once(set_dir, "%d_%s" % [d, b], hold):
+					return true
+			elif spr.load_action(set_dir, "%d_%s" % [d, b]):
+				return true
+	return false
+
+
 ## Load the idle animation for a fighter in a given wire direction, falling
 ## back to the coach sprite when the breed's fighter set has no asset —
 ## summons carry breed -1 and never have a fighter file.
-func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int) -> void:
+func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int,
+		base := "AnimStatique") -> void:
 	var f: Dictionary = State.fighters[fid]
-	var breed := int(f.get("breed", 1))
-	var action := "%d_AnimStatique" % DIR_MAP.get(wire_dir, 1)
-	if breed >= 1 and spr.load_action(FIGHTER_SET % _fighter_file(
-			breed, int(f.get("sex", 0))), action):
+	var set_dir := _anim_set(f)
+	if set_dir != COACH_SET and _anim_probe(spr, set_dir, wire_dir, base):
 		return
-	spr.load_action(COACH_SET, action)
+	spr.load_action(COACH_SET, "%d_%s" % [DIR_MAP.get(wire_dir, 1), base])
+
+
+## Back to idle once a one-shot gesture ends — unless the fighter died
+## (AnimMort holds its last frame; the grey modulate does the rest).
+func _restore_idle(spr: AnmSprite, fid: int) -> void:
+	if _dead.has(fid) or not is_instance_valid(spr):
+		return
+	_load_fighter_anim(spr, fid, int(_actor_dir.get(fid, 5)))
+
+
+## Play a one-shot gesture from the fighter's own set — NPC summon anms carry
+## AnimHit/AnimMort/AnimCast, player fighter files do not. Silent no-op when
+## the action is absent; falls back to the coach set last.
+func _play_combat(fid: int, base: String, hold := false) -> bool:
+	var spr: AnmSprite = _sprites.get(fid)
+	var f: Dictionary = State.fighters.get(fid, {})
+	if spr == null or f.is_empty():
+		return false
+	var set_dir := _anim_set(f)
+	var dir := int(_actor_dir.get(fid, 5))
+	var sets := [set_dir] if set_dir != COACH_SET else []
+	sets.append(COACH_SET)
+	for s in sets:
+		if _anim_probe(spr, s, dir, base, true, hold):
+			if not hold:
+				spr.action_finished.connect(_restore_idle.bind(spr, fid),
+					CONNECT_ONE_SHOT)
+			return true
+	return false
+
+
+## French spell name → anm action slug: strip accents and everything
+## non-alphanumeric ("Colère de Iop" -> "ColeredeIop"), matching the retail
+## AnimSort-<name> actions inside AnimSort_<breed*10>.
+const _ACCENTS := {"é":"e","è":"e","ê":"e","ë":"e","à":"a","â":"a",
+	"î":"i","ï":"i","ô":"o","ö":"o","û":"u","ù":"u","ü":"u","ç":"c",
+	"É":"E","È":"E","À":"A","Ç":"C","Î":"I","Ô":"O","Û":"U"}
+
+func _anim_slug(fr_name: String) -> String:
+	var out := ""
+	for ch in fr_name:
+		if _ACCENTS.has(ch):
+			out += _ACCENTS[ch]
+		elif (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") \
+				or (ch >= "0" and ch <= "9"):
+			out += ch
+	return out
+
+
+## Cast gesture (8110): AnimSort_<breed*10> carries one action per spell —
+## <dir>_AnimSort-<slugged French name> — plus the generic AnimSort-Cast.
+## The sets only hold dir 1 (right-facing) and 5 (left); DIR_FLIP's mirror
+## is already on the sprite, so map the facing to the nearest authored side.
+func _play_cast(fid: int, sid: int) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	var f: Dictionary = State.fighters.get(fid, {})
+	if spr == null or f.is_empty():
+		return
+	var fr := _anim_slug(Spells.fr_name(sid))
+	var own := _anim_set(f)
+	var sets: Array = []
+	var breed := int(f.get("breed", 0))
+	if breed >= 1:
+		sets.append("res://assets/anims/animsort_%d" % (breed * 10))
+	if own != COACH_SET:
+		sets.append(own)
+	for set_dir in sets:
+		var dir := 1 if int(DIR_MAP.get(int(_actor_dir.get(fid, 1)), 1)) <= 2 else 5
+		for base in (["AnimSort-%s" % fr] if not fr.is_empty() else []) \
+				+ ["AnimSort-Cast", "AnimCast"]:
+			if spr.play_once(set_dir, "%d_%s" % [dir, base]):
+				spr.action_finished.connect(_restore_idle.bind(spr, fid),
+					CONNECT_ONE_SHOT)
+				return
+	# last resort: the coach set's generic cast, if it has one
+	_play_combat(fid, "AnimCast")
 
 
 ## Face button: cycle the acting fighter's facing one diagonal clockwise and
