@@ -202,6 +202,7 @@ const OP_CARD_USE_REQ := 8107    # C2S [i64 fid][i32 card][i32 x][i32 y][i16 z]
 const OP_CARD_USE := 8108        # S2C header+[i64 user][i32 card][i8 miss]
 const OP_DIR_CHANGE_REQ := 4521  # C2S [i64 fid][u8 dir] — facing (free action)
 const OP_DIR_CHANGE := 4522      # S2C header+[i64 fid][u8 dir]
+const OP_FIGHTER_TACKLED := 4506 # S2C header+[i64 tackled][i64 tackler]
 
 ## Breed base stats (server breed.go): [HP, AP, MP] — AP/MP refill each turn.
 const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
@@ -400,6 +401,16 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var rdir := payload.get_u8()
 			_actor_dir[rfid] = rdir
 			_reface(rfid, rdir)
+		OP_FIGHTER_TACKLED:
+			# [i32 uid][i32 -1][i64 tackled][i64 tackler] — a failed evasion
+			# roll: no 4524 follows, the mover never leaves its cell and the
+			# server force-ends its turn. Float the tackle cue on the held
+			# fighter (retail plays a held-in-place gesture we don't have).
+			payload.get_i32()
+			payload.get_i32()
+			var tackled := int(payload.get_i64())
+			_walk.erase(tackled)
+			_float_text(tackled, "tackled!", Color(1.0, 0.5, 0.3))
 		OP_FIGHTER_DIES:
 			payload.get_i32()
 			payload.get_i32()
@@ -1127,13 +1138,22 @@ func _on_turn_begin(fid: int) -> void:
 		and not f.get("summon", false)
 	_end_turn.disabled = not ours
 	_face_btn.disabled = not ours
+	# retail's bar tracks the ACTING fighter's AP/MP even on enemy turns —
+	# summons read theirs off the type-300 template, players off breed stats.
+	var stats: Array = BREED_STATS.get(int(f.get("breed", 1)), [60, 6, 3])
+	if f.get("summon", false):
+		stats = [0, int(f.get("ap", 6)), int(f.get("mp", 3))]
+	_ap_left = int(stats[1])
+	_mp_left = int(stats[2])
 	if ours:
-		var stats: Array = BREED_STATS.get(int(f.get("breed", 1)), [60, 6, 3])
-		_ap_left = int(stats[1])
-		_mp_left = int(stats[2])
 		_build_spell_bar(f)
 	else:
 		_clear_spell_bar()
+		var res := Label.new()
+		res.name = "APMP"
+		res.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		$UI/SpellBar.add_child(res)
+		_refresh_apmp()
 	info.text = "map %s — turn: %s%s" % [$UI/TopBar/MapId.text,
 		f.get("name", str(fid)),
 		" (yours — click a cell to move)" if ours else ""]

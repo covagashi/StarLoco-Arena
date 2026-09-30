@@ -336,6 +336,7 @@ result dialog.
 | 8105 | FighterEndTurnReq | C2S | ✓ | A | — | ✓ |
 | 4503 | FighterMoveInFightReq | C2S | ✓ | A | — | ✓ |
 | 4524 | FighterMoveInFight | S2C | ✓ | A | — | ✓ |
+| 4506 | FighterTackled | S2C | ✓ | A (i64 tackled, i64 tackler) | — | ✓ (godot floats "tackled!") |
 | 8107 | FighterCardUseRequest | C2S | ✓ | A (sg_2: i64 fid, i32 card, x, y, z) | — | ✓ (godot fight_smoke) |
 | 8108 | FighterCardUse | S2C | ✓ | A | — | ✓ |
 | 8109 | SpellCastRequest | C2S | ✓ | A | — | ✓ |
