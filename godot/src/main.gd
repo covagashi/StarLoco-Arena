@@ -198,6 +198,7 @@ const OP_EX_END := 5114                  # S2C [u8 reason][i64 ex]
 const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
 const ELEM_EXCHANGE := 100               # pseudo kind: ElementDlg in trade mode
 const ELEM_SCENARIO := -2                # pseudo kind: tutorial monologue (zone trigger)
+const ELEM_RESULT := -3                  # pseudo kind: post-fight debrief (8300)
 const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 card]
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
@@ -440,6 +441,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/SearchBtn.disabled = false
 			$UI/VBox/AuthRow/EvoBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
+			# Post-fight re-entry: the debrief was decoded on 8300 — pop the
+			# result panel now that the island is up.
+			if not State.fight_result.is_empty():
+				_show_fight_result()
 			# aog_1: while achievement "coach created" (criterion 229) is unset,
 			# retail acks the tutorial instance (4517) and reports criterion
 			# 229 done (22003) on every entry until the server persists it.
@@ -672,11 +677,13 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# A result screen arriving on the lobby scene means the user backed
 			# out of the fight view mid-fight — ack it (26321) so the server
 			# detaches the spectator link and returns the coach to overworld.
+			State.fight_result = Codec.decode(opcode, payload)
 			State.spectating = false
 			State.fight_world = -1
 			State.fighters = {}
 			Session.send(OP_END_FIGHT_DONE, PackedByteArray(), 3)
 			_log_line("[i]fight over — back to the island[/i]")
+			_show_fight_result()
 		OP_CHALLENGE_INVITATION:
 			# 26300 [i64 handle][u8 outgoing][u8 evo][u8 n]{[i32 len][name]}
 			_challenge_handle = int(payload.get_i64())
@@ -2479,6 +2486,104 @@ func _desc_fields(desc: String) -> Array:
 	for f in desc.split(";"):
 		out.append(int(f) if f.is_valid_int() else -1)
 	return out
+
+
+## Coach display name for the result panel — own coach, then the fight blob's
+## coach list (State.coach_ids), then a bare id fallback.
+func _coach_result_name(id: int) -> String:
+	if id == State.my_coach_id:
+		return State.my_coach_name
+	var c: Dictionary = State.coach_ids.get(id, {})
+	return str(c.get("name", "coach %d" % id))
+
+
+## Report rows name ROSTER ids — resolve against the lobby roster; fall back
+## to the fight-time fighter index (wire ids — rarely matches, kept anyway).
+func _fighter_result_name(fid: int) -> String:
+	for f in State.roster:
+		if int(f.get("id", -1)) == fid:
+			return str(f.get("name", "fighter %d" % fid))
+	return str(State.fighters.get(fid, {}).get("name", "fighter %d" % fid))
+
+
+## Post-fight debrief — the client's fightResultDialog + fightResultEvolution-
+## Dialog folded into one read-only panel: winner/loser coaches with their new
+## ladder strength, cards won, then each of our fighters' OW report (banked
+## XP, morale/tiredness drift, wounds). fight_view decoded the 8300 before
+## acking; we pop the panel once the island view is back.
+func _show_fight_result() -> void:
+	var r: Dictionary = State.fight_result
+	State.fight_result = {}
+	if r.is_empty():
+		return
+	var me := int(State.my_coach_id)
+	var in_win: bool = r.get("win_str", {}).has(me)
+	var in_lose: bool = r.get("lose_str", {}).has(me)
+	var title := "Fight over"
+	if int(r.get("flee", 0)) != 0:
+		title = "Fight over — abandoned"
+	elif in_win:
+		title = "Victory!"
+	elif in_lose:
+		title = "Defeat"
+	var hints := []
+	if in_win:
+		hints.append("strength → %d" % int(r.win_str[me]))
+	elif in_lose:
+		hints.append("strength → %d" % int(r.lose_str[me]))
+	if int(r.get("standing", 0)) != 0:
+		hints.append("standing %+d" % int(r.standing))
+	if int(r.get("killed", 0)) > 0 or int(r.get("injured", 0)) > 0:
+		hints.append("killed %d / injured %d" % [
+			int(r.killed), int(r.injured)])
+	_element_text(title, "   ".join(hints))
+	_elem_kind = ELEM_RESULT
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	for c in r.get("winners", []):
+		var cid := int(c.id)
+		var str_new: Variant = r.get("win_str", {}).get(cid)
+		list.add_item("★ %s%s" % [_coach_result_name(cid),
+			"  → str %d" % int(str_new) if str_new != null else ""])
+	for c in r.get("losers", []):
+		var cid := int(c.id)
+		var str_new: Variant = r.get("lose_str", {}).get(cid)
+		list.add_item("   %s%s" % [_coach_result_name(cid),
+			"  → str %d" % int(str_new) if str_new != null else ""])
+	for rep in r.get("reports", []):
+		# Retail applies the OW report to the roster fighter (adY.dz) — keep
+		# the lobby panel's morale/tiredness/xp current without a 6006 re-push.
+		for f in State.roster:
+			if int(f.get("id", -1)) == int(rep.fighter):
+				f.morale = int(rep.get("morale", f.get("morale", 0)))
+				f.tiredness = int(rep.get("tiredness", f.get("tiredness", 0)))
+				f.xp = int(f.get("xp", 0)) + int(rep.get("xp_final", 0))
+				if rep.get("dead", false):
+					f.state = 2   # dead — the graveyard list picks it up
+		var parts := [_fighter_result_name(int(rep.fighter))]
+		if int(rep.get("xp_final", 0)) != 0:
+			var xp := "%+d XP" % int(rep.xp_final)
+			if int(rep.get("morale_bonus", 0)) != 0:
+				xp += " (morale %+d%%)" % int(rep.morale_bonus)
+			parts.append(xp)
+		if int(rep.get("morale_delta", 0)) != 0:
+			parts.append("morale %+d → %d" % [
+				int(rep.morale_delta), int(rep.get("morale", 0))])
+		if int(rep.get("tiredness_delta", 0)) != 0:
+			parts.append("tired %+d → %d" % [
+				int(rep.tiredness_delta), int(rep.get("tiredness", 0))])
+		if rep.get("dead", false):
+			parts.append("dead")
+		elif int(rep.get("wound", 0)) != 0:
+			parts.append("wounded")
+		list.add_item(", ".join(parts))
+	var won_cards: Array = r.get("won_cards", [])
+	if not won_cards.is_empty():
+		list.add_item("— cards won —")
+		var counts := {}
+		for cid in won_cards:
+			counts[cid] = int(counts.get(cid, 0)) + 1
+		for cid in counts:
+			list.add_item("%s ×%d" % [Cards.name_of(int(cid)), int(counts[cid])])
 
 
 ## Graveyard: dead (2) / interred (3) fighters from the roster, plus the owned

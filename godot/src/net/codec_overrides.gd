@@ -52,6 +52,7 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"stat_data": return _stat_data(r)
 		"tournament_calendar": return _tournament_calendar(r)
 		"tournament_list": return _tournament_list(r)
+		"end_fight": return _end_fight(r)
 		_:
 			return {"_opcode": opcode, "_raw": r.get_rest(),
 					"_handler": handler}
@@ -653,6 +654,83 @@ static func _running_effect(r: WireReader) -> Dictionary:
 			4:
 				pr.get_i32()   # source type — 13 = spell
 				out.spell_id = pr.get_i64()
+	return out
+
+
+## Opcode 8300 — END_FIGHT result screen (fight_combat_packets.go
+## buildEndFightFull, client's WE/YP decode):
+##   [i32 uid][i32 -1][u8 flee]
+##   [i32 n]{i64 coachId, i32 strength}          winners' strength map
+##   [i32 n]{i64 coachId, i32 strength}          losers'
+##   [u8 n]{i64 coachId, u16 s2, u16 reportLen}  winner list
+##   [u8 n]{i64 coachId, u16 s2, u16 reportLen}  loser list
+##   [u16 len]+cardBlob  won cards               ([u8 groups]{u8 n}{i32 id})
+##   [u16 len]+cardBlob  lost cards
+##   [u8 n]{i64 fighterId, u16 len, OW blob}     per-fighter debrief (adl_0, 40B)
+##   [u8 killed][u8 injured][i32 standingWon]
+static func _end_fight(r: WireReader) -> Dictionary:
+	var out := {"winners": [], "losers": [], "reports": []}
+	r.get_i32()                    # uid
+	r.get_i32()                    # -1
+	out.flee = r.get_u8()
+	out.win_str = {}
+	for i in r.get_i32():
+		var wid := r.get_i64()
+		out.win_str[wid] = r.get_i32()   # dict[k]=v evaluates v BEFORE k here
+	out.lose_str = {}
+	for i in r.get_i32():
+		var lid := r.get_i64()
+		out.lose_str[lid] = r.get_i32()
+	for i in r.get_u8():
+		out.winners.append({"id": r.get_i64(),
+			"s2": r.get_u16(), "report_len": r.get_u16()})
+	for i in r.get_u8():
+		out.losers.append({"id": r.get_i64(),
+			"s2": r.get_u16(), "report_len": r.get_u16()})
+	out.won_cards = _end_fight_cards(r)
+	out.lost_cards = _end_fight_cards(r)
+	for i in r.get_u8():
+		var rep := {"fighter": r.get_i64()}
+		var blob := r.get_bytes(maxi(r.get_u16(), 0))
+		var b := WireReader.new(blob)
+		# adl_0/OW — 40 bytes, positional, no markers (postfight.go encode).
+		if b.remaining() >= 40:
+			rep.wound_rolled = b.get_u8()
+			rep.won = b.get_u8() != 0
+			rep.injury_chance = b.get_i32()
+			rep.injury_cancel = b.get_u8() != 0
+			rep.exhausted = b.get_u8() != 0
+			rep.wound = b.get_i32()
+			rep.death_chance = b.get_i32()
+			rep.resurrected = b.get_u8() != 0
+			rep.dead = b.get_u8() != 0
+			rep.tiredness = b.get_u8()
+			rep.tiredness_delta = b.get_i8()
+			rep.morale = b.get_u8()
+			rep.morale_delta = b.get_i8()
+			rep.xp_total = b.get_i32()
+			rep.xp_base = b.get_i32()
+			rep.morale_bonus = b.get_u8()
+			rep.good_rest = b.get_u8() != 0
+			rep.xp_before_gear = b.get_i32()
+			rep.xp_final = b.get_i32()
+		out.reports.append(rep)
+	out.killed = r.get_u8()
+	out.injured = r.get_u8()
+	out.standing = r.get_i32()
+	return out
+
+
+## [u16 len] then [u8 groupCount]{u8 n}{i32 cardId} — flat card list out.
+static func _end_fight_cards(r: WireReader) -> Array:
+	var blob := r.get_bytes(maxi(r.get_u16(), 0))
+	var out := []
+	var b := WireReader.new(blob)
+	if b.remaining() <= 0:
+		return out
+	for g in b.get_u8():
+		for i in b.get_u8():
+			out.append(b.get_i32())
 	return out
 
 

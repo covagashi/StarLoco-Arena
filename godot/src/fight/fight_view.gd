@@ -352,8 +352,10 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_RUNNING_EFFECT:
 			_on_running_effect(Codec.decode(opcode, payload))
 		OP_END_FIGHT:
-			# Result screen — we ack (26321 empty); the server then sends a
-			# fresh 4600 to put the coach back into its overworld.
+			# Result screen — decode the debrief (winners, cards, per-fighter
+			# OW reports) for the lobby's result panel, then ack (26321); the
+			# server answers with a fresh 4600 back to the overworld.
+			State.fight_result = Codec.decode(opcode, payload)
 			_fight_over = true
 			State.spectating = false
 			if State.net != null:

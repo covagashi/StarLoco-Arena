@@ -60,6 +60,12 @@ static var guild := {}
 ## 22003 reports land here too (idempotent — the server persists anyway).
 static var criteria := {}
 
+## Last fight's decoded 8300 debrief — stashed by fight_view before the 26321
+## ack; the lobby pops the result panel on re-entry. {winners, losers,
+## win_str, lose_str, won_cards, lost_cards, reports, killed, injured,
+## standing, flee}
+static var fight_result := {}
+
 ## True while this session watches a fight via 26331 — the fight view runs
 ## read-only (the server keeps us out of Fights.ByCoach so actions are refused
 ## anyway; this stops the client from even offering them).

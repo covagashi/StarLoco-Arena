@@ -345,7 +345,7 @@ result dialog.
 | 8120 | RunningEffect (AP/MP/HP) | S2C | ✓ | A | ✓ | ✓ (blob parts 0-4; 3=displacement, 4=source spell) |
 | 4520 | FighterDies | S2C | ✓ | A | — | ✓ (forfeit) |
 | 8200 | ActionSequenceExecute | S2C | ✓ | A | — | ✓ |
-| 8300 | EndFight | S2C | ✓ | A (2.70 strength-map counts) | ✓ | ✓ |
+| 8300 | EndFight | S2C | ✓ | A (2.70 strength-map counts) | ✓ | ✓ **live** (Godot decodes + renders the debrief panel) |
 | 26321 | EndFightDone | C2S | ✓ | A | — | ✓ (godot pvp_smoke, spectator) |
 | 8151 | GiveUpFight | C2S | ✓ | A | — | ✓ |
 | 2260 | SpectateQuery | C2S | ✓ | A (i64 target) | — | ✓ (godot pvp_smoke, 3rd client) |

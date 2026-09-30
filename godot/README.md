@@ -64,7 +64,10 @@ challenge 34 (overworld practice vs the AI "Démon de la 58ème minute") →
 placements → phase gates (`8011`/`8023`/`8031` on arch 3) → `8040` combat →
 turn loop (`8100` round, `8104` begin, `4503` move / `8109`/`8111` casts,
 `8105` end-turn, `8120` effects decoded to floating damage + AP/MP spend) →
-`8151` surrender → `8300` end → `26321` ack → `4600` back to overworld →
+`8151` surrender → `8300` end (decoded — winner/loser strength maps, won
+cards, per-fighter OW debrief — rendered as the result panel on re-entry,
+and its morale/tiredness/xp/dead fields applied back onto the roster
+entries like retail `adY.dz`) → `26321` ack → `4600` back to overworld →
 repeat.
 
 `world_smoke` also exercises: vicinity/whisper/trade chat (local echo +

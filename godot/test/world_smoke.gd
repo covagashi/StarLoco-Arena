@@ -771,6 +771,24 @@ func _move_and_shoot() -> void:
 				w8 += 1
 			print("[smoke] NPC fight lifecycle: started=", _npc_fight,
 				" done=", _npc_fight_done)
+	# The 8300 debrief → post-fight result panel on whichever main scene ran
+	# OP_INSTANCE_READY (the original _main survives scene changes as a root
+	# child, so scan every live instance and take the one that popped).
+	await create_timer(1.5).timeout
+	var found := false
+	for c in root.get_children():
+		var rdlg: PanelContainer = c.get_node_or_null("UI/ElementDlg")
+		if rdlg == null:
+			continue
+		var list: ItemList = rdlg.get_node("VBox/Scroll/List")
+		print("[smoke] RESULT PANEL visible=", rdlg.visible,
+			" title='", rdlg.get_node("VBox/Title").text,
+			"' rows=", list.item_count,
+			" row0='", (list.get_item_text(0) if list.item_count else ""),
+			"'")
+		if rdlg.visible:
+			found = true
+	print("[smoke] RESULT PANEL shown=", found)
 	quit()
 
 

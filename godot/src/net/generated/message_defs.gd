@@ -229,7 +229,7 @@ const DEFS := {
 	8151: {"name": "GiveUpFightRequestMessage", "dir": "C2S", "fields": []},
 	8200: {"name": "FightActionSequenceExecute", "dir": "S2C", "fields": []},
 	8250: {"name": "Msg8250", "dir": "S2C", "fields": [{"n": "f0", "t": "i64"}, {"n": "f1", "t": "i8"}]},
-	8300: {"name": "EndFightMessage", "dir": "S2C", "handler": "hand"},
+	8300: {"name": "EndFightMessage", "dir": "S2C", "handler": "end_fight"},
 	8400: {"name": "Msg8400", "dir": "S2C", "fields": []},
 	15000: {"name": "Msg15000", "dir": "C2S", "fields": []},
 	15001: {"name": "MailList", "dir": "S2C", "handler": "mail_list"},
