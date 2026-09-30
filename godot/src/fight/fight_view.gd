@@ -183,6 +183,7 @@ const OP_FIGHTER_MOVE := 4524  # [i32][i32][i64 fighterId] + path i32x,i32y,i16z
 const OP_FIGHTER_DIES := 4520  # [i32][i32][i64 fighterId]
 const OP_RUNNING_EFFECT := 8120  # header + BinarSerial blob (see codec)
 const OP_BUFF_ATTACH := 8121     # S2C buff re-attach (resync) — no execution
+const OP_AREA_ACTION := 6200     # S2C hdr+[u8 in][i64 inst][i64 tpl][i64 fid]
 const OP_END_FIGHT := 8300     # S2C result screen — ack with 26321
 const OP_END_FIGHT_DONE := 26321  # C2S empty — server returns us to overworld
 const OP_ENTER_INSTANCE := 4600
@@ -386,6 +387,17 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_on_running_effect(Codec.decode(opcode, payload))
 		OP_BUFF_ATTACH:
 			_on_buff_attach(Codec.decode(opcode, payload))
+		OP_AREA_ACTION:
+			# [i32 uid][i32 -1][u8 entering][i64 inst][i64 tpl][i64 fid] —
+			# the tile's own animation trigger; float its kind name instead.
+			payload.get_i32()
+			payload.get_i32()
+			var entering := int(payload.get_u8())
+			payload.get_i64()              # area instance id
+			var tpl := int(payload.get_i64())
+			var vfid := int(payload.get_i64())
+			if entering and SPECIAL_CELLS.has(tpl):
+				_float_text(vfid, SPECIAL_CELLS[tpl][1], SPECIAL_CELLS[tpl][2])
 		OP_END_FIGHT:
 			# Result screen — decode the debrief (winners, cards, per-fighter
 			# OW reports) for the lobby's result panel, then ack (26321); the
@@ -508,6 +520,20 @@ static func _elem_fx(id: int) -> Array:
 		83: return [-1, "dmg% all"]
 	return []
 
+
+## Special battlefield tiles (arena .fmd specials / wire special_detail —
+## server specialcells.go): template id -> [abbr, label, color]. The tile
+## animates only when a fighter STARTS its turn on it (6200 broadcast).
+const SPECIAL_CELLS := {
+	1002: ["K", "Killer cell", Color(1.0, 0.15, 0.1)],
+	1003: ["T", "Trap", Color(0.85, 0.5, 0.1)],
+	1004: ["E", "Eagle eye", Color(0.3, 0.9, 1.0)],
+	1005: ["S", "Shield", Color(0.3, 0.5, 1.0)],
+	1006: ["P", "Panacea", Color(0.4, 1.0, 0.5)],
+	1007: ["X", "Enthusiasm", Color(1.0, 0.6, 0.2)],
+	1008: ["M", "Motivation", Color(1.0, 0.9, 0.2)],
+	1009: ["H", "Healing heart", Color(1.0, 0.4, 0.6)],
+}
 
 ## Status states (server stateByAction) — a pale float over the target.
 const FX_STATE := {
@@ -1631,6 +1657,18 @@ func _draw_overlays() -> void:
 		if c.x <= -2047:
 			continue
 		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.85, 0.2, 0.5))
+	# special battlefield tiles — a small lettered diamond marks each
+	for sc in _fmd.get("specials", []):
+		var sp: Dictionary = sc.pos          # {x,y,z} — z is the altitude
+		var sm: Array = SPECIAL_CELLS.get(int(sc.template), ["?", "?", Color(0.7, 0.7, 0.7)])
+		var ctr := _iso(float(sp.x) + 0.5, float(sp.y) + 0.5, float(sp.z))
+		var dm := PackedVector2Array([ctr + Vector2(0, -7), ctr + Vector2(7, 0),
+			ctr + Vector2(0, 7), ctr + Vector2(-7, 0)])
+		var col: Color = sm[2]
+		draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
+		draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
+		draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), sm[0],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 	if _placement:
 		# our start cells glow; selected fighter gets a ring
 		var t := _my_team()

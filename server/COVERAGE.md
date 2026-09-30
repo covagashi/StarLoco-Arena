@@ -345,6 +345,7 @@ result dialog.
 | 4522 | FighterDirectionChange | S2C | ✓ | A | — | ✓ |
 | 8120 | RunningEffect (AP/MP/HP/summons) | S2C | ✓ | A | ✓ | ✓ (blob parts 0-4; 3=displacement, 4=source spell; action 67/75/97 spawn a summon — Godot builds the fighter from type-300 + content.10; actions 37/38/39/58/59/64/153 displace actors — Godot moves/swaps/carries them; timed effects attach a buff chip — `dumpeffects` supplies the data-side duration) |
 | 8121 | FightEffectTimer (buff attach) | S2C | ✓ | A | ✓ | ✓ (resync/spectator attach — never executes; Godot decodes `actionId + blob + fid + i16 expiry` into the same buff strip, rounds-left = expiry − own-turn counter) |
+| 6200 | EffectAreaAction | S2C | ✓ | A | — | ✓ (Godot: entering a special cell floats its name — killer/trap/eagle-eye/shield/panacea/enthusiasm/motivation/healing-heart — over the fighter; tiles themselves render as lettered diamond markers from `_fmd.specials`) |
 | 4520 | FighterDies | S2C | ✓ | A | — | ✓ (forfeit) |
 | 8200 | ActionSequenceExecute | S2C | ✓ | A | — | ✓ |
 | 8300 | EndFight | S2C | ✓ | A (2.70 strength-map counts) | ✓ | ✓ **live** (Godot decodes + renders the debrief panel) |
