@@ -1873,8 +1873,12 @@ func _play_combat(fid: int, base: String, hold := false) -> bool:
 	for s in sets:
 		if _anim_probe(spr, s, dir, base, true, hold):
 			if not hold:
-				spr.action_finished.connect(_restore_idle.bind(spr, fid),
-					CONNECT_ONE_SHOT)
+				# a pre-empted gesture may never emit finished — the
+				# pending ONE_SHOT connection survives, so re-arming
+				# it would double-connect
+				var cb := _restore_idle.bind(spr, fid)
+				if not spr.action_finished.is_connected(cb):
+					spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
 			return true
 	return false
 
@@ -1923,8 +1927,9 @@ func _play_cast(fid: int, sid: int) -> void:
 		for base in (["AnimSort-%s" % fr] if not fr.is_empty() else []) \
 				+ ["AnimSort-Cast", "AnimCast"]:
 			if spr.play_once(set_dir, "%d_%s" % [dir, base]):
-				spr.action_finished.connect(_restore_idle.bind(spr, fid),
-					CONNECT_ONE_SHOT)
+				var cb := _restore_idle.bind(spr, fid)
+				if not spr.action_finished.is_connected(cb):
+					spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
 				return
 	# last resort: the coach set's generic cast, if it has one
 	_play_combat(fid, "AnimCast")

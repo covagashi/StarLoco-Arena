@@ -331,6 +331,13 @@ func handleFightReadyConfirm(s *Session, f *protocol.C2SFrame) error {
 // (overworld challenges). Order is the store's, so it is stable across runs.
 // Returns nil when the coach has none, letting buildFightTeamFor fall back.
 func (d *Deps) titularRoster(coachID uint, max int) []int64 {
+	// The caller's cap is arena seats, but the roster rules cap a fielded
+	// team at maxTeamMembers — a coach whose titular list grew past six
+	// (rewards, seeds) must not have every challenge launch refuse at
+	// validateRoster.
+	if max > maxTeamMembers {
+		max = maxTeamMembers
+	}
 	fighters, err := d.Store.Fighters.ListByCoach(coachID)
 	if err != nil {
 		return nil

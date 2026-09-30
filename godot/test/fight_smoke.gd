@@ -75,7 +75,13 @@ func _send_coach(coach_name: String) -> void:
 	client.send_message(2049, w.raw(), 2)
 
 
+var _challenged := false      # 4516 re-fires on post-fight world re-entry;
+                              # the défi is consumed — relaunch would refuse
+
 func _launch_challenge() -> void:
+	if _challenged:
+		return
+	_challenged = true
 	var w := WireWriter.new()
 	w.put_i32(34)      # challenge id 34 — "Démon de la 58ème minute"
 	w.put_u16(99)      # 99 = overworld challenge (not team preset)

@@ -11,6 +11,23 @@ decompiled client, no runtime).
 
 ---
 
+### B-164 · titularRoster caps by arena seats, not the six-fighter team rule
+
+- **Symptom (Godot smoke):** every `26330` défi launch answered `26310`
+  "illegal roster: too many fighters" once the coach's titular list
+  reached 8 fighters (rewards had grown it past the team cap).
+- **Root cause:** `titularRoster(coachID, max)` caps picks at `max`, which
+  callers set to `len(fightArena.team0)` — arena start cells, often ≥8.
+  With 8 titular fighters the roster passed `validateRoster`'s
+  `maxTeamMembers` (=6) check and the launch refused. Affected every
+  server-picked lineup: `startPvEChallenge`, `/FIGHT` GM, totem duels.
+- **Fix:** `titularRoster` now clamps `max` to `maxTeamMembers` before
+  reading the store — the same "the server picks a legal lineup" rule
+  that already enforced `maxSameBreedPerTeam` there.
+- **Verified:** `live` Godot `fight_smoke` — challenge 34 launches with
+  the 8-fighter titular roster again (capped to 6), fight completes.
+  (`internal/game/handlers_fightcreation.go`)
+
 ### B-163 · Godot: the LadderDlg list never cleared between tabs
 
 - **Symptom (Godot):** switching tabs in the "Ranks" window stacked rows —
