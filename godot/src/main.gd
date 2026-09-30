@@ -163,6 +163,8 @@ const OP_FIGHTER_SET_STATE := 23000      # C2S [i64 fid][u8 legendary] arch 2
 const OP_STAT_REQ := 22001               # C2S empty arch 2 — open criteria tab
 const OP_STAT_DATA := 22002              # S2C — codec_overrides stat_data
 const OP_STAT_UPD := 22003               # C2S [i16 id][u8 flag][i16 val] arch 2
+const OP_STATS_REPORT := 2400            # S2C rs_2 stat map — coach report
+const OP_STATS_PUSH := 2401              # S2C uf_0 stat map — login push
 const OP_TUTORIAL_READY := 4517          # C2S empty arch 3 — aog_1 first-entry ack
 const OP_RESET_POS := 4514               # C2S empty arch 3 — /resetPosition
 const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
@@ -199,6 +201,7 @@ const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
 const ELEM_EXCHANGE := 100               # pseudo kind: ElementDlg in trade mode
 const ELEM_SCENARIO := -2                # pseudo kind: tutorial monologue (zone trigger)
 const ELEM_RESULT := -3                  # pseudo kind: post-fight debrief (8300)
+const ELEM_COACH := -4                   # pseudo kind: coach statistics (2401)
 const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 card]
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
@@ -267,6 +270,7 @@ func _ready() -> void:
 	$UI/GuildAskDlg.confirmed.connect(_answer_guild_invite.bind(true))
 	$UI/GuildAskDlg.canceled.connect(_answer_guild_invite.bind(false))
 	$UI/VBox/AuthRow/GearBtn.pressed.connect(_open_equip)
+	$UI/VBox/AuthRow/CoachBtn.pressed.connect(_open_coach_stats)
 	$UI/EquipDlg/VBox/Btns/WearBtn.pressed.connect(_on_equip_wear)
 	$UI/EquipDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/EquipDlg.hide())
@@ -439,6 +443,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/RanksBtn.disabled = false
 			$UI/VBox/AuthRow/ClanBtn.disabled = false
 			$UI/VBox/AuthRow/GearBtn.disabled = false
+			$UI/VBox/AuthRow/CoachBtn.disabled = false
 			$UI/VBox/AuthRow/SearchBtn.disabled = false
 			$UI/VBox/AuthRow/EvoBtn.disabled = false
 			world.show_world(State.current_world, _my_pos)
@@ -909,6 +914,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for r0 in sd.get("rows", []):
 				State.criteria[int(r0.get("crit", 0))] = int(r0.get("val", 0))
 			_fill_ladder(sd, opcode)
+		OP_STATS_REPORT, OP_STATS_PUSH:
+			# 2400/2401 — rs_2 stat map: the coach's lifetime numbers; the
+			# "Coach" pane reads State.coach_stats.
+			var sm := Codec.decode(opcode, payload)
+			for s in sm.get("stats", []):
+				State.coach_stats[int(s.id)] = s.value
+			if _elem_kind == ELEM_COACH and $UI/ElementDlg.visible:
+				_fill_coach_stats()
 		510:  # GuildRecord — guild name/demon/rank table for our guild
 			var d := Codec.decode(opcode, payload)
 			State.guild["guild_id"] = int(d.guild_id)
@@ -2068,6 +2081,40 @@ func _on_save_loadout() -> void:
 		w.put_i32(int(c.id))
 	Session.send(OP_FIGHTER_LOADOUT, w.raw(), 2)
 	_log_line("loadout sent — %d spells" % picked.size())
+
+
+## --- Coach statistics (2401 / 2400) ------------------------------------------
+## The 2401 login push carries the coach's lifetime counters as an rs_2 stat
+## map (server statistics.go — PlayerStatisticsReport field ids). Sparse: a
+## stat the server never tracked simply isn't there and reads as 0.
+const COACH_STAT_LABELS := {1: "time played", 2: "time in fights",
+	3: "fights", 4: "wins", 5: "losses", 7: "win streak", 8: "loss streak"}
+const COACH_STAT_ORDER := [3, 4, 5, 7, 8, 1, 2]  # fights first, times last
+
+func _open_coach_stats() -> void:
+	_element_text("Coach — %s" % State.my_coach_name,
+		"lifetime statistics:")
+	_elem_kind = ELEM_COACH
+	_fill_coach_stats()
+
+
+func _fill_coach_stats() -> void:
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	list.clear()
+	for id in COACH_STAT_ORDER:
+		var v := int(State.coach_stats.get(id, 0))
+		var text := _fmt_secs(v) if id in [1, 2] else str(v)
+		list.add_item("%s: %s" % [COACH_STAT_LABELS[id], text])
+	var fights := int(State.coach_stats.get(3, 0))
+	if fights > 0:
+		$UI/ElementDlg/VBox/Hint.text = "win rate: %d%%" % [
+			int(State.coach_stats.get(4, 0)) * 100 / fights]
+
+
+static func _fmt_secs(secs: int) -> String:
+	var h := secs / 3600
+	var m := (secs % 3600) / 60
+	return "%dh %02dm" % [h, m] if h > 0 else "%dm %02ds" % [m, secs % 60]
 
 
 ## --- Coach equipment (5201) -------------------------------------------------

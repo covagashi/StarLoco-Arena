@@ -60,6 +60,11 @@ static var guild := {}
 ## 22003 reports land here too (idempotent — the server persists anyway).
 static var criteria := {}
 
+## Lifetime coach statistics {statId: value} — the 2401 login push (and 2400
+## report refresh). Retail stat ids: 1 play secs, 2 fight secs, 3 fights,
+## 4 wins, 5 losses, 7 win streak, 8 loss streak (PlayerStatisticsReport).
+static var coach_stats := {}
+
 ## Last fight's decoded 8300 debrief — stashed by fight_view before the 26321
 ## ack; the lobby pops the result panel on re-entry. {winners, losers,
 ## win_str, lose_str, won_cards, lost_cards, reports, killed, injured,

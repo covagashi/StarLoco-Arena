@@ -111,6 +111,11 @@ text = "Gear"
 disabled = true
 tooltip_text = "coach equipment (5201) — set bonuses"
 
+[node name="CoachBtn" type="Button" parent="UI/VBox/AuthRow"]
+text = "Coach"
+disabled = true
+tooltip_text = "lifetime statistics (2401) — fights, wins, streaks"
+
 [node name="RosterTitle" type="Label" parent="UI/VBox"]
 text = "Fighters:"
 mouse_filter = 2

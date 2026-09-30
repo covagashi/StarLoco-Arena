@@ -658,6 +658,17 @@ func _move_and_shoot() -> void:
 		_main._on_ladder_more()      # demons page 2 (start 12 → demons 13-24)
 		await create_timer(0.6).timeout
 	_main.get_node("UI/LadderDlg").hide()
+	# Coach statistics pane (2401 login push → State.coach_stats): named
+	# rows, never the raw stat ids.
+	_main._open_coach_stats()
+	var cslist: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
+	var cs0 := cslist.get_item_text(0) if cslist.item_count > 0 else ""
+	print("[smoke] COACH STATS rows=%d row0='%s' hint='%s'" % [
+		cslist.item_count, cs0,
+		_main.get_node("UI/ElementDlg/VBox/Hint").text])
+	if cslist.item_count == 0 or not cs0.begins_with("fights:"):
+		push_error("coach stats pane empty or wrong")
+	_main.get_node("UI/ElementDlg").visible = false
 	# Search lanes: quick-search (2301 → 2304 → 2303 → 2306) and the
 	# evolution queue (23003 → 23004 → 23001 → 23002), each ack+cancel.
 	_main._on_quick_search()

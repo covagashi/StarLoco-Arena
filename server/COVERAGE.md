@@ -54,6 +54,7 @@ Audit legend cross-refs the commit that did/verified it.
 | 2052 | CoachInformations | S2C | ✓ | **A*** (color order fixed) | ✓ | ✓ |
 | 4600 | EnterInstance | S2C | ✓ | A | — | ✓ |
 | 2400 | PlayerStatisticsReport | S2C | ✓ | **A*** (field ids fixed vs class) | ✓ | ✓ (implicit) |
+| 2401 | PlayerStatistics (`uf_0`) | S2C | ✓ (login push) | A (u16 len + stat map) | ✓ | ✓ **live** — Godot "Coach" pane |
 
 ## World / actors / movement
 
