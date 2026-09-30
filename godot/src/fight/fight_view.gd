@@ -307,15 +307,22 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var caster := int(payload.get_i64())
 			var sid := int(payload.get_i32())
 			var miss := int(payload.get_i8())
-			_float_text(caster, "miss!" if miss else "spell %d" % sid,
-				Color(0.6, 0.8, 1.0) if not miss else Color(1, 1, 0.4))
+			var crit := int(payload.get_i8()) if not miss and payload.remaining() > 0 else 0
+			_float_text(caster,
+				"miss!" if miss else
+				("critical! " if crit else "") + Spells.name_of(sid),
+				Color(1, 1, 0.4) if miss else
+				Color(1.0, 0.6, 0.2) if crit else Color(0.6, 0.8, 1.0))
 		OP_CLOSE_COMBAT:
 			payload.get_i32()
 			payload.get_i32()
 			var atk := int(payload.get_i64())
 			var wmiss := int(payload.get_i8()) if payload.remaining() > 0 else 0
-			_float_text(atk, "miss!" if wmiss else "hit!",
-				Color(1, 1, 0.4) if wmiss else Color(1.0, 0.7, 0.3))
+			var wcrit := int(payload.get_i8()) if not wmiss and payload.remaining() > 0 else 0
+			_float_text(atk, "miss!" if wmiss else
+				"critical hit!" if wcrit else "hit!",
+				Color(1, 1, 0.4) if wmiss else
+				Color(1.0, 0.6, 0.2) if wcrit else Color(1.0, 0.7, 0.3))
 		OP_CARD_USE:
 			# [i32 uid][i32 -1][i64 user][i32 card][i8 miss](+crit+target)
 			payload.get_i32()
@@ -323,9 +330,11 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var user := int(payload.get_i64())
 			var cid := int(payload.get_i32())
 			var cmiss := int(payload.get_i8()) if payload.remaining() > 0 else 0
+			var ccrit := int(payload.get_i8()) if not cmiss and payload.remaining() > 0 else 0
 			_float_text(user, "miss!" if cmiss else
-				FighterCards.label(cid),
-				Color(1, 1, 0.4) if cmiss else Color(0.9, 0.6, 1.0))
+				("critical! " if ccrit else "") + FighterCards.label(cid),
+				Color(1, 1, 0.4) if cmiss else
+				Color(1.0, 0.6, 0.2) if ccrit else Color(0.9, 0.6, 1.0))
 		OP_FIGHTER_MOVE:
 			# [i32 uid][i32 -1][i64 fighterId] + path — server prepends the
 			# origin cell (applyFighterMove), so path[0] is where the fighter
@@ -1363,6 +1372,20 @@ func _find_path(from: Vector2i, to: Vector2i, ignore_fid: int) -> Array:
 	return path
 
 
+## Walk preview for the hovered cell on our turn — the same _find_path the
+## click sends, so the dots/MP label always match what would go out on 4503.
+## Empty during placement, with a spell/card armed, or off-turn.
+func _preview_path() -> Array:
+	if _placement or _spell_mode != -1 or _card_mode != -1:
+		return []
+	if not _is_my_turn() or not _cells.has(_hover):
+		return []
+	if not _cells[_hover].ground:
+		return []
+	var cur: Vector3i = _actor_cells.get(_current_fid, Vector3i.ZERO)
+	return _find_path(Vector2i(cur.x, cur.y), _hover, _current_fid)
+
+
 func _try_move() -> void:
 	if State.spectating:
 		return   # read-only viewer: clicks only pan/zoom
@@ -1489,6 +1512,17 @@ func _draw_overlays() -> void:
 		draw_colored_polygon(_cell_poly(pos.x, pos.y, rc.alt),
 			Color(1.0, 0.5, 0.1, 0.45) if legal
 			else Color(1.0, 0.5, 0.1, 0.12))
+	# movement path preview — retail dots the walk steps and floats the MP
+	# cost at the target; red once the path exceeds the MP we have left.
+	var path := _preview_path()
+	if not path.is_empty():
+		var pc := Color(0.4, 1.0, 0.4, 0.9) if path.size() <= _mp_left \
+			else Color(1.0, 0.35, 0.3, 0.9)
+		for p in path:
+			draw_circle(_iso(p.x + 0.5, p.y + 0.5, p.z), 3.5, pc)
+		draw_string(ThemeDB.fallback_font,
+			_iso(_hover.x + 0.5, _hover.y + 0.5, _cells[_hover].alt) + Vector2(8, -10),
+			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, pc)
 	if not _placement and _is_my_turn() and _cells.has(_hover):
 		var hc: Dictionary = _cells[_hover]
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)

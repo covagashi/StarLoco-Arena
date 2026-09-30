@@ -23,6 +23,7 @@ var _card_landed := false
 var _timeline_checked := false
 var _faced := false
 var _range_seen := false
+var _path_seen := false
 
 
 func _init() -> void:
@@ -160,6 +161,33 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 	if not ours or finished:
 		return
 	var cur: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
+	# Walk preview — hovering a free ground cell on our turn produces the BFS
+	# step list the click would send; hovering our own cell stays empty.
+	if not _path_seen:
+		_path_seen = true
+		var occupied := {}
+		for id in fight_scene._actor_cells:
+			var ap: Vector3i = fight_scene._actor_cells[id]
+			occupied[Vector2i(ap.x, ap.y)] = true
+		var dest := Vector2i(-9999, -9999)
+		for pos in fight_scene._cells:
+			var c: Dictionary = fight_scene._cells[pos]
+			var dd := absi(pos.x - cur.x) + absi(pos.y - cur.y)
+			if c.ground and dd >= 1 and dd <= 3 and not occupied.has(pos):
+				dest = pos
+				break
+		fight_scene._hover = dest
+		var pv: Array = fight_scene._preview_path()
+		print("[smoke] PATH PREVIEW hover=%s steps=%d mp=%d" % [
+			dest, pv.size(), fight_scene._mp_left])
+		if dest.x != -9999 and pv.is_empty():
+			push_error("path preview empty for a reachable cell")
+		if pv.size() > 0 and Vector2i(pv[-1].x, pv[-1].y) != dest:
+			push_error("path preview does not land on the hovered cell")
+		fight_scene._hover = Vector2i(cur.x, cur.y)
+		if not fight_scene._preview_path().is_empty():
+			push_error("path preview on own cell should be empty")
+		fight_scene._hover = Vector2i(-9999, -9999)
 	# Exercise the cast path first (from the CURRENT cell — the 4503 below is
 	# still in flight). Weapon (8111) needs an orthogonally adjacent enemy;
 	# a known spell goes at the closest enemy cell. Server validates
