@@ -53,6 +53,7 @@ static func dispatch(handler: String, opcode: int, r: WireReader) -> Dictionary:
 		"tournament_calendar": return _tournament_calendar(r)
 		"tournament_list": return _tournament_list(r)
 		"end_fight": return _end_fight(r)
+		"buff_attach": return _buff_attach(r)
 		_:
 			return {"_opcode": opcode, "_raw": r.get_rest(),
 					"_handler": handler}
@@ -632,20 +633,9 @@ static func _running_effect(r: WireReader) -> Dictionary:
 	out.elapsed = r.get_i32()
 	out.effect_id = r.get_i32()
 	var blob := r.get_bytes(maxi(r.get_u16(), 0))
-	var br := WireReader.new(blob)
-	var offsets := {}
-	var order := []
-	for i in br.get_u8():
-		var idx := br.get_u8()
-		offsets[idx] = br.get_i32()
-		order.append(idx)
-	for i in order.size():
-		var idx: int = order[i]
-		var start: int = offsets.get(idx, blob.size())
-		var end: int = offsets.get(order[i + 1], blob.size()) if i + 1 < order.size() else blob.size()
-		var pr := WireReader.new(blob.slice(mini(start, blob.size()), mini(end, blob.size())))
-		if pr.remaining() <= 0 or pr.get_u8() != idx:
-			continue
+	var parts := _effect_blob_parts(blob)
+	for idx in parts:
+		var pr: WireReader = parts[idx]
 		match idx:
 			0:
 				out.caster = pr.get_i64()
@@ -665,6 +655,54 @@ static func _running_effect(r: WireReader) -> Dictionary:
 			4:
 				pr.get_i32()   # source type — 13 = spell
 				out.spell_id = pr.get_i64()
+	return out
+
+
+## Slices a BinarSerial part-table blob into {partIdx: WireReader} with each
+## reader positioned past the leading idx byte (the idx-check already done).
+## Shared by 8120's effect blob and 8121's buff-attach blob.
+static func _effect_blob_parts(blob: PackedByteArray) -> Dictionary:
+	var parts := {}
+	var br := WireReader.new(blob)
+	var offsets := {}
+	var order := []
+	for i in br.get_u8():
+		var idx := br.get_u8()
+		offsets[idx] = br.get_i32()
+		order.append(idx)
+	for i in order.size():
+		var idx: int = order[i]
+		var start: int = offsets.get(idx, blob.size())
+		var end: int = offsets.get(order[i + 1], blob.size()) if i + 1 < order.size() else blob.size()
+		var pr := WireReader.new(blob.slice(mini(start, blob.size()), mini(end, blob.size())))
+		if pr.remaining() <= 0 or pr.get_u8() != idx:
+			continue
+		parts[idx] = pr
+	return parts
+
+
+## Opcode 8121 — RUN_SCRIPTED_EFFECT / buff attach (buff_resync.go
+## buildAttachBuff): [i32 actionId][i16 blobLen][BinarSerial blob]
+## [i64 fighterId][i16 expiry][i8 flag]. Attaches WITHOUT executing (resync /
+## spectator join) — expiry is an absolute mark on the fighter's own turn
+## counter (turnsTaken + turnsLeft at send time); a negative value = infinite.
+static func _buff_attach(r: WireReader) -> Dictionary:
+	var out := {}
+	out.action_id = r.get_i32()
+	var blob := r.get_bytes(maxi(r.get_u16(), 0))
+	var parts := _effect_blob_parts(blob)
+	if parts.has(0):
+		var pr: WireReader = parts[0]
+		out.caster = pr.get_i64()
+		out.target = pr.get_i64()
+		out.gen_effect = pr.get_i32()
+		pr.get_i32()   # x
+		pr.get_i32()   # y
+		pr.get_u16()   # z
+		out.value = pr.get_i32()
+	out.fighter = r.get_i64()
+	out.expiry = r.get_i16()
+	r.get_i8()       # ordering nudge flag — unused
 	return out
 
 

@@ -343,7 +343,8 @@ result dialog.
 | 8111/8112 | CloseCombatReq/CloseCombat | C2S+S2C | ✓ | A | — | ✓ (godot fallback path) |
 | 4521 | FighterDirChangeReq | C2S | ✓ | A (i64 fid, u8 dir, arch 3) | — | ✓ (godot fight_smoke) |
 | 4522 | FighterDirectionChange | S2C | ✓ | A | — | ✓ |
-| 8120 | RunningEffect (AP/MP/HP/summons) | S2C | ✓ | A | ✓ | ✓ (blob parts 0-4; 3=displacement, 4=source spell; action 67/75/97 spawn a summon — Godot builds the fighter from type-300 + content.10; actions 37/38/39/58/59/64/153 displace actors — Godot moves/swaps/carries them) |
+| 8120 | RunningEffect (AP/MP/HP/summons) | S2C | ✓ | A | ✓ | ✓ (blob parts 0-4; 3=displacement, 4=source spell; action 67/75/97 spawn a summon — Godot builds the fighter from type-300 + content.10; actions 37/38/39/58/59/64/153 displace actors — Godot moves/swaps/carries them; timed effects attach a buff chip — `dumpeffects` supplies the data-side duration) |
+| 8121 | FightEffectTimer (buff attach) | S2C | ✓ | A | ✓ | ✓ (resync/spectator attach — never executes; Godot decodes `actionId + blob + fid + i16 expiry` into the same buff strip, rounds-left = expiry − own-turn counter) |
 | 4520 | FighterDies | S2C | ✓ | A | — | ✓ (forfeit) |
 | 8200 | ActionSequenceExecute | S2C | ✓ | A | — | ✓ |
 | 8300 | EndFight | S2C | ✓ | A (2.70 strength-map counts) | ✓ | ✓ **live** (Godot decodes + renders the debrief panel) |

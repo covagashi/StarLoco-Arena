@@ -355,7 +355,7 @@
   },
   "8121": {
    "name": "FightEffectTimer",
-   "handler": "hand"
+   "handler": "buff_attach"
   },
   "26333": {
    "name": "ReconnectFightQuestion",

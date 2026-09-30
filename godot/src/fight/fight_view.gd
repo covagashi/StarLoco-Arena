@@ -15,6 +15,7 @@ const Codec := preload("res://src/net/codec.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
+const Effects := preload("res://src/gamedata/effects.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 
@@ -180,6 +181,7 @@ const OP_TURN_END := 8106      # S2C [i32][i32][i64 fighterId]
 const OP_FIGHTER_MOVE := 4524  # [i32][i32][i64 fighterId] + path i32x,i32y,i16z
 const OP_FIGHTER_DIES := 4520  # [i32][i32][i64 fighterId]
 const OP_RUNNING_EFFECT := 8120  # header + BinarSerial blob (see codec)
+const OP_BUFF_ATTACH := 8121     # S2C buff re-attach (resync) — no execution
 const OP_END_FIGHT := 8300     # S2C result screen — ack with 26321
 const OP_END_FIGHT_DONE := 26321  # C2S empty — server returns us to overworld
 const OP_ENTER_INSTANCE := 4600
@@ -210,6 +212,8 @@ var _actor_dir := {}     # actor id -> last server dir (facing during walk)
 var _hp_lost := {}       # fighter id -> accumulated damage (8000 + 8120)
 var _dead := {}          # fighter id -> true once 4520 arrives
 var _carried_by := {}    # carried fighter id -> carrier fighter id (58/59)
+var _buffs := {}         # fighter id -> [{label,left,inf,src}] effect chips
+var _turns_taken := {}   # fighter id -> own-turn count (client alh_1.NC)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
 var _selected := -1      # our fighter selected for placement
 
@@ -291,6 +295,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TABLE_TURN:
 			var d := Codec.decode(opcode, payload)
 			info.text = "map %s — turn %d" % [$UI/TopBar/MapId.text, int(d.get("f2", 0))]
+			_age_buffs()
 		OP_TURN_BEGIN:
 			var d := Codec.decode(opcode, payload)
 			_on_turn_begin(int(d.get("f2", -1)))
@@ -366,6 +371,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_kill_actor(int(payload.get_i64()))
 		OP_RUNNING_EFFECT:
 			_on_running_effect(Codec.decode(opcode, payload))
+		OP_BUFF_ATTACH:
+			_on_buff_attach(Codec.decode(opcode, payload))
 		OP_END_FIGHT:
 			# Result screen — decode the debrief (winners, cards, per-fighter
 			# OW reports) for the lobby's result panel, then ack (26321); the
@@ -551,6 +558,22 @@ func _on_running_effect(d: Dictionary) -> void:
 		var spr: AnmSprite = _sprites.get(target)
 		if spr != null:
 			spr.modulate.a = 1.0
+		# strips by SOURCE effectId — the dispel's params[0] (server
+		# removeEffectByID); params-free dispels remove nothing
+		var p: Variant = Effects.meta(int(d.get("gen_effect", 0))).get("p", [])
+		if p is Array and not p.is_empty():
+			var rid := int(p[0])
+			_buffs[target] = _buffs.get(target, []).filter(
+				func(b): return int(b.src) != rid)
+			_refresh_buffs(target)
+	# a timed/infinite effect also joins the buff strip — the client's PJ()
+	# container gains it when the running effect executes; instant effects
+	# resolve to {} in effects.json and skip. Duration comes from the data
+	# (never on the wire); the server ages buffs per table-turn (tickBuffs).
+	var em := Effects.meta(int(d.get("gen_effect", 0)))
+	if not em.is_empty():
+		_attach_buff(target, int(d.effect_id), int(d.gen_effect), value,
+			int(em.get("d", 0)), bool(em.get("i", false)))
 
 
 ## Summon spawn (8120 action 67/75/97 → hy_1.gn_0.d): the wire carries the new
@@ -680,6 +703,8 @@ func chat_bubble(coach_id: int, text: String) -> void:
 ## 4520 — grey out the corpse; its cell stays occupied for pathing.
 func _kill_actor(fid: int) -> void:
 	_dead[fid] = true
+	_buffs.erase(fid)                  # a dead fighter's icons are moot
+	_refresh_buffs(fid)
 	_carried_by.erase(fid)             # dying breaks both carry directions
 	for cid in _carried_by.keys():     # (breakCarryLinks) — the carried drops
 		if _carried_by[cid] == fid:      # onto the carrier's cell, where it is
@@ -755,6 +780,92 @@ func _float_text(fid: int, text: String, color: Color) -> void:
 	tw.chain().tween_callback(lbl.queue_free)
 
 
+## --- Buff strip ------------------------------------------------------
+## One chip line under the nameplate ("Buffs" label) — the client's own
+## effect container (PJ()): +2 AP·3, Rooted·∞… Chip text reuses the
+## float label maps; `left` counts table-turns (server tickBuffs ages on
+## 8100) and `src` is the source effectId so dispel can strip by params[0].
+
+func _buff_label(action_id: int, value: int) -> String:
+	if FX_RES_ID.has(action_id) or not _elem_fx(action_id).is_empty():
+		var e: Array = FX_RES_ID.get(action_id, _elem_fx(action_id))
+		return "%s%d %s" % ["-" if int(e[0]) < 0 else "+", value, e[1]]
+	if FX_STATE.has(action_id):
+		return FX_STATE[action_id]
+	if FX_HP_GAIN.has(action_id):
+		return "+%d HP" % value
+	if FX_HP_LOSS.has(action_id):
+		return "-%d HP" % value
+	return ""
+
+
+func _attach_buff(fid: int, action_id: int, src: int, value: int,
+		left: int, inf: bool) -> void:
+	var label := _buff_label(action_id, value)
+	if fid <= 0 or label.is_empty():
+		return
+	var list: Array = _buffs.get_or_add(fid, [])
+	for b in list:
+		if int(b.src) == src:            # re-fire refreshes, never doubles
+			b.left = left
+			b.inf = inf
+			_refresh_buffs(fid)
+			return
+	list.append({"label": label, "left": left, "inf": inf, "src": src})
+	_refresh_buffs(fid)
+
+
+## 8100 — every fighter's finite buffs lose one table-turn (tickBuffs);
+## expired chips drop. Infinite (≥63 → sentinel) chips never age.
+func _age_buffs() -> void:
+	for fid in _buffs.keys():
+		var kept := []
+		for b in _buffs[fid]:
+			if not b.inf:
+				b.left = int(b.left) - 1
+			if b.inf or int(b.left) > 0:
+				kept.append(b)
+		_buffs[fid] = kept
+		_refresh_buffs(int(fid))
+
+
+func _refresh_buffs(fid: int) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr == null:
+		return
+	var lbl := spr.get_node_or_null("Buffs") as Label
+	if lbl == null:
+		lbl = Label.new()
+		lbl.name = "Buffs"
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.position = Vector2(-80, -112)
+		lbl.size = Vector2(160, 14)
+		lbl.add_theme_font_size_override("font_size", 10)
+		lbl.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
+		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+		lbl.add_theme_constant_override("shadow_offset_x", 1)
+		lbl.add_theme_constant_override("shadow_offset_y", 1)
+		spr.add_child(lbl)
+		lbl.scale.x = -1.0 if spr.scale.x < 0 else 1.0   # counter-flip like Plate
+	var parts := []
+	for b in _buffs.get(fid, []):
+		parts.append(str(b.label) if b.inf else "%s·%d" % [b.label, b.left])
+	lbl.text = "  ".join(parts)
+	lbl.visible = not parts.is_empty()
+
+
+## 8121 — a buff re-attach for a viewer that missed the cast (reconnect /
+## spectator join). It does NOT execute; expiry is an absolute mark on the
+## fighter's own turn counter: rounds-left = expiry - turnsTaken (server
+## buffExpiryMark), negative = infinite.
+func _on_buff_attach(d: Dictionary) -> void:
+	var fid := int(d.get("fighter", -1))
+	var expiry := int(d.get("expiry", 0))
+	_attach_buff(fid, int(d.get("action_id", 0)), int(d.get("gen_effect", 0)),
+		int(d.get("value", 0)), expiry - int(_turns_taken.get(fid, 0)),
+		expiry < 0)
+
+
 ## 8104 — a fighter's turn started. Ours: spell bar (8109 casts / 8111
 ## weapon), click a cell to move (4503), End turn sends 8105. The
 ## turn_began signal lets a harness drive instead.
@@ -763,6 +874,9 @@ func _on_turn_begin(fid: int) -> void:
 	_spell_mode = -1
 	_card_mode = -1
 	_range_overlay.clear()
+	# the client's per-fighter timeline counter (alh_1.aAw) bumps here —
+	# 8121 buff expiries are absolute marks against it
+	_turns_taken[fid] = int(_turns_taken.get(fid, 0)) + 1
 	var f: Dictionary = State.fighters.get(fid, {})
 	# Summons share their caster's coach id but are server-AI-driven
 	# (Father set, ai.go) — no bar, no End turn for them.

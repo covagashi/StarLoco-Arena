@@ -24,6 +24,7 @@ var _timeline_checked := false
 var _faced := false
 var _range_seen := false
 var _path_seen := false
+var _buff_seen := false
 
 
 func _init() -> void:
@@ -188,6 +189,56 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		if not fight_scene._preview_path().is_empty():
 			push_error("path preview on own cell should be empty")
 		fight_scene._hover = Vector2i(-9999, -9999)
+	# Buff strip — fabricate the exact 8121 wire bytes the resync path emits
+	# (i32 actionId + u16 blobLen + BinarSerial blob + i64 fid + i16 expiry
+	# + i8) for a finite +AP buff and an infinite Invisible, then age them
+	# through a synthetic table turn: finite expires, infinite persists.
+	if not _buff_seen:
+		_buff_seen = true
+		var mk_blob := func(gen: int, val: int) -> PackedByteArray:
+			var b := WireWriter.new()
+			b.put_u8(1)          # one part
+			b.put_u8(0)          # part 0
+			b.put_i32(6)         # abs offset of part 0's idx byte
+			b.put_u8(0)          # part 0 idx
+			b.put_i64(fid)       # caster
+			b.put_i64(fid)       # target
+			b.put_i32(gen)       # genEffect (effectId)
+			b.put_i32(0)         # x
+			b.put_i32(0)         # y
+			b.put_u16(0)         # z
+			b.put_i32(val)       # value
+			return b.raw()
+		var t0: int = fight_scene._turns_taken.get(fid, 0)
+		# [action, effectId, value, expiry] — expiry is absolute against
+		# the fighter's own turn counter; -1 encodes infinite
+		for fx in [[99, 1418, 3, t0 + 1], [57, 1485, 0, -1]]:
+			var blob: PackedByteArray = mk_blob.call(fx[1], fx[2])
+			var w := WireWriter.new()
+			w.put_i32(fx[0])
+			w.put_u16(blob.size())
+			w.put_bytes(blob)
+			w.put_i64(fid)
+			w.put_i16(fx[3])
+			w.put_u8(0)
+			fight_scene._on_net_message(8121, w.raw())
+		var bl: Array = fight_scene._buffs.get(fid, [])
+		print("[smoke] BUFFS chips=%s" % [bl])
+		if bl.size() != 2:
+			push_error("buff strip: expected 2 chips, got %d" % bl.size())
+		elif bl[0].label != "+3 AP" or bl[1].label != "Invisible":
+			push_error("buff strip: wrong labels %s / %s" % [
+				bl[0].label, bl[1].label])
+		var t := WireWriter.new()
+		t.put_i32(0)
+		t.put_i32(0)
+		t.put_u8(9)
+		t.put_i32(0)
+		fight_scene._on_net_message(8100, t.raw())
+		var bl2: Array = fight_scene._buffs.get(fid, [])
+		print("[smoke] BUFFS after 8100 chips=%s" % [bl2])
+		if bl2.size() != 1 or not bool(bl2[0].inf):
+			push_error("buff strip: finite chip did not expire / infinite aged")
 	# Exercise the cast path first (from the CURRENT cell — the 4503 below is
 	# still in flight). Weapon (8111) needs an orthogonally adjacent enemy;
 	# a known spell goes at the closest enemy cell. Server validates
