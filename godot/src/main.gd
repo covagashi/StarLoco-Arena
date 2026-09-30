@@ -242,6 +242,7 @@ func _ready() -> void:
 	$UI/VBox/AuthRow/DuoBtn.pressed.connect(_open_duo_dlg)
 	$UI/VBox/AuthRow/RanksBtn.pressed.connect(_open_ladder)
 	$UI/LadderDlg/VBox/Tabs.item_selected.connect(_on_ladder_tab)
+	$UI/LadderDlg/VBox/Scroll/List.item_selected.connect(_on_ladder_sel)
 	$UI/LadderDlg/VBox/Btns/MoreBtn.pressed.connect(_on_ladder_more)
 	$UI/LadderDlg/VBox/Btns/CloseBtn.pressed.connect(
 		func(): $UI/LadderDlg.hide())
@@ -902,8 +903,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					int(s.id), int(s.type), str(s.value)])
 			_log_line("\n".join(lines))
 		OP_STAT_DATA:
-			# 22002 — reply to opening the criteria/achievements tab.
-			_fill_ladder(Codec.decode(opcode, payload), opcode)
+			# 22002 — reply to opening the achievements tab; the pairs also
+			# refresh the local criterion map the pane evaluates against.
+			var sd := Codec.decode(opcode, payload)
+			for r0 in sd.get("rows", []):
+				State.criteria[int(r0.get("crit", 0))] = int(r0.get("val", 0))
+			_fill_ladder(sd, opcode)
 		510:  # GuildRecord — guild name/demon/rank table for our guild
 			var d := Codec.decode(opcode, payload)
 			State.guild["guild_id"] = int(d.guild_id)
@@ -1313,6 +1318,10 @@ func _on_ladder_more() -> void:
 ## Send the current tab's request at _ladder_start (arch 2).
 func _ladder_request() -> void:
 	var w := WireWriter.new()
+	if _ladder_start == 0:
+		# fresh window (open / tab switch) — drop the previous tab's rows;
+		# "More" requests append instead.
+		$UI/LadderDlg/VBox/Scroll/List.clear()
 	match int(LADDER_TABS[_ladder_tab].op):
 		OP_LADDER_GUILD_REQ:
 			w.put_i16(1)                     # board id — must be 1
@@ -1346,12 +1355,7 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 	var more: Button = $UI/LadderDlg/VBox/Btns/MoreBtn
 	match opcode:
 		OP_STAT_DATA:
-			# criteria pairs — no client-side names; raw id = value rows
-			for r0 in d.get("rows", []):
-				list.add_item("criterion %d = %d" % [
-					int(r0.get("crit", 0)), int(r0.get("val", 0))])
-			hint.text = "%d criteria" % d.get("rows", []).size()
-			more.disabled = true
+			_fill_achievements(list, hint, more)
 		OP_LADDER_1V1:
 			for r0 in d.get("rows", []):
 				var g := str(r0.get("guild", ""))
@@ -1433,6 +1437,60 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 				+ d.get("rows", []).size()
 		_:
 			_ladder_start = int(d.get("end", _ladder_start))
+
+
+## Achievements tab — the retail achievementsDialog: named rows sorted
+## done-first (qy_2), each showing ✓ or its averaged progress %, then a tail
+## of named raw criteria. Selecting a row puts its description and
+## per-condition progress in the hint line.
+func _fill_achievements(list: ItemList, hint: Label, more: Button) -> void:
+	var rows := NpcDialogs.achievement_rows(State.criteria, State.inventory)
+	var earned := 0
+	for r0 in rows:
+		var aid := int(r0.id)
+		var pts := int(NpcDialogs.achievement_info(aid).get("pts", 0))
+		if r0.done:
+			earned += pts
+			list.add_item("✓ %s — %d pts" % [
+				NpcDialogs.achievement_name(aid), pts])
+		else:
+			list.add_item("%s — %d%%" % [NpcDialogs.achievement_name(aid),
+				NpcDialogs.achievement_progress(
+					aid, State.criteria, State.inventory)])
+		list.set_item_metadata(list.item_count - 1, {"ach": aid})
+	var cids := State.criteria.keys()
+	cids.sort()
+	for cid in cids:
+		list.add_item("%s = %d" % [
+			NpcDialogs.criterion_name(int(cid)), int(State.criteria[cid])])
+		list.set_item_metadata(list.item_count - 1, {"crit": int(cid)})
+	hint.text = "%d achievements · %d pts earned · %d criteria" % [
+		rows.size(), earned, State.criteria.size()]
+	more.disabled = true
+
+
+func _on_ladder_sel(idx: int) -> void:
+	var list: ItemList = $UI/LadderDlg/VBox/Scroll/List
+	var m: Variant = list.get_item_metadata(idx)
+	if typeof(m) != TYPE_DICTIONARY or not m.has("ach"):
+		return
+	var aid := int(m.ach)
+	var info := NpcDialogs.achievement_info(aid)
+	var conds := []
+	for c in info.get("conds", []):
+		if c.kind == "stat":
+			conds.append("%s %d/%d" % [
+				NpcDialogs.criterion_name(int(c.id)),
+				mini(int(State.criteria.get(int(c.id), 0)), int(c.thr)),
+				int(c.thr)])
+		else:
+			conds.append("%s %s" % [Cards.name_of(int(c.id)),
+				"✓" if int(State.inventory.get(int(c.id), 0)) > 0 else "—"])
+	var desc := NpcDialogs.achievement_desc(aid)
+	$UI/LadderDlg/VBox/Hint.text = "%s — %d pts%s%s" % [
+		NpcDialogs.achievement_name(aid), int(info.get("pts", 0)),
+		"\n" + desc if desc != "" else "",
+		"\n" + " · ".join(conds) if not conds.is_empty() else ""]
 
 
 ## --- Clan panel (501-557, 2600/2601) ------------------------------------------
@@ -2133,7 +2191,7 @@ const LADDER_TABS := [
 	{"label": "Tournoi", "op": OP_LADDER_TOURN_REQ, "page": 20},
 	{"label": "Ligue Pro", "op": OP_LADDER_PRO_REQ, "page": 20},
 	{"label": "Démon", "op": OP_LADDER_DEMON_REQ, "page": 12},
-	{"label": "Stats", "op": OP_STAT_REQ, "page": 0},
+	{"label": "Achievements", "op": OP_STAT_REQ, "page": 0},
 ]
 var _tourn_search_tid := -1  # tournament whose opponent-search is live
 var _ladder_tab := 0          # current LADDER_TABS index

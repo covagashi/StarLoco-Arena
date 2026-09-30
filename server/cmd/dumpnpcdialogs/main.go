@@ -99,7 +99,9 @@ func main() {
 	// Achievements (type 800) gate the named-demon elements (env 6/9/7): the
 	// client evaluates "achievement done" locally as every stat condition met
 	// AND every required card in the tome (aau_1.a / sj_1.c). The dialog code
-	// needs the whole table — ids 275..284 drive the demon pages.
+	// needs the whole table — ids 275..284 drive the demon pages. The extra
+	// fields feed the achievements pane: prev/superseding chain + hidden drive
+	// the list filter (qy_2), points the header total, category the tab strip.
 	achievements := map[string]any{}
 	if ach, err := st.LoadAchievements(); err == nil && ach != nil {
 		for _, id := range ach.IDs() {
@@ -114,6 +116,12 @@ func main() {
 			achievements[fmt.Sprint(a.ID)] = map[string]any{
 				"stats": stats,
 				"cards": a.Cards,
+				"prev":  a.Previous,
+				"super": a.Superseding,
+				"cat":   a.Category,
+				"sub":   a.Subcategory,
+				"pts":   a.Points,
+				"hid":   a.Hidden,
 			}
 		}
 	}

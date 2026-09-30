@@ -53,13 +53,19 @@ def main() -> None:
         "challengeNames": {str(k): v for k, v in table(texts, 30).items()},
         "groups": groups,
         "challengeModes": raw.get("challengeModes") or {},
-        # type-800 achievements: {id: {stats: {statId: thr}, cards: [id]}} —
-        # the demon elements' gate checks (aau_1.a: every stat >= threshold
-        # AND every card in the tome).
+        # type-800 achievements: {id: {stats, cards, prev, super, cat, sub,
+        # pts, hid}} — the demon elements' gate checks (aau_1.a) AND the
+        # achievements pane's list filter (qy_2). Names/descriptions index
+        # content.37 / content.49; condition rows name criteria via
+        # content.48 (aea_1/ako).
         "achievements": raw.get("achievements") or {},
+        "achievementNames": {str(k): v for k, v in table(texts, 37).items()},
+        "achievementDescs": {str(k): v for k, v in table(texts, 49).items()},
+        "criterionNames": {str(k): v for k, v in table(texts, 48).items()},
     }
     json.dump(out, open(out_path, "w"), ensure_ascii=False)
-    print("wrote", out_path, "groups:", len(groups), "names:", len(names))
+    print("wrote", out_path, "groups:", len(groups), "names:", len(names),
+          "achievements:", len(out["achievements"]))
 
 
 if __name__ == "__main__":

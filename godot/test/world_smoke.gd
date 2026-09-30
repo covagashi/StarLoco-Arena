@@ -636,6 +636,23 @@ func _move_and_shoot() -> void:
 		tabs.select(i)
 		_main._on_ladder_tab(i)
 		await create_timer(0.6).timeout
+		if tabs.get_item_text(i) == "Achievements":
+			var alist: ItemList = _main.get_node(
+				"UI/LadderDlg/VBox/Scroll/List")
+			var row0 := alist.get_item_text(0) if alist.item_count > 0 \
+				else ""
+			print("[smoke] ACHIEVEMENTS rows=%d row0='%s'" % [
+				alist.item_count, row0])
+			if alist.item_count == 0 or row0.begins_with("criterion"):
+				push_error("achievements tab empty or raw rows")
+			# detail select: hint picks up the achievement's description +
+			# per-condition progress line
+			alist.select(0)
+			alist.item_selected.emit(0)
+			await create_timer(0.2).timeout
+			print("[smoke] ACHIEVEMENT detail hint='%s'" % [
+				_main.get_node("UI/LadderDlg/VBox/Hint").text \
+					.replace("\n", " | ")])
 	var more: Button = _main.get_node("UI/LadderDlg/VBox/Btns/MoreBtn")
 	if not more.disabled:
 		_main._on_ladder_more()      # demons page 2 (start 12 → demons 13-24)

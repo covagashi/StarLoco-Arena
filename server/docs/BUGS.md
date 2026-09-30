@@ -11,6 +11,20 @@ decompiled client, no runtime).
 
 ---
 
+### B-163 · Godot: the LadderDlg list never cleared between tabs
+
+- **Symptom (Godot):** switching tabs in the "Ranks" window stacked rows —
+  e.g. the Coach ladder rendered appended under leftover 1v1 rows, and the
+  criteria tab could repeat its rows on reopen.
+- **Root cause:** `_fill_ladder` only ever *appended*; neither
+  `_open_ladder`, `_on_ladder_tab` nor the dispatch cleared the ItemList.
+  Windowed "More" requests are supposed to append, so the fill itself can't
+  blanket-clear.
+- **Fix:** `_ladder_request` clears the list when `_ladder_start == 0`
+  (fresh open / tab switch); `More` requests keep appending.
+- **Verified:** live `world_smoke` — the Achievements tab fills 112 clean
+  rows after the other tabs.
+
 ### B-162 · `/TP` moved the coach but never its element AoI — zone triggers silently absent
 
 - **Symptom (Godot smoke):** after `/tp 179 194` the client correctly snapped
