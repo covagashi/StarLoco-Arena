@@ -360,6 +360,12 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				("critical! " if crit else "") + Spells.name_of(sid),
 				Color(1, 1, 0.4) if miss else
 				Color(1.0, 0.6, 0.2) if crit else Color(0.6, 0.8, 1.0))
+			# retail fight info channel: "[name] casts the spell [s] [(…)]."
+			var cname := str(State.fighters.get(caster, {}).get("name", ""))
+			var marker := "(Critical Failure)" if miss else \
+				"(critical hit)" if crit else ""
+			_fight_log("%s casts the spell %s %s." % [
+				cname, Spells.name_of(sid), marker])
 			# even a fumble counts against the frequency limits (the server
 			# storeCasts after the roll); a bare-cell cast has no target
 			_note_cast(caster, sid, aimed)
@@ -375,6 +381,11 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				"critical hit!" if wcrit else "hit!",
 				Color(1, 1, 0.4) if wmiss else
 				Color(1.0, 0.6, 0.2) if wcrit else Color(1.0, 0.7, 0.3))
+			# fight.closeCombat: "[name] attacks [(…)] in close combat."
+			var aname := str(State.fighters.get(atk, {}).get("name", ""))
+			_fight_log("%s attacks %s in close combat." % [aname,
+				"(Critical Failure)" if wmiss else
+				"(critical hit)" if wcrit else ""])
 		OP_CARD_USE:
 			# [i32 uid][i32 -1][i64 user][i32 card][i8 miss](+crit+target)
 			payload.get_i32()
@@ -387,6 +398,13 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				("critical! " if ccrit else "") + FighterCards.label(cid),
 				Color(1, 1, 0.4) if cmiss else
 				Color(1.0, 0.6, 0.2) if ccrit else Color(0.9, 0.6, 1.0))
+			# fight.cardUse: "[name] uses [card][(…)]." (marker glued on)
+			var uname := str(State.fighters.get(user, {}).get("name", ""))
+			_fight_log("%s uses %s%s." % [uname, FighterCards.label(cid),
+				"(Critical Failure)" if cmiss else
+				"(critical hit)" if ccrit else ""])
+			if not cmiss:
+				_play_combat(user, "AnimCarte")
 		OP_FIGHTER_MOVE:
 			# [i32 uid][i32 -1][i64 fighterId] + path — server prepends the
 			# origin cell (applyFighterMove), so path[0] is where the fighter
@@ -423,10 +441,12 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_walk.erase(tackled)
 			_float_text(tackled, "tackled!", Color(1.0, 0.5, 0.3))
 			# Retail also logs "[name] has been tackled." to the fight info
-			# channel and plays AnimTacle (skeletal — unrenderable
-			# standalone, so the float carries the visual cue).
+			# channel and plays AnimTacle on the held fighter — a skeletal
+			# track in AnimCombat.anm, rendered for players via the
+			# composite bake; sets that lack it keep just the float.
+			_play_combat(tackled, "AnimTacle")
 			var tn := str(State.fighters.get(tackled, {}).get("name", ""))
-			$UI/Chat.log_line("%s has been tackled." % tn
+			_fight_log("%s has been tackled." % tn
 				if not tn.is_empty() else "Fighter tackled.")
 		OP_FIGHTER_OUCH:
 			# [i32][i32][i64 fid] — retail pops "ouch !" over the fighter who
@@ -438,7 +458,11 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_FIGHTER_DIES:
 			payload.get_i32()
 			payload.get_i32()
-			_kill_actor(int(payload.get_i64()))
+			var dead := int(payload.get_i64())
+			# fight.die: "[name] is dead."
+			var dname := str(State.fighters.get(dead, {}).get("name", ""))
+			_fight_log("%s is dead." % dname)
+			_kill_actor(dead)
 		OP_RUNNING_EFFECT:
 			_on_running_effect(Codec.decode(opcode, payload))
 		OP_BUFF_ATTACH:
@@ -952,9 +976,16 @@ func _kill_actor(fid: int) -> void:
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr != null:
 		# AnimMort where the set has one (NPC summon anms) — holds the last
-		# frame as the corpse; player fighter files carry no death anim.
+		# frame as the corpse; player fighter files carry the KO sequence
+		# instead (AnimKO-Debut once → AnimKO-Boucle held loop).
 		if not _play_combat(fid, "AnimMort", true):
-			spr.playing = false
+			var set_dir := _anim_set(State.fighters.get(fid, {}))
+			var dir := int(_actor_dir.get(fid, 5))
+			if _anim_probe(spr, set_dir, dir, "AnimKO-Debut", true, true):
+				spr.action_finished.connect(_ko_loop.bind(spr, set_dir, dir),
+					CONNECT_ONE_SHOT)
+			else:
+				spr.playing = false
 		spr.modulate = Color(0.55, 0.55, 0.6, 0.85)
 		# back to its own canvas item so the corpse greys out via modulate
 		_gfx.unregister_dynamic(fid)
@@ -1054,6 +1085,13 @@ func _float_text(fid: int, text: String, color: Color) -> void:
 	tw.tween_property(lbl, "position:y", lbl.position.y - 26.0, 0.9)
 	tw.tween_property(lbl, "modulate:a", 0.0, 0.9)
 	tw.chain().tween_callback(lbl.queue_free)
+
+
+## Fight info channel — retail Hv.info lines (fight.spellCast / cardUse /
+## closeCombat / tackled / die), grey like the rest of the wire chatter.
+func _fight_log(text: String) -> void:
+	if $UI/Chat != null:
+		$UI/Chat.log_line("[color=gray]%s[/color]" % text)
 
 
 ## --- Event-card strip ------------------------------------------------
@@ -1792,6 +1830,13 @@ func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int,
 	spr.load_action(COACH_SET, "%d_%s" % [DIR_MAP.get(wire_dir, 1), base])
 
 
+## AnimKO-Debut done — chain into the held Boucle corpse loop; if the set
+## lacks it the one-shot already holds its last frame.
+func _ko_loop(spr: AnmSprite, set_dir: String, dir: int) -> void:
+	if is_instance_valid(spr):
+		_anim_probe(spr, set_dir, dir, "AnimKO-Boucle")
+
+
 ## Back to idle once a one-shot gesture ends — unless the fighter died
 ## (AnimMort holds its last frame; the grey modulate does the rest).
 func _restore_idle(spr: AnmSprite, fid: int) -> void:
@@ -1851,11 +1896,15 @@ func _play_cast(fid: int, sid: int) -> void:
 	var fr := _anim_slug(Spells.fr_name(sid))
 	var own := _anim_set(f)
 	var sets: Array = []
+	# Own set first: NPC summon anms carry authored AnimSort-* gestures, and
+	# fighter_<file> dirs carry the composited AnimSort_<breed> tracks baked
+	# over that body (full skeleton + fx quads). The raw animsort_<b*10>
+	# dirs only ever rasterize loose fx sprites — a weaker fallback.
+	if own != COACH_SET:
+		sets.append(own)
 	var breed := int(f.get("breed", 0))
 	if breed >= 1:
 		sets.append("res://assets/anims/animsort_%d" % (breed * 10))
-	if own != COACH_SET:
-		sets.append(own)
 	for set_dir in sets:
 		var dir := 1 if int(DIR_MAP.get(int(_actor_dir.get(fid, 1)), 1)) <= 2 else 5
 		for base in (["AnimSort-%s" % fr] if not fr.is_empty() else []) \

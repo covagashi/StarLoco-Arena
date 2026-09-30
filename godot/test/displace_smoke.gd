@@ -311,7 +311,9 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			if _swap_ok:
 				fight_scene.request_end_turn()
 				return
-			var ally2 := _ally_in_range(me, 1, 3, fid)
+			# Sacrifice needs LoS (los:true) — filter the pick through the
+			# fight view's own gate so a covered ally isn't cast at.
+			var ally2 := _ally_in_range(me, 1, 3, fid, true)
 			if ally2 < 0:
 				print("[smoke] SWAP: no ally in range — ending turn")
 				fight_scene.request_end_turn()
@@ -354,17 +356,21 @@ func _occupied(cell: Vector2i, except_fid: int) -> bool:
 
 
 ## A living teammate's fighter at Manhattan range [rmin,rmax] from `me`.
-func _ally_in_range(me: Vector3i, rmin: int, rmax: int, except_fid: int) -> int:
+## `los` additionally requires the fight view's own LoS gate to pass.
+func _ally_in_range(me: Vector3i, rmin: int, rmax: int, except_fid: int,
+		los := false) -> int:
 	for id in fight_scene._actor_cells:
 		var iid := int(id)
-		if iid == except_fid:
+		if iid == except_fid or fight_scene._dead.get(iid, false):
 			continue
 		var f: Dictionary = State.fighters.get(iid, {})
 		if int(f.get("coach", -1)) != State.my_coach_id:
 			continue            # only our own preset fighters — AI pushes us off a cliff
 		var p: Vector3i = fight_scene._actor_cells[id]
 		var dd := _cell_dist(me, p)
-		if dd >= rmin and dd <= rmax:
+		if dd >= rmin and dd <= rmax \
+				and (not los or fight_scene._los_clear(
+					Vector2i(me.x, me.y), Vector2i(p.x, p.y))):
 			return iid
 	return -1
 

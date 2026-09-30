@@ -195,10 +195,21 @@ class FrameRenderer:
         })
 
     def rasterize(self):
-        if not self.quads:
+        quads = []
+        for q in self.quads:
+            qq = dict(q)
+            qq["teximg"] = self.tex[q["tex"]] if q["tex"] < len(self.tex) \
+                else None
+            quads.append(qq)
+        return rasterize_quads(quads)
+
+
+def rasterize_quads(quads):
+        """Rasterize quads; each must carry a resolved `teximg` (w,h,rgba)."""
+        if not quads:
             return None
         corners = []
-        for q in self.quads:
+        for q in quads:
             x, y = q["p"]
             corners += [(x, y),
                         (x + q["ex"][0], y + q["ex"][1]),
@@ -212,8 +223,8 @@ class FrameRenderer:
         W, H = max(1, x1 - x0), max(1, y1 - y0)
         canvas = bytearray(W * H * 4)
 
-        for q in self.quads:
-            tex = self.tex[q["tex"]] if q["tex"] < len(self.tex) else None
+        for q in quads:
+            tex = q.get("teximg")
             if tex is None:
                 continue
             tw, th, tpx = tex
@@ -272,6 +283,80 @@ class FrameRenderer:
         return W, H, bytes(canvas), (x0, y0)
 
 
+# ------------------------------------------- cross-anm composition ----
+class CompositeRenderer:
+    """Draw an action whose transforms retarget parts living in OTHER anms.
+
+    Retail's AnimSort_<breed>/AnimXxx.anm files are pure animation tracks:
+    each transform's fL is a label id in the gesture anm whose crc resolves
+    into the ACTOR's anm (Players/-<file>.anm) part actions. When the crc
+    misses in the driving anm, every extra host is searched — that is how
+    the gesture poses the body skeleton while its own fx sprites (regions
+    inside the gesture anm) still emit from the right atlas.
+    """
+
+    def __init__(self, z, drive_entry, *host_entries):
+        self.hosts = []
+        for e in (drive_entry,) + host_entries:
+            anm, tex = load_anm_and_textures(z, e)
+            self.hosts.append(FrameRenderer(anm, tex))
+
+    def clear(self):
+        for fr in self.hosts:
+            fr.quads = []
+
+    def draw_action(self, action, n2, pq, h=0, depth=0):
+        fr = self.hosts[h]
+        if depth > 8 or action is None:
+            return
+        frames = action["frames"]
+        if not frames:
+            return
+        idx = n2
+        if idx >= action["logical_frames"]:
+            idx = (idx % action["logical_frames"] if action["flags"] & 0x80
+                   else action["logical_frames"] - 1)
+        phys = None
+        acc = 0
+        for f in frames:
+            if acc <= idx < acc + 1 + f["repeat"]:
+                phys = f
+                break
+            acc += 1 + f["repeat"]
+        if phys is None:
+            return
+        for t in phys["transforms"]:
+            pq2 = apply_xf(t, pq)
+            if pq2[11] <= 0.004:
+                continue
+            fl = t["fL"]
+            lab = fr.labels.get(fl)
+            if lab is not None:
+                for h2, fr2 in enumerate(self.hosts):
+                    sub = fr2.by_crc.get(lab["crc"])
+                    if sub is not None:
+                        self.draw_action(sub, idx, pq2, h2, depth + 1)
+                        break
+                continue
+            sub = fr.by_id.get(fl)
+            if sub is not None:
+                self.draw_action(sub, idx, pq2, h, depth + 1)
+                continue
+            rg = fr.regions.get(fl)
+            if rg is not None:
+                fr.emit_quad(rg, pq2)
+
+    def rasterize(self):
+        quads = []
+        for fr in self.hosts:
+            for q in fr.quads:
+                qq = dict(q)
+                qq["teximg"] = fr.tex[q["tex"]] if q["tex"] < len(fr.tex) \
+                    else None
+                quads.append(qq)
+        return rasterize_quads(quads)
+
+
 def load_anm_and_textures(z, entry):
     """Parse one .anm from the jar and load its referenced .tgam atlases."""
     anm = parse_anm(z.read(entry))
@@ -321,8 +406,55 @@ def export_action(z, entry, action, out_dir):
     return len(meta["frames"])
 
 
+def export_action_composite(cr, anm, entry, action, out_dir):
+    """Composite-export one gesture action against the actor skeleton."""
+    import json
+    name = action.get("name") or str(action["fL"])
+    safe = name.replace("/", "_").replace(" ", "_")
+    dst = os.path.join(out_dir, safe)
+    os.makedirs(dst, exist_ok=True)
+    meta = {"anm": entry, "action": name, "fps": anm["header"]["fps"],
+            "frames": []}
+    for i in range(action["logical_frames"]):
+        cr.clear()
+        cr.draw_action(action, i, PQ_IDENTITY)
+        out = cr.rasterize()
+        if out is None:
+            continue
+        W, H, rgba, off = out
+        fname = f"f{i:03d}.png"
+        write_png(os.path.join(dst, fname), W, H, rgba)
+        meta["frames"].append({"png": fname, "w": W, "h": H,
+                               "ox": off[0], "oy": off[1]})
+    with open(os.path.join(dst, "meta.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+    return len(meta["frames"])
+
+
 def main():
     jar, entry = sys.argv[1], sys.argv[2]
+    if len(sys.argv) > 3 and sys.argv[3] == "--composite":
+        # anm_render.py jar <gesture.anm> --composite <actor.anm> --export
+        # <out_dir> [action-substr] — bake skeletal gesture tracks (AnimSort/
+        # AnimXxx.anm) over the actor anm's own part sprites.
+        host = sys.argv[4]
+        out_dir = sys.argv[6] if len(sys.argv) > 6 else "out"
+        only = sys.argv[7] if len(sys.argv) > 7 else None
+        z = zipfile.ZipFile(jar)
+        cr = CompositeRenderer(z, entry, host)
+        drive_anm = cr.hosts[0].anm
+        total = 0
+        for a in drive_anm["actions"]:
+            if not a.get("name"):
+                continue
+            if only and only not in a["name"]:
+                continue
+            n = export_action_composite(cr, drive_anm, entry, a, out_dir)
+            total += n
+            if n:
+                print(f"[comp] {a['name']}: {n} frame(s)")
+        print(f"[comp] done — {total} frame(s) -> {out_dir}")
+        return 0
     if len(sys.argv) > 3 and sys.argv[3] == "--export":
         out_dir = sys.argv[4] if len(sys.argv) > 4 else "out"
         only = sys.argv[5] if len(sys.argv) > 5 else None
