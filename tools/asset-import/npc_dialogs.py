@@ -67,6 +67,9 @@ def main() -> None:
         # builds name/stats locally. Names index content.10 (aJt.getName).
         "summons": raw.get("summons") or {},
         "summonNames": {str(k): v for k, v in table(texts, 10).items()},
+        # per-round event-card names index content.8 (tO title) — the 8100
+        # tail carries the drawn eventId for display only.
+        "eventNames": {str(k): v for k, v in table(texts, 8).items()},
     }
     json.dump(out, open(out_path, "w"), ensure_ascii=False)
     print("wrote", out_path, "groups:", len(groups), "names:", len(names),

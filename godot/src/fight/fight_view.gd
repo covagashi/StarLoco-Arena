@@ -203,6 +203,7 @@ const OP_CARD_USE := 8108        # S2C header+[i64 user][i32 card][i8 miss]
 const OP_DIR_CHANGE_REQ := 4521  # C2S [i64 fid][u8 dir] — facing (free action)
 const OP_DIR_CHANGE := 4522      # S2C header+[i64 fid][u8 dir]
 const OP_FIGHTER_TACKLED := 4506 # S2C header+[i64 tackled][i64 tackler]
+const OP_FIGHTER_OUCH := 4902    # S2C header+[i64 fid] — crit-hit "ouch !"
 
 ## Breed base stats (server breed.go): [HP, AP, MP] — AP/MP refill each turn.
 const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
@@ -319,7 +320,14 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TABLE_TURN:
 			var d := Codec.decode(opcode, payload)
 			_table_turn = int(d.get("f2", 0))
-			info.text = "map %s — turn %d" % [$UI/TopBar/MapId.text, _table_turn]
+			# f3 is the round's drawn EVENT CARD (type-230) — display-only:
+			# the server already applied its effects; we just name it like
+			# retail's card popup.
+			var ev := int(d.get("f3", 0))
+			var evname := NpcDialogs.event_name(ev)
+			info.text = "map %s — turn %d%s" % [$UI/TopBar/MapId.text,
+				_table_turn,
+				" — %s" % evname if not evname.is_empty() else ""]
 			_age_buffs()
 			_age_areas()
 		OP_TURN_BEGIN:
@@ -411,6 +419,13 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var tackled := int(payload.get_i64())
 			_walk.erase(tackled)
 			_float_text(tackled, "tackled!", Color(1.0, 0.5, 0.3))
+		OP_FIGHTER_OUCH:
+			# [i32][i32][i64 fid] — retail pops "ouch !" over the fighter who
+			# just lost HP to a CRITICAL cast (B-138).
+			payload.get_i32()
+			payload.get_i32()
+			_float_text(int(payload.get_i64()), "ouch !",
+				Color(1.0, 0.4, 0.2))
 		OP_FIGHTER_DIES:
 			payload.get_i32()
 			payload.get_i32()

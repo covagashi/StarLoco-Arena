@@ -28,6 +28,7 @@ static var _ach_descs := {}   # achievement id int -> String (content.49)
 static var _crit_names := {}  # criterion id int -> String (content.48)
 static var _summons := {}     # summon template id int -> {hp, ap, mp, look}
 static var _summon_names := {} # summon id int -> String (content.10)
+static var _event_names := {}  # event card id int -> String (content.8)
 static var _loaded := false
 
 
@@ -72,6 +73,8 @@ static func _ensure() -> void:
 		_summons[int(sid)] = data.summons[sid]
 	for sid in _dict(data.get("summonNames")):
 		_summon_names[int(sid)] = data.summonNames[sid]
+	for eid in _dict(data.get("eventNames")):
+		_event_names[int(eid)] = data.eventNames[eid]
 
 
 ## content.29 text — used for NPC names AND the demon/Challenge speech bodies.
@@ -113,6 +116,13 @@ static func summon(id: int) -> Dictionary:
 static func summon_name(id: int) -> String:
 	_ensure()
 	return str(_summon_names.get(id, ""))
+
+
+## Per-round event-card title (content.8 — tO). The 8100 tail carries the
+## drawn id; 0 means no card this round. Empty for unknown ids.
+static func event_name(id: int) -> String:
+	_ensure()
+	return str(_event_names.get(id, ""))
 
 
 ## Client `aau_1.a` / `sj_1.c`: an achievement is complete when EVERY stat
