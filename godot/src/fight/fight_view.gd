@@ -85,7 +85,20 @@ func _ready() -> void:
 	$UI/Chat.bubble.connect(chat_bubble)
 	$UI/Chat.emote.connect(func(id, anim):
 		chat_bubble(id, "* %s *" % anim.trim_prefix("AnimEmote-")
-			.trim_suffix("-Debut").to_lower()))
+			.trim_suffix("-Debut").to_lower())
+		# retail plays the gesture too — AnimEmotes<Male|Femele>.anm tracks
+		# are composited into fighter_* sets (loop emotes keep only Debut).
+		# The 4700 actor id is a COACH id — resolve to their live fighter.
+		var fid := -1
+		for k in State.fighters:
+			if int(State.fighters[k].get("coach", -1)) == id \
+					and not _dead.get(int(k), false):
+				fid = int(k)
+				break
+		if fid >= 0:
+			var base: String = anim.trim_suffix("-Debut") \
+				.trim_suffix("-Boucle").trim_suffix("-Fin")
+			_play_combat(fid, base))
 	_gfx = MapGfx.new()
 	_gfx.name = "MapGfx"
 	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside
