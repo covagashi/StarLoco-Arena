@@ -271,6 +271,34 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		if nc == 0 or last_txt != NpcDialogs.event_name(14):
 			push_error("event card strip: expected '%s', got n=%d '%s'" % [
 				NpcDialogs.event_name(14), nc, last_txt])
+		# Tackle + ouch — fabricate 4506 ([i32][i32][i64 tackled][i64
+		# tackler]) and 4902 ([i32][i32][i64 fid]): the chat must log the
+		# tackled line and the fighter gets its cue floats.
+		var tk := WireWriter.new()
+		tk.put_i32(0)
+		tk.put_i32(0)
+		tk.put_i64(fid)
+		tk.put_i64(fid)
+		fight_scene._on_net_message(4506, tk.raw())
+		var ou := WireWriter.new()
+		ou.put_i32(0)
+		ou.put_i32(0)
+		ou.put_i64(fid)
+		fight_scene._on_net_message(4902, ou.raw())
+		var chat_txt: String = fight_scene.get_node(
+			"UI/Chat/Display").get_parsed_text()
+		var floats := 0
+		var fspr = fight_scene._sprites.get(fid)
+		if fspr != null:
+			for c in fspr.get_children():
+				if c is Label and not c.name in ["Plate", "Buffs"]:
+					floats += 1
+		print("[smoke] TACKLE/OUCH chat=%s floats=%d" % [
+			chat_txt.contains("has been tackled"), floats])
+		if not chat_txt.contains("has been tackled"):
+			push_error("4506 did not log the tackled line")
+		if floats < 2:
+			push_error("4506/4902 cue floats missing (got %d)" % floats)
 	# Effect areas — fabricate the 8120 creation broadcasts (action 66): a
 	# one-shot trap (tpl 1, maxExec 1) on the caster's cell and a r2 glyph
 	# (tpl 1015, unlimited). The trap's inner-effect 8120 (gen 9670, same
