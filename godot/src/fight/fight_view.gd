@@ -918,7 +918,8 @@ func _on_turn_begin(fid: int) -> void:
 	# the client's per-fighter timeline counter (alh_1.aAw) bumps here —
 	# 8121 buff expiries are absolute marks against it
 	_turns_taken[fid] = int(_turns_taken.get(fid, 0)) + 1
-	_turn_left = TURN_CLOCK              # the server auto-ends at 0 (fight.go)
+	# mv_1.byv — the 8000 carries turnClockMs; retail floors it at 31s.
+	_turn_left = maxf(31.0, float(State.fight_data.get("ca", 0)) / 1000.0)
 	var f: Dictionary = State.fighters.get(fid, {})
 	# Summons share their caster's coach id but are server-AI-driven
 	# (Father set, ai.go) — no bar, no End turn for them.
