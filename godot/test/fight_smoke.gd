@@ -22,6 +22,7 @@ var _combat_seen := false
 var _card_landed := false
 var _timeline_checked := false
 var _faced := false
+var _range_seen := false
 
 
 func _init() -> void:
@@ -223,6 +224,19 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		elif dd == 1:
 			target = Vector2i(p.x, p.y)
 			break
+	# arming a spell must light the range overlay (zone de portée) — the
+	# request_cast_at below disarms and clears it again.
+	if sid >= 0 and not _range_seen:
+		_range_seen = true
+		fight_scene._on_spell_button(sid)
+		var legal := 0
+		for k in fight_scene._range_overlay:
+			if fight_scene._range_overlay[k] == 2:
+				legal += 1
+		print("[smoke] RANGE OVERLAY sid=%d cells=%d legal=%d" % [
+			sid, fight_scene._range_overlay.size(), legal])
+		if fight_scene._range_overlay.is_empty():
+			push_error("armed spell produced no range overlay")
 	if target.x != -9999 and fight_scene.request_cast_at(sid, target):
 		print("[smoke] scripted cast %s -> %s" % [
 			"spell %d" % sid if sid >= 0 else "weapon", target])

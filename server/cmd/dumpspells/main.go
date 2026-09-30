@@ -25,13 +25,26 @@ func main() {
 		Min   int8  `json:"min"`
 		Max   int8  `json:"max"`
 		Value int32 `json:"value"`
+		// Cast gates for the Godot range overlay — the client enforces the
+		// same rules before it ever sends 8109 (see spellTargetValidFrom).
+		LoS     bool    `json:"los"`            // TestLoS — needs line of sight
+		Line    bool    `json:"line"`           // OnlyLine — same row/col only
+		Free    bool    `json:"free"`           // NeedFreeCell — empty target cell
+		NoBoost bool    `json:"noboost"`        // RangeNotBoostable
+		Masks   []int64 `json:"mask,omitempty"` // cast-level TargetMasks (only when enforced)
 	}
 	byBreed := map[int32][]rec{}
 	for _, s := range sp.All() {
 		if s.BreedID < 1 || s.BreedID > 12 {
 			continue
 		}
-		byBreed[s.BreedID] = append(byBreed[s.BreedID], rec{s.ID, s.AP, s.RangeMin, s.RangeMax, s.Value})
+		r := rec{ID: s.ID, AP: s.AP, Min: s.RangeMin, Max: s.RangeMax,
+			Value: s.Value, LoS: s.TestLoS, Line: s.OnlyLine,
+			Free: s.NeedFreeCell, NoBoost: s.RangeNotBoostable}
+		if s.EnforceTargetMasks {
+			r.Masks = s.TargetMasks
+		}
+		byBreed[s.BreedID] = append(byBreed[s.BreedID], r)
 	}
 	b, _ := json.Marshal(byBreed)
 	if err := os.WriteFile(out, b, 0o644); err != nil {

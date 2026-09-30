@@ -682,6 +682,7 @@ func _on_turn_begin(fid: int) -> void:
 	_current_fid = fid
 	_spell_mode = -1
 	_card_mode = -1
+	_range_overlay.clear()
 	var f: Dictionary = State.fighters.get(fid, {})
 	# Summons share their caster's coach id but are server-AI-driven
 	# (Father set, ai.go) — no bar, no End turn for them.
@@ -803,12 +804,180 @@ func _refresh_apmp() -> void:
 		res.text = "  AP %d  MP %d" % [_ap_left, _mp_left]
 
 
+## --- cast-range overlay -----------------------------------------------------
+## While a spell/card/weapon is armed, retail tints the cells a cast could
+## legally land on (the "zone de portée"). The overlay mirrors the server's
+## spellTargetValidFrom gates — Manhattan range, only-line, line-of-sight,
+## free-cell, enforced target mask — so a bright cell will not be refused.
+## Dim cells are in range but blocked by one gate.
+var _range_overlay := {}   # Vector2i -> 1 in-range-blocked / 2 castable
+var _overlay_from := Vector3i(-9999, -9999, -9999)  # caster cell it was built for
+
+# LoS constants mirroring server line_of_sight.go (client ahc_2/ahC):
+const LOS_EYE := 4        # eye height over the cell floor (fighter PE*0.8)
+const LOS_LOW := -30000   # a void/off-map cell never blocks the ray
+const LOS_HIGH := 30000   # a scenery cell always blocks it
+
+# Cast-level target-mask bits (client aLc / server target_conditions.go):
+# 2 caster, 4 ally, 8 enemy, 16 human, 32 summoned, 64 effect-area,
+# 128 ally-except-caster, 256 not-caster, 512 breed-0, 1024 breed-nonzero,
+# bits 16-29 breed IS k+1, bits 32-45 breed NOT k+1. Anything else (the
+# state bank 49-57, bit 62 ground-area) is unevaluable here → permissive,
+# the same escape hatch the server takes in spellTargetMaskAllows.
+const COND_EVALUABLE := 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 1024 \
+	| 0x3FFF0000 | 0x3FFF00000000
+
+
+func _refresh_range_overlay() -> void:
+	_range_overlay.clear()
+	_overlay_from = _actor_cells.get(_current_fid, Vector3i(-9999, -9999, -9999))
+	if _placement or not _is_my_turn():
+		return
+	var meta := {}
+	if _spell_mode == -2:
+		meta = {"min": 1, "max": 1}              # weapon — adjacent melee
+	elif _spell_mode >= 0:
+		meta = Spells.meta(_spell_mode)
+	elif _card_mode >= 0:
+		meta = FighterCards.ability(_card_mode)
+	if meta.is_empty():
+		return
+	var from := Vector2i(_overlay_from.x, _overlay_from.y)
+	var rmin := int(meta.get("min", 0))
+	var rmax := int(meta.get("max", 0))
+	for pos in _cells:
+		var c: Dictionary = _cells[pos]
+		if not c.get("ground", false):
+			continue                             # unaimable (walkable gate)
+		var dist := absi(pos.x - from.x) + absi(pos.y - from.y)
+		if dist < rmin or dist > rmax:
+			continue
+		var castable := true
+		if meta.get("line", false) and pos.x != from.x and pos.y != from.y:
+			castable = false
+		elif meta.get("los", false) and not _los_clear(from, pos):
+			castable = false
+		elif meta.get("free", false) and _occupied_fighter(pos) >= 0:
+			castable = false
+		elif not _mask_passes(meta.get("mask", []), pos):
+			castable = false
+		_range_overlay[pos] = 2 if castable else 1
+	queue_redraw()
+
+
+## Living, un-carried fighter on a cell — the occupancy rule the server's
+## cellOccupied applies to free-cell and target-mask gates.
+func _occupied_fighter(pos: Vector2i) -> int:
+	for fid in _actor_cells:
+		if _dead.get(fid, false) or _carried_by.has(fid):
+			continue
+		var p: Vector3i = _actor_cells[fid]
+		if p.x == pos.x and p.y == pos.y:
+			return int(fid)
+	return -1
+
+
+## Cast-level target mask (spell field 22 — only the few spells flagged
+## EnforceTargetMasks reach the export): the aimed cell must hold a fighter
+## satisfying ONE condition, and a condition needs every set bit to hold.
+func _mask_passes(masks: Array, pos: Vector2i) -> bool:
+	if masks.is_empty():
+		return true
+	var fid := _occupied_fighter(pos)
+	if fid < 0:
+		return false                        # every mask names a fighter property
+	var f: Dictionary = State.fighters.get(fid, {})
+	var cf: Dictionary = State.fighters.get(_current_fid, {})
+	var is_self := fid == _current_fid
+	var same_team := int(f.get("team", -1)) == int(cf.get("team", -2))
+	var is_summon := bool(f.get("summon", false)) \
+		or str(f.get("type", "")) == "summon"
+	var breed := 0 if is_summon else int(f.get("breed", 0))
+	for m in masks:
+		var cond := int(m)
+		if cond & ~COND_EVALUABLE != 0:
+			return true                     # unrepresentable bit — permissive
+		var ok := true
+		if cond & 2 and not is_self:
+			ok = false
+		if cond & 256 and is_self:
+			ok = false
+		if cond & 4 and not same_team:
+			ok = false
+		if cond & 128 and (is_self or not same_team):
+			ok = false
+		if cond & 8 and same_team:
+			ok = false
+		if cond & 16 and is_summon:
+			ok = false
+		if cond & 32 and not is_summon:
+			ok = false
+		if cond & 64:
+			ok = false                      # a fighter is never an effect area
+		if cond & 512 and breed != 0:
+			ok = false
+		if cond & 1024 and breed == 0:
+			ok = false
+		var is_bank := int(cond >> 16) & 0x3FFF
+		var not_bank := int(cond >> 32) & 0x3FFF
+		for k in 14:
+			if is_bank & (1 << k) and breed != k + 1:
+				ok = false
+			if not_bank & (1 << k) and breed == k + 1:
+				ok = false
+		if ok:
+			return true
+	return false
+
+
+func _los_altitude(pos: Vector2i) -> int:
+	var c: Variant = _cells.get(pos)
+	if c == null:
+		return LOS_LOW
+	if not c.get("ground", false):
+		return LOS_HIGH
+	return int(c.get("alt", 0))
+
+
+## Client ahc_2 two-try check: eye→eye, then eye→feet.
+func _los_clear(from: Vector2i, to: Vector2i) -> bool:
+	var feet0 := _los_altitude(from)
+	var feet1 := _los_altitude(to)
+	if _ray_clear(from, to, feet0 + LOS_EYE, feet1 + LOS_EYE):
+		return true
+	return _ray_clear(from, to, feet0 + LOS_EYE, feet1)
+
+
+## Samples the ray 8× per crossed cell; an intermediate cell blocks sight
+## when its terrain altitude pokes above the ray's lowest altitude over it.
+## The endpoint cells are exempt, exactly like the server's rayClear.
+func _ray_clear(from: Vector2i, to: Vector2i, z0: int, z1: int) -> bool:
+	var steps := maxi(absi(to.x - from.x), absi(to.y - from.y))
+	if steps == 0:
+		return true
+	var n := steps * 8
+	var min_ray := {}
+	for i in n + 1:
+		var t := float(i) / n
+		var k := Vector2i(int(round(from.x + (to.x - from.x) * t)),
+			int(round(from.y + (to.y - from.y) * t)))
+		var z := int(round(z0 + (z1 - z0) * t))
+		if not min_ray.has(k) or z < min_ray[k]:
+			min_ray[k] = z
+	for k in min_ray:
+		if k == from or k == to:
+			continue
+		if _los_altitude(k) > min_ray[k]:
+			return false
+	return true
+
+
 func _on_spell_button(sid: int) -> void:
 	_spell_mode = -2 if _spell_mode == sid else sid
 	_card_mode = -1
 	info.text = "map %s — %s: click a target" % [$UI/TopBar/MapId.text,
 		"weapon" if sid == -2 else "spell %d" % sid]
-	queue_redraw()
+	_refresh_range_overlay()
 
 
 func _on_card_button(cid: int) -> void:
@@ -816,7 +985,7 @@ func _on_card_button(cid: int) -> void:
 	_spell_mode = -1
 	info.text = "map %s — card %s: click a target" % [
 		$UI/TopBar/MapId.text, FighterCards.label(cid)]
-	queue_redraw()
+	_refresh_range_overlay()
 
 
 func _is_my_turn() -> bool:
@@ -846,6 +1015,8 @@ func request_cast_at(sid: int, cell: Vector2i) -> bool:
 	print("[fight] %s fid=%d -> (%d,%d)" % [
 		"cast %d" % sid if sid >= 0 else "weapon", _current_fid, cell.x, cell.y])
 	_spell_mode = -1
+	_range_overlay.clear()
+	queue_redraw()
 	return true
 
 
@@ -865,6 +1036,8 @@ func request_card_at(cid: int, cell: Vector2i) -> bool:
 	print("[fight] card %d fid=%d -> (%d,%d)" % [cid, _current_fid,
 		cell.x, cell.y])
 	_card_mode = -1
+	_range_overlay.clear()
+	queue_redraw()
 	return true
 
 
@@ -966,6 +1139,12 @@ const OP_MOVE_REQ := 4503
 
 
 func _process(delta: float) -> void:
+	if _spell_mode != -1 or _card_mode != -1:
+		# the reach ring follows the acting fighter — recompute after a move
+		var at: Vector3i = _actor_cells.get(_current_fid,
+			Vector3i(-9999, -9999, -9999))
+		if at != _overlay_from:
+			_refresh_range_overlay()
 	if _walk.is_empty():
 		return
 	for fid in _walk.keys():
@@ -1233,7 +1412,13 @@ func _draw_overlays() -> void:
 			var p: Vector3i = _actor_cells[_selected]
 			draw_arc(_iso(p.x + 0.5, p.y + 0.5, p.z), 14.0, 0, TAU, 24,
 				Color(1, 1, 1), 2.0)
-	elif _is_my_turn() and _cells.has(_hover):
+	for pos in _range_overlay:
+		var rc: Dictionary = _cells[pos]
+		var legal: bool = _range_overlay[pos] == 2
+		draw_colored_polygon(_cell_poly(pos.x, pos.y, rc.alt),
+			Color(1.0, 0.5, 0.1, 0.45) if legal
+			else Color(1.0, 0.5, 0.1, 0.12))
+	if not _placement and _is_my_turn() and _cells.has(_hover):
 		var hc: Dictionary = _cells[_hover]
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
 		draw_polyline(poly + PackedVector2Array([poly[0]]),

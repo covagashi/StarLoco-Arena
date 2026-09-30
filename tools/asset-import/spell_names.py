@@ -7,8 +7,10 @@ Usage:
   python3 tools/asset-import/spell_names.py /tmp/spells_raw.json \
       client/compiled/game/contents/i18n.jar godot/assets/gamedata/spells.json
 
-Output: {"<breed>": [{"id","name","ap","min","max","value"}]} — one record per
-breed-legal spell, name in English (client content key 3.<id>).
+Output: {"<breed>": [{"id","name","ap","min","max","value",
+"los","line","free","noboost","mask"?}]} — one record per breed-legal spell,
+name in English (client content key 3.<id>). los/line/free/noboost/mask are
+the cast gates the Godot fight view needs for its range overlay.
 """
 
 import json
@@ -28,17 +30,24 @@ def main() -> None:
 
     out = {}
     for breed, lst in spells.items():
-        out[breed] = [
-            {
+        rows = []
+        for s in sorted(lst, key=lambda r: r["id"]):
+            row = {
                 "id": s["id"],
                 "name": names.get(s["id"], "Spell %d" % s["id"]),
                 "ap": s["ap"],
                 "min": s["min"],
                 "max": s["max"],
                 "value": s["value"],
+                "los": s.get("los", False),
+                "line": s.get("line", False),
+                "free": s.get("free", False),
+                "noboost": s.get("noboost", False),
             }
-            for s in sorted(lst, key=lambda r: r["id"])
-        ]
+            if s.get("mask"):
+                row["mask"] = s["mask"]
+            rows.append(row)
+        out[breed] = rows
     with open(out_path, "w") as f:
         json.dump(out, f, indent=1)
     print("wrote", out_path, "breeds:", len(out),

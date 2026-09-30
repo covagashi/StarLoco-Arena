@@ -19,6 +19,11 @@ type rec struct {
 	Min    int32 `json:"min"`
 	Max    int32 `json:"max"`
 	Usable bool  `json:"usable"` // has a FIGHTER_CARD_USE effect list (server Usable())
+	// Cast gates for the Godot range overlay — the same three mv_1
+	// rejections the server validates in fightercard_use.go.
+	LoS  bool `json:"los"`  // TestLoS — needs line of sight
+	Line bool `json:"line"` // OnlyLine — same row/col only
+	Free bool `json:"free"` // NeedFreeCell — empty target cell
 }
 
 func main() {
@@ -36,6 +41,7 @@ func main() {
 		res[fmt.Sprint(id)] = rec{
 			AP: c.APCost, Min: c.RangeMin, Max: c.RangeMax,
 			Usable: c.Usable(),
+			LoS:    c.TestLoS, Line: c.OnlyLine, Free: c.NeedFreeCell,
 		}
 	}
 	b, _ := json.Marshal(res)
