@@ -27,9 +27,16 @@ var foot_pivot := false
 ## calls draw_on() instead so the frame interleaves with map elements.
 var external_draw := false
 
+## meta.json "sfx" — {frame index: [sound ids]} baked from Sons* parts.
+## Played through a small round-robin pool; streams are cached by path.
+var _sfx: Dictionary = {}
+var _sfx_pool: Array = []
+var _sfx_next := 0
+
 ## Decoded actions are shared read-only across sprites — direction flips
 ## during a walk reload the same action set many times per second.
-static var _cache := {}   # "set/action" -> {fps, frames}
+static var _cache := {}   # "set/action" -> {fps, frames, sfx}
+static var _snd_cache := {}   # ogg path -> AudioStreamOggVorbis | false
 
 
 func load_action(set_dir: String, action: String) -> bool:
@@ -38,6 +45,7 @@ func load_action(set_dir: String, action: String) -> bool:
 		var c: Dictionary = _cache[key]
 		_fps = c.fps
 		_frames = c.frames
+		_sfx = c.get("sfx", {})
 		_cur = 0
 		_time = 0.0
 		once = false
@@ -45,11 +53,13 @@ func load_action(set_dir: String, action: String) -> bool:
 		current = key
 		playing = true
 		queue_redraw()
+		_play_sfx(0)
 		return not _frames.is_empty()
 	var meta_path := "%s/%s/meta.json" % [set_dir, action]
 	if not FileAccess.file_exists(meta_path):
 		return false   # keep the previous animation rather than going blank
 	_frames = []
+	_sfx = {}
 	_cur = 0
 	_time = 0.0
 	var meta: Dictionary = JSON.parse_string(
@@ -79,12 +89,16 @@ func load_action(set_dir: String, action: String) -> bool:
 			"off": Vector2(fr.ox, fr.oy),
 			"w": w, "h": h, "foot": foot,
 		})
-	_cache[key] = {"fps": _fps, "frames": _frames}
+	_sfx = {}
+	for k in meta.get("sfx", {}):
+		_sfx[int(k)] = meta["sfx"][k]
+	_cache[key] = {"fps": _fps, "frames": _frames, "sfx": _sfx}
 	once = false
 	hold_last = false
 	current = key
 	playing = true
 	queue_redraw()
+	_play_sfx(0)
 	return not _frames.is_empty()
 
 
@@ -113,6 +127,7 @@ func _process(delta: float) -> void:
 		var f := mini(int(_time), _frames.size() - 1)
 		if f != _cur:
 			_cur = f
+			_play_sfx(f)
 			queue_redraw()
 		if int(_time) >= _frames.size():
 			playing = false
@@ -121,6 +136,7 @@ func _process(delta: float) -> void:
 	var f := int(_time) % _frames.size()
 	if f != _cur:
 		_cur = f
+		_play_sfx(f)
 		queue_redraw()
 
 
@@ -148,3 +164,36 @@ func _draw_frame(ci: CanvasItem, at: Vector2) -> void:
 		# pin the feet (lowest visible row), centered, to the node origin
 		pos = at + Vector2(-fr.w * 0.5, -float(fr.foot) - 1.0)
 	ci.draw_texture(fr.tex, pos)
+
+
+## Play the Sons* triggers baked for this frame. Round-robin pool so
+## overlapping casts/hits don't cut each other; headless just no-ops.
+func _play_sfx(frame_idx: int) -> void:
+	var ids: Array = _sfx.get(frame_idx, [])
+	if ids.is_empty() or not is_inside_tree():
+		return
+	if _sfx_pool.is_empty():
+		for i in 8:
+			var p := AudioStreamPlayer.new()
+			add_child(p)
+			_sfx_pool.append(p)
+	for sid in ids:
+		var st := _snd_stream(int(sid))
+		if st == null:
+			continue
+		var p: AudioStreamPlayer = _sfx_pool[_sfx_next]
+		_sfx_next = (_sfx_next + 1) % _sfx_pool.size()
+		p.stream = st
+		p.play()
+
+
+static func _snd_stream(sid: int) -> AudioStream:
+	var path := "res://assets/sounds/%d.ogg" % sid
+	if _snd_cache.has(path):
+		var hit = _snd_cache[path]
+		return hit if hit is AudioStream else null
+	var st: AudioStream = null
+	if FileAccess.file_exists(path):
+		st = AudioStreamOggVorbis.load_from_file(path)
+	_snd_cache[path] = st if st != null else false
+	return st

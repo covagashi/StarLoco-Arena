@@ -141,6 +141,7 @@ class FrameRenderer:
         self.by_id = {a["fL"]: a for a in anm["actions"]}
         self.by_crc = {a["crc"]: a for a in anm["actions"]}
         self.quads = []
+        self.son_hits = {}           # Sons<sid> name -> earliest logical frame
 
     def draw_action(self, action, n2, pq, depth=0):
         if depth > 8 or action is None:
@@ -171,11 +172,17 @@ class FrameRenderer:
             if lab is not None:
                 sub = self.by_crc.get(lab["crc"])
                 if sub is not None:
-                    self.draw_action(sub, idx, pq2, depth + 1)
+                    if str(sub.get("name") or "").startswith("Sons"):
+                        self.son_hits.setdefault(sub["name"], idx)
+                    else:
+                        self.draw_action(sub, idx, pq2, depth + 1)
                 continue
             sub = self.by_id.get(fl)
             if sub is not None:
-                self.draw_action(sub, idx, pq2, depth + 1)
+                if str(sub.get("name") or "").startswith("Sons"):
+                    self.son_hits.setdefault(sub["name"], idx)
+                else:
+                    self.draw_action(sub, idx, pq2, depth + 1)
                 continue
             rg = self.regions.get(fl)
             if rg is not None:
@@ -300,6 +307,8 @@ class CompositeRenderer:
         for e in (drive_entry,) + host_entries:
             anm, tex = load_anm_and_textures(z, e)
             self.hosts.append(FrameRenderer(anm, tex))
+        self.son_hits = {}           # Sons<sid> -> earliest logical frame,
+                                     # resolved across every host anm
 
     def clear(self):
         for fr in self.hosts:
@@ -335,12 +344,18 @@ class CompositeRenderer:
                 for h2, fr2 in enumerate(self.hosts):
                     sub = fr2.by_crc.get(lab["crc"])
                     if sub is not None:
-                        self.draw_action(sub, idx, pq2, h2, depth + 1)
+                        if str(sub.get("name") or "").startswith("Sons"):
+                            self.son_hits.setdefault(sub["name"], idx)
+                        else:
+                            self.draw_action(sub, idx, pq2, h2, depth + 1)
                         break
                 continue
             sub = fr.by_id.get(fl)
             if sub is not None:
-                self.draw_action(sub, idx, pq2, h, depth + 1)
+                if str(sub.get("name") or "").startswith("Sons"):
+                    self.son_hits.setdefault(sub["name"], idx)
+                else:
+                    self.draw_action(sub, idx, pq2, h, depth + 1)
                 continue
             rg = fr.regions.get(fl)
             if rg is not None:
@@ -372,6 +387,29 @@ def load_anm_and_textures(z, entry):
     return anm, textures
 
 
+def meta_sfx(son_hits, frames):
+    """son_hits {Sons<sid>: firstFrame} -> meta map {frameIdx: [sid,...]}.
+
+    Retail plays a Sons* part once when the parent action's frame stream
+    first references it — first appearance only, or a held part would
+    retrigger every frame.  son_hits keys are LOGICAL frame indexes; the
+    meta frame list skips frames that rendered nothing, so each logical
+    index is remapped onto its written position via the f<NNN>.png name
+    (which carries the logical index)."""
+    l2w = {}
+    for k, fr in enumerate(frames):
+        try:
+            l2w[int(fr["png"][1:-4])] = k
+        except (KeyError, ValueError):
+            continue
+    sfx = {}
+    for nm, i in sorted(son_hits.items(), key=lambda kv: kv[1]):
+        sid = nm[4:]
+        if sid.isdigit() and i in l2w:
+            sfx.setdefault(str(l2w[i]), []).append(int(sid))
+    return sfx
+
+
 def export_action(z, entry, action, out_dir):
     """Render every logical frame of one action to PNG + write meta.json.
 
@@ -401,6 +439,8 @@ def export_action(z, entry, action, out_dir):
         write_png(os.path.join(dst, fname), W, H, rgba)
         meta["frames"].append({"png": fname, "w": W, "h": H,
                                "ox": off[0], "oy": off[1]})
+    if fr.son_hits:
+        meta["sfx"] = meta_sfx(fr.son_hits, meta["frames"])
     with open(os.path.join(dst, "meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     return len(meta["frames"])
@@ -415,6 +455,7 @@ def export_action_composite(cr, anm, entry, action, out_dir):
     os.makedirs(dst, exist_ok=True)
     meta = {"anm": entry, "action": name, "fps": anm["header"]["fps"],
             "frames": []}
+    cr.son_hits = {}
     for i in range(action["logical_frames"]):
         cr.clear()
         cr.draw_action(action, i, PQ_IDENTITY)
@@ -426,6 +467,8 @@ def export_action_composite(cr, anm, entry, action, out_dir):
         write_png(os.path.join(dst, fname), W, H, rgba)
         meta["frames"].append({"png": fname, "w": W, "h": H,
                                "ox": off[0], "oy": off[1]})
+    if cr.son_hits:
+        meta["sfx"] = meta_sfx(cr.son_hits, meta["frames"])
     with open(os.path.join(dst, "meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     return len(meta["frames"])
