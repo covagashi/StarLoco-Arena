@@ -20,6 +20,7 @@ var finished := false
 var fight_scene: Node2D = null
 var _combat_seen := false
 var _card_landed := false
+var _timeline_checked := false
 var _faced := false
 
 
@@ -139,6 +140,22 @@ func _on_placement() -> void:
 
 ## turn_began policy for the harness: one short move request, then pass.
 func _on_fight_turn(fid: int, ours: bool) -> void:
+	# Timeline check (runs on every 8104): chips = 8000 timeline size and
+	# exactly the acting fighter's chip pressed.
+	if not _timeline_checked and fight_scene != null:
+		_timeline_checked = true
+		var tl: HBoxContainer = fight_scene.get_node("UI/TopBar/Timeline")
+		var want: Array = State.fight_data.get("timeline", [])
+		var pressed := 0
+		for i in tl.get_child_count():
+			if tl.get_child(i).button_pressed:
+				pressed += 1
+		print("[smoke] TIMELINE chips=%d expected=%d pressed=%d cur=%d" % [
+			tl.get_child_count(), want.size(), pressed, fid])
+		if tl.get_child_count() != want.size() or want.size() == 0:
+			push_error("timeline chips missing")
+		if pressed != 1:
+			push_error("timeline: acting chip not highlighted")
 	if not ours or finished:
 		return
 	var cur: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)

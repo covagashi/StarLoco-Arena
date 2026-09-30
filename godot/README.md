@@ -22,7 +22,7 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `src/state.gd` | `State` static holder — worlds, `fight_data`, `fighters`, `roster` (6006), `presets` (6030), `breed_name` |
 | `src/maps/` | `.fmd` arena parser, world `.tplg` topology, `map_gfx.gd` — retail painted-map renderer |
 | `src/anims/` | `AnmSprite` — frames from `tools/asset-import/anm_render.py --export`; alpha-scan foot pivot, `draw_on()` for merged z-order |
-| `src/fight/fight_view.gd/.tscn` | Fight scene: painted map, spawn zones, placement clicks, turns, move/spell targeting, nameplates + damage floats |
+| `src/fight/fight_view.gd/.tscn` | Fight scene: painted map, spawn zones, placement clicks, turns, move/spell targeting, nameplates + damage floats, turn timeline (8000 initiative order — team-tinted chips, acting fighter highlighted, dead dimmed, click centres the camera) |
 | `src/world/world_view.gd` | Overworld island: painted map, coach actors (4096), click-to-move (4501), chat bubbles, coach hit-test for challenges, **interactive-element markers** (200/206) with click → `201` |
 | `src/ui/chat_box.*` | Chat panel: vicinity/whisper/trade/group/clan + server announcements, `/command` emotes (4701→4700), `/friend` `/ignore` social ops (3129/3131/3133/3135), world bubbles |
 | `src/gamedata/spells.gd` | Breed spell tables + names (from `assets/gamedata/spells.json`) |

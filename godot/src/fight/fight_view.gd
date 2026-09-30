@@ -55,6 +55,7 @@ var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
 @onready var _actors: Node2D = $Actors
 @onready var _end_turn: Button = $UI/TopBar/EndTurnBtn
 @onready var _face_btn: Button = $UI/TopBar/FaceBtn
+@onready var _timeline: HBoxContainer = $UI/TopBar/Timeline
 var _dragging := false
 var _press_pos := Vector2.ZERO
 var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
@@ -90,6 +91,7 @@ func _ready() -> void:
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
 	_load()
+	_build_timeline()
 	if State.net != null:
 		for m in State.net.drain():
 			_on_net_message(m.op, m.raw)
@@ -295,6 +297,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_end_turn.disabled = true
 			_face_btn.disabled = true
 			_clear_spell_bar()
+			_refresh_timeline()
 		OP_SPELL_CAST:
 			# [i32 uid][i32 -1][i64 caster][i32 spell][i8 miss](+crit+target)
 			payload.get_i32()
@@ -494,6 +497,7 @@ func _kill_actor(fid: int) -> void:
 	if _current_fid == fid:
 		_current_fid = -1
 		_end_turn.disabled = true
+	_refresh_timeline()
 
 
 ## Name + cumulative damage label above each fighter, childed to the sprite
@@ -574,7 +578,54 @@ func _on_turn_begin(fid: int) -> void:
 	info.text = "map %s — turn: %s%s" % [$UI/TopBar/MapId.text,
 		f.get("name", str(fid)),
 		" (yours — click a cell to move)" if ours else ""]
+	_refresh_timeline()
 	turn_began.emit(fid, ours)
+
+
+## --- turn timeline ---------------------------------------------------------
+## The 8000 `timeline` block is the initiative-descending fighter order —
+## retail renders it as the top-of-screen portrait strip. Here: one chip per
+## fighter, team-tinted like the placement cells (team0 blue / team1 red),
+## acting fighter pressed, dead dimmed; clicking a chip centres the camera.
+const TEAM_TINTS := [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)]
+
+func _build_timeline() -> void:
+	for c in _timeline.get_children():
+		c.queue_free()
+	if State.fighters.is_empty():
+		return  # preview mode (Load) — no fight, no timeline
+	for fid in State.fight_data.get("timeline", []):
+		var f: Dictionary = State.fighters.get(fid, {})
+		var tint: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
+		var b := Button.new()
+		b.text = str(f.get("name", fid))
+		b.toggle_mode = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		b.add_theme_font_size_override("font_size", 11)
+		b.add_theme_color_override("font_color", tint)
+		b.add_theme_color_override("font_pressed_color", tint.lightened(0.35))
+		b.tooltip_text = "turn order — click to centre"
+		b.pressed.connect(_on_timeline_chip.bind(int(fid)))
+		_timeline.add_child(b)
+	_refresh_timeline()
+
+
+func _refresh_timeline() -> void:
+	var tl: Array = State.fight_data.get("timeline", [])
+	var n: int = mini(tl.size(), _timeline.get_child_count())
+	for i in n:
+		var fid := int(tl[i])
+		var b: Button = _timeline.get_child(i)
+		b.set_pressed_no_signal(fid == _current_fid)
+		b.modulate = Color(0.45, 0.45, 0.5, 0.7) \
+			if _dead.get(fid, false) else Color.WHITE
+
+
+func _on_timeline_chip(fid: int) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr != null:
+		cam.position = spr.position
 
 
 ## --- spell casting ---------------------------------------------------------
