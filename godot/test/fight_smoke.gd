@@ -10,6 +10,7 @@ const ArenaClient := preload("res://src/net/arena_client.gd")
 const Codec := preload("res://src/net/codec.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
+const Areas := preload("res://src/gamedata/areas.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -25,6 +26,7 @@ var _faced := false
 var _range_seen := false
 var _path_seen := false
 var _buff_seen := false
+var _area_seen := false
 
 
 func _init() -> void:
@@ -247,6 +249,55 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		print("[smoke] BUFFS after 8100 chips=%s" % [bl2])
 		if bl2.size() != 1 or not bool(bl2[0].inf):
 			push_error("buff strip: finite chip did not expire / infinite aged")
+	# Effect areas — fabricate the 8120 creation broadcasts (action 66): a
+	# one-shot trap (tpl 1, maxExec 1) on the caster's cell and a r2 glyph
+	# (tpl 1015, unlimited). The trap's inner-effect 8120 (gen 9670, same
+	# caster, victim inside the footprint) must count the fire and erase it;
+	# the unlimited glyph stays.
+	if not _area_seen:
+		_area_seen = true
+		var mk8120 := func(action: int, gen: int, val: int, tx: int,
+				ty: int, tgt: int) -> PackedByteArray:
+			var b := WireWriter.new()
+			b.put_u8(1)
+			b.put_u8(0)
+			b.put_i32(6)
+			b.put_u8(0)
+			b.put_i64(fid)      # caster
+			b.put_i64(tgt)      # target
+			b.put_i32(gen)      # genEffect
+			b.put_i32(tx)
+			b.put_i32(ty)
+			b.put_u16(0)
+			b.put_i32(val)      # value = template id for action 66
+			var blob: PackedByteArray = b.raw()
+			var w := WireWriter.new()
+			w.put_i32(0)
+			w.put_i32(-1)
+			w.put_u8(0)
+			w.put_u8(0)
+			w.put_i32(0)
+			w.put_i32(action)
+			w.put_u16(blob.size())
+			w.put_bytes(blob)
+			return w.raw()
+		var cc: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
+		fight_scene._on_net_message(8120, mk8120.call(66, 0, 1, cc.x, cc.y, fid))
+		fight_scene._on_net_message(8120, mk8120.call(66, 0, 1015,
+			cc.x, cc.y, fid))
+		print("[smoke] AREAS placed=%d r2footprint=%d" % [
+			fight_scene._areas.size(),
+			Areas.footprint(1015, cc).size()])
+		if fight_scene._areas.size() != 2:
+			push_error("effect areas: expected 2 placed, got %d"
+				% fight_scene._areas.size())
+		elif Areas.footprint(1015, cc).size() != 13:
+			push_error("effect areas: r2 diamond should cover 13 cells")
+		fight_scene._on_net_message(8120, mk8120.call(0, 9670, 0,
+			cc.x, cc.y, fid))
+		print("[smoke] AREAS after fire=%d" % fight_scene._areas.size())
+		if fight_scene._areas.size() != 1:
+			push_error("effect areas: one-shot trap should die after firing")
 	# Exercise the cast path first (from the CURRENT cell — the 4503 below is
 	# still in flight). Weapon (8111) needs an orthogonally adjacent enemy;
 	# a known spell goes at the closest enemy cell. Server validates

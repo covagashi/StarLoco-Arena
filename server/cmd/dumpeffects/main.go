@@ -65,4 +65,41 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("wrote", out, "timed/infinite effects:", len(effects))
+
+	// Static-effect templates (type 210 — traps/glyphs/specials). The 8120
+	// creation broadcast (action 66/176) carries only the template id, so the
+	// footprint shape/size, fire budget and inner effects are data-side here —
+	// mirrors the client's own rf_2 catalog.
+	type areaRec struct {
+		Type    string  `json:"t"`
+		Label   string  `json:"l,omitempty"`
+		Shape   int32   `json:"s"`
+		Size    []int32 `json:"z,omitempty"`
+		MaxExec int32   `json:"m"`
+		WalkOn  bool    `json:"w"`
+		Inner   []int32 `json:"e,omitempty"`
+	}
+	se, err := st.LoadStaticEffects()
+	if err == nil && se != nil {
+		areas := map[int32]areaRec{}
+		for id, t := range se.All() {
+			inner := make([]int32, 0, len(t.Effects))
+			for _, e := range t.Effects {
+				inner = append(inner, e.EffectID)
+			}
+			walkOn := false
+			for _, tr := range t.AppTriggers {
+				if tr == 10001 { // trapTriggerWalkOn
+					walkOn = true
+				}
+			}
+			areas[id] = areaRec{Type: t.Type, Label: t.Label, Shape: t.AreaShape,
+				Size: t.AreaSize, MaxExec: t.MaxExec, WalkOn: walkOn, Inner: inner}
+		}
+		ab, _ := json.Marshal(areas)
+		aout := out[:len(out)-len("effects.json")] + "areas.json"
+		if err := os.WriteFile(aout, ab, 0o644); err == nil {
+			fmt.Println("wrote", aout, "static-effect templates:", len(areas))
+		}
+	}
 }

@@ -16,6 +16,7 @@ const Spells := preload("res://src/gamedata/spells.gd")
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const Effects := preload("res://src/gamedata/effects.gd")
+const Areas := preload("res://src/gamedata/areas.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 
@@ -215,6 +216,7 @@ var _hp_lost := {}       # fighter id -> accumulated damage (8000 + 8120)
 var _dead := {}          # fighter id -> true once 4520 arrives
 var _carried_by := {}    # carried fighter id -> carrier fighter id (58/59)
 var _buffs := {}         # fighter id -> [{label,left,inf,src}] effect chips
+var _areas := []         # placed traps/glyphs/auras {tpl,ctr,caster,aura,left,turns}
 var _turns_taken := {}   # fighter id -> own-turn count (client alh_1.NC)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
 var _selected := -1      # our fighter selected for placement
@@ -308,6 +310,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			info.text = "map %s — turn %d" % [$UI/TopBar/MapId.text, int(d.get("f2", 0))]
 			_age_buffs()
+			_age_areas()
 		OP_TURN_BEGIN:
 			var d := Codec.decode(opcode, payload)
 			_on_turn_begin(int(d.get("f2", -1)))
@@ -549,12 +552,19 @@ const FX_STATE := {
 ## summon actions create a whole new fighter instead, and the displacement
 ## actions move an existing one.
 func _on_running_effect(d: Dictionary) -> void:
-	if FX_SUMMON.has(int(d.get("effect_id", -1))):
+	_note_area_fire(d)
+	var act := int(d.get("effect_id", -1))
+	if FX_SUMMON.has(act):
 		_spawn_summon(d)
 		return
-	if FX_DISPLACE.has(int(d.get("effect_id", -1))):
+	if FX_DISPLACE.has(act):
 		_apply_displacement(d)
 		return
+	if act == 66:                    # trap/glyph placed on a cell — no float
+		_place_area(d, false)
+		return
+	if act == 176:                   # caster-followed aura — also chips up
+		_place_area(d, true)
 	if not d.has("value"):
 		return
 	var target := int(d.get("target", -1))
@@ -708,6 +718,70 @@ func _apply_displacement(d: Dictionary) -> void:
 			pass
 
 
+## Effect areas (8120 action 66 trap/glyph on a cell, 176 aura on the caster).
+## Retail builds the live yl_1 from the template id carried in `value` — the
+## footprint shape/size and the fire budget are data-side (areas.json, the
+## type-210 catalog). An area renders only while its caster is a visible
+## fighter (aew_1: caster !PR() && !PT(), else aoy() hides it — an invisible
+## fighter's traps don't show), so draw-time visibility follows the sprite's
+## invisibility fade rather than a stored flag. Auras (176) re-centre on the
+## caster's live cell every frame and age one step per table turn.
+func _place_area(d: Dictionary, aura: bool) -> void:
+	var tpl := int(d.get("value", 0))
+	var m := Areas.meta(tpl)
+	if m.is_empty():
+		return                     # unknown template — nothing to draw
+	var turns := 0
+	if aura:
+		var ge := int(d.get("gen_effect", 0))
+		turns = -1 if Effects.is_infinite(ge) else Effects.duration(ge)
+	_areas.append({"tpl": tpl, "aura": aura,
+		"ctr": Vector3i(int(d.get("x", 0)), int(d.get("y", 0)),
+			int(d.get("z", 0))),
+		"caster": int(d.get("caster", -1)),
+		"left": int(m.get("m", 1)),
+		"turns": turns})
+	queue_redraw()
+
+
+## Inner-effect attribution — a trap firing broadcasts its template's inner
+## effects as ordinary 8120s (no area id on the wire), so we count a fire when
+## the gen_effect is one of the area's inners, the caster matches and the
+## victim stands inside the footprint. Finite areas (maxExec < 63) die at 0 —
+## matching the server's pruneEffectAreas, which has no removal broadcast.
+func _note_area_fire(d: Dictionary) -> void:
+	var gen := int(d.get("gen_effect", 0))
+	var caster := int(d.get("caster", -1))
+	var target := int(d.get("target", -1))
+	var tpos: Vector3i = _actor_cells.get(target, Vector3i(-9999, 0, 0))
+	for a in _areas.duplicate():
+		if a.aura or int(a.caster) != caster:
+			continue
+		var inner: Array = Areas.meta(int(a.tpl)).get("e", [])
+		if inner.is_empty() or not inner.has(gen):
+			continue
+		var cells: Array = Areas.footprint(int(a.tpl), a.ctr)
+		if not cells.has(Vector2i(tpos.x, tpos.y)):
+			continue
+		var m := int(Areas.meta(int(a.tpl)).get("m", 1))
+		if m >= 0 and m < 63:
+			a.left = int(a.left) - 1
+			if int(a.left) <= 0:
+				_areas.erase(a)
+		queue_redraw()
+		break
+
+
+## 8100 — auras age one table turn (server tickEffectAreas); traps don't age.
+func _age_areas() -> void:
+	for a in _areas.duplicate():
+		if a.aura and int(a.turns) > 0:
+			a.turns = int(a.turns) - 1
+			if int(a.turns) <= 0:
+				_areas.erase(a)
+				queue_redraw()
+
+
 ## Vicinity chat bubble over a fighter's head — chat actor ids are coach ids;
 ## map them to that coach's fighter sprite.
 func chat_bubble(coach_id: int, text: String) -> void:
@@ -750,6 +824,9 @@ func _kill_actor(fid: int) -> void:
 	for cid in _carried_by.keys():     # (breakCarryLinks) — the carried drops
 		if _carried_by[cid] == fid:      # onto the carrier's cell, where it is
 			_carried_by.erase(cid)
+	for a in _areas.duplicate():       # a dead caster's aura dies with it
+		if a.aura and int(a.caster) == fid:
+			_areas.erase(a)
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr != null:
 		spr.playing = false
@@ -1670,6 +1747,25 @@ func _draw_overlays() -> void:
 		draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
 		draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), sm[0],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
+	# placed traps/glyphs/auras — footprint tinted per the type-210 template
+	for a in _areas:
+		var csp: AnmSprite = _sprites.get(int(a.caster))
+		if csp != null and csp.modulate.a < 0.9:
+			continue                # hidden caster → hidden area (aew_1.aoy)
+		var m: Dictionary = Areas.meta(int(a.tpl))
+		var actr: Vector3i = _actor_cells.get(int(a.caster), a.ctr) \
+			if a.aura else a.ctr
+		var acol := Color(0.3, 0.9, 1.0) if a.aura else \
+			(Color(1.0, 0.6, 0.15) if bool(m.get("w", false))
+				else Color(0.65, 0.4, 1.0))
+		for cell: Vector2i in Areas.footprint(int(a.tpl), actr):
+			var cz := int(_cells.get(cell, {}).get("alt", actr.z))
+			var fp := _cell_poly(cell.x, cell.y, cz)
+			draw_colored_polygon(fp, Color(acol.r, acol.g, acol.b, 0.14))
+			draw_polyline(fp + PackedVector2Array([fp[0]]),
+				Color(acol.r, acol.g, acol.b, 0.7), 1.0)
+		draw_circle(_iso(float(actr.x) + 0.5, float(actr.y) + 0.5,
+			float(actr.z)), 3.0, acol)
 	if _placement:
 		# our start cells glow; selected fighter gets a ring
 		var t := _my_team()
