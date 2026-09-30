@@ -633,7 +633,11 @@ func _on_running_effect(d: Dictionary) -> void:
 		_float_text(target, FX_STATE[int(d.effect_id)], Color(0.9, 0.9, 1.0))
 		var spr: AnmSprite = _sprites.get(target)
 		if int(d.effect_id) == 57 and spr != null:
-			spr.modulate.a = 0.35      # invisible — retail fades the sprite
+			# invisible — retail hides the sprite from enemies entirely and
+			# fades it for the caster's own team
+			var f: Dictionary = State.fighters.get(target, {})
+			var allied := int(f.get("coach", -1)) == State.my_coach_id
+			spr.modulate.a = 0.35 if allied else 0.0
 	elif int(d.effect_id) == 62:      # dispel — clears the invisibility tint
 		_float_text(target, "Dispelled", Color(0.9, 0.9, 1.0))
 		var spr: AnmSprite = _sprites.get(target)
@@ -2030,11 +2034,16 @@ func _draw_overlays() -> void:
 		draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
 		draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), sm[0],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
-	# placed traps/glyphs/auras — footprint tinted per the type-210 template
+	# placed traps/glyphs/auras — footprint tinted per the type-210 template.
+	# Retail reveals own-team areas unconditionally (aX(true)); an enemy
+	# caster's only show while that caster is visible (aew_1.aoy) — an
+	# invisible enemy's traps stay hidden from us.
 	for a in _areas:
 		var csp: AnmSprite = _sprites.get(int(a.caster))
-		if csp != null and csp.modulate.a < 0.9:
-			continue                # hidden caster → hidden area (aew_1.aoy)
+		var cf: Dictionary = State.fighters.get(int(a.caster), {})
+		var enemy := int(cf.get("coach", -1)) != State.my_coach_id
+		if enemy and csp != null and csp.modulate.a < 0.9:
+			continue                # invisible enemy caster → hidden area
 		var m: Dictionary = Areas.meta(int(a.tpl))
 		var actr: Vector3i = _actor_cells.get(int(a.caster), a.ctr) \
 			if a.aura else a.ctr
@@ -2056,6 +2065,9 @@ func _draw_overlays() -> void:
 		var f: Dictionary = State.fighters.get(id, {})
 		if f.is_empty():
 			continue                 # coach actors aren't fighters
+		var fspr: AnmSprite = _sprites.get(id)
+		if fspr != null and fspr.modulate.a < 0.05:
+			continue                 # fully hidden — don't leak the position
 		var p: Vector3i = _actor_cells[id]
 		var ctr := _iso(p.x + 0.5, p.y + 0.5, p.z)
 		var col: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
