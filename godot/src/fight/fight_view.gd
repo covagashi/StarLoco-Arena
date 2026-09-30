@@ -166,7 +166,7 @@ func _spawn_actors() -> void:
 const OP_ACTOR_APPEAR := 4102
 const OP_PLACEMENT := 8022
 const OP_START_PRESENTATION := 8010
-const OP_END_PRESENTATION := 8014
+const OP_END_PRESENTATION := 8018
 const OP_START_PLACEMENT := 8020
 const OP_READY_OBSERVATION := 8023
 const OP_END_PLACEMENT := 8028
@@ -911,6 +911,7 @@ func _kill_actor(fid: int) -> void:
 		_current_fid = -1
 		_end_turn.disabled = true
 	_refresh_timeline()
+	queue_redraw()                    # the base ring dims over the corpse
 
 
 ## Name + cumulative damage label above each fighter, childed to the sprite
@@ -1804,6 +1805,15 @@ func _cell_poly(x: int, y: int, alt: float) -> PackedVector2Array:
 		c + Vector2(0, HH), c + Vector2(-HW, 0)])
 
 
+## Iso-proportioned ground ellipse for the fighter base rings.
+func _draw_base_ring(ctr: Vector2, col: Color, w: float) -> void:
+	var pts := PackedVector2Array()
+	for i in 25:
+		var a := TAU * float(i) / 24.0
+		pts.append(ctr + Vector2(cos(a) * HW * 0.55, sin(a) * HH * 0.55))
+	draw_polyline(pts, col, w)
+
+
 func _alt_color(alt: float) -> Color:
 	var t := 0.5 if _alt_max == _alt_min else inverse_lerp(_alt_min, _alt_max, alt)
 	return Color(0.25 + 0.45 * t, 0.35 + 0.35 * t, 0.3, 1.0)
@@ -1889,6 +1899,23 @@ func _draw_overlays() -> void:
 				Color(acol.r, acol.g, acol.b, 0.7), 1.0)
 		draw_circle(_iso(float(actr.x) + 0.5, float(actr.y) + 0.5,
 			float(actr.z)), 3.0, acol)
+	# team base rings — a ground ellipse under every live fighter so side
+	# reads at a glance; the acting fighter gets a brighter double ring
+	# (retail's current-turn marker). Corpses keep only a faint trace.
+	for id in _actor_cells:
+		var f: Dictionary = State.fighters.get(id, {})
+		if f.is_empty():
+			continue                 # coach actors aren't fighters
+		var p: Vector3i = _actor_cells[id]
+		var ctr := _iso(p.x + 0.5, p.y + 0.5, p.z)
+		var col: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
+		if _dead.has(id):
+			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.15), 1.0)
+		elif id == _current_fid:
+			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.3), 5.0)
+			_draw_base_ring(ctr, col.lightened(0.3), 2.0)
+		else:
+			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.65), 1.5)
 	if _placement:
 		# our start cells glow; selected fighter gets a ring
 		var t := _my_team()
