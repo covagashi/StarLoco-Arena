@@ -57,14 +57,26 @@ func TestNPCTalkersAreSpawned(t *testing.T) {
 	}
 }
 
-// TestExactlyOneNPCHasADialogTree pins the fact that makes item 27 small: of the
-// six NPCTalkers, only "bob" carries a dialog id. The other five are decorative
-// ghosts whose descriptor names dialog -1, so no amount of server work would give
-// them anything to say.
+// TestNPCDescriptorsCarryDialogGroups pins the real ni_0 descriptor layout:
 //
-// The descriptor is ';'-separated: nameTextId;dialogId;?;?;spriteName.
-func TestExactlyOneNPCHasADialogTree(t *testing.T) {
-	withDialog := map[int64]int{}
+//	nameTextId ; criterionId ; defaultGroup ; altGroup ; guiStyle
+//
+// All six NPCs carry a dialog group — the "only bob talks" belief came from
+// misreading field 1 (the criterion gate) as the dialog id. The client opens
+// altGroup when criterionId != -1 and the criterion's value is > 0, else
+// defaultGroup. Only bob (143) is criterion-gated (228); the ghosts and the
+// demon use -1, so they always open their default group.
+func TestNPCDescriptorsCarryDialogGroups(t *testing.T) {
+	// instanceID -> {criterionId, defaultGroup, altGroup}
+	want := map[int64][3]int{
+		143: {228, 7, 7},   // bob — Baan, the tutorial guide
+		170: {-1, 56, 56},  // Sramette ghost
+		171: {-1, 45, 45},  // Iop ghost
+		172: {-1, 50, 50},  // Sacrieur ghost
+		173: {-1, 60, 60},  // Enutrof ghost
+		181: {-1, 65, 65},  // Demon I
+	}
+	got := map[int64][3]int{}
 	for _, elems := range worldElements {
 		for _, e := range elems {
 			if e.kind != kindNPC {
@@ -72,26 +84,29 @@ func TestExactlyOneNPCHasADialogTree(t *testing.T) {
 			}
 			desc := trailingDescriptor(e.payload)
 			parts := strings.Split(desc, ";")
-			if len(parts) < 2 {
-				t.Errorf("NPC %d: descriptor %q has no dialog field", e.instanceID, desc)
+			if len(parts) < 5 {
+				t.Errorf("NPC %d: descriptor %q has <5 fields", e.instanceID, desc)
 				continue
 			}
-			id, err := strconv.Atoi(parts[1])
-			if err != nil {
-				t.Errorf("NPC %d: dialog field %q is not a number (descriptor %q)",
-					e.instanceID, parts[1], desc)
-				continue
+			var f [3]int
+			for i := 0; i < 3; i++ {
+				v, err := strconv.Atoi(parts[i+1])
+				if err != nil {
+					t.Errorf("NPC %d: field %d %q is not a number (descriptor %q)",
+						e.instanceID, i+1, parts[i+1], desc)
+				}
+				f[i] = v
 			}
-			if id >= 0 {
-				withDialog[e.instanceID] = id
-			}
+			got[e.instanceID] = f
 		}
 	}
-	if len(withDialog) != 1 {
-		t.Fatalf("expected exactly one NPC with a dialog tree, got %v", withDialog)
+	if len(got) != len(want) {
+		t.Fatalf("expected %d NPC descriptors, got %v", len(want), got)
 	}
-	if got, ok := withDialog[143]; !ok || got != 228 {
-		t.Errorf("the talking NPC is %v, want {143: 228} (bob)", withDialog)
+	for id, w := range want {
+		if got[id] != w {
+			t.Errorf("NPC %d descriptor = %v, want %v", id, got[id], w)
+		}
 	}
 }
 

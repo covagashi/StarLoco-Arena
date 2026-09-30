@@ -48,6 +48,12 @@ const sparringCoachID uint = 1 << 31
 // both send it with **arch byte 2** rather than the usual 3.
 const challengeAcceptBreed uint16 = 99
 
+// practiceFightType is the value the client puts in the FIRST field of 26330
+// for the team panel's "Tester" practice launch (hu_2 hardcodes fH(12)). It
+// collides with challenge id 12 in the data table, which is why the NPC-dialog
+// path below can only key off "known challenge AND not the practice literal".
+const practiceFightType int32 = 12
+
 // handleTeamTest (26330 alv_1: [i32 a][i16 b]) serves two distinct launches,
 // told apart by the second field:
 //
@@ -57,6 +63,9 @@ const challengeAcceptBreed uint16 = 99
 //   - b == 99 — an overworld CHALLENGE launch (a = challenge id): the
 //     DemonChallenge bubble's "accept" or a BreedMaster's "test this breed".
 //     See challengeAcceptBreed and challenge_fights.go.
+//   - a = a known challenge id, b = its mode — the NPC-dialog "Lancer un
+//     défi" reply action (client th_0 sends afz_0.Qu(), not 99). Same PvE
+//     challenge path as b == 99.
 func handleTeamTest(s *Session, f *protocol.C2SFrame) error {
 	if s.Coach == nil {
 		return nil
@@ -71,6 +80,16 @@ func handleTeamTest(s *Session, f *protocol.C2SFrame) error {
 		return err
 	}
 	if teamID == challengeAcceptBreed {
+		return s.startPvEChallenge(first)
+	}
+	// NPC-dialog challenge launch (client th_0, the "Lancer un défi" reply
+	// action): first = the challenge id as well, but the second field is the
+	// challenge's own mode (afz_0.Qu() = record Fields[1]) — never 99 and not
+	// a teamId. Route any known challenge id to the PvE path; first == 12 is
+	// always the team panel's "Tester" (fH(12) is the only literal practice
+	// sender) and must keep hitting the roster lookup below.
+	if first != practiceFightType && s.deps.ChallengeDefs != nil &&
+		s.deps.ChallengeDefs.Get(first) != nil {
 		return s.startPvEChallenge(first)
 	}
 	if s.deps.Fights.ByCoach(s.Coach.ID) != nil {

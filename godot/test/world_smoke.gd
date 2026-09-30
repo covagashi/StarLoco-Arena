@@ -14,6 +14,8 @@ const State := preload("res://src/state.gd")
 var _sess: Node
 var _main
 var _entered := false
+var _npc_fight := false        # 8000 seen after the NPC "défi" reply
+var _npc_fight_done := false   # 8300 seen + 26321 acked
 
 
 func _init() -> void:
@@ -183,6 +185,17 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 				" obtained=", d.get("obtained"),
 				" missed=", d.get("not_obtained"),
 				" recovered=", d.get("recovered"))
+		8000:
+			# NPC "Lancer un défi" reply → the challenge fight started. The
+			# world scene is being replaced by fight_view — surrender from here.
+			print("[smoke] NPC CHALLENGE fight started (8000)")
+			_npc_fight = true
+			await create_timer(3.0).timeout
+			_sess.send(8151, PackedByteArray(), 3)
+		8300:
+			print("[smoke] NPC CHALLENGE ended (8300) — ack 26321")
+			_sess.send(26321, PackedByteArray(), 3)
+			_npc_fight_done = true
 		504:
 			var d := Codec.decode(op, payload)
 			print("[smoke] GUILD result type=", d.get("type"),
@@ -660,6 +673,45 @@ func _move_and_shoot() -> void:
 		if img != null:
 			img.save_png("/tmp/world_live.png")
 			print("[smoke] shot -> /tmp/world_live.png")
+
+	# --- NPC dialog (record 1500, kind 15) ---------------------------------
+	# GM /WORLD 85 re-sends 4600 for Baan's tutorial island (the 'test'
+	# account is admin). Baan = element 143 at cell (7,9).
+	# NOTE: this must run LAST — the défi reply starts a fight, which swaps
+	# the whole scene (this _main instance is freed).
+	_main.log._on_submit("/world 85")
+	await create_timer(1.5).timeout
+	var npc := await _goto_elem(15, Vector2i(7, 9))
+	if npc < 0:
+		print("[smoke] NPC never entered AoI — SKIP")
+	else:
+		_main._use_element(npc)
+		await create_timer(0.4).timeout
+		var npc_list: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
+		print("[smoke] NPC '", _main.get_node("UI/ElementDlg/VBox/Title").text,
+			"' speech='", _main.get_node("UI/ElementDlg/VBox/Hint").text.substr(0, 45),
+			"' replies=", npc_list.item_count)
+		# Baan group 7: a single act=2 reply (criterion 219 → 22003) → next 8.
+		if npc_list.item_count > 0:
+			npc_list.item_selected.emit(0)
+			await create_timer(0.4).timeout
+			print("[smoke] NPC node 8 speech='",
+				_main.get_node("UI/ElementDlg/VBox/Hint").text.substr(0, 45), "'")
+		# Group 48 carries the two "Lancer un défi" rows (act=1 → 26330
+		# [challengeId][mode]) — drive it directly to exercise the wire path.
+		_main._npc_node(48)
+		await create_timer(0.2).timeout
+		if npc_list.item_count > 0:
+			print("[smoke] NPC défi replies=", npc_list.item_count,
+				" — launching", npc_list.get_item_text(0).substr(0, 40))
+			npc_list.item_selected.emit(0)
+			# 8000 arrives → _on_msg surrenders; wait for the 8300 + world return.
+			var w8 := 0
+			while not _npc_fight_done and w8 < 30:
+				await create_timer(1.0).timeout
+				w8 += 1
+			print("[smoke] NPC fight lifecycle: started=", _npc_fight,
+				" done=", _npc_fight_done)
 	quit()
 
 

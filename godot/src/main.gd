@@ -24,6 +24,7 @@ const Spells := preload("res://src/gamedata/spells.gd")
 const Elements := preload("res://src/gamedata/elements.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
+const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
@@ -2097,6 +2098,7 @@ var _kanodo_fid := -1         # fighter id of the open Kanodo board
 var _kanodo_pick := {}        # sphere node selected on the board
 var _duo_pending := {}        # incoming 6025 {team, inviter, invited}
 var _watch_target := -1       # coach id asked in the pending 2260
+var _npc := {}                # open NPC dialog {name, replies}
 
 ## Ranking window tabs (retail ladderInformationDialog order): the request
 ## opcode and a payload builder; replies land in _on_message below.
@@ -2158,8 +2160,76 @@ func _use_element(id: int) -> void:
 			_open_tournament_totem()
 		12:  # Firework launcher — pick a card → 22095 → 22094 echo
 			_open_firework(e)
-		_:   # Demons (6/9), NPC talkers (15) — local text bubble
+		15:  # NPC talker — client-side dialog tree (record 1500)
+			_open_npc(e)
+		_:   # Demons (6/9) — local text bubble
 			_element_text(label, "…")
+
+
+## NPC talker (kind 15): desc = "nameId;criterionId;defaultGroup;altGroup;
+## style" (client ni_0). The whole tree is client-side — opening sends nothing;
+## reply actions are the only wire traffic (26330 challenge / 22003 criterion).
+## altGroup is picked when criterionId != -1 and its value is > 0.
+func _open_npc(e: Dictionary) -> void:
+	var fields := str(e.get("desc", "")).split(";")
+	var name_id := int(fields[0]) if fields.size() > 0 else -1
+	var crit := int(fields[1]) if fields.size() > 1 else -1
+	var def_group := int(fields[2]) if fields.size() > 2 else -1
+	var alt_group := int(fields[3]) if fields.size() > 3 else def_group
+	_npc = {
+		"name": NpcDialogs.npc_name(name_id),
+		"replies": [],
+	}
+	var group := def_group
+	if crit != -1 and int(State.criteria.get(crit, 0)) > 0:
+		group = alt_group
+	_npc_node(group)
+
+
+## Show one dialog node: speech (content.59) + reply rows (content.60 labels).
+func _npc_node(group_id: int) -> void:
+	var g := NpcDialogs.group(group_id)
+	if g.is_empty():
+		$UI/ElementDlg.visible = false
+		return
+	var replies: Array = g.get("replies", [])
+	_npc["replies"] = replies
+	_element_text(str(_npc.get("name", "NPC")), str(g.get("text", "")))
+	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	for i in replies.size():
+		list.add_item(str(replies[i].get("label", "…")))
+		list.set_item_metadata(i, i)
+	if not list.item_selected.is_connected(_on_npc_reply):
+		list.item_selected.connect(_on_npc_reply)
+
+
+## Reply click = client ao_2 case 17001: run the action, then navigate to the
+## reply's `next` group (0 = close the dialog).
+func _on_npc_reply(i: int) -> void:
+	if _elem_kind != 15:
+		return
+	var replies: Array = _npc.get("replies", [])
+	if i < 0 or i >= replies.size():
+		return
+	var r: Dictionary = replies[i]
+	match int(r.get("act", 0)):
+		1: # Lancer un défi — 26330 [i32 challengeId][i16 challenge.Qu()]
+			var chal := int(r.get("params", [0])[0])
+			var w := WireWriter.new()
+			w.put_i32(chal)
+			w.put_u16(NpcDialogs.challenge_mode(chal))
+			Session.send(OP_TEAM_TEST, w.raw(), 2)
+		2: # Donne un exploit — 22003 {i16 criterionId, u8 1, i16 1}
+			var w := WireWriter.new()
+			w.put_i16(int(r.get("params", [0])[0]))
+			w.put_u8(1)
+			w.put_i16(1)
+			State.net.send_message(OP_STAT_UPD, w.raw(), 2)
+	var next := int(r.get("next", 0))
+	if next != 0:
+		_npc_node(next)
+	else:
+		$UI/ElementDlg.visible = false
 
 
 ## Generic element dialog: title + hint + a list + two optional action

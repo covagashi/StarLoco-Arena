@@ -288,6 +288,7 @@ pieces: the other sub-boards (evolution/team/etc., 27504–27552).
 | 23006 | `azl_0` EvolutionFightStarting | S2C | ✓ | A (empty) | — | ✓ **live** |
 | 23008 | `KL` EvolutionSearchError | S2C | ✓ | A (`[i8 code]`) | — | ✓ |
 | 23009 | `aow_2` SphereBuy (Kanodo) | C2S | ✓ | A (`[i64 fighterId][i32 sphereId][i32 cardTemplateId]`) | — | ✓ **live** |
+| 26330 | `alv_1` TeamTest / challenge launch | C2S | ✓ | A (`[i32 id][i16]`; b=99 bubble/breedmaster, b=teamId Tester, b=challenge.`Qu()` NPC-dialog défi — all three dispatch) | ✓ | ✓ (godot world_smoke: Baan group 48 défi → 8000) |
 
 **There are THREE parallel copies of this handshake**, one per team-panel tab,
 consumed by three near-identical client frames: `vu_1` (classic/Elite), `wp_0`
@@ -412,8 +413,8 @@ missing feature manifests to the client as a *hang*. Prioritized:
 - **2308 alt match accept** — duplicate accept path (matchId+mode+roster);
   the Godot client resolves matches through 23114/23116 instead.
 - **22003 criteria** — Godot reports criterion 229 on first world entry
-  (verified in coach_stats) and 221 on breedmaster dialogs; the demon-NPC
-  criteria (210/218/219) need real NPC dialogs first.
+  (verified in coach_stats), 221 on breedmaster dialogs, and 219 via the
+  record-1500 NPC dialog tree (verified live: Baan reply → coach_stats).
 - 2052 CoachInformations / 4096 coach-actor sub-blobs are still empty (guild,
   inventory, appearance — the `0x80` tome blob is now populated, see B-106)
   BUT this is now known to be low-impact for stats: the

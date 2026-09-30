@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
+	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 	"github.com/StarLoco/arena-2.70/internal/store"
 )
@@ -288,5 +289,50 @@ func TestTitularRosterCapsSameBreed(t *testing.T) {
 	got := d.titularRoster(coach.ID, 6)
 	if len(got) != 3 { // 2 Iops + 1 Feca
 		t.Fatalf("titularRoster = %v, want 3 ids (2 capped Iops + Feca)", got)
+	}
+}
+
+// TestNPCDialogChallengeLaunch: the record-1500 "Lancer un défi" reply action
+// (client th_0) sends 26330 [i32 challengeId][i16 challenge.Qu()] — the second
+// field is the challenge's own mode (Fields[1]), NOT the bubble/breedmaster
+// literal 99 and NOT a teamId. The handler must still route it to the PvE
+// challenge path rather than the "Tester" roster lookup.
+func TestNPCDialogChallengeLaunch(t *testing.T) {
+	d, st := fightCreationDeps(t)
+	d.ChallengeDefs = gamedata.NewChallenges(&gamedata.Challenge{ID: 46})
+	coach, _ := coachWithTeam(t, st, "npc")
+	s := fcSession(d, coach)
+
+	// Challenge 46's real record: Fields = [63, 9, 110, 0, 5, 0] — Qu() = 9.
+	payload := protocol.NewWriter().I32(46).U16(9).Bytes()
+	if err := handleTeamTest(s, &protocol.C2SFrame{Payload: payload}); err != nil {
+		t.Fatalf("handleTeamTest: %v", err)
+	}
+	f := d.Fights.ByCoach(coach.ID)
+	if f == nil {
+		t.Fatal("NPC-dialog challenge launch created no fight")
+	}
+	defer stopTestFight(d, f)
+	teamB := f.Teams[1]
+	if teamB == nil || teamB.Coach() == nil || teamB.Coach().ID != challengeCoachID {
+		t.Fatalf("team B should be the challenge side, got %+v", teamB)
+	}
+
+	// And the practice path is untouched: first==12 keeps meaning "Tester"
+	// even though 12 also exists as a challenge id in the data table.
+	d.ChallengeDefs = gamedata.NewChallenges(&gamedata.Challenge{ID: 12})
+	coach2, team2 := coachWithTeam(t, st, "npc2")
+	s2 := fcSession(d, coach2)
+	p2 := protocol.NewWriter().I32(12).U16(uint16(team2)).Bytes()
+	if err := handleTeamTest(s2, &protocol.C2SFrame{Payload: p2}); err != nil {
+		t.Fatalf("handleTeamTest (practice): %v", err)
+	}
+	f2 := d.Fights.ByCoach(coach2.ID)
+	if f2 == nil {
+		t.Fatal("practice launch created no fight")
+	}
+	defer stopTestFight(d, f2)
+	if got := f2.Teams[1].Coach().ID; got != sparringCoachID {
+		t.Errorf("first==12 must still spawn the sparring side, got coach %d", got)
 	}
 }

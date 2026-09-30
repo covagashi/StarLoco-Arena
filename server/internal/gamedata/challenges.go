@@ -34,7 +34,10 @@ const TypeChallengeDef = 400
 type Challenge struct {
 	ID int32
 	// Fields are the six i32 that follow the id (GE getters Qt/Qu/Qv/Qw/Qy/Qz).
-	// Their semantics are NOT verified — do not build behaviour on them. Observed
+	// Fields[1] (Qu) IS verified: the NPC-dialog "Lancer un défi" reply action
+	// (client th_0) sends it as the i16 second field of 26330 — i.e. the
+	// challenge launch carries [challengeId][Fields[1]], not the breedmaster's
+	// literal 99. The remaining fields' semantics are NOT verified — observed
 	// shapes, for whoever decodes them next:
 	//
 	//	breed-master challenges 17..28: [45, 33..44, 36, 0, 5, 0]  (field0 constant,
