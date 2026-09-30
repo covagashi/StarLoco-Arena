@@ -51,6 +51,8 @@ def main() -> None:
             for k in ("lk", "cd", "mpt", "mptt"):
                 if s.get(k):
                     row[k] = s[k]
+            if s.get("zn"):
+                row["zn"] = s["zn"]
             rows.append(row)
         out[breed] = rows
     with open(out_path, "w") as f:

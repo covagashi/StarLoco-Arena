@@ -1879,6 +1879,24 @@ func _draw_overlays() -> void:
 			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, pc)
 	if not _placement and _is_my_turn() and _cells.has(_hover):
 		var hc: Dictionary = _cells[_hover]
+		# AoE preview — an armed spell/card's effect zones (data-side `zn`,
+		# the same areaShape/areaSize the server feeds areaFighters) tint the
+		# cells they would hit. Only on a castable hover — matching retail,
+		# which shows the zone only where the cast would land.
+		if (_spell_mode >= 0 or _card_mode >= 0) and \
+				int(_range_overlay.get(_hover, 0)) == 2:
+			var meta: Dictionary = Spells.meta(_spell_mode) \
+				if _spell_mode >= 0 else FighterCards.ability(_card_mode)
+			var src3: Vector3i = _actor_cells.get(_current_fid, Vector3i.ZERO)
+			var aim := Vector3i(_hover.x, _hover.y, int(hc.alt))
+			for zn in meta.get("zn", []):
+				for cell: Vector2i in Areas.footprint_cells(int(zn[0]),
+						zn.slice(1), aim, src3):
+					if _cells.has(cell):
+						var zp := _cell_poly(cell.x, cell.y,
+							int(_cells[cell].get("alt", 0)))
+						draw_colored_polygon(zp,
+							Color(1.0, 0.45, 0.15, 0.22))
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
 		draw_polyline(poly + PackedVector2Array([poly[0]]),
 			Color(1, 0.3, 0.25, 0.9) if _spell_mode != -1

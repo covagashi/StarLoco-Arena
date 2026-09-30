@@ -38,15 +38,21 @@ static func meta(template_id: int) -> Dictionary:
 	return _by_id.get(template_id, {})
 
 
-## Footprint cells (x,y dicts) around `center` Vector3i per AreaShape/AreaSize —
-## a port of server pointInArea (area.go): 1 point, 2 filled Manhattan diamond,
-## 3 cross arms, 5 diamond annulus, 6 square; T/point-list degrade to the
-## centre cell (directional shapes need a cast axis we don't carry).
+## Footprint cells around `center` per AreaShape/AreaSize — a port of server
+## pointInArea (area.go): 1 point, 2 filled Manhattan diamond, 3 cross arms,
+## 4/9 directional T, 5 diamond annulus, 6 square, 8 point-list. Directional
+## shapes orient along the source→center cardinal step (for placed areas
+## source==center, which is exactly how the server evaluates them).
 static func footprint(template_id: int, center: Vector3i) -> Array:
 	var m := meta(template_id)
+	return footprint_cells(int(m.get("s", 1)), m.get("z", []), center, center)
+
+
+## Shape/size-driven footprint — used both by placed-area markers (source =
+## center) and by the spell AoE preview (source = the caster's live cell).
+static func footprint_cells(shape: int, size: Array, center: Vector3i,
+		source: Vector3i) -> Array:
 	var cells: Array = []
-	var shape := int(m.get("s", 1))
-	var size: Array = m.get("z", [])
 	var r := int(size[0]) if size.size() > 0 else 0
 	match shape:
 		2: # circle — filled diamond, radius z[0]
@@ -87,6 +93,42 @@ static func footprint(template_id: int, center: Vector3i) -> Array:
 			for dx in range(-r, r + 1):
 				for dy in range(-hh, hh + 1):
 					cells.append(Vector2i(center.x + dx, center.y + dy))
-		_: # point (1) and unknown shapes — the single centre cell
+		4, 9: # T / inverted-T — stem z[1] toward the target, bar z[0]
+			var dir := _cardinal(center.x - source.x, center.y - source.y)
+			if dir == Vector2i.ZERO:
+				cells.append(Vector2i(center.x, center.y))
+			else:
+				var stem := int(size[1]) if size.size() > 1 else 0
+				var bar_at := 0 if shape == 9 else stem
+				var perp := Vector2i(-dir.y, dir.x)
+				cells.append(Vector2i(center.x, center.y))
+				for i in range(1, stem + 1):
+					cells.append(Vector2i(center.x + dir.x * i,
+						center.y + dir.y * i))
+				for i in range(1, r + 1):
+					for s in [-1, 1]:
+						cells.append(Vector2i(center.x + dir.x * bar_at
+							+ perp.x * i * s, center.y + dir.y * bar_at
+							+ perp.y * i * s))
+		8: # point-list — authored (dx,dy) pairs rotated onto the cast axis
+			var dir := _cardinal(center.x - source.x, center.y - source.y)
+			if dir == Vector2i.ZERO or size.size() < 2:
+				cells.append(Vector2i(center.x, center.y))
+			else:
+				for i in range(0, size.size() - 1, 2):
+					var ox := int(size[i])
+					var oy := int(size[i + 1])
+					cells.append(Vector2i(center.x + ox * dir.x - oy * dir.y,
+						center.y + ox * dir.y + oy * dir.x))
+		_: # point (1), empty (32767) and unknown — the single centre cell
 			cells.append(Vector2i(center.x, center.y))
 	return cells
+
+
+## Cardinal step toward (dx,dy) — dominant axis wins (server cardinalStep).
+static func _cardinal(dx: int, dy: int) -> Vector2i:
+	if dx == 0 and dy == 0:
+		return Vector2i.ZERO
+	if absi(dx) >= absi(dy):
+		return Vector2i(1 if dx > 0 else -1, 0)
+	return Vector2i(0, 1 if dy > 0 else -1)

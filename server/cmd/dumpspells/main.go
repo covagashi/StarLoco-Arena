@@ -39,6 +39,9 @@ func main() {
 		Cooldown uint8 `json:"cd,omitempty"`
 		PerTurn  uint8 `json:"mpt,omitempty"`
 		PerTarget uint8 `json:"mptt,omitempty"`
+		// Effect zones for the Godot AoE preview — deduped [shape, size…]
+		// tuples from the spell's effects (point/empty/all produce no tint).
+		Zones [][]int32 `json:"zn,omitempty"`
 	}
 	byBreed := map[int32][]rec{}
 	for _, s := range sp.All() {
@@ -57,6 +60,18 @@ func main() {
 		}
 		r.PerTurn = s.CastMaxPerTurn
 		r.PerTarget = s.CastMaxPerTarget
+		seen := map[string]bool{}
+		for _, ef := range s.Effects {
+			if ef.AreaShape <= 1 || ef.AreaShape == 32767 || len(ef.AreaSize) == 0 {
+				continue
+			}
+			row := append([]int32{ef.AreaShape}, ef.AreaSize...)
+			key := fmt.Sprint(row)
+			if !seen[key] {
+				seen[key] = true
+				r.Zones = append(r.Zones, row)
+			}
+		}
 		byBreed[s.BreedID] = append(byBreed[s.BreedID], r)
 	}
 	b, _ := json.Marshal(byBreed)
