@@ -9,6 +9,7 @@ const PATH := "res://assets/gamedata/spells.json"
 static var _by_breed := {}    # breed int -> Array[Dictionary]
 static var _by_id := {}       # spell id -> Dictionary
 static var _sfx := {}         # spell id -> [[t_ms, soundId], …]
+static var _fx := {}          # spell id -> [[t_ms, xpsId, anchor], …]
 static var _loaded := false
 
 
@@ -36,6 +37,13 @@ static func _ensure() -> void:
 		if sfx is Dictionary:
 			for k in sfx.keys():
 				_sfx[int(k)] = sfx[k]
+	var fx_path := "res://assets/gamedata/spell_fx.json"
+	if FileAccess.file_exists(fx_path):
+		var fx: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string(fx_path))
+		if fx is Dictionary:
+			for k in fx.keys():
+				_fx[int(k)] = fx[k]
 
 
 ## Timed sound events for the cast — [[t_ms, soundId], …] from the spell's
@@ -43,6 +51,12 @@ static func _ensure() -> void:
 static func sfx_events(id: int) -> Array:
 	_ensure()
 	return _sfx.get(id, [])
+
+
+## Timed .xps spawns from the cast script — [[t_ms, xpsId, "caster"|"target"]].
+static func fx_events(id: int) -> Array:
+	_ensure()
+	return _fx.get(id, [])
 
 
 static func for_breed(breed: int) -> Array:

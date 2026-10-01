@@ -29,11 +29,54 @@ import sys
 import zipfile
 
 PLAY = re.compile(r"Sound\.playSound\(\s*(\d+)")
+PART = re.compile(
+    r"Particle\.add(?:Tween)?ParticleSystem\(\s*(\d+)\s*,\s*(\w+)")
 # weighted variant: playLocalRandomSound(rollOff, stop, id1, w1, id2, w2, ...)
 RAND = re.compile(r"Sound\.playLocalRandomSound\(([^)]*)\)")
 INVOKE = re.compile(r'invoke\(\s*(\d+)\s*,\s*\d+\s*,\s*"(\w+)"')
 FUNC = re.compile(r"^function\s+(\w+)\s*\(")
 END = re.compile(r"^end\b")
+
+
+def script_fx(src: str) -> list:
+    """[[t_ms, xpsId, anchor], ...] — anchor is caster|target|cell."""
+    lines = src.split("\n")
+    funcs = {}
+    top = []
+    cur = None
+    for ln in lines:
+        m = FUNC.match(ln)
+        if m:
+            cur = m.group(1)
+            funcs.setdefault(cur, [])
+            continue
+        if cur is not None and END.match(ln):
+            cur = None
+            continue
+        (funcs[cur] if cur is not None else top).append(ln)
+
+    out = []
+    seen = set()
+
+    def anchor(var: str) -> str:
+        if var.startswith("dest"):
+            return "target"
+        if var.startswith("start"):
+            return "caster"
+        return "caster"
+
+    def scan(body, base_t):
+        for ln in body:
+            for m in PART.finditer(ln):
+                out.append((base_t, int(m.group(1)), anchor(m.group(2))))
+            for m in INVOKE.finditer(ln):
+                t, fn = int(m.group(1)), m.group(2)
+                if fn in funcs and fn not in seen:
+                    seen.add(fn)
+                    scan(funcs[fn], base_t + t)
+
+    scan(top, 0)
+    return out
 
 
 def script_sounds(src: str) -> list:
@@ -106,6 +149,7 @@ def anm_script_sounds(src: str):
 def main() -> None:
     spells_path, data_jar, sounds_jar, out_json, out_sounds = sys.argv[1:6]
     anm_json = sys.argv[6] if len(sys.argv) > 6 else None
+    fx_json = sys.argv[7] if len(sys.argv) > 7 else None
     spells = json.load(open(spells_path))
 
     # spell -> scriptId (dedup across breeds)
@@ -116,6 +160,7 @@ def main() -> None:
                 script_of[s["id"]] = s["script"]
 
     result = {}
+    fx_result = {}
     wanted = set()
     anm_result = {}
     barks = 0
@@ -129,6 +174,11 @@ def main() -> None:
             if hits:
                 result[str(sid)] = [[t, i] for t, i in sorted(set(hits))]
                 wanted.update(i for _, i in hits)
+            if fx_json:
+                fx = script_fx(src)
+                if fx:
+                    fx_result[str(sid)] = [
+                        [t, i, a] for t, i, a in sorted(set(fx))]
         if anm_json:
             for nm in z.namelist():
                 m = re.match(r"scripts/anm/(\d+)\.lua$", nm)
@@ -160,6 +210,9 @@ def main() -> None:
         json.dump(anm_result, open(anm_json, "w"), separators=(",", ":"))
         print(f"anm script sfx: {len(anm_result)} scripts, {barks} skipped "
               f"(bark/none) -> {anm_json}")
+    if fx_json:
+        json.dump(fx_result, open(fx_json, "w"), separators=(",", ":"))
+        print(f"spell fx: {len(fx_result)} spells -> {fx_json}")
 
 
 if __name__ == "__main__":

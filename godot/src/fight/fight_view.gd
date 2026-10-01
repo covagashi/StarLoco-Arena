@@ -9,6 +9,7 @@ extends Node2D
 const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
+const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
@@ -403,6 +404,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			if not miss:
 				_play_cast(caster, sid)
 				_cast_sfx(caster, sid)
+				_cast_fx(caster, sid, aimed)
 		OP_CLOSE_COMBAT:
 			# [i32 uid][i32 -1][i64 attacker][i8 miss](+[i8 crit][i32 x][i32 y][i16 z])
 			payload.get_i32()
@@ -1961,6 +1963,27 @@ func _zoom_punch(fid: int, cell: Vector2i) -> void:
 ## The cast script's Sound.playSound ids with their invoke() delays
 ## (spell_sfx.json): t=0 fires with the gesture, later ones land with the
 ## scripted impact. Played on the caster's sprite pool.
+func _cast_fx(fid: int, sid: int, aimed: Vector2i) -> void:
+	for ev in Spells.fx_events(sid):
+		var t := float(ev[0]) / 1000.0
+		var xps := int(ev[1])
+		var anchor: String = str(ev[2])
+		var cb := _spawn_xps.bind(fid, xps, anchor, aimed)
+		if t <= 0.0:
+			cb.call()
+		else:
+			get_tree().create_timer(t).timeout.connect(cb)
+
+
+func _spawn_xps(fid: int, xps_id: int, anchor: String, aimed: Vector2i) -> void:
+	var cell: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
+	if anchor == "target" and aimed.x > -9000:
+		var c: Dictionary = _cells.get(Vector2i(aimed.x, aimed.y), {})
+		cell = Vector3i(aimed.x, aimed.y, int(c.get("alt", 0)))
+	var at := _iso(cell.x + 0.5, cell.y + 0.5, cell.z)
+	XpsFx.spawn(self, xps_id, at)
+
+
 func _cast_sfx(fid: int, sid: int) -> void:
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr == null:

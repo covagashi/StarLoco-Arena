@@ -11,6 +11,23 @@ decompiled client, no runtime).
 
 ---
 
+### B-167 · Godot: spell cast `.xps` particle FX missing
+
+- **Symptom (Godot):** spell casts showed gesture + script sfx but no
+  projectile/burst particles — retail runs `Particle.addParticleSystem`
+  from `data.jar` scripts (171/197 spell scripts reference an `.xps` id).
+- **Root cause:** the sfx.jar `.xps` binaries (365 systems, textures in
+  `particles/<id>.tga`) were never decoded or wired; the fight view had
+  no spawn hook on `8110`/`8108`.
+- **Fix:** `spell_sounds.py` → `spell_fx.json`; `xps_dump.py` → header
+  index + TGA→PNG; `xps_fx.gd` + `_cast_fx` in `fight_view.gd`. Full
+  `.xps` → JSON decode is **partial** (1/365 EOF-clean as of this fix —
+  2.70 files use leveled emitter flag bytes the wakfu reference mislabels
+  and allow tag-0 emitter placeholders + zero padding; see `xps_dump.py`).
+- **Verify:** `fight_smoke` + `carry_smoke` green (headless). Live cast
+  FX visible when `spell_fx.json`, `xps_index.json`, and the texture png
+  exist for the spell's xps id.
+
 ### B-166 · Godot: anm-frame `runScript` audio channel missing entirely
 
 - **Symptom (Godot):** fight gestures played silent — cast whooshes,
