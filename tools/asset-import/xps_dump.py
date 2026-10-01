@@ -20,6 +20,16 @@ import zipfile
 
 MAGIC = 0x5001
 LEVEL = 100  # lerp at max level (retail default for fight FX)
+_LEGACY_XPS = b"XPS"  # particles/81.xps — zlib payload, not 0x5001 wire (sole sfx.jar outlier)
+
+
+def _unwrap_xps(data: bytes) -> bytes | None:
+    """Return particle bytes for parse_xps, or None if legacy XPS wrapper."""
+    if len(data) >= 2 and data[0] == 0x01 and data[1] == 0x50:
+        return data
+    if data[:3] == _LEGACY_XPS:
+        return None
+    return data
 
 # gg_0 affector tag -> wakfu-style name (arena ids differ from wakfu 1.14 set)
 AFF_NAMES = {
@@ -119,8 +129,14 @@ class Reader:
 def _read_affector(r: Reader, t: float) -> dict:
     tag = r.u8()
     name = AFF_NAMES.get(tag, f"Unknown{tag}")
-    leveled = r.bool_bit()
-    out: dict = {"type": tag, "name": name, "leveled": leveled}
+    out: dict = {"type": tag, "name": name}
+    # lo_0.j (DirectionFollower) reads no bits after the tag byte.
+    if tag == 6:
+        leveled = False
+        out["leveled"] = leveled
+    else:
+        leveled = r.bool_bit()
+        out["leveled"] = leveled
 
     if tag == 1:  # ku_1 LinearForce
         out["forceX"] = r.leveled_f32(leveled, t)
@@ -160,7 +176,7 @@ def _read_affector(r: Reader, t: float) -> dict:
         out["value"] = r.leveled_f32(leveled, t)
         out["keyframed"] = True
     else:
-        raise ValueError(f"unknown affector type {tag}")
+        out["skipped"] = True
 
     ncond = r.u8()
     conds = []
@@ -182,7 +198,8 @@ def _read_affector(r: Reader, t: float) -> dict:
                 "threshold": r.leveled_i32(clev, t),
             })
         else:
-            raise ValueError(f"unknown condition type {ct}")
+            # auw_0.t: unknown condition tag — tag byte only (matches retail loader).
+            conds.append({"type": ct, "name": cn, "skipped": True})
     if conds:
         out["conditions"] = conds
     return out
@@ -213,6 +230,7 @@ def _read_anim_curve(r: Reader) -> dict | None:
     }
 
 
+# bk_0.i: f2..f23 (22 leveled floats) — 2.70 has no trailing rotationX/Y/Z.
 _BITMAP_FLOATS = [
     "hotX", "hotY", "scaleX", "scaleY", "scaleRandomX", "scaleRandomY",
     "rotation", "rotationRandom",
@@ -220,7 +238,6 @@ _BITMAP_FLOATS = [
     "redRandom", "greenRandom", "blueRandom", "alphaRandom",
     "textureTop", "textureLeft", "textureBottom", "textureRight",
     "halfWidth", "halfHeight",
-    "rotationX", "rotationY", "rotationZ",
 ]
 
 _SEQUENCE_FLOATS = [
@@ -232,8 +249,10 @@ _SEQUENCE_FLOATS = [
 ]
 
 
-def _read_particle_model(r: Reader, t: float) -> dict:
+def _read_particle_model(r: Reader, t: float) -> dict | None:
     tag = r.u8()
+    if tag not in (1, 2):
+        return None
     if tag == 1:  # ParticleBitmapModelAttributesRW / bk_0
         leveled = r.bool_bit()
         scale_random_keep_ratio = r.bool_bit()
@@ -258,14 +277,13 @@ def _read_particle_model(r: Reader, t: float) -> dict:
         m["anim"] = _read_anim_curve(r)
         m["speed"] = r.leveled_f32(leveled, t)
         m["loopCount"] = r.leveled_i32(leveled, t)
-        for k in ("rotationX", "rotationY", "rotationZ"):
-            m[k] = r.leveled_f32(leveled, t)
         return m
-    raise ValueError(f"unknown particle model tag {tag}")
+    raise ValueError(f"unreachable model tag")
 
 
-def _read_light(r: Reader, t: float) -> dict:
-    assert r.u8() == 2
+def _read_light(r: Reader, t: float) -> dict | None:
+    if r.u8() != 2:
+        return None
     leveled = r.bool_bit()
     return {
         "name": "LightDefinition",
@@ -279,15 +297,9 @@ def _read_light(r: Reader, t: float) -> dict:
 
 def _read_emitter(r: Reader, t: float) -> dict | None:
     tag = r.u8()
-    if tag == 0:
+    if tag != 1:
+        # cZ.a: unknown tags consume only the tag byte.
         return None
-    assert tag == 1
-    # Some emitters insert a spare 0x01 between the tag and the 0x80 flag
-    # byte that carries the leveled/geocentric bits.
-    if (r.pos + 1 < len(r.data) and r.data[r.pos] == 0x01
-            and r.data[r.pos + 1] == 0x80):
-        r.u8()
-    fb = r.pos
     leveled = r.bool_bit()
     geocentric = r.bool_bit()
     em = {
@@ -321,13 +333,17 @@ def _read_emitter(r: Reader, t: float) -> dict | None:
     }
     nm = r.u8()
     for _ in range(nm):
-        em["models"].append(_read_particle_model(r, t))
+        m = _read_particle_model(r, t)
+        if m is not None:
+            em["models"].append(m)
     aff, key = _read_affectors(r, t)
     em["affectors"] = aff
     em["keyframedAffectors"] = key
     nl = r.u8()
     for _ in range(nl):
         light = _read_light(r, t)
+        if light is None:
+            continue
         laff, lkey = _read_affectors(r, t)
         light["affectors"] = laff
         light["keyframedAffectors"] = lkey
@@ -338,78 +354,67 @@ def _read_emitter(r: Reader, t: float) -> dict | None:
     return em
 
 
-def parse_xps_header(data: bytes, level: int = LEVEL) -> dict:
-    """System block only — enough for texture + duration + blend."""
-    r = Reader(data)
-    if r.u16() != MAGIC:
-        raise ValueError("bad magic")
-    t = 0.0 if level <= 1 else min(level, 100) / 100.0
+def _read_system_block(r: Reader, t: float) -> dict:
+    """alo_2 system block; dst==0 non-geocentric omits the i64 texture field."""
     leveled = r.bool_bit()
     geocentric = r.bool_bit()
     behind_mobile = r.bool_bit()
+    src_blend = r.i32()
+    dst_blend = r.i32()
+    # When dst blend is 0 the on-disk header drops the i64 texture id (see 10000.xps).
+    compact = dst_blend == 0
+    if compact:
+        texture_id = 0
+        duration_ms = r.leveled_u16(leveled, t)
+        render_radius = r.u8()
+    else:
+        texture_id = r.i64()
+        duration_ms = r.leveled_u16(leveled, t)
+        render_radius = r.u8()
     return {
         "leveled": leveled,
         "geocentric": geocentric,
         "behindMobile": behind_mobile,
-        "srcBlend": r.i32(),
-        "dstBlend": r.i32(),
-        "textureId": r.i64(),
-        "durationMs": r.leveled_u16(leveled, t),
-        "renderRadius": r.u8(),
+        "srcBlend": src_blend,
+        "dstBlend": dst_blend,
+        "textureId": texture_id,
+        "durationMs": duration_ms,
+        "renderRadius": render_radius,
+        "compactHeader": compact,
     }
 
 
-def parse_xps(data: bytes, level: int = LEVEL) -> dict:
-    r = Reader(data)
+def parse_xps_header(data: bytes, level: int = LEVEL) -> dict:
+    """System block only — enough for texture + duration + blend."""
+    raw = _unwrap_xps(data)
+    if raw is None:
+        raise ValueError("legacy XPS wrapper")
+    r = Reader(raw)
     if r.u16() != MAGIC:
         raise ValueError("bad magic")
     t = 0.0 if level <= 1 else min(level, 100) / 100.0
-    leveled = r.bool_bit()
-    geocentric = r.bool_bit()
-    behind_mobile = r.bool_bit()
-    sysd = {
-        "leveled": leveled,
-        "geocentric": geocentric,
-        "behindMobile": behind_mobile,
-        "srcBlend": r.i32(),
-        "dstBlend": r.i32(),
-        "textureId": r.i64(),
-        "durationMs": r.leveled_u16(leveled, t),
-        "renderRadius": r.u8(),
-        "emitters": [],
-    }
+    blk = _read_system_block(r, t)
+    blk.pop("compactHeader", None)
+    return blk
+
+
+def parse_xps(data: bytes, level: int = LEVEL) -> dict:
+    raw = _unwrap_xps(data)
+    if raw is None:
+        raise ValueError("legacy XPS wrapper")
+    r = Reader(raw)
+    if r.u16() != MAGIC:
+        raise ValueError("bad magic")
+    t = 0.0 if level <= 1 else min(level, 100) / 100.0
+    sysd = _read_system_block(r, t)
+    sysd["emitters"] = []
     ne = r.u8()
     for _ in range(ne):
         em = _read_emitter(r, t)
         if em is not None:
             sysd["emitters"].append(em)
-    while r.pos < len(r.data):
-        while r.pos < len(r.data) and r.data[r.pos] == 0:
-            r.u8()
-        if r.pos >= len(r.data):
-            break
-        if not _emitter_starts(r):
-            break
-        em = _read_emitter(r, t)
-        if em is not None:
-            sysd["emitters"].append(em)
-    tail = r.data[r.pos:]
-    if tail and any(b != 0 for b in tail):
-        raise ValueError(f"trailing {len(tail)} non-zero bytes at {r.pos}")
-    r.pos = len(r.data)
+    # Retail loader stops after ne emitters; extra bytes are ignored (alo_2.close).
     return sysd
-
-
-def _emitter_starts(r: Reader) -> bool:
-    if r.pos >= len(r.data) or r.data[r.pos] != 1:
-        return False
-    n = r.pos + 1
-    if n >= len(r.data):
-        return True
-    b = r.data[n]
-    if b in (0x00, 0x80):
-        return True
-    return n + 1 < len(r.data) and b == 0x01 and r.data[n + 1] == 0x80
 
 
 # ---------------------------------------------------------------- TGA ----
@@ -506,11 +511,22 @@ def main() -> None:
                 print(f"HDR {xid}: {e}")
             try:
                 doc = parse_xps(data)
+            except ValueError as e:
+                if "legacy XPS" in str(e):
+                    print(f"SKIP {xid}: legacy XPS wrapper")
+                    continue
+                print(f"FAIL {xid}: {e}")
+                fail += 1
+                continue
             except Exception as e:
                 print(f"FAIL {xid}: {e}")
                 fail += 1
                 continue
-            textures.add(int(doc["textureId"]))
+            tid = int(doc["textureId"])
+            if tid == 0 and doc.get("compactHeader"):
+                tid = int(xid)
+                doc["textureId"] = tid
+            textures.add(tid)
             index[xid] = {**index.get(xid, {}), "full": True}
             with open(f"{out_json_dir}/{xid}.json", "w") as f:
                 json.dump(doc, f, separators=(",", ":"))

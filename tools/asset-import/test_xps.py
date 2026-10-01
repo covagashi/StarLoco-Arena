@@ -16,11 +16,14 @@ def main() -> None:
     if not JAR.is_file():
         print("skip: no sfx.jar")
         return
-    ok = hdr = fail = 0
+    ok = hdr = fail = skip = 0
     with zipfile.ZipFile(JAR) as z:
         names = [n for n in z.namelist() if n.endswith(".xps")]
         for nm in names:
             data = z.read(nm)
+            if data[:3] == b"XPS":
+                skip += 1
+                continue
             try:
                 parse_xps_header(data)
                 hdr += 1
@@ -31,8 +34,9 @@ def main() -> None:
                 ok += 1
             except Exception:
                 fail += 1
-    print(f"xps: {ok}/{len(names)} full, {hdr}/{len(names)} header, {fail} fail")
-    if ok != len(names):
+    wire = len(names) - skip
+    print(f"xps: {ok}/{wire} full, {hdr}/{wire} header, {skip} legacy, {fail} fail")
+    if ok != wire:
         sys.exit(1)
 
 
