@@ -887,6 +887,36 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_tourn_search_tid = -1
 			_log_line("tournament %d: fight starting!" % int(d.f0))
+		28620:  # TournamentFinale (Yq) — [u8 status]1=add/2=remove; on add:
+			# [i64 tid][i32 n][i64 coaches][i32 m][str32 names][str32 tname]
+			# (both arrays written reversed — the retail reader Yq.a fills
+			# them backwards, names[0] VS names[1] renders correct anyway).
+			var st := payload.get_u8()
+			var tid := int(payload.get_i64())
+			if st == 1:
+				var cn := payload.get_i32()
+				for i in cn:
+					payload.get_i64()
+				var nn := payload.get_i32()
+				var names := []
+				for i in nn:
+					# the wire order is reversed — prepend to land at the
+					# same indices Yq.a fills (names[0] VS names[1])
+					names.insert(0, payload.get_str("u32", "utf8"))
+				var tname := payload.get_str("u32", "utf8")
+				_toast("Finale du tournoi %s — %s VS %s" % [
+					tname, names[0] if names.size() > 0 else "?",
+					names[1] if names.size() > 1 else "?"])
+			else:
+				pass  # remove — the toast already aged out
+		28644:  # TournamentSearchUpcoming [i64 tid][i64 startUnixMs] — zN
+			# alert-list row "search opens in N min" (1 + diff/60000).
+			var tid2 := int(payload.get_i64())
+			var start_ms := int(payload.get_i64())
+			var mins := 1 + int((start_ms -
+				int(Time.get_unix_time_from_system() * 1000)) / 60000)
+			_log_line("tournament %d: opponent search opens in %d min" % [
+				tid2, max(mins, 0)])
 		OP_GUILD_RESULT:
 			var d := Codec.decode(opcode, payload)
 			match int(d.code):

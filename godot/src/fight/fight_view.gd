@@ -272,13 +272,7 @@ const STEP_DIR := {
 	Vector2i(1, 0): 1, Vector2i(0, 1): 3,
 	Vector2i(-1, 0): 5, Vector2i(0, -1): 7}
 
-## qc_0 Direction8 grid deltas — E..NE around the iso compass. The script
-## verb setMobileLookAt(caster, x, y) snaps the caster's facing to the
-## nearest of these (agv_0.D): casters face their target cell.
-const DIR8_VEC := {
-	0: Vector2i(1, -1), 1: Vector2i(1, 0), 2: Vector2i(1, 1),
-	3: Vector2i(0, 1), 4: Vector2i(-1, 1), 5: Vector2i(-1, 0),
-	6: Vector2i(-1, -1), 7: Vector2i(0, -1)}
+
 
 ## Card-use script id -> armed-stance family suffix (scripts 800x in
 ## data.jar: AnimStatique03[-Debut]-<fam> while a weapon swings).
@@ -1907,22 +1901,28 @@ func _face_step(fid: int) -> void:
 		false, false, true)   # AnimMarche02 first where authored (qg_2)
 
 
-## setMobileLookAt(caster, x, y): snap the fighter's facing to the Direction8
-## nearest its target cell — every cast script leads with it (apb_1 →
-## agv_0.D). Pure visual; nothing goes back on the wire.
+## setMobileLookAt(caster, x, y): the retail cast script's first verb —
+## snaps the fighter's facing to the Direction8 of the aimed cell using the
+## screen-space vector, exactly like agv_0.D: f3 = -atan2(dy, dx) sector
+## thresholds → qc_0 ordinal. Pure visual; nothing goes back on the wire.
 func _face_toward(fid: int, cell: Vector2i) -> void:
 	var cur: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
-	var d := Vector2(cell.x - cur.x, cell.y - cur.y)
+	if cur == Vector3i.ZERO or (cell.x == cur.x and cell.y == cur.y):
+		return
+	var tc: Dictionary = _cells.get(Vector2i(cell.x, cell.y), {})
+	var d: Vector2 = _iso(cell.x + 0.5, cell.y + 0.5,
+		int(tc.get("alt", 0))) - _iso(cur.x + 0.5, cur.y + 0.5, cur.z)
 	if d == Vector2.ZERO:
 		return
-	var dn := d.normalized()
-	var best := -1
-	var best_dot := -2.0
-	for i in DIR8_VEC:
-		var dot := dn.dot(Vector2(DIR8_VEC[i]).normalized())
-		if dot > best_dot:
-			best_dot = dot
-			best = i
+	var ang := -atan2(d.y, d.x)   # agv_0.D sector snap (radians, qc_0 ords)
+	var best := 5                                        # NW (wrap default)
+	if ang <= 2.7489 and ang >= 1.9635: best = 6         # N
+	elif ang <= 1.9635 and ang >= 1.1781: best = 7       # NE
+	elif ang <= 1.1781 and ang >= 0.3927: best = 0       # E
+	elif ang <= 0.3927 and ang >= -0.3927: best = 1      # SE
+	elif ang <= -0.3927 and ang >= -1.1781: best = 2     # S
+	elif ang <= -1.1781 and ang >= -1.9635: best = 3     # SW
+	elif ang <= -1.9635 and ang >= -2.7489: best = 4     # W
 	if best < 0 or best == _actor_dir.get(fid, -1):
 		return
 	_actor_dir[fid] = best
