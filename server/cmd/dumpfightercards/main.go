@@ -24,6 +24,9 @@ type rec struct {
 	LoS  bool `json:"los"`  // TestLoS — needs line of sight
 	Line bool `json:"line"` // OnlyLine — same row/col only
 	Free bool `json:"free"` // NeedFreeCell — empty target cell
+	// Script is the card-use Lua script id (uh_0.eA) — the Godot client maps
+	// the weapon scripts 800x to their AnimStatique03-<family> gestures.
+	Script int32 `json:"script,omitempty"`
 	// Effect zones for the Godot AoE preview — deduped [shape, size…]
 	// tuples from UseEffects (point/empty/all produce no tint).
 	Zones [][]int32 `json:"zn,omitempty"`
@@ -43,8 +46,8 @@ func main() {
 	for id, c := range fc.All() {
 		r := rec{
 			AP: c.APCost, Min: c.RangeMin, Max: c.RangeMax,
-			Usable: c.Usable(),
-			LoS:    c.TestLoS, Line: c.OnlyLine, Free: c.NeedFreeCell,
+			Usable: c.Usable(), Script: c.ScriptID,
+			LoS: c.TestLoS, Line: c.OnlyLine, Free: c.NeedFreeCell,
 		}
 		seen := map[string]bool{}
 		for _, ef := range c.UseEffects {

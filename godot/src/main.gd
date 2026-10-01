@@ -33,6 +33,7 @@ const OP_INVALID_VERSION := 8
 const OP_AUTH_RESULT := 1024
 const OP_COACH_CREATE_REQ := 2048
 const OP_COACH_CREATE := 2049
+const OP_COACH_CREATION_RESULT := 2050
 const OP_COACH_INFO := 2052
 const OP_ENTER_INSTANCE := 4600
 const OP_INSTANCE_READY := 4516
@@ -411,6 +412,13 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_log_line("[color=red]auth refused, code %d[/color]" % code)
 		OP_COACH_CREATE_REQ:
 			_send_coach_creation()
+		OP_COACH_CREATION_RESULT:
+			# 2050: [u8 result] — 0 = created; success is followed by
+			# COACH_INFO + ENTER_INSTANCE, failures only carry the code.
+			var res := payload.get_u8()
+			if res != 0:
+				_log_line("[color=red]coach create refused, code %d[/color]"
+					% res)
 		OP_COACH_INFO:
 			var d := Codec.decode(opcode, payload)
 			State.my_coach_id = int(d.get("id", -1))
@@ -1156,7 +1164,9 @@ func _spawn_world_actors(payload: WireReader) -> void:
 		body.get_u8()  # sex
 		body.get_u16() # look
 		body.get_i32() # standing
-		body.get_u8()  # sit
+		body.get_u8()  # sit — opcode 4601 would toggle it; the coach anm
+		               # (equipments/coachs/805) authors no AnimAssis, so
+		               # sitting has no retail-renderable pose — read, kept
 		body.get_u16() # guild blob len
 		body.get_u16() # descriptor blob len
 		body.get_u8()  # strength pairs

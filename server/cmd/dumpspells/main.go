@@ -35,10 +35,13 @@ func main() {
 		// Cast-frequency limits for the Godot spell-bar lock — the client
 		// tracks its own sH history: parent key, effective cooldown (63 =
 		// once per fight), per-turn and per-target caps (0 = unconstrained).
-		LimitKey int32 `json:"lk,omitempty"`
-		Cooldown uint8 `json:"cd,omitempty"`
-		PerTurn  uint8 `json:"mpt,omitempty"`
+		LimitKey  int32 `json:"lk,omitempty"`
+		Cooldown  uint8 `json:"cd,omitempty"`
+		PerTurn   uint8 `json:"mpt,omitempty"`
 		PerTarget uint8 `json:"mptt,omitempty"`
+		// Script is the cast Lua script id (field 5) — drives the client
+		// gesture/sfx layer (setMobileLookAt, Sound.playSound, projectiles).
+		Script int32 `json:"script,omitempty"`
 		// Effect zones for the Godot AoE preview — deduped [shape, size…]
 		// tuples from the spell's effects (point/empty/all produce no tint).
 		Zones [][]int32 `json:"zn,omitempty"`
@@ -49,7 +52,8 @@ func main() {
 			continue
 		}
 		r := rec{ID: s.ID, AP: s.AP, Min: s.RangeMin, Max: s.RangeMax,
-			Value: s.Value, LoS: s.TestLoS, Line: s.OnlyLine,
+			Value: s.Value, Script: s.ScriptID, LoS: s.TestLoS,
+			Line: s.OnlyLine,
 			Free: s.NeedFreeCell, NoBoost: s.RangeNotBoostable}
 		if s.EnforceTargetMasks {
 			r.Masks = s.TargetMasks

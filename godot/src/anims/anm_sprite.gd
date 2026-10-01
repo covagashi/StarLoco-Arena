@@ -166,6 +166,26 @@ func _draw_frame(ci: CanvasItem, at: Vector2) -> void:
 	ci.draw_texture(fr.tex, pos)
 
 
+## Play one sound id on this sprite's pool (script-driven spell sfx —
+## retail Sound.playSound in cast scripts). Silent no-op headless or when
+## the ogg is absent.
+func play_sound(sid: int) -> void:
+	if not is_inside_tree():
+		return
+	if _sfx_pool.is_empty():
+		for i in 8:
+			var p := AudioStreamPlayer.new()
+			add_child(p)
+			_sfx_pool.append(p)
+	var st := _snd_stream(sid)
+	if st == null:
+		return
+	var p: AudioStreamPlayer = _sfx_pool[_sfx_next]
+	_sfx_next = (_sfx_next + 1) % _sfx_pool.size()
+	p.stream = st
+	p.play()
+
+
 ## Play the Sons* triggers baked for this frame. Round-robin pool so
 ## overlapping casts/hits don't cut each other; headless just no-ops.
 func _play_sfx(frame_idx: int) -> void:

@@ -11,6 +11,19 @@ decompiled client, no runtime).
 
 ---
 
+### B-165 · Godot: opcode 2050 (coach-creation result) had no handler
+
+- **Symptom (Godot):** a refused coach creation (e.g. a taken name) was
+  silent — the server answers `2050` with the result code and only sends
+  `2052`/`4600` on success, so the client waited forever.
+- **Root cause:** the dispatch table covered `2048` (creation request)
+  and `2052` (coach info) but `2050` fell through unresolved; only the
+  generated opcode constant existed.
+- **Fix:** `main.gd` now handles `OP_COACH_CREATION_RESULT` — logs the
+  refusal code; success still flows through `2052` + `4600` unchanged.
+- **Verified:** audit (the handler is a one-byte read + log; the success
+  path is exercised by every smoke's login).
+
 ### B-164 · titularRoster caps by arena seats, not the six-fighter team rule
 
 - **Symptom (Godot smoke):** every `26330` défi launch answered `26310`

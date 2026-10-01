@@ -22,6 +22,12 @@ extract `DofusArena-v2.70.zip`'s `game/` folder there). Python 3, stdlib only.
 | `anm_dump.py <animations.jar>` | Parse & scan every `.anm` (573/573 pass) |
 | `anm_render.py <jar> <entry> [action] [frame]` | Render one frame to `/tmp/*.png` |
 | `anm_render.py <jar> <entry> --export <dir>` | Export all frames of every named action |
+| `anm_render.py <jar> <entry> --composite <actor.anm>` | Bake skeletal gesture tracks (`AnimSort_*`, `AnimCombat`, weapon banks `Anim*.anm`…) over a body set |
+| `spell_names.py` | Merge FR spell names into `spells.json` (`nfr` slug → `AnimSort-<name>` casts) |
+| `npc_dialogs.py` | Merge i18n 29/59/60/10/37/48/49 into `npcdialogs.json` |
+| `card_names.py` | Merge card names into `cards.json` |
+| `map_gfx.py` | Painted-map sprites/atlases → `godot/assets/mapgfx/` |
+| `spell_sounds.py <spells.json> <data.jar> <sounds.jar> <out.json> <snd_dir>` | Extract `Sound.playSound` ids + `invoke()` delays per spell script → `spell_sfx.json`; copies the referenced oggs |
 | `test_anm.py` | Parse sweep + render checks (skips if jar absent) |
 
 ## Export layout

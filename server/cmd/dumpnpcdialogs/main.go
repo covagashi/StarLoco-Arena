@@ -136,6 +136,9 @@ func main() {
 		for id, sm := range sums.All() {
 			summons[fmt.Sprint(id)] = map[string]any{
 				"hp": sm.HP, "ap": sm.AP, "mp": sm.MP, "look": sm.Look,
+				// field 17 (jz_2.oz) — a nonzero FreeParticleSystem id means
+				// the creature dissipates on death instead of a corpse.
+				"particle": sm.ParticleID,
 			}
 		}
 	}

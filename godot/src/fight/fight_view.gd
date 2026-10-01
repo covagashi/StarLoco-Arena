@@ -240,6 +240,9 @@ var _carried_by := {}    # carried fighter id -> carrier fighter id (58/59)
 var _buffs := {}         # fighter id -> [{label,left,inf,src}] effect chips
 var _areas := []         # placed traps/glyphs/auras {tpl,ctr,caster,aura,left,turns}
 var _cast_hist := {}     # fid -> {limitKey: {last,n,tgt}} — client sH history
+var _zoom_tween: Tween   # crit/fumble camera punch (re_0 afH||afI)
+var _zoom_from := Vector2.ZERO
+var _zoom_level := Vector2.ONE
 var _table_turn := 0     # last 8100 round counter (cooldowns compare it)
 
 var _spell_btns := {}    # spell id -> Button (for the cooldown lock refresh)
@@ -268,6 +271,21 @@ const TURN_CLOCK := 30.0
 const STEP_DIR := {
 	Vector2i(1, 0): 1, Vector2i(0, 1): 3,
 	Vector2i(-1, 0): 5, Vector2i(0, -1): 7}
+
+## qc_0 Direction8 grid deltas — E..NE around the iso compass. The script
+## verb setMobileLookAt(caster, x, y) snaps the caster's facing to the
+## nearest of these (agv_0.D): casters face their target cell.
+const DIR8_VEC := {
+	0: Vector2i(1, -1), 1: Vector2i(1, 0), 2: Vector2i(1, 1),
+	3: Vector2i(0, 1), 4: Vector2i(-1, 1), 5: Vector2i(-1, 0),
+	6: Vector2i(-1, -1), 7: Vector2i(0, -1)}
+
+## Card-use script id -> armed-stance family suffix (scripts 800x in
+## data.jar: AnimStatique03[-Debut]-<fam> while a weapon swings).
+## 219 = unarmed fists (AnimPoings / script 8000, also the 8111 punch).
+const WEAPON_FAMILY := {
+	8000: "219", 8001: "110", 8002: "112", 8003: "117",
+	8004: "108", 8006: "114", 8007: "111"}
 
 
 func _exit_tree() -> void:
@@ -382,14 +400,27 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# even a fumble counts against the frequency limits (the server
 			# storeCasts after the roll); a bare-cell cast has no target
 			_note_cast(caster, sid, aimed)
+			# scripts lead with setMobileLookAt(caster, dest) — the caster
+			# turns to the aimed cell before its gesture (apb_1/agv_0.D)
+			if aimed.x > -999:
+				_face_toward(caster, aimed)
+			if miss or crit:
+				_zoom_punch(caster, aimed)
 			if not miss:
 				_play_cast(caster, sid)
+				_cast_sfx(caster, sid)
 		OP_CLOSE_COMBAT:
+			# [i32 uid][i32 -1][i64 attacker][i8 miss](+[i8 crit][i32 x][i32 y][i16 z])
 			payload.get_i32()
 			payload.get_i32()
 			var atk := int(payload.get_i64())
 			var wmiss := int(payload.get_i8()) if payload.remaining() > 0 else 0
-			var wcrit := int(payload.get_i8()) if not wmiss and payload.remaining() > 0 else 0
+			var wcrit := 0
+			var waim := Vector2i(-9999, -9999)
+			if not wmiss and payload.remaining() >= 11:
+				wcrit = int(payload.get_i8())
+				waim = Vector2i(payload.get_i32(), payload.get_i32())
+				payload.get_i16()
 			_float_text(atk, "miss!" if wmiss else
 				"critical hit!" if wcrit else "hit!",
 				Color(1, 1, 0.4) if wmiss else
@@ -399,6 +430,14 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_fight_log("%s attacks %s in close combat." % [aname,
 				"(Critical Failure)" if wmiss else
 				"(critical hit)" if wcrit else ""])
+			if waim.x > -999:
+				_face_toward(atk, waim)
+			if wmiss or wcrit:
+				_zoom_punch(atk, waim)
+			if not wmiss:
+				# akg_2 hard-codes script 8000 (AnimPoings): the unarmed
+				# fist strike is AnimStatique03-219 in the fighter's set
+				_play_weapon(atk, "219")
 		OP_CARD_USE:
 			# [i32 uid][i32 -1][i64 user][i32 card][i8 miss](+crit+target)
 			payload.get_i32()
@@ -406,7 +445,14 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var user := int(payload.get_i64())
 			var cid := int(payload.get_i32())
 			var cmiss := int(payload.get_i8()) if payload.remaining() > 0 else 0
-			var ccrit := int(payload.get_i8()) if not cmiss and payload.remaining() > 0 else 0
+			# buildCardUse always appends crit + target (unlike spell cast's
+			# miss short-circuit) — read them whenever the bytes are there.
+			var ccrit := int(payload.get_i8()) if payload.remaining() > 0 else 0
+			var caim := Vector2i(-9999, -9999)
+			if payload.remaining() >= 10:
+				caim = Vector2i(payload.get_i32(), payload.get_i32())
+				if payload.remaining() >= 2:
+					payload.get_i16()
 			_float_text(user, "miss!" if cmiss else
 				("critical! " if ccrit else "") + FighterCards.label(cid),
 				Color(1, 1, 0.4) if cmiss else
@@ -416,8 +462,20 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_fight_log("%s uses %s%s." % [uname, FighterCards.label(cid),
 				"(Critical Failure)" if cmiss else
 				"(critical hit)" if ccrit else ""])
+			if caim.x > -999:
+				_face_toward(user, caim)
+			if cmiss or ccrit:
+				_zoom_punch(user, caim)
 			if not cmiss:
-				_play_combat(user, "AnimCarte")
+				# Weapon cards run scripts 800x — the armed gesture family
+				# AnimStatique03-<fam>; non-weapon cards keep the generic
+				# AnimCarte flourish.
+				var fam: String = WEAPON_FAMILY.get(
+					int(FighterCards.ability(cid).get("script", 0)), "")
+				if fam != "":
+					_play_weapon(user, fam)
+				else:
+					_play_combat(user, "AnimCarte")
 		OP_FIGHTER_MOVE:
 			# [i32 uid][i32 -1][i64 fighterId] + path — server prepends the
 			# origin cell (applyFighterMove), so path[0] is where the fighter
@@ -754,6 +812,8 @@ func _spawn_summon(d: Dictionary) -> void:
 		"coach": int(cf.get("coach", -1)), "team": int(cf.get("team", 0)),
 		"hp": int(meta.get("hp", 0)), "ap": int(meta.get("ap", 0)),
 		"mp": int(meta.get("mp", 0)), "spells": [],
+		# jz_2.oz — nonzero = dies as a particle burst, not a corpse
+		"particle": int(meta.get("particle", 0)),
 		# the double mirrors its caster's sprite; creatures render through
 		# their own `look` anm id (type-300): negative → Players fighter file,
 		# positive → NPCs set (they carry AnimHit/AnimMort too).
@@ -1019,6 +1079,16 @@ func _kill_actor(fid: int) -> void:
 		_gfx.unregister_dynamic(fid)
 		spr.external_draw = false
 		spr.queue_redraw()
+		# jz_2.oz — a summon with a particle id dies as a FreeParticleSystem
+		# burst (aiJ.kT), no grey corpse. We can't run .xps, so the corpse
+		# dissolves upward instead — same "it dissipates" read.
+		if int(State.fighters.get(fid, {}).get("particle", 0)) != 0:
+			var dt := create_tween()
+			dt.tween_interval(0.9)
+			dt.tween_property(spr, "modulate:a", 0.0, 0.7)
+			dt.parallel().tween_property(spr, "position:y",
+				spr.position.y - 40.0, 0.7)
+			dt.tween_callback(spr.hide)
 	var carrier := int(_carried_by.get(fid, -1))  # fid was the cargo — its
 	_drop_cargo(fid)                   # dying breaks both carry directions
 	for cid in _carried_by.keys():     # (breakCarryLinks) — the carried drops
@@ -1835,6 +1905,114 @@ func _face_step(fid: int) -> void:
 		return
 	_anim_probe(spr, set_dir, step_dir, "AnimMarche",
 		false, false, true)   # AnimMarche02 first where authored (qg_2)
+
+
+## setMobileLookAt(caster, x, y): snap the fighter's facing to the Direction8
+## nearest its target cell — every cast script leads with it (apb_1 →
+## agv_0.D). Pure visual; nothing goes back on the wire.
+func _face_toward(fid: int, cell: Vector2i) -> void:
+	var cur: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
+	var d := Vector2(cell.x - cur.x, cell.y - cur.y)
+	if d == Vector2.ZERO:
+		return
+	var dn := d.normalized()
+	var best := -1
+	var best_dot := -2.0
+	for i in DIR8_VEC:
+		var dot := dn.dot(Vector2(DIR8_VEC[i]).normalized())
+		if dot > best_dot:
+			best_dot = dot
+			best = i
+	if best < 0 or best == _actor_dir.get(fid, -1):
+		return
+	_actor_dir[fid] = best
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr == null:
+		return
+	_set_flip(spr, DIR_FLIP.get(best, false))
+	_load_fighter_anim(spr, fid, best)
+
+
+## re_0 crit/fumble camera work: the retail action zooms the fight camera to
+## the attacker↔target midpoint at 1.4× for the action's run, then restores
+## (afH || afI gate). Only cosmetic; the user pan/zoom stays as it was.
+func _zoom_punch(fid: int, cell: Vector2i) -> void:
+	if cam == null:
+		return
+	var at: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
+	var mid := _iso(at.x + 0.5, at.y + 0.5, at.z)
+	if cell.x > -999:
+		var c: Dictionary = _cells.get(Vector2i(cell.x, cell.y), {})
+		mid = (mid + _iso(cell.x + 0.5, cell.y + 0.5,
+			int(c.get("alt", 0)))) * 0.5
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	_zoom_from = cam.position
+	_zoom_level = cam.zoom
+	_zoom_tween = create_tween()
+	_zoom_tween.tween_property(cam, "position", mid, 0.15)
+	_zoom_tween.parallel().tween_property(cam, "zoom",
+		_zoom_level * 1.4, 0.15)
+	_zoom_tween.tween_interval(0.9)
+	_zoom_tween.tween_property(cam, "position", _zoom_from, 0.3)
+	_zoom_tween.parallel().tween_property(cam, "zoom", _zoom_level, 0.3)
+
+
+## The cast script's Sound.playSound ids with their invoke() delays
+## (spell_sfx.json): t=0 fires with the gesture, later ones land with the
+## scripted impact. Played on the caster's sprite pool.
+func _cast_sfx(fid: int, sid: int) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	if spr == null:
+		return
+	for ev in Spells.sfx_events(sid):
+		var t := float(ev[0]) / 1000.0
+		var snd := int(ev[1])
+		if t <= 0.0:
+			spr.play_sound(snd)
+		else:
+			get_tree().create_timer(t).timeout.connect(
+				spr.play_sound.bind(snd))
+
+
+## Weapon swing — card scripts 800x play AnimStatique03(-Debut)-<fam> on the
+## attacker (the armed stance strike). Debut where authored (swords draw
+## first), the plain gesture otherwise; fists (219) for the unarmed 8111.
+func _play_weapon(fid: int, fam: String) -> void:
+	var spr: AnmSprite = _sprites.get(fid)
+	var f: Dictionary = State.fighters.get(fid, {})
+	if spr == null or f.is_empty():
+		return
+	var set_dir := _anim_set(f)
+	# weapon banks author only sides 1/5 (same as AnimSort_*): map the
+	# facing to the nearest authored side — DIR_FLIP mirrors the rest.
+	var dir := 1 if int(DIR_MAP.get(int(_actor_dir.get(fid, 1)), 1)) <= 2 else 5
+	var debut := "AnimStatique03-Debut-%s" % fam
+	var base := "AnimStatique03-%s" % fam
+	if spr.play_once(set_dir, "%d_%s" % [dir, debut]):
+		var hold := _weapon_hold.bind(spr, fid, set_dir, dir, base)
+		if not spr.action_finished.is_connected(hold):
+			spr.action_finished.connect(hold, CONNECT_ONE_SHOT)
+		return
+	if spr.play_once(set_dir, "%d_%s" % [dir, base]):
+		var cb := _restore_idle.bind(spr, fid)
+		if not spr.action_finished.is_connected(cb):
+			spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
+		return
+	# no armed set for this fighter — generic strike fallback
+	_play_combat(fid, "AnimCarte")
+
+
+func _weapon_hold(spr: AnmSprite, fid: int, set_dir: String, dir: int,
+		base: String) -> void:
+	if not is_instance_valid(spr) or _dead.has(fid):
+		return
+	if spr.play_once(set_dir, "%d_%s" % [dir, base]):
+		var cb := _restore_idle.bind(spr, fid)
+		if not spr.action_finished.is_connected(cb):
+			spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
+		return
+	_restore_idle(spr, fid)
 
 
 ## Re-face one actor to a server direction (4522 or 4521-driven).

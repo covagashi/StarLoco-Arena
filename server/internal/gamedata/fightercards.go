@@ -47,6 +47,11 @@ type FighterCard struct {
 
 	// --- use-time (active) data: the weapon attack, played via 8107 ---
 
+	// ScriptID (uh_0 field 7, eA()) is the Lua script the client's card-use
+	// action runs (abk_1 bGs it). The shipped weapon scripts 8000-8007 play
+	// the per-family armed gesture AnimStatique03(-Debut)-<fam> — 219 fists,
+	// 110 sword, 112 dagger, 117 bow, 108 wand, 114 hammer, 111 shovel.
+	ScriptID int32
 	// APCost is the AP the attack costs (client jb_2.Vo()).
 	APCost int32
 	// RangeMin/RangeMax bound the aimable distance (Manhattan), client
@@ -131,7 +136,7 @@ func decodeFighterCard(data []byte) *FighterCard {
 	value := c.i32()    // 4  value
 	rangeMax := c.i32() // 5  uh_0.Az -> jb_2.Az = range MAX (see the struct doc)
 	rangeMin := c.i32() // 6  uh_0.AA -> jb_2.AA = range MIN
-	c.i32()             // 7  uh_0.eA
+	scriptID := c.i32() // 7  uh_0.eA — use-time Lua script id
 	c.i32()             // 8  icon sub-type (ve_0.Bo)
 	// The six flags, now identified against the client's own targeting validator
 	// (mv_1.a(gn_0, jb_2, ry), which rejects a use with a specific error per flag).
@@ -145,7 +150,7 @@ func decodeFighterCard(data []byte) *FighterCard {
 		return nil
 	}
 	card := &FighterCard{
-		ID: id, Type: typ, Value: value,
+		ID: id, Type: typ, Value: value, ScriptID: scriptID,
 		APCost: int32(ap), RangeMin: rangeMin, RangeMax: rangeMax,
 		OnlyLine: onlyLine, TestLoS: testLoS, NeedFreeCell: needFreeCell,
 		UsableWhenDead: whenDead, UsableWhenCarried: whenCarried,
