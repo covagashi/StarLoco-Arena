@@ -282,13 +282,14 @@ def _read_emitter(r: Reader, t: float) -> dict | None:
     if tag == 0:
         return None
     assert tag == 1
+    # Some emitters insert a spare 0x01 between the tag and the 0x80 flag
+    # byte that carries the leveled/geocentric bits.
+    if (r.pos + 1 < len(r.data) and r.data[r.pos] == 0x01
+            and r.data[r.pos + 1] == 0x80):
+        r.u8()
     fb = r.pos
     leveled = r.bool_bit()
     geocentric = r.bool_bit()
-    # Retail files sometimes store leveled=1 as a bare 0x01 flag byte (bit0
-    # set, MSB leveled/geo bits clear) — alo_2 still expects leveled data.
-    if r.data[fb] == 1 and not leveled:
-        leveled = True
     em = {
         "name": "EmitterDefinition",
         "geocentric": geocentric,
@@ -382,11 +383,33 @@ def parse_xps(data: bytes, level: int = LEVEL) -> dict:
         em = _read_emitter(r, t)
         if em is not None:
             sysd["emitters"].append(em)
+    while r.pos < len(r.data):
+        while r.pos < len(r.data) and r.data[r.pos] == 0:
+            r.u8()
+        if r.pos >= len(r.data):
+            break
+        if not _emitter_starts(r):
+            break
+        em = _read_emitter(r, t)
+        if em is not None:
+            sysd["emitters"].append(em)
     tail = r.data[r.pos:]
     if tail and any(b != 0 for b in tail):
         raise ValueError(f"trailing {len(tail)} non-zero bytes at {r.pos}")
     r.pos = len(r.data)
     return sysd
+
+
+def _emitter_starts(r: Reader) -> bool:
+    if r.pos >= len(r.data) or r.data[r.pos] != 1:
+        return False
+    n = r.pos + 1
+    if n >= len(r.data):
+        return True
+    b = r.data[n]
+    if b in (0x00, 0x80):
+        return True
+    return n + 1 < len(r.data) and b == 0x01 and r.data[n + 1] == 0x80
 
 
 # ---------------------------------------------------------------- TGA ----
