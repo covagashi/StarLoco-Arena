@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""spell_sounds.py — retail spell-cast SFX map for the Godot fight view.
+"""spell_sounds.py — retail SFX maps for the Godot fight view.
 
 The retail client runs a Lua script per spell cast (data.jar scripts/<id>.lua).
 Those scripts fire `Sound.playSound(<id>, stopOnChange)` at script scope
@@ -7,12 +7,20 @@ Those scripts fire `Sound.playSound(<id>, stopOnChange)` at script scope
 This extracts, per spell, the timed sound ids — [[t_ms, soundId], ...] —
 and copies the referenced oggs out of sounds.jar.
 
+It also handles the anm-frame channel: `pb_1` runScript parts on .anm frames
+execute `scripts/anm/<id>.lua`, which are boilerplate locals feeding
+`playLocalSound(preset, stop, soundFileId, gain)` / `playLocalRandomSound`
+/ `playBark`. Those map into `anm_scripts.json`:
+  {scriptId: {"s": [[soundId, gain], ...], "stop": bool}} — multi-entry "s"
+  is a uniform-random set (playLocalRandomSound); Godot picks one per play.
+
 Usage:
   go run ./server/cmd/dumpspells server/data-dist /tmp/spells_raw.json
   python3 tools/asset-import/spell_sounds.py /tmp/spells_raw.json \
       client/compiled/game/contents/data.jar \
       client/compiled/game/contents/sounds.jar \
-      godot/assets/gamedata/spell_sfx.json godot/assets/sounds
+      godot/assets/gamedata/spell_sfx.json godot/assets/sounds \
+      godot/assets/gamedata/anm_scripts.json
 """
 
 import json
@@ -68,8 +76,36 @@ def script_sounds(src: str) -> list:
     return out
 
 
+def anm_script_sounds(src: str):
+    """Parse one scripts/anm/<id>.lua boilerplate.
+
+    -> {"s": [[soundId, gain], ...], "stop": bool} or None.
+    playLocalSound feeds soundFileId/gain/stopOnAnimationChange locals;
+    playLocalRandomSound takes literal (id, gain) pairs picked UNIFORMLY
+    (agO.java: ej_0.n — the second number is gain, not a weight).
+    playBark/playGroundSound resolve through tables we don't ship -> None.
+    """
+    stop = re.search(r"stopOnAnimationChange\s*=\s*(\w+)", src)
+    stop = stop.group(1) == "true" if stop else False
+    sid = re.search(r"soundFileId\s*=\s*(\d+)", src)
+    if sid:
+        g = re.search(r"gain\s*=\s*([\d.]+)", src)
+        return {"s": [[int(sid.group(1)),
+                       float(g.group(1)) if g else 100.0]],
+                "stop": stop}
+    m = RAND.search(src)
+    if m:
+        nums = [int(x) for x in re.findall(r"\d+", m.group(1))]
+        # var-name args carry no digits, so nums is exactly id,gain,id,gain…
+        return {"s": [[nums[i], float(nums[i + 1])]
+                      for i in range(0, len(nums) - 1, 2)],
+                "stop": stop}
+    return None  # playBark (npc voice table we don't ship) / silence
+
+
 def main() -> None:
     spells_path, data_jar, sounds_jar, out_json, out_sounds = sys.argv[1:6]
+    anm_json = sys.argv[6] if len(sys.argv) > 6 else None
     spells = json.load(open(spells_path))
 
     # spell -> scriptId (dedup across breeds)
@@ -81,6 +117,8 @@ def main() -> None:
 
     result = {}
     wanted = set()
+    anm_result = {}
+    barks = 0
     with zipfile.ZipFile(data_jar) as z:
         for sid, script in sorted(script_of.items()):
             try:
@@ -91,6 +129,18 @@ def main() -> None:
             if hits:
                 result[str(sid)] = [[t, i] for t, i in sorted(set(hits))]
                 wanted.update(i for _, i in hits)
+        if anm_json:
+            for nm in z.namelist():
+                m = re.match(r"scripts/anm/(\d+)\.lua$", nm)
+                if not m:
+                    continue
+                parsed = anm_script_sounds(
+                    z.read(nm).decode("latin-1"))
+                if parsed is None:
+                    barks += 1
+                    continue
+                anm_result[m.group(1)] = parsed
+                wanted.update(p[0] for p in parsed["s"])
 
     copied = 0
     with zipfile.ZipFile(sounds_jar) as z:
@@ -106,6 +156,10 @@ def main() -> None:
     json.dump(result, open(out_json, "w"), separators=(",", ":"))
     print(f"spell sfx: {len(result)} spells, {len(wanted)} ids, "
           f"{copied} oggs -> {out_sounds}")
+    if anm_json:
+        json.dump(anm_result, open(anm_json, "w"), separators=(",", ":"))
+        print(f"anm script sfx: {len(anm_result)} scripts, {barks} skipped "
+              f"(bark/none) -> {anm_json}")
 
 
 if __name__ == "__main__":

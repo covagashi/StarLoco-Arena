@@ -142,6 +142,7 @@ class FrameRenderer:
         self.by_crc = {a["crc"]: a for a in anm["actions"]}
         self.quads = []
         self.son_hits = {}           # Sons<sid> name -> earliest logical frame
+        self.scr_hits = {}           # runScript id -> earliest logical frame
 
     def draw_action(self, action, n2, pq, depth=0):
         if depth > 8 or action is None:
@@ -163,6 +164,13 @@ class FrameRenderer:
             acc += 1 + f["repeat"]
         if phys is None:
             return
+        # runScript frame parts (pb_1): the retail client runs
+        # scripts/anm/<id>.lua when the frame is entered — record the script
+        # id at this logical index, first appearance only (same rule as
+        # Sons*: a held part must not retrigger every frame).
+        for p in phys["parts"]:
+            if p.get("type") == 3 and p.get("script"):
+                self.scr_hits.setdefault(p["script"], idx)
         for t in phys["transforms"]:
             pq2 = apply_xf(t, pq)
             if pq2[11] <= 0.004:
@@ -309,6 +317,7 @@ class CompositeRenderer:
             self.hosts.append(FrameRenderer(anm, tex))
         self.son_hits = {}           # Sons<sid> -> earliest logical frame,
                                      # resolved across every host anm
+        self.scr_hits = {}           # runScript id -> earliest logical frame
 
     def clear(self):
         for fr in self.hosts:
@@ -334,6 +343,12 @@ class CompositeRenderer:
             acc += 1 + f["repeat"]
         if phys is None:
             return
+        # runScript frame parts (pb_1) on the visited action's own frames —
+        # sub-actions reached via labels run their parts too when their
+        # logical frame is entered.
+        for p in phys["parts"]:
+            if p.get("type") == 3 and p.get("script"):
+                self.scr_hits.setdefault(p["script"], idx)
         for t in phys["transforms"]:
             pq2 = apply_xf(t, pq)
             if pq2[11] <= 0.004:
@@ -410,6 +425,26 @@ def meta_sfx(son_hits, frames):
     return sfx
 
 
+def meta_scr(scr_hits, frames):
+    """scr_hits {scriptId_str: firstFrame} -> meta map {frameIdx: [id,...]}.
+
+    Same first-appearance/logical→written remap as meta_sfx: retail fires
+    the frame's pb_1 hook once when the frame is entered; the hook runs
+    scripts/anm/<id>.lua which is where playLocalSound/playBark live.
+    """
+    l2w = {}
+    for k, fr in enumerate(frames):
+        try:
+            l2w[int(fr["png"][1:-4])] = k
+        except (KeyError, ValueError):
+            continue
+    scr = {}
+    for sid, i in sorted(scr_hits.items(), key=lambda kv: kv[1]):
+        if sid.isdigit() and i in l2w:
+            scr.setdefault(str(l2w[i]), []).append(int(sid))
+    return scr
+
+
 def export_action(z, entry, action, out_dir):
     """Render every logical frame of one action to PNG + write meta.json.
 
@@ -441,6 +476,8 @@ def export_action(z, entry, action, out_dir):
                                "ox": off[0], "oy": off[1]})
     if fr.son_hits:
         meta["sfx"] = meta_sfx(fr.son_hits, meta["frames"])
+    if fr.scr_hits:
+        meta["scr"] = meta_scr(fr.scr_hits, meta["frames"])
     with open(os.path.join(dst, "meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     return len(meta["frames"])
@@ -456,6 +493,7 @@ def export_action_composite(cr, anm, entry, action, out_dir):
     meta = {"anm": entry, "action": name, "fps": anm["header"]["fps"],
             "frames": []}
     cr.son_hits = {}
+    cr.scr_hits = {}
     for i in range(action["logical_frames"]):
         cr.clear()
         cr.draw_action(action, i, PQ_IDENTITY)
@@ -469,6 +507,8 @@ def export_action_composite(cr, anm, entry, action, out_dir):
                                "ox": off[0], "oy": off[1]})
     if cr.son_hits:
         meta["sfx"] = meta_sfx(cr.son_hits, meta["frames"])
+    if cr.scr_hits:
+        meta["scr"] = meta_scr(cr.scr_hits, meta["frames"])
     with open(os.path.join(dst, "meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     return len(meta["frames"])

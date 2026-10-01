@@ -30,13 +30,21 @@ var external_draw := false
 ## meta.json "sfx" — {frame index: [sound ids]} baked from Sons* parts.
 ## Played through a small round-robin pool; streams are cached by path.
 var _sfx: Dictionary = {}
+## meta.json "scr" — {frame index: [script ids]} baked from runScript parts
+## (pb_1). Each id resolves through anm_scripts.json to {s:[[id,gain],…],
+## stop} — playLocalSound / uniform-random playLocalRandomSound.
+var _scr: Dictionary = {}
+## Players flagged stopOnAnimationChange — killed when the action swaps.
+var _scr_stop: Array = []
 var _sfx_pool: Array = []
 var _sfx_next := 0
 
 ## Decoded actions are shared read-only across sprites — direction flips
 ## during a walk reload the same action set many times per second.
-static var _cache := {}   # "set/action" -> {fps, frames, sfx}
+static var _cache := {}   # "set/action" -> {fps, frames, sfx, scr}
 static var _snd_cache := {}   # ogg path -> AudioStreamOggVorbis | false
+## scripts/anm/<id>.lua resolutions (sound pairs + stop flag), lazy-loaded.
+static var _anm_scripts = null
 
 
 func load_action(set_dir: String, action: String) -> bool:
@@ -46,6 +54,8 @@ func load_action(set_dir: String, action: String) -> bool:
 		_fps = c.fps
 		_frames = c.frames
 		_sfx = c.get("sfx", {})
+		_scr = c.get("scr", {})
+		_stop_scr_sounds()
 		_cur = 0
 		_time = 0.0
 		once = false
@@ -60,6 +70,8 @@ func load_action(set_dir: String, action: String) -> bool:
 		return false   # keep the previous animation rather than going blank
 	_frames = []
 	_sfx = {}
+	_scr = {}
+	_stop_scr_sounds()
 	_cur = 0
 	_time = 0.0
 	var meta: Dictionary = JSON.parse_string(
@@ -92,7 +104,10 @@ func load_action(set_dir: String, action: String) -> bool:
 	_sfx = {}
 	for k in meta.get("sfx", {}):
 		_sfx[int(k)] = meta["sfx"][k]
-	_cache[key] = {"fps": _fps, "frames": _frames, "sfx": _sfx}
+	_scr = {}
+	for k in meta.get("scr", {}):
+		_scr[int(k)] = meta["scr"][k]
+	_cache[key] = {"fps": _fps, "frames": _frames, "sfx": _sfx, "scr": _scr}
 	once = false
 	hold_last = false
 	current = key
@@ -172,39 +187,74 @@ func _draw_frame(ci: CanvasItem, at: Vector2) -> void:
 func play_sound(sid: int) -> void:
 	if not is_inside_tree():
 		return
-	if _sfx_pool.is_empty():
-		for i in 8:
-			var p := AudioStreamPlayer.new()
-			add_child(p)
-			_sfx_pool.append(p)
 	var st := _snd_stream(sid)
 	if st == null:
 		return
-	var p: AudioStreamPlayer = _sfx_pool[_sfx_next]
-	_sfx_next = (_sfx_next + 1) % _sfx_pool.size()
+	var p := _sfx_player()
 	p.stream = st
 	p.play()
 
 
-## Play the Sons* triggers baked for this frame. Round-robin pool so
-## overlapping casts/hits don't cut each other; headless just no-ops.
-func _play_sfx(frame_idx: int) -> void:
-	var ids: Array = _sfx.get(frame_idx, [])
-	if ids.is_empty() or not is_inside_tree():
-		return
+func _sfx_player() -> AudioStreamPlayer:
 	if _sfx_pool.is_empty():
 		for i in 8:
 			var p := AudioStreamPlayer.new()
 			add_child(p)
 			_sfx_pool.append(p)
+	var p: AudioStreamPlayer = _sfx_pool[_sfx_next]
+	_sfx_next = (_sfx_next + 1) % _sfx_pool.size()
+	p.volume_db = 0.0    # pooled slot — reset any prior script gain
+	return p
+
+
+## Play the Sons* + runScript triggers baked for this frame. Round-robin
+## pool so overlapping casts/hits don't cut each other; headless just no-ops.
+func _play_sfx(frame_idx: int) -> void:
+	var ids: Array = _sfx.get(frame_idx, [])
+	var scrs: Array = _scr.get(frame_idx, [])
+	if (ids.is_empty() and scrs.is_empty()) or not is_inside_tree():
+		return
 	for sid in ids:
 		var st := _snd_stream(int(sid))
 		if st == null:
 			continue
-		var p: AudioStreamPlayer = _sfx_pool[_sfx_next]
-		_sfx_next = (_sfx_next + 1) % _sfx_pool.size()
+		var p := _sfx_player()
 		p.stream = st
 		p.play()
+	var table := _anm_script_table()
+	for scr in scrs:
+		var e = table.get(str(int(scr)))
+		if e == null or e.get("s", []).is_empty():
+			continue
+		var pair: Array = e["s"][randi() % e["s"].size()]
+		var st := _snd_stream(int(pair[0]))
+		if st == null:
+			continue
+		var p := _sfx_player()
+		p.stream = st
+		p.volume_db = linear_to_db(clampf(float(pair[1]), 0.0, 100.0) / 100.0)
+		p.play()
+		if e.get("stop", false):
+			_scr_stop.append(p)
+
+
+## stopOnAnimationChange — retail registers the stream handle and kills it
+## when the entity's animation swaps; mirror that on load_action.
+func _stop_scr_sounds() -> void:
+	for p in _scr_stop:
+		p.stop()
+	_scr_stop.clear()
+
+
+static func _anm_script_table() -> Dictionary:
+	if _anm_scripts == null:
+		_anm_scripts = {}
+		var p := "res://assets/gamedata/anm_scripts.json"
+		if FileAccess.file_exists(p):
+			var parsed = JSON.parse_string(FileAccess.get_file_as_string(p))
+			if parsed is Dictionary:
+				_anm_scripts = parsed
+	return _anm_scripts
 
 
 static func _snd_stream(sid: int) -> AudioStream:

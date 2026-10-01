@@ -11,6 +11,40 @@ decompiled client, no runtime).
 
 ---
 
+### B-166 · Godot: anm-frame `runScript` audio channel missing entirely
+
+- **Symptom (Godot):** fight gestures played silent — cast whooshes,
+  tackle/hit/KO grunts, weapon-draw sweeps, emote stingers — even though
+  the oggs existed in `sounds.jar`.
+- **Root cause:** `spell_sounds.py` only covered the *spell-script* API
+  `Sound.playSound`. The louder retail channel is separate: 83 `.anm`
+  files carry `pb_1` **runScript** frame parts (1,657 parts) that run
+  `scripts/anm/<id>.lua` on frame enter — 388 `Sound.playLocalSound`,
+  21 `playLocalRandomSound`, 18 `playBark`, 4 `playGroundSound` calls.
+  `anm_render.py` parsed the parts but never recorded them, so no
+  metadata reached the client.
+- **Fix:** `anm_render.py` now collects `scr_hits` (script id → first
+  logical frame, same rule as `Sons*`) in both the flat and composite
+  renderers and emits `meta.scr` `{frameIdx: [scriptIds]}`;
+  `spell_sounds.py` gained a `scripts/anm/*.lua` pass emitting
+  `anm_scripts.json` `{scriptId: {s: [[soundId, gain]…], stop}}` —
+  `playLocalRandomSound`'s arg list is literal `(id, gain)` pairs picked
+  **uniformly** (`agO.c` uses `ej_0.n`, the second number is gain not a
+  weight). `AnmSprite` resolves the table lazily, plays picks through
+  the same pool with `volume_db = linear_to_db(gain/100)`, and kills
+  `stopOnAnimationChange` streams on the next `load_action` (retail
+  registers the stream handle and stops it on anim swap). Skipped and
+  documented: `playBark` (npc voice table, 18 scripts — no matching
+  oggs shipped), `playGroundSound` (ground-material footsteps, 4
+  scripts), `playCount` (never used — all calls 4-arg), and
+  `rollOffPreset` (positional attenuation — the pool is non-positional).
+  `anm_scr_patch.py` backfills `meta.scr` into existing exports without
+  re-rendering: 3,144 metas patched.
+- **Verified:** `audit` — patched metas carry retail script ids (e.g.
+  `1_AnimTacle` frame 0 → 1990000005/1990000006 → whoosh 1100000001-3
+  @35 + hit 1100000004 @60); `fight_smoke` green; headless AnmSprite
+  check resolves the table and no-ops cleanly on bark ids.
+
 ### B-165 · Godot: opcode 2050 (coach-creation result) had no handler
 
 - **Symptom (Godot):** a refused coach creation (e.g. a taken name) was

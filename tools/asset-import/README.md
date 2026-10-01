@@ -27,14 +27,17 @@ extract `DofusArena-v2.70.zip`'s `game/` folder there). Python 3, stdlib only.
 | `npc_dialogs.py` | Merge i18n 29/59/60/10/37/48/49 into `npcdialogs.json` |
 | `card_names.py` | Merge card names into `cards.json` |
 | `map_gfx.py` | Painted-map sprites/atlases → `godot/assets/mapgfx/` |
-| `spell_sounds.py <spells.json> <data.jar> <sounds.jar> <out.json> <snd_dir>` | Extract `Sound.playSound` ids + `invoke()` delays per spell script → `spell_sfx.json`; copies the referenced oggs |
+| `spell_sounds.py <spells.json> <data.jar> <sounds.jar> <out.json> <snd_dir> [anm_out.json]` | Extract `Sound.playSound` ids + `invoke()` delays per spell script → `spell_sfx.json`; with a 6th arg also scans `scripts/anm/*.lua` (`playLocalSound`/`playLocalRandomSound` boilerplate → `{id: {s:[[soundId,gain]…], stop}}` → `anm_scripts.json`); copies every referenced ogg |
+| `anm_scr_patch.py <animations.jar> <anims_root> [set…]` | Backfill `meta.scr` into already-exported `meta.json`s — replays each action's frame walk to collect `pb_1` runScript parts without re-rendering frames |
 | `test_anm.py` | Parse sweep + render checks (skips if jar absent) |
 
 ## Export layout
 
 ```
 <out>/<action_name>/f000.png …      per-frame sprites (tight bounds)
-<out>/<action_name>/meta.json       {anm, action, fps, frames:[{png,w,h,ox,oy}]}
+<out>/<action_name>/meta.json       {anm, action, fps, frames:[{png,w,h,ox,oy}],
+                                     sfx?: {frameIdx: [Sons<id> soundIds]},
+                                     scr?: {frameIdx: [runScript ids]}}
 ```
 
 `ox`/`oy` is the frame's top-left offset in scene space — keep it as the
@@ -55,8 +58,10 @@ python3 tools/asset-import/anm_render.py \
 - Renderer: affine quads + color mul/add chains reproduce `gw_2` output;
   NPC 2001 (treant) `1_AnimHit` renders a correct 24-frame sequence,
   coach `805.anm` renders a correct dark-bird sprite.
-- Known gaps: frame-part effects (particles, sound triggers, script hooks)
-  are parsed but not rendered; external `.anmx` composition tables unused.
+- Known gaps: frame-part effects (particles) are parsed but not rendered;
+  sound triggers (`Sons*` → `meta.sfx`) and script hooks (`pb_1` runScript →
+  `meta.scr` → `anm_scripts.json`) ARE exported; external `.anmx`
+  composition tables unused.
 
 ## References
 
