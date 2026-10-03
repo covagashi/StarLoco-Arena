@@ -1,9 +1,10 @@
 extends Node2D
 
 ## Retail spell .xps burst — CPUParticles2D billboard approximating the first
-## emitter of sfx.jar particle systems. Full affector/keyframe behaviours from
-## the binary (Deformer curves, DirectionFollower, …) are intentionally omitted;
-## see tools/asset-import/xps_dump.py for the complete decode matrix.
+## emitter of sfx.jar particle systems. Ports the three hot affectors from the
+## ua_0 update math (ColorFader → lifetime ramp, LinearForceEx → accel,
+## FrictionalForce → damping); curves/sub-emitters/DirectionFollower/Rebound
+## remain omitted — see tools/asset-import/xps_dump.py for the decode matrix.
 ##
 ## Also covers the script Particle.addTweenParticleSystem projectile: a burst
 ## riding the retail avw_0 ballistic arc (v0 = sqrt(g*dist/sin 2a), flight
@@ -125,7 +126,6 @@ static func _build(xps_id: int, flying := false) -> Node2D:
 	p.speed_scale = 1.0
 	p.direction = dir
 	p.spread = 45.0
-	p.gravity = Vector2(0, 120)
 	var v0 := maxf(vlen, 40.0)
 	var vr := float(em.get("velocityRandX", 0.0)) + float(em.get("velocityRandY", 0.0))
 	p.initial_velocity_min = maxf(10.0, v0 - vr * 0.5)
@@ -140,8 +140,8 @@ static func _build(xps_id: int, flying := false) -> Node2D:
 			float(m.get("green", 1.0)),
 			float(m.get("blue", 1.0)),
 			clampf(float(m.get("alpha", 0.85)), 0.05, 1.0))
-	p.color = col
 	p.texture = tex
+	_apply_affectors(p, em, col, life)
 	# GL_ONE / GL_SRC_ALPHA-style pairs → additive glow
 	if dst_blend == 771 or int(meta.get("srcBlend", 0)) == 1:
 		p.material = _additive_mat()
@@ -254,3 +254,85 @@ static func _additive_mat() -> CanvasItemMaterial:
 	var m := CanvasItemMaterial.new()
 	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	return m
+
+
+## Retail affector port (update math from the decompiled ua_0 subclasses):
+## - LinearForceEx (lv, tag 8): vel += F * 33 * dt — a constant accel in
+##   world cells/s² when `geocentric`, a flat drift otherwise; projected
+##   through the iso transform (x-y → screen x, x+y and -z → screen y).
+## - FrictionalForce (nt, tag 7): vel *= 1 - (33 - friction) * dt.
+## - ColorFader (oo_0, tag 4): c += (target - c) * speed * dt, gated by
+##   TimeCondition windows — simulated into a lifetime color ramp.
+## Rebound/DirectionFollower/keyframed affectors have no 2D analogue — skipped.
+static func _apply_affectors(p: CPUParticles2D, em: Dictionary,
+		base: Color, life: float) -> void:
+	var accel := Vector3.ZERO
+	var damp := 0.0
+	var faders: Array = []
+	for a in em.get("affectors", []):
+		if not (a is Dictionary):
+			continue
+		match int(a.get("type", 0)):
+			7:
+				var fr := float(a.get("friction", 0.0))
+				damp = 60.0 if fr < 1e-4 else maxf(damp, 33.0 - fr)
+			8:
+				accel += Vector3(float(a.get("x", 0.0)),
+					float(a.get("y", 0.0)), float(a.get("z", 0.0)))
+			4:
+				var w := Vector2(0.0, 1e9)
+				for c in a.get("conditions", []):
+					if int(c.get("type", 0)) == 1:
+						w = Vector2(float(c.get("minTime", 0.0)),
+							float(c.get("maxTime", 1e9)))
+				faders.append([Color(float(a.get("r", 0.0)),
+						float(a.get("g", 0.0)), float(a.get("b", 0.0)),
+						float(a.get("a", 0.0))),
+					float(a.get("speed", 1.0)), w])
+	var v33 := accel * 33.0                     # retail stores force/33
+	p.gravity = Vector2((v33.x - v33.y) * 43.0,
+		(v33.x + v33.y) * 21.5 - v33.z * 10.0)
+	if damp > 0.0:
+		p.damping_min = damp
+		p.damping_max = damp
+	var ramp := _fader_ramp(faders, base, life)
+	if ramp != null:
+		p.color = Color.WHITE
+		p.color_ramp = ramp
+
+
+## Simulate the ColorFader chain: boundaries at every window edge; within a
+## window the color chases the rate-weighted target exponentially. Emitted
+## as a Gradient over the particle lifetime.
+static func _fader_ramp(faders: Array, base: Color, life: float) -> Gradient:
+	if faders.is_empty():
+		return null
+	var cuts := {0.0: true, life: true}
+	for f in faders:
+		var w: Vector2 = f[2]
+		for t in [w.x, w.y]:
+			if t > 0.0 and t < life:
+				cuts[t] = true
+	var times: Array = cuts.keys()
+	times.sort()
+	var grad := Gradient.new()
+	grad.remove_point(1)
+	grad.set_color(0, base)
+	var col := base
+	for i in range(times.size() - 1):
+		var a: float = times[i]
+		var b: float = times[i + 1]
+		var mid := (a + b) * 0.5
+		var r := 0.0
+		var tgt := Color(0, 0, 0, 0)
+		for f in faders:
+			var w: Vector2 = f[2]
+			if mid >= w.x and mid <= w.y:
+				var s: float = f[1]
+				tgt += (f[0] as Color) * s
+				r += s
+		if r > 0.0:
+			tgt /= r
+			col = tgt + (col - tgt) * exp(-r * (b - a))
+		grad.add_point(clampf(b / life, 0.0, 1.0), col)
+	return grad

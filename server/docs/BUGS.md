@@ -36,8 +36,15 @@ decompiled client, no runtime).
   constants) and Xelor's Aiguille volley (8 needles, impact bound to the
   main needle). `addTweenParticleSystem` now flies retail's `avw_0`
   arc in `xps_fx.gd` (`spawn_projectile` + `arrived` → `tw#i+k` rows);
-  `pick_id` resolves `{dir:id}` maps by caster Direction8. Complex
-  affectors still not simulated in Godot.
+  `pick_id` resolves `{dir:id}` maps by caster Direction8.
+- **Fix (2026-10-03, paridad):** the three hot affectors now run their
+  real `ua_0` update math in `xps_fx.gd` — `LinearForceEx` (`lv`: vel +=
+  F·33·dt → iso-projected accel), `FrictionalForce` (`nt`: vel·= 1−(33−
+  f)·dt → damping), `ColorFader` (`oo_0`: c += (t−c)·speed·dt inside
+  TimeCondition windows → simulated lifetime `color_ramp`). Still out:
+  `Rebound` (it's an orbital force, not a bounce), `DirectionFollower`,
+  keyframed `Deformer`/`Curve`/`RotationInterpolation`, sub-emitters,
+  lights, and emitters beyond the first.
 - **Verify:** `fight_smoke` + `carry_smoke` green (headless, 0 script
   errors). Live cast FX visible when `spell_fx.json`, `xps_index.json`,
   and the texture png exist for the spell's xps id — the `assets/fx`

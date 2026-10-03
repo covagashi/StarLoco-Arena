@@ -27,7 +27,7 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 ```
 
 - [x] **Texturas sin PNG — resuelto (2026-10-03):** el dump exporta 253/275, pero auditado por `textureId` **los 21 sistemas sin PNG referencian texturas que no existen en `sfx.jar`** (ids `71000xxx`, `11110`/`11111`, `13002`/`13004`, `20003`, `10105`, `7000005` — TGA ausente, no fallo del extractor). **Cero texturas faltantes entre los 182 sistemas referenciados por spells.** Ojo: el PNG se nombra por *texture id*, no por system id (10905 usa `10936.png`, 1009201 usa `1009202.png`).
-- [ ] **`81.xps`:** único archivo con prefijo `XPS` + zlib en el jar (no magic `0x5001`). Opciones: reverse del payload post-zlib, comprobar si el retail lo carga aún, o dejar documentado como excluido en `test_xps.py`.
+- [x] **`81.xps` — resuelto (2026-10-03):** es un resto muerto de retail. Wrapper `"XPS\x08" + u32 + zlib` (399 B de un serializado pre-`0x5001`); **ningún script referencia el sistema 81**, hay copia idéntica en `gui.jar` (`gui/theme/particles/81.xps`), y el único loader (`alo_2.a` → `acf.T` bytes crudos → check de magic `20481`) lo rechazaría igualmente — nada descomprime el wrapper en el cliente. Documentado en `xps_dump.py`/`test_xps.py` como exclusión intencional.
 
 ---
 
@@ -45,8 +45,8 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 ## 3. Godot — runtime y opcodes
 
 - [x] **`8108` (uso de carta):** verificado — los 6 scripts de cartas arma (8001–8007) no llaman a `Particle.*`, así que no hay FX que cablear; el JSON nunca usará card id como xps id.
-- [ ] **Paridad visual (opcional, grande):** portar affectors del JSON (`LinearForce`, `ColorFader`, `Deformer`, sub-emitters, luces) a `xps_fx.gd` o nodos hijos; hoy solo primer emitter + CPUParticles2D aproximado.
-- [ ] **Secuencias bitmap:** modelos tag `2` con curva `anim` — usar atlas/celdas UV en Godot si un FX depende de flipbook.
+- [~] **Paridad visual — parcial (2026-10-03):** portados los 3 affectors calientes con la matemática real de los `ua_0` descompilados — `LinearForceEx` (vel += F·33·dt → `gravity` proyectada, los 208 del corpus son `geocentric`), `FrictionalForce` (vel·= 1−(33−f)·dt → `damping`) y `ColorFader` (c += (tgt−c)·speed·dt con ventanas `TimeCondition` → `color_ramp` simulando la cadena exponencial por intervalos). Pendiente: `Rebound` (52 refs — en realidad es fuerza orbital, no rebote), `DirectionFollower` (10), keyframed (`Deformer`/`Curve`/`RotationInterpolation`), sub-emitters, luces y emitters 2+.
+- [x] **Secuencias bitmap — resuelto (2026-10-03):** auditados los 182 sistemas referenciados por spells — **ninguno usa modelos tag `2` con curva `anim`**; no hay flipbook que portar.
 
 ---
 
@@ -72,6 +72,6 @@ Por convención del repo (`AGENTS.md`):
 
 1. ~~Regenerar assets + cerrar gaps `spell_fx.json`~~ ✓  
 2. ~~`8108` + tweens/coords (FX en cartas y proyectiles)~~ ✓  
-3. `81.xps` (completitud del jar — texturas ya resueltas).  
+3. ~~`81.xps` + texturas faltantes~~ ✓ (dato muerto / TGAs ausentes del jar).  
 4. Affectors / flipbooks (paridad retail, esfuerzo alto).  
 5. Validación live vs cliente retail vía MCP.

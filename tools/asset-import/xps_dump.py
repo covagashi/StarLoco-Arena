@@ -20,7 +20,12 @@ import zipfile
 
 MAGIC = 0x5001
 LEVEL = 100  # lerp at max level (retail default for fight FX)
-_LEGACY_XPS = b"XPS"  # particles/81.xps — zlib payload, not 0x5001 wire (sole sfx.jar outlier)
+_LEGACY_XPS = b"XPS"  # particles/81.xps — dead retail leftover: "XPS\x08"+
+                      # u32 + zlib holding a pre-0x5001 serialization.
+                      # Unreferenced by any script, identical copy in
+                      # gui.jar gui/theme/particles/81.xps, and the only
+                      # loader (alo_2.a -> acf.T raw bytes -> magic check)
+                      # would reject it anyway. Sole sfx.jar outlier.
 
 
 def _unwrap_xps(data: bytes) -> bytes | None:
