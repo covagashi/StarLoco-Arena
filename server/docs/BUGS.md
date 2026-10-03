@@ -48,10 +48,14 @@ decompiled client, no runtime).
   projectile trails hold `flying` until `arrived`). `Rebound` (`arx_0`
   dvel = R90(offset)·restitution·dt — an orbital curl, not a bounce) is
   approximated by `tangential_accel` (29 spell-referenced systems).
+  The keyframed layer (fixed 0.03s tick inside `TimeCondition`
+  windows) is ported too: `Deformer` (`ir_1` — scaleX/Y += p0/p1,
+  rot += p2 per tick, ~160 systems) → piecewise `scale_amount_curve`
+  + `angular_velocity`, and `LinearForce` (`af_0` — pull toward a
+  point; every authored target is the origin) → `radial_accel`.
   Still out: `DirectionFollower` (velocity-aligned billboards — no
-  CPUParticles2D equivalent), sub-emitters, and lights. The keyframed
-  `Deformer`/`Curve`/`RotationInterpolation` affectors never appear in
-  the decoded corpus — nothing to port.
+  CPUParticles2D equivalent), sub-emitters (7 decoded systems, none
+  spell-referenced), and lights (a single corpus entry).
 - **Verify:** `fight_smoke` + `carry_smoke` green (headless, 0 script
   errors). Live cast FX visible when `spell_fx.json`, `xps_index.json`,
   and the texture png exist for the spell's xps id — the `assets/fx`

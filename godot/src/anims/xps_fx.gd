@@ -5,9 +5,10 @@ extends Node2D
 ## start/endSpawnTime window via _schedule_emit). Ports the three hot
 ## affectors from the ua_0 update math (ColorFader → lifetime ramp,
 ## LinearForceEx → accel, FrictionalForce → damping, Rebound's orbital
-## curl → tangential_accel); sub-emitters, DirectionFollower and lights
-## remain omitted — see tools/asset-import/xps_dump.py for the decode
-## matrix (keyframed affectors never appear in the decoded corpus).
+## curl → tangential_accel, keyframed Deformer → scale_amount_curve +
+## angular_velocity, keyframed LinearForce origin-pull → radial_accel);
+## DirectionFollower, sub-emitters and lights remain omitted — see
+## tools/asset-import/xps_dump.py for the decode matrix.
 ##
 ## Also covers the script Particle.addTweenParticleSystem projectile: a burst
 ## riding the retail avw_0 ballistic arc (v0 = sqrt(g*dist/sin 2a), flight
@@ -333,14 +334,25 @@ static func _additive_mat() -> CanvasItemMaterial:
 ## - Rebound (arx_0, tag 10): dvel = R90(offset) * restitution * dt — a curl
 ##   field that orbits particles around the anchor (NOT a bounce);
 ##   tangential_accel approximates the swirl at a ~0.8-cell radius.
-## DirectionFollower aligns billboards to the velocity — no 2D analogue;
-## keyframed Deformer/Curve/RotationInterpolation are absent from the corpus.
+## Keyframed layer (ir_1/af_0 apply once per ~30Hz tick inside TimeCondition
+## windows, authored as piecewise ramps):
+## - Deformer (ir_1, tag 5): scaleX += p0, scaleY += p1, rot += p2 per tick —
+##   simulated into a piecewise-linear scale_amount_curve; p2's windowed mean
+##   becomes a constant angular_velocity (deg/s).
+## - LinearForce (af_0, tag 1): accelerates toward a point along an axis
+##   mask — every authored target is the origin, so radial_accel carries it
+##   (positive forceX attracts → negative radial_accel).
+## DirectionFollower aligns billboards to the velocity — no 2D analogue.
 static func _apply_affectors(p: CPUParticles2D, em: Dictionary,
 		base: Color, life: float) -> void:
 	var accel := Vector3.ZERO
 	var damp := 0.0
 	var tang := 0.0
+	var radial := 0.0
+	var spin := 0.0
 	var faders: Array = []
+	var scale_cuts := [0.0, 1.0]
+	var deformers: Array = []
 	for a in em.get("affectors", []):
 		if not (a is Dictionary):
 			continue
@@ -354,15 +366,28 @@ static func _apply_affectors(p: CPUParticles2D, em: Dictionary,
 			10:
 				tang += float(a.get("restitution", 0.0)) * 34.0
 			4:
-				var w := Vector2(0.0, 1e9)
-				for c in a.get("conditions", []):
-					if int(c.get("type", 0)) == 1:
-						w = Vector2(float(c.get("minTime", 0.0)),
-							float(c.get("maxTime", 1e9)))
+				var w := _time_window(a, Vector2(0.0, 1e9))
 				faders.append([Color(float(a.get("r", 0.0)),
 						float(a.get("g", 0.0)), float(a.get("b", 0.0)),
 						float(a.get("a", 0.0))),
 					float(a.get("speed", 1.0)), w])
+	for a in em.get("keyframedAffectors", []):
+		if not (a is Dictionary):
+			continue
+		var w := _time_window(a, Vector2(0.0, life))
+		w.y = minf(w.y, life)
+		match int(a.get("type", 0)):
+			5:
+				deformers.append([0.5 * (float(a.get("p0", 0.0))
+						+ float(a.get("p1", 0.0))), w])
+				spin += float(a.get("p2", 0.0)) * 33.0 * (w.y - w.x) / life
+				if not scale_cuts.has(w.x / life):
+					scale_cuts.append(w.x / life)
+				if not scale_cuts.has(w.y / life):
+					scale_cuts.append(w.y / life)
+			1:
+				radial -= float(a.get("forceX", 0.0)) * 33.0 * 43.0 \
+					* clampf((w.y - w.x) / life, 0.0, 1.0)
 	var v33 := accel * 33.0                     # retail stores force/33
 	p.gravity = Vector2((v33.x - v33.y) * 43.0,
 		(v33.x + v33.y) * 21.5 - v33.z * 10.0)
@@ -372,10 +397,47 @@ static func _apply_affectors(p: CPUParticles2D, em: Dictionary,
 	if tang != 0.0:
 		p.tangential_accel_min = tang
 		p.tangential_accel_max = tang
+	if radial != 0.0:
+		p.radial_accel_min = radial
+		p.radial_accel_max = radial
+	if spin != 0.0:
+		p.angular_velocity_min = rad_to_deg(spin)
+		p.angular_velocity_max = rad_to_deg(spin)
+	if not deformers.is_empty():
+		p.scale_amount_curve = _deformer_curve(deformers, scale_cuts, life)
 	var ramp := _fader_ramp(faders, base, life)
 	if ramp != null:
 		p.color = Color.WHITE
 		p.color_ramp = ramp
+
+
+## The affector's TimeCondition window in seconds of particle age —
+## defaults to `dflt` when the affector carries no type-1 condition.
+static func _time_window(a: Dictionary, dflt: Vector2) -> Vector2:
+	for c in a.get("conditions", []):
+		if int(c.get("type", 0)) == 1:
+			return Vector2(float(c.get("minTime", dflt.x)),
+				float(c.get("maxTime", dflt.y)))
+	return dflt
+
+
+## Piecewise-linear scale multiplier over normalized particle life:
+## m(t) = 1 + Σ rate*clamp(t - w.min, 0, w.len), rate = p*33/s (the fixed
+## 0.03s keyframed tick). Sampled at every window boundary.
+static func _deformer_curve(deformers: Array, cuts: Array, life: float) -> Curve:
+	var times := cuts.duplicate()
+	times.sort()
+	var curve := Curve.new()
+	curve.bake_resolution = 64
+	for tn in times:
+		var t := float(tn) * life
+		var m := 1.0
+		for d in deformers:
+			var w: Vector2 = d[1]
+			m += float(d[0]) * 33.0 * clampf(t - w.x, 0.0, w.y - w.x)
+		curve.add_point(Vector2(clampf(float(tn), 0.0, 1.0),
+			maxf(m, 0.05)))
+	return curve
 
 
 ## Simulate the ColorFader chain: boundaries at every window edge; within a
