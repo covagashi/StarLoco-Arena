@@ -53,7 +53,11 @@ static func sfx_events(id: int) -> Array:
 	return _sfx.get(id, [])
 
 
-## Timed .xps spawns from the cast script — [[t_ms, xpsId, "caster"|"target"]].
+## Timed .xps spawns from the cast script — rows of
+##   [t_ms, xpsId, "caster"|"target"]              burst
+##   [t_ms, xpsId, "tw", angleDeg, timeCoef]       avw_0 projectile
+##   ["tw#i+k", xpsId, anchor]                     after tween i lands
+## xpsId may be {"1":…,"3":…,"5":…,"7":…,"_":def} — direction-keyed pick.
 static func fx_events(id: int) -> Array:
 	_ensure()
 	return _fx.get(id, [])

@@ -1960,19 +1960,77 @@ func _zoom_punch(fid: int, cell: Vector2i) -> void:
 	_zoom_tween.parallel().tween_property(cam, "zoom", _zoom_level, 0.3)
 
 
-## The cast script's Sound.playSound ids with their invoke() delays
-## (spell_sfx.json): t=0 fires with the gesture, later ones land with the
-## scripted impact. Played on the caster's sprite pool.
+## Timed .xps events from the cast script (spell_fx.json):
+##   [t_ms, id, anchor]            burst at caster / aimed cell
+##   [t_ms, id, "tw", angle, coef] avw_0 ballistic projectile caster→aimed
+##   ["tw#i+k", id, anchor]        k ms after the i-th "tw" row lands
+## id may be a {dir:xpsId} dictionary picked by the caster's Direction8.
 func _cast_fx(fid: int, sid: int, aimed: Vector2i) -> void:
+	var tw_count := 0
+	var pending: Array = []                # [tween idx, extra ms, id, anchor]
 	for ev in Spells.fx_events(sid):
-		var t := float(ev[0]) / 1000.0
-		var xps := int(ev[1])
-		var anchor: String = str(ev[2])
-		var cb := _spawn_xps.bind(fid, xps, anchor, aimed)
-		if t <= 0.0:
+		var xps := XpsFx.pick_id(ev[1], int(_actor_dir.get(fid, 5)))
+		if xps <= 0:
+			continue
+		var t: Variant = ev[0]
+		if t is String:
+			# "tw#i[+k]" — fires k ms after tween row i lands
+			var s: String = (t as String).substr(3)
+			var cut := s.length()
+			for c in ["+", "-"]:
+				var p := s.find(c, 1)
+				if p > 0 and p < cut:
+					cut = p
+			var idx := int(s.substr(0, cut))
+			var off := int(s.substr(cut)) if cut < s.length() else 0
+			pending.append([idx, off, xps, str(ev[2])])
+			continue
+		var launch := float(t) / 1000.0
+		if len(ev) > 3 and str(ev[2]) == "tw":
+			var tw_idx := tw_count
+			tw_count += 1
+			var cb := _launch_xps.bind(
+				fid, xps, aimed, float(ev[3]), float(ev[4]),
+				tw_idx, pending)
+			if launch <= 0.0:
+				cb.call()
+			else:
+				get_tree().create_timer(launch).timeout.connect(cb)
+		else:
+			var anchor: String = str(ev[2])
+			var cb := _spawn_xps.bind(fid, xps, anchor, aimed)
+			if launch <= 0.0:
+				cb.call()
+			else:
+				get_tree().create_timer(launch).timeout.connect(cb)
+
+
+func _launch_xps(fid: int, xps_id: int, aimed: Vector2i, angle: float,
+		coef: float, tw_idx: int, pending: Array) -> void:
+	var c0: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
+	var c1 := c0
+	if aimed.x > -9000:
+		var c: Dictionary = _cells.get(Vector2i(aimed.x, aimed.y), {})
+		c1 = Vector3i(aimed.x, aimed.y, int(c.get("alt", 0)))
+	var proj: Node2D = XpsFx.spawn_projectile(self, xps_id,
+		Vector3(c0.x + 0.5, c0.y + 0.5, float(c0.z)),
+		Vector3(c1.x + 0.5, c1.y + 0.5, float(c1.z)),
+		angle, coef, _iso)
+	proj.arrived.connect(
+		_xps_arrived.bind(tw_idx, pending, fid, aimed))
+
+
+func _xps_arrived(tw_idx: int, pending: Array, fid: int,
+		aimed: Vector2i) -> void:
+	for ev in pending:
+		if int(ev[0]) != tw_idx:
+			continue
+		var cb := _spawn_xps.bind(fid, int(ev[2]), str(ev[3]), aimed)
+		var off := float(ev[1]) / 1000.0
+		if off <= 0.0:
 			cb.call()
 		else:
-			get_tree().create_timer(t).timeout.connect(cb)
+			get_tree().create_timer(off).timeout.connect(cb)
 
 
 func _spawn_xps(fid: int, xps_id: int, anchor: String, aimed: Vector2i) -> void:
@@ -1984,6 +2042,9 @@ func _spawn_xps(fid: int, xps_id: int, anchor: String, aimed: Vector2i) -> void:
 	XpsFx.spawn(self, xps_id, at)
 
 
+## The cast script's Sound.playSound ids with their invoke() delays
+## (spell_sfx.json): t=0 fires with the gesture, later ones land with the
+## scripted impact. Played on the caster's sprite pool.
 func _cast_sfx(fid: int, sid: int) -> void:
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr == null:

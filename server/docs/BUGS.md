@@ -15,7 +15,7 @@ decompiled client, no runtime).
 
 - **Symptom (Godot):** spell casts showed gesture + script sfx but no
   projectile/burst particles — retail runs `Particle.addParticleSystem`
-  from `data.jar` scripts (171/197 spell scripts reference an `.xps` id).
+  from `data.jar` scripts (161/197 scripts reference an `.xps` id).
 - **Root cause:** the sfx.jar `.xps` binaries (365 systems, textures in
   `particles/<id>.tga`) were never decoded or wired; the fight view had
   no spawn hook on `8110`/`8108`.
@@ -25,11 +25,24 @@ decompiled client, no runtime).
   first emitter from `assets/gamedata/xps/<id>.json` when present;
   `_cast_fx` on `8110` in `fight_view.gd`. Decoder follows `alo_2` /
   `bk_0` / `gg_0` (22-float bitmap models, compact header when
-  `dstBlend==0`, DirectionFollower tag-6 has no leveled bit). Complex
+  `dstBlend==0`, DirectionFollower tag-6 has no leveled bit).
+- **Fix (2026-10-03):** the regex pass missed whole code paths —
+  direct `displayEffect()` calls (7 spells), `invoke (` with a space,
+  `addTweenParticleSystem` variable ids, direction-keyed picks
+  (`if startMobileDirection == N`, `APS_*` tables), `time`-relative
+  invokes — and scraped commented-out code (3 false rows). Replaced by a
+  scoped mini-evaluator → **116 spells** (was 100), incl. the Cra arrow
+  family (`10905`–`10945`: dir-keyed projectile ids, `delai_trajSprite`
+  constants) and Xelor's Aiguille volley (8 needles, impact bound to the
+  main needle). `addTweenParticleSystem` now flies retail's `avw_0`
+  arc in `xps_fx.gd` (`spawn_projectile` + `arrived` → `tw#i+k` rows);
+  `pick_id` resolves `{dir:id}` maps by caster Direction8. Complex
   affectors still not simulated in Godot.
-- **Verify:** `fight_smoke` + `carry_smoke` green (headless). Live cast
-  FX visible when `spell_fx.json`, `xps_index.json`, and the texture png
-  exist for the spell's xps id.
+- **Verify:** `fight_smoke` + `carry_smoke` green (headless, 0 script
+  errors). Live cast FX visible when `spell_fx.json`, `xps_index.json`,
+  and the texture png exist for the spell's xps id — the `assets/fx`
+  pngs need a `.godot` import pass (`godot --headless --import` once
+  after regenerating) or `load()` skips them silently.
 
 ### B-166 · Godot: anm-frame `runScript` audio channel missing entirely
 
