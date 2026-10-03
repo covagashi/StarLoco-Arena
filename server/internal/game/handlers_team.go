@@ -50,7 +50,14 @@ func handleFighterAssignTeam(s *Session, f *protocol.C2SFrame) error {
 	if err != nil {
 		return err
 	}
-	// am (i64) follows — owning coach / teammate slot; unused for 1v1 persistence.
+	// am = the coach the client is filing the slot under (own id for 1v1, the
+	// teammate's for a 2v2 preset). Unused for persistence — but echoed in the
+	// 6014 ack, where the client puts it straight into the preset's
+	// fighter->coach map.
+	am64, err := r.I64()
+	if err != nil {
+		return err
+	}
 	fid := uint(fid64)
 	src := int16(srcU)
 	dst := int16(dstU)
@@ -81,15 +88,36 @@ func handleFighterAssignTeam(s *Session, f *protocol.C2SFrame) error {
 	}
 
 	// Link into the destination team (dst <= 0 is a pure removal to the pool).
+	// applied tracks whether the persisted state now matches the request; the
+	// 6014 ack goes out only when it does — sending status 0 on a refused add
+	// would file the fighter into the client's open preset anyway.
+	applied := true
 	if dst > 0 {
+		applied = false
 		if t, err := s.deps.Store.Teams.Get(uint(dst)); err == nil && t.CoachID == s.Coach.ID && canPlaceFighter(t, moved, roster) {
 			if err := s.deps.Store.Teams.AddMember(uint(dst), fid); err != nil {
 				return err
 			}
+			applied = true
 		}
 	}
 
 	s.log.Info("fighter team assignment", "fighter", fid, "src", src, "dst", dst)
+
+	// Ack first so the client performs its own bookkeeping (`dx_2` case 6014:
+	// unlink from the src preset, file the fighter under `am` in the open
+	// preset, fire the five notifications). aCG is the effective fighter id —
+	// we never re-id, so it's fid on an assign and -1 on a removal, the value
+	// `sw_1.j` refuses (skipping the re-add for a pure remove).
+	if applied {
+		aCG := int64(fid)
+		if dst <= 0 {
+			aCG = -1
+		}
+		if err := s.sendFighterAssignedTeam(int64(fid), srcU, dstU, am64, aCG); err != nil {
+			return err
+		}
+	}
 
 	// Refresh the client's roster (pool) and team list so slots/pool reconcile.
 	if err := s.pushFighterList(); err != nil {
@@ -308,6 +336,21 @@ func (s *Session) pushTeamPresetList() error {
 	w.U8(0) // coach section (empty)
 
 	frame, err := protocol.EncodeS2C(protocol.OpTeamPresetList, w.Bytes())
+	if err != nil {
+		return err
+	}
+	return s.Send(frame)
+}
+
+// sendFighterAssignedTeam acks a 6013 assign/remove (6014 aoi):
+// [i8 status][i64 fighterId][i16 srcTeam][i16 dstTeam][i64 am][i64 aCG] — the
+// status==0 body is the request echoed plus the effective fighter id aCG.
+// `dx_2` unlinks the fighter from preset srcTeam (`at(aCE).l(K)`), re-keys it
+// when K != aCG, then files aCG under coach am in the OPEN preset; aCG = -1 is
+// the pure-removal sentinel (`sw_1.j` refuses -1, so nothing is re-added).
+func (s *Session) sendFighterAssignedTeam(fid int64, src, dst uint16, am, aCG int64) error {
+	w := protocol.NewWriter().U8(0).I64(fid).U16(src).U16(dst).I64(am).I64(aCG)
+	frame, err := protocol.EncodeS2C(protocol.OpFighterAssignedTeam, w.Bytes())
 	if err != nil {
 		return err
 	}

@@ -98,6 +98,7 @@ BUGS.md B-108.
 | 510 | GuildRecord (`arl_0`/`KI.b`) | S2C | ✓ | A | ✓ | ✓ **live** |
 | 512 | GuildMembers (`kf_1` part 0) | S2C | ✓ | A | ✓ | ✓ **live** |
 | 552 | GuildMembership (`kf_1` part 2) | S2C | ✓ | A | ✓ | ✓ **live** |
+| 554 | GuildTags (`kf_1` part-table) | S2C | ✓ | A ([i32 n]+tag records; login push + join/leave broadcasts) | ✓ | — |
 | 556 | GuildMemberGone (`h_0`) | S2C | ✓ | A | — | — |
 | 558 | GuildCreatedFeed (`ahU`) | S2C | ✓ | A | — | — |
 | 560 | GuildMemberFeed (`ry_1`) | S2C | ✓ | A | ✓ | — |
@@ -153,6 +154,7 @@ markup, and Trade carries the client's own 30 s cooldown. See BUGS.md B-104.
 |---|---|:---:|:---:|:---:|:---:|:---:|
 | 5200 | CoachInventoryUpdate | S2C | ✓ | A | — | ✓ |
 | 5203 | CoachInventoryUpdateRequest | C2S | ✓ | A | — | ✓ |
+| 5204 | AddToTome (`ajm_2`) | C2S | ✓ | A ([i32 templateId], no reply) | ✓ | — |
 | 5201 | CoachEquipmentUpdateRequest | C2S | ✓ | A | — | ✓ |
 
 ## Shop / economy (Card Master token purchase)
@@ -254,6 +256,7 @@ pieces: the other sub-boards (evolution/team/etc., 27504–27552).
 | 6011 | UpdateFighterInventory | C2S | ✓ | A (bp_1: cards [i32]*, spells [i16 slot][i32]*) | ✓ | ✓ |
 | 6010 | UpdatedFighterInventory | S2C | ✓ | A (nl_1: [i64 id][i8 res](+blobs)) | — | ✓ |
 | 6013 | FighterAssignTeam | C2S | ✓ | A (qp_1: [i64 f][i16 src][i16 dst][i64 am], dst=-1 removes) | ✓ | — |
+| 6014 | FighterAssignedTeam (`aoi`) | S2C | ✓ | A ([i8 st][i64 fid][i16 src][i16 dst][i64 am][i64 aCG=-1 on remove]) | ✓ | — |
 | 6021 | TeamPresetSave | C2S | ✓ | A | ✓ | ✓ |
 | 6023 | TeamPresetDelete | C2S | ✓ | **A*** (i64 not u16 fixed) | — | ✓ (regression) |
 | 6031 | TeamPresetListRequest | C2S | ✓ | A | — | ✓ (Godot graveyard open) |
@@ -271,7 +274,9 @@ pieces: the other sub-boards (evolution/team/etc., 27504–27552).
 | 23110 | MatchFound | S2C | ✓ | **A*** (mode/fightType dup fixed) | — | ✓ |
 | 23114 | MatchAccept | C2S | ✓ | A | — | ✓ |
 | 2308 | MatchAcceptAlt | C2S | ✓ | A | — | — |
-| 23116 | MatchConfirm | S2C | ✓ | — | — | — |
+| 23112 | MatchResult (`aku_1`) | S2C | ✓ | A ([i8 ok]; `avn_0.close()`+"resultIsNo") | ✓ | — |
+| 23116 | MatchConfirm (`aex_0`) | C2S | — | A (C2S-only: `gz_1` never decodes it; roster confirm we don't need) | — | — |
+| 25000 | ErrorNotice (`az`) | S2C | ✓ | A ([i8 code] → `zN.M` toast; clan-island Zaap → 72) | ✓ | — |
 | 28609 | `bt_0` TournamentSearchCancel | C2S | ✓ | A (`[i64 tid][i64 coachId][i16 preset]`) | — | ✓ |
 | 28610 | `de_0` TournamentSearchCancelResult | S2C | ✓ | A (`[i8 accepted]`) | — | ✓ |
 | 28611 | `ly_1` TournamentSearchRequest | C2S | ✓ refuses | A (`[i64 tid][i64 coachId][i16 preset]`) | — | ✓ |
@@ -387,7 +392,6 @@ result dialog.
 
 **Wire-audit gaps** (impl exists, not yet byte-verified vs client):
 - FighterCreate/Delete **result** messages (6000/6002).
-- MatchConfirm (23116).
 
 **Open-world feature gaps (build these before finishing the fight):**
 The retail client uses many open-world (non-fight) opcodes the server does not

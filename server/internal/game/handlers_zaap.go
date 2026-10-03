@@ -31,8 +31,11 @@ func handleZaapTeleport(s *Session, f *protocol.C2SFrame) error {
 		// OWN clan island, allotted on first use from the 24 the map data ships.
 		dest, ok = s.deps.clanIslandDest(s.Coach.ID)
 		if !ok {
+			// Real gameplay refusal the client cannot predict (it can't know the
+			// clan's island state): toast "error.guild.noIsland" via the bare
+			// zN.M code channel rather than failing silently.
 			s.log.Debug("zaap use: no clan island for this coach", "coach", s.Coach.Name)
-			return nil
+			return s.sendErrorNotice(protocol.FightErrNoIsland)
 		}
 	}
 	if !ok {
@@ -66,6 +69,19 @@ func handleZaapTeleport(s *Session, f *protocol.C2SFrame) error {
 	s.log.Info("zaap teleport", "coach", s.Coach.Name, "card", cardID, "world", dest.world,
 		"zaap", dest.instanceID, "cell", []int32{z.cellX, z.cellY}, "alt", z.alt)
 	return nil
+}
+
+// sendErrorNotice emits OpErrorNotice (25000, client `az`): [i8 code] ->
+// zN.M(code), the bare localized error toast. Use it for gameplay refusals that
+// happen OUTSIDE the fight-creation handshake (that handshake's channel is
+// 26310, which additionally pops the client's pending fight frames).
+func (s *Session) sendErrorNotice(code uint8) error {
+	w := protocol.NewWriter().U8(code)
+	frame, err := protocol.EncodeS2C(protocol.OpErrorNotice, w.Bytes())
+	if err != nil {
+		return err
+	}
+	return s.Send(frame)
 }
 
 // coachOwnsCard reports whether the coach's inventory holds the given card

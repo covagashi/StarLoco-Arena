@@ -11,6 +11,7 @@ import (
 func registerInventoryHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpCoachInventoryUpdateRequest, handleInventoryRequest)
 	r.Register(protocol.OpCoachEquipmentUpdateRequest, handleEquipmentRequest)
+	r.Register(protocol.OpAddToTome, handleAddToTome)
 }
 
 // grantStarterCards gives a brand-new coach a handful of cards so the inventory
@@ -106,6 +107,46 @@ func handleInventoryRequest(s *Session, f *protocol.C2SFrame) error {
 		return nil
 	}
 	return s.pushInventory(s.Coach)
+}
+
+// handleAddToTome processes AddToTome(5204, client `ajm_2`): [i32 templateId].
+// Fired by the card context-menu "inscribe in grimoire" action (`ST.b(8)`) —
+// the client marks the entry `isInTome` locally at click time, so there is no
+// reply to send. Cards carry no instance uid on the wire (2.70 mints them
+// client-side, `eb_1`/`uq_1.ahR()`), which is why the id is the template — all
+// client lookups use `Math.abs(wy_2.jf())`. Our tome is grow-only and login
+// sync already records every owned template, so the honest behaviour is to
+// verify the coach actually holds the card and ensure it is recorded: an
+// explicitly inscribed card then survives being traded away, matching the
+// grimoire's "collection that never forgets" semantics.
+func handleAddToTome(s *Session, f *protocol.C2SFrame) error {
+	if s.Coach == nil {
+		return nil
+	}
+	r := protocol.NewReader(f.Payload)
+	id, err := r.I32()
+	if err != nil {
+		return err
+	}
+	if id < 0 {
+		id = -id
+	}
+	if id == 0 {
+		return nil
+	}
+	owned := false
+	for _, card := range s.Coach.Inventory {
+		if card.TemplateID == id && card.Quantity > 0 {
+			owned = true
+			break
+		}
+	}
+	if !owned {
+		s.log.Debug("add-to-tome for unowned card dropped", "coach", s.Coach.Name, "template", id)
+		return nil
+	}
+	_, err = s.deps.Store.Coaches.SyncTome(s.Coach.ID, []int32{id})
+	return err
 }
 
 // handleEquipmentRequest processes CoachEquipmentUpdateRequest(5201): 14×i32

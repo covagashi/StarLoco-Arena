@@ -11,6 +11,23 @@ decompiled client, no runtime).
 
 ---
 
+### B-168 · Match-decline notice emitted on an opcode the client cannot decode
+
+- **Symptom:** when one coach declined a match, the still-waiting opponent's
+  "do you accept?" dialog stayed open forever — the cancel frame never reached
+  its handler.
+- **Root cause:** `sendMatchCancelled` emitted **23116**, but `aex_0` (the
+  23116 class) is `so_0`+`encode()`-only and `gz_1` has no 23116 case — it is a
+  **C2S-only** message (the client's post-match roster confirm, built by
+  `aox_0`). The retail decoder dropped our frame silently.
+- **Fix:** the decline now emits **23112** `MatchResult` (`aku_1: [i8 ok]`), the
+  result frame paired with our 23110 announce: `ft_1` case 23112 does
+  `avn_0.close()` + toasts `opponentSearchConfirmation.resultIsNo`. (2309 is the
+  same frame for the *other* match-found variant, 2307.)
+- **Verified:** `audit` (`gz_1`/`aex_0`/`aku_1`/`ft_1`) + unit
+  (`TestAddToTome…`, `TestZaapClanIslandRefusalToasts25000` cover the two
+  sibling emissions from the same pass).
+
 ### B-167 · Godot: spell cast `.xps` particle FX missing
 
 - **Symptom (Godot):** spell casts showed gesture + script sfx but no

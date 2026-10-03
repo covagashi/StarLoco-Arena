@@ -122,11 +122,20 @@ func handleGuildLeave(s *Session, f *protocol.C2SFrame) error {
 	}
 	// And tell the clan, refreshing the roster everyone is looking at.
 	feed, _ := buildGuildMemberFeed(name, true)
-	gone, _ := buildGuildMemberGone(int64(target))
 	for _, other := range s.deps.guildSessions(int64(guildID), target) {
 		_ = other.Send(feed)
-		_ = other.Send(gone)
 		_ = s.deps.sendGuildMembers(other, guildID)
+	}
+	// Every observer's coach registry clears the tag too (556 is the removal
+	// counterpart of the 554 tag push). The departed already got its copy above;
+	// everyone else - clan included - takes it from this broadcast.
+	if gone, err := buildGuildMemberGone(int64(target)); err == nil {
+		departed := s.deps.findSessionByCoach("", target)
+		s.deps.Sessions.Each(func(other *Session) {
+			if other != departed {
+				_ = other.Send(gone)
+			}
+		})
 	}
 	return nil
 }
@@ -164,6 +173,13 @@ func handleGuildDestroy(s *Session, f *protocol.C2SFrame) error {
 		}
 		seen[sess] = true
 		_ = sess.Send(frame)
+	}
+	// Clear every ex-member's clan tag in every observer's registry — the 556
+	// the leave path broadcasts, times one per member of the dissolved clan.
+	for _, coachID := range members {
+		if gone, err := buildGuildMemberGone(int64(coachID)); err == nil {
+			s.deps.Sessions.Each(func(other *Session) { _ = other.Send(gone) })
+		}
 	}
 	return nil
 }

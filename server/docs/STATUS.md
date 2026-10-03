@@ -58,11 +58,12 @@ Two lessons worth keeping: the suspect written down here previously (`agz_1` →
 totem) found in one step what re-reading the client had not. And when driving the client,
 **switch tabs once after opening the team panel** before trusting what the roster shows.
 
-**Opcode coverage, and what is actually left.** 331 rows: 104 C2S handled, 122 S2C emitted,
-5 inactive, 100 unimplemented. 16 of those 100 are **unreachable from the retail client**
-and are recorded as deliberate non-work, with the evidence, in
-[`docs/OPCODE-INVENTORY.md`](./OPCODE-INVENTORY.md) — 10 C2S whose message class is never
-constructed, and 6 S2C with no live consumer. The other ~84 are real gaps; that file now
+**Opcode coverage, and what is actually left.** 345 rows: 109 C2S handled, 150 S2C emitted,
+6 inactive, 76 unimplemented. A large share of the remainder is **unreachable from the retail client**
+and is recorded as deliberate non-work, with the evidence, in
+[`docs/OPCODE-INVENTORY.md`](./OPCODE-INVENTORY.md) — C2S whose message class is never
+constructed, S2C with no live consumer, and the Ankama-internal avatar pipeline (X).
+The rest are real gaps; that file now
 names the consuming client class for each, groups them by feature family, and gives a
 suggested order. Start there rather than from the raw table.
 A recurring result worth knowing before picking up an item: **five Tier 1 entries were

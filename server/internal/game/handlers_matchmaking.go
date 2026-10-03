@@ -194,10 +194,13 @@ func (s *Session) resolveMatchAccept(accept bool) error {
 	return nil
 }
 
-// sendMatchCancelled tells a coach the match was cancelled (23116 empty roster).
+// sendMatchCancelled tells the still-waiting coach their match fell through:
+// MatchResult(23112) [i8 0] closes the avn_0 confirmation dialog client-side and
+// toasts "opponentSearchConfirmation.resultIsNo". (This used to emit 23116,
+// which gz_1 never registers — the retail decoder dropped it silently.)
 func sendMatchCancelled(to *Session) error {
-	w := protocol.NewWriter().I32(0)
-	frame, err := protocol.EncodeS2C(protocol.OpMatchConfirm, w.Bytes())
+	w := protocol.NewWriter().U8(0)
+	frame, err := protocol.EncodeS2C(protocol.OpMatchResult, w.Bytes())
 	if err != nil {
 		return err
 	}

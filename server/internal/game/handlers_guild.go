@@ -137,6 +137,9 @@ func handleGuildCreate(s *Session, f *protocol.C2SFrame) error {
 	if err := s.pushGuildState(g.ID); err != nil {
 		return err
 	}
+	// Every other session's coach registry now labels this coach with the new
+	// clan - the 554 merge lands on the record it already holds.
+	s.deps.broadcastGuildTag(s.Coach.ID)
 	// The creation feed goes to everyone: it is a world announcement
 	// ("infos.guildCreated"), not a clan-scoped line.
 	if frame, err := buildGuildCreatedFeed(s.Coach.Name, g.Name); err == nil {
@@ -260,6 +263,8 @@ func handleGuildInviteAnswer(s *Session, f *protocol.C2SFrame) error {
 	if err := s.pushGuildState(inv.guildID); err != nil {
 		return err
 	}
+	// The joiner's clan tag now shows under its name for every observer.
+	s.deps.broadcastGuildTag(s.Coach.ID)
 	// Tell the clan, and refresh the member list everyone is looking at.
 	if frame, err := buildGuildMemberFeed(s.Coach.Name, false); err == nil {
 		for _, other := range s.deps.guildSessions(int64(inv.guildID), s.Coach.ID) {
@@ -376,6 +381,60 @@ func (s *Session) pushGuildState(guildID uint) error {
 		}
 	}
 	return s.deps.sendGuildMembers(s, guildID)
+}
+
+// pushGuildTags sends the clan-tag part-table (554, kf_1 with ca_0 part 1 =
+// `ut_2`): one entry per clanned coach, so the client's `bd_1.Is()` registry
+// can label every coach it knows — the same role the 0x20 blob plays for the
+// coach itself, and the reason a coach's clan tag appears under its name
+// without a per-observer lookup.
+func (d *Deps) pushGuildTags(to *Session) error {
+	if d == nil || d.Store == nil || d.Store.Guilds == nil {
+		return nil
+	}
+	members, err := d.Store.Guilds.MembershipsAll()
+	if err != nil {
+		return err
+	}
+	payloads := make([][]byte, 0, len(members))
+	for _, m := range members {
+		g, err := d.Store.Guilds.ByID(m.GuildID)
+		if err != nil || g == nil {
+			continue
+		}
+		payloads = append(payloads, guildTagPart(g.Name, int64(m.CoachID), g.DemonID))
+	}
+	frame, err := buildGuildMemberList(protocol.OpGuildTags, 1, payloads)
+	if err != nil {
+		return err
+	}
+	return to.Send(frame)
+}
+
+// broadcastGuildTag pushes one coach's clan tag (554, single-entry table) to
+// every connected session after a membership change, so the tag under its name
+// updates live rather than on each observer's next login. `lh_1` merges the
+// entry onto the coach record it already holds, so no clear is needed here —
+// removals go through 556 (`a(null)` on the coach), which the leave/destroy
+// paths already send.
+func (d *Deps) broadcastGuildTag(coachID uint) {
+	if d == nil || d.Store == nil || d.Store.Guilds == nil || d.Sessions == nil {
+		return
+	}
+	m, err := d.Store.Guilds.MembershipOf(coachID)
+	if err != nil || m == nil {
+		return // not in a guild: nothing to tag (a removal is 556's job)
+	}
+	g, err := d.Store.Guilds.ByID(m.GuildID)
+	if err != nil || g == nil {
+		return
+	}
+	frame, err := buildGuildMemberList(protocol.OpGuildTags, 1,
+		[][]byte{guildTagPart(g.Name, int64(coachID), g.DemonID)})
+	if err != nil {
+		return
+	}
+	d.Sessions.Each(func(other *Session) { _ = other.Send(frame) })
 }
 
 // sendGuildMembers pushes 512 for a guild to one session.

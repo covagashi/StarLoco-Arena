@@ -347,6 +347,13 @@ func (s *Session) completeLogin(coach *domain.Coach) error {
 		return err
 	}
 
+	// Push the clan-tag part-table (554) so every coach the client already
+	// knows gets its clan label without a per-observer lookup — the login-time
+	// snapshot `broadcastGuildTag` keeps live afterwards.
+	if err := s.deps.pushGuildTags(s); err != nil {
+		return err
+	}
+
 	// Push the coach's card inventory (separate from the 2052 blob).
 	if err := s.pushInventory(coach); err != nil {
 		return err

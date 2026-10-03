@@ -150,6 +150,14 @@ func (r *GuildRepo) Rank(guildID uint, level int16) (*domain.GuildRank, error) {
 	return &rk, err
 }
 
+// MembershipsAll returns every guild_members row across all guilds — the
+// source for the 554 clan-tag table the client caches for every known coach.
+func (r *GuildRepo) MembershipsAll() ([]domain.GuildMember, error) {
+	var out []domain.GuildMember
+	err := r.db.Find(&out).Error
+	return out, err
+}
+
 // Members returns a guild's memberships ordered by rank then id, mirroring the
 // client's own member sort (`Wt` orders by rank).
 func (r *GuildRepo) Members(guildID uint) ([]domain.GuildMember, error) {

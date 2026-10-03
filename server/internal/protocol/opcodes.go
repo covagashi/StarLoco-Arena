@@ -80,6 +80,7 @@ const (
 	OpCoachInventoryUpdate        = 5200 // S2C: 4 sections (addEquip, removeShort, updInv, ints)
 	OpCoachEquipmentUpdateRequest = 5201 // C2S: 14×i32 slot references
 	OpCoachInventoryUpdateRequest = 5203 // C2S: [u16 count]+i64 uids — cards REMOVED from the inventory (client fh_0/sj_1.yG); the uids are client-local (eb_1 assigns uq_1.ahR()), so they cannot be resolved server-side
+	OpAddToTome                   = 5204 // C2S ajm_2: [i32 templateId] — the card context-menu "inscribe in grimoire"; the client marks isInTome locally, no reply expected
 	OpCoachEquipmentUpdate        = 5202 // S2C: broadcast equipment change
 
 	// Shop / economy (Card Master token purchase + wallet)
@@ -132,6 +133,17 @@ const (
 	OpUpdateFighterInventory  = 6011 // C2S: [i64 fighterId][i16 teamId][i16 len][cards][i16 len][spells]
 	OpUpdatedFighterInventory = 6010 // S2C: [i64 fighterId][i8 result](+[i16 len][cards][i16 len][spells])
 	OpFighterAssignTeam       = 6013 // C2S: [i64 fighterId][i16 srcTeam][i16 dstTeam][i64 am] — qp_1 drag/assign; dst=-1 removes
+	// OpFighterAssignedTeam acks 6013: [i8 status], and on status 0 the request
+	// echoed verbatim — [i64 fighterId][i16 srcTeam][i16 dstTeam][i64 am] — plus a
+	// trailing [i64 effectiveFighterId] (`aoi.cKH`/`aCG`). `dx_2` case 6014 then
+	// removes the fighter from preset srcTeam (`at(aCE).l(K)` — bMJ is the preset's
+	// fighter->coach map and l() = dv = remove), re-keys the entity when K!=aCG,
+	// and files `aCG` under coach `am` in the CURRENTLY OPEN preset
+	// (`IF().II().j(aCG, mb)`). aCF is decoded but never read: the destination is
+	// the open preset, not a wire field. aCG=-1 makes `sw_1.j` skip the re-add —
+	// the "pure removal" sentinel, since `j` refuses -1 with an error log and no
+	// put. We never re-id fighters, so aCG = fid on assigns and -1 on removes.
+	OpFighterAssignedTeam = 6014 // S2C aoi
 	// OpTeamPresetSaved is the reply to 6021: [i8 status], and on status 0 the
 	// full saved preset follows. `aic_0` reads NOTHING after a non-zero status, so
 	// an error frame is exactly one byte.
@@ -263,7 +275,14 @@ const (
 	FightErrInvalidTeamBudget    = 46 // "error.fight.creation.invalidTeamBudget"
 	FightErrTooManySameBreed     = 63 // "tooMuchSameBreedFighters"
 	FightErrMatchfinderOccuring  = 69 // "Action impossible pendant une recherche de combat."
+	FightErrNoIsland             = 72 // "error.guild.noIsland" — the clan-island Zaap when the clan holds none
 	FightErrMinEvolutionBudget   = 78 // "invalidMinimalEvolutionTeamBudget"
+
+	// OpErrorNotice is the BARE zN.M() code toaster (25000, client `az`): [i8
+	// code]. 26310 wraps the same code table in frame cleanup; 25000 is for
+	// refusals outside the fight-creation handshake where no pending state needs
+	// popping (e.g. the clan-island Zaap refusal).
+	OpErrorNotice = 25000 // S2C az: [i8 errorCode] -> zN.M(code) toast
 
 	// Fireworks (the overworld "cardUsingSwitch" element, env type 12).
 	OpFireworkShow   = 22094 // S2C la_1: [i32 cardId][i32 x][i32 y][i32 z][i64 elementId]
@@ -397,8 +416,9 @@ const (
 	OpOpponentSearchCancelResult = 2306  // S2C: [i8 result]
 	OpMatchAcceptAlt             = 2308  // C2S: [i64 id][i16 mode][i32 N][ids][i8 accept]
 	OpMatchFound                 = 23110 // S2C: match-found "do you accept?"
+	OpMatchResult                = 23112 // S2C aku_1: [i8 ok] — closes the avn_0 dialog; 0 toasts "resultIsNo" to the still-waiting side
 	OpMatchAccept                = 23114 // C2S: [i64 id][i64 opp][i16][i16][ids][i8 accept]
-	OpMatchConfirm               = 23116 // S2C/C2S: [i32 N][i64×N] confirmed roster
+	OpMatchConfirm               = 23116 // C2S aex_0 only: [i32 N][i64×N reversed] team-confirm roster — gz_1 has no 23116 case, the client cannot decode it
 
 	// Classic opponent search (23100 block) — the CLASSIC tab's "Combattre".
 	// 23103 is the request; the rest is the same handshake as the evolution block
