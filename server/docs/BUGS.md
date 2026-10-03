@@ -53,9 +53,12 @@ decompiled client, no runtime).
   rot += p2 per tick, ~160 systems) → piecewise `scale_amount_curve`
   + `angular_velocity`, and `LinearForce` (`af_0` — pull toward a
   point; every authored target is the origin) → `radial_accel`.
-  Still out: `DirectionFollower` (velocity-aligned billboards — no
-  CPUParticles2D equivalent), sub-emitters (7 decoded systems, none
-  spell-referenced), and lights (a single corpus entry).
+  `DirectionFollower` (`aie_1` — billboards track screen velocity;
+  its emitters are motionless, the visible motion is the parent
+  system's) is approximated on projectiles by rotating the streak
+  body to the instantaneous screen velocity (arc-following).
+  Still out: sub-emitters (7 decoded systems, none spell-referenced)
+  and lights (a single corpus entry).
 - **Verify:** `fight_smoke` + `carry_smoke` green (headless, 0 script
   errors). Live cast FX visible when `spell_fx.json`, `xps_index.json`,
   and the texture png exist for the spell's xps id — the `assets/fx`

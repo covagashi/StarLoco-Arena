@@ -6,9 +6,10 @@ extends Node2D
 ## affectors from the ua_0 update math (ColorFader → lifetime ramp,
 ## LinearForceEx → accel, FrictionalForce → damping, Rebound's orbital
 ## curl → tangential_accel, keyframed Deformer → scale_amount_curve +
-## angular_velocity, keyframed LinearForce origin-pull → radial_accel);
-## DirectionFollower, sub-emitters and lights remain omitted — see
-## tools/asset-import/xps_dump.py for the decode matrix.
+## angular_velocity, keyframed LinearForce origin-pull → radial_accel,
+## DirectionFollower → projectile body rotation tracking the
+## instantaneous screen-space velocity); sub-emitters and lights remain
+## omitted — see tools/asset-import/xps_dump.py for the decode matrix.
 ##
 ## Also covers the script Particle.addTweenParticleSystem projectile: a burst
 ## riding the retail avw_0 ballistic arc (v0 = sqrt(g*dist/sin 2a), flight
@@ -76,7 +77,8 @@ static func _load_doc(xps_id: int) -> Dictionary:
 ## metas for its startSpawnTime/endSpawnTime window — _schedule_emit()
 ## runs them once the node is in the tree. `flying` keeps it emitting
 ## continuously for a projectile ride.
-static func _build(xps_id: int, flying := false) -> Node2D:
+static func _build(xps_id: int, flying := false,
+		fly_angle := 999.0) -> Node2D:
 	_ensure()
 	var doc := _load_doc(xps_id)
 	var meta: Dictionary = _index.get(str(xps_id), {})
@@ -100,16 +102,21 @@ static func _build(xps_id: int, flying := false) -> Node2D:
 	if emitters.is_empty():
 		emitters = [{}]                    # index-only entry: generic burst
 	var tail := float(dur_ms) / 1000.0
+	var df := false
 	for e in emitters:
 		if not (e is Dictionary):
 			continue
 		var p := _build_emitter(e, tex, dst_blend, int(meta.get("srcBlend", 0)),
-			float(dur_ms) / 1000.0, flying)
+			float(dur_ms) / 1000.0, flying, fly_angle)
 		n.add_child(p)
+		df = df or bool(p.get_meta("dirfollow", false))
 		tail = maxf(tail, float(p.get_meta("stop_s")) + p.lifetime)
 	if n.get_child_count() == 0:
 		return null
 	n.set_meta("free_s", tail + 0.15)
+	if df and fly_angle < 900.0:
+		n.set_meta("dirfollow", true)
+		n.set_meta("df0", fly_angle)
 	return n
 
 
@@ -117,7 +124,8 @@ static func _build(xps_id: int, flying := false) -> Node2D:
 ## retail interval between spawn ticks (Emitter.b — dnG += dt vs auL);
 ## start/endSpawnTime bound emission. freq<=0 is a single burst at start.
 static func _build_emitter(em: Dictionary, tex: Texture2D, dst_blend: int,
-		src_blend: int, dur_s: float, flying: bool) -> CPUParticles2D:
+		src_blend: int, dur_s: float, flying: bool,
+		fly_angle: float) -> CPUParticles2D:
 	var life := float(em.get("particleLifeTime", 0.0))
 	if life <= 0.0:
 		life = clampf(dur_s * 0.35, 0.25, 2.5) if dur_s > 0.0 else 0.5
@@ -159,6 +167,17 @@ static func _build_emitter(em: Dictionary, tex: Texture2D, dst_blend: int,
 	var dir := Vector2(vx - vy, (vx + vy) * 0.5 - vz)
 	p.direction = dir.normalized() if dir.length() > 0.01 else Vector2(0, -1)
 	p.spread = 45.0
+	for a in em.get("affectors", []):
+		if int(a.get("type", 0)) == 6:
+			# DirectionFollower (aie_1): billboard rotation tracks the
+			# particle's screen-space motion. These emitters sit still in
+			# system space — the visible motion is the parent system's,
+			# so on a projectile the streak aligns to the flight angle.
+			if fly_angle < 900.0:
+				p.angle_min = fly_angle
+				p.angle_max = fly_angle
+				p.set_meta("dirfollow", true)
+			break
 	var v0 := maxf(vlen * 43.0, 40.0)          # cells/s → iso px/s
 	var vr := (float(em.get("velocityRandX", 0.0))
 		+ float(em.get("velocityRandY", 0.0))) * 43.0
@@ -241,7 +260,10 @@ static func spawn_projectile(parent: Node, xps_id: int, from: Vector3,
 	p.name = "xps_tween_%d" % xps_id
 	p.setup(from, to, angle_deg, coef, project)
 	parent.add_child(p)
-	var body := _build(xps_id, true)
+	var d2: Vector2 = project.call(to.x, to.y, 0.0) \
+		- project.call(from.x, from.y, 0.0)
+	var body := _build(xps_id, true,
+		rad_to_deg(d2.angle()) if d2.length() > 0.01 else 999.0)
 	if body != null:
 		body.position = Vector2.ZERO
 		p.add_child(body)
@@ -316,6 +338,19 @@ class _Projectile:
 		var alt := ALT_Z * z + _from.z + \
 			_sim * (_to.z - _from.z) / _dur
 		position = _project.call(wx, wy, alt)
+		var body := get_child(0)
+		if body != null and bool(body.get_meta("dirfollow", false)):
+			# DirectionFollower: rotate the whole streak with the
+			# instantaneous screen-space velocity (arc-following).
+			var s2 := _sim + 0.02
+			var nx: Vector2 = _project.call(
+				_from.x + _az.x * _v0 * _cos * s2,
+				_from.y + _az.y * _v0 * _cos * s2,
+				ALT_Z * (-G * 0.5 * s2 * s2 + _v0 * _sin * s2)
+					+ _from.z + s2 * (_to.z - _from.z) / _dur)
+			if (nx - position).length() > 0.01:
+				body.rotation = (nx - position).angle() \
+					- deg_to_rad(float(body.get_meta("df0", 0.0)))
 
 
 static func _additive_mat() -> CanvasItemMaterial:
