@@ -1,10 +1,12 @@
 extends Node2D
 
-## Retail spell .xps burst — CPUParticles2D billboard approximating the first
-## emitter of sfx.jar particle systems. Ports the three hot affectors from the
-## ua_0 update math (ColorFader → lifetime ramp, LinearForceEx → accel,
-## FrictionalForce → damping); curves/sub-emitters/DirectionFollower/Rebound
-## remain omitted — see tools/asset-import/xps_dump.py for the decode matrix.
+## Retail spell .xps burst — one CPUParticles2D per emitter of the sfx.jar
+## particle systems (retail stacks 1-14 layers; each keeps its own
+## start/endSpawnTime window via _schedule_emit). Ports the three hot
+## affectors from the ua_0 update math (ColorFader → lifetime ramp,
+## LinearForceEx → accel, FrictionalForce → damping); curves/sub-emitters/
+## DirectionFollower/Rebound remain omitted — see
+## tools/asset-import/xps_dump.py for the decode matrix.
 ##
 ## Also covers the script Particle.addTweenParticleSystem projectile: a burst
 ## riding the retail avw_0 ballistic arc (v0 = sqrt(g*dist/sin 2a), flight
@@ -64,24 +66,20 @@ static func _load_doc(xps_id: int) -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 
-static func _first_emitter(doc: Dictionary) -> Dictionary:
-	var emitters: Array = doc.get("emitters", [])
-	if emitters.is_empty():
-		return {}
-	var em: Variant = emitters[0]
-	return em if em is Dictionary else {}
 
-
-## Build the burst node (unpositioned, not yet in the tree). Meta "free_s" is
-## the auto-free delay for plain spawn(); "particles" is the CPUParticles2D.
-## `flying` keeps it emitting continuously for a projectile ride.
+## Build the burst node (unpositioned, not yet in the tree): one
+## CPUParticles2D per emitter (retail systems stack 1-14 layers, all
+## sharing the doc texture/blend). Meta "free_s" is the auto-free delay
+## for plain spawn(); each particle child carries "start_s"/"stop_s"
+## metas for its startSpawnTime/endSpawnTime window — _schedule_emit()
+## runs them once the node is in the tree. `flying` keeps it emitting
+## continuously for a projectile ride.
 static func _build(xps_id: int, flying := false) -> Node2D:
 	_ensure()
 	var doc := _load_doc(xps_id)
 	var meta: Dictionary = _index.get(str(xps_id), {})
 	if not doc.is_empty():
 		meta = doc
-	var em := _first_emitter(doc)
 	var tex_id := int(meta.get("textureId", xps_id))
 	if tex_id == 0 and bool(meta.get("compactHeader", false)):
 		tex_id = xps_id
@@ -93,61 +91,125 @@ static func _build(xps_id: int, flying := false) -> Node2D:
 
 	var n := Node2D.new()
 	n.name = "xps_%d" % xps_id
+	if bool(meta.get("behindMobile", false)):
+		n.z_index = -8
 
-	var max_p := int(em.get("maxParticles", 24))
+	var emitters: Array = doc.get("emitters", [])
+	if emitters.is_empty():
+		emitters = [{}]                    # index-only entry: generic burst
+	var tail := float(dur_ms) / 1000.0
+	for e in emitters:
+		if not (e is Dictionary):
+			continue
+		var p := _build_emitter(e, tex, dst_blend, int(meta.get("srcBlend", 0)),
+			float(dur_ms) / 1000.0, flying)
+		n.add_child(p)
+		tail = maxf(tail, float(p.get_meta("stop_s")) + p.lifetime)
+	if n.get_child_count() == 0:
+		return null
+	n.set_meta("free_s", tail + 0.15)
+	return n
+
+
+## One emitter → one CPUParticles2D. Spawn window: spawnFrequency is the
+## retail interval between spawn ticks (Emitter.b — dnG += dt vs auL);
+## start/endSpawnTime bound emission. freq<=0 is a single burst at start.
+static func _build_emitter(em: Dictionary, tex: Texture2D, dst_blend: int,
+		src_blend: int, dur_s: float, flying: bool) -> CPUParticles2D:
 	var life := float(em.get("particleLifeTime", 0.0))
 	if life <= 0.0:
-		life = clampf(float(dur_ms) / 1000.0 * 0.35, 0.25, 2.5)
+		life = clampf(dur_s * 0.35, 0.25, 2.5) if dur_s > 0.0 else 0.5
 	else:
 		life = clampf(life, 0.08, 4.0)
+	var start := maxf(0.0, float(em.get("startSpawnTime", 0.0)))
+	var end := float(em.get("endSpawnTime", 0.0))
+	if end <= start:
+		end = maxf(dur_s, start + life) if dur_s > 0.0 else start + life
+	end = minf(end, dur_s + life) if dur_s > 0.0 else end
 	var freq := float(em.get("spawnFrequency", 0.0))
-	var amount := clampi(max_p if max_p > 0 else 24, 4, 128)
-	var explos := 0.92 if freq <= 0.0 else clampf(1.0 - freq * 4.0, 0.15, 0.95)
-	var vx := float(em.get("velocityX", 0.0))
-	var vy := float(em.get("velocityY", 0.0))
-	var vlen := sqrt(vx * vx + vy * vy)
-	var dir := Vector2(vx, vy).normalized() if vlen > 0.01 else Vector2(0, -1)
-	var scale_base := 0.5
-	var models: Array = em.get("models", [])
-	if not models.is_empty() and models[0] is Dictionary:
-		scale_base = clampf(float(models[0].get("scaleY", 0.5)), 0.05, 2.0)
+	var max_p := int(em.get("maxParticles", 24))
+	var mps := int(em.get("maxPerSpawn", 1))
 
 	var p := CPUParticles2D.new()
 	p.name = "particles"
-	p.one_shot = not flying
-	p.emitting = true
-	p.explosiveness = explos if not flying else 0.0
-	if flying:
-		amount = mini(amount, 16)
-		life = clampf(life * 0.5, 0.15, 1.2)
 	p.randomness = clampf(float(em.get("particleLifeTimeRandom", 0.35)), 0.0, 1.0)
-	p.amount = amount
 	p.lifetime = life
 	p.speed_scale = 1.0
-	p.direction = dir
+	if flying:
+		p.amount = mini(maxi(max_p, 4), 16)
+		p.lifetime = clampf(life * 0.5, 0.15, 1.2)
+	elif freq > 0.0:
+		# continuous stream: amount/lifetime ≈ spawn rate (mps per freq)
+		var rate := float(mps) / freq
+		p.amount = clampi(int(ceilf(rate * life)), 1, mini(max_p, 96))
+	else:
+		p.amount = clampi(max_p if max_p > 0 else 24, 4, 128)
+		p.one_shot = true
+		p.explosiveness = 0.92
+	p.emitting = flying or start <= 0.0
+	p.set_meta("start_s", 0.0 if flying else start)
+	p.set_meta("stop_s", 0.0 if flying else end)
+
+	var vx := float(em.get("velocityX", 0.0))
+	var vy := float(em.get("velocityY", 0.0))
+	var vz := float(em.get("velocityZ", 0.0))
+	var vlen := sqrt(vx * vx + vy * vy + vz * vz)
+	var dir := Vector2(vx - vy, (vx + vy) * 0.5 - vz)
+	p.direction = dir.normalized() if dir.length() > 0.01 else Vector2(0, -1)
 	p.spread = 45.0
-	var v0 := maxf(vlen, 40.0)
-	var vr := float(em.get("velocityRandX", 0.0)) + float(em.get("velocityRandY", 0.0))
+	var v0 := maxf(vlen * 43.0, 40.0)          # cells/s → iso px/s
+	var vr := (float(em.get("velocityRandX", 0.0))
+		+ float(em.get("velocityRandY", 0.0))) * 43.0
 	p.initial_velocity_min = maxf(10.0, v0 - vr * 0.5)
 	p.initial_velocity_max = v0 + vr
-	p.scale_amount_min = scale_base * 0.6
-	p.scale_amount_max = scale_base * 1.2
+	var ox := float(em.get("offsetX", 0.0))
+	var oy := float(em.get("offsetY", 0.0))
+	var oz := float(em.get("offsetZ", 0.0))
+	p.position = Vector2((ox - oy) * 43.0, (ox + oy) * 21.5 - oz * 10.0)
+	var rx := absf(float(em.get("offsetRandX", 0.0)))
+	var ry := absf(float(em.get("offsetRandY", 0.0)))
+	var rz := absf(float(em.get("offsetRandZ", 0.0)))
+	if rx + ry + rz > 0.01:
+		p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		p.emission_rect_extents = Vector2((rx + ry) * 43.0,
+			(rx + ry) * 21.5 + rz * 10.0)
+
+	var scale_base := 0.5
 	var col := Color.WHITE
+	var models: Array = em.get("models", [])
 	if not models.is_empty() and models[0] is Dictionary:
 		var m: Dictionary = models[0]
-		col = Color(
-			float(m.get("red", 1.0)),
-			float(m.get("green", 1.0)),
+		scale_base = clampf(float(m.get("scaleY", 0.5)), 0.05, 2.0)
+		col = Color(float(m.get("red", 1.0)), float(m.get("green", 1.0)),
 			float(m.get("blue", 1.0)),
 			clampf(float(m.get("alpha", 0.85)), 0.05, 1.0))
+	p.scale_amount_min = scale_base * 0.6
+	p.scale_amount_max = scale_base * 1.2
 	p.texture = tex
-	_apply_affectors(p, em, col, life)
+	_apply_affectors(p, em, col, p.lifetime)
 	# GL_ONE / GL_SRC_ALPHA-style pairs → additive glow
-	if dst_blend == 771 or int(meta.get("srcBlend", 0)) == 1:
+	if dst_blend == 771 or src_blend == 1:
 		p.material = _additive_mat()
-	n.add_child(p)
-	n.set_meta("free_s", maxf(p.lifetime + 0.15, float(dur_ms) / 1000.0))
-	return n
+	return p
+
+
+## Kick the emitters' start/stop windows once `n` is in the tree.
+static func _schedule_emit(n: Node2D) -> void:
+	if not n.is_inside_tree():
+		return
+	for p in n.get_children():
+		if not (p is CPUParticles2D):
+			continue
+		var start := float(p.get_meta("start_s", 0.0))
+		var stop := float(p.get_meta("stop_s", 0.0))
+		if start > 0.0:
+			var tree := n.get_tree()
+			tree.create_timer(start).timeout.connect(
+				func(): if is_instance_valid(p): p.emitting = true)
+		if stop > 0.0:
+			var tree2 := n.get_tree()
+			tree2.create_timer(stop).timeout.connect(
+				func(): if is_instance_valid(p): p.emitting = false)
 
 
 ## Spawn a one-shot burst at `at` (screen space). Returns the node (auto-freed).
@@ -157,8 +219,10 @@ static func spawn(parent: Node, xps_id: int, at: Vector2) -> Node2D:
 		return null
 	n.position = at
 	parent.add_child(n)
-	n.get_tree().create_timer(float(n.get_meta("free_s"))).timeout.connect(
-		n.queue_free)
+	_schedule_emit(n)
+	if n.is_inside_tree():
+		n.get_tree().create_timer(float(n.get_meta("free_s"))).timeout.connect(
+			n.queue_free)
 	return n
 
 
@@ -179,6 +243,7 @@ static func spawn_projectile(parent: Node, xps_id: int, from: Vector3,
 	if body != null:
 		body.position = Vector2.ZERO
 		p.add_child(body)
+		_schedule_emit(body)
 		p.set_meta("tail_s", float(body.get_meta("free_s")) * 0.5)
 	p.position = project.call(from.x, from.y, from.z)
 	return p
@@ -235,9 +300,10 @@ class _Projectile:
 			arrived.emit()
 			set_process(false)
 			var tail := float(get_meta("tail_s", 0.6))
-			var particles := find_child("particles", true, false)
-			if particles != null:
-				particles.emitting = false
+			for c in get_children():
+				for em in c.get_children():
+					if em is CPUParticles2D:
+						em.emitting = false
 			if is_inside_tree():
 				get_tree().create_timer(minf(tail, 1.5)).timeout.connect(
 					queue_free)

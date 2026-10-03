@@ -21,8 +21,9 @@ decompiled client, no runtime).
   no spawn hook on `8110`/`8108`.
 - **Fix:** `spell_sounds.py` → `spell_fx.json`; `xps_dump.py` → full
   emitter-tree JSON for **364/364** retail `0x5001` systems (+ `81.xps`
-  legacy `XPS` zlib wrapper, skipped); TGA→PNG; `xps_fx.gd` reads the
-  first emitter from `assets/gamedata/xps/<id>.json` when present;
+  legacy `XPS` zlib wrapper, skipped); TGA→PNG; `xps_fx.gd` builds one
+  `CPUParticles2D` per emitter from `assets/gamedata/xps/<id>.json`
+  (154/182 spell-referenced systems stack 2–14 layers);
   `_cast_fx` on `8110` in `fight_view.gd`. Decoder follows `alo_2` /
   `bk_0` / `gg_0` (22-float bitmap models, compact header when
   `dstBlend==0`, DirectionFollower tag-6 has no leveled bit).
@@ -41,10 +42,13 @@ decompiled client, no runtime).
   real `ua_0` update math in `xps_fx.gd` — `LinearForceEx` (`lv`: vel +=
   F·33·dt → iso-projected accel), `FrictionalForce` (`nt`: vel·= 1−(33−
   f)·dt → damping), `ColorFader` (`oo_0`: c += (t−c)·speed·dt inside
-  TimeCondition windows → simulated lifetime `color_ramp`). Still out:
+  TimeCondition windows → simulated lifetime `color_ramp`). All
+  emitters now spawn (not just the first), each under its own
+  `startSpawnTime`/`endSpawnTime` window (`_schedule_emit` timers;
+  projectile trails hold `flying` until `arrived`). Still out:
   `Rebound` (it's an orbital force, not a bounce), `DirectionFollower`,
   keyframed `Deformer`/`Curve`/`RotationInterpolation`, sub-emitters,
-  lights, and emitters beyond the first.
+  and lights.
 - **Verify:** `fight_smoke` + `carry_smoke` green (headless, 0 script
   errors). Live cast FX visible when `spell_fx.json`, `xps_index.json`,
   and the texture png exist for the spell's xps id — the `assets/fx`
