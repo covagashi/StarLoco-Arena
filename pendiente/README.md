@@ -53,7 +53,7 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 ## 4. Validación
 
 - [x] **`displace_smoke`:** verde contra servidor Go local — `tp=true push=true swap=true`.
-- [ ] **Cliente retail / MCP:** [`server/docs/CLIENT-TESTING.md`](../server/docs/CLIENT-TESTING.md) — cast con partículas visibles vs Godot (misma spell id / xps id).
+- [ ] **Cliente retail / MCP:** [`server/docs/CLIENT-TESTING.md`](../server/docs/CLIENT-TESTING.md) — cast con partículas visibles vs Godot (misma spell id / xps id). **Bloqueado en macOS arm64 (verificado 2026-10-03):** el bundle local `client/compiled` carece de `lib/`+natives (~171MB menos que el bundle completo), el display es JOGL 1.x obligatorio (`pG extends GLCanvas` — `shadersActivated` solo gobierna efectos), y JOGL 1.x/luajava no tienen natives arm64 (ppc/i386 únicamente — sin 32-bit desde Catalina; JogAmp 2.x tiene aarch64 pero renombró la API a `com.jogamp.opengl`). Caminos: Windows real/VM ARM (UTM/Parallels) con el bundle win32 completo — como `arena-mcp`/`drive.ps1` ya están escritos — o shim `javax.media.opengl`→JogAmp 2.x (trabajo grande).
 - [x] Tras cada cambio de decoder o FX: `go test ./...` (desde `server/`, todo verde), smokes `fight_smoke` + `carry_smoke` + `displace_smoke` (0 errores script).
 
 ---
