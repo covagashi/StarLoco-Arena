@@ -4,9 +4,10 @@ extends Node2D
 ## particle systems (retail stacks 1-14 layers; each keeps its own
 ## start/endSpawnTime window via _schedule_emit). Ports the three hot
 ## affectors from the ua_0 update math (ColorFader → lifetime ramp,
-## LinearForceEx → accel, FrictionalForce → damping); curves/sub-emitters/
-## DirectionFollower/Rebound remain omitted — see
-## tools/asset-import/xps_dump.py for the decode matrix.
+## LinearForceEx → accel, FrictionalForce → damping, Rebound's orbital
+## curl → tangential_accel); sub-emitters, DirectionFollower and lights
+## remain omitted — see tools/asset-import/xps_dump.py for the decode
+## matrix (keyframed affectors never appear in the decoded corpus).
 ##
 ## Also covers the script Particle.addTweenParticleSystem projectile: a burst
 ## riding the retail avw_0 ballistic arc (v0 = sqrt(g*dist/sin 2a), flight
@@ -329,11 +330,16 @@ static func _additive_mat() -> CanvasItemMaterial:
 ## - FrictionalForce (nt, tag 7): vel *= 1 - (33 - friction) * dt.
 ## - ColorFader (oo_0, tag 4): c += (target - c) * speed * dt, gated by
 ##   TimeCondition windows — simulated into a lifetime color ramp.
-## Rebound/DirectionFollower/keyframed affectors have no 2D analogue — skipped.
+## - Rebound (arx_0, tag 10): dvel = R90(offset) * restitution * dt — a curl
+##   field that orbits particles around the anchor (NOT a bounce);
+##   tangential_accel approximates the swirl at a ~0.8-cell radius.
+## DirectionFollower aligns billboards to the velocity — no 2D analogue;
+## keyframed Deformer/Curve/RotationInterpolation are absent from the corpus.
 static func _apply_affectors(p: CPUParticles2D, em: Dictionary,
 		base: Color, life: float) -> void:
 	var accel := Vector3.ZERO
 	var damp := 0.0
+	var tang := 0.0
 	var faders: Array = []
 	for a in em.get("affectors", []):
 		if not (a is Dictionary):
@@ -345,6 +351,8 @@ static func _apply_affectors(p: CPUParticles2D, em: Dictionary,
 			8:
 				accel += Vector3(float(a.get("x", 0.0)),
 					float(a.get("y", 0.0)), float(a.get("z", 0.0)))
+			10:
+				tang += float(a.get("restitution", 0.0)) * 34.0
 			4:
 				var w := Vector2(0.0, 1e9)
 				for c in a.get("conditions", []):
@@ -361,6 +369,9 @@ static func _apply_affectors(p: CPUParticles2D, em: Dictionary,
 	if damp > 0.0:
 		p.damping_min = damp
 		p.damping_max = damp
+	if tang != 0.0:
+		p.tangential_accel_min = tang
+		p.tangential_accel_max = tang
 	var ramp := _fader_ramp(faders, base, life)
 	if ramp != null:
 		p.color = Color.WHITE

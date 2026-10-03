@@ -45,10 +45,13 @@ decompiled client, no runtime).
   TimeCondition windows → simulated lifetime `color_ramp`). All
   emitters now spawn (not just the first), each under its own
   `startSpawnTime`/`endSpawnTime` window (`_schedule_emit` timers;
-  projectile trails hold `flying` until `arrived`). Still out:
-  `Rebound` (it's an orbital force, not a bounce), `DirectionFollower`,
-  keyframed `Deformer`/`Curve`/`RotationInterpolation`, sub-emitters,
-  and lights.
+  projectile trails hold `flying` until `arrived`). `Rebound` (`arx_0`
+  dvel = R90(offset)·restitution·dt — an orbital curl, not a bounce) is
+  approximated by `tangential_accel` (29 spell-referenced systems).
+  Still out: `DirectionFollower` (velocity-aligned billboards — no
+  CPUParticles2D equivalent), sub-emitters, and lights. The keyframed
+  `Deformer`/`Curve`/`RotationInterpolation` affectors never appear in
+  the decoded corpus — nothing to port.
 - **Verify:** `fight_smoke` + `carry_smoke` green (headless, 0 script
   errors). Live cast FX visible when `spell_fx.json`, `xps_index.json`,
   and the texture png exist for the spell's xps id — the `assets/fx`
