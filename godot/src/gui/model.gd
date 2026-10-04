@@ -38,12 +38,17 @@ func get_value(name: String, field: String = ""):
 	return v
 
 
-## retail fields can be property paths that restate the name's last
-## segment — field="guild.name" on name="guild" means guild.name flat,
-## not guild.guild.name. Drop the redundant head and walk the rest.
+## retail fields can be property paths that restate the model root or the
+## name's last segment — field="guild.name" on name="guild" means guild.name
+## flat, and field="teamManagement.teamPreset1vs1List" on
+## name="teamManagement.teamManager" means a direct child of teamManager.
+## Drop the redundant head and walk the rest.
 func _field_parts(name: String, field: String) -> PackedStringArray:
 	var parts := field.split(".")
-	if parts.size() > 1 and parts[0] == name.split(".")[-1]:
+	if parts.size() <= 1:
+		return parts
+	var segs := name.split(".")
+	if parts[0] == segs[-1] or parts[0] == segs[0]:
 		return parts.slice(1)
 	return parts
 

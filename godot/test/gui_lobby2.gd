@@ -187,7 +187,22 @@ func _init() -> void:
 	_gui.model.set_value("teamManagement", [], "selectedItemCardList")
 	var fe := _gui.open_dialog("fighterEquipmentDialog")
 	print("[smoke] fighterEquip:", "ok" if fe != null else "FAIL")
-	for r in [sd, cs, ld, cd, ad, od, cb, gc, gm, gs, mb, nm, cm, ex, tm, fe]:
+	_gui.model.set_value("teamManagement",
+		{"teamPreset1vs1List": [{"id": 4, "teamId": 4,
+			"name": "Alpha", "isEditable": true,
+			"strength": 800, "level": 3, "fighters": [],
+			"selectedFighters": []}]},
+		"teamManager")
+	var tn := _gui.open_dialog("teamNameDialog")
+	print("[smoke] teamName:", "ok" if tn != null else "FAIL")
+	var t2 := _gui.open_dialog("team2vs2NameDialog")
+	print("[smoke] team2vs2Name:", "ok" if t2 != null else "FAIL")
+	var tl := _gui.open_dialog("teamLoadDialog")
+	print("[smoke] teamLoad:", "ok" if tl != null else "FAIL")
+	var nt := _gui.open_dialog("newTeamTournamentDialog")
+	print("[smoke] newTeamTournament:", "ok" if nt != null else "FAIL")
+	for r in [sd, cs, ld, cd, ad, od, cb, gc, gm, gs, mb, nm, cm, ex, tm,
+			fe, tn, t2, tl, nt]:
 		if r != null:
 			vp.add_child(r)
 	if sd != null:

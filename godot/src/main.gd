@@ -262,12 +262,49 @@ func _ready() -> void:
 	# teamManagement / evolution namespace → the lobby fight screens
 	_gui.on("launchEvolutionFight", func(_a, _w): _on_evo_search())
 	_gui.on("launchTeamTest", func(_a, _w): _on_practice_pressed())
-	_gui.on("createNewEvolutionFighter", _on_new_fighter_dialog)
+	_gui.on("createNewEvolutionFighter",
+		func(a, w): _on_new_fighter_dialog(a, w, true))
 	_gui.on("deleteFighter", _on_gui_delete_fighter)
 	# dofusarena.evolution:* — teamManagementEvolution roster component
 	_gui.on("selectFighter", _on_evo_select_fighter)
 	_gui.on("changeFighterStatus", _on_evo_fighter_status)
-	_gui.on("becomeALegend", func(_a, _w): pass)
+	_gui.on("becomeALegend", _on_evo_become_legend)
+	_gui.on("createNewFighter",
+		func(a, w): _on_new_fighter_dialog(a, w, false))
+	_gui.on("selectTeamPreset", _on_tm_select_preset)
+	_gui.on("onFighterDropped", _on_tm_fighter_dropped)
+	_gui.on("onFighterDroppedXvsX", _on_tm_fighter_dropped)
+	_gui.on("deleteEditableTeamPreset", _on_tm_delete_preset)
+	_gui.on("saveTeam", _on_tm_save_team)
+	_gui.on("selectEditableFighter", _on_tm_select_editable_fighter)
+	_gui.on("showHidePrebuildTeams", _on_tm_prebuild_toggle)
+	_gui.on("addNewTeam", func(a, w): _on_tm_add_team(a, w, -6))
+	_gui.on("addNewTournamentTeam",
+		func(a, w): _on_tm_add_team(a, w, -5))
+	_gui.on("addNewTeamXvsX", _on_tm_add_team_xvsx)
+	_gui.on("selectTeamBackgroundColorIndex",
+		func(a, w): _on_tm_pick_color(a, w,
+			"selectedTeamBackground", "color"))
+	_gui.on("selectTeamIconColorIndex",
+		func(a, w): _on_tm_pick_color(a, w,
+			"selectedTeamIcon", "color"))
+	_gui.on("selectTeamBackground",
+		func(a, w): _on_tm_pick_color(a, w,
+			"selectedTeamBackground", "id"))
+	_gui.on("selectTeamIcon",
+		func(a, w): _on_tm_pick_color(a, w, "selectedTeamIcon", "id"))
+	_gui.on("setClassicReadyForFight",
+		func(_a, _w): _on_fight_pressed())
+	_gui.on("launchLegendTest",
+		func(_a, _w): _on_practice_pressed())
+	# retail surfaces without a backing lane yet — tournaments, team-file
+	# restore, and the hover popups the engine already owns.
+	for m in ["validateTeamNameForm", "loadTeam", "selectTournament",
+			"loadProfile", "deleteProfile", "setPlayerIndex",
+			"setTournamentReadyForFight",
+			"setLegendTournamentReadyForFight",
+			"showFighterInfos", "hideFighterInfos"]:
+		_gui.on(m, func(_a, _w): pass)
 	_gui.on("openCloseSphereBoard", _on_evo_sphere_board)
 	_gui.on("selectConsumableSet", _on_evo_select_set)
 	_gui.on("goBackToList", _on_evo_back_to_list)
@@ -306,7 +343,9 @@ func _ready() -> void:
 	_gui.on("setFighterVersion", _on_fighter_version)
 	_gui.on("setFighterSex", _on_fighter_set.bind("sex"))
 	_gui.on("hideMouseImage", func(_a, _w): pass)
-	_gui.on("changeTeamTab", func(_a, _w): pass)
+	_gui.on("changeTeamTab", _on_tm_change_tab)
+	_gui.on("addRemoveFighterFromEditableTeamPreset",
+		_on_tm_add_remove_fighter)
 	_gui.on("openCloseUnlockedColors", func(_a, _w): pass)
 	# dofusarena.social:* — friend/ignore/guild tab actions
 	_gui.on("addToFriendList", _on_social_add.bind(OP_FRIEND_ADD))
@@ -1576,7 +1615,9 @@ func _on_fight_pressed() -> void:
 	# The first i64 is the CLAIMED partner for duo presets (coaches[0] =
 	# ally, per the 6030 coach list order); solo sends the own coach id.
 	var partner := State.my_coach_id
-	var pid := _selected_preset_id()
+	# the retail classic tab's selection wins over the debug dropdown
+	var pid := _tm_preset_sel if _tm_preset_sel > 0 \
+		else _selected_preset_id()
 	for p in State.presets:
 		if int(p.id) == pid and p.get("coaches", []).size() >= 1:
 			partner = int(p.coaches[0])
@@ -2373,8 +2414,9 @@ func _on_create_fighter() -> void:
 		dlg.get_node("Breed").get_selected_id(), fname,
 		1 if dlg.get_node("Sex").button_pressed else 0)
 	var w := WireWriter.new()
-	w.put_u8(0)                       # flag: 0 = classic roster
-	w.put_u16(0)                      # slot
+	w.put_u8(0)                       # flag: 0 = UI create (1 = file restore)
+	# slot = target preset id (-1 → titular pool), per hu_2.java:16611
+	w.put_i16(_selected_preset_id())
 	w.put_u16(blob.size())
 	w.put_bytes(blob)
 	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
@@ -2634,7 +2676,14 @@ func _on_coach_create(_args: Array, _w) -> void:
 const _FV := preload("res://src/fight/fight_view.gd")
 
 
-func _on_new_fighter_dialog(_args: Array, _w) -> void:
+## Whether the create-fighter dialog was opened from the evolution tab —
+## retail writes slot=99 + blob type 2 for evolution recruits, slot=teamId +
+## blob type 1 for classic preset recruits (hu_2.java:16611).
+var _create_fighter_evo := false
+
+
+func _on_new_fighter_dialog(_args: Array, _w, evo := false) -> void:
+	_create_fighter_evo = evo
 	_gui.gui.model.set_value("teamManagement", {
 		"breedId": 1, "sex": 0, "version": 1,
 		"skin": 0, "hair": 0, "eye": 0, "name": "",
@@ -2701,10 +2750,17 @@ func _on_gui_create_fighter(_args: Array, _w) -> void:
 	var blob: PackedByteArray = Overrides.encode_fighter_blob(
 		int(f.get("breedId", 1)), fname, int(f.get("sex", 0)), [],
 		[int(f.get("hair", 0)), int(f.get("skin", 0)),
-			int(f.get("eye", 0))])
+			int(f.get("eye", 0))],
+		2 if _create_fighter_evo else 1)
+	# slot: 99 for evolution recruits, the preset's team id for classic
+	# (hu_2.java:16611 — 0 was our placeholder, the server needs the team).
+	var slot := 99
+	if not _create_fighter_evo:
+		slot = _tm_preset_sel if _tm_preset_sel > 0 \
+			else _selected_preset_id()
 	var w := WireWriter.new()
 	w.put_u8(0)
-	w.put_u16(0)
+	w.put_i16(slot)
 	w.put_u16(blob.size())
 	w.put_bytes(blob)
 	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
@@ -2723,25 +2779,404 @@ func _on_gui_delete_fighter(args: Array, _w) -> void:
 
 
 ## Roster → the XULOR2 model the evolution tab's fighter cards bind.
-## state 0 titular / 1 bench / 2+ dead-ish — bench goes to fightersOnBench.
+## state 1/5 → bench lists; the editableTeamPreset.fighters bean is
+## per-tab (evolution titulars vs the classic recruit pool) like retail.
 func _push_team_model() -> void:
-	var playing: Array = []
 	var bench: Array = []
 	for fr in State.roster:
 		var item := _evo_fighter_item(fr)
-		if int(fr.get("state", 0)) == 1 or int(fr.get("state", 0)) == 5:
+		if int(fr.get("state", 0)) == 1:
 			bench.append(item)
-		elif int(fr.get("type", 2)) == 2:
-			playing.append(item)
-	while playing.size() < 6:
-		playing.append(null)
 	_gui.gui.model.set_value("teamManagement",
-		{"fighters": playing}, "editableTeamPreset")
+		{"fighters": _tm_classic_pool() if _tm_tab() in [1, 2, 3]
+			else _tm_evo_playing()}, "editableTeamPreset")
 	_gui.gui.model.set_value("evolutionTeam",
 		{"fightersOnBench": bench})
 	_gui.gui.model.set_value("tomeManager",
 		_all_card_sets(), "evolutionSets")
 	_gui.gui.model.set_value("onlyTabEnabledId", -1)
+	_push_team_classic_model()
+
+
+## Active teamManagement tab — persisted like retail's
+## gamePreferences.lastSelectedGameModeId (0 evolution, 1 elite, 2 2v2,
+## 3 tournament, 4 legends).
+func _tm_tab() -> int:
+	var v: Variant = _gui.gui.model.get_value("gamePreferences",
+		"lastSelectedGameModeId")
+	return int(v) if v is int or v is float else 0
+
+
+## Classic tabs' fighter pool — every type-1 roster fighter flagged with
+## `teamMember` when it already belongs to the selected preset (the
+## newFighterList renderer reads it for the add/remove button).
+func _tm_classic_pool() -> Array:
+	var pool: Array = []
+	for fr in State.roster:
+		if int(fr.get("type", 2)) != 1:
+			continue
+		var it := _evo_fighter_item(fr)
+		it["teamMember"] = _tm_preset_has(int(it.get("id", 0)))
+		pool.append(it)
+	return pool
+
+
+func _tm_preset_has(fid: int) -> bool:
+	for p in State.presets:
+		if int(p.get("id", -1)) != _tm_preset_sel:
+			continue
+		for pf in p.get("fighters", []):
+			if int(pf.get("id", 0)) == fid:
+				return true
+	return false
+
+
+func _tm_evo_playing() -> Array:
+	var playing: Array = []
+	for fr in State.roster:
+		if int(fr.get("type", 2)) == 2 and int(fr.get("state", 0)) != 1 \
+				and int(fr.get("state", 0)) != 5:
+			playing.append(_evo_fighter_item(fr))
+	while playing.size() < 6:
+		playing.append(null)
+	return playing
+
+
+## changeTeamTab(teamManagementTabbedContainer) — repush the shared
+## editableTeamPreset fields for the newly shown tab and persist the
+## index like retail's lastSelectedGameModeId.
+func _on_tm_change_tab(args: Array, w: GWidget) -> void:
+	var idx := -1
+	var src: GWidget = w
+	for a in args:
+		if a is GWidget:
+			src = a
+	if src != null:
+		idx = src.selected_index
+	if idx < 0:
+		return
+	_gui.gui.model.set_value("gamePreferences",
+		idx, "lastSelectedGameModeId")
+	var ev: Variant = _gui.gui.model.get_value("teamManagement",
+		"editableTeamPreset")
+	var ef: Dictionary = ev if ev is Dictionary else {}
+	ef["fighters"] = _tm_classic_pool() if idx in [1, 2, 3] \
+		else _tm_evo_playing()
+	_gui.gui.model.set_value("teamManagement", ef, "editableTeamPreset")
+
+
+## addRemoveFighterFromEditableTeamPreset(fighter) — the recruit pool's
+## add/remove button; same 6013 wire as the drag-drop path.
+func _on_tm_add_remove_fighter(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	var fid := int(row.get("id", row.get("fighterId", 0)))
+	if fid <= 0 or _tm_preset_sel <= 0:
+		return
+	var out := bool(row.get("teamMember", false))
+	var wr := WireWriter.new()
+	wr.put_i64(fid)
+	wr.put_i16(_tm_preset_sel if out else -1)
+	wr.put_i16(-1 if out else _tm_preset_sel)
+	wr.put_i64(State.my_coach_id)
+	Session.send(OP_FIGHTER_ASSIGN, wr.raw(), 2)
+
+
+## Classic tab — preset rows under teamManager + the selected preset as
+## editableTeamPreset.selectedFighters. Legendary evolution fighters feed
+## the Legends tab's editableTeamPreset.legendaryFighters /
+## evolutionTeam.legendary* lists.
+var _tm_preset_sel := -1
+
+
+func _push_team_classic_model() -> void:
+	var model := _gui.gui.model
+	var legends: Array = []
+	var legends_bench: Array = []
+	for fr in State.roster:
+		var st := int(fr.get("state", 0))
+		var it := _evo_fighter_item(fr)
+		if st == 4:
+			legends.append(it)
+		elif st == 5:
+			legends_bench.append(it)
+	model.set_value("teamManagement", legends,
+		"editableTeamPreset.legendaryFighters")
+	model.set_value("evolutionTeam", legends_bench,
+		"legendaryFightersOnBench")
+	model.set_value("evolutionTeam", _preset_strength(legends),
+		"legendaryValue")
+	var rows: Array = []
+	var rows2: Array = []
+	for p in State.presets:
+		var fid_list: Array = []
+		for pf in p.get("fighters", []):
+			var f: Variant = _fighter_by_id(int(pf.get("id", 0)))
+			if f != null:
+				fid_list.append(_evo_fighter_item(f))
+		var row := {"id": int(p.get("id", 0)),
+			"teamId": int(p.get("id", 0)),
+			"name": str(p.get("name", "")),
+			"isEditable": true,
+			"background": "", "icon": "",
+			"backgroundColor": "", "iconColor": "",
+			"strength": _preset_strength(fid_list),
+			"level": fid_list.size(),
+			"fighters": fid_list,
+			"selectedFighters": fid_list,
+			"consecutiveVictories": 0, "totalVictories": 0,
+			"totalDefeats": 0, "isBestTeam": false}
+		if int(p.get("type", 0)) in [-5, -6, -7]:
+			row["coachs"] = p.get("coaches", [])
+			rows2.append(row)
+		else:
+			rows.append(row)
+	model.set_value("teamManagement", {
+		"teamPreset1vs1List": rows,
+		"teamPreset2vs2List": rows2,
+		"tournamentsList": [], "teamsIconsList": _team_icons(),
+		"teamsBackgroundsList": _team_icons()}, "teamManager")
+	var gpv: Variant = model.get_value("gamePreferences")
+	var gp: Dictionary = gpv if gpv is Dictionary else {}
+	gp["showPrebuildTeam"] = true
+	model.set_value("gamePreferences", gp)
+	# selected preset → editableTeamPreset (classic fields — the evolution
+	# tab's editableTeamPreset.fighters is untouched; classic members live
+	# under selectedFighters like retail).
+	var sel: Variant = null
+	for r in rows + rows2:
+		if int(r.get("id", -1)) == _tm_preset_sel:
+			sel = r
+	var efv: Variant = model.get_value("teamManagement",
+		"editableTeamPreset")
+	var ef: Dictionary = efv if efv is Dictionary else {}
+	if sel != null:
+		ef["name"] = sel.get("name", "")
+		ef["value"] = sel.get("strength", 0)
+		ef["selectedFighters"] = sel.get("selectedFighters", [])
+	model.set_value("teamManagement", ef, "editableTeamPreset")
+
+
+func _preset_strength(list: Array) -> int:
+	var s := 0
+	for f in list:
+		if f is Dictionary:
+			s += int(f.get("budget", 0))
+	return s
+
+
+## teamNameDialog's icon/background pickers — the retail list is a fixed
+## icon sheet; expose the 12 slots the XML enumerates.
+func _team_icons() -> Array:
+	var out: Array = []
+	for i in 12:
+		out.append({"id": i, "textureUrl": "", "color": "1,1,1"})
+	return out
+
+
+## selectTeamPreset — the clicked row becomes editableTeamPreset.
+func _on_tm_select_preset(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	_tm_preset_sel = int(row.get("id", row.get("teamId", -1)))
+	_push_team_classic_model()
+
+
+## onFighterDropped/onFighterDroppedXvsX — a roster fighter dropped onto a
+## preset slot → 6013 [i64 fid][i16 src][i16 dst][i64 coach]. Dropping a
+## preset member back onto the roster pool sends dst = -1.
+func _on_tm_fighter_dropped(_a: Array, w: GWidget) -> void:
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	var payload: Variant = dnd.get("item")
+	if not (payload is Dictionary):
+		return
+	var fid := int(payload.get("id", payload.get("fighterId", 0)))
+	if fid <= 0:
+		return
+	# destination: the preset this drop targeted (row's team id), else the
+	# roster pool (-1) when the drop landed outside a preset list.
+	var dst := _tm_preset_sel
+	var row: Variant = _row_item(w)
+	if row is Dictionary and row.has("teamId"):
+		dst = int(row.get("teamId", dst))
+	elif row is Dictionary and row.has("id") and not row.has("fighterId"):
+		dst = int(row.get("id", dst))
+	if dst <= 0:
+		return
+	var src := -1
+	for p in State.presets:
+		for pf in p.get("fighters", []):
+			if int(pf.get("id", 0)) == fid:
+				src = int(p.get("id", -1))
+	var wr := WireWriter.new()
+	wr.put_i64(fid)
+	wr.put_i16(src)
+	wr.put_i16(dst)
+	wr.put_i64(State.my_coach_id)
+	Session.send(OP_FIGHTER_ASSIGN, wr.raw(), 2)
+
+
+## deleteEditableTeamPreset(team) → 6023 [i64 team][i16 gm][i16 fa].
+func _on_tm_delete_preset(args: Array, w: GWidget) -> void:
+	var team_id := _tm_preset_sel
+	var row: Variant = args[0] if args.size() > 0 \
+		and args[0] is Dictionary else _row_item(w)
+	if row is Dictionary:
+		team_id = int(row.get("teamId", row.get("id", team_id)))
+	if team_id <= 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_i64(team_id)
+	wr.put_i16(0)
+	wr.put_i16(0)
+	Session.send(OP_TEAM_PRESET_DELETE, wr.raw(), 2)
+	if _tm_preset_sel == team_id:
+		_tm_preset_sel = -1
+
+
+## saveTeam — persist editableTeamPreset's members back under its own id
+## (6021 sw_1 blob; same layout the debug saver writes). saveTeam(team)
+## carries the preset row in the elite/tournament tabs.
+func _on_tm_save_team(args: Array, w: GWidget) -> void:
+	var team_id := _tm_preset_sel
+	var row: Variant = args[0] if args.size() > 0 \
+		and args[0] is Dictionary else _row_item(w)
+	if row is Dictionary:
+		team_id = int(row.get("teamId", row.get("id", team_id)))
+	if team_id <= 0:
+		return
+	var preset: Variant = null
+	for p in State.presets:
+		if int(p.get("id", -1)) == team_id:
+			preset = p
+	if preset == null:
+		return
+	var wr := WireWriter.new()
+	wr.put_i16(int(preset.get("type", 0)))
+	wr.put_i16(team_id)
+	wr.put_i16(int(preset.get("game_mode", 1)))
+	var nb := CP1252.encode(str(preset.get("name", "")))
+	wr.put_u8(nb.size())
+	wr.put_bytes(nb)
+	var members: Array = preset.get("fighters", [])
+	wr.put_u8(members.size())
+	for pf in members:
+		wr.put_i64(int(pf.get("id", 0)))
+		wr.put_i64(int(pf.get("owner", State.my_coach_id)))
+	wr.put_u8(0)
+	wr.put_u8(0)
+	Session.send(OP_TEAM_PRESET_SAVE, wr.raw(), 2)
+
+
+## addNewTeam/addNewTournamentTeam — the name dialog's form → 6021 (aqH:
+## raw sw_1 blob). Retail types: -6 elite (teamNameDialog), -5 tournament
+## (newTeamTournamentDialog); both carry the 4 appearance bytes picked via
+## selectedTeamIcon/selectedTeamBackground (hu_2.java:16632/16660).
+func _on_tm_add_team(_args: Array, _w: GWidget, preset_type: int) -> void:
+	var model := _gui.gui.model
+	var tname := str(model.get_value("teamManagement", "teamName"))
+	if tname.strip_edges() == "":
+		return
+	var wr := WireWriter.new()
+	wr.put_i16(preset_type)
+	wr.put_i16(0)
+	wr.put_i16(1)
+	var nb := CP1252.encode(tname.strip_edges())
+	wr.put_u8(nb.size())
+	wr.put_bytes(nb)
+	if preset_type in [-5, -6, -7]:
+		var icon := _asv(model.get_value("selectedTeamIcon"))
+		var bg := _asv(model.get_value("selectedTeamBackground"))
+		wr.put_u8(icon[0] & 0xFF)
+		wr.put_u8(icon[1] & 0xFF)
+		wr.put_u8(bg[0] & 0xFF)
+		wr.put_u8(bg[1] & 0xFF)
+	wr.put_u8(0)   # fighters — created empty
+	wr.put_u8(0)   # coaches
+	wr.put_u8(0)   # trailing pad
+	Session.send(OP_TEAM_PRESET_SAVE, wr.raw(), 2)
+	for d in ["teamNameDialog", "team2vs2NameDialog",
+			"newTeamTournamentDialog"]:
+		_gui.close(d)
+
+
+## asV pair — {id, color} dict → [index, colorIndex] like retail's
+## asV(lV, aFS). The icon pickers store plain ints; tolerate both.
+func _asv(v: Variant) -> Array:
+	if v is Dictionary:
+		return [int(v.get("id", 0)), int(v.get("color", 0))]
+	if v is int or v is float:
+		return [int(v), 0]
+	return [0, 0]
+
+
+## addNewTeamXvsX — 2v2 teams are created by INVITING a teammate, not by
+## saving a solo preset: 6024 [str8 name][i64 inviter][i64 invited]
+## (hu_2.java:16636 → ir_0). The invited coach comes from
+## teamManagement.teammateName (friend-list picker).
+func _on_tm_add_team_xvsx(_args: Array, _w: GWidget) -> void:
+	var model := _gui.gui.model
+	var tname := str(model.get_value("teamManagement", "teamName"))
+	if tname.strip_edges() == "":
+		return
+	var mate: Variant = model.get_value("teamManagement", "teammateName")
+	var mate_id := -1
+	if mate is Dictionary:
+		mate_id = int(mate.get("id", mate.get("coach_id", -1)))
+	elif mate is int or mate is float:
+		mate_id = int(mate)
+	else:
+		var mname := str(mate)
+		for fr in State.friends:
+			if str(fr.get("name", "")) == mname:
+				mate_id = int(fr.get("id", fr.get("coach_id", -1)))
+	if mate_id <= 0:
+		_log_line("[i]pick a teammate for the 2v2 team first[/i]")
+		return
+	var wr := WireWriter.new()
+	wr.put_str(tname.strip_edges(), "u8")
+	wr.put_i64(State.my_coach_id)
+	wr.put_i64(mate_id)
+	Session.send(6024, wr.raw(), 2)
+	_gui.close("team2vs2NameDialog")
+
+
+## selectTeam{Icon,Background} set the asV index; the *ColorIndex events set
+## its color — `field` is the model key, `part` the asV component.
+func _on_tm_pick_color(args: Array, w: GWidget, field: String,
+		part: String) -> void:
+	var idx := 0
+	if part == "id":
+		var row: Variant = _row_item(w)
+		if row is Dictionary:
+			idx = int(row.get("id", row.get("index", 0)))
+	for a in args:
+		if a is int or a is float:
+			idx = int(a)
+		elif a is Dictionary:
+			idx = int(a.get("id", idx))
+	var cur: Variant = _gui.gui.model.get_value(field)
+	var d: Dictionary = cur if cur is Dictionary else {}
+	d[part] = idx
+	_gui.gui.model.set_value(field, d)
+
+
+## showHidePrebuildTeams — the preferences checkbox → model flag.
+func _on_tm_prebuild_toggle(_a: Array, _w: GWidget) -> void:
+	var gpv: Variant = _gui.gui.model.get_value("gamePreferences")
+	var gp: Dictionary = gpv if gpv is Dictionary else {}
+	gp["showPrebuildTeam"] = not bool(gp.get("showPrebuildTeam", true))
+	_gui.gui.model.set_value("gamePreferences", gp)
+
+
+## selectEditableFighter — preset-member row → editableFighter preview.
+func _on_tm_select_editable_fighter(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if row is Dictionary:
+		_gui.gui.model.set_value("teamManagement",
+			row, "editableFighter")
 
 
 ## The fighter-card item the evolution rows bind — raw roster dict merged
@@ -2813,9 +3248,28 @@ func _on_evo_fighter_status(_args: Array, w: GWidget) -> void:
 	var f: Variant = _fighter_by_id(fid)
 	if f == null or int(f.get("state", 0)) == 3:
 		return
+	# 23000 [i64 fid][u8 promote] — retail Jc: flag 0 = titular/bench toggle
+	# (both the evolution pair 1↔3 and the legend pair 4↔5); flag 1 is
+	# becomeALegend only (event 23068).
 	var wr := WireWriter.new()
 	wr.put_i64(fid)
-	wr.put_u8(1 if int(f.get("state", 0)) >= 4 else 0)
+	wr.put_u8(0)
+	Session.send(OP_FIGHTER_SET_STATE, wr.raw(), 2)
+
+
+## evolution:becomeALegend — promote the clicked evolution fighter into the
+## Legends team → 23000 flag 1 (retail event 23068).
+func _on_evo_become_legend(args: Array, w: GWidget) -> void:
+	var row: Variant = args[0] if args.size() > 0 \
+		and args[0] is Dictionary else _row_item(w)
+	if not (row is Dictionary):
+		return
+	var fid := int(row.get("id", row.get("fighterId", 0)))
+	if fid <= 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_i64(fid)
+	wr.put_u8(1)
 	Session.send(OP_FIGHTER_SET_STATE, wr.raw(), 2)
 
 

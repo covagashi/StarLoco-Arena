@@ -17,6 +17,8 @@ const DIALOG_ALIASES := {
 	# the generic toggle names the old drag-only lab; the tray UI is the
 	# functional one we wired
 	"fusionLaboratoryDialog": "fusionLabDialog",
+	# openCloseTeamXvsXNameDialog names the 2v2 name screen logically
+	"teamXvsXNameDialog": "team2vs2NameDialog",
 }
 
 
