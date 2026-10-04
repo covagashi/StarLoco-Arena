@@ -179,9 +179,12 @@ func _load_settings() -> void:
 	if gui.model.values["account.remember"]:
 		gui.model.values["account.password"] = c.get_value("account", "password", "")
 	var hosts: Array = c.get_value("proxy", "list", ["140.238.172.196:3000", "127.0.0.1:5555"])
+	var sel: String = str(c.get_value("proxy", "selected", hosts[0]))
+	if sel not in hosts:
+		sel = str(hosts[0])
 	gui.model.values["proxy"] = {
 		"list": hosts.map(func(h): return {"text": h}),
-		"selected": c.get_value("proxy", "selected", hosts[0]),
+		"selected": sel,
 	}
 	gui.model.values["gamePreferences"] = {
 		"language": c.get_value("gui", "language", "es"),

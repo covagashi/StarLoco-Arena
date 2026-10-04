@@ -1,18 +1,18 @@
 class_name PippopLogin
 extends Control
-## Custom login screen — Pillow-baked art (assets/gui/login_bg.png) with
+## Custom login screen — Pillow-baked art (assets/ui/login_bg.png) with
 ## real controls overlaid at the baked slot coordinates. Replaces the
 ## retail logonDialog; emits `submit(login, password, proxy)`.
 
 signal submit(login: String, password: String, proxy: String)
 
-const REF := Vector2(1280, 800)
+const REF := Vector2(1280, 720)
 # baked slot rects (final px of login_bg.png)
-const R_NAME := Rect2(475, 390, 330, 46)
-const R_PASS := Rect2(475, 470, 330, 46)
-const R_PROXY := Rect2(475, 550, 330, 46)
-const R_BTN := Rect2(530, 648, 220, 58)
-const R_ERR := Rect2(440, 712, 400, 24)
+const R_NAME := Rect2(475, 365, 330, 44)
+const R_PASS := Rect2(475, 445, 330, 44)
+const R_PROXY := Rect2(475, 525, 330, 44)
+const R_BTN := Rect2(530, 608, 220, 52)
+const R_ERR := Rect2(440, 662, 400, 20)
 
 var name_edit: LineEdit
 var pass_edit: LineEdit
@@ -122,9 +122,12 @@ func _solid(c: Color) -> StyleBoxFlat:
 func _relayout() -> void:
 	if _box == null:
 		return
-	var s := minf(size.x / REF.x, size.y / REF.y)
+	var vp := get_viewport_rect().size
+	position = Vector2.ZERO
+	size = vp
+	var s := minf(vp.x / REF.x, vp.y / REF.y)
 	_box.scale = Vector2(s, s)
-	_box.position = (size - REF * s) / 2.0
+	_box.position = (vp - REF * s) / 2.0
 
 
 func _do_submit() -> void:

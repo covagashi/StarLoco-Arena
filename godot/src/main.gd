@@ -676,7 +676,7 @@ func _on_disconnected() -> void:
 
 func _show_login_screen() -> void:
 	_login_screen = preload("res://src/ui/login_screen.gd").new()
-	add_child(_login_screen)
+	$UI.add_child(_login_screen)   # CanvasLayer — camera must not shift it
 	_login_screen.submit.connect(_on_login_submit)
 	var pm: Dictionary = _gui.gui.model.values.get("proxy", {})
 	var hosts: Array = []
