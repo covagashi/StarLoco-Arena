@@ -169,6 +169,11 @@ const OP_STATS_PUSH := 2401              # S2C uf_0 stat map — login push
 const OP_TUTORIAL_READY := 4517          # C2S empty arch 3 — aog_1 first-entry ack
 const OP_RESET_POS := 4514               # C2S empty arch 3 — /resetPosition
 const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
+const OP_FRIEND_REMOVE := 21050          # C2S [str8 name] (uk_1.removeFromFriendList)
+const OP_FRIEND_ADD := 21051             # C2S [str8 name]
+const OP_IGNORE_REMOVE := 21052          # C2S [str8 name]
+const OP_IGNORE_ADD := 21053             # C2S [str8 name]
+const OP_GUILD_INVITE_BY_NAME := 21054   # C2S [str8 name]
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
 const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
 const OP_FRIEND_ADDED := 3156            # [u8 name][u8 note][i64 id]…
@@ -266,6 +271,39 @@ func _ready() -> void:
 	_gui.on("hideMouseImage", func(_a, _w): pass)
 	_gui.on("changeTeamTab", func(_a, _w): pass)
 	_gui.on("openCloseUnlockedColors", func(_a, _w): pass)
+	# dofusarena.social:* — friend/ignore/guild tab actions
+	_gui.on("addToFriendList", _on_social_add.bind(OP_FRIEND_ADD))
+	_gui.on("addToIgnoreList", _on_social_add.bind(OP_IGNORE_ADD))
+	_gui.on("removeFromFriendList", _on_social_remove.bind(OP_FRIEND_REMOVE))
+	_gui.on("removeFromIgnoreList", _on_social_remove.bind(OP_IGNORE_REMOVE))
+	_gui.on("inviteToGuild", _on_social_add.bind(OP_GUILD_INVITE_BY_NAME))
+	_gui.on("switchSocialTab", func(_a, _w): pass)
+	_gui.on("quitGuild", _on_gui_quit_guild)
+	_gui.on("destroyGuild", _on_gui_destroy_guild)
+	_gui.on("openCloseGuildManagement", func(_a, _w): pass)
+	# dofusarena:*LadderInformationDialog — paging of the retail ladder tabs
+	_gui.on("forwardTenLadderInformationDialog",
+		func(_a, _w): _ladder_gui_page(10))
+	_gui.on("forwardOneHundredLadderInformationDialog",
+		func(_a, _w): _ladder_gui_page(100))
+	_gui.on("backwardTenLadderInformationDialog",
+		func(_a, _w): _ladder_gui_page(-10))
+	_gui.on("backwardOneHundredLadderInformationDialog",
+		func(_a, _w): _ladder_gui_page(-100))
+	_gui.on("firstPlayerLadderInformationDialog",
+		func(_a, _w): _ladder_gui_first())
+	_gui.on("lastPlayerLadderInformationDialog",
+		func(_a, _w): _ladder_gui_last())
+	_gui.on("coachSearchLadderInformationDialog",
+		func(_a, _w): _ladder_gui_mine())
+	# dofusarena.coachManagement:* — zaap tome navigation + teleport
+	_gui.on("goToSet", _on_zaap_go_to_set)
+	_gui.on("goToSetList", _on_zaap_go_to_list)
+	_gui.on("changeInstance", _on_zaap_change_instance)
+	_gui.on("showCoachCardInfosInTome", func(_a, _w): pass)
+	_gui.on("hideCoachCardInfos", func(_a, _w): pass)
+	_gui.on("equipSet", func(_a, _w): pass)
+	_gui.dialog_opened.connect(_on_gui_dialog_opened)
 	$UI/VBox.visible = false
 	if State.my_coach_id <= 0:
 		_gui.open("logonDialog")
@@ -491,6 +529,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.my_coach_name = str(d.get("name", State.my_coach_name))
 			State.my_coach_look = {"skin": int(d.get("skin", 0)),
 				"hair": int(d.get("hair", 0)), "sex": int(d.get("sex", 0))}
+			State.coach_standing = int(d.get("standing", 0))
+			State.coach_tournament_points = int(
+				d.get("tournament_points", 0))
 			State.guild = d.get("guild", {})
 			# criteria_blob = raw {u16 id, u16 value} pairs — the field's u16
 			# length prefix already served as buildCriteriaBlob's byteLen.
@@ -759,7 +800,11 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.spectating = false
 		OP_LADDER_1V1, OP_LADDER_GUILD, OP_LADDER_2V2, OP_LADDER_TOURN, \
 				OP_LADDER_COACH, OP_LADDER_DEMON, OP_LADDER_PRO:
-			_fill_ladder(Codec.decode(opcode, payload), opcode)
+			var ld := Codec.decode(opcode, payload)
+			_ladder_data[opcode] = ld
+			_fill_ladder(ld, opcode)
+			if _gui.is_open("ladderInformationDialog"):
+				_push_ladder_model()
 		OP_END_FIGHT:
 			# A result screen arriving on the lobby scene means the user backed
 			# out of the fight view mid-fight — ack it (26321) so the server
@@ -1046,6 +1091,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				State.coach_stats[int(s.id)] = s.value
 			if _elem_kind == ELEM_COACH and $UI/ElementDlg.visible:
 				_fill_coach_stats()
+			# refresh localCoach's statistics* fields for any open stats screen
+			if _gui.is_open("coachStatisticsDialog"):
+				_push_local_coach()
 		510:  # GuildRecord — guild name/demon/rank table for our guild
 			var d := Codec.decode(opcode, payload)
 			State.guild["guild_id"] = int(d.guild_id)
@@ -1233,6 +1281,15 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_IGNORE_OFFLINE:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i](ignored) %s went offline[/i]" % d.name)
+		_:
+			pass
+	# friend/ignore/guild pushes — keep the social dialog's model fresh
+	if opcode in [OP_FRIEND_LIST, OP_IGNORE_LIST, OP_FRIEND_ADDED,
+			OP_FRIEND_REMOVED, OP_IGNORE_ADDED, OP_IGNORE_REMOVED,
+			OP_FRIEND_ONLINE, OP_FRIEND_OFFLINE, 512] \
+			and _gui.is_open("socialDialog"):
+		_push_social_model()
+	match opcode:
 		OP_FIGHT_ERROR:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[color=red]fight refused (code %d)[/color]"
@@ -1486,6 +1543,16 @@ func _ladder_request() -> void:
 
 
 func _fill_ladder(d: Dictionary, opcode: int) -> void:
+	# window advance: the reply's `end` is the next start (demons: start+n)
+	match opcode:
+		OP_LADDER_DEMON:
+			_ladder_start = int(d.get("start", 0)) \
+				+ d.get("rows", []).size()
+		OP_LADDER_GUILD:
+			_ladder_start = int(d.get("start", 0)) \
+				+ d.get("rows", []).size()
+		_:
+			_ladder_start = int(d.get("end", _ladder_start))
 	if not $UI/LadderDlg.visible:
 		return
 	var list: ItemList = $UI/LadderDlg/VBox/Scroll/List
@@ -1565,16 +1632,6 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 				str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
 					else "unranked"]
 			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
-	# window advance: the reply's `end` is the next start (demons: start+n)
-	match opcode:
-		OP_LADDER_DEMON:
-			_ladder_start = int(d.get("start", 0)) \
-				+ d.get("rows", []).size()
-		OP_LADDER_GUILD:
-			_ladder_start = int(d.get("start", 0)) \
-				+ d.get("rows", []).size()
-		_:
-			_ladder_start = int(d.get("end", _ladder_start))
 
 
 ## Achievements tab — the retail achievementsDialog: named rows sorted
@@ -2509,12 +2566,411 @@ func _push_team_model() -> void:
 	_gui.gui.model.set_value("tomeManager", false)
 
 
-## COACH_INFO → the retail lobby bar. localCoach carries the fields
+## --- lobby dialogs: model pushes on open + dofusarena.social:* ---------------
+
+## Called by GuiLayer for every XULOR2 dialog that mounts — feed each
+## screen's model from State before its first draw.
+func _on_gui_dialog_opened(name: String) -> void:
+	match name:
+		"socialDialog", "guildDialog":
+			_push_social_model()
+		"coachStatisticsDialog":
+			_push_local_coach()
+		"teamManagementDialog":
+			_push_team_model()
+		"ladderInformationDialog":
+			_request_all_ladders()
+			_push_ladder_model()
+		"zaapDialog":
+			_push_zaap_model()
+
+
+## friends.list / ignore.list / guild.{members,name} for the social tabs.
+func _push_social_model() -> void:
+	var model := _gui.gui.model
+	var fl: Array = []
+	for fr in State.friends:
+		fl.append({"name": str(fr.get("name", "")),
+			"online": bool(fr.get("online", false)),
+			"notify": int(fr.get("notify", 0)),
+			"connected": bool(fr.get("online", false))})
+	model.set_value("friends", {"list": fl})
+	var il: Array = []
+	for nm in State.ignored:
+		il.append({"name": str(nm)})
+	model.set_value("ignore", {"list": il})
+	var gm: Array = []
+	for m in State.guild.get("members", []):
+		gm.append({"name": str(m.get("name", "")),
+			"connected": bool(m.get("online", false)),
+			"rankIconUrl": "", "guildInfos": ""})
+	model.set_value("guild", {
+		"name": str(State.guild.get("guild", "")),
+		"members": gm,
+		"canManage": false, "guildInfos": ""})
+	model.set_value("guildMaster", false)
+	model.set_value("guildInviter", "")
+
+
+## --- ladderInformationDialog -------------------------------------------------
+## ladderManager holds one list per tab; rows come from the last reply
+## cached per request opcode in _ladder_data.
+
+var _ladder_data := {}    # request opcode -> last decoded ladder reply
+
+
+func _ladder_items(rows: Array, fields: Array, vals: Callable) -> Array:
+	var out: Array = []
+	var i := 0
+	for r in rows:
+		var it := {"position": i + 1, "style": ""}
+		var v: Dictionary = vals.call(r)
+		for f in fields:
+			it[f] = v.get(f, 0 if f in ["level", "rating", "reputation",
+				"strength", "points", "quarterlyReputationPoints",
+				"totalVictories", "totalDefeats",
+				"consecutiveVictories"] else "")
+		out.append(it)
+		i += 1
+	return out
+
+
+func _push_ladder_model() -> void:
+	var lm := {}
+	var d: Dictionary = _ladder_data.get(OP_LADDER_1V1, {})
+	lm["list1vs1"] = _ladder_items(d.get("rows", []),
+		["coachName", "guildName", "level", "rankIconUrl", "rankName",
+		 "totalVictories", "totalDefeats", "consecutiveVictories"],
+		func(r): return {
+			"coachName": str(r.get("name", "")),
+			"guildName": str(r.get("guild", "")),
+			"totalVictories": int(r.get("wins", 0)),
+			"totalDefeats": int(r.get("losses", 0)),
+			"consecutiveVictories": int(r.get("streak", 0))})
+	d = _ladder_data.get(OP_LADDER_COACH, {})
+	lm["listReputation"] = _ladder_items(d.get("rows", []),
+		["creatorCoachName", "demonName", "guildName", "reputation",
+		 "totalVictories", "totalDefeats"],
+		func(r): return {
+			"creatorCoachName": str(r.get("coach", "")),
+			"demonName": str(r.get("demon", "")),
+			"reputation": int(r.get("rep", 0)),
+			"totalVictories": int(r.get("wins", 0)),
+			"totalDefeats": int(r.get("losses", 0))})
+	d = _ladder_data.get(OP_LADDER_2V2, {})
+	lm["list2vs2"] = _ladder_items(d.get("rows", []),
+		["teamName", "coachName", "guildName", "level", "rankIconUrl",
+		 "rankName", "totalVictories", "totalDefeats",
+		 "consecutiveVictories"],
+		func(r): return {
+			"teamName": str(r.get("team", "")),
+			"coachName": str(r.get("coaches", "")),
+			"guildName": str(r.get("guild", "")),
+			"totalVictories": int(r.get("wins", 0)),
+			"totalDefeats": int(r.get("losses", 0))})
+	d = _ladder_data.get(OP_LADDER_GUILD, {})
+	lm["listGuild"] = _ladder_items(d.get("rows", []),
+		["name", "bossName", "strength"],
+		func(r): return {
+			"name": str(r.get("guild", "")),
+			"bossName": str(r.get("leader", "")),
+			"strength": int(r.get("score", 0))})
+	d = _ladder_data.get(OP_LADDER_TOURN, {})
+	var wins: Array = d.get("windows", [])
+	var wnames := ["Month", "Trimester", "Year"]
+	for i in wnames.size():
+		var rows: Array = wins[i].get("rows", []) if i < wins.size() else []
+		lm["listTournamentInThe%s" % wnames[i]] = \
+			_ladder_items(rows, ["name", "points"],
+				func(r): return {"name": str(r.get("name", "")),
+					"points": int(r.get("points", 0))})
+	d = _ladder_data.get(OP_LADDER_PRO, {})
+	lm["listGlickoRating"] = _ladder_items(d.get("rows", []),
+		["coachName", "guildName", "rating"],
+		func(r): return {
+			"coachName": str(r.get("name", "")),
+			"guildName": str(r.get("guild", "")),
+			"rating": int(r.get("rating", 0))})
+	lm["proLeagueDefinitionName"] = "Arena Ligue Pro"
+	d = _ladder_data.get(OP_LADDER_DEMON, {})
+	lm["listDemon"] = _ladder_items(d.get("rows", []),
+		["demonName", "guildName", "quarterlyReputationPoints"],
+		func(r): return {
+			"demonName": "Demon %d" % int(r.get("demon", 0)),
+			"guildName": str(r.get("guild", "")),
+			"quarterlyReputationPoints": int(r.get("rep", 0))})
+	_gui.gui.model.set_value("ladderManager", lm)
+	# search/paging button visibility flags the tabs bind to
+	for n in ["ladderPlayerSearchButtonVisible",
+			"ladderReputationSearchButtonVisible",
+			"ladder2vs2BestTeamSearchButtonVisible",
+			"ladderGlickoRatingSearchButtonVisible"]:
+		_gui.gui.model.set_value(n, true)
+
+
+## The retail ladder tab order matches LADDER_TABS[0..6]; read the live
+## selection off the dialog's tabbedContainer widget.
+func _ladder_gui_tab() -> int:
+	var root: GWidget = _gui.dialogs.get("ladderInformationDialog")
+	if root != null:
+		var tc := _find_kind(root, "tabbedContainer")
+		if tc != null:
+			return clampi(int(tc.selected_index), 0, 6)
+	return _ladder_tab
+
+
+func _find_kind(w: GWidget, k: String) -> GWidget:
+	if w.kind == k:
+		return w
+	for ch in w.get_children():
+		if ch is GWidget:
+			var r := _find_kind(ch, k)
+			if r != null:
+				return r
+	return null
+
+
+func _ladder_gui_page(delta: int) -> void:
+	_ladder_tab = _ladder_gui_tab()
+	var board: Dictionary = _ladder_data.get(
+		int(LADDER_TABS[_ladder_tab].op), {})
+	var cur := int(board.get("start", 0))
+	var total := int(board.get("total", 0))
+	_ladder_start = maxi(0, cur + delta)
+	if total > 0:
+		_ladder_start = mini(_ladder_start, total - 1)
+	_ladder_request()
+
+
+func _ladder_gui_first() -> void:
+	_ladder_tab = _ladder_gui_tab()
+	_ladder_start = 0
+	_ladder_request()
+
+
+func _ladder_gui_last() -> void:
+	_ladder_tab = _ladder_gui_tab()
+	var board: Dictionary = _ladder_data.get(
+		int(LADDER_TABS[_ladder_tab].op), {})
+	var total := int(board.get("total", 0))
+	_ladder_start = maxi(0, total - int(LADDER_TABS[_ladder_tab].page))
+	_ladder_request()
+
+
+func _ladder_gui_mine() -> void:
+	_ladder_tab = _ladder_gui_tab()
+	var board: Dictionary = _ladder_data.get(
+		int(LADDER_TABS[_ladder_tab].op), {})
+	_ladder_start = maxi(0, int(board.get("my_rank", 0)) - 1)
+	_ladder_request()
+
+
+## On open, fetch every board the dialog can show — replies land in
+## _ladder_data and refresh ladderManager as they arrive.
+func _request_all_ladders() -> void:
+	var saved_tab := _ladder_tab
+	var saved_start := _ladder_start
+	for i in 7:
+		_ladder_tab = i
+		_ladder_start = 0
+		_ladder_request()
+	_ladder_tab = saved_tab
+	_ladder_start = saved_start
+
+
+## --- zaapDialog --------------------------------------------------------------
+## tomeManager.zaapSets = the special card sets (those holding type-20
+## zaap cards); each set's `collection` feeds the card grid.
+
+func _push_zaap_model() -> void:
+	var sets := {}     # set id -> {cards, owned}
+	for cid in Cards.all_ids():
+		var m := Cards.meta(int(cid))
+		var sid := int(m.get("set", 0))
+		if sid <= 0:
+			continue
+		var has_zaap := int(m.get("type", 0)) == 20
+		if not sets.has(sid):
+			sets[sid] = {"cards": [], "owned": 0, "zaap": false}
+		sets[sid]["cards"].append(int(cid))
+		sets[sid]["zaap"] = sets[sid]["zaap"] or has_zaap
+		if int(State.inventory.get(int(cid), 0)) > 0:
+			sets[sid]["owned"] += 1
+	var zs: Array = []
+	for sid in sets:
+		var sd: Dictionary = sets[sid]
+		if not sd["zaap"]:
+			continue
+		var coll: Array = []
+		for cid in sd["cards"]:
+			var qty := int(State.inventory.get(cid, 0))
+			coll.append({
+				"id": cid, "name": Cards.name_of(cid),
+				"illustrationUrl": str(cid),
+				"tomeStyle": "" if qty > 0 else "BackZaapCoachCard",
+				"globalQuantity": qty,
+				"isInTome": qty > 0, "quantity": qty})
+		coll.sort_custom(func(a, b): return int(a.id) < int(b.id))
+		zs.append({
+			"name": _set_name(sd["cards"]),
+			"size": sd["cards"].size(),
+			"completion": sd["owned"],
+			"description": "",
+			"collection": coll,
+			"illustrationUrl": str(sd["cards"][0]),
+			"isInTome": int(sd["owned"]) == sd["cards"].size(),
+			"tomeStyle": ""})
+	zs.sort_custom(func(a, b): return str(a.name) < str(b.name))
+	_gui.gui.model.set_value("tomeManager", {"zaapSets": zs})
+
+
+## Card-set display name — longest shared prefix of its cards (family
+## names like "Weerdtrot" / "Zatrox"), else the first card's name.
+func _set_name(cards: Array) -> String:
+	if cards.is_empty():
+		return ""
+	var prefix: String = Cards.name_of(int(cards[0]))
+	for c in cards:
+		var n := Cards.name_of(int(c))
+		var i := 0
+		while i < prefix.length() and i < n.length() and prefix[i] == n[i]:
+			i += 1
+		prefix = prefix.left(i)
+	prefix = prefix.strip_edges()
+	if prefix.length() < 3:
+		var words := Cards.name_of(int(cards[0])).split(" ")
+		prefix = " ".join(words.slice(0, maxi(1, words.size() - 1)))
+	return prefix
+
+
+## goToSet(specialList,specialSetDetails,4) — open the set detail pane:
+## the clicked row's item is the set dict → coachManagement.currentSet.
+func _on_zaap_go_to_set(args: Array, w: GWidget) -> void:
+	if w != null and w.item_value is Dictionary:
+		_gui.gui.model.set_value("coachManagement",
+			w.item_value, "currentSet")
+	if args.size() >= 2:
+		if args[0] is GWidget:
+			args[0].visible = false
+		if args[1] is GWidget:
+			args[1].visible = true
+
+
+## goToSetList(specialList,specialSetDetails) — back to the sets list.
+func _on_zaap_go_to_list(args: Array, _w: GWidget) -> void:
+	if args.size() >= 2:
+		if args[0] is GWidget:
+			args[0].visible = true
+		if args[1] is GWidget:
+			args[1].visible = false
+
+
+## changeInstance(card) — double-click a zaap card teleports (retail
+## sends its own opcode; ours is OP_ZAAP [i32 cardTemplateId]).
+func _on_zaap_change_instance(_args: Array, w: GWidget) -> void:
+	var card = w.item_value if w != null else null
+	if not (card is Dictionary):
+		return
+	var cid := int(card.get("id", 0))
+	if cid <= 0 or int(Cards.meta(cid).get("type", 0)) != 20:
+		return
+	if int(State.inventory.get(cid, 0)) <= 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_i32(cid)
+	Session.send(OP_ZAAP, wr.raw(), 3)
+	_gui.close("zaapDialog")
+
+
+## Event args are either the textEditor widget (editor) or a row's
+## <data id> value (friend dict / ignore name).
+func _social_arg_text(v: Variant) -> String:
+	if v is GWidget:
+		return v.text.strip_edges()
+	if v is Dictionary:
+		return str(v.get("name", v.get("text", ""))).strip_edges()
+	return str(v).strip_edges()
+
+
+func _on_social_add(args: Array, _w: GWidget, opcode: int) -> void:
+	var s := _social_arg_text(args[0]) if not args.is_empty() else ""
+	if s.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_str(s, "u8")
+	Session.send(opcode, w.raw(), 2)
+
+
+func _on_social_remove(args: Array, w: GWidget, opcode: int) -> void:
+	_on_social_add(args, w, opcode)
+
+
+func _on_gui_quit_guild(_a: Array, _w: GWidget) -> void:
+	var gid := int(State.guild.get("guild_id", 0))
+	if gid <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(gid)
+	w.put_i64(State.my_coach_id)   # member = self → leave
+	Session.send(OP_GUILD_LEAVE, w.raw(), 8)
+
+
+func _on_gui_destroy_guild(_a: Array, _w: GWidget) -> void:
+	var gid := int(State.guild.get("guild_id", 0))
+	if gid <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(gid)
+	Session.send(OP_GUILD_DESTROY, w.raw(), 2)
+
+
+## localCoach model — shared by menuBarDialog / coachStatisticsDialog /
+## coachCreationDialog. Stats come from the 2400/2401 rs_2 stat map.
+func _local_coach_model() -> Dictionary:
+	var cs: Dictionary = State.coach_stats
+	var look: Dictionary = State.my_coach_look
+	return {
+		"name": State.my_coach_name,
+		"sex": int(look.get("sex", 0)),
+		"skin": int(look.get("skin", 0)),
+		"hair": int(look.get("hair", 0)),
+		"equipedEmotes": [],
+		"actorDescriptorLibrary": "coach_700%d" % int(look.get("sex", 0)),
+		"actorAnimation": "AnimStatique",
+		"actorDirection": 3,
+		"actorMaterial": Palettes.coach_tints(
+			int(look.get("skin", 0)), int(look.get("hair", 0))),
+		"standing": State.coach_standing,
+		"standingForProgressBar": State.coach_standing,
+		"standingNeededForNextLevel": 0,
+		"strenght": 0,
+		"strengthForProgressBar": 0,
+		"strengthNeededForNextLevel": 0,
+		"tournamentToken": State.coach_tournament_points,
+		"level": 0,
+		"rankIconUrl": "", "guildRankIconUrl": "",
+		"statisticsTotalPlayTime": int(cs.get(1, 0)),
+		"statisticsTotalFightsTime": int(cs.get(2, 0)),
+		"statisticsTotalFights": int(cs.get(3, 0)),
+		"statisticsTotalFightsWon": int(cs.get(4, 0)),
+		"statisticsTotalFightsLost": int(cs.get(5, 0)),
+		"statisticsConsecutiveWins": int(cs.get(7, 0)),
+		"statisticsConsecutiveEvolutionWins": 0,
+		"statisticsTotalFightsEvolution": 0,
+		"statisticsTotalFightsEvolutionWon": 0,
+		"statisticsTotalFightsEvolutionLost": 0,
+		"statisticsTournamentPoints": State.coach_tournament_points,
+	}
+
+
+func _push_local_coach() -> void:
+	_gui.gui.model.set_value("localCoach", _local_coach_model())
+
+
 ## menuBarDialog binds (equipedEmotes + name today; more land as screens port).
 func _mount_lobby_menubar(d: Dictionary) -> void:
-	_gui.gui.model.set_value("localCoach", {
-		"name": str(d.get("name", "")),
-		"equipedEmotes": []})
+	State.my_coach_name = str(d.get("name", State.my_coach_name))
+	_push_local_coach()
 	_gui.gui.model.set_value("showToolsInMenuBar", 0)
 	_gui.gui.model.set_value("menuBar", {
 		"coachInventoryButton": true, "socialButton": true})
@@ -3687,6 +4143,15 @@ func _on_element_alt() -> void:
 var _zaap_mode := false
 
 func _open_zaap() -> void:
+	# retail zaapDialog — the tome of special sets; debug list as fallback
+	if _gui.open("zaapDialog") != null:
+		if _pending_zaap_page > 0:
+			var page := _pending_zaap_page
+			_pending_zaap_page = 0
+			_npc = {"pages": [page], "page": 0, "chals": []}
+			_elem_kind = ELEM_SCENARIO
+			_npc_page_show("Tutorial")
+		return
 	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
 	list.clear()
 	var owned := []

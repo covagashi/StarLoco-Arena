@@ -136,9 +136,10 @@ func _content_pref() -> Vector2:
 			var fs := _font_size(la)
 			var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 			return Vector2(w + 4, fs + 4)
-		"image":
+		"image", "repeatableImage":
 			var px: Dictionary = appearance().get("pixmap", {})
-			return px.get("rect", Rect2()).size
+			var sz: Vector2 = px.get("rect", Rect2()).size
+			return Vector2(sz.x * repeat_n, sz.y)
 		"textEditor", "texteditor":
 			return Vector2(80, 20)
 		_:
@@ -196,6 +197,7 @@ func _bg_decl() -> Dictionary:
 
 var selected_index := 0   # tabbedContainer
 var tabs_alignment := "north"
+var repeat_n := 1         # repeatableImage tile count
 
 
 func _draw() -> void:
@@ -217,14 +219,20 @@ func _draw() -> void:
 			else:
 				draw_texture(t, (size - t.get_size()) / 2.0)
 	# 2. single pixmap image (image widget / appearances with inline pixmap)
-	if kind == "image":
+	if kind == "image" or kind == "repeatableImage":
 		var t: Texture2D = a.get("pixmap_tex")
 		if t == null:
 			var px: Dictionary = a.get("pixmap", {})
 			t = guitheme.pixmap_tex(px)
 		if t != null:
 			var cr := content_rect()
-			draw_texture(t, cr.position + (cr.size - t.get_size()) / 2.0)
+			if repeat_n > 1:
+				var x := cr.position.x
+				for i in repeat_n:
+					draw_texture(t, Vector2(x + i * t.get_size().x,
+						cr.position.y + (cr.size.y - t.get_size().y) / 2.0))
+			else:
+				draw_texture(t, cr.position + (cr.size - t.get_size()) / 2.0)
 	# 3. 9-slice border
 	_draw_border()
 	# 4. text
@@ -803,7 +811,9 @@ func duplicate_widget() -> GWidget:
 	w.template_id = template_id
 	w.tabs_alignment = tabs_alignment
 	w.selected_index = selected_index
+	w.repeat_n = repeat_n
 	w.model = model
+	w.event_hub = event_hub
 	w.mouse_filter = mouse_filter
 	w.gui_event.connect(_forward_event)
 	# renderer templates -> their duplicated counterparts (nested lists in rows)
@@ -824,8 +834,14 @@ func duplicate_widget() -> GWidget:
 	return w
 
 
+## loader._on_event — duplicated row widgets forward their actions here so
+## the dispatch sees the row (not the template) as the event source.
+var event_hub := Callable()
+
+
 func _forward_event(a: String) -> void:
-	gui_event.emit(a)
+	if event_hub.is_valid():
+		event_hub.call(a, self)
 
 
 func _type_name() -> String:

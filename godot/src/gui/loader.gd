@@ -12,10 +12,13 @@ const WIDGET_TAGS := [
 	"tabItem",
 	"toggleButton", "stack", "progressIcon", "dnd", "windowMovePoint",
 	"colorPicker", "text", "simpleMessage", "scrollBar",
-	"animatedElementViewer", "elementEditor",
+	"animatedElementViewer", "elementEditor", "repeatableImage",
 ]
 const COND_OPS := ["isNull", "isNotNull", "isTrue", "isFalse", "isGreater",
-	"isLess", "isEqual", "isDifferent", "isNullOrEmpty", "isNotNullOrEmpty",
+	"isLess", "isEqual", "isNotEqual", "isDifferent", "isNullOrEmpty",
+	"isNotNullOrEmpty", "IsNull", "IsNotNull", "IsTrue", "IsFalse",
+	"IsGreater", "IsLess", "IsEqual", "IsNotEqual", "IsDifferent",
+	"IsNullOrEmpty", "IsNotNullOrEmpty",
 	"Not", "not", "and", "or"]
 const LAYOUT_TAGS := ["sl", "bl", "rl", "gl", "tl", "SPL", "al"]
 const LDATA_TAGS := ["sld", "bld", "rld", "gld", "tld", "spl", "ald"]
@@ -261,7 +264,8 @@ func load_file(path: String) -> GWidget:
 						parent.set_meta("tooltip", a)
 				elif tag == "itemRenderer":
 					if not p.is_empty():
-						stack.append({"w": parent, "tag": tag, "structural": true})
+						stack.append({"w": parent, "tag": tag,
+							"structural": true, "item_ev": a})
 				elif tag in WIDGET_TAGS or _looks_like_widget(tag):
 					var w: GWidget = _make_widget(tag, a)
 					if parent != null:
@@ -271,6 +275,17 @@ func load_file(path: String) -> GWidget:
 						if not stack.is_empty() \
 								and stack[-1].get("tag") == "itemRenderer":
 							w.visible = false
+							# onItem* events live on the renderer element —
+							# map them onto the row's widget events
+							var iev: Dictionary = stack[-1].get("item_ev", {})
+							const ITEM_EV := {"onItemClick": "onClick",
+								"onItemOver": "onMouseEnter",
+								"onItemOut": "onMouseExit",
+								"onItemDoubleClick": "onDoubleClick"}
+							for k in ITEM_EV:
+								var ev_name: String = ITEM_EV[k]
+								if iev.has(k) and not w.events.has(ev_name):
+									w.events[ev_name] = iev[k]
 							var owner: GWidget = _nearest_list(parent)
 							if owner != null:
 								owner.renderers.append(
@@ -419,6 +434,8 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 		by_id[w.widget_id] = w
 	w.group_id = a.get("groupId", "")
 	w.template_id = a.get("templateId", "")
+	if tag == "repeatableImage":
+		w.repeat_n = maxi(1, int(a.get("repeatNumber", "1")))
 	if tag == "animatedElementViewer":
 		w.set_meta("viewer_scale", float(a.get("scale", "1")))
 		w.set_meta("viewer_offy", float(a.get("offsetY", "0")))
@@ -624,6 +641,7 @@ func _wire(root: GWidget) -> void:
 		# model binding — one watcher per <property> bind
 		if model != null:
 			w.model = model
+			w.event_hub = Callable(self, "_on_event")
 			for b in w.binds:
 				if not b.has("name"):
 					continue

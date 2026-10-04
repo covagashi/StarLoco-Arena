@@ -20,26 +20,26 @@ static func eval(node: Dictionary, v, ctx := {}) -> bool:
 		"listCondition":
 			var lv = ctx.get(node.get("key", ""), null)
 			return kids.is_empty() or eval(kids[0], lv, ctx)
-		"isNull":
+		"isNull", "IsNull":
 			return v == null
-		"isNotNull":
+		"isNotNull", "IsNotNull":
 			return v != null
-		"isTrue":
+		"isTrue", "IsTrue":
 			return _truthy(v)
-		"isFalse":
+		"isFalse", "IsFalse":
 			return not _truthy(v)
-		"isGreater":
+		"isGreater", "IsGreater":
 			return _num(v) > _num(node.get("value", "0"))
-		"isLess":
+		"isLess", "IsLess":
 			return _num(v) < _num(node.get("value", "0"))
-		"isEqual":
+		"isEqual", "IsEqual":
 			return _eq(v, node.get("value", ""))
-		"isDifferent":
+		"isNotEqual", "IsNotEqual", "isDifferent", "IsDifferent":
 			return not _eq(v, node.get("value", ""))
-		"isNullOrEmpty":
+		"isNullOrEmpty", "IsNullOrEmpty":
 			return v == null or (v is Array and v.is_empty()) \
 				or (v is String and v == "")
-		"isNotNullOrEmpty":
+		"isNotNullOrEmpty", "IsNotNullOrEmpty":
 			return not (v == null or (v is Array and v.is_empty()) \
 				or (v is String and v == ""))
 		"Not", "not":

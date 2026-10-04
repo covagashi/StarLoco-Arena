@@ -3,6 +3,8 @@ extends CanvasLayer
 ## Hosts XULOR2 dialogs on a CanvasLayer and routes dofusarena:* widget
 ## events to a handler map. One GuiLib per layer (theme + model shared).
 
+signal dialog_opened(name: String)
+
 var gui: GuiLib
 var handlers := {}          # method -> Callable(args, widget)
 var dialogs := {}           # name -> GWidget root
@@ -29,6 +31,7 @@ func open(name: String, model_values := {}) -> GWidget:
 	GuiLayouts.apply(root)
 	root.resized.connect(func(): GuiLayouts.apply(root))
 	get_viewport().size_changed.connect(func(): _relayout(root))
+	dialog_opened.emit(name)
 	return root
 
 
