@@ -6,16 +6,17 @@ extends RefCounted
 const WIDGET_TAGS := [
 	"container", "button", "label", "image", "textView", "textEditor",
 	"texteditor", "checkBox", "checkbox", "radioButton", "radioGroup",
-	"comboboxplus", "comboBox", "list", "form", "window", "scrollContainer",
+	"comboboxplus", "comboBox", "list", "stackList", "form", "window", "scrollContainer",
 	"slider", "progressBar", "tabbedContainer", "tree", "table", "map",
 	"renderableContainer", "itemRenderer", "spacer", "separator", "iconLabel",
+	"tabItem",
 	"toggleButton", "stack", "progressIcon", "dnd", "windowMovePoint",
 	"colorPicker", "text", "simpleMessage", "scrollBar",
 	"animatedElementViewer", "elementEditor",
 ]
 const COND_OPS := ["isNull", "isNotNull", "isTrue", "isFalse", "isGreater",
 	"isLess", "isEqual", "isDifferent", "isNullOrEmpty", "isNotNullOrEmpty",
-	"Not", "and", "or"]
+	"Not", "not", "and", "or"]
 const LAYOUT_TAGS := ["sl", "bl", "rl", "gl", "tl", "SPL", "al"]
 const LDATA_TAGS := ["sld", "bld", "rld", "gld", "tld", "spl", "ald"]
 
@@ -33,13 +34,18 @@ func _init(t: GuiTheme, strings: Dictionary, m: GuiModel) -> void:
 	model = m
 
 
+var _depth := 0  # template/include recursion — ids + wire only at depth 0
+
+
 func load_file(path: String) -> GWidget:
 	var p := XMLParser.new()
 	if p.open(path) != OK:
 		push_error("[guiloader] cannot open " + path)
 		return null
-	by_id.clear()
-	data_ids.clear()
+	_depth += 1
+	if _depth == 1:
+		by_id.clear()
+		data_ids.clear()
 	var root: GWidget = null
 	var stack: Array = []  # {w: GWidget, tag: String, structural: bool}
 	while p.read() == OK:
@@ -104,8 +110,88 @@ func load_file(path: String) -> GWidget:
 				elif tag == "PlainBackground":
 					if parent != null:
 						_appear(parent, "default")["plain_bg"] = true
-				elif tag == "property":
+						if a.has("color"):
+							_appear(parent, "default")["plain_bg_color"] = \
+								_color(a["color"])
+				elif tag == "valueReplacer":
+					# <property ...><valueReplacer key="size"/></property>
+					var cframe4 = _cond_frame(stack)
+					if cframe4 != null:
+						var node4 := {"op": "valueReplacer",
+							"key": a.get("key", ""), "children": []}
+						if cframe4["cond_ops"].is_empty():
+							cframe4["cond_root"].append(node4)
+						else:
+							cframe4["cond_ops"][-1]["children"].append(node4)
+						cframe4["cond_ops"].append(node4)
+				elif tag == "include":
+					# <include id="x" path="../components/foo.xml"/> — graft a
+					# component tree here under the local id
+					if a.has("path") and parent != null:
+						var sub := load_file(
+							(path.get_base_dir() + "/" + a["path"])
+								.simplify_path())
+						if sub != null:
+							if a.get("id", "") != "":
+								sub.widget_id = a["id"]
+								by_id[a["id"]] = sub
+							parent.add_child(sub)
+				elif tag == "template":
+					# <template path="x.xml"> — the root is the template file;
+					# children <templateElement> retarget its templateId anchors
+					if stack.is_empty() and a.has("path"):
+						root = load_file(
+							(path.get_base_dir() + "/" + a["path"])
+								.simplify_path())
+						if not p.is_empty():
+							stack.append({"w": null, "tag": tag})
+				elif tag == "templateElement":
+					# <templateElement templateRef="x"> — retarget the widget
+					# in the template whose templateId == templateRef
+					var tgt: GWidget = _find_template_id(
+						root, a.get("templateRef", ""))
+					if tgt != null:
+						_apply_telem(tgt, a)
+						if not p.is_empty():
+							stack.append({"w": tgt, "tag": tag})
+					elif not p.is_empty():
+						stack.append({"w": null, "tag": tag})
+				elif tag == "popup":
+					# hover overlay owned by its parent widget
+					var pw := GWidget.new()
+					pw.guitheme = theme
+					pw.kind = "container"
+					pw.type_style = a.get("style", "")
+					var pe: Dictionary = theme.elem("container", pw.type_style)
+					pw.states = pe.get("states", {}).duplicate(true)
+					if not pw.states.has("default"):
+						pw.states["default"] = {}
+					pw.set_meta("popup", true)
+					pw.set_meta("popup_align", a.get("align", "south"))
+					pw.visible = false
+					pw.mouse_filter = Control.MOUSE_FILTER_IGNORE
 					if parent != null:
+						parent.add_child(pw)
+						pw.position = Vector2(0, parent.size.y)
+					if not p.is_empty():
+						stack.append({"w": pw, "tag": tag})
+				elif tag == "property":
+					var cframe3 = _cond_frame(stack)
+					if cframe3 != null:
+						# <property name= attribute="comparedValue"> inside a
+						# condition op — resolves a model value as operand
+						var node3 := {"op": "propertyValue",
+							"name": a.get("name", ""),
+							"attribute": a.get("attribute", ""),
+							"children": []}
+						if cframe3["cond_ops"].is_empty():
+							cframe3["cond_root"].append(node3)
+						else:
+							cframe3["cond_ops"][-1]["children"].append(node3)
+						cframe3["cond_ops"].append(node3)
+						if not p.is_empty():
+							stack.append({"w": null, "tag": tag})
+					elif parent != null:
 						var b := {
 							"attribute": a.get("attribute", ""),
 							"name": a.get("name", ""),
@@ -135,11 +221,29 @@ func load_file(path: String) -> GWidget:
 					if not p.is_empty():
 						stack.append({"w": parent, "tag": tag,
 							"data_id": a.get("id", "")})
-				elif tag == "condition" or tag == "itemCondition":
+				elif tag == "condition":
 					# condition tree built by child op nodes; assigned on END
+					# (value=/elseValue= pick between two values on eval)
 					var host = _bind_host(parent, stack)
 					stack.append({"w": null, "tag": tag, "cond_root": [],
-						"cond_ops": [], "cond_host": host})
+						"cond_ops": [], "cond_host": host,
+						"cond_value": a.get("value", ""),
+						"cond_else": a.get("elseValue", ""),
+						"cond_ret": a.get("returnOriginalValue", "")})
+				elif tag == "itemCondition" or tag == "listCondition":
+					# scope nodes inside a <condition>/<and>/<or>: carry
+					# their single child (and key for listCondition)
+					var cframe2 = _cond_frame(stack)
+					var node2 := {"op": tag, "key": a.get("key", ""),
+						"children": []}
+					if cframe2 != null:
+						if cframe2["cond_ops"].is_empty():
+							cframe2["cond_root"].append(node2)
+						else:
+							cframe2["cond_ops"][-1]["children"].append(node2)
+						cframe2["cond_ops"].append(node2)
+					if not p.is_empty():
+						stack.append({"w": null, "tag": tag})
 				elif tag in COND_OPS:
 					var cframe = _cond_frame(stack)
 					var node := {"op": tag, "value": a.get("value", ""),
@@ -184,17 +288,41 @@ func load_file(path: String) -> GWidget:
 						stack.append({"w": null, "tag": tag})
 			XMLParser.NODE_ELEMENT_END:
 				var tag := p.get_node_name()
-				if tag in COND_OPS:
+				if tag in COND_OPS or tag == "itemCondition" or tag == "listCondition":
 					var cframe = _cond_frame(stack)
 					if cframe != null and not cframe["cond_ops"].is_empty():
 						cframe["cond_ops"].pop_back()
-				elif tag == "condition" or tag == "itemCondition":
+				elif tag == "condition":
 					for i in range(stack.size() - 1, -1, -1):
 						if stack[i].get("tag") == tag:
 							var fr: Dictionary = stack[i]
 							var host = fr.get("cond_host")
 							if host != null and not fr["cond_root"].is_empty():
-								host["condition"] = fr["cond_root"][0]
+								var tests: Array = []
+								var cond_meta := {
+									"value": fr.get("cond_value", ""),
+									"elseValue": fr.get("cond_else", ""),
+									"returnOriginalValue":
+										fr.get("cond_ret", "")}
+								# propertyValue children carry roles —
+								# elseValue/comparedValue operands are not tests
+								for n in fr["cond_root"]:
+									match n.get("op"):
+										"propertyValue":
+											match n.get("attribute"):
+												"elseValue":
+													cond_meta["else_bind"] = n
+												"comparedValue":
+													cond_meta["cmp_bind"] = n
+												_:
+													tests.append(n)
+										_:
+											tests.append(n)
+								if not tests.is_empty():
+									cond_meta["tree"] = tests[0] \
+										if tests.size() == 1 else \
+											{"op": "and", "children": tests}
+									host["condition"] = cond_meta
 							stack.resize(i)
 							break
 					continue
@@ -202,21 +330,53 @@ func load_file(path: String) -> GWidget:
 					if stack[i].get("tag") == tag:
 						stack.resize(i)
 						break
-	if root != null:
+	if _depth == 1 and root != null:
 		_wire(root)
 		# lists bind before their itemRenderer children register — rebuild now
 		var all: Array = []
 		_collect_widgets(root, all)
 		for w in all:
-			if is_instance_valid(w) and w.kind in ["list", "comboboxplus", "comboBox"]:
+			if is_instance_valid(w) and w.kind in ["list", "stackList", "comboboxplus", "comboBox"]:
 				w.rebuild_items()
+	_depth -= 1
 	return root
+
+
+## template support — find the widget in a template tree whose
+## templateId matches, then graft the dialog's customisation onto it
+func _find_template_id(w: GWidget, ref: String) -> GWidget:
+	if w == null:
+		return null
+	if w.template_id == ref:
+		return w
+	for ch in w.get_children():
+		if ch is GWidget:
+			var r := _find_template_id(ch, ref)
+			if r != null:
+				return r
+	return null
+
+
+func _apply_telem(tgt: GWidget, a: Dictionary) -> void:
+	if a.get("id", "") != "":
+		tgt.widget_id = a["id"]
+		by_id[a["id"]] = tgt
+	if a.get("style", "") != "":
+		tgt.type_style = a["style"]
+		var e: Dictionary = theme.elem(tgt.kind, tgt.type_style)
+		if not e.is_empty():
+			tgt.states = e.get("states", {}).duplicate(true)
+	if a.get("visible", "") == "false":
+		tgt.visible = false
+	if a.has("prefSize"):
+		var v: PackedFloat64Array = a["prefSize"].split_floats(",")
+		tgt.pref_size = Vector2(v[0], v[1] if v.size() > 1 else v[0])
 
 
 func _nearest_list(w: GWidget) -> GWidget:
 	var n: Node = w
 	while n != null:
-		if n is GWidget and n.kind in ["list", "comboboxplus", "comboBox"]:
+		if n is GWidget and n.kind in ["list", "stackList", "comboboxplus", "comboBox"]:
 			return n
 		n = n.get_parent()
 	return null
@@ -258,12 +418,14 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 	if w.widget_id != "":
 		by_id[w.widget_id] = w
 	w.group_id = a.get("groupId", "")
+	w.template_id = a.get("templateId", "")
 	if tag == "animatedElementViewer":
 		w.set_meta("viewer_scale", float(a.get("scale", "1")))
 		w.set_meta("viewer_offy", float(a.get("offsetY", "0")))
 		if a.get("animName", "") != "":
 			w._viewer["anim"] = a["animName"]
 	w.value = a.get("value", "")
+	w.tabs_alignment = a.get("tabsAlignment", "north")
 	w.expandable = a.get("expandable", "true") == "true"
 	w.shrinkable = a.get("shrinkable", "true") == "true"
 	w.password = a.get("password", "false") == "true"
@@ -296,6 +458,8 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 		le.flat = true
 		le.secret = w.password
 		le.text = w.text
+		if a.has("maxChars"):
+			le.max_length = int(a["maxChars"])
 		le.select_all_on_focus = a.get("selectOnFocus", "false") == "true"
 		var la: Dictionary = w.states.get("default", {}).get("label", w.states.get("default", {}))
 		if la.has("font") and theme.fonts.has(la["font"]):

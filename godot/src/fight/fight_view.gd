@@ -13,6 +13,7 @@ const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
+const CardsDB := preload("res://src/gamedata/cards.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
@@ -558,16 +559,17 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_float_text(vfid, SPECIAL_CELLS[tpl][1], SPECIAL_CELLS[tpl][2])
 		OP_END_FIGHT:
 			# Result screen — decode the debrief (winners, cards, per-fighter
-			# OW reports) for the lobby's result panel, then ack (26321); the
-			# server answers with a fresh 4600 back to the overworld.
+			# OW reports) and show the retail fightResultDialog. The 26321 ack
+			# goes out when the player closes it; only then does the server
+			# answer with a fresh 4600 back to the overworld.
 			State.fight_result = Codec.decode(opcode, payload)
 			_fight_over = true
 			_turn_left = -1.0
 			_turn_timer.text = ""
 			State.spectating = false
-			if State.net != null:
-				State.net.send_message(OP_END_FIGHT_DONE, PackedByteArray(), 3)
 			info.text = "map %s — fight over" % $UI/TopBar/MapId.text
+			if not _show_fight_result():
+				_end_fight_ack()
 		OP_ENTER_INSTANCE:
 			# Post-fight re-entry (world != arena id) → back to the lobby scene.
 			# The fight-entry 4600 that drained during _ready has
@@ -2349,20 +2351,112 @@ func _send_fighter_dir(nxt: int) -> void:
 ## _on_gui_event and call the same senders as the wire-test buttons.
 var _gui: GuiLib = null
 var _hud: GWidget = null
+var _hud_tl: GWidget = null
+var _hud_mb: GWidget = null
+var _hud_menu: GWidget = null
+var _hud_res: GWidget = null
+var _hud_layer: CanvasLayer = null
+var _ack_pending := false
 
 
 func _mount_fight_hud() -> void:
 	_gui = GuiLib.new("es")
 	_gui.event_sink = _on_gui_event
-	var layer := CanvasLayer.new()
-	layer.layer = 5
-	add_child(layer)
+	_hud_layer = CanvasLayer.new()
+	_hud_layer.layer = 5
+	add_child(_hud_layer)
 	_hud = _gui.open_dialog("fighterControlsDialog")
-	if _hud == null:
-		return
-	layer.add_child(_hud)
+	_hud_tl = _gui.open_dialog("timelineDialog")
+	_hud_mb = _gui.open_dialog("fightMenuBarDialog")
+	if _hud != null:
+		_hud_layer.add_child(_hud)
+	if _hud_tl != null:
+		_hud_layer.add_child(_hud_tl)
+		_position_timeline()
+	if _hud_mb != null:
+		_hud_layer.add_child(_hud_mb)
+		_position_menubar()
+		_gui.model.set_value("replayMode", false)
+		_gui.model.set_value("countdown", "")
+		_gui.model.set_value("tools", [])
+		_gui.model.set_value("fight.timeline.currentTableTurn", 1)
 	_position_hud()
 	get_viewport().size_changed.connect(_position_hud)
+	get_viewport().size_changed.connect(_position_timeline)
+	get_viewport().size_changed.connect(_position_menubar)
+
+
+func _position_menubar() -> void:
+	if _hud_mb == null:
+		return
+	var vs := get_viewport().get_visible_rect().size
+	_hud_mb.size = Vector2(vs.x, 500)
+	_hud_mb.position = Vector2(0, vs.y - 500)
+	GuiLayouts.apply(_hud_mb)
+
+
+## the retail 26321 ack — deferred while the result dialog is up
+func _end_fight_ack() -> void:
+	if _ack_pending or not _fight_over or State.net == null:
+		return
+	_ack_pending = true
+	State.net.send_message(OP_END_FIGHT_DONE, PackedByteArray(), 3)
+
+
+## fightResultDialog on 8300 — model: localWinner/cards/teamFighters.
+## Returns false when the dialog can't load (caller acks right away).
+func _show_fight_result() -> bool:
+	if _gui == null or _hud_layer == null:
+		return false
+	var res: Dictionary = State.fight_result
+	_hud_res = _gui.open_dialog("fightResultDialog")
+	if _hud_res == null:
+		return false
+	var vs := get_viewport().get_visible_rect().size
+	_hud_layer.add_child(_hud_res)
+	_hud_res.position = (vs - _hud_res.size) / 2.0
+	_gui.model.set_value("replayMode", false)
+	_gui.model.set_value("fight.localWinner",
+		res.get("win_str", {}).has(State.my_coach_id))
+	_gui.model.set_value("fight.wonCards",
+		_card_items(res.get("won_cards", [])))
+	_gui.model.set_value("fight.bonusCards", [])
+	_gui.model.set_value("fight.lostCards",
+		_card_items(res.get("lost_cards", [])))
+	return true
+
+
+func _card_items(ids: Array) -> Array:
+	var out: Array = []
+	for cid in ids:
+		out.append({"value": int(cid), "id": int(cid),
+			"illustrationUrl": str(int(cid)), "quantity": 1,
+			"name": CardsDB.name_of(int(cid))})
+	return out
+
+
+func _toggle_fight_menu() -> void:
+	if _gui == null or _hud_layer == null:
+		return
+	if _hud_menu != null and is_instance_valid(_hud_menu):
+		_hud_menu.queue_free()
+		_hud_menu = null
+		return
+	_hud_menu = _gui.open_dialog("fightMenuDialog")
+	if _hud_menu == null:
+		return
+	_hud_layer.add_child(_hud_menu)
+	var vs := get_viewport().get_visible_rect().size
+	_hud_menu.position = (vs - _hud_menu.size) / 2.0
+
+
+func _position_timeline() -> void:
+	if _hud_tl == null:
+		return
+	var vs := get_viewport().get_visible_rect().size
+	_hud_tl.size = Vector2(700, 105)
+	_hud_tl.position = Vector2((vs.x - 700.0) / 2.0, 0.0)
+	GuiLayouts.apply(_hud_tl)
 
 
 func _position_hud() -> void:
@@ -2417,6 +2511,40 @@ func _hud_push() -> void:
 		_fighter_gui_model(f))
 	_gui.model.set_value("fight.endTurnState",
 		_is_my_turn() and not State.spectating)
+	_gui.model.set_value("fight.timeline.display", true)
+	_gui.model.set_value("fight.timeline.fighters", _timeline_items())
+	_gui.model.set_value("fight.status",
+		"action" if _is_my_turn() else "")
+	_gui.model.set_value("countdown",
+		str(int(_turn_left)) if _turn_left > 0 else "")
+
+
+## timelineDialog's per-fighter item shape (initiative order = the 8000
+## timeline array). Icon resolves to breeds/fightTimeline/<id>.png —
+## players are breed*10, summons/looks the raw look id.
+func _timeline_items() -> Array:
+	var items: Array = []
+	for fid in State.fight_data.get("timeline", []):
+		var f: Dictionary = State.fighters.get(fid, {})
+		if f.is_empty():
+			continue
+		var look := int(f.get("look", 0))
+		var breed := int(f.get("breed", 0))
+		var icon := str(breed * 10) if breed > 0 else str(-look if look < 0 else look)
+		items.append({
+			"teamId": int(f.get("team", 0)),
+			"name": str(f.get("name", "")),
+			"timelineIconUrl": icon,
+			"timelineButtonStyle": "",
+			"hasBuff": not f.get("buffs", []).is_empty() \
+				if f.has("buffs") else false,
+			"isSummoned": bool(f.get("summon", false)),
+			"runningEffects": [],
+			"nextTableTurn": 0,
+			"hideInTimeline": _dead.get(int(fid), false),
+			"fid": int(fid),
+		})
+	return items
 
 
 func _on_gui_event(ns: String, method: String, args: Array, _w) -> void:
@@ -2441,6 +2569,23 @@ func _on_gui_event(ns: String, method: String, args: Array, _w) -> void:
 			_send_fighter_dir(5)
 		"fighterSetSouthEastDirection":
 			_send_fighter_dir(3)
+		"openCloseFighterInformations":
+			var it = args[0] if args.size() > 0 else null
+			if it is Dictionary and it.has("fid"):
+				_on_timeline_chip(int(it["fid"]))
+		"giveUpFight":
+			# 18000 C2S empty — the server settles it as a forfeit
+			if State.net != null:
+				State.net.send_message(18000, PackedByteArray(), 3)
+		"openCloseFightMenuDialog":
+			_toggle_fight_menu()
+		"closeFightResultDialog", "quit":
+			if _hud_res != null and is_instance_valid(_hud_res):
+				_hud_res.queue_free()
+				_hud_res = null
+			_end_fight_ack()
+		"disconnect":
+			get_tree().change_scene_to_file("res://src/main.tscn")
 
 
 ## World pixel -> grid cell: nearest ground-cell center within a cell diag.

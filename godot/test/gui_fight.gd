@@ -18,6 +18,7 @@ func _init() -> void:
 		"usableFighterCards": [],
 		"closeCombatUsable": true,
 	}
+	var tl := _gui.open_dialog("timelineDialog", {"fight": {"timeline": {"display": true, "fighters": [{"teamId":0,"name":"Iop","timelineIconUrl":"80","hasBuff":false,"isSummoned":false,"runningEffects":[],"nextTableTurn":0,"hideInTimeline":false},{"teamId":1,"name":"Sacrieur","timelineIconUrl":"110","hasBuff":true,"isSummoned":false,"runningEffects":[],"nextTableTurn":0,"hideInTimeline":false}]}}})
 	var root := _gui.open_dialog("fighterControlsDialog", {
 		"fight": {"timeline": {"currentFighter": fighter},
 			"endTurnState": true},
@@ -30,6 +31,8 @@ func _init() -> void:
 	vp.size = Vector2i(560, 170)
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.size = Vector2(530, 150)
+	vp.add_child(tl)
+	tl.position = Vector2(0, 160)
 	vp.add_child(root)
 	get_root().add_child(vp)
 	for i in 6:

@@ -369,7 +369,7 @@ static func _fighter_create_result(r: WireReader) -> Dictionary:
 ## minimal classic fighter — type 1, no cards, default colors. `spells` is an
 ## optional starting loadout (breed-legality is enforced server-side).
 static func encode_fighter_blob(breed: int, fname: String, sex: int,
-		spells: Array = []) -> PackedByteArray:
+		spells: Array = [], colors: Array = [0, 0, 0]) -> PackedByteArray:
 	var w := WireWriter.new()
 	w.put_u8(1)                # classic (2 = evolution roster)
 	w.put_i16(400)             # budget — server recomputes from loadout anyway
@@ -377,9 +377,9 @@ static func encode_fighter_blob(breed: int, fname: String, sex: int,
 	w.put_str(fname, "u8")
 	w.put_u8(sex & 1)
 	w.put_i8(-1)               # ey < 0 → color triple follows
-	w.put_u8(0)                # hair
-	w.put_u8(0)                # skin
-	w.put_u8(0)                # eye
+	w.put_u8(colors[0] & 0xFF) # hair
+	w.put_u8(colors[1] & 0xFF) # skin
+	w.put_u8(colors[2] & 0xFF) # eye
 	w.put_i16(spells.size() * 4)   # spell blob: {i32 spellId}×n
 	for sid in spells:
 		w.put_i32(int(sid))

@@ -42,6 +42,14 @@ func is_open(name: String) -> bool:
 	return dialogs.has(name)
 
 
+## openClose<XxxDialog> toggles; close<XxxDialog> always closes.
+func toggle(name: String, model_values := {}) -> GWidget:
+	if is_open(name):
+		close(name)
+		return null
+	return open(name, model_values)
+
+
 func on(method: String, cb: Callable) -> void:
 	handlers[method] = cb
 
@@ -64,6 +72,16 @@ func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void
 		"quit":
 			get_tree().quit()
 		_:
+			# dofusarena:openCloseXxxDialog / closeXxxDialog are generic
+			# dialog toggles — the name is already the file name
+			if method.begins_with("openClose") and \
+					method.ends_with("Dialog"):
+				toggle(method.trim_prefix("openClose"))
+				return
+			if method.begins_with("close") and \
+					method.ends_with("Dialog"):
+				close(method.trim_prefix("close"))
+				return
 			var h: Callable = handlers.get(method, Callable())
 			if h.is_valid():
 				h.call(args, widget)

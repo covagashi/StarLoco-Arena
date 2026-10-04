@@ -47,6 +47,12 @@ func open_dialog(name: String, model_values := {}) -> GWidget:
 
 func _dispatch(action: String, w: GWidget, _loader: GuiLoader) -> void:
 	# "dofusarena:logon(loginForm)" / "dofusarena.fight:fighterEndsTurn(fighter)"
+	# onClick="a;b;c" fires each action in sequence
+	for act in action.split(";", false):
+		_dispatch_one(act.strip_edges(), w)
+
+
+func _dispatch_one(action: String, w: GWidget) -> void:
 	var m := RegEx.new()
 	m.compile("^([\\w.]+):(\\w+)(?:\\((.*)\\))?$")
 	var r := m.search(action)

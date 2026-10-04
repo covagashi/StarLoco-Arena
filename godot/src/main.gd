@@ -243,10 +243,34 @@ func _ready() -> void:
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
+	_gui.on("createCoach", _on_coach_create)
+	_gui.on("validateCoachCreationForm", _on_coach_create)
+	_gui.on("createRandomCoach", _on_coach_random)
+	_gui.on("setPreviousCoachDirection", _on_coach_dir.bind(-1))
+	_gui.on("setNextCoachDirection", _on_coach_dir.bind(1))
+	_gui.on("disconnect", func(_a, _w): Session.client.disconnect_from())
+	# teamManagement / evolution namespace → the lobby fight screens
+	_gui.on("launchEvolutionFight", func(_a, _w): _on_evo_search())
+	_gui.on("launchTeamTest", func(_a, _w): _on_practice_pressed())
+	_gui.on("createNewEvolutionFighter", _on_new_fighter_dialog)
+	_gui.on("deleteFighter", _on_gui_delete_fighter)
+	_gui.on("createFighter", _on_gui_create_fighter)
+	_gui.on("closeFighterCreationDialog",
+		func(_a, _w): _gui.close("fighterCreationDialog"))
+	_gui.on("setFighterBreedId", _on_fighter_set.bind("breedId"))
+	_gui.on("setFighterSkinColorIndex", _on_fighter_set.bind("skin"))
+	_gui.on("setFighterHairColorIndex", _on_fighter_set.bind("hair"))
+	_gui.on("setFighterEyeColorIndex", _on_fighter_set.bind("eye"))
+	_gui.on("setFighterVersion", _on_fighter_version)
+	_gui.on("setFighterSex", _on_fighter_set.bind("sex"))
+	_gui.on("hideMouseImage", func(_a, _w): pass)
+	_gui.on("changeTeamTab", func(_a, _w): pass)
+	_gui.on("openCloseUnlockedColors", func(_a, _w): pass)
 	$UI/VBox.visible = false
 	if State.my_coach_id <= 0:
 		_gui.open("logonDialog")
 	else:
+		_mount_lobby_menubar({"name": State.my_coach_name})
 		$UI/VBox.visible = true
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
@@ -453,7 +477,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			else:
 				_log_line("[color=red]auth refused, code %d[/color]" % code)
 		OP_COACH_CREATE_REQ:
-			_send_coach_creation()
+			_open_coach_creation()
 		OP_COACH_CREATION_RESULT:
 			# 2050: [u8 result] — 0 = created; success is followed by
 			# COACH_INFO + ENTER_INSTANCE, failures only carry the code.
@@ -464,6 +488,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_COACH_INFO:
 			var d := Codec.decode(opcode, payload)
 			State.my_coach_id = int(d.get("id", -1))
+			State.my_coach_name = str(d.get("name", State.my_coach_name))
 			State.my_coach_look = {"skin": int(d.get("skin", 0)),
 				"hair": int(d.get("hair", 0)), "sex": int(d.get("sex", 0))}
 			State.guild = d.get("guild", {})
@@ -480,6 +505,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					int(State.guild.get("demon_id", 0))])
 			_log_line("[color=green]coach info received — in lobby[/color]")
 			_gui.close("logonDialog")
+			_mount_lobby_menubar(d)
 			$UI/VBox.visible = true
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
@@ -561,6 +587,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				roster_list.add_item(label)
 				roster_list.set_item_metadata(roster_list.item_count - 1, int(f.id))
 			_log_line("roster: %s" % (", ".join(names) if names else "empty"))
+			_push_team_model()
 			if _elem_kind == 10 and $UI/ElementDlg.visible:
 				_fill_graveyard()
 		OP_TEAM_PRESETS:
@@ -2286,17 +2313,213 @@ func _on_equip_wear() -> void:
 		(14 - _equip_slots.count(0)))
 
 
-func _send_coach_creation() -> void:
-	var name := login_edit.text.strip_edges()
+## 2048 COACH_CREATE_REQ → retail coachCreationDialog (sex/skin/hair/name +
+## live paper-doll preview). localCoach is the model the XML binds to.
+func _open_coach_creation() -> void:
+	_gui.gui.model.set_value("localCoach", {
+		"sex": 0, "skin": 1, "hair": 1,
+		"name": login_edit.text.strip_edges().left(20),
+		"actorDescriptorLibrary": "coach_7000",
+		"actorAnimation": "AnimStatique",
+		"actorDirection": 3,
+		"actorMaterial": Palettes.coach_tints(1, 1)})
+	_gui.open("coachCreationDialog")
+	if not _gui.gui.model.changed.is_connected(_on_localcoach_changed):
+		_gui.gui.model.changed.connect(_on_localcoach_changed)
+
+
+## localCoach.sex/hair/skin drive the preview's paper-doll set + channel tints
+func _on_localcoach_changed(n: String, field: String, _v) -> void:
+	if n != "localCoach" or not field in ["sex", "hair", "skin"]:
+		return
+	var lc = _gui.gui.model.get_value("localCoach")
+	if not (lc is Dictionary):
+		return
+	lc["actorDescriptorLibrary"] = "coach_700%d" % int(lc.get("sex", 0))
+	lc["actorMaterial"] = Palettes.coach_tints(
+		int(lc.get("skin", 0)), int(lc.get("hair", 0)))
+	_gui.gui.model.set_value("localCoach", lc)
+
+
+func _on_coach_dir(_args: Array, _w, d: int) -> void:
+	var lc = _gui.gui.model.get_value("localCoach")
+	if not (lc is Dictionary):
+		return
+	lc["actorDirection"] = (int(lc.get("actorDirection", 3)) + d) & 7
+	_gui.gui.model.set_value("localCoach", lc)
+
+
+func _on_coach_random(_args: Array, _w) -> void:
+	var lc = _gui.gui.model.get_value("localCoach")
+	if not (lc is Dictionary):
+		return
+	lc["sex"] = randi() % 2
+	lc["skin"] = randi() % Palettes.SKIN.size()
+	lc["hair"] = randi() % Palettes.HAIR.size()
+	_gui.gui.model.set_value("localCoach", lc)
+
+
+func _on_coach_create(_args: Array, _w) -> void:
+	var lc = _gui.gui.model.get_value("localCoach")
+	if not (lc is Dictionary):
+		return
+	var name := str(lc.get("name", "")).strip_edges()
+	if name == "":
+		return
 	var name_bytes := CP1252.encode(name.left(20))
 	var w := WireWriter.new()
 	w.put_u8(name_bytes.size())
 	w.put_bytes(name_bytes)
-	w.put_u8(1)  # skin
-	w.put_u8(1)  # hair
-	w.put_u8(0)  # sex
+	w.put_u8(int(lc.get("skin", 0)) & 0xFF)
+	w.put_u8(int(lc.get("hair", 0)) & 0xFF)
+	w.put_u8(int(lc.get("sex", 0)) & 0xFF)
 	Session.send(OP_COACH_CREATE, w.raw(), 2)
-	_log_line("server asked coach creation — sent name '%s'" % name)
+	_gui.close("coachCreationDialog")
+	_log_line("coach creation sent — '%s'" % name)
+
+
+## --- fighter creation (teamManagement.editableFighter) --------------------
+## The retail fighterCreationDialog binds a preview paper-doll to the model;
+## setFighter* events just rewrite fields. On validate → 6001.
+const _FV := preload("res://src/fight/fight_view.gd")
+
+
+func _on_new_fighter_dialog(_args: Array, _w) -> void:
+	_gui.gui.model.set_value("teamManagement", {
+		"breedId": 1, "sex": 0, "version": 1,
+		"skin": 0, "hair": 0, "eye": 0, "name": "",
+		"actorAnimation": "AnimStatique", "actorDirection": 3},
+		"editableFighter")
+	_refresh_editable_fighter()
+	_gui.open("fighterCreationDialog")
+
+
+func _refresh_editable_fighter() -> void:
+	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	if not (f is Dictionary):
+		return
+	var breed := clampi(int(f.get("breedId", 1)), 1, 12)
+	var sex := clampi(int(f.get("sex", 0)), 0, 1)
+	f["actorDescriptorLibrary"] = "fighter_%s" % \
+		_FV.FIGHTER_FILES[(breed - 1) * 2 + sex]
+	f["actorMaterial"] = Palettes.fighter_tints(
+		int(f.get("skin", 0)), int(f.get("hair", 0)), int(f.get("eye", 0)))
+	_gui.gui.model.set_value("teamManagement", f, "editableFighter")
+
+
+## setFighterBreedId(fighter,N) / setFighterSkinColorIndex(N,fighter) —
+## the arg order differs per event; take the numeric arg either way.
+func _on_fighter_set(args: Array, _w, field: String) -> void:
+	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	if not (f is Dictionary):
+		return
+	var v := -1
+	for a in args:
+		if a is int or a is float:
+			v = int(a)
+	if field == "breedId" and v < 0:
+		v = int(args[1]) if args.size() > 1 else 1
+	if v < 0:
+		return
+	f[field] = v
+	if field == "breedId" or field == "sex":
+		_refresh_editable_fighter()
+	else:
+		f["actorMaterial"] = Palettes.fighter_tints(
+			int(f.get("skin", 0)), int(f.get("hair", 0)),
+			int(f.get("eye", 0)))
+		_gui.gui.model.set_value("teamManagement", f, "editableFighter")
+
+
+func _on_fighter_version(args: Array, _w) -> void:
+	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	if not (f is Dictionary):
+		return
+	for a in args:
+		if a is int or a is float:
+			f["version"] = int(a)
+	_gui.gui.model.set_value("teamManagement", f, "editableFighter")
+
+
+func _on_gui_create_fighter(_args: Array, _w) -> void:
+	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	if not (f is Dictionary):
+		return
+	var fname := str(f.get("name", "")).strip_edges()
+	if fname == "":
+		return
+	var blob: PackedByteArray = Overrides.encode_fighter_blob(
+		int(f.get("breedId", 1)), fname, int(f.get("sex", 0)), [],
+		[int(f.get("hair", 0)), int(f.get("skin", 0)),
+			int(f.get("eye", 0))])
+	var w := WireWriter.new()
+	w.put_u8(0)
+	w.put_u16(0)
+	w.put_u16(blob.size())
+	w.put_bytes(blob)
+	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
+	_gui.close("fighterCreationDialog")
+	_log_line("fighter create sent: %s" % fname)
+
+
+func _on_gui_delete_fighter(args: Array, _w) -> void:
+	# deleteFighter(fighter) — fighter = the row's <data id> item
+	if args.is_empty() or not (args[0] is Dictionary):
+		return
+	var w := WireWriter.new()
+	w.put_i64(int(args[0].get("id", args[0].get("fighterId", 0))))
+	w.put_u16(0)
+	Session.send(OP_FIGHTER_DELETE, w.raw(), 2)
+
+
+## Roster → the XULOR2 model the evolution tab's fighter cards bind.
+## state 0 titular / 1 bench / 2+ dead-ish — bench goes to fightersOnBench.
+func _push_team_model() -> void:
+	var playing: Array = []
+	var bench: Array = []
+	for fr in State.roster:
+		var breed := clampi(int(fr.get("breed", 1)), 1, 12)
+		var sex := clampi(int(fr.get("sex", 0)), 0, 1)
+		var item := {
+			"id": int(fr.get("id", 0)),
+			"fighterId": int(fr.get("id", 0)),
+			"name": str(fr.get("name", "")),
+			"breedId": breed, "sex": sex,
+			"state": str(fr.get("state", 0)),
+			"description": "", "conditions": [],
+			"torsoInjury": [], "otherInjury": [], "legInjury": [],
+			"headInjury": [], "armInjury": [],
+			"actorDescriptorLibrary": "fighter_%s" % \
+				_FV.FIGHTER_FILES[(breed - 1) * 2 + sex],
+			"actorAnimation": "AnimStatique",
+			"actorDirection": 3,
+			"actorMaterial": Palettes.fighter_tints(
+				int(fr.get("skin", 0)), int(fr.get("hair", 0)),
+				int(fr.get("eye", 0)))}
+		if int(fr.get("state", 0)) == 1:
+			bench.append(item)
+		else:
+			playing.append(item)
+	_gui.gui.model.set_value("teamManagement",
+		{"fighters": playing}, "editableTeamPreset")
+	_gui.gui.model.set_value("evolutionTeam",
+		{"fightersOnBench": bench})
+	_gui.gui.model.set_value("onlyTabEnabledId", -1)
+	_gui.gui.model.set_value("coachManagement", {"currentSet": ""})
+	_gui.gui.model.set_value("tomeManager", false)
+
+
+## COACH_INFO → the retail lobby bar. localCoach carries the fields
+## menuBarDialog binds (equipedEmotes + name today; more land as screens port).
+func _mount_lobby_menubar(d: Dictionary) -> void:
+	_gui.gui.model.set_value("localCoach", {
+		"name": str(d.get("name", "")),
+		"equipedEmotes": []})
+	_gui.gui.model.set_value("showToolsInMenuBar", 0)
+	_gui.gui.model.set_value("menuBar", {
+		"coachInventoryButton": true, "socialButton": true})
+	if not _gui.is_open("menuBarDialog"):
+		_gui.open("menuBarDialog")
 
 
 func _log_line(s: String) -> void:

@@ -21,6 +21,7 @@ var min_size := Vector2(-1, -1)
 var expandable := true
 var shrinkable := true
 var widget_id := ""
+var template_id := ""          # <x templateId=> anchor for <templateElement>
 var group_id := ""
 var value := ""
 var text := ""
@@ -193,9 +194,15 @@ func _bg_decl() -> Dictionary:
 	return a.get("bg_inline", {})
 
 
+var selected_index := 0   # tabbedContainer
+var tabs_alignment := "north"
+
+
 func _draw() -> void:
 	if _viewer_spr != null:
 		_viewer_place()
+	if kind == "tabbedContainer":
+		_tabs_reflow()
 	var a := appearance()
 	# 1. background
 	if a.has("plain_bg"):
@@ -223,6 +230,72 @@ func _draw() -> void:
 	# 4. text
 	if text != "" and kind != "image":
 		_draw_text()
+	# 5. tabbedContainer strip — tab rects + labels along the aligned edge
+	if kind == "tabbedContainer":
+		_draw_tabs()
+
+
+## tab strip geometry — west = a left column of tabs, else a top row
+func _tab_strip() -> Vector2:
+	return Vector2(110, 0) if tabs_alignment == "west" \
+		else Vector2(0, 30)
+
+
+func _tab_rect(i: int) -> Rect2:
+	if tabs_alignment == "west":
+		return Rect2(0, i * 28 + 6, 104, 24)
+	return Rect2(i * 110 + 4, 0, 104, 26)
+
+
+func _tabs_reflow() -> void:
+	var strip := _tab_strip()
+	var i := 0
+	for ch in get_children():
+		if not (ch is GWidget) or ch.get_meta("list_row", false):
+			continue
+		if ch.kind != "tabItem":
+			continue
+		ch.visible = (i == selected_index)
+		ch.position = Vector2(strip.x, strip.y)
+		ch.size = size - Vector2(strip.x, strip.y)
+		if ch.visible:
+			GuiLayouts.apply(ch)
+		i += 1
+
+
+func _draw_tabs() -> void:
+	var la := label_appearance()
+	var f := _font(la)
+	var fs := _font_size(la)
+	var i := 0
+	for ch in get_children():
+		if not (ch is GWidget) or ch.kind != "tabItem":
+			continue
+		var r := _tab_rect(i)
+		var c := _text_color(la)
+		if i == selected_index:
+			draw_rect(r, Color(0.35, 0.25, 0.12, 0.9), true)
+			draw_rect(r, Color(0.6, 0.45, 0.25), false, 2.0)
+		elif ch.enabled:
+			draw_rect(r, Color(0.22, 0.15, 0.07, 0.8), true)
+		else:
+			draw_rect(r, Color(0.15, 0.11, 0.06, 0.8), true)
+			c = c.darkened(0.5)
+		draw_multiline_string(f, r.position + Vector2(6, 3),
+			_strip_markup(ch.text), HORIZONTAL_ALIGNMENT_LEFT,
+			r.size.x - 8, fs, -1, c)
+		i += 1
+
+
+func _tab_at(p: Vector2) -> int:
+	var i := 0
+	for ch in get_children():
+		if not (ch is GWidget) or ch.kind != "tabItem":
+			continue
+		if _tab_rect(i).has_point(p):
+			return i
+		i += 1
+	return -1
 
 
 func _draw_border() -> void:
@@ -336,14 +409,27 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_MOUSE_ENTER:
 		_hover = true
 		refresh_state()
+		_popup_show(true)
 		emit_action("onMouseEnter")
 	elif what == NOTIFICATION_MOUSE_EXIT:
 		_hover = false
 		_pressed = false
 		refresh_state()
+		_popup_show(false)
 		emit_action("onMouseExit")
 	elif what == NOTIFICATION_RESIZED and _viewer_spr != null:
 		_viewer_place()
+
+
+## <popup> children — hover overlays (buff list, tooltips). align="south"
+## floats under the owning widget; content visibility still gates itself.
+func _popup_show(v: bool) -> void:
+	for ch in get_children():
+		if ch is GWidget and ch.get_meta("popup", false):
+			if v:
+				ch.position = Vector2(
+					(size.x - ch.size.x) / 2.0, size.y + 4)
+			ch.visible = v
 
 
 func _gui_input(ev: InputEvent) -> void:
@@ -356,6 +442,14 @@ func _gui_input(ev: InputEvent) -> void:
 			_pressed = false
 			refresh_state()
 			if was:
+				if kind == "tabbedContainer":
+					var t := _tab_at(ev.position)
+					if t >= 0 and t != selected_index:
+						selected_index = t
+						_bind_write(t)
+						emit_action("onClick")
+						queue_redraw()
+						return
 				activate()
 	elif ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT and ev.double_click:
 		emit_action("onDoubleClick")
@@ -399,7 +493,7 @@ func apply_model(v, b: Dictionary = {}) -> void:
 		data_value = v
 	var pcond: Dictionary = bb.get("condition", {})
 	if not pcond.is_empty():
-		v = GuiConditions.eval(pcond, v)
+		v = _eval_cond(pcond, v)
 	match attr:
 		"text":
 			set_text(str(v))
@@ -410,6 +504,9 @@ func apply_model(v, b: Dictionary = {}) -> void:
 			_sync_group()
 		"content":
 			set_content(v)
+		"selectedTabIndex":
+			selected_index = int(v)
+			queue_redraw()
 		"style":
 			type_style = str(v)
 			var e := guitheme.elem(_type_name(), type_style)
@@ -428,10 +525,31 @@ func apply_model(v, b: Dictionary = {}) -> void:
 		"material":
 			_viewer_set("material", v)
 		_:
-			# model object → apply any bound FIELDS as item binds would
-			if v is Dictionary and bb.get("field", "") != "":
+			if attr.begins_with("on"):
+				# <property attribute="onClick"> — value/elseValue picks
+				# the action string the click emits
+				events[attr] = str(v)
+			elif v is Dictionary and bb.get("field", "") != "":
 				_apply_attr(attr, v.get(bb["field"]))
+			elif bb.get("field", "") == "":
+				_apply_attr(attr, v)
 	queue_redraw()
+
+
+func _eval_cond(cond: Dictionary, v):
+	var ctx := {"model": model}
+	# <property attribute="comparedValue"> replaces the tested operand
+	if cond.has("cmp_bind"):
+		v = GuiConditions.resolve(cond["cmp_bind"], ctx)
+	var else_v = cond.get("elseValue", "")
+	if cond.has("else_bind"):
+		else_v = GuiConditions.resolve(cond["else_bind"], ctx)
+	var ok := GuiConditions.eval(cond.get("tree", cond), v, ctx)
+	if cond.get("returnOriginalValue", "") == "true":
+		return v if ok else else_v
+	if cond.get("value", "") != "" or else_v != "":
+		return cond.get("value", "") if ok else else_v
+	return ok
 
 
 func _truthy(v) -> bool:
@@ -439,7 +557,9 @@ func _truthy(v) -> bool:
 		return v
 	if v is String:
 		return v == "true" or v == "1"
-	return v != null and v != 0 and v != 0.0
+	if v is int or v is float:
+		return v != 0
+	return v != null
 
 
 func set_enabled_flag(v: bool) -> void:
@@ -463,6 +583,14 @@ func _apply_attr(attr: String, v) -> void:
 			set_selected(_truthy(v))
 		"texture", "pixmap":
 			_set_item_texture(str(v))
+		"modulationColor":
+			var cv: PackedFloat64Array = str(v).split_floats(",")
+			if cv.size() >= 3:
+				self_modulate = Color(cv[0], cv[1], cv[2],
+					cv[3] if cv.size() > 3 else 1.0)
+		"color":
+			set_meta("attr_color", str(v))
+			queue_redraw()
 		"content":
 			set_content(v)
 		"value":
@@ -482,6 +610,11 @@ func _set_item_texture(url: String) -> void:
 	var img := Image.new()
 	for cand in [p, "res://assets/gui/images/spells/" + bn,
 			"res://assets/gui/images/spells/icons/" + bn,
+			"res://assets/gui/images/breeds/fightTimeline/" + bn,
+			"res://assets/gui/images/equipments/coachs/illustrations/" + bn,
+			"res://assets/gui/images/equipments/coachs/icons/" + bn,
+			"res://assets/gui/images/equipments/fighters/illustrations/" + bn,
+			"res://assets/gui/images/equipments/fighters/icons/" + bn,
 			"res://assets/gui/images/equipments/" + bn,
 			"res://assets/gui/images/breeds/" + bn,
 			"res://assets/gui/images/miscellaneous/" + bn]:
@@ -510,7 +643,7 @@ func _viewer_set(k: String, v) -> void:
 	if _viewer_spr == null and _viewer["lib"] != "":
 		_viewer_spr = load("res://src/anims/anm_sprite.gd").new()
 		add_child(_viewer_spr)
-		_viewer_spr.centered = true
+		_viewer_spr.foot_pivot = true   # pin feet like the retail portrait
 	_viewer_place()
 	if _viewer_spr != null and _viewer["lib"] != "":
 		var set_dir := str(_viewer["lib"])
@@ -529,14 +662,16 @@ func _viewer_set(k: String, v) -> void:
 				var try := "%d_%s" % [d, anim.split("_", false, 1)[-1]]
 				if _viewer_spr.load_action(set_dir, try):
 					break
-		_viewer_spr.flip_h = dir in [1, 2, 3]
+		var fdir := -1.0 if dir in [1, 2, 3] else 1.0
+		_viewer_spr.scale.x = absf(_viewer_spr.scale.x) * fdir
 
 
 func _viewer_place() -> void:
 	if _viewer_spr == null:
 		return
 	var sc: float = get_meta("viewer_scale", 1.0)
-	_viewer_spr.scale = Vector2(sc, sc)
+	var sx: float = sign(_viewer_spr.scale.x) * sc
+	_viewer_spr.scale = Vector2(sx if sx != 0 else sc, sc)
 	_viewer_spr.position = size / 2.0 + Vector2(0, get_meta("viewer_offy", 0.0))
 
 
@@ -548,17 +683,18 @@ func apply_item(v) -> void:
 		data_value = v
 	for b in item_binds:
 		var fv = v.get(b["field"]) if v is Dictionary and b.get("field", "") != "" else v
-		# a <condition> on an item transforms the value (visible <- isFalse(usable))
+		# a <condition> transforms the bound value — bare ops give a bool,
+		# value=/elseValue= attrs pick between two values
 		var cond: Dictionary = b.get("condition", {})
 		if not cond.is_empty():
-			fv = GuiConditions.eval(cond, fv)
+			fv = _eval_cond(cond, fv)
 		_apply_attr(b["attribute"], fv)
 	queue_redraw()
 
 
 ## list row materialization — called when content_items changes
 func rebuild_items() -> void:
-	if kind != "list" and kind != "comboboxplus" and kind != "comboBox":
+	if kind != "list" and kind != "stackList" and kind != "comboboxplus" and kind != "comboBox":
 		return
 	# drop old rows (renderer templates stay hidden, owned by us). free()
 	# now — queue_free defers and a same-frame rebuild would double them.
@@ -570,7 +706,7 @@ func rebuild_items() -> void:
 		return
 	# retail List is a fixed grid: cols = floor(width/cellW), row-major.
 	var cell := cell_size
-	if cell == Vector2.ZERO:
+	if cell == Vector2(-1, -1) or cell == Vector2.ZERO:
 		cell = Vector2(20, 20)
 	# grid width: live size, else the sld size the dialog gave us
 	var box_w := size.x
@@ -580,11 +716,15 @@ func rebuild_items() -> void:
 			box_w = float(sv[0])
 	var cols: int = max(1, int(box_w / cell.x)) if box_w > 0 else 1
 	var i := 0
+	var stack_x := 0.0
+	var ctx := {"count": content_items.size(), "model": model}
 	for item in content_items:
+		ctx["index"] = i
 		var tpl: GWidget = null
 		for r in renderers:
 			var cond: Dictionary = r.get("cond", {})
-			if cond.is_empty() or GuiConditions.eval(cond, item):
+			var tree: Dictionary = cond.get("tree", cond)
+			if tree.is_empty() or GuiConditions.eval(tree, item, ctx):
 				tpl = r["template"]
 				break
 		if tpl == null:
@@ -593,15 +733,36 @@ func rebuild_items() -> void:
 		row.set_meta("list_row", true)
 		row.visible = true
 		row.item_value = item
-		row.size = cell
-		row.custom_minimum_size = cell
-		row.position = Vector2((i % cols) * cell.x, (i / cols) * cell.y)
+		if kind == "stackList":
+			# horizontal pack at each row's own preferred size
+			var p := _row_pref(row)
+			row.size = p
+			row.position = Vector2(stack_x, 0)
+			stack_x += p.x
+		else:
+			row.size = cell
+			row.custom_minimum_size = cell
+			row.position = Vector2((i % cols) * cell.x, (i / cols) * cell.y)
 		add_child(row)
 		row.apply_item_deep(item)
 		# each row is a sl canvas (templates position with sld)
 		row.layout = {"type": "sl"}
 		GuiLayouts.apply(row)
 		i += 1
+
+
+func _row_pref(row: GWidget) -> Vector2:
+	var s := row.pref_size
+	if s.x >= 0 and s.y >= 0:
+		return s
+	var m := row.get_minimum_size()
+	if s.x >= 0:
+		m.x = s.x
+	if s.y >= 0:
+		m.y = s.y
+	if m == Vector2.ZERO:
+		m = Vector2(40, 40)
+	return m
 
 
 func apply_item_deep(v) -> void:
@@ -639,6 +800,9 @@ func duplicate_widget() -> GWidget:
 	w.binds = binds.duplicate(true)
 	w.item_binds = item_binds.duplicate(true)
 	w.data_id = data_id
+	w.template_id = template_id
+	w.tabs_alignment = tabs_alignment
+	w.selected_index = selected_index
 	w.model = model
 	w.mouse_filter = mouse_filter
 	w.gui_event.connect(_forward_event)
