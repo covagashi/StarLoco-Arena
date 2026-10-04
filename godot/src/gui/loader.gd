@@ -354,7 +354,8 @@ func load_file(path: String) -> GWidget:
 		var all: Array = []
 		_collect_widgets(root, all)
 		for w in all:
-			if is_instance_valid(w) and w.kind in ["list", "stackList", "comboboxplus", "comboBox"]:
+			if is_instance_valid(w) and w.kind in ["list", "stackList",
+					"comboboxplus", "comboBox", "renderableContainer"]:
 				w.rebuild_items()
 	_depth -= 1
 	return root
@@ -394,7 +395,8 @@ func _apply_telem(tgt: GWidget, a: Dictionary) -> void:
 func _nearest_list(w: GWidget) -> GWidget:
 	var n: Node = w
 	while n != null:
-		if n is GWidget and n.kind in ["list", "stackList", "comboboxplus", "comboBox"]:
+		if n is GWidget and n.kind in ["list", "stackList", "comboboxplus",
+				"comboBox", "renderableContainer"]:
 			return n
 		n = n.get_parent()
 	return null
@@ -493,7 +495,25 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 		le.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 		w.text_editor = le
 		w.editable = true
-		le.text_changed.connect(func(t): w.text = t; w._bind_write(t))
+		var rx: RegEx = null
+		if a.has("restrict"):
+			# retail char-class filter — e.g. guild names take [a-zA-Z -]
+			rx = RegEx.new()
+			rx.compile(a["restrict"])
+		le.text_changed.connect(func(t):
+			var tt: String = t
+			if rx != null:
+				var out := ""
+				for ch in t:
+					if rx.search(ch) != null:
+						out += ch
+				if out != t:
+					var cp := le.caret_column
+					le.text = out
+					le.caret_column = mini(cp, out.length())
+					tt = out
+			w.text = tt
+			w._bind_write(tt))
 		le.text_submitted.connect(func(_t):
 			w.emit_action("onKeyPress")
 			w.submit_form())

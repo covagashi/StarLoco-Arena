@@ -85,7 +85,71 @@ func _init() -> void:
 		"evolutionSets": [], "zaapSets": []})
 	var cb := _gui.open_dialog("cardBookDialog")
 	print("[smoke] cardBook:", "ok" if cb != null else "FAIL")
-	for r in [sd, cs, ld, cd, ad, od, cb]:
+	var gc := _gui.open_dialog("guildCreationDialog")
+	print("[smoke] guildCreation:", "ok" if gc != null else "FAIL")
+	_gui.model.set_value("guild",
+		{"editableRanks": [{"name": "leader", "rankLevel": 1,
+			"rankIconUrl": "", "canInvite": true, "canRemove": false,
+			"canPromote": false, "canDepromote": false},
+			{"name": "member", "rankLevel": 10, "rankIconUrl": "",
+			"canInvite": false, "canRemove": false, "canPromote": false,
+			"canDepromote": false}]})
+	_gui.model.set_value("guildSelectedRank", {})
+	var gm := _gui.open_dialog("guildManagementDialog")
+	print("[smoke] guildMgmt:", "ok" if gm != null else "FAIL")
+	_gui.model.set_value("guildCoachStats", {"name": "boss", "level": 3,
+		"actorDescriptorLibrary": "coach_7000", "rankIconUrl": "",
+		"guildRankIconUrl": "", "statisticsTotalFights": 10,
+		"statisticsTotalFightsWon": 6, "statisticsTotalFightsLost": 4,
+		"statisticsConsecutiveWins": 2, "statisticsTotalPlayTime": 100,
+		"statisticsTotalFightsTime": 50})
+	_gui.model.set_value("guildCanPromote", true)
+	_gui.model.set_value("guildCanDepromote", true)
+	_gui.model.set_value("guildExcluder", true)
+	var gs := _gui.open_dialog("guildCoachStatsDialog")
+	print("[smoke] guildCoachStats:", "ok" if gs != null else "FAIL")
+	_gui.model.set_value("mailManager", {"receivedMails": [
+		{"mailId": 1, "sender": "boss", "receiver": "me",
+			"title": "hi", "date": "01/01/2012", "read": false,
+			"hasItems": true, "style": "", "message": "body",
+			"cards": [{"id": 1, "name": "Cape", "iconUrl": "1",
+				"quantity": 1}]}],
+		"sentMails": []})
+	_gui.model.set_value("mailbox.mail", {})
+	var mb := _gui.open_dialog("mailboxDialog")
+	print("[smoke] mailbox:", "ok" if mb != null else "FAIL")
+	_gui.model.set_value("mailbox.newMail", {"receiver": "", "title": "",
+		"message": "", "cards": [], "receiverId": 0})
+	var nm := _gui.open_dialog("newMailDialog")
+	print("[smoke] newMail:", "ok" if nm != null else "FAIL")
+	_gui.model.set_value("cardMasterTrade", {
+		"cardMasterCardExchange": [
+			{"id": 1, "name": "Cape", "iconUrl": "1",
+				"illustrationUrl": "1", "value": 50,
+				"requiredLevel": "", "typeIconUrl": "",
+				"cardSetName": "s", "description": "d",
+				"quantity": 1}],
+		"localCardExchange": [null, null, null, null],
+		"cardMasterCardsPrice": 50, "localCardsPrice": 0,
+		"canBuyCards": false, "selectedCard": null})
+	_gui.model.set_value("exchange.cardTrade", 7, "exchangeId")
+	var cm := _gui.open_dialog("cardMasterDialog")
+	print("[smoke] cardMaster:", "ok" if cm != null else "FAIL")
+	_gui.model.set_value("exchange.remoteCoach", {"name": "peer",
+		"actorDescriptorLibrary": "coach_7000"})
+	_gui.model.set_value("exchange.cardTrade", {
+		"exchangeId": 5,
+		"localCardExchange": [{"id": 1, "name": "Cape",
+			"iconUrl": "1", "illustrationUrl": "1", "value": 50,
+			"quantity": 2, "requiredLevel": "", "typeIconUrl": "",
+			"cardSetName": "s", "description": "d"}],
+		"remoteCardExchange": [null, null, null, null],
+		"localCardsValue": 100, "remoteCardsValue": 0,
+		"localUserReady": false, "remoteUserReady": false,
+		"readyButtonEnabled": true})
+	var ex := _gui.open_dialog("exchangeDialog")
+	print("[smoke] exchange:", "ok" if ex != null else "FAIL")
+	for r in [sd, cs, ld, cd, ad, od, cb, gc, gm, gs, mb, nm, cm, ex]:
 		if r != null:
 			vp.add_child(r)
 	if sd != null:

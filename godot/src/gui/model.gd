@@ -31,9 +31,21 @@ func get_value(name: String, field: String = ""):
 	if w == null:
 		return null
 	var v = w["parent"].get(w["key"])
-	if field != "" and v is Dictionary:
-		return v.get(field)
+	for p in _field_parts(name, field):
+		if not (v is Dictionary):
+			return null
+		v = v.get(p)
 	return v
+
+
+## retail fields can be property paths that restate the name's last
+## segment — field="guild.name" on name="guild" means guild.name flat,
+## not guild.guild.name. Drop the redundant head and walk the rest.
+func _field_parts(name: String, field: String) -> PackedStringArray:
+	var parts := field.split(".")
+	if parts.size() > 1 and parts[0] == name.split(".")[-1]:
+		return parts.slice(1)
+	return parts
 
 
 func set_value(name: String, value, field: String = "") -> void:
@@ -41,9 +53,17 @@ func set_value(name: String, value, field: String = "") -> void:
 	if w == null:
 		return
 	if field != "":
-		if not (w["parent"].get(w["key"]) is Dictionary):
-			w["parent"][w["key"]] = {}
-		w["parent"][w["key"]][field] = value
+		var d = w["parent"]
+		var key: String = w["key"]
+		var parts := _field_parts(name, field)
+		for i in parts.size() - 1:
+			if not (d.get(key) is Dictionary):
+				d[key] = {}
+			d = d[key]
+			key = parts[i]
+		if not (d.get(key) is Dictionary):
+			d[key] = {}
+		d[key][parts[-1]] = value
 	else:
 		w["parent"][w["key"]] = value
 	changed.emit(name, field, value)

@@ -187,7 +187,10 @@ const OP_IGNORE_ONLINE := 3164           # [u8 name][i64 id]
 const OP_IGNORE_OFFLINE := 3166          # [u8 name]
 const OP_MAILBOX_REQ := 15000            # C2S empty — opens the mailbox dialog
 const OP_MAIL_LIST := 15001              # S2C [i16 n]{mail record}
+const OP_MAIL_SEND := 539                # C2S full mail record arch 3
 const OP_MAIL_SEND_RES := 15003          # S2C [i64 result][mail record]
+const OP_MAIL_CHECK := 15506             # C2S [str8 name] — recipient check
+const OP_MAIL_NAME_RES := 15507          # S2C [i64 coachId] — 0 = unknown
 const OP_MAIL_DELETE := 15004            # C2S [u8 n]{i64 ids}
 const OP_MAIL_NOTICE := 15005            # S2C [u8 newCount]
 const OP_MAIL_TAKE := 15006              # C2S [i64 mailId][u8 pad]
@@ -281,7 +284,41 @@ func _ready() -> void:
 	_gui.on("switchSocialTab", func(_a, _w): pass)
 	_gui.on("quitGuild", _on_gui_quit_guild)
 	_gui.on("destroyGuild", _on_gui_destroy_guild)
-	_gui.on("openCloseGuildManagement", func(_a, _w): pass)
+	# dofusarena.guild:* — creation + management + member stats
+	_gui.on("openCloseGuildManagement",
+		func(_a, _w): _gui.toggle("guildManagementDialog"))
+	_gui.on("createGuild", _on_guild_create)
+	_gui.on("validateGuildCreationForm", func(_a, _w): pass)
+	_gui.on("showRanks", func(_a, _w): pass)   # hover popup owns itself
+	_gui.on("selectRank", _on_guild_select_rank)
+	_gui.on("addRankToGuild", _on_guild_add_rank)
+	_gui.on("removeRankToGuild", _on_guild_remove_rank)
+	_gui.on("modifyRank", _on_guild_modify_rank)
+	# the checkbox bindings already write guildSelectedRank.can* back
+	for m in ["setCanInvite", "setCanRemove", "setCanPromote",
+			"setCanDepromote"]:
+		_gui.on(m, func(_a, _w): pass)
+	_gui.on("getMemberStats", _on_guild_member_stats)
+	_gui.on("promote", _on_guild_stats_promote.bind(-1))
+	_gui.on("depromote", _on_guild_stats_promote.bind(1))
+	_gui.on("removeGuildMember", _on_guild_stats_kick)
+	_gui.on("closeMemberStatsDialog",
+		func(_a, _w): _gui.close("guildCoachStatsDialog"))
+	# dofusarena.mail:* — inbox/sentbox + compose dialog
+	_gui.on("tabItemChange", func(_a, _w): pass)
+	_gui.on("readMail", _on_mail_read)
+	_gui.on("deleteMail", _on_mail_delete)
+	_gui.on("getItemFromMail", _on_mail_take)
+	_gui.on("newMail", _on_mail_new)
+	_gui.on("reply", _on_mail_reply)
+	_gui.on("sendMail", _on_mail_send)
+	_gui.on("testName", _on_mail_test_name)
+	_gui.on("closeNewMailDialog",
+		func(_a, _w): _gui.close("newMailDialog"))
+	_gui.on("validateNewMailForm", func(_a, _w): pass)
+	_gui.on("toggleInventory", func(_a, _w): pass)
+	_gui.on("addItemToMail", func(_a, _w): pass)   # dndc staging — later
+	_gui.on("removeItemFromMail", func(_a, _w): pass)
 	# dofusarena:*LadderInformationDialog — paging of the retail ladder tabs
 	_gui.on("forwardTenLadderInformationDialog",
 		func(_a, _w): _ladder_gui_page(10))
@@ -313,7 +350,24 @@ func _ready() -> void:
 	_gui.on("selectEquipmentTypeFilter", _on_equip_type_filter)
 	_gui.on("selectAllEquipmentTypeFilter", _on_equip_filter_all)
 	_gui.on("useSpecialCard", _on_use_special_card)
-	_gui.on("equip", func(_a, _w): pass)
+	_gui.on("equip", _on_maybe_fusion_add)
+	# dofusarena.fusionLaboratory:* + cardMaster:* — shared drag names,
+	# dispatched on whichever trade dialog is open
+	_gui.on("removeCard", _on_shared_remove_card)
+	_gui.on("removeFusionCard", _on_fusion_remove_target)
+	_gui.on("fusionRequest", _on_fusion_request)
+	_gui.on("dragCard", func(_a, _w): pass)
+	_gui.on("dropCard", _on_shared_drop_card)
+	_gui.on("dragFusionCard", func(_a, _w): pass)
+	_gui.on("dropFusionCard", _on_fusion_drop_target)
+	_gui.on("selectCardToBuy", _on_cm_select_card)
+	_gui.on("chooseAnotherCard", _on_cm_choose_another)
+	_gui.on("buyCards", _on_cm_buy)
+	_gui.on("closeCardMasterDialog",
+		func(_a, _w): _gui.close("cardMasterDialog"))
+	# dofusarena.exchange:* — player trade pane (5105-5116)
+	_gui.on("setReadyForExchange", _on_ex_ready)
+	_gui.on("closeCoachExchangeDialog", _on_ex_close)
 	_gui.on("addCardToTome", func(_a, _w): pass)
 	_gui.on("selectCostFilter", func(_a, _w): pass)
 	_gui.on("selectSetFilter", func(_a, _w): pass)
@@ -982,6 +1036,13 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					% Cards.name_of(int(d.recovered)))
 			else:
 				_log_line("[color=red]fusion failed — cards consumed[/color]")
+			# the tray is consumed either way — reset the lab
+			_fusion_inputs = []
+			_fusion_failed = int(d.get("obtained", 0)) <= 0 \
+				and int(d.get("not_obtained", 0)) <= 0 \
+				and int(d.get("recovered", 0)) <= 0
+			if _gui.is_open("fusionLabDialog"):
+				_push_fusion_model()
 		OP_DEMON_LADDER_RES:
 			var d := Codec.decode(opcode, payload)
 			if $UI/ElementDlg.visible and _elem_kind == 11:
@@ -1122,6 +1183,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				lines.append("  stat %d (type %d) = %s" % [
 					int(s.id), int(s.type), str(s.value)])
 			_log_line("\n".join(lines))
+			# retail raises the stats dialog on the reply
+			if not _guild_stats_member.is_empty():
+				_gui.open("guildCoachStatsDialog")
+				_push_guild_member_stats(d)
 		22000:
 			# AchievementUnlocked — retail zN raises the achievementDialog
 			# toast, gated on !isHidden() (the server already skips hidden
@@ -1160,6 +1225,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.guild["demon_id"] = int(d.demon_id)
 			State.guild["ranks"] = d.ranks
 			_fill_guild()
+			if _gui.is_open("guildManagementDialog"):
+				_push_guild_mgmt_model()
 		552:  # GuildMembership — my own rank/demon row (part 2)
 			var d := Codec.decode(opcode, payload)
 			for row in d.rows:
@@ -1169,6 +1236,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					State.guild.get("guild", "?"),
 					State.guild.get("rank_name", "?"),
 					int(State.guild.get("demon_id", 0))])
+			if _gui.is_open("guildDialog") or _gui.is_open("socialDialog"):
+				_push_social_model()
 		512:  # GuildMembers — the roster (part 0 rows)
 			var d := Codec.decode(opcode, payload)
 			State.guild["members"] = d.rows
@@ -1178,6 +1247,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					"*" if m.get("online", false) else ""])
 			_log_line("guild roster: %s" % ", ".join(names))
 			_fill_guild()
+			if _gui.is_open("guildDialog") or _gui.is_open("socialDialog"):
+				_push_social_model()
 		554:  # GuildTags — clan tags for nearby coaches (name labels)
 			var d := Codec.decode(opcode, payload)
 			for row in d.rows:
@@ -1202,6 +1273,17 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if $UI/ElementDlg.visible and _elem_kind == 2:
 				_fill_mails()
 			_log_line("mailbox: %d letter(s)" % _mails.size())
+			# the retail client opens the dialog when the list lands
+			if _elem_kind == 2 or _gui.is_open("mailboxDialog") or \
+					_gui.is_open("newMailDialog"):
+				_gui.open("mailboxDialog")
+				_push_mail_model()
+		OP_MAIL_NAME_RES:
+			var d := Codec.decode(opcode, payload)
+			var cid := int(d.get("coach_id", 0))
+			_gui.gui.model.set_value("mailbox.newMail.receiverId", cid)
+			if cid <= 0:
+				_toast("No such coach")
 		OP_MAIL_SEND_RES:
 			var d := Codec.decode(opcode, payload)
 			var res := int(d.result)
@@ -1257,16 +1339,20 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				3:
 					_ex["accepted"] = true
 					_log_line("[color=green]trade accepted[/color]")
-					_open_exchange()
+					if _gui.open("exchangeDialog") == null:
+						_open_exchange()
+					_push_exchange_model()
 		OP_EX_ADDED:
 			var d := Codec.decode(opcode, payload)
 			var side := int(d.side)
 			_ex.staged[side][int(d.card)] = int(d.qty)
 			_refresh_exchange()
+			_push_exchange_model()
 		OP_EX_REMOVED:
 			var d := Codec.decode(opcode, payload)
 			_ex.staged[int(d.side)].erase(int(d.card))
 			_refresh_exchange()
+			_push_exchange_model()
 		OP_EX_USER_READY:
 			var d := Codec.decode(opcode, payload)
 			_ex.ready[int(d.side)] = true
@@ -1275,6 +1361,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line("%s %s ready" % [who,
 				"are" if int(d.side) == _ex.get("my_side", -1) else "is"])
 			_refresh_exchange()
+			_push_exchange_model()
 		OP_EX_ERROR:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[color=red]trade error: %s[/color]" % (
@@ -1285,6 +1372,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line("[color=green]trade complete[/color]"
 				if int(d.reason) == 0 else "[i]trade cancelled[/i]")
 			_ex = {}
+			_gui.close("exchangeDialog")
 			if _elem_kind == ELEM_EXCHANGE:
 				$UI/ElementDlg.visible = false
 		OP_FIREWORK_SHOW:
@@ -2631,8 +2719,13 @@ func _push_team_model() -> void:
 ## screen's model from State before its first draw.
 func _on_gui_dialog_opened(name: String) -> void:
 	match name:
-		"socialDialog", "guildDialog":
+		"socialDialog":
 			_push_social_model()
+		"guildDialog":
+			_push_social_model()
+			_request_guild_refresh()
+		"guildManagementDialog":
+			_push_guild_mgmt_model()
 		"coachStatisticsDialog":
 			_push_local_coach()
 		"teamManagementDialog":
@@ -2653,6 +2746,19 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_push_achievement_model()
 		"optionsDialog":
 			_push_options_model()
+		"fusionLabDialog":
+			_push_cardbook_model()   # the include's inventory tab needs it
+			_push_fusion_model()
+		"mailboxDialog":
+			if _mails.is_empty():
+				Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
+			_push_mail_model()
+		"newMailDialog":
+			_push_cardbook_model()
+		"exchangeDialog", "cardMasterDialog":
+			_push_cardbook_model()   # embedded inventory include
+			if name == "exchangeDialog":
+				_push_exchange_model()
 
 
 ## friends.list / ignore.list / guild.{members,name} for the social tabs.
@@ -2671,15 +2777,22 @@ func _push_social_model() -> void:
 	model.set_value("ignore", {"list": il})
 	var gm: Array = []
 	for m in State.guild.get("members", []):
-		gm.append({"name": str(m.get("name", "")),
+		var it := {"name": str(m.get("name", "")),
 			"connected": bool(m.get("online", false)),
-			"rankIconUrl": "", "guildInfos": ""})
+			"rankIconUrl": "", "guildInfos": ""}
+		it.merge(m, true)   # coach_id/rank_level ride for stats & kick
+		gm.append(it)
 	model.set_value("guild", {
 		"name": str(State.guild.get("guild", "")),
 		"members": gm,
-		"canManage": false, "guildInfos": ""})
-	model.set_value("guildMaster", false)
-	model.set_value("guildInviter", "")
+		"canManage": _has_right(GUILD_RIGHT_LEADER)
+			if not State.guild.is_empty() else false,
+		"guildInfos": ""})
+	model.set_value("guildMaster",
+		_has_right(GUILD_RIGHT_LEADER) if not State.guild.is_empty() else false)
+	# guildInviter gates the invite-send panel — the INVITE right
+	model.set_value("guildInviter",
+		_has_right(GUILD_RIGHT_INVITE) if not State.guild.is_empty() else false)
 
 
 ## --- ladderInformationDialog -------------------------------------------------
@@ -3083,11 +3196,13 @@ func _push_cardbook_model() -> void:
 	var equip: Array = []
 	var zaap: Array = []
 	var special: Array = []
+	var all_cards: Array = []
 	var owned := State.inventory.keys()
 	owned.sort()
 	for cid in owned:
 		var t := int(Cards.meta(int(cid)).get("type", 0))
 		var it := _card_item(int(cid))
+		all_cards.append(it)
 		match t:
 			20:
 				zaap.append(it)
@@ -3103,6 +3218,8 @@ func _push_cardbook_model() -> void:
 	model.set_value("localCoach", equip, "filtredEquipmentCardInventory")
 	model.set_value("localCoach", zaap, "zaapInventory")
 	model.set_value("localCoach", special, "specialCardInventory")
+	model.set_value("localCoach", all_cards, "filtredCardInventory")
+	model.set_value("localCoach", all_cards, "cardInventory")
 	model.set_value("localCoach", [], "filtredSetCardInventory")
 	model.set_value("localCoach", _all_card_sets(), "cardSets")
 	model.set_value("localCoach", [], "cardCostFilterList")
@@ -3487,6 +3604,371 @@ func _on_gui_destroy_guild(_a: Array, _w: GWidget) -> void:
 	Session.send(OP_GUILD_DESTROY, w.raw(), 2)
 
 
+## --- dofusarena.guild:* — creation / management / member stats -------------
+
+var _guild_stats_member := {}   # member dict the stats dialog is showing
+
+
+## guildDialog wants fresh data each open — same 517/519 pair the debug
+## panel sends in _open_guild.
+func _request_guild_refresh() -> void:
+	if State.guild.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_i64(State.my_coach_id)
+	Session.send(OP_GUILD_GET, w.raw(), 2)
+	w = WireWriter.new()
+	w.put_i64(int(State.guild.get("guild_id", 0)))
+	Session.send(OP_GUILD_MEMBERS, w.raw(), 2)
+
+
+## createGuild(guildCreationForm) — aia_0.createGuild reads the
+## guildCreationName property, requires >= 5 chars, sends
+## atM(509)=[u8 type=kG.Fi=2][str8 name] and closes.
+func _on_guild_create(_a: Array, _w: GWidget) -> void:
+	var name := str(_gui.gui.model.get_value("guildCreationName")) \
+		.strip_edges()
+	if name.length() < 5:
+		_toast("Guild name must be at least 5 characters")
+		return
+	var w := WireWriter.new()
+	w.put_u8(2)                              # kG.Fi — the clan guild type
+	w.put_str(name, "u8")
+	Session.send(OP_GUILD_CREATE, w.raw(), 3)
+	_gui.close("guildCreationDialog")
+
+
+## guild.editableRanks — ranks with the right bits split into the can*
+## flags the management checkboxes bind.
+func _rank_item(rk: Dictionary) -> Dictionary:
+	var r := int(rk.get("rights", 0))
+	return {"name": str(rk.get("name", "")),
+		"rankLevel": int(rk.get("level", 0)),
+		"rankIconUrl": "", "rights": r,
+		"canInvite": r & GUILD_RIGHT_INVITE != 0,
+		"canRemove": r & GUILD_RIGHT_REMOVE != 0,
+		"canPromote": r & GUILD_RIGHT_PROMOTE != 0,
+		"canDepromote": r & GUILD_RIGHT_DEMOTE != 0}
+
+
+func _push_guild_mgmt_model() -> void:
+	var model := _gui.gui.model
+	var ranks: Array = []
+	for rk in State.guild.get("ranks", []):
+		ranks.append(_rank_item(rk))
+	model.set_value("guild", ranks, "guild.editableRanks")
+	model.set_value("guildSelectedRank",
+		ranks[0] if not ranks.is_empty() else {})
+
+
+## selectRank(rankNameEditor) — item click seeds the editor + checkboxes
+## through the guildSelectedRank binding.
+func _on_guild_select_rank(_a: Array, w: GWidget) -> void:
+	if w.item_value is Dictionary:
+		_gui.gui.model.set_value("guildSelectedRank",
+			w.item_value.duplicate())
+
+
+func _selected_rank_rights() -> int:
+	var sr: Variant = _gui.gui.model.get_value("guildSelectedRank")
+	var r := 0
+	if sr is Dictionary:
+		if sr.get("canInvite", false): r |= GUILD_RIGHT_INVITE
+		if sr.get("canRemove", false): r |= GUILD_RIGHT_REMOVE
+		if sr.get("canPromote", false): r |= GUILD_RIGHT_PROMOTE
+		if sr.get("canDepromote", false): r |= GUILD_RIGHT_DEMOTE
+	return r
+
+
+## addRankToGuild — 553 [i64 gid][i32 rights][str8 name] arch 2; retail
+## adds the typed name with the toggled rights.
+func _on_guild_add_rank(_a: Array, _w: GWidget) -> void:
+	var gid := int(State.guild.get("guild_id", 0))
+	var name := str(_gui.gui.model.get_value(
+		"guildSelectedRank", "name")).strip_edges()
+	if gid <= 0 or name.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_i64(gid)
+	w.put_i32(_selected_rank_rights())
+	w.put_str(name, "u8")
+	Session.send(OP_GUILD_RANK_ADD, w.raw(), 2)
+
+
+func _on_guild_remove_rank(_a: Array, _w: GWidget) -> void:
+	var gid := int(State.guild.get("guild_id", 0))
+	var sr: Variant = _gui.gui.model.get_value("guildSelectedRank")
+	var lvl := int(sr.get("rankLevel", 0)) if sr is Dictionary else 0
+	if gid <= 0 or lvl <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(gid)
+	w.put_i16(lvl)
+	Session.send(OP_GUILD_RANK_DEL, w.raw(), 2)
+
+
+## modifyRank — 555 [i64 gid][i32 rights][u16 lvl][u16 lvl][str8 name]
+## (both shorts carry the same level — aia_0.modifyRank).
+func _on_guild_modify_rank(_a: Array, _w: GWidget) -> void:
+	var gid := int(State.guild.get("guild_id", 0))
+	var sr: Variant = _gui.gui.model.get_value("guildSelectedRank")
+	if gid <= 0 or not (sr is Dictionary):
+		return
+	var name := str(sr.get("name", "")).strip_edges()
+	var lvl := int(sr.get("rankLevel", 0))
+	if name.is_empty() or lvl <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(gid)
+	w.put_i32(_selected_rank_rights())
+	w.put_i16(lvl)
+	w.put_i16(lvl)
+	w.put_str(name, "u8")
+	Session.send(OP_GUILD_RANK_MOD, w.raw(), 2)
+
+
+## getMemberStats — row click on the roster; 2600 fetches the member's
+## PlayerStatisticsReport, 2601 fills guildCoachStatsDialog.
+func _on_guild_member_stats(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	_guild_stats_member = row
+	var wr := WireWriter.new()
+	wr.put_i64(int(_guild_stats_member.get("coach_id", 0)))
+	Session.send(OP_GUILD_MEMBER_STATS, wr.raw(), 2)
+
+
+func _push_guild_member_stats(d: Dictionary) -> void:
+	var stats := {}
+	for s in d.get("stats", []):
+		stats[int(s.id)] = s.value
+	var model := _gui.gui.model
+	model.set_value("guildCoachStats", {
+		"name": str(d.get("name", "")),
+		"level": int(_guild_stats_member.get("level", 0)),
+		"actorDescriptorLibrary": "coach_7000",
+		"rankIconUrl": "", "guildRankIconUrl": "",
+		"statisticsTotalPlayTime": int(stats.get(1, 0)),
+		"statisticsTotalFightsTime": int(stats.get(2, 0)),
+		"statisticsTotalFights": int(stats.get(3, 0)),
+		"statisticsTotalFightsWon": int(stats.get(4, 0)),
+		"statisticsTotalFightsLost": int(stats.get(5, 0)),
+		"statisticsConsecutiveWins": int(stats.get(7, 0))})
+	var rl := int(_guild_stats_member.get("rank_level", 0))
+	model.set_value("guildCanPromote",
+		_has_right(GUILD_RIGHT_PROMOTE) and rl > 2)
+	model.set_value("guildCanDepromote",
+		_has_right(GUILD_RIGHT_DEMOTE) and rl >= 1)
+	model.set_value("guildExcluder",
+		_has_right(GUILD_RIGHT_REMOVE) and rl != 1)
+
+
+## promote/depromote on the stats screen act on the member it shows —
+## same sparse-rank pick as _on_guild_set_rank.
+func _on_guild_stats_promote(_a: Array, _w: GWidget, delta: int) -> void:
+	if _guild_stats_member.is_empty():
+		return
+	var gid := int(State.guild.get("guild_id", 0))
+	var cur := int(_guild_stats_member.get("rank_level", 0))
+	var want := -1
+	for rk in State.guild.get("ranks", []):
+		var lvl := int(rk.get("level", 0))
+		if delta < 0 and lvl < cur and (want < 0 or lvl > want):
+			want = lvl
+		elif delta > 0 and lvl > cur and (want < 0 or lvl < want):
+			want = lvl
+	if gid <= 0 or want < 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(gid)
+	w.put_i64(int(_guild_stats_member.get("coach_id", 0)))
+	w.put_i16(want)
+	Session.send(OP_GUILD_SET_RANK, w.raw(), 8)
+
+
+func _on_guild_stats_kick(_a: Array, _w: GWidget) -> void:
+	var gid := int(State.guild.get("guild_id", 0))
+	var mid := int(_guild_stats_member.get("coach_id", 0))
+	if gid <= 0 or mid <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i64(gid)
+	w.put_i64(mid)
+	Session.send(OP_GUILD_LEAVE, w.raw(), 8)
+
+
+## --- dofusarena.mail:* — inbox / sentbox / compose --------------------------
+
+func _mail_date(ms: int) -> String:
+	if ms <= 0:
+		return ""
+	var d := Time.get_datetime_dict_from_unix_time(ms / 1000)
+	return "%02d/%02d/%04d %02d:%02d" % [d.day, d.month, d.year,
+		d.hour, d.minute]
+
+
+func _mail_row(m: Dictionary) -> Dictionary:
+	var cards: Array = []
+	for cid in m.get("cards", []):
+		var it := _card_item(int(cid))
+		cards.append(it)
+	return {"mailId": int(m.get("id", 0)),
+		"sender": str(m.get("sender", "")),
+		"receiver": str(m.get("receiver", "")),
+		"title": str(m.get("title", "")),
+		"date": _mail_date(int(m.get("date_ms", 0))),
+		"read": bool(m.get("read", false)),
+		"hasItems": not m.get("cards", []).is_empty(),
+		"style": "",
+		"message": str(m.get("body", "")),
+		"cards": cards}
+
+
+## mailManager.{receivedMails,sentMails} + mailbox.mail (the selected
+## letter) + mailbox.newMail (the compose draft).
+func _push_mail_model() -> void:
+	var model := _gui.gui.model
+	var recv: Array = []
+	var sent: Array = []
+	for m in _mails:
+		if int(m.get("sender_id", 0)) == State.my_coach_id:
+			sent.append(_mail_row(m))
+		else:
+			recv.append(_mail_row(m))
+	model.set_value("mailManager",
+		{"receivedMails": recv, "sentMails": sent})
+	if not (model.get_value("mailbox.mail") is Dictionary):
+		model.set_value("mailbox.mail",
+			recv[0] if not recv.is_empty() else {})
+
+
+## the clicked widget can be a child of the materialized row — the item
+## dict only lives on the renderer root.
+func _row_item(w: GWidget) -> Variant:
+	var n: Node = w
+	while n != null:
+		if n is GWidget and n.item_value != null:
+			return n.item_value
+		n = n.get_parent()
+	return null
+
+
+func _on_mail_read(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	row["read"] = true
+	for m in _mails:
+		if int(m.get("id", 0)) == int(row.get("mailId", 0)):
+			m["read"] = true
+	_gui.gui.model.set_value("mailbox.mail", row)
+
+
+## deleteMail(mail) — the row dict carries mailId; the button inside a
+## sent-box row deletes that copy server-side too (15004).
+func _on_mail_delete(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary) or int(row.get("mailId", 0)) <= 0:
+		row = _gui.gui.model.get_value("mailbox.mail")
+	if not (row is Dictionary):
+		return
+	var mid := int(row.get("mailId", 0))
+	if mid <= 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_u8(1)
+	wr.put_i64(mid)
+	Session.send(OP_MAIL_DELETE, wr.raw(), 3)
+	for i in range(_mails.size() - 1, -1, -1):
+		if int(_mails[i].get("id", -1)) == mid:
+			_mails.remove_at(i)
+	_push_mail_model()
+
+
+func _on_mail_take(_a: Array, _w: GWidget) -> void:
+	var row: Variant = _gui.gui.model.get_value("mailbox.mail")
+	if not (row is Dictionary):
+		return
+	var mid := int(row.get("mailId", 0))
+	if mid <= 0 or row.get("cards", []).is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_i64(mid)
+	w.put_u8(0)
+	Session.send(OP_MAIL_TAKE, w.raw(), 3)
+
+
+func _on_mail_new(_a: Array, _w: GWidget) -> void:
+	_gui.gui.model.set_value("mailbox.newMail", {
+		"receiver": "", "receiverId": 0, "title": "",
+		"message": "", "cards": []})
+	_push_cardbook_model()   # compose binds localCoach.cardInventory
+	_gui.open("newMailDialog")
+
+
+## reply — seed the draft with the selected letter's sender.
+func _on_mail_reply(_a: Array, _w: GWidget) -> void:
+	var row: Variant = _gui.gui.model.get_value("mailbox.mail")
+	var to := str(row.get("sender", "")) if row is Dictionary else ""
+	_gui.gui.model.set_value("mailbox.newMail", {
+		"receiver": to, "receiverId": 0, "title": "",
+		"message": "", "cards": []})
+	_push_cardbook_model()
+	_gui.open("newMailDialog")
+
+
+## testName(newMailForm) — resolves the typed receiver name into
+## mailbox.newMail.receiverId through 15506/15507.
+func _on_mail_test_name(_a: Array, _w: GWidget) -> void:
+	var name := str(_gui.gui.model.get_value(
+		"mailbox.newMail", "receiver")).strip_edges()
+	if name.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_str(name, "u8")
+	Session.send(OP_MAIL_CHECK, w.raw(), 2)
+
+
+## sendMail(newMailForm) — the full mail record, arch 3: the same record
+## shape the server decodes (id=0, session-derived sender fields).
+func _on_mail_send(_a: Array, _w: GWidget) -> void:
+	var nm: Variant = _gui.gui.model.get_value("mailbox.newMail")
+	if not (nm is Dictionary):
+		return
+	var receiver := str(nm.get("receiver", "")).strip_edges()
+	var title := str(nm.get("title", ""))
+	var message := str(nm.get("message", ""))
+	if receiver.is_empty():
+		_toast("Mail needs a recipient")
+		return
+	var extra := WireWriter.new()
+	var tb := title.to_utf8_buffer()
+	extra.put_u16(1); extra.put_i32(tb.size()); extra.put_bytes(tb)
+	var bb := message.to_utf8_buffer()
+	extra.put_u16(2); extra.put_i32(bb.size()); extra.put_bytes(bb)
+	var cards: Array = nm.get("cards", [])
+	if not cards.is_empty():
+		extra.put_u16(3)
+		extra.put_u16(cards.size())
+		for c in cards:
+			extra.put_i32(int(c.get("id", 0)) if c is Dictionary else int(c))
+	var w := WireWriter.new()
+	w.put_i64(0)                                   # mail id — server assigns
+	w.put_i64(State.my_coach_id)
+	w.put_str(State.my_coach_name, "u8")
+	w.put_i32(0)                                   # senderGame
+	w.put_i64(int(nm.get("receiverId", 0)))
+	w.put_str(receiver, "u8")
+	var eb := extra.raw()
+	w.put_i32(eb.size())
+	w.put_bytes(eb)
+	w.put_i64(int(Time.get_unix_time_from_system() * 1000.0))
+	w.put_u8(0); w.put_u8(0); w.put_u8(0); w.put_i32(0)
+	Session.send(OP_MAIL_SEND, w.raw(), 3)
+	_gui.close("newMailDialog")
+
+
 ## localCoach model — shared by menuBarDialog / coachStatisticsDialog /
 ## coachCreationDialog. Stats come from the 2400/2401 rs_2 stat map.
 func _local_coach_model() -> Dictionary:
@@ -3628,8 +4110,8 @@ func _use_element(id: int) -> void:
 			Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
 		10:  # Graveyard — dead/interred fighters + resurrection cards
 			_open_graveyard()
-		14:  # Fusion altar — feed same-set cards at a target → 5490
-			_open_fusion()
+		14:  # Fusion altar — retail lab: fuel tray + boost target → 5490
+			_open_fusion_lab(e)
 		3:   # Challenge (uk_0) — name;textId;challengeIds… → picker → cj_0 26330
 			_open_challenge_picker(e)
 		7:   # Demon challenge (pn_0) — gated on achievement 278
@@ -4094,6 +4576,357 @@ func _fill_graveyard() -> void:
 
 ## Fusion altar: multi-select inventory cards as inputs (≥2 of one set), pick
 ## the target from List2 (every template in the inputs' set), Fuse → 5490.
+## --- fusionLabDialog ---------------------------------------------------------
+## fusionTrade: localCardExchange = input tray (padded to slotCount),
+## fusionCard/resultCard = the boost card being made, labPower = altar power,
+## kardsPower = Σ inputs.reqLevel − target.fusPower (client recipe math).
+
+var _fusion_lab := {}          # altar record {power, quality, slots}
+var _fusion_inputs: Array = [] # card ids fed in
+var _fusion_target := -1       # boost card id being made
+var _fusion_failed := false
+
+
+func _open_fusion_lab(e: Dictionary) -> void:
+	_fusion_inputs = []
+	_fusion_target = -1
+	_fusion_failed = false
+	# the altar element's desc arg is its type-1100 lab id
+	var lab := Cards.lab(int(str(e.get("desc", "0"))))
+	_fusion_lab = lab if not lab.is_empty() else Cards.lab_default()
+	_gui.open("fusionLabDialog")
+
+
+func _push_fusion_model() -> void:
+	var model := _gui.gui.model
+	var slots := maxi(1, int(_fusion_lab.get("slots", 3)) - 1)
+	var tray: Array = []
+	for cid in _fusion_inputs:
+		tray.append(_card_item(int(cid)))
+	while tray.size() < slots:
+		tray.append(null)
+	var target = _card_item(_fusion_target) if _fusion_target > 0 else null
+	var kp := -int(Cards.meta(_fusion_target).get("fusPower", 0)) \
+		if _fusion_target > 0 else 0
+	for cid in _fusion_inputs:
+		kp += int(Cards.meta(int(cid)).get("reqLevel", 0))
+	model.set_value("fusionTrade", {
+		"localCardExchange": tray,
+		"fusionCard": target,
+		"resultCard": target,
+		"fusionFailed": _fusion_failed,
+		"labPower": int(_fusion_lab.get("power", 0)),
+		"kardsPower": maxi(0, kp),
+		"slotCount": slots,
+		"canFusion": _fusion_inputs.size() >= 2 and _fusion_target > 0,
+		"help": ""})
+
+
+## Double-click a tray row → hand the card back to the inventory.
+## (method name shared with cardMaster — only act while the lab is open)
+func _on_fusion_remove_input(_a: Array, w: GWidget) -> void:
+	if not _gui.is_open("fusionLabDialog"):
+		return
+	if w == null or not (w.item_value is Dictionary):
+		return
+	var cid := int(w.item_value.get("id", 0))
+	_fusion_inputs.erase(cid)
+	_fusion_failed = false
+	_push_fusion_model()
+
+
+## Double-click the target card → clear it.
+func _on_fusion_remove_target(_a: Array, _w: GWidget) -> void:
+	if not _gui.is_open("fusionLabDialog"):
+		return
+	_fusion_target = -1
+	_fusion_failed = false
+	_push_fusion_model()
+
+
+## equip(coach) double-click on an inventory row — while the lab is open it
+## stages the card: boost cards (fusPower/fusQuality) become the target,
+## everything else becomes fuel. Stands in for retail drag&drop.
+func _on_maybe_fusion_add(_a: Array, w: GWidget) -> void:
+	if not _gui.is_open("fusionLabDialog"):
+		return
+	var card = w.item_value if w != null else null
+	if not (card is Dictionary):
+		return
+	var cid := int(card.get("id", 0))
+	if cid <= 0 or int(State.inventory.get(cid, 0)) <= 0:
+		return
+	var m := Cards.meta(cid)
+	var slots := maxi(1, int(_fusion_lab.get("slots", 3)) - 1)
+	if int(m.get("fusPower", 0)) > 0 or int(m.get("fusQuality", 0)) > 0:
+		_fusion_target = cid
+	elif _fusion_inputs.size() < slots and not _fusion_inputs.has(cid):
+		_fusion_inputs.append(cid)
+	_fusion_failed = false
+	_push_fusion_model()
+
+
+## fusionRequest(...) → 5490 [i32 n]{i32 ids}: inputs then target LAST —
+## the client writes the array reversed so the server reads the target last.
+func _on_fusion_request(_a: Array, _w: GWidget) -> void:
+	if _fusion_inputs.size() < 2 or _fusion_target <= 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_i32(_fusion_inputs.size() + 1)
+	for cid in _fusion_inputs:
+		wr.put_i32(int(cid))
+	wr.put_i32(_fusion_target)
+	Session.send(OP_FUSION_REQ, wr.raw(), 3)
+	_log_line("fusion sent: %d cards → %s" % [_fusion_inputs.size(),
+		Cards.name_of(_fusion_target)])
+
+
+## Shared removeCard — the method name lives on both the fusion tray and
+## the card-master exchange list.
+func _on_shared_remove_card(a: Array, w: GWidget) -> void:
+	if _gui.is_open("cardMasterDialog"):
+		_on_cm_remove(a, w)
+	elif _gui.is_open("exchangeDialog"):
+		_on_ex_remove(a, w)
+	else:
+		_on_fusion_remove_input(a, w)
+
+
+## Shared dropCard — route the drag payload by open dialog. The fusion
+## tray slots and the barter slots both accept inventory cards.
+func _on_shared_drop_card(_a: Array, w: GWidget) -> void:
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	var payload: Variant = dnd.get("item")
+	if not (payload is Dictionary):
+		return
+	var cid := int(payload.get("id", 0))
+	if cid <= 0 or int(State.inventory.get(cid, 0)) <= 0:
+		return
+	if _gui.is_open("cardMasterDialog"):
+		_cm_stage(cid)
+	elif _gui.is_open("exchangeDialog"):
+		_ex_stage(cid, w)
+	elif _gui.is_open("fusionLabDialog"):
+		_fusion_stage(cid, w)
+
+
+## drop on a tray slot: boost cards land on the target, others on the
+## fuel slots (same rule as the double-click stage).
+func _fusion_stage(cid: int, _w: GWidget) -> void:
+	var m := Cards.meta(cid)
+	var slots := maxi(1, int(_fusion_lab.get("slots", 3)) - 1)
+	if int(m.get("fusPower", 0)) > 0 or int(m.get("fusQuality", 0)) > 0:
+		_fusion_target = cid
+	elif _fusion_inputs.size() < slots and not _fusion_inputs.has(cid):
+		_fusion_inputs.append(cid)
+	_fusion_failed = false
+	_push_fusion_model()
+
+
+## dropFusionCard — drop onto the fusion-target slot itself.
+func _on_fusion_drop_target(_a: Array, _w: GWidget) -> void:
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	var payload: Variant = dnd.get("item")
+	if not (payload is Dictionary) or not _gui.is_open("fusionLabDialog"):
+		return
+	var cid := int(payload.get("id", 0))
+	if cid <= 0:
+		return
+	_fusion_target = cid
+	_fusion_failed = false
+	_push_fusion_model()
+
+
+## --- cardMasterDialog (5401 catalog / 5450 buy / 5400 barter) -----------------
+
+var _cm_given := {}       # cid -> staged count for the barter
+var _cm_selected := -1    # catalog card being bought
+
+
+## The retail dialog opens on the catalog reply (5401), like the mailbox.
+func _push_cardmaster_model() -> void:
+	var model := _gui.gui.model
+	var catalog: Array = []
+	for c in _shop_cards:
+		var it := _card_item(int(c.id))
+		it["shopQty"] = int(c.qty)
+		catalog.append(it)
+	var staged: Array = []
+	var sum := 0
+	for cid in _cm_given:
+		for i in int(_cm_given[cid]):
+			staged.append(_card_item(int(cid)))
+		sum += Cards.value_of(int(cid)) * int(_cm_given[cid])
+	while staged.size() < 4:
+		staged.append(null)
+	var wanted_val := Cards.value_of(_cm_selected) if _cm_selected > 0 else 0
+	model.set_value("cardMasterTrade", {
+		"cardMasterCardExchange": catalog,
+		"localCardExchange": staged,
+		"cardMasterCardsPrice": wanted_val,
+		"localCardsPrice": sum,
+		"canBuyCards": _cm_selected > 0 and sum >= wanted_val and sum > 0,
+		"selectedCard": _card_item(_cm_selected)
+			if _cm_selected > 0 else null})
+	model.set_value("exchange.cardTrade", _shop_id, "exchangeId")
+
+
+## selectCardToBuy(selectCardContainer, buyCardContainer) — the two
+## container widget args toggle; the row item becomes selectedCard.
+func _on_cm_select_card(a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if row is Dictionary:
+		_cm_selected = int(row.get("id", -1))
+	if a.size() >= 2:
+		if a[0] is GWidget: a[0].visible = false
+		if a[1] is GWidget: a[1].visible = true
+	_push_cardmaster_model()
+
+
+## chooseAnotherCard — back to the catalog.
+func _on_cm_choose_another(a: Array, _w: GWidget) -> void:
+	if a.size() >= 2:
+		if a[0] is GWidget: a[0].visible = true
+		if a[1] is GWidget: a[1].visible = false
+	_cm_selected = -1
+	_push_cardmaster_model()
+
+
+## stage a dragged inventory card into the barter offer.
+func _cm_stage(cid: int) -> void:
+	var owned := int(State.inventory.get(cid, 0))
+	var cur := int(_cm_given.get(cid, 0))
+	if cur >= owned:
+		return
+	_cm_given[cid] = cur + 1
+	_push_cardmaster_model()
+
+
+## removeCard on the exchange list — unstage one of the row's cards.
+func _on_cm_remove(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	var cid := int(row.get("id", 0))
+	if cid <= 0:
+		return
+	var cur := int(_cm_given.get(cid, 0))
+	if cur <= 1:
+		_cm_given.erase(cid)
+	else:
+		_cm_given[cid] = cur - 1
+	_push_cardmaster_model()
+
+
+## buyCards → 5400 [i32 exId][i16 nW]{i32 wanted}[i16 nG]{i32,u16}.
+func _on_cm_buy(_a: Array, _w: GWidget) -> void:
+	if _cm_selected <= 0 or _cm_given.is_empty():
+		return
+	var wr := WireWriter.new()
+	wr.put_i32(_shop_id)
+	wr.put_i16(1)
+	wr.put_i32(_cm_selected)
+	wr.put_i16(_cm_given.size())
+	for cid in _cm_given:
+		wr.put_i32(int(cid))
+		wr.put_u16(int(_cm_given[cid]))
+	Session.send(OP_SHOP_BARTER, wr.raw(), 3)
+	_log_line("barter sent: %d kinds → %s" % [_cm_given.size(),
+		Cards.name_of(_cm_selected)])
+
+
+## --- exchangeDialog (player trade, 5101-5116) ---------------------------------
+
+func _ex_staged_items(side: int) -> Array:
+	var out: Array = []
+	var staged: Dictionary = _ex.get("staged", {}).get(side, {})
+	for cid in staged:
+		var it := _card_item(int(cid))
+		it["quantity"] = int(staged[cid])
+		out.append(it)
+	while out.size() < 4:
+		out.append(null)
+	return out
+
+
+func _ex_staged_value(side: int) -> int:
+	var sum := 0
+	var staged: Dictionary = _ex.get("staged", {}).get(side, {})
+	for cid in staged:
+		sum += Cards.value_of(int(cid)) * int(staged[cid])
+	return sum
+
+
+func _push_exchange_model() -> void:
+	if _ex.is_empty():
+		return
+	var model := _gui.gui.model
+	var mine := int(_ex.get("my_side", 0))
+	var other := 1 - mine
+	var look: Dictionary = State.my_coach_look
+	model.set_value("localCoach", "coach_700%d" % int(look.get("sex", 0)),
+		"actorDescriptorLibrary")
+	model.set_value("exchange.remoteCoach", {
+		"name": str(_ex.get("other_name", "?")),
+		"actorDescriptorLibrary": "coach_7000"})
+	model.set_value("exchange.cardTrade", {
+		"exchangeId": int(_ex.get("id", 0)),
+		"localCardExchange": _ex_staged_items(mine),
+		"remoteCardExchange": _ex_staged_items(other),
+		"localCardsValue": _ex_staged_value(mine),
+		"remoteCardsValue": _ex_staged_value(other),
+		"localUserReady": bool(_ex.get("ready", {}).get(mine, false)),
+		"remoteUserReady": bool(_ex.get("ready", {}).get(other, false)),
+		"readyButtonEnabled": bool(_ex.get("accepted", false))
+			and not bool(_ex.get("ready", {}).get(mine, false))})
+
+
+## setReadyForExchange → 5109 ready toggle.
+func _on_ex_ready(_a: Array, _w: GWidget) -> void:
+	if _ex.is_empty():
+		return
+	var w := WireWriter.new()
+	w.put_i64(int(_ex.id))
+	Session.send(OP_EX_READY, w.raw(), 3)
+
+
+## closeCoachExchangeDialog → 5111 cancels the trade.
+func _on_ex_close(_a: Array, _w: GWidget) -> void:
+	if not _ex.is_empty():
+		var w := WireWriter.new()
+		w.put_i64(int(_ex.id))
+		Session.send(OP_EX_CANCEL, w.raw(), 3)
+	_gui.close("exchangeDialog")
+
+
+## removeCard on my side of the trade → 5107 unstage.
+func _on_ex_remove(_a: Array, w: GWidget) -> void:
+	if _ex.is_empty():
+		return
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	var cid := int(row.get("id", 0))
+	if cid <= 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_i64(int(_ex.id))
+	wr.put_i32(cid)
+	wr.put_u16(1)
+	Session.send(OP_EX_REMOVE, wr.raw(), 3)
+
+
+## drop on my tray → 5105 stage one of the dragged card.
+func _ex_stage(cid: int, _w: GWidget) -> void:
+	if _ex.is_empty() or not _ex.get("accepted", false):
+		return
+	var wr := WireWriter.new()
+	wr.put_i64(int(_ex.id))
+	wr.put_i32(cid)
+	wr.put_u16(1)
+	Session.send(OP_EX_ADD, wr.raw(), 3)
+
+
 func _open_fusion() -> void:
 	_element_text("Fusion altar", "")
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
@@ -4750,6 +5583,13 @@ func _open_shop(d: Dictionary) -> void:
 	_zaap_mode = false
 	_shop_id = int(d.get("shop_id", -1))
 	_shop_cards = d.get("cards", [])
+	_cm_given = {}
+	_cm_selected = -1
+	# the retail card-master dialog is the primary UI; the debug pane
+	# stays hidden unless the XML fails to load
+	if _gui.open("cardMasterDialog") != null:
+		_push_cardmaster_model()
+		return
 	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
 	list.clear()
 	for c in _shop_cards:

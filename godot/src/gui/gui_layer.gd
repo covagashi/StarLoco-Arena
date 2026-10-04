@@ -14,6 +14,9 @@ var settings_path := "user://gui_settings.cfg"
 ## logical names, not file names)
 const DIALOG_ALIASES := {
 	"coachInventoryDialog": "cardBookDialog",
+	# the generic toggle names the old drag-only lab; the tray UI is the
+	# functional one we wired
+	"fusionLaboratoryDialog": "fusionLabDialog",
 }
 
 

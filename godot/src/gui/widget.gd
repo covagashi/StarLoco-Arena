@@ -483,17 +483,72 @@ func _popup_show(v: bool) -> void:
 			ch.visible = v
 
 
+## dndc drag payload — shared through the model (one GuiLib): the drag
+## source's item plus the source widget, set when onDrag first fires.
+var _drag_src: GWidget = null
+var _press_pos := Vector2.ZERO
+
+
+func _dnd_active() -> bool:
+	return model != null and model.values.get("dnd") is Dictionary \
+		and not model.values.dnd.is_empty()
+
+
+## nearest dndc that owns w — ancestors first, then the first dndc
+## descendant (a nonBlocking slot inside a list row).
+func _dnd_for(w: Control) -> GWidget:
+	var n: Node = w
+	while n != null:
+		if n is GWidget and n.kind == "dndc":
+			return n
+		n = n.get_parent()
+	if w is GWidget:
+		for ch in w.get_children():
+			if ch is GWidget:
+				if ch.kind == "dndc":
+					return ch
+				var r: GWidget = _dnd_for(ch)
+				if r != null:
+					return r
+	return null
+
+
+## the item a dndc carries — its own item or the enclosing row's.
+func _dnd_item(src: GWidget) -> Variant:
+	if src.item_value != null:
+		return src.item_value
+	var n := src.get_parent()
+	while n != null:
+		if n is GWidget and n.item_value != null:
+			return n.item_value
+		n = n.get_parent()
+	return null
+
+
 func _gui_input(ev: InputEvent) -> void:
 	if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT:
 		if ev.pressed:
 			_pressed = true
+			_press_pos = ev.position
+			_drag_src = _dnd_for(self)
 			if kind == "slider":
 				_slider_set(ev.position)
 			refresh_state()
 		else:
 			var was := _pressed
 			_pressed = false
+			_drag_src = null
 			refresh_state()
+			if _dnd_active():
+				# drag finished — the control under the mouse owns the
+				# drop; its dndc emits onDrop.
+				var hit: Control = get_viewport().gui_find_control(
+					get_global_mouse_position())
+				var dst: GWidget = _dnd_for(hit) if hit != null else null
+				if dst != null:
+					dst.emit_action("onDrop")
+				model.values["dnd"] = {}
+				return
 			if was:
 				if kind == "tabbedContainer":
 					var t := _tab_at(ev.position)
@@ -509,8 +564,14 @@ func _gui_input(ev: InputEvent) -> void:
 				if get_meta("list_row", false):
 					_combo_pick()
 				activate()
-	elif ev is InputEventMouseMotion and _pressed and kind == "slider":
-		_slider_set(ev.position)
+	elif ev is InputEventMouseMotion and _pressed:
+		if kind == "slider":
+			_slider_set(ev.position)
+		elif _drag_src != null and not _dnd_active() and \
+				ev.position.distance_to(_press_pos) > 4.0:
+			_drag_src.emit_action("onDrag")
+			model.values["dnd"] = {"src": _drag_src,
+				"item": _dnd_item(_drag_src)}
 	elif ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT and ev.double_click:
 		emit_action("onDoubleClick")
 
@@ -820,7 +881,8 @@ func apply_item(v) -> void:
 
 ## list row materialization — called when content_items changes
 func rebuild_items() -> void:
-	if kind != "list" and kind != "stackList" and kind != "comboboxplus" and kind != "comboBox":
+	if kind != "list" and kind != "stackList" and kind != "comboboxplus" \
+			and kind != "comboBox" and kind != "renderableContainer":
 		return
 	# drop old rows (renderer templates stay hidden, owned by us). free()
 	# now — queue_free defers and a same-frame rebuild would double them.
@@ -828,7 +890,11 @@ func rebuild_items() -> void:
 		if ch is GWidget and ch.get_meta("list_row", false):
 			remove_child(ch)
 			ch.free()
-	if renderers.is_empty() or content_items.is_empty():
+	# renderableContainer renders its single content_value as one item
+	var items := content_items
+	if kind == "renderableContainer":
+		items = [content_value]
+	if renderers.is_empty() or items.is_empty():
 		return
 	# retail List is a fixed grid: cols = floor(width/cellW), row-major.
 	var cell := cell_size
@@ -843,9 +909,14 @@ func rebuild_items() -> void:
 	var cols: int = max(1, int(box_w / cell.x)) if box_w > 0 else 1
 	var i := 0
 	var stack_x := 0.0
-	var ctx := {"count": content_items.size(), "model": model}
-	for item in content_items:
+	var ctx := {"count": items.size(), "model": model}
+	for item in items:
 		ctx["index"] = i
+		# retail listCondition keys: tableIndex=cell index, evenIndex=parity,
+		# size=row count
+		ctx["tableIndex"] = i
+		ctx["evenIndex"] = (i % 2) == 0
+		ctx["size"] = items.size()
 		var tpl: GWidget = null
 		for r in renderers:
 			var cond: Dictionary = r.get("cond", {})
@@ -854,7 +925,14 @@ func rebuild_items() -> void:
 				tpl = r["template"]
 				break
 		if tpl == null:
-			tpl = renderers[0]["template"]
+			# fall back to the first renderer only when it has no
+			# condition — otherwise a mismatched item just skips
+			var fcond: Dictionary = renderers[0].get("cond", {})
+			if fcond.get("tree", fcond).is_empty():
+				tpl = renderers[0]["template"]
+			else:
+				i += 1
+				continue
 		var row: GWidget = tpl.duplicate_widget()
 		row.set_meta("list_row", true)
 		row.visible = true
@@ -872,6 +950,9 @@ func rebuild_items() -> void:
 			row.size = p
 			row.position = Vector2(stack_x, 0)
 			stack_x += p.x
+		elif kind == "renderableContainer":
+			row.size = size
+			row.position = Vector2.ZERO
 		else:
 			row.size = cell
 			row.custom_minimum_size = cell
