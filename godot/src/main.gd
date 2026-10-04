@@ -236,6 +236,7 @@ var _shop_id := -1            # catalogue id echoed back on buy/barter
 var _shop_cards := []         # [{id, qty}] of the open catalogue
 var _barter_wanted := -1      # card id picked for exchange
 var _gui: GuiLayer            # retail XULOR2 dialog layer
+var _login_screen             # baked-art login (PippopLogin via preload)
 var _pending_login := ""      # login queued while connecting
 var _pending_pass := ""       # password queued while connecting
 
@@ -501,10 +502,9 @@ func _ready() -> void:
 	$UI/VBox.visible = false
 	$UI/Chat.visible = false
 	if State.my_coach_id <= 0:
-		_gui.open("logonDialog")
+		_show_login_screen()
 	else:
 		_mount_lobby_menubar({"name": State.my_coach_name})
-		$UI/VBox.visible = true
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
 	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
@@ -669,6 +669,47 @@ func _on_disconnected() -> void:
 	login_btn.disabled = true
 	connect_btn.text = "Connect"
 	_log_line("[color=red]disconnected[/color]")
+	if _login_screen != null and _pending_login != "":
+		_login_screen.set_error("No se pudo conectar al servidor")
+		_pending_login = ""
+
+
+func _show_login_screen() -> void:
+	_login_screen = preload("res://src/ui/login_screen.gd").new()
+	add_child(_login_screen)
+	_login_screen.submit.connect(_on_login_submit)
+	var pm: Dictionary = _gui.gui.model.values.get("proxy", {})
+	var hosts: Array = []
+	for it in pm.get("list", []):
+		hosts.append(str(it.get("text", it)) if it is Dictionary else str(it))
+	if hosts.is_empty():
+		hosts = ["140.238.172.196:3000", "127.0.0.1:5555"]
+	_login_screen.set_proxies(hosts, str(pm.get("selected", hosts[0])))
+	_login_screen.name_edit.text = str(
+		_gui.gui.model.values.get("account.name", ""))
+	if _gui.gui.model.values.get("account.remember", false):
+		_login_screen.pass_edit.text = str(
+			_gui.gui.model.values.get("account.password", ""))
+
+
+func _on_login_submit(login: String, password: String, proxy: String) -> void:
+	_gui.gui.model.values["account.name"] = login
+	_gui.gui.model.values["account.password"] = password
+	var pm: Dictionary = _gui.gui.model.values.get("proxy", {})
+	pm["selected"] = proxy
+	login_edit.text = login
+	password_edit.text = password
+	if Session.is_online():
+		_send_auth(login, password)
+	else:
+		_pending_login = login
+		_pending_pass = password
+		if proxy == "":
+			proxy = "140.238.172.196:3000"
+		var hp := proxy.split(":")
+		Session.connect_to(hp[0], int(hp[1]) if hp.size() > 1 else 5555)
+		_log_line("connecting to %s…" % proxy)
+	_gui._save_settings()
 
 
 func _on_login_pressed() -> void:
@@ -709,6 +750,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_log_line("[color=green]auth OK[/color]")
 			else:
 				_log_line("[color=red]auth refused, code %d[/color]" % code)
+				if _login_screen != null:
+					_login_screen.set_error(
+						"Cuenta o contraseña incorrectas")
 		OP_COACH_CREATE_REQ:
 			_open_coach_creation()
 		OP_COACH_CREATION_RESULT:
@@ -741,8 +785,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					int(State.guild.get("demon_id", 0))])
 			_log_line("[color=green]coach info received — in lobby[/color]")
 			_gui.close("logonDialog")
+			if _login_screen != null:
+				_login_screen.queue_free()
+				_login_screen = null
 			_mount_lobby_menubar(d)
-			$UI/VBox.visible = true
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
 			State.current_world = int(d.get("world_id", -1))
