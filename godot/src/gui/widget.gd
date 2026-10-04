@@ -30,8 +30,15 @@ var editable := false
 var horizontal := false
 var cell_size := Vector2(-1, -1)
 var events := {}                 # signal name -> "dofusarena:method(args)"
-var bind := {}                   # {attribute, name, field}
+var bind := {}                   # last <property>/<data> bind (legacy)
+var binds: Array = []            # all <property> binds {attribute,name,field,data_id,condition}
+var item_binds: Array = []       # {attribute, field, item, condition}
 var item_bind := ""              # <item attribute="..."> inside itemRenderer
+var renderers: Array = []        # list: [{cond, template}] itemRenderer pool
+var item_value = null            # bound item object (renderer rows / <data>)
+var data_value = null           # resolved object under <data id> alias
+var data_id := ""                # <data id> alias this widget exposes
+var enabled := true
 var model = null                 # GuiModel
 var dialog = null                # owning GuiDialog (event dispatch)
 var state := "default"
@@ -187,6 +194,8 @@ func _bg_decl() -> Dictionary:
 
 
 func _draw() -> void:
+	if _viewer_spr != null:
+		_viewer_place()
 	var a := appearance()
 	# 1. background
 	if a.has("plain_bg"):
@@ -202,8 +211,10 @@ func _draw() -> void:
 				draw_texture(t, (size - t.get_size()) / 2.0)
 	# 2. single pixmap image (image widget / appearances with inline pixmap)
 	if kind == "image":
-		var px: Dictionary = a.get("pixmap", {})
-		var t := guitheme.pixmap_tex(px)
+		var t: Texture2D = a.get("pixmap_tex")
+		if t == null:
+			var px: Dictionary = a.get("pixmap", {})
+			t = guitheme.pixmap_tex(px)
 		if t != null:
 			var cr := content_rect()
 			draw_texture(t, cr.position + (cr.size - t.get_size()) / 2.0)
@@ -302,11 +313,11 @@ func set_state(s: String) -> void:
 func refresh_state() -> void:
 	var order: Array[String] = []
 	if _pressed:
-		order = ["pressedSelected", "pressed", "selected"] if selected else ["pressed"]
+		order.assign(["pressedSelected", "pressed", "selected"] if selected else ["pressed"])
 	elif _hover:
-		order = ["mouseHoverSelected", "mouseHover", "selected"] if selected else ["mouseHover"]
+		order.assign(["mouseHoverSelected", "mouseHover", "selected"] if selected else ["mouseHover"])
 	elif selected:
-		order = ["selected"]
+		order.assign(["selected"])
 	order.append("default")
 	for s in order:
 		if states.has(s):
@@ -331,6 +342,8 @@ func _notification(what: int) -> void:
 		_pressed = false
 		refresh_state()
 		emit_action("onMouseExit")
+	elif what == NOTIFICATION_RESIZED and _viewer_spr != null:
+		_viewer_place()
 
 
 func _gui_input(ev: InputEvent) -> void:
@@ -373,12 +386,20 @@ func set_content(v) -> void:
 		content_items = v
 	else:
 		content_value = v
+	rebuild_items()
 	queue_redraw()
 
 
 ## ---- model binding ------------------------------------------------------
-func apply_model(v) -> void:
-	var attr: String = bind.get("attribute", "")
+func apply_model(v, b: Dictionary = {}) -> void:
+	var bb: Dictionary = b if not b.is_empty() else bind
+	var attr: String = bb.get("attribute", "")
+	if bb.has("data_id"):
+		data_id = bb["data_id"]
+		data_value = v
+	var pcond: Dictionary = bb.get("condition", {})
+	if not pcond.is_empty():
+		v = GuiConditions.eval(pcond, v)
 	match attr:
 		"text":
 			set_text(str(v))
@@ -394,7 +415,253 @@ func apply_model(v) -> void:
 			var e := guitheme.elem(_type_name(), type_style)
 			states = e.get("states", {}).duplicate(true)
 			refresh_state()
+		"enabled":
+			set_enabled_flag(_truthy(v))
+		"visible":
+			visible = _truthy(v)
+		"animatedElement":
+			_viewer_set("lib", v)
+		"animName":
+			_viewer_set("anim", v)
+		"direction":
+			_viewer_set("dir", v)
+		"material":
+			_viewer_set("material", v)
+		_:
+			# model object → apply any bound FIELDS as item binds would
+			if v is Dictionary and bb.get("field", "") != "":
+				_apply_attr(attr, v.get(bb["field"]))
 	queue_redraw()
+
+
+func _truthy(v) -> bool:
+	if v is bool:
+		return v
+	if v is String:
+		return v == "true" or v == "1"
+	return v != null and v != 0 and v != 0.0
+
+
+func set_enabled_flag(v: bool) -> void:
+	enabled = v
+	mouse_filter = MOUSE_FILTER_STOP if v else MOUSE_FILTER_IGNORE
+	if not v:
+		set_state("disabled")
+	else:
+		refresh_state()
+
+
+func _apply_attr(attr: String, v) -> void:
+	match attr:
+		"text":
+			set_text(str(v))
+		"visible":
+			visible = _truthy(v)
+		"enabled":
+			set_enabled_flag(_truthy(v))
+		"selected":
+			set_selected(_truthy(v))
+		"texture", "pixmap":
+			_set_item_texture(str(v))
+		"content":
+			set_content(v)
+		"value":
+			data_value = v
+		_:
+			set_meta("attr_" + attr, v)
+	queue_redraw()
+
+
+func _set_item_texture(url: String) -> void:
+	# item icon url -> look up in theme image index (e.g. spells/eq icons)
+	var bn := url.get_file()
+	if bn.get_extension() == "":
+		bn += ".png"
+	var p := "res://assets/gui/images/" + bn
+	var px := {"texture": "", "rect": Rect2()}
+	var img := Image.new()
+	for cand in [p, "res://assets/gui/images/spells/" + bn,
+			"res://assets/gui/images/spells/icons/" + bn,
+			"res://assets/gui/images/equipments/" + bn,
+			"res://assets/gui/images/breeds/" + bn,
+			"res://assets/gui/images/miscellaneous/" + bn]:
+		if FileAccess.file_exists(cand):
+			if img.load(cand) == OK:
+				_appear("default")["pixmap_tex"] = ImageTexture.create_from_image(img)
+				return
+	# theme texture id fallback
+	if guitheme != null and guitheme.textures.has(url):
+		_appear("default")["pixmap"] = {"texture": url,
+			"rect": Rect2(Vector2.ZERO, guitheme.texture(url).get_size())}
+
+
+## animatedElementViewer — lazily hosts an AnmSprite bound to model fields
+var _viewer := {"lib": "", "anim": "", "dir": 0, "material": null}
+var _viewer_spr = null
+
+func _appear(state: String) -> Dictionary:
+	if not states.has(state):
+		states[state] = {}
+	return states[state]
+
+
+func _viewer_set(k: String, v) -> void:
+	_viewer[k] = v
+	if _viewer_spr == null and _viewer["lib"] != "":
+		_viewer_spr = load("res://src/anims/anm_sprite.gd").new()
+		add_child(_viewer_spr)
+		_viewer_spr.centered = true
+	_viewer_place()
+	if _viewer_spr != null and _viewer["lib"] != "":
+		var set_dir := str(_viewer["lib"])
+		if not set_dir.begins_with("res://"):
+			set_dir = "res://assets/anims/" + set_dir
+		var anim := str(_viewer["anim"]) if _viewer["anim"] != "" else "AnimStatique"
+		if _viewer["material"] is Dictionary:
+			_viewer_spr.tints = _viewer["material"]
+		var dir := int(_viewer["dir"])
+		# exported actions carry their facing: "<dir>_<Anim>"
+		if not anim[0].is_valid_int():
+			anim = "%d_%s" % [dir, anim]
+		if not _viewer_spr.load_action(set_dir, anim):
+			# facing may be missing in the set — try the canonical two
+			for d in [5, 2, 0, 6, 1, 3, 7, 4]:
+				var try := "%d_%s" % [d, anim.split("_", false, 1)[-1]]
+				if _viewer_spr.load_action(set_dir, try):
+					break
+		_viewer_spr.flip_h = dir in [1, 2, 3]
+
+
+func _viewer_place() -> void:
+	if _viewer_spr == null:
+		return
+	var sc: float = get_meta("viewer_scale", 1.0)
+	_viewer_spr.scale = Vector2(sc, sc)
+	_viewer_spr.position = size / 2.0 + Vector2(0, get_meta("viewer_offy", 0.0))
+
+
+## item context — for renderer rows and <data>-bound widgets
+func apply_item(v) -> void:
+	item_value = v
+	if bind.has("data_id"):
+		data_id = bind["data_id"]
+		data_value = v
+	for b in item_binds:
+		var fv = v.get(b["field"]) if v is Dictionary and b.get("field", "") != "" else v
+		# a <condition> on an item transforms the value (visible <- isFalse(usable))
+		var cond: Dictionary = b.get("condition", {})
+		if not cond.is_empty():
+			fv = GuiConditions.eval(cond, fv)
+		_apply_attr(b["attribute"], fv)
+	queue_redraw()
+
+
+## list row materialization — called when content_items changes
+func rebuild_items() -> void:
+	if kind != "list" and kind != "comboboxplus" and kind != "comboBox":
+		return
+	# drop old rows (renderer templates stay hidden, owned by us). free()
+	# now — queue_free defers and a same-frame rebuild would double them.
+	for ch in get_children().duplicate():
+		if ch is GWidget and ch.get_meta("list_row", false):
+			remove_child(ch)
+			ch.free()
+	if renderers.is_empty() or content_items.is_empty():
+		return
+	# retail List is a fixed grid: cols = floor(width/cellW), row-major.
+	var cell := cell_size
+	if cell == Vector2.ZERO:
+		cell = Vector2(20, 20)
+	# grid width: live size, else the sld size the dialog gave us
+	var box_w := size.x
+	if box_w <= 0 and layout_data.has("size"):
+		var sv: Array = layout_data["size"]
+		if not (sv[0] is String):
+			box_w = float(sv[0])
+	var cols: int = max(1, int(box_w / cell.x)) if box_w > 0 else 1
+	var i := 0
+	for item in content_items:
+		var tpl: GWidget = null
+		for r in renderers:
+			var cond: Dictionary = r.get("cond", {})
+			if cond.is_empty() or GuiConditions.eval(cond, item):
+				tpl = r["template"]
+				break
+		if tpl == null:
+			tpl = renderers[0]["template"]
+		var row: GWidget = tpl.duplicate_widget()
+		row.set_meta("list_row", true)
+		row.visible = true
+		row.item_value = item
+		row.size = cell
+		row.custom_minimum_size = cell
+		row.position = Vector2((i % cols) * cell.x, (i / cols) * cell.y)
+		add_child(row)
+		row.apply_item_deep(item)
+		# each row is a sl canvas (templates position with sld)
+		row.layout = {"type": "sl"}
+		GuiLayouts.apply(row)
+		i += 1
+
+
+func apply_item_deep(v) -> void:
+	apply_item(v)
+	for ch in get_children().duplicate():
+		if ch is GWidget:
+			ch.apply_item_deep(v)
+
+
+func duplicate_widget() -> GWidget:
+	var w := GWidget.new()
+	w.guitheme = guitheme
+	w.kind = kind
+	w.type_style = type_style
+	w.states = states.duplicate(true)
+	w.margin = margin
+	w.layout = layout.duplicate()
+	w.layout_data = layout_data.duplicate()
+	w.pref_size = pref_size
+	w.min_size = min_size
+	w.expandable = expandable
+	w.shrinkable = shrinkable
+	w.widget_id = widget_id
+	w.group_id = group_id
+	w.value = value
+	w.visible = visible
+	w.enabled = enabled
+	w.selected = selected
+	w.text = text
+	w.password = password
+	w.horizontal = horizontal
+	w.cell_size = cell_size
+	w.events = events.duplicate()
+	w.bind = bind.duplicate()
+	w.binds = binds.duplicate(true)
+	w.item_binds = item_binds.duplicate(true)
+	w.data_id = data_id
+	w.model = model
+	w.mouse_filter = mouse_filter
+	w.gui_event.connect(_forward_event)
+	# renderer templates -> their duplicated counterparts (nested lists in rows)
+	var tpl_map := {}
+	for ch in get_children():
+		if ch is GWidget:
+			var c: GWidget = ch.duplicate_widget()
+			w.add_child(c)
+			tpl_map[ch] = c
+		elif ch == text_editor:
+			pass  # embedded LineEdit — not part of renderer templates
+	for r in renderers:
+		var t: GWidget = r["template"]
+		if tpl_map.has(t):
+			w.renderers.append({"cond": r.get("cond", {}), "template": tpl_map[t]})
+	if item_renderer != null and tpl_map.has(item_renderer):
+		w.item_renderer = tpl_map[item_renderer]
+	return w
+
+
+func _forward_event(a: String) -> void:
+	gui_event.emit(a)
 
 
 func _type_name() -> String:

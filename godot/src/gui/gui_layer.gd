@@ -51,7 +51,7 @@ func _relayout(root: GWidget) -> void:
 	GuiLayouts.apply(root)
 
 
-func _on_event(method: String, args: Array, widget: GWidget) -> void:
+func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void:
 	match method:
 		"setLanguage":
 			var lang := str(args[0]) if args.size() > 0 else "en"

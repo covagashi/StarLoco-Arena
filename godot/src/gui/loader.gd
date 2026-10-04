@@ -11,7 +11,11 @@ const WIDGET_TAGS := [
 	"renderableContainer", "itemRenderer", "spacer", "separator", "iconLabel",
 	"toggleButton", "stack", "progressIcon", "dnd", "windowMovePoint",
 	"colorPicker", "text", "simpleMessage", "scrollBar",
+	"animatedElementViewer", "elementEditor",
 ]
+const COND_OPS := ["isNull", "isNotNull", "isTrue", "isFalse", "isGreater",
+	"isLess", "isEqual", "isDifferent", "isNullOrEmpty", "isNotNullOrEmpty",
+	"Not", "and", "or"]
 const LAYOUT_TAGS := ["sl", "bl", "rl", "gl", "tl", "SPL", "al"]
 const LDATA_TAGS := ["sld", "bld", "rld", "gld", "tld", "spl", "ald"]
 
@@ -19,6 +23,7 @@ var theme: GuiTheme
 var i18n := {}
 var model: GuiModel
 var by_id := {}          # id -> GWidget (per loaded dialog)
+var data_ids := {}       # <data id> alias -> GWidget (per loaded dialog)
 var unknown_tags := {}
 
 
@@ -34,6 +39,7 @@ func load_file(path: String) -> GWidget:
 		push_error("[guiloader] cannot open " + path)
 		return null
 	by_id.clear()
+	data_ids.clear()
 	var root: GWidget = null
 	var stack: Array = []  # {w: GWidget, tag: String, structural: bool}
 	while p.read() == OK:
@@ -100,14 +106,52 @@ func load_file(path: String) -> GWidget:
 						_appear(parent, "default")["plain_bg"] = true
 				elif tag == "property":
 					if parent != null:
-						parent.bind = {
+						var b := {
 							"attribute": a.get("attribute", ""),
 							"name": a.get("name", ""),
 							"field": a.get("field", ""),
 						}
+						var did := _data_id(stack)
+						if did != "":
+							b["data_id"] = did
+						# widgets can carry several <property> binds
+						# (animatedElementViewer has four) — keep them all
+						parent.binds.append(b)
+						parent.bind = b
 				elif tag == "item":
+					_parse_item(parent, a, stack)
+					if not p.is_empty():
+						stack.append({"w": null, "tag": tag})
+				elif tag == "pixmap":
+					# <image><pixmap><item attribute="texture" field="iconUrl"/></pixmap></image>
+					var px_slot := {"attribute": "pixmap", "field": "",
+						"item": true}
 					if parent != null:
-						parent.item_bind = a.get("attribute", "text")
+						parent.item_binds.append(px_slot)
+					if not p.is_empty():
+						stack.append({"w": null, "tag": tag,
+							"bind_slot": px_slot})
+				elif tag == "data":
+					if not p.is_empty():
+						stack.append({"w": parent, "tag": tag,
+							"data_id": a.get("id", "")})
+				elif tag == "condition" or tag == "itemCondition":
+					# condition tree built by child op nodes; assigned on END
+					var host = _bind_host(parent, stack)
+					stack.append({"w": null, "tag": tag, "cond_root": [],
+						"cond_ops": [], "cond_host": host})
+				elif tag in COND_OPS:
+					var cframe = _cond_frame(stack)
+					var node := {"op": tag, "value": a.get("value", ""),
+						"children": []}
+					if cframe != null:
+						if cframe["cond_ops"].is_empty():
+							cframe["cond_root"].append(node)
+						else:
+							cframe["cond_ops"][-1]["children"].append(node)
+						cframe["cond_ops"].append(node)
+					if not p.is_empty():
+						stack.append({"w": null, "tag": tag})
 				elif tag == "tooltip":
 					if parent != null:
 						parent.set_meta("tooltip", a)
@@ -118,12 +162,18 @@ func load_file(path: String) -> GWidget:
 					var w: GWidget = _make_widget(tag, a)
 					if parent != null:
 						parent.add_child(w)
-						if in_renderer:
+						# only the direct child of an <itemRenderer> is the
+						# row template — its descendants are just content
+						if not stack.is_empty() \
+								and stack[-1].get("tag") == "itemRenderer":
 							w.visible = false
-							# the owning list/combo keeps it as a row template
 							var owner: GWidget = _nearest_list(parent)
 							if owner != null:
-								owner.item_renderer = w
+								owner.renderers.append(
+									{"cond": _renderer_cond(stack),
+										"template": w})
+								if owner.item_renderer == null:
+									owner.item_renderer = w
 					else:
 						root = w
 					if not p.is_empty():
@@ -134,12 +184,32 @@ func load_file(path: String) -> GWidget:
 						stack.append({"w": null, "tag": tag})
 			XMLParser.NODE_ELEMENT_END:
 				var tag := p.get_node_name()
+				if tag in COND_OPS:
+					var cframe = _cond_frame(stack)
+					if cframe != null and not cframe["cond_ops"].is_empty():
+						cframe["cond_ops"].pop_back()
+				elif tag == "condition" or tag == "itemCondition":
+					for i in range(stack.size() - 1, -1, -1):
+						if stack[i].get("tag") == tag:
+							var fr: Dictionary = stack[i]
+							var host = fr.get("cond_host")
+							if host != null and not fr["cond_root"].is_empty():
+								host["condition"] = fr["cond_root"][0]
+							stack.resize(i)
+							break
+					continue
 				for i in range(stack.size() - 1, -1, -1):
 					if stack[i].get("tag") == tag:
 						stack.resize(i)
 						break
 	if root != null:
 		_wire(root)
+		# lists bind before their itemRenderer children register — rebuild now
+		var all: Array = []
+		_collect_widgets(root, all)
+		for w in all:
+			if is_instance_valid(w) and w.kind in ["list", "comboboxplus", "comboBox"]:
+				w.rebuild_items()
 	return root
 
 
@@ -150,6 +220,22 @@ func _nearest_list(w: GWidget) -> GWidget:
 			return n
 		n = n.get_parent()
 	return null
+
+
+## condition parsed by the enclosing <itemRenderer><condition><itemCondition>
+func _renderer_cond(stack: Array) -> Dictionary:
+	for i in range(stack.size() - 1, -1, -1):
+		var fr: Dictionary = stack[i]
+		if fr.get("tag") == "itemRenderer":
+			return fr.get("renderer_cond", {}).get("condition", {})
+	return {}
+
+
+static func _collect_widgets(n: Node, out: Array) -> void:
+	if n is GWidget:
+		out.append(n)
+	for c in n.get_children():
+		_collect_widgets(c, out)
 
 
 func _looks_like_widget(tag: String) -> bool:
@@ -172,6 +258,11 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 	if w.widget_id != "":
 		by_id[w.widget_id] = w
 	w.group_id = a.get("groupId", "")
+	if tag == "animatedElementViewer":
+		w.set_meta("viewer_scale", float(a.get("scale", "1")))
+		w.set_meta("viewer_offy", float(a.get("offsetY", "0")))
+		if a.get("animName", "") != "":
+			w._viewer["anim"] = a["animName"]
 	w.value = a.get("value", "")
 	w.expandable = a.get("expandable", "true") == "true"
 	w.shrinkable = a.get("shrinkable", "true") == "true"
@@ -182,6 +273,10 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 	if a.has("prefSize"):
 		var v: PackedFloat64Array = a["prefSize"].split_floats(",")
 		w.pref_size = Vector2(v[0], v[1] if v.size() > 1 else v[0])
+	if a.has("displaySize"):
+		var v: PackedFloat64Array = a["displaySize"].split_floats(",")
+		w.pref_size = Vector2(v[0], v[1] if v.size() > 1 else v[0])
+		w.min_size = w.pref_size
 	if a.has("minSize"):
 		var v: PackedFloat64Array = a["minSize"].split_floats(",")
 		w.min_size = Vector2(v[0], v[1] if v.size() > 1 else v[0])
@@ -189,6 +284,10 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 		w.cell_size = _size_spec(a["cellSize"])
 	if a.get("nonBlocking", "false") == "true":
 		w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if a.get("visible", "true") == "false":
+		w.visible = false
+	if a.get("enabled", "true") == "false":
+		w.enabled = false
 	if a.get("focused", "false") == "true":
 		w.set_meta("focused", true)
 	# editor for textEditor
@@ -358,14 +457,21 @@ func _wire(root: GWidget) -> void:
 			var gp := w.get_parent()
 			if gp is GWidget and not gp.layout.is_empty():
 				w.layout = gp.layout.duplicate()
-		# model binding
+		# model binding — one watcher per <property> bind
 		if model != null:
 			w.model = model
-			if not w.bind.is_empty():
-				model.watch(w, w.bind["name"], w.bind["field"])
-				var v = model.get_value(w.bind["name"], w.bind["field"])
+			for b in w.binds:
+				if not b.has("name"):
+					continue
+				model.watch(w, b["name"], b.get("field", ""), b)
+				var v = model.get_value(b["name"], b.get("field", ""))
 				if v != null:
-					w.apply_model(v)
+					w.apply_model(v, b)
+		# <data id> aliases resolve event args
+		if w.bind.has("data_id"):
+			w.data_id = w.bind["data_id"]
+		if w.data_id != "":
+			data_ids[w.data_id] = w
 
 
 func _on_event(action: String, w: GWidget) -> void:
@@ -381,3 +487,64 @@ func resolve_arg(arg: String) -> Variant:
 	if by_id.has(arg):
 		return by_id[arg]
 	return arg
+
+
+## enclosing <data id="X"> frame's id, or ""
+func _data_id(stack: Array) -> String:
+	for i in range(stack.size() - 1, -1, -1):
+		var d: String = stack[i].get("data_id", "")
+		if d != "":
+			return d
+	return ""
+
+
+## nearest enclosing condition-building frame, or null
+func _cond_frame(stack: Array):
+	for i in range(stack.size() - 1, -1, -1):
+		if stack[i].has("cond_root"):
+			return stack[i]
+	return null
+
+
+## the dict a <condition> writes its tree into on close
+func _bind_host(parent: GWidget, stack: Array):
+	for i in range(stack.size() - 1, -1, -1):
+		var fr: Dictionary = stack[i]
+		if fr.has("bind_slot"):
+			return fr["bind_slot"]
+		if fr.has("data_id"):
+			if parent != null:
+				return parent.bind
+			return null
+		if fr.get("tag") == "itemRenderer":
+			if not fr.has("renderer_cond"):
+				fr["renderer_cond"] = {}
+			return fr["renderer_cond"]
+	if parent != null:
+		if not parent.item_binds.is_empty():
+			return parent.item_binds[-1]
+		return parent.bind
+	return null
+
+
+## <item attribute="A" field="F"/> — item-level bind. Inside <data> it sets
+## the parent's bind; inside <pixmap> it fills the bind_slot; elsewhere it
+## appends to the parent's item_binds.
+func _parse_item(parent: GWidget, a: Dictionary, stack: Array) -> void:
+	for i in range(stack.size() - 1, -1, -1):
+		var fr: Dictionary = stack[i]
+		if fr.has("bind_slot"):
+			fr["bind_slot"]["attribute"] = a.get("attribute", "texture")
+			fr["bind_slot"]["field"] = a.get("field", "")
+			return
+	for i in range(stack.size() - 1, -1, -1):
+		var fr: Dictionary = stack[i]
+		if fr.has("data_id"):
+			if parent != null:
+				parent.bind = {"attribute": a.get("attribute", "value"),
+					"field": a.get("field", ""), "item": true,
+					"data_id": fr["data_id"]}
+			return
+	if parent != null:
+		parent.item_binds.append({"attribute": a.get("attribute", "value"),
+			"field": a.get("field", ""), "item": true})

@@ -46,9 +46,9 @@ func open_dialog(name: String, model_values := {}) -> GWidget:
 
 
 func _dispatch(action: String, w: GWidget, _loader: GuiLoader) -> void:
-	# "dofusarena:logon(loginForm)" / "xulor:unloadDialog(name)"
+	# "dofusarena:logon(loginForm)" / "dofusarena.fight:fighterEndsTurn(fighter)"
 	var m := RegEx.new()
-	m.compile("^(\\w+):(\\w+)(?:\\((.*)\\))?$")
+	m.compile("^([\\w.]+):(\\w+)(?:\\((.*)\\))?$")
 	var r := m.search(action)
 	if r == null:
 		return
@@ -58,25 +58,29 @@ func _dispatch(action: String, w: GWidget, _loader: GuiLoader) -> void:
 	var args: Array = []
 	if raw != null and raw != "":
 		for part in raw.split(","):
-			var arg := part.strip_edges()
-			# literal quoted string -> strip; widget id -> resolve
-			if arg.begins_with("'") or arg.begins_with('"'):
-				args.append(arg.trim_prefix("'").trim_prefix('"').trim_suffix("'").trim_suffix('"'))
-			elif arg.is_valid_int() or arg.is_valid_float():
-				args.append(float(arg) if arg.contains(".") else int(arg))
-			elif loader.by_id.has(arg):
-				args.append(loader.by_id[arg])
-			else:
-				args.append(arg)
-	match ns:
-		"dofusarena":
-			if event_sink.is_valid():
-				event_sink.call(method, args, w)
-		"xulor":
-			pass  # engine-internal actions (dialog unload etc.) — later
-		_:
-			if event_sink.is_valid():
-				event_sink.call(method, args, w)
+			args.append(_resolve_arg(part.strip_edges(), w))
+	if event_sink.is_valid():
+		event_sink.call(ns, method, args, w)
+
+
+func _resolve_arg(arg: String, src: GWidget) -> Variant:
+	if arg == "":
+		return arg
+	if arg.begins_with("'") or arg.begins_with('"'):
+		return arg.trim_prefix("'").trim_prefix('"').trim_suffix("'").trim_suffix('"')
+	if arg.is_valid_int() or arg.is_valid_float():
+		return arg.to_float() if arg.contains(".") else arg.to_int()
+	if loader.by_id.has(arg):
+		return loader.by_id[arg]
+	# <data id> aliases — nearest ancestor binding first (list rows)
+	var n: Node = src
+	while n != null:
+		if n is GWidget and n.data_id == arg:
+			return n.data_value
+		n = n.get_parent()
+	if loader.data_ids.has(arg):
+		return loader.data_ids[arg].data_value
+	return arg
 
 
 ## Dump the widget tree for smoke tests.

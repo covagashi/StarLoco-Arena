@@ -123,6 +123,7 @@ func _ready() -> void:
 			_on_net_message(m.op, m.raw)
 		State.net.message_received.connect(_on_net_message)
 		State.net.scene_active = true
+	_mount_fight_hud()
 
 
 func _load() -> void:
@@ -506,6 +507,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var rdir := payload.get_u8()
 			_actor_dir[rfid] = rdir
 			_reface(rfid, rdir)
+			_hud_push()
 		OP_FIGHTER_TACKLED:
 			# [i32 uid][i32 -1][i64 tackled][i64 tackler] — a failed evasion
 			# roll: no 4524 follows, the mover never leaves its cell and the
@@ -1360,6 +1362,7 @@ func _on_turn_begin(fid: int) -> void:
 		f.get("name", str(fid)),
 		" (yours — click a cell to move)" if ours else ""]
 	_refresh_timeline()
+	_hud_push()
 	turn_began.emit(fid, ours)
 
 
@@ -1474,6 +1477,7 @@ func _refresh_apmp() -> void:
 	if res != null:
 		res.text = "  AP %d  MP %d" % [_ap_left, _mp_left]
 	_refresh_spell_locks()   # AP debit may have priced spells out
+	_hud_push()
 
 
 ## --- cast-range overlay -----------------------------------------------------
@@ -2325,15 +2329,118 @@ func _play_cast(fid: int, sid: int) -> void:
 ## Face button: cycle the acting fighter's facing one diagonal clockwise and
 ## send 4521 — a free action the server broadcasts back as 4522.
 func _on_face_pressed() -> void:
-	if not _is_my_turn() or State.net == null:
-		return
 	var cur: int = _actor_dir.get(_current_fid, 1)
 	var dirs := [1, 3, 5, 7]
-	var nxt: int = dirs[(dirs.find(cur) + 1) % dirs.size()]
+	_send_fighter_dir(dirs[(dirs.find(cur) + 1) % dirs.size()])
+
+
+func _send_fighter_dir(nxt: int) -> void:
+	if not _is_my_turn() or State.net == null:
+		return
 	var w := WireWriter.new()
 	w.put_i64(_current_fid)
 	w.put_u8(nxt)
 	State.net.send_message(OP_DIR_CHANGE_REQ, w.raw(), 3)
+
+
+## --- retail fight HUD ------------------------------------------------------
+## XULOR2 fighterControlsDialog mounted bottom-centre, driven by the same
+## State.fighters data the debug TopBar uses. Events come back through
+## _on_gui_event and call the same senders as the wire-test buttons.
+var _gui: GuiLib = null
+var _hud: GWidget = null
+
+
+func _mount_fight_hud() -> void:
+	_gui = GuiLib.new("es")
+	_gui.event_sink = _on_gui_event
+	var layer := CanvasLayer.new()
+	layer.layer = 5
+	add_child(layer)
+	_hud = _gui.open_dialog("fighterControlsDialog")
+	if _hud == null:
+		return
+	layer.add_child(_hud)
+	_position_hud()
+	get_viewport().size_changed.connect(_position_hud)
+
+
+func _position_hud() -> void:
+	if _hud == null:
+		return
+	var vs := get_viewport().get_visible_rect().size
+	_hud.size = Vector2(530, 150)
+	_hud.position = Vector2((vs.x - 530.0) / 2.0, vs.y - 150.0)
+	GuiLayouts.apply(_hud)
+
+
+## State.fighters[fid] -> the shape fighterControlsDialog.xml binds.
+func _fighter_gui_model(f: Dictionary) -> Dictionary:
+	var fid := int(f.get("id", _current_fid))
+	var ours: bool = int(f.get("coach", -1)) == State.my_coach_id \
+		and not f.get("summon", false)
+	var spells: Array = []
+	for sid in f.get("spells", []):
+		var sd := int(sid)
+		spells.append({
+			"id": sd,
+			"iconUrl": str(sd),
+			"smallDescription": Spells.name_of(sd),
+			"usable": ours and not _spell_locked(sd) and _spell_affordable(sd),
+			"cooldownInFight": 0,
+		})
+	return {
+		"healthPoints": int(f.get("hp", 0)),
+		"actionPoints": _ap_left,
+		"movePoints": _mp_left,
+		"actorDescriptorLibrary": _anim_set(f),
+		"actorAnimation": "AnimStatique",
+		"actorDirection": int(_actor_dir.get(fid, 5)),
+		"actorMaterial": _fighter_tints(f),
+		"spells": spells,
+		"coachSpells": [],
+		"usableFighterCards": [],
+		"closeCombatUsable": ours and _is_my_turn(),
+		"closeCombatSmallDescription": "",
+	}
+
+
+## Push the acting fighter into the HUD model — called on turn begin and
+## whenever AP/MP/HP/dir move under us.
+func _hud_push() -> void:
+	if _gui == null:
+		return
+	var f: Dictionary = State.fighters.get(_current_fid, {})
+	if f.is_empty():
+		return
+	_gui.model.set_value("fight.timeline.currentFighter",
+		_fighter_gui_model(f))
+	_gui.model.set_value("fight.endTurnState",
+		_is_my_turn() and not State.spectating)
+
+
+func _on_gui_event(ns: String, method: String, args: Array, _w) -> void:
+	match method:
+		"fighterEndsTurn":
+			request_end_turn()
+		"fighterSelectCloseCombat":
+			_on_spell_button(-2)
+		"fighterSelectSpell":
+			var sp = args[1] if args.size() > 1 else null
+			if sp is Dictionary:
+				_on_spell_button(int(sp.get("id", -1)))
+		"fighterSelectFighterCard":
+			var cd = args[1] if args.size() > 1 else null
+			if cd is Dictionary:
+				_on_card_button(int(cd.get("id", -1)))
+		"fighterSetNorthWestDirection":
+			_send_fighter_dir(7)
+		"fighterSetNorthEastDirection":
+			_send_fighter_dir(1)
+		"fighterSetSouthWestDirection":
+			_send_fighter_dir(5)
+		"fighterSetSouthEastDirection":
+			_send_fighter_dir(3)
 
 
 ## World pixel -> grid cell: nearest ground-cell center within a cell diag.
