@@ -38,7 +38,54 @@ func _init() -> void:
 		"listDemon": []})
 	var ld := _gui.open_dialog("ladderInformationDialog")
 	print("[smoke] ladder:", "ok" if ld != null else "FAIL")
-	for r in [sd, cs, ld]:
+	_gui.model.set_value("calendar", {
+		"currentMonth": "January 2012",
+		"calendar": [{"day": "1", "events": [
+			{"title": "T", "typeIcon": "", "description": "d",
+				"registrationButton": true, "style": "", "id": 1}],
+			"hasMoreEventsToShow": false, "style": ""}],
+		"fullEventList": {"events": [], "style": ""},
+		"eventFilter": {"showAllEvent": true,
+			"tournamentEventFilter": true,
+			"maintenanceEventFilter": true,
+			"broadcastEventFilter": true}})
+	_gui.model.set_value("itemOver", {})
+	_gui.model.set_value("itemSelected", {})
+	var cd := _gui.open_dialog("calendarDialog")
+	print("[smoke] calendar:", "ok" if cd != null else "FAIL")
+	_gui.model.set_value("achievementManager", {
+		"achievementsList": [{"id": 1, "name": "First",
+			"points": 10, "grade": 0, "iconUrl": "", "keyIconUrl": "",
+			"completion": 100, "descriptionDone": "done",
+			"isSelected": false, "style": "done", "subtypes": []}],
+		"achievementTypesList": [{"name": "Type 0", "cat": 0,
+			"isSelected": true,
+			"subtypes": [{"name": "Type 0", "sub": 0, "cat": 0,
+				"isSelected": true}]}],
+		"achievementsTotalPoints": 10})
+	_gui.model.set_value("selectedAchievementType", {"name": "Type 0",
+		"cat": 0, "isSelected": true,
+		"subtypes": [{"name": "Type 0", "sub": 0, "cat": 0,
+			"isSelected": true}]})
+	var ad := _gui.open_dialog("achievementDialog")
+	print("[smoke] achievement:", "ok" if ad != null else "FAIL")
+	var od := _gui.open_dialog("optionsDialog")
+	print("[smoke] options:", "ok" if od != null else "FAIL")
+	_gui.model.set_value("localCoach", {
+		"filtredEquipmentCardInventory": [
+			{"id": 1, "name": "Cape", "iconUrl": "1", "quantity": 2,
+				"cardType": 8}],
+		"zaapInventory": [], "specialCardInventory": [],
+		"filtredSetCardInventory": [], "cardSets": [],
+		"cardCostFilterList": [], "selectedCostFilter": ""})
+	_gui.model.set_value("coachManagement", {"selectedCard": null,
+		"currentSet": null})
+	_gui.model.set_value("tomeManager", {"cheapSets": [],
+		"expensiveSets": [], "specialSets": [], "fightSets": [],
+		"evolutionSets": [], "zaapSets": []})
+	var cb := _gui.open_dialog("cardBookDialog")
+	print("[smoke] cardBook:", "ok" if cb != null else "FAIL")
+	for r in [sd, cs, ld, cd, ad, od, cb]:
 		if r != null:
 			vp.add_child(r)
 	if sd != null:

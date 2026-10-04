@@ -125,6 +125,7 @@ const OP_TOURN_SEARCH_PERIOD := 28630    # [i64 tid][i8 open]
 const OP_TOURN_SEARCH_RES := 28612       # [i64 tid][i16 preset][i8 accepted]
 const OP_TOURN_SEARCH_ERR := 28616       # [i8 code][i8 sub]
 const OP_TOURN_SEARCH_END := 28648       # [i64 tid][i8 forfeit]
+const OP_DESTROY_COACH := 27529          # C2S empty (arch 2) — delete coach
 const OP_GUILD_CREATE := 509             # C2S [u8 type][str8 name] arch 3
 const OP_GUILD_RESULT := 504             # [i8 type][i32 code]
 const OP_GUILD_FEED := 558               # [str8 coach][str8 guild]
@@ -298,11 +299,65 @@ func _ready() -> void:
 		func(_a, _w): _ladder_gui_mine())
 	# dofusarena.coachManagement:* — zaap tome navigation + teleport
 	_gui.on("goToSet", _on_zaap_go_to_set)
-	_gui.on("goToSetList", _on_zaap_go_to_list)
+	_gui.on("goToSetList", _on_cardbook_tab)
 	_gui.on("changeInstance", _on_zaap_change_instance)
-	_gui.on("showCoachCardInfosInTome", func(_a, _w): pass)
-	_gui.on("hideCoachCardInfos", func(_a, _w): pass)
 	_gui.on("equipSet", func(_a, _w): pass)
+	# dofusarena.coachManagement:* — card book / coach inventory
+	_gui.on("showCoachCardInfos", _on_card_hover)
+	_gui.on("showCoachCardInfosInTome", _on_card_hover)
+	_gui.on("showSpellCardInTome", _on_card_hover)
+	_gui.on("hideCoachCardInfos", _on_card_unhover)
+	_gui.on("hideCoachEquipmentInfos", _on_card_unhover)
+	_gui.on("showCoachEquipmentInfos", _on_card_hover)
+	_gui.on("goToFightList", _on_cardbook_tab)
+	_gui.on("selectEquipmentTypeFilter", _on_equip_type_filter)
+	_gui.on("selectAllEquipmentTypeFilter", _on_equip_filter_all)
+	_gui.on("useSpecialCard", _on_use_special_card)
+	_gui.on("equip", func(_a, _w): pass)
+	_gui.on("addCardToTome", func(_a, _w): pass)
+	_gui.on("selectCostFilter", func(_a, _w): pass)
+	_gui.on("selectSetFilter", func(_a, _w): pass)
+	_gui.on("selectPetTypeFilter", func(_a, _w): pass)
+	_gui.on("changeFightTab", func(_a, _w): pass)
+	_gui.on("changeTomeTab", func(_a, _w): pass)
+	_gui.on("showBreedDetails", func(_a, _w): pass)
+	_gui.on("showSummonDetails", func(_a, _w): pass)
+	_gui.on("backToBreedList", func(_a, _w): pass)
+	_gui.on("showEffectDetails", func(_a, _w): pass)
+	_gui.on("hideEffectDetails", func(_a, _w): pass)
+	_gui.on("selectNextSet", func(a, _w): _step_set(a, 1))
+	_gui.on("selectPreviousSet", func(a, _w): _step_set(a, -1))
+	# dofusarena.calendar:* — month paging + day events + registration
+	_gui.on("showNextMonth", _on_calendar_month.bind(1))
+	_gui.on("showPreviousMonth", _on_calendar_month.bind(-1))
+	_gui.on("showFullEventList", _on_calendar_day_events)
+	_gui.on("highlightEvent", _on_calendar_highlight)
+	_gui.on("unhighlightEvent", func(_a, _w): pass)
+	_gui.on("registerTournament", _on_calendar_register)
+	_gui.on("selectAllEventTypeFilter", func(_a, _w): pass)
+	_gui.on("openTournamentDetailsDialog", func(_a, _w): pass)
+	_gui.on("openTournamentDetailsDialogInFullList", func(_a, _w): pass)
+	# dofusarena.achievement:* — type/subtype filters
+	_gui.on("selectAchievementType", _on_ach_select_type)
+	_gui.on("selectAchievementSubtype", _on_ach_select_subtype)
+	_gui.on("selectAchievement", func(_a, _w): pass)
+	# dofusarena:* — options dialog; the widget binds already wrote
+	# gamePreferences, handlers just apply side-effects
+	_gui.on("setInverseMouseControl", func(_a, _w): pass)
+	_gui.on("setShowFighterMoveRange", func(_a, _w): pass)
+	_gui.on("setSaveReplay", func(_a, _w): pass)
+	_gui.on("setMaskWorld", func(_a, _w): pass)
+	_gui.on("setGridActivated", func(_a, _w): pass)
+	_gui.on("setMusicMute", func(_a, _w): _apply_audio_prefs())
+	_gui.on("setMusicVolume", func(_a, _w): _apply_audio_prefs())
+	_gui.on("setSoundsMute", func(_a, _w): _apply_audio_prefs())
+	_gui.on("setSoundsVolume", func(_a, _w): _apply_audio_prefs())
+	_gui.on("activateParticles", func(_a, _w): pass)
+	_gui.on("activateVSync", func(_a, _w): _apply_vsync_pref())
+	_gui.on("activateShaders", func(_a, _w): pass)
+	_gui.on("setFullScreen", func(_a, _w): _apply_fullscreen_pref())
+	_gui.on("applyResolution", _on_apply_resolution)
+	_gui.on("destroyCoach", _on_destroy_coach)
 	_gui.dialog_opened.connect(_on_gui_dialog_opened)
 	$UI/VBox.visible = false
 	if State.my_coach_id <= 0:
@@ -944,6 +999,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TOURN_CALENDAR, OP_TOURN_LIST_RES:
 			var d := Codec.decode(opcode, payload)
 			var rows: Array = d.get("events", d.get("tournaments", []))
+			if opcode == OP_TOURN_CALENDAR:
+				_calendar_events = rows
+				if _gui.is_open("calendarDialog"):
+					_push_calendar_model()
 			if $UI/ElementDlg.visible and _elem_kind == 13:
 				var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 				for r0 in rows:
@@ -2583,6 +2642,17 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_push_ladder_model()
 		"zaapDialog":
 			_push_zaap_model()
+		"cardBookDialog":
+			_push_cardbook_model()
+		"calendarDialog":
+			if _calendar_events.is_empty():
+				Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
+			_push_calendar_model()
+		"achievementDialog":
+			_ach_sel = {"type": -1, "sub": -1}
+			_push_achievement_model()
+		"optionsDialog":
+			_push_options_model()
 
 
 ## friends.list / ignore.list / guild.{members,name} for the social tabs.
@@ -2856,19 +2926,108 @@ func _on_zaap_go_to_set(args: Array, w: GWidget) -> void:
 			args[1].visible = true
 
 
-## goToSetList(specialList,specialSetDetails) — back to the sets list.
-func _on_zaap_go_to_list(args: Array, _w: GWidget) -> void:
-	if args.size() >= 2:
-		if args[0] is GWidget:
-			args[0].visible = true
-		if args[1] is GWidget:
-			args[1].visible = false
+## goToSetList has two call shapes sharing one method name:
+##   goToSetList(specialList,specialSetDetails) — zaap: show list, hide details
+##   goToSetList(inventoryTab,N[,list,details]) — inventory: select tab N
+func _on_cardbook_tab(args: Array, _w: GWidget) -> void:
+	if args.size() < 2 or not (args[0] is GWidget):
+		return
+	if args[1] is GWidget:
+		args[0].visible = true
+		args[1].visible = false
+		return
+	args[0].selected_index = int(args[1])
+	args[0].queue_redraw()
+	if args.size() >= 4:
+		if args[2] is GWidget:
+			args[2].visible = true
+		if args[3] is GWidget:
+			args[3].visible = false
+
+
+## selectEquipmentTypeFilter(coach,N) — checkbox toggles type N in/out of
+## the equipment filter; coachManagement.inventoryCardTypeFilter holds the
+## per-type checkbox state, we keep the active mask alongside it.
+var _equip_filter := {}   # card type -> bool shown (default all)
+
+
+func _on_equip_type_filter(args: Array, _w: GWidget) -> void:
+	if args.size() < 2:
+		return
+	var t := int(args[1])
+	_equip_filter[t] = not _equip_filter.get(t, true)
+	_sync_equip_filter_model()
+	_push_cardbook_model()
+
+
+func _on_equip_filter_all(_a: Array, _w: GWidget) -> void:
+	# all-on (the default) -> all-off; otherwise back to all-on
+	var all_on := true
+	for t in range(1, 20):
+		if not _equip_filter.get(t, true):
+			all_on = false
+	for t in range(1, 20):
+		_equip_filter[t] = not all_on
+	_sync_equip_filter_model()
+	_push_cardbook_model()
+
+
+const _FILTER_FIELDS := {7: "shoulderpadFilter", 11: "beltFilter",
+	4: "bootsFilter", 3: "hatFilter", 5: "cloakFilter", 10: "amuletFilter",
+	2: "ringFilter", 6: "weaponFilter", 13: "offhandFilter",
+	8: "petFilter", 12: "dofusFilter", 9: "setFilter"}
+
+
+func _sync_equip_filter_model() -> void:
+	var f := {}
+	for t in _FILTER_FIELDS:
+		f[_FILTER_FIELDS[t]] = _equip_filter.get(t, true)
+	_gui.gui.model.set_value("coachManagement", f,
+		"inventoryCardTypeFilter")
+
+
+func _on_card_hover(_a: Array, w: GWidget) -> void:
+	if w != null and w.item_value is Dictionary:
+		_gui.gui.model.set_value("coachManagement",
+			w.item_value, "selectedCard")
+
+
+func _on_card_unhover(_a: Array, _w: GWidget) -> void:
+	_gui.gui.model.set_value("coachManagement", null, "selectedCard")
+
+
+## useSpecialCard — zaap-type (20) cards teleport via the shared zaap
+## path; the 21-23 special actions (rename, firework…) are UI events we
+## don't support yet, so non-zaap cards no-op here.
+func _on_use_special_card(_a: Array, w: GWidget) -> void:
+	var card = w.item_value if w != null else null
+	if not (card is Dictionary):
+		card = _gui.gui.model.values.get(
+			"coachManagement", {}).get("selectedCard")
+	if card is Dictionary \
+			and int(card.get("cardType", card.get("type", 0))) == 20:
+		_on_zaap_change_instance(_a, w)
+
+
+func _step_set(args: Array, delta: int) -> void:
+	if args.is_empty() or not (args[0] is GWidget):
+		return
+	var n: int = args[0].content_items.size()
+	if n == 0:
+		return
+	args[0].selected_index = wrapi(
+		args[0].selected_index + delta, 0, n)
+	args[0].queue_redraw()
 
 
 ## changeInstance(card) — double-click a zaap card teleports (retail
-## sends its own opcode; ours is OP_ZAAP [i32 cardTemplateId]).
+## sends its own opcode; ours is OP_ZAAP [i32 cardTemplateId]). The
+## cardBook's detail-panel button passes the hovered selectedCard.
 func _on_zaap_change_instance(_args: Array, w: GWidget) -> void:
 	var card = w.item_value if w != null else null
+	if not (card is Dictionary):
+		card = _gui.gui.model.values.get(
+			"coachManagement", {}).get("selectedCard")
 	if not (card is Dictionary):
 		return
 	var cid := int(card.get("id", 0))
@@ -2880,6 +3039,410 @@ func _on_zaap_change_instance(_args: Array, w: GWidget) -> void:
 	wr.put_i32(cid)
 	Session.send(OP_ZAAP, wr.raw(), 3)
 	_gui.close("zaapDialog")
+
+
+## --- cardBookDialog (coach inventory) ----------------------------------------
+## Inventory tabs bind coachManagement.*Inventory lists; the summary tab
+## binds tomeManager's five set-category lists.
+
+func _card_item(cid: int) -> Dictionary:
+	var m := Cards.meta(cid)
+	var qty := int(State.inventory.get(cid, 0))
+	return {"id": cid, "name": Cards.name_of(cid),
+		"iconUrl": str(cid), "illustrationUrl": str(cid),
+		"quantity": qty, "globalQuantity": qty,
+		"cardType": int(m.get("type", 0)),
+		"description": "", "coachCardEffects": [],
+		"showEvolutionBonus": false,
+		"value": int(m.get("value", 0)),
+		"requiredLevel": "", "typeIconUrl": "",
+		"cardSetName": _set_name_for(int(m.get("set", 0))),
+		"rarity": Color(1.0, 0.6, 0.1) if bool(m.get("unique", false))
+			else Color(1, 1, 1),
+		"tomeStyle": "" if qty > 0 else "BackZaapCoachCard",
+		"isInTome": qty > 0}
+
+
+## set id -> shared-name prefix (memoized; _all_card_sets builds once)
+var _set_name_cache := {}
+
+
+func _set_name_for(sid: int) -> String:
+	if sid <= 0:
+		return ""
+	if not _set_name_cache.has(sid):
+		var cards: Array = []
+		for cid in Cards.all_ids():
+			if int(Cards.meta(int(cid)).get("set", 0)) == sid:
+				cards.append(int(cid))
+		_set_name_cache[sid] = _set_name(cards)
+	return _set_name_cache[sid]
+
+
+func _push_cardbook_model() -> void:
+	var equip: Array = []
+	var zaap: Array = []
+	var special: Array = []
+	var owned := State.inventory.keys()
+	owned.sort()
+	for cid in owned:
+		var t := int(Cards.meta(int(cid)).get("type", 0))
+		var it := _card_item(int(cid))
+		match t:
+			20:
+				zaap.append(it)
+			21, 22, 23:
+				special.append(it)
+			_:
+				if t >= 1 and t <= 19 \
+						and _equip_filter.get(t, true):
+					equip.append(it)
+	var model := _gui.gui.model
+	_sync_equip_filter_model()
+	# the inventory tabs all bind localCoach.<field>
+	model.set_value("localCoach", equip, "filtredEquipmentCardInventory")
+	model.set_value("localCoach", zaap, "zaapInventory")
+	model.set_value("localCoach", special, "specialCardInventory")
+	model.set_value("localCoach", [], "filtredSetCardInventory")
+	model.set_value("localCoach", _all_card_sets(), "cardSets")
+	model.set_value("localCoach", [], "cardCostFilterList")
+	model.set_value("localCoach", "", "selectedCostFilter")
+	model.set_value("isEvolutionMode", false)
+	model.set_value("tome", {"actionCards": [], "currentBreed": "",
+		"currentBreedDescription": "",
+		"currentBreedHelpDescription": ""})
+	# tome summary: five categories — classify by content until the
+	# retail set-kind metadata is decoded
+	var cheap: Array = []
+	var expensive: Array = []
+	var spec: Array = []
+	var fight: Array = []
+	var evo: Array = []
+	for sd in _all_card_sets():
+		var items: Array = sd["collection"]
+		var has_special := false
+		var all_fight := items.size() > 0
+		var total_v := 0
+		for c in items:
+			var t := int(Cards.meta(int(c.id)).get("type", 0))
+			if t in [20, 21, 22, 23]:
+				has_special = true
+			if t < 24:
+				all_fight = false
+			total_v += int(Cards.meta(int(c.id)).get("value", 0))
+		if has_special:
+			spec.append(sd)
+		elif all_fight:
+			fight.append(sd)
+		elif items.size() > 0 and total_v / items.size() < 10000:
+			cheap.append(sd)
+		else:
+			expensive.append(sd)
+	model.set_value("tomeManager", {"cheapSets": cheap,
+		"expensiveSets": expensive, "specialSets": spec,
+		"fightSets": fight, "evolutionSets": evo,
+		"zaapSets": spec})
+
+
+## Every card set in cards.json (for the tome + set-tab pickers).
+func _all_card_sets() -> Array:
+	var groups := {}
+	for cid in Cards.all_ids():
+		var m := Cards.meta(int(cid))
+		var sid := int(m.get("set", 0))
+		if sid <= 0:
+			continue
+		if not groups.has(sid):
+			groups[sid] = []
+		groups[sid].append(int(cid))
+	var out: Array = []
+	for sid in groups:
+		var cards: Array = groups[sid]
+		cards.sort()
+		var coll: Array = []
+		var owned := 0
+		for cid in cards:
+			coll.append(_card_item(cid))
+			if int(State.inventory.get(cid, 0)) > 0:
+				owned += 1
+		out.append({"name": _set_name(cards), "size": cards.size(),
+			"completion": owned, "description": "", "collection": coll,
+			"illustrationUrl": str(cards[0]),
+			"isInTome": owned == cards.size(), "tomeStyle": ""})
+	out.sort_custom(func(a, b): return str(a.name) < str(b.name))
+	return out
+
+
+## --- calendarDialog ------------------------------------------------------------
+
+var _calendar_events: Array = []   # decoded 17003 rows
+var _calendar_month_off := 0       # showNext/PreviousMonth offset
+
+const MONTH_NAMES := ["january", "february", "march", "april", "may",
+	"june", "july", "august", "september", "october", "november",
+	"december"]
+
+
+func _days_in_month(year: int, month: int) -> int:
+	match month:
+		1, 3, 5, 7, 8, 10, 12:
+			return 31
+		4, 6, 9, 11:
+			return 30
+		_:
+			return 29 if (year % 4 == 0 and (year % 100 != 0
+				or year % 400 == 0)) else 28
+
+
+func _push_calendar_model() -> void:
+	var model := _gui.gui.model
+	var base := Time.get_datetime_dict_from_system()
+	var year := int(base.year)
+	var month := int(base.month) + _calendar_month_off
+	while month > 12:
+		month -= 12
+		year += 1
+	while month < 1:
+		month += 12
+		year -= 1
+	var dim := _days_in_month(year, month)
+	var first := Time.get_datetime_dict_from_unix_time(
+		Time.get_unix_time_from_datetime_dict(
+			{"year": year, "month": month, "day": 1}))
+	# Monday-first grid: leading empty cells before day 1
+	var off := (int(first.weekday) + 6) % 7
+	var cells: Array = []
+	for i in off:
+		cells.append({"day": "", "events": [], "style": "",
+			"hasMoreEventsToShow": false})
+	for day_i in range(1, dim + 1):
+		var evs: Array = []
+		for e in _calendar_events:
+			var ed := Time.get_datetime_dict_from_unix_time(
+				int(e.get("runs_until", 0)) / 1000)
+			if int(ed.year) == year and int(ed.month) == month \
+					and int(ed.day) == day_i:
+				evs.append({"title": str(e.get("name", "")),
+					"typeIcon": "",
+					"description": str(e.get("desc", "")),
+					"registrationButton": true,
+					"style": "", "id": int(e.get("tid", -1))})
+		cells.append({"day": str(day_i), "events": evs,
+			"hasMoreEventsToShow": evs.size() > 3, "style": ""})
+	model.set_value("calendar", {
+		"currentMonth": "%s %d" % [MONTH_NAMES[month - 1].capitalize(), year],
+		"calendar": cells,
+		"fullEventList": {"events": [], "style": ""},
+		"eventFilter": {"showAllEvent": true,
+			"tournamentEventFilter": true,
+			"maintenanceEventFilter": true,
+			"broadcastEventFilter": true}})
+	model.set_value("itemOver", {})
+	model.set_value("itemSelected", {})
+
+
+func _on_calendar_month(_a: Array, _w: GWidget, delta: int) -> void:
+	_calendar_month_off += delta
+	_push_calendar_model()
+
+
+## showFullEventList(eventListContainer,eventDescription,eventList,
+## calendarDay) — fill the shared day-detail list with the clicked day's
+## events; args[3] resolves the row's <data id="calendarDay">.
+func _on_calendar_day_events(args: Array, _w: GWidget) -> void:
+	var day_cell = args[3] if args.size() > 3 else null
+	if not (day_cell is Dictionary):
+		return
+	_gui.gui.model.set_value("calendar",
+		{"events": day_cell.get("events", []), "style": ""},
+		"fullEventList")
+
+
+func _on_calendar_highlight(a: Array, w: GWidget) -> void:
+	var ev = a[0] if not a.is_empty() else \
+		(w.item_value if w != null else null)
+	if ev is Dictionary:
+		_gui.gui.model.set_value("itemOver", ev)
+		_gui.gui.model.set_value("itemSelected", ev)
+
+
+func _on_calendar_register(args: Array, w: GWidget) -> void:
+	var ev = args[0] if not args.is_empty() else \
+		(w.item_value if w != null else null)
+	if not (ev is Dictionary):
+		return
+	var tid := int(ev.get("id", -1))
+	if tid < 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_i64(tid)
+	wr.put_i64(State.my_coach_id)
+	wr.put_i16(-1)
+	wr.put_i32(0)
+	Session.send(OP_TOURN_REGISTER, wr.raw(), 2)
+
+
+## --- achievementDialog --------------------------------------------------------
+## achievementManager: types/subtypes tabs group the NpcDialogs rows by
+## cat/sub; selecting one filters achievementsList.
+
+var _ach_sel := {"type": -1, "sub": -1}
+
+
+func _achievement_items() -> Array:
+	var rows := NpcDialogs.achievement_rows(State.criteria, State.inventory)
+	var items: Array = []
+	for r0 in rows:
+		var aid := int(r0.id)
+		var info := NpcDialogs.achievement_info(aid)
+		if _ach_sel["type"] >= 0 \
+				and int(info.get("cat", 0)) != _ach_sel["type"]:
+			continue
+		if _ach_sel["sub"] >= 0 \
+				and int(info.get("sub", 0)) != _ach_sel["sub"]:
+			continue
+		var done := bool(r0.done)
+		items.append({"id": aid,
+			"name": NpcDialogs.achievement_name(aid),
+			"points": int(info.get("pts", 0)),
+			"grade": int(info.get("cat", 0)),
+			"iconUrl": "", "keyIconUrl": "",
+			"completion": 100 if done else
+				NpcDialogs.achievement_progress(
+					aid, State.criteria, State.inventory),
+			"descriptionDone": NpcDialogs.achievement_desc(aid)
+				if done else "",
+			"isSelected": false,
+			"style": "done" if done else "", "subtypes": []})
+	return items
+
+
+func _push_achievement_model() -> void:
+	var rows := NpcDialogs.achievement_rows(State.criteria, State.inventory)
+	var total := 0
+	var types := {}
+	for r0 in rows:
+		var info := NpcDialogs.achievement_info(int(r0.id))
+		if bool(r0.done):
+			total += int(info.get("pts", 0))
+		var cat := int(info.get("cat", 0))
+		if not types.has(cat):
+			types[cat] = {}
+		types[cat][int(info.get("sub", 0))] = true
+	var tl: Array = []
+	var cats := types.keys()
+	cats.sort()
+	for cat in cats:
+		var subs: Array = []
+		for s in types[cat]:
+			subs.append({"name": "Type %d" % s, "sub": s,
+				"cat": cat,
+				"isSelected": s == _ach_sel["sub"]})
+		subs.sort_custom(func(a, b): return int(a.sub) < int(b.sub))
+		tl.append({"name": "Type %d" % cat, "cat": cat,
+			"isSelected": cat == _ach_sel["type"], "subtypes": subs})
+	_gui.gui.model.set_value("achievementManager", {
+		"achievementsList": _achievement_items(),
+		"achievementTypesList": tl,
+		"achievementsTotalPoints": total})
+	var sel = null
+	for t in tl:
+		if t["isSelected"]:
+			sel = t
+	if sel == null and not tl.is_empty():
+		sel = tl[0]
+	_gui.gui.model.set_value("selectedAchievementType", sel)
+
+
+func _on_ach_select_type(_a: Array, w: GWidget) -> void:
+	if w == null or not (w.item_value is Dictionary):
+		return
+	_ach_sel["type"] = int(w.item_value.get("cat", -1))
+	_ach_sel["sub"] = -1
+	_push_achievement_model()
+
+
+func _on_ach_select_subtype(_a: Array, w: GWidget) -> void:
+	if w == null or not (w.item_value is Dictionary):
+		return
+	_ach_sel["type"] = int(w.item_value.get("cat", _ach_sel["type"]))
+	_ach_sel["sub"] = int(w.item_value.get("sub", -1))
+	_push_achievement_model()
+
+
+## --- optionsDialog ------------------------------------------------------------
+
+func _push_options_model() -> void:
+	var model := _gui.gui.model
+	var gp: Dictionary = model.values.get("gamePreferences", {})
+	var res_list: Array = []
+	for r in ["800x600", "1024x768", "1280x832", "1280x1024", "1440x900",
+			"1600x1200", "1920x1080", "1920x1200"]:
+		res_list.append({"text": r, "value": r})
+	gp["screenResolutions"] = res_list
+	if str(gp.get("screenResolution", "")) == "":
+		var ws := get_window().size
+		gp["screenResolution"] = "%dx%d" % [ws.x, ws.y]
+	model.set_value("gamePreferences", gp)
+
+
+func _apply_audio_prefs() -> void:
+	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
+	var mv := 0.0 if bool(gp.get("musicMute", false)) \
+		else float(gp.get("musicVolume", 0.5))
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music")
+		if AudioServer.get_bus_index("Music") >= 0 else 0,
+		linear_to_db(maxf(mv, 0.0001)))
+
+
+func _apply_vsync_pref() -> void:
+	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
+	DisplayServer.window_set_vsync_mode(
+		DisplayServer.VSYNC_ENABLED
+		if bool(gp.get("vsyncActivated", true))
+		else DisplayServer.VSYNC_DISABLED)
+
+
+func _apply_fullscreen_pref() -> void:
+	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
+	get_window().mode = Window.MODE_FULLSCREEN \
+		if bool(gp.get("fullScreen", false)) else Window.MODE_WINDOWED
+
+
+func _on_apply_resolution(args: Array, _w: GWidget) -> void:
+	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
+	var spec: String = str(gp.get("screenResolution", ""))
+	# the form's combobox may hold a picked-but-unapplied value
+	if args.size() > 0 and args[0] is GWidget:
+		var combo: GWidget = _find_combo(args[0])
+		if combo != null and str(combo.content_value) != "":
+			spec = str(combo.content_value)
+	var p := spec.split("x")
+	if p.size() != 2:
+		return
+	get_window().size = Vector2i(int(p[0]), int(p[1]))
+
+
+func _find_combo(w: GWidget) -> GWidget:
+	if w.kind == "comboboxplus" or w.kind == "comboBox":
+		return w
+	for ch in w.get_children():
+		if ch is GWidget:
+			var r := _find_combo(ch)
+			if r != null:
+				return r
+	return null
+
+
+func _on_destroy_coach(_a: Array, _w: GWidget) -> void:
+	if not State.fight_data.is_empty():
+		return  # retail: cantDestroyCoachDuringFight
+	var d := ConfirmationDialog.new()
+	d.dialog_text = "Destroy your coach? This cannot be undone."
+	d.confirmed.connect(func():
+		Session.send(OP_DESTROY_COACH, PackedByteArray(), 2))
+	add_child(d)
+	d.popup_centered()
 
 
 ## Event args are either the textEditor widget (editor) or a row's

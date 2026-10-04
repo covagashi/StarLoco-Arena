@@ -10,6 +10,16 @@ var handlers := {}          # method -> Callable(args, widget)
 var dialogs := {}           # name -> GWidget root
 var settings_path := "user://gui_settings.cfg"
 
+## event-name → xml file when they differ (retail registers screens under
+## logical names, not file names)
+const DIALOG_ALIASES := {
+	"coachInventoryDialog": "cardBookDialog",
+}
+
+
+func _file_for(name: String) -> String:
+	return DIALOG_ALIASES.get(name, name)
+
 
 func _init() -> void:
 	layer = 10
@@ -22,27 +32,29 @@ func _ready() -> void:
 
 
 func open(name: String, model_values := {}) -> GWidget:
-	var root := gui.open_dialog(name, model_values)
+	var fname := _file_for(name)
+	var root := gui.open_dialog(fname, model_values)
 	if root == null:
 		return null
 	root.size = get_viewport().get_visible_rect().size
 	add_child(root)
-	dialogs[name] = root
+	dialogs[fname] = root
 	GuiLayouts.apply(root)
 	root.resized.connect(func(): GuiLayouts.apply(root))
 	get_viewport().size_changed.connect(func(): _relayout(root))
-	dialog_opened.emit(name)
+	dialog_opened.emit(fname)
 	return root
 
 
 func close(name: String) -> void:
-	if dialogs.has(name):
-		dialogs[name].queue_free()
-		dialogs.erase(name)
+	var fname := _file_for(name)
+	if dialogs.has(fname):
+		dialogs[fname].queue_free()
+		dialogs.erase(fname)
 
 
 func is_open(name: String) -> bool:
-	return dialogs.has(name)
+	return dialogs.has(_file_for(name))
 
 
 ## openClose<XxxDialog> toggles; close<XxxDialog> always closes.
@@ -88,6 +100,7 @@ func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void
 			var h: Callable = handlers.get(method, Callable())
 			if h.is_valid():
 				h.call(args, widget)
+				_save_settings()
 
 
 func _rebuild_open_dialogs() -> void:
@@ -120,6 +133,22 @@ func _load_settings() -> void:
 	}
 	gui.model.values["gamePreferences"] = {
 		"language": c.get_value("gui", "language", "es"),
+		"inverseMouseControl": c.get_value("prefs", "inverseMouseControl", false),
+		"showFighterMoveRange": c.get_value("prefs", "showFighterMoveRange", true),
+		"saveReplays": c.get_value("prefs", "saveReplays", true),
+		"alphaMaskActivated": c.get_value("prefs", "alphaMaskActivated", true),
+		"gridActivated": c.get_value("prefs", "gridActivated", false),
+		"musicMute": c.get_value("prefs", "musicMute", false),
+		"musicVolume": c.get_value("prefs", "musicVolume", 0.5),
+		"ambianceSoundsMute": c.get_value("prefs", "ambianceSoundsMute", false),
+		"ambianceSoundsVolume": c.get_value("prefs", "ambianceSoundsVolume", 0.5),
+		"activateParticles": c.get_value("prefs", "activateParticles", true),
+		"vsyncActivated": c.get_value("prefs", "vsyncActivated", true),
+		"shadersActivated": c.get_value("prefs", "shadersActivated", true),
+		"shadersEnabled": c.get_value("prefs", "shadersEnabled", true),
+		"fullScreen": c.get_value("prefs", "fullScreen", false),
+		"screenResolution": c.get_value("prefs", "screenResolution", ""),
+		"screenResolutions": [],
 	}
 	gui.model.values["buildVersion"] = "2.70 (72909)"
 
@@ -136,4 +165,8 @@ func _save_settings() -> void:
 		gui.model.values.get("account.password", "") if rem else "")
 	c.set_value("proxy", "selected",
 		gui.model.values.get("proxy", {}).get("selected", ""))
+	for k in gp:
+		if k == "language" or k == "screenResolutions":
+			continue
+		c.set_value("prefs", k, gp[k])
 	c.save(settings_path)

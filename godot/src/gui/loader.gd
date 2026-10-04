@@ -275,6 +275,9 @@ func load_file(path: String) -> GWidget:
 						if not stack.is_empty() \
 								and stack[-1].get("tag") == "itemRenderer":
 							w.visible = false
+							# retail nonBlocking passes hits to the row —
+							# our row IS the hit area, so keep it clickable
+							w.mouse_filter = Control.MOUSE_FILTER_STOP
 							# onItem* events live on the renderer element —
 							# map them onto the row's widget events
 							var iev: Dictionary = stack[-1].get("item_ev", {})
@@ -448,6 +451,7 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 	w.password = a.get("password", "false") == "true"
 	w.selected = a.get("selected", "false") == "true"
 	w.horizontal = a.get("horizontal", "false") == "true"
+	w.slider_size = clampf(float(a.get("sliderSize", "0.25")), 0.02, 1.0)
 	w.text = i18n_str(a.get("text", ""))
 	if a.has("prefSize"):
 		var v: PackedFloat64Array = a["prefSize"].split_floats(",")

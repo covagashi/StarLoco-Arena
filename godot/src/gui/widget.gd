@@ -241,6 +241,49 @@ func _draw() -> void:
 	# 5. tabbedContainer strip — tab rects + labels along the aligned edge
 	if kind == "tabbedContainer":
 		_draw_tabs()
+	# 6. slider track + thumb; combobox selected-value text
+	if kind == "slider":
+		_draw_slider()
+	if kind == "comboboxplus" or kind == "comboBox":
+		_combo_sync_once()
+		var cr := content_rect()
+		var f := _font(label_appearance())
+		var fs := _font_size(label_appearance())
+		var v: String = str(content_value) if content_value != null else ""
+		draw_string(f, cr.position + Vector2(6, cr.size.y / 2.0 + fs / 3.0),
+			_strip_markup(v), HORIZONTAL_ALIGNMENT_LEFT, cr.size.x - 22, fs,
+			_text_color(label_appearance()))
+		# dropdown arrow
+		draw_rect(Rect2(cr.end.x - 14, cr.position.y + 4, 10,
+			cr.size.y - 8), Color(0.6, 0.45, 0.25), false, 1.0)
+
+
+## hide the dropdown <list> on first draw — it must not paint open
+var _combo_init := false
+
+
+func _combo_sync_once() -> void:
+	if _combo_init:
+		return
+	_combo_init = true
+	var dd := _combo_list()
+	if dd != null:
+		dd.visible = false
+
+
+func _draw_slider() -> void:
+	var cr := content_rect()
+	var v := clampf(float(content_value) if content_value != null else 0.0,
+		0.0, 1.0)
+	var track := Rect2(cr.position.x,
+		cr.position.y + (cr.size.y - 4.0) / 2.0, cr.size.x, 4.0)
+	draw_rect(track, Color(0.12, 0.08, 0.04), true)
+	draw_rect(track, Color(0.55, 0.4, 0.2), false, 1.0)
+	var tw := maxf(cr.size.x * slider_size, 8.0)
+	var thumb := Rect2(cr.position.x + v * (cr.size.x - tw),
+		cr.position.y, tw, cr.size.y)
+	draw_rect(thumb, Color(0.45, 0.32, 0.14), true)
+	draw_rect(thumb, Color(0.7, 0.55, 0.3), false, 1.0)
 
 
 ## tab strip geometry — west = a left column of tabs, else a top row
@@ -444,6 +487,8 @@ func _gui_input(ev: InputEvent) -> void:
 	if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT:
 		if ev.pressed:
 			_pressed = true
+			if kind == "slider":
+				_slider_set(ev.position)
 			refresh_state()
 		else:
 			var was := _pressed
@@ -458,9 +503,57 @@ func _gui_input(ev: InputEvent) -> void:
 						emit_action("onClick")
 						queue_redraw()
 						return
+				if kind == "comboboxplus" or kind == "comboBox":
+					_combo_toggle()
+					return
+				if get_meta("list_row", false):
+					_combo_pick()
 				activate()
+	elif ev is InputEventMouseMotion and _pressed and kind == "slider":
+		_slider_set(ev.position)
 	elif ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT and ev.double_click:
 		emit_action("onDoubleClick")
+
+
+## horizontal slider — value 0..1 follows the pointer, writes its bind
+## and fires onSliderMove while dragging.
+func _slider_set(p: Vector2) -> void:
+	var v: float = clampf(p.x / maxf(size.x, 1.0), 0.0, 1.0) \
+		if horizontal else clampf(p.y / maxf(size.y, 1.0), 0.0, 1.0)
+	content_value = v
+	_bind_write(v)
+	emit_action("onSliderMove")
+	queue_redraw()
+
+
+func _combo_toggle() -> void:
+	_combo_open = not _combo_open
+	var dd := _combo_list()
+	if dd != null:
+		dd.visible = _combo_open
+		if _combo_open:
+			dd.rebuild_items()
+	emit_action("onClick")
+
+
+## a click on a materialized dropdown row — walk up to the owning combo
+## and commit the row's value to its selectedValue bind.
+func _combo_pick() -> void:
+	var n := get_parent()
+	while n != null:
+		if n is GWidget and (n.kind == "comboboxplus" or n.kind == "comboBox"):
+			var v = item_value
+			if v is Dictionary:
+				v = v.get("value", v.get("text", ""))
+			n.content_value = v
+			n._bind_write(v)
+			n._combo_open = false
+			var dd: GWidget = n._combo_list()
+			if dd != null:
+				dd.visible = false
+			n.queue_redraw()
+			return
+		n = n.get_parent()
 
 
 func _unhandled_input(ev: InputEvent) -> void:
@@ -489,7 +582,32 @@ func set_content(v) -> void:
 	else:
 		content_value = v
 	rebuild_items()
+	# comboboxplus feeds its item array to the dropdown <list> child —
+	# the combo itself only draws the selected value + arrow.
+	if kind == "comboboxplus" or kind == "comboBox":
+		var dd := _combo_list()
+		if dd != null:
+			dd.visible = _combo_open
+			if v is Array:
+				dd.content_items = v
+				dd.rebuild_items()
 	queue_redraw()
+
+
+## first descendant <list> — the comboboxplus dropdown panel
+func _combo_list() -> GWidget:
+	for ch in get_children():
+		if ch is GWidget:
+			if ch.kind == "list":
+				return ch
+			var r: GWidget = ch._combo_list()
+			if r != null:
+				return r
+	return null
+
+
+var _combo_open := false
+var slider_size := 0.25
 
 
 ## ---- model binding ------------------------------------------------------
@@ -741,6 +859,13 @@ func rebuild_items() -> void:
 		row.set_meta("list_row", true)
 		row.visible = true
 		row.item_value = item
+		# <list onItemOver=...> fires per-row — map onto row mouse events
+		const LEV := {"onItemClick": "onClick",
+			"onItemOver": "onMouseEnter", "onItemOut": "onMouseExit",
+			"onItemDoubleClick": "onDoubleClick"}
+		for k in LEV:
+			if events.has(k) and not row.events.has(LEV[k]):
+				row.events[LEV[k]] = events[k]
 		if kind == "stackList":
 			# horizontal pack at each row's own preferred size
 			var p := _row_pref(row)
@@ -812,6 +937,7 @@ func duplicate_widget() -> GWidget:
 	w.tabs_alignment = tabs_alignment
 	w.selected_index = selected_index
 	w.repeat_n = repeat_n
+	w.slider_size = slider_size
 	w.model = model
 	w.event_hub = event_hub
 	w.mouse_filter = mouse_filter
@@ -875,9 +1001,11 @@ func activate() -> void:
 		"checkBox", "checkbox":
 			set_selected(not selected)
 			_bind_write(selected)
+			emit_action("onSelectionChange")
 		"radioButton":
 			set_selected(true)
 			_bind_write(value)
+			emit_action("onSelectionChange")
 			# deselect siblings sharing groupId
 			var p := get_parent()
 			if p != null:
@@ -887,6 +1015,7 @@ func activate() -> void:
 		"toggleButton":
 			set_selected(not selected)
 			_bind_write(selected)
+			emit_action("onSelectionChange")
 	emit_action("onMouseRelease")
 	emit_action("onClick")
 
