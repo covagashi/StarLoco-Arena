@@ -225,6 +225,9 @@ var _match := {}              # pending 23110 MatchFound row
 var _shop_id := -1            # catalogue id echoed back on buy/barter
 var _shop_cards := []         # [{id, qty}] of the open catalogue
 var _barter_wanted := -1      # card id picked for exchange
+var _gui: GuiLayer            # retail XULOR2 dialog layer
+var _pending_login := ""      # login queued while connecting
+var _pending_pass := ""       # password queued while connecting
 
 
 func _ready() -> void:
@@ -235,6 +238,16 @@ func _ready() -> void:
 	for m in Session.client.drain():
 		_on_message(m.op, m.raw)
 	Session.client.scene_active = true
+	# retail XULOR2 layer — logonDialog replaces the wire-test login row
+	_gui = GuiLayer.new()
+	add_child(_gui)
+	_gui.on("logon", _on_retail_logon)
+	_gui.on("validateLoginForm", _on_retail_logon)
+	$UI/VBox.visible = false
+	if State.my_coach_id <= 0:
+		_gui.open("logonDialog")
+	else:
+		$UI/VBox.visible = true
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
 	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
@@ -367,6 +380,31 @@ func _on_connected() -> void:
 	login_btn.disabled = false
 	connect_btn.text = "Disconnect"
 	_log_line("[color=green]connected[/color]")
+	if _pending_login != "":
+		_send_auth(_pending_login, _pending_pass)
+		_pending_login = ""
+
+
+func _on_retail_logon(args: Array, _widget: GWidget) -> void:
+	# dofusarena:logon(loginForm) — green button / Enter in a field
+	var login := str(_gui.gui.model.get_value("account.name"))
+	var password := str(_gui.gui.model.get_value("account.password"))
+	if login.strip_edges() == "":
+		return
+	login_edit.text = login
+	password_edit.text = password
+	if Session.is_online():
+		_send_auth(login, password)
+	else:
+		_pending_login = login
+		_pending_pass = password
+		var proxy := str(_gui.gui.model.get_value("proxy", "selected"))
+		if proxy == "":
+			proxy = "140.238.172.196:3000"
+		var hp := proxy.split(":")
+		Session.connect_to(hp[0], int(hp[1]) if hp.size() > 1 else 5555)
+		_log_line("connecting to %s…" % proxy)
+	_gui._save_settings()
 
 
 func _on_disconnected() -> void:
@@ -377,6 +415,10 @@ func _on_disconnected() -> void:
 
 
 func _on_login_pressed() -> void:
+	_send_auth(login_edit.text, password_edit.text)
+
+
+func _send_auth(login_txt: String, pass_txt: String) -> void:
 	var version := WireWriter.new()
 	version.put_u8(0x02)          # marker, ignored by the server
 	version.put_u16(70)           # the only field it validates
@@ -385,15 +427,15 @@ func _on_login_pressed() -> void:
 	Session.send(OP_CLIENT_VERSION, version.raw(), 0)
 
 	var auth := WireWriter.new()
-	var login := CP1252.encode(login_edit.text)
-	var password := CP1252.encode(password_edit.text)
+	var login := CP1252.encode(login_txt)
+	var password := CP1252.encode(pass_txt)
 	auth.put_u8(login.size())
 	auth.put_bytes(login)
 	auth.put_u8(password.size())
 	auth.put_bytes(password)
 	Session.send(OP_CLIENT_AUTH, auth.raw(), 1)
-	State.my_coach_name = login_edit.text.strip_edges()
-	_log_line("sent version + auth for '%s'" % login_edit.text)
+	State.my_coach_name = login_txt.strip_edges()
+	_log_line("sent version + auth for '%s'" % login_txt)
 
 
 func _on_message(opcode: int, raw: PackedByteArray) -> void:
@@ -437,6 +479,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					State.guild.get("rank_name", "?"),
 					int(State.guild.get("demon_id", 0))])
 			_log_line("[color=green]coach info received — in lobby[/color]")
+			_gui.close("logonDialog")
+			$UI/VBox.visible = true
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
 			State.current_world = int(d.get("world_id", -1))
