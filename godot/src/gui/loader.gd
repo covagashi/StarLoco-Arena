@@ -441,6 +441,11 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 	w.template_id = a.get("templateId", "")
 	if tag == "repeatableImage":
 		w.repeat_n = maxi(1, int(a.get("repeatNumber", "1")))
+	if tag == "mapNavigator":
+		w.set_meta("mapShape", a.get("mapShape", ""))
+		w.set_meta("isoMap", a.get("isoMap", "false") == "true")
+		w.set_meta("minZoom", float(a.get("minZoom", "0")))
+		w.set_meta("maxZoom", float(a.get("maxZoom", "1")))
 	if tag == "animatedElementViewer":
 		w.set_meta("viewer_scale", float(a.get("scale", "1")))
 		w.set_meta("viewer_offy", float(a.get("offsetY", "0")))
@@ -513,7 +518,8 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 					le.caret_column = mini(cp, out.length())
 					tt = out
 			w.text = tt
-			w._bind_write(tt))
+			w._bind_write(tt)
+			w.emit_action("onKeyType"))
 		le.text_submitted.connect(func(_t):
 			w.emit_action("onKeyPress")
 			w.submit_form())

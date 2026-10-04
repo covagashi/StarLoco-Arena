@@ -256,6 +256,38 @@ func _draw() -> void:
 		# dropdown arrow
 		draw_rect(Rect2(cr.end.x - 14, cr.position.y + 4, 10,
 			cr.size.y - 8), Color(0.6, 0.45, 0.25), false, 1.0)
+	if kind == "mapNavigator":
+		_draw_map_navigator()
+
+
+## <mapNavigator> — fitted world-map texture + iso-space pin dots.
+## Model contract: miniMap.mapId = the theme texture id ("map80"),
+## content = [{x, y, color}] in map-image px, attr_zoomScale = zoom.
+func _draw_map_navigator() -> void:
+	var mmv: Variant = model.get_value("miniMap") if model != null else null
+	var mm: Dictionary = mmv if mmv is Dictionary else {}
+	var map_id := str(mm.get("mapId", ""))
+	var zoom := float(get_meta("attr_zoomScale", 0.0))
+	if zoom <= 0.0:
+		zoom = 1.0
+	if map_id != "" and guitheme != null:
+		var t := guitheme.texture(map_id)
+		if t != null:
+			var s: Vector2 = size / t.get_size() * zoom
+			var off := (size - t.get_size() * s) / 2.0
+			draw_texture_rect(t, Rect2(off, t.get_size() * s), false)
+	# pins — content items in map px, scaled the same way
+	var scale := size / Vector2(1024.0, 512.0) * zoom
+	for it in content_items:
+		if not (it is Dictionary):
+			continue
+		var p := Vector2(float(it.get("x", 0)),
+			float(it.get("y", 0))) * scale
+		p += (size - Vector2(1024, 512) * scale) / 2.0
+		var c: Color = it.get("color", Color(1, 0.9, 0.2))
+		draw_circle(p, 4.0 if not it.get("me", false) else 6.0, c)
+		if it.get("me", false):
+			draw_circle(p, 6.0, Color(0, 0, 0, 0.6), false, 1.5)
 
 
 ## hide the dropdown <list> on first draw — it must not paint open

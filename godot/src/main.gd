@@ -25,6 +25,7 @@ const Elements := preload("res://src/gamedata/elements.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
+const Topology := preload("res://src/maps/topology.gd")
 const Scenarios := preload("res://src/gamedata/scenarios.gd")
 
 const OP_CLIENT_VERSION := 7
@@ -395,6 +396,19 @@ func _ready() -> void:
 	_gui.on("selectCardToBuy", _on_cm_select_card)
 	_gui.on("chooseAnotherCard", _on_cm_choose_another)
 	_gui.on("buyCards", _on_cm_buy)
+	_gui.on("affiliateToDemon", _on_demon_affiliate)
+	# dofusarena.firework:* — launcher slots + per-slot delays
+	_gui.on("dropFirework", _on_fw_drop)
+	_gui.on("removeFirework", _on_fw_remove)
+	_gui.on("setDelay", _on_fw_delay)
+	_gui.on("validateFireworkDrop", func(_a, _w): pass)
+	_gui.on("launchFirework", _on_fw_launch)
+	_gui.on("closeFireworkDialog",
+		func(_a, _w): _gui.close("fireworkDialog"))
+	# dofusarena:zoom* — miniMap navigator controls
+	_gui.on("zoomIn", func(a, w): _on_map_zoom(a, w, 0.25))
+	_gui.on("zoomOut", func(a, w): _on_map_zoom(a, w, -0.25))
+	_gui.on("setMapZoom", _on_map_zoom_slider)
 	_gui.on("closeCardMasterDialog",
 		func(_a, _w): _gui.close("cardMasterDialog"))
 	# dofusarena.exchange:* — player trade pane (5105-5116)
@@ -3161,6 +3175,14 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_push_mail_model()
 		"newMailDialog":
 			_push_cardbook_model()
+		"demonAffiliationDialog":
+			_push_cardbook_model()
+			_push_demon_model()
+		"fireworkDialog":
+			_push_cardbook_model()
+			_push_firework_model()
+		"mapDialog", "miniMapDialog":
+			_push_map_model()
 		"exchangeDialog", "cardMasterDialog":
 			_push_cardbook_model()   # embedded inventory include
 			if name == "exchangeDialog":
@@ -5094,6 +5116,8 @@ func _on_shared_remove_card(a: Array, w: GWidget) -> void:
 		_on_cm_remove(a, w)
 	elif _gui.is_open("exchangeDialog"):
 		_on_ex_remove(a, w)
+	elif _gui.is_open("demonAffiliationDialog"):
+		_on_demon_remove(a, w)
 	else:
 		_on_fusion_remove_input(a, w)
 
@@ -5112,6 +5136,8 @@ func _on_shared_drop_card(_a: Array, w: GWidget) -> void:
 		_cm_stage(cid)
 	elif _gui.is_open("exchangeDialog"):
 		_ex_stage(cid, w)
+	elif _gui.is_open("demonAffiliationDialog"):
+		_demon_stage(cid)
 	elif _gui.is_open("fusionLabDialog"):
 		_fusion_stage(cid, w)
 
@@ -5239,6 +5265,82 @@ func _on_cm_buy(_a: Array, _w: GWidget) -> void:
 	Session.send(OP_SHOP_BARTER, wr.raw(), 3)
 	_log_line("barter sent: %d kinds → %s" % [_cm_given.size(),
 		Cards.name_of(_cm_selected)])
+
+
+## --- demonAffiliationDialog (5470 card offering) ------------------------------
+## Same barter shape as the card master: stage cards in localCardExchange,
+## each card's `value` becomes demon reputation server-side. Only the guild
+## LEADER can affiliate and only while the guild serves no demon yet.
+
+var _demon_staged := {}     # cid -> staged count
+
+
+func _open_demon_offer_dialog() -> bool:
+	_demon_staged = {}
+	_push_demon_model()
+	return _gui.open("demonAffiliationDialog") != null
+
+
+func _push_demon_model() -> void:
+	var staged: Array = []
+	var sum := 0
+	for cid in _demon_staged:
+		for i in int(_demon_staged[cid]):
+			staged.append(_card_item(int(cid)))
+		sum += Cards.value_of(int(cid)) * int(_demon_staged[cid])
+	while staged.size() < 4:
+		staged.append(null)
+	_gui.gui.model.set_value("demonAffiliationTrade", {
+		"localCardExchange": staged,
+		"localCardsPrice": sum,
+		"affiliationPrice": 0,
+		"canBuyCards": not _demon_staged.is_empty()})
+	_gui.gui.model.set_value("exchange.cardTrade", _demon_id,
+		"exchangeId")
+
+
+func _demon_stage(cid: int) -> void:
+	var owned := int(State.inventory.get(cid, 0))
+	var cur := int(_demon_staged.get(cid, 0))
+	if cur >= owned:
+		return
+	_demon_staged[cid] = cur + 1
+	_push_demon_model()
+
+
+func _on_demon_remove(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	var cid := int(row.get("id", 0))
+	var cur := int(_demon_staged.get(cid, 0))
+	if cur <= 1:
+		_demon_staged.erase(cid)
+	else:
+		_demon_staged[cid] = cur - 1
+	_push_demon_model()
+
+
+## affiliateToDemon → 5470 [u16 demon][u16 n]{i32 card, u16 qty}. Retail
+## sends every staged instance as its own (card,1) pair.
+func _on_demon_affiliate(_a: Array, _w: GWidget) -> void:
+	if _demon_staged.is_empty() or _demon_id < 0:
+		return
+	var wr := WireWriter.new()
+	var total := 0
+	for cid in _demon_staged:
+		total += int(_demon_staged[cid])
+	wr.put_i16(_demon_id)
+	wr.put_i16(total)
+	for cid in _demon_staged:
+		for i in int(_demon_staged[cid]):
+			wr.put_i32(int(cid))
+			wr.put_i16(1)
+	_awaiting_offer = true
+	Session.send(OP_DEMON_OFFER, wr.raw(), 3)
+	_gui.close("demonAffiliationDialog")
+	$UI/ElementDlg.visible = false
+	_log_line("demon %d offering sent: %d card(s)" % [_demon_id, total])
 
 
 ## --- exchangeDialog (player trade, 5101-5116) ---------------------------------
@@ -5739,9 +5841,217 @@ func _refresh_exchange() -> void:
 		"✓" if them_r else "·"]
 
 
-## Firework launcher — pick any owned card; launch → 22095 [i32 card][i32 x]
-## [i32 y][i64 elementId]; the server echoes 22094 for everyone nearby.
-func _open_firework(e: Dictionary) -> void:
+## --- mapDialog / miniMapDialog ------------------------------------------------
+## map.xml is static except the map background (containerMap<id> theme style)
+## and the coach pin; miniMapDialog is a live mapNavigator of the same data.
+## Coach/element world coords → map px: iso-project the fmd cells, fit the
+## projected bounds into the 1024×512 retail map image, apply that same
+## transform to each pin.
+
+const _MAP_SIZE := Vector2(1024, 512)
+
+
+func _push_map_model() -> void:
+	var model := _gui.gui.model
+	var w := State.current_world
+	model.set_value("currentInstanceId", "Map%d" % w)
+	var mm := {"mapId": "map%d" % w,
+		"mapSize": "%d,%d" % [int(_MAP_SIZE.x), int(_MAP_SIZE.y)],
+		"name": "Island %d" % w,
+		"eliteBonus": "", "evolutionBonus": "",
+		"zoom": 1.0, "xCenter": 222, "yCenter": 9}
+	var topo := Topology.load_world(w, Topology.SCOPE_WORLD)
+	var cells: Dictionary = topo.get("cells", {})
+	var mn := Vector2(INF, INF)
+	var mx := Vector2(-INF, -INF)
+	for pos in cells:
+		if not cells[pos].get("ground", false):
+			continue
+		var p := Vector2((pos.x - pos.y) * 43.0, (pos.x + pos.y) * 21.5)
+		mn = mn.min(p)
+		mx = mx.max(p)
+	if mn.x >= mx.x:
+		model.set_value("miniMap", mm)
+		return
+	var span := mx - mn
+	var s := minf(_MAP_SIZE.x / maxf(span.x + 86.0, 1.0),
+		_MAP_SIZE.y / maxf(span.y + 43.0, 1.0))
+	var to_px := func(wx: float, wy: float) -> Vector2:
+		var p := Vector2((wx - wy) * 43.0, (wx + wy) * 21.5)
+		return (p - mn) * s + (_MAP_SIZE - span * s) / 2.0
+	var cp: Vector2 = to_px.call(_my_pos.x, _my_pos.y)
+	mm["miniMapX"] = cp.x
+	mm["miniMapY"] = cp.y
+	var points: Array = []
+	for id in State.elements:
+		var e: Dictionary = State.elements[id]
+		var ep: Vector2 = to_px.call(float(e.get("x", 0)), float(e.get("y", 0)))
+		points.append({"x": ep.x, "y": ep.y,
+			"color": _map_pin_color(int(e.get("type", 0)))})
+	points.append({"x": cp.x, "y": cp.y,
+		"color": Color(1, 0.85, 0.2), "me": true})
+	mm["points"] = points
+	model.set_value("miniMap", mm)
+
+
+## Element-kind → pin color on the minimap (same palette the world markers
+## use, mapped through the env-type table's own numbering).
+func _map_pin_color(t: int) -> Color:
+	match t:
+		2: return Color(0.7, 0.7, 0.75)      # mailbox
+		4: return Color(0.35, 0.7, 1.0)      # zaap
+		6, 9, 11: return Color(0.8, 0.4, 1.0)  # demons
+		12: return Color(1.0, 0.65, 0.2)     # firework
+		13: return Color(0.95, 0.55, 0.95)   # tournament totem
+		14: return Color(0.4, 0.9, 0.85)     # fusion altar
+		_: return Color(0.6, 0.9, 0.6)
+
+
+## dofusarena:zoomIn / zoomOut / setMapZoom — miniMap.zoom drives the
+## navigator's zoomScale bind.
+func _on_map_zoom(_a: Array, _w: GWidget, delta: float) -> void:
+	var model := _gui.gui.model
+	var mmv: Variant = model.get_value("miniMap")
+	var mm: Dictionary = mmv if mmv is Dictionary else {"zoom": 1.0}
+	var z: float = clampf(float(mm.get("zoom", 1.0)) + delta, 0.5, 4.0)
+	mm["zoom"] = z
+	model.set_value("miniMap", mm)
+	model.set_value("zoomScale", z)
+
+
+func _on_map_zoom_slider(_a: Array, w: GWidget) -> void:
+	var model := _gui.gui.model
+	var mmv: Variant = model.get_value("miniMap")
+	var mm: Dictionary = mmv if mmv is Dictionary else {}
+	mm["zoom"] = float(w.content_value) * 3.5 + 0.5
+	model.set_value("miniMap", mm)
+	model.set_value("zoomScale", mm["zoom"])
+
+
+## --- fireworkDialog (22095 launch) --------------------------------------------
+## 8 launcher slots {card, delay}; the tome panel lists the sets that hold
+## type-25 (fairywork/fountain) cards. launchFirework schedules each staged
+## card on its own delay and sends one 22095 per launch — the server echoes
+## 22094 for everyone near the element.
+
+var _fw_slots := []          # index 0..7 → {"cid": int, "delay": int}
+var _fw_elem := -1
+
+
+func _fw_reset() -> void:
+	_fw_slots = []
+	for i in 8:
+		_fw_slots.append({"cid": 0, "delay": 0})
+
+
+func _open_firework(_e: Dictionary) -> void:
+	if not _open_firework_retail():
+		_open_firework_debug()
+		return
+
+
+func _open_firework_retail() -> bool:
+	_fw_elem = _elem_id
+	_fw_reset()
+	_push_firework_model()
+	return _gui.open("fireworkDialog") != null
+
+
+func _push_firework_model() -> void:
+	if _fw_slots.is_empty():
+		_fw_reset()
+	var model := _gui.gui.model
+	var sets: Array = []
+	for sd in _all_card_sets():
+		for c in sd.get("collection", []):
+			if c is Dictionary \
+					and int(Cards.meta(int(c.get("id", 0))).get("type", 0)) == 25:
+				sets.append(sd)
+				break
+	model.set_value("tomeManager", sets, "fireworkSets")
+	var slots := {}
+	for i in _fw_slots.size():
+		var cid := int(_fw_slots[i].get("cid", 0))
+		slots["firework%d" % (i + 1)] = {
+			"card": _card_item(cid) if cid > 0 else null,
+			"delay": int(_fw_slots[i].get("delay", 0))}
+	model.set_value("fireworkLauncher", slots)
+
+
+## dropFirework(N) — a tome/inventory card lands on launcher slot N.
+func _on_fw_drop(args: Array, _w: GWidget) -> void:
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	var payload: Variant = dnd.get("item")
+	if not (payload is Dictionary):
+		return
+	var cid := int(payload.get("id", 0))
+	if cid <= 0 or int(State.inventory.get(cid, 0)) <= 0:
+		return
+	for a in args:
+		if a is int or a is float:
+			var i := clampi(int(a), 0, _fw_slots.size() - 1)
+			_fw_slots[i]["cid"] = cid
+	_push_firework_model()
+
+
+## removeFirework(N) — the slot's own card is dragged out → clear the slot.
+func _on_fw_remove(args: Array, _w: GWidget) -> void:
+	for a in args:
+		if a is int or a is float:
+			var i := clampi(int(a), 0, _fw_slots.size() - 1)
+			_fw_slots[i]["cid"] = 0
+	_push_firework_model()
+
+
+## setDelay(N, delayN) — the per-slot textEditor, arg2 = the editor widget.
+func _on_fw_delay(args: Array, _w: GWidget) -> void:
+	var slot := -1
+	var editor: GWidget = null
+	for a in args:
+		if a is int or a is float:
+			if slot < 0:
+				slot = int(a)
+		elif a is GWidget:
+			editor = a
+	if slot < 0 or slot >= _fw_slots.size() or editor == null:
+		return
+	_fw_slots[slot]["delay"] = maxi(0, int(editor.text))
+
+
+## launchFirework — schedule each staged card; delay is in deciseconds
+## (maxChars=3 on the field). One 22095 per launch, element pos/id on wire.
+func _on_fw_launch(_a: Array, _w: GWidget) -> void:
+	var e: Dictionary = world.element_info(_fw_elem)
+	var pos: Vector3i = e.get("pos", Vector3i.ZERO)
+	var delay_acc := 0.0
+	var sent := 0
+	for s in _fw_slots:
+		var cid := int(s.get("cid", 0))
+		if cid <= 0:
+			continue
+		delay_acc += int(s.get("delay", 0)) * 0.1
+		_launch_firework_at(cid, pos, delay_acc)
+		sent += 1
+	if sent > 0:
+		_gui.close("fireworkDialog")
+
+
+func _launch_firework_at(cid: int, pos: Vector3i, delay_s: float) -> void:
+	var w := WireWriter.new()
+	w.put_i32(cid)
+	w.put_i32(pos.x)
+	w.put_i32(pos.y)
+	w.put_i64(_fw_elem)
+	var send := func() -> void:
+		Session.send(OP_FIREWORK, w.raw(), 3)
+	if delay_s <= 0.0 or not is_inside_tree():
+		send.call()
+	else:
+		get_tree().create_timer(delay_s).timeout.connect(send,
+			CONNECT_ONE_SHOT)
+
+
+func _open_firework_debug() -> void:
 	_element_text("Fireworks", "Pick a card to launch:")
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 	for cid in State.inventory:
@@ -5914,8 +6224,10 @@ func _on_element_alt() -> void:
 			_log_line("tournament search sent (tid %d)" % tid)
 		return
 	if _elem_kind == 11 and not _elem_offer:
-		# "Offer cards" — the affiliate basket: multi-pick tradable cards,
-		# Act sends 5470 [demon][n]{id, qty=1}. Guild leaders only per server.
+		# "Offer cards" — the retail demonAffiliationDialog barter; debug
+		# multi-pick stays as the fallback when the GUI layer is off.
+		if _open_demon_offer_dialog():
+			return
 		_elem_offer = true
 		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 		list.clear()
