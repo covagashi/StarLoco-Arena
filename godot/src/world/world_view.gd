@@ -175,8 +175,7 @@ func _spawn_coach(id: int, cname: String, x: int, y: int, z: int,
 	if _gfx_active:
 		spr.external_draw = true
 		_gfx.register_dynamic(id,
-			func(): return MapGfx.actor_key_cell(
-				_pos.get(id, Vector3i.ZERO)),
+			func(): return MapGfx.actor_key_cell(_key_cell(id)),
 			func(ci): _draw_actor(ci, id))
 	_names[id] = cname
 	var tag := spr.get_node_or_null("Tag")
@@ -246,7 +245,7 @@ func chat_bubble(id: int, text: String) -> void:
 ## -1 for none. Sprites are foot-pivoted so test a box around the body.
 func actor_at(pos: Vector2) -> int:
 	var best := -1
-	var best_d := 55.0
+	var best_d := 40.0
 	for id in _sprites:
 		if id == State.my_coach_id:
 			continue
@@ -365,8 +364,23 @@ func actor_despawned(id: int) -> void:
 		_looks.erase(id)
 
 
+## Painter z-order cell for a coach: while walking, the cell it is
+## entering (feet cross the cell's north edge early — sorting must lead),
+## otherwise its committed cell.
+func _key_cell(id: int) -> Vector3i:
+	var w = _walk.get(id)
+	if w != null and w.seg < w.steps.size():
+		return w.steps[w.seg]
+	return _pos.get(id, Vector3i.ZERO)
+
+
 func actor_moved(id: int, path: Array) -> void:
 	# 4500 carries the full path (origin first) — animate over the steps.
+	# The server rebroadcasts our own 4501 back to us; while the local walk
+	# animation is already playing that echo would snap the sprite back to
+	# path[0], so only accept fresh moves for ourselves when idle.
+	if id == State.my_coach_id and _walk.has(id):
+		return
 	if _pos.has(id) and path.size() > 1:
 		_walk[id] = {"steps": path, "seg": 1, "t": 0.0}
 		_pos[id] = path[0]   # _process advances the cell per segment
@@ -393,14 +407,31 @@ func _face_step(id: int, a: Vector3i, b: Vector3i) -> void:
 func click_to(cell: Vector2i) -> void:
 	if not _loaded or not _pos.has(State.my_coach_id):
 		return
-	var path := _find_path(_pos[State.my_coach_id], cell)
-	if path.size() < 2:
+	var id := State.my_coach_id
+	# Re-pathing mid-walk: keep the segment already under way (the sprite is
+	# interpolated inside it) and stitch the new path on from its target —
+	# no teleport, no stutter, the coach just finishes the step and turns.
+	var prefix: Array = []
+	var from: Vector3i
+	if _walk.has(id):
+		var w: Dictionary = _walk[id]
+		prefix = [w.steps[w.seg - 1], w.steps[w.seg]]
+		from = prefix[-1]
+	else:
+		from = _pos[id]
+	var tail := _find_path(from, cell)
+	if tail.size() < 2:
 		return
-	_walk[State.my_coach_id] = {"steps": path, "seg": 1, "t": 0.0}
-	_pos[State.my_coach_id] = path[path.size() - 1]
-	_face_step(State.my_coach_id, path[0], path[1])
+	# prefix already ends at `from` == tail[0] — skip it only when splicing
+	var steps := prefix + tail.slice(1) if not prefix.is_empty() else tail
+	if _walk.has(id):
+		_walk[id].steps = steps
+		_walk[id].seg = 1   # in-flight segment moved to index 0->1
+	else:
+		_walk[id] = {"steps": steps, "seg": 1, "t": 0.0}
+	_face_step(id, steps[0], steps[1])
 	var w := WireWriter.new()
-	for s in path:
+	for s in steps:
 		w.put_i32(s.x)
 		w.put_i32(s.y)
 		w.put_i16(s.z)
@@ -422,28 +453,42 @@ func _layers_of(cd: Dictionary) -> Array:
 const MAX_STEP := 5
 
 
-## BFS over (cell, z) states — retail seeds its A* on cell+altitude and a
-## step is legal only onto a floor layer reachable from the current z,
-## picking the layer closest to it (walk UNDER arches, ONTO bridges).
+## A* over (cell, z) states — retail seeds its pathfind on cell+altitude.
+## A step is legal only onto a floor layer reachable from the current z
+## (walk UNDER arches, ONTO bridges), with retail-style altitude costs
+## (bHa) plus a small turn penalty so paths read as clean lines instead
+## of BFS stair-steps. The goal is any layer of the target cell.
+const DZ_COST := [0.0, 0.0, 0.5, 2.5, 3.5, 4.5]
+const TURN_COST := 0.3
+
 func _find_path(from: Vector3i, to: Vector2i) -> Array:
 	var target = _cells.get(to)
 	if target == null or not target.ground:
 		return []
 	const DIRS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-	var start := Vector3i(from.x, from.y, from.z)
-	var frontier := [start]
-	var came := {start: start}
+	var h := func(k: Vector3i) -> float:
+		return float(absi(k.x - to.x) + absi(k.y - to.y))
+	var open := [{"k": from, "g": 0.0, "f": h.call(from), "dir": -1}]
+	var best_g := {from: 0.0}
+	var came := {}
 	var goal := Vector3i(-99999, -99999, 0)
-	var head := 0
-	while head < frontier.size():
-		var c: Vector3i = frontier[head]
-		head += 1
-		var cp := Vector2i(c.x, c.y)
-		if cp == to:
+	var found := false
+	while not open.is_empty():
+		var mi := 0
+		for i in range(1, open.size()):
+			if open[i].f < open[mi].f:
+				mi = i
+		var node: Dictionary = open[mi]
+		open.remove_at(mi)
+		var c: Vector3i = node.k
+		if node.g > best_g.get(c, INF) + 0.001:
+			continue   # stale record — a better route already popped it
+		if c.x == to.x and c.y == to.y:
 			goal = c
+			found = true
 			break
-		for d in DIRS:
-			var np: Vector2i = cp + d
+		for di in DIRS.size():
+			var np: Vector2i = Vector2i(c.x, c.y) + DIRS[di]
 			var nc = _cells.get(np)
 			if nc == null or not nc.ground:
 				continue
@@ -456,19 +501,22 @@ func _find_path(from: Vector3i, to: Vector2i) -> Array:
 					best = int(l)
 			if best == -1:
 				continue
+			var g: float = node.g + 1.0 + DZ_COST[bd] \
+				+ (TURN_COST if node.dir >= 0 and node.dir != di else 0.0)
 			var nk := Vector3i(np.x, np.y, best)
-			if came.has(nk):
-				continue
-			came[nk] = c
-			frontier.append(nk)
-	if not came.has(goal):
+			if g < best_g.get(nk, INF) - 0.001:
+				best_g[nk] = g
+				came[nk] = c
+				open.append({"k": nk, "g": g, "dir": di,
+					"f": g + h.call(nk)})
+	if not found:
 		return []
 	var path := []
 	var cur := goal
-	while cur != start:
+	while cur != from:
 		path.push_front(cur)
 		cur = came[cur]
-	path.push_front(start)
+	path.push_front(from)
 	return path
 
 
