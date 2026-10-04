@@ -20,12 +20,18 @@ const HW := 43.0
 const HH := 21.5
 const EL := 10.0
 const WALK_SPEED := 3.0
-## Orthogonal grid step -> coach anm direction (coach sets carry all 8
-## dirs natively — no mirror needed, unlike the fighter files' 5-dir pack).
+## Orthogonal grid step -> coach anm wire direction (mapped onto the
+## packed {0,1,2,5,6} export + horizontal mirror via DIR_MAP/DIR_FLIP).
 const STEP_DIR := {
 	Vector2i(1, 0): 1, Vector2i(0, 1): 3,
 	Vector2i(-1, 0): 5, Vector2i(0, -1): 7}
-const COACH_SET := "res://assets/anims/coach_805"
+## Coach paper-doll sets carry the packed 5-dir complement {0,1,2,5,6} —
+## 3/4/7 mirror 1/0/5 (same DIR_MAP/DIR_FLIP as fight_view).
+const DIR_MAP := {0: 0, 1: 1, 2: 2, 3: 1, 4: 0, 5: 5, 6: 6, 7: 5}
+const DIR_FLIP := {0: false, 1: false, 2: false, 3: true,
+	4: true, 5: false, 6: false, 7: true}
+const COACH_SET := "res://assets/anims/coach_7000"
+const Palettes := preload("res://src/gamedata/palettes.gd")
 
 var _cells := {}
 var _sorted := []
@@ -34,6 +40,7 @@ var _alt_max := 0
 var _loaded := false
 var _sprites := {}      # coach id -> AnmSprite
 var _names := {}        # coach id -> String
+var _looks := {}        # coach id -> {skin, hair, sex}
 var _pos := {}          # coach id -> Vector3i
 var _walk := {}         # coach id -> {steps, seg, t}
 var _hover: Vector2i = Vector2i(-9999, -9999)
@@ -117,17 +124,50 @@ func hide_world() -> void:
 		_sprites[id].queue_free()
 	_sprites = {}
 	_names = {}
+	_looks = {}
 	_pos = {}
 
 
-func _spawn_coach(id: int, cname: String, x: int, y: int, z: int) -> void:
+func _coach_look(id: int) -> Dictionary:
+	if id == State.my_coach_id:
+		return State.my_coach_look
+	return _looks.get(id, {})
+
+
+func _coach_set(id: int) -> String:
+	return "res://assets/anims/coach_700%d" % int(
+		_coach_look(id).get("sex", 0))
+
+
+func _coach_tints(id: int) -> Dictionary:
+	var l := _coach_look(id)
+	if l.is_empty():
+		return {}
+	return Palettes.coach_tints(int(l.get("skin", 0)), int(l.get("hair", 0)))
+
+
+func _set_flip(spr: AnmSprite, flip: bool) -> void:
+	spr.scale.x = -absf(spr.scale.x) if flip else absf(spr.scale.x)
+	for c in spr.get_children():
+		if c is Label:
+			c.scale.x = -1.0 if flip else 1.0
+
+
+func _spawn_coach(id: int, cname: String, x: int, y: int, z: int,
+		look := {}) -> void:
 	var spr: AnmSprite = _sprites.get(id)
 	if spr == null:
 		spr = AnmSprite.new()
 		spr.foot_pivot = true
 		_sprites[id] = spr
 		add_child(spr)
-	spr.load_action(COACH_SET, "2_AnimStatique")
+	if not look.is_empty():
+		_looks[id] = look
+	spr.tints = _coach_tints(id)
+	var wdir: int = int(_coach_look(id).get("dir", 2))
+	_set_flip(spr, DIR_FLIP.get(wdir, false))
+	spr.load_action(_coach_set(id),
+		"%d_AnimStatique" % DIR_MAP.get(wdir, 2))
 	spr.position = _iso(x + 0.5, y + 0.5, z)
 	spr.z_index = clampi((x + y) * 4 + 1, -4096, 4096)
 	_pos[id] = Vector3i(x, y, z)
@@ -152,8 +192,9 @@ func _spawn_coach(id: int, cname: String, x: int, y: int, z: int) -> void:
 	tag.position = Vector2(-tag.size.x / 2.0, -70)
 
 
-func actor_spawned(id: int, cname: String, x: int, y: int, z: int) -> void:
-	_spawn_coach(id, cname, x, y, z)
+func actor_spawned(id: int, cname: String, x: int, y: int, z: int,
+		look := {}) -> void:
+	_spawn_coach(id, cname, x, y, z, look)
 
 
 ## Vicinity chat bubble over a coach's head, fading after a few seconds —
@@ -301,6 +342,7 @@ func actor_despawned(id: int) -> void:
 		_sprites.erase(id)
 		_pos.erase(id)
 		_names.erase(id)
+		_looks.erase(id)
 
 
 func actor_moved(id: int, path: Array) -> void:
@@ -312,13 +354,20 @@ func actor_moved(id: int, path: Array) -> void:
 
 
 ## Switch the coach sprite into the march cycle facing the step direction.
+## Wire dirs map onto the packed 5-dir export; 3/4/7 mirror via scale.x.
 func _face_step(id: int, a: Vector3i, b: Vector3i) -> void:
 	var spr: AnmSprite = _sprites.get(id)
 	if spr == null:
 		return
 	var dir: int = STEP_DIR.get(Vector2i(b.x - a.x, b.y - a.y), -1)
-	if dir >= 0 and str(spr.current) != "%d_AnimMarche" % dir:
-		spr.load_action(COACH_SET, "%d_AnimMarche" % dir)
+	if dir < 0:
+		return
+	var asset_dir: int = DIR_MAP.get(dir, 1)
+	_set_flip(spr, DIR_FLIP.get(dir, false))
+	# current is "<set>/<action>@t<tints>" — match action before the @
+	if not str(spr.current).get_slice("@", 0).ends_with(
+			"%d_AnimMarche" % asset_dir):
+		spr.load_action(_coach_set(id), "%d_AnimMarche" % asset_dir)
 
 
 func click_to(cell: Vector2i) -> void:
@@ -435,8 +484,9 @@ func _process(delta: float) -> void:
 				var dl := Vector2i(steps[-1].x - steps[-2].x,
 					steps[-1].y - steps[-2].y)
 				last_dir = STEP_DIR.get(dl, -1)
-			spr.load_action(COACH_SET, "%d_AnimStatique" % (last_dir
-				if last_dir >= 0 else 2))
+			var adir: int = DIR_MAP.get(last_dir, 2)
+			_set_flip(spr, DIR_FLIP.get(last_dir, false))
+			spr.load_action(_coach_set(id), "%d_AnimStatique" % adir)
 			_walk.erase(id)
 			continue
 		var a: Vector3i = steps[w.seg - 1]

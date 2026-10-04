@@ -422,6 +422,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_COACH_INFO:
 			var d := Codec.decode(opcode, payload)
 			State.my_coach_id = int(d.get("id", -1))
+			State.my_coach_look = {"skin": int(d.get("skin", 0)),
+				"hair": int(d.get("hair", 0)), "sex": int(d.get("sex", 0))}
 			State.guild = d.get("guild", {})
 			# criteria_blob = raw {u16 id, u16 value} pairs — the field's u16
 			# length prefix already served as buildCriteriaBlob's byteLen.
@@ -1188,22 +1190,21 @@ func _spawn_world_actors(payload: WireReader) -> void:
 		var x := int(body.get_i32())
 		var y := int(body.get_i32())
 		var z := int(body.get_i16())
-		body.get_u8()  # dir
-		body.get_u8()  # skin
-		body.get_u8()  # hair
-		body.get_u8()  # sex
-		body.get_u16() # look
+		var look := {"dir": int(body.get_u8()),
+			"skin": int(body.get_u8()), "hair": int(body.get_u8()),
+			"sex": int(body.get_u8())}
+		body.get_u16() # look flags (equipment variant bits — unused)
 		body.get_i32() # standing
-		body.get_u8()  # sit — opcode 4601 would toggle it; the coach anm
-		               # (equipments/coachs/805) authors no AnimAssis, so
-		               # sitting has no retail-renderable pose — read, kept
+		body.get_u8()  # sit — opcode 4601 would toggle it; AnimAssis lives
+		               # in coach_700x but the sit pose needs the retail
+		               # bench-anchor — read, kept
 		body.get_u16() # guild blob len
 		body.get_u16() # descriptor blob len
 		body.get_u8()  # strength pairs
 		body.get_i32() # admin right
 		if id == State.my_coach_id:
 			continue   # we already render ourselves from the 4600 position
-		world.actor_spawned(id, cname, x, y, z)
+		world.actor_spawned(id, cname, x, y, z, look)
 
 
 func _unhandled_input(event: InputEvent) -> void:

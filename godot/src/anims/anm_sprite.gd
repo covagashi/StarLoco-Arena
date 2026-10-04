@@ -27,6 +27,11 @@ var foot_pivot := false
 ## calls draw_on() instead so the frame interleaves with map elements.
 var external_draw := false
 
+## gw_2 tE channel tints — {1: Vector3 skin, 2: Vector3 hair, 8: Vector3
+## eye}.  Set once at spawn; every load_action/play_once applies them via
+## the frame's mask (R=ch1, G=ch2, B=ch8) unless overridden per-call.
+var tints := {}
+
 ## meta.json "sfx" — {frame index: [sound ids]} baked from Sons* parts.
 ## Played through a small round-robin pool; streams are cached by path.
 var _sfx: Dictionary = {}
@@ -47,8 +52,17 @@ static var _snd_cache := {}   # ogg path -> AudioStreamOggVorbis | false
 static var _anm_scripts = null
 
 
-func load_action(set_dir: String, action: String) -> bool:
+## Optional tints: {channel: Vector3} — gw_2's tE table (1=skin, 2=hair,
+## 8=eye).  When the action's meta carries mask PNGs (f*_m.png — R=ch1,
+## G=ch2, B=ch8 coverage), each frame's rgb is multiplied by the channel
+## tint at load, once per (action, tints) combination — the channel color
+## replaces like retail's divide/mul, it never stacks.  The explicit arg
+## overrides `self.tints` only when non-empty.
+func load_action(set_dir: String, action: String, tints := {}) -> bool:
+	var eff: Dictionary = tints if not tints.is_empty() else self.tints
 	var key := "%s/%s" % [set_dir, action]
+	if not eff.is_empty():
+		key += _tint_key(eff)
 	if _cache.has(key):
 		var c: Dictionary = _cache[key]
 		_fps = c.fps
@@ -82,6 +96,10 @@ func load_action(set_dir: String, action: String) -> bool:
 		var img := Image.load_from_file("%s/%s" % [dir, fr.png])
 		if img == null:
 			continue
+		if not eff.is_empty() and fr.get("mask", "") != "":
+			var mimg := Image.load_from_file("%s/%s" % [dir, fr.mask])
+			if mimg != null:
+				_apply_tints(img, mimg, eff)
 		var w := int(fr.w)
 		var h := int(fr.h)
 		# lowest row containing visible pixels — the authored PNG bottom can
@@ -267,3 +285,40 @@ static func _snd_stream(sid: int) -> AudioStream:
 		st = AudioStreamOggVorbis.load_from_file(path)
 	_snd_cache[path] = st if st != null else false
 	return st
+
+
+## Cache discriminant for a tints dict — stable order, 3 decimals enough
+## to separate every palette entry.
+static func _tint_key(tints: Dictionary) -> String:
+	var chans: Array = tints.keys()
+	chans.sort()
+	var parts := PackedStringArray()
+	for c in chans:
+		var v: Vector3 = tints[c]
+		parts.append("%d:%.3f,%.3f,%.3f" % [int(c), v.x, v.y, v.z])
+	return "@t" + ";".join(parts)
+
+
+## Per-pixel channel tint — mask.r/g/b hold ch1/ch2/ch8 coverage; the
+## channel color multiplies rgb (clamped like the float path — authored
+## textures can exceed 1.0 after ×1.25 boosting, same as retail floats).
+static func _apply_tints(img: Image, mimg: Image, tints: Dictionary) -> void:
+	var t1: Vector3 = tints.get(1, Vector3.ONE)
+	var t2: Vector3 = tints.get(2, Vector3.ONE)
+	var t8: Vector3 = tints.get(8, Vector3.ONE)
+	if t1 == Vector3.ONE and t2 == Vector3.ONE and t8 == Vector3.ONE:
+		return
+	img.convert(Image.FORMAT_RGBA8)
+	mimg.convert(Image.FORMAT_RGBA8)
+	var w := mini(img.get_width(), mimg.get_width())
+	var h := mini(img.get_height(), mimg.get_height())
+	for y in h:
+		for x in w:
+			var m := mimg.get_pixel(x, y)
+			if m.r + m.g + m.b <= 0.0:
+				continue
+			var c := img.get_pixel(x, y)
+			c.r *= lerpf(1.0, t1.x, m.r) * lerpf(1.0, t2.x, m.g) * lerpf(1.0, t8.x, m.b)
+			c.g *= lerpf(1.0, t1.y, m.r) * lerpf(1.0, t2.y, m.g) * lerpf(1.0, t8.y, m.b)
+			c.b *= lerpf(1.0, t1.z, m.r) * lerpf(1.0, t2.z, m.g) * lerpf(1.0, t8.z, m.b)
+			img.set_pixel(x, y, c)

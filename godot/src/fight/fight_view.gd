@@ -20,10 +20,12 @@ const Effects := preload("res://src/gamedata/effects.gd")
 const Areas := preload("res://src/gamedata/areas.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
+const Palettes := preload("res://src/gamedata/palettes.gd")
 
-## Placeholder coach sprite until fight-setup wire data gives the real
-## per-pedestal coach anm id.
-const COACH_SET := "res://assets/anims/coach_805"
+## Player coach paper-doll: Players/700<sex>.anm body + AnimCommunes
+## gestures, channel-tinted per coach (ch1 skin=apH, ch2 hair=agl_0).
+## coach_805 was an NPC bird used as a stand-in — gone.
+const COACH_SET := "res://assets/anims/coach_7000"
 const FIGHTER_SET := "res://assets/anims/fighter_%s"
 
 ## Breed -> Players/<file>.anm (client zh_1.cdN): entry i = breed i/2+1,
@@ -177,6 +179,8 @@ func _spawn_actors() -> void:
 		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z + 1.0)
 		spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
 		_actors.add_child(spr)
+		# pedestal spectators have no wire identity — palette defaults
+		spr.tints = Palettes.coach_tints(0, 0)
 		spr.load_action(COACH_SET, "5_AnimStatique")
 
 
@@ -587,11 +591,13 @@ func _place_actor(a: Dictionary) -> void:
 	_set_flip(spr, DIR_FLIP.get(a.dir, false))
 	if State.fighters.has(a.id):
 		var f: Dictionary = State.fighters[a.id]
+		spr.tints = _fighter_tints(f)
 		_load_fighter_anim(spr, a.id, a.dir)
 		_hp_lost[a.id] = int(f.get("hp_lost", 0))
 		_nameplate(spr, a.id)
 	else:
-		spr.load_action(COACH_SET, "%d_AnimStatique" % dir)
+		spr.tints = _coach_tints(int(a.id))
+		spr.load_action(_coach_set(int(a.id)), "%d_AnimStatique" % dir)
 	spr.position = _iso(a.x + 0.5, a.y + 0.5, a.z)
 	spr.z_index = clampi(int(a.x + a.y) * 4 + 1, -4096, 4096)
 	_actor_cells[a.id] = Vector3i(a.x, a.y, a.z)
@@ -2108,6 +2114,31 @@ func _reface(fid: int, dir: int) -> void:
 	_load_fighter_anim(spr, fid, dir)
 
 
+## Appearance for a fight coach — FightCreation's coach blob carries
+## look=[skin, hair, sex] (fight_packets.go write order); our own coach
+## comes from the 2052 login (State.my_coach_look).
+func _coach_look(coach_id: int) -> Dictionary:
+	if coach_id == State.my_coach_id:
+		return State.my_coach_look
+	var c: Dictionary = State.coach_ids.get(coach_id, {})
+	var l: Array = c.get("look", [])
+	if l.size() >= 3:
+		return {"skin": int(l[0]), "hair": int(l[1]), "sex": int(l[2])}
+	return {}
+
+
+func _coach_set(coach_id: int) -> String:
+	return "res://assets/anims/coach_700%d" % int(
+		_coach_look(coach_id).get("sex", 0))
+
+
+func _coach_tints(coach_id: int) -> Dictionary:
+	var l := _coach_look(coach_id)
+	if l.is_empty():
+		return {}
+	return Palettes.coach_tints(int(l.get("skin", 0)), int(l.get("hair", 0)))
+
+
 ## Sprite set for a fighter record: summon `look` points straight at an anm
 ## (negative → Players fighter file, positive → NPCs set); players resolve
 ## through the breed/sex table; anything unresolvable falls back to coach.
@@ -2120,7 +2151,22 @@ func _anim_set(f: Dictionary) -> String:
 	var breed := int(f.get("breed", 1))
 	if breed >= 1:
 		return FIGHTER_SET % _fighter_file(breed, int(f.get("sex", 0)))
-	return COACH_SET
+	return _coach_set(int(f.get("coach", -1)))
+
+
+## Coach fallback check — _anim_set returns coach_700<sex>, so an exact
+## COACH_SET compare leaks the female paper-doll into fighter probes.
+static func _is_coach_set(set_dir: String) -> bool:
+	return set_dir.begins_with("res://assets/anims/coach_")
+
+
+## Fighter channel tints (ee_2): skin/hair/eye draw from tn_0 — the
+## fighter blob only carries them when its ey byte was negative.
+func _fighter_tints(f: Dictionary) -> Dictionary:
+	if not f.has("skin"):
+		return {}
+	return Palettes.fighter_tints(int(f.get("skin", 0)),
+		int(f.get("hair", 0)), int(f.get("eye", 0)))
 
 
 ## Exported sets repack to {0,1,2,5,6}, but AnimSort sets only carry {1,5}
@@ -2153,13 +2199,15 @@ func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int,
 	var set_dir := _anim_set(f)
 	# a carrier idles on the Porte pose (ee_2: ls("Porte") swaps the gesture
 	# bank until the throw); only the carrier breeds' sets author it
-	if base == "AnimStatique" and set_dir != COACH_SET and _is_carrier(fid) \
+	if base == "AnimStatique" and not _is_coach_set(set_dir) \
+			and _is_carrier(fid) \
 			and _anim_probe(spr, set_dir, wire_dir, "AnimStatiquePorte"):
 		return
-	if set_dir != COACH_SET and _anim_probe(spr, set_dir, wire_dir, base,
-			false, false, true):   # combat stance: Statique02 first (qg_2)
+	if not _is_coach_set(set_dir) and _anim_probe(spr, set_dir, wire_dir,
+			base, false, false, true):   # Statique02 first (qg_2)
 		return
-	spr.load_action(COACH_SET, "%d_%s" % [DIR_MAP.get(wire_dir, 1), base])
+	var coach := _coach_set(int(f.get("coach", -1)))
+	spr.load_action(coach, "%d_%s" % [DIR_MAP.get(wire_dir, 1), base])
 
 
 ## True while `fid` carries another fighter (inverse lookup over the small
@@ -2256,7 +2304,7 @@ func _play_cast(fid: int, sid: int) -> void:
 	# fighter_<file> dirs carry the composited AnimSort_<breed> tracks baked
 	# over that body (full skeleton + fx quads). The raw animsort_<b*10>
 	# dirs only ever rasterize loose fx sprites — a weaker fallback.
-	if own != COACH_SET:
+	if not _is_coach_set(own):
 		sets.append(own)
 	var breed := int(f.get("breed", 0))
 	if breed >= 1:

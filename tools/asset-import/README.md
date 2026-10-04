@@ -21,8 +21,10 @@ extract `DofusArena-v2.70.zip`'s `game/` folder there). Python 3, stdlib only.
 |---|---|
 | `anm_dump.py <animations.jar>` | Parse & scan every `.anm` (573/573 pass) |
 | `anm_render.py <jar> <entry> [action] [frame]` | Render one frame to `/tmp/*.png` |
-| `anm_render.py <jar> <entry> --export <dir>` | Export all frames of every named action |
+| `anm_render.py <jar> <entry> --export <dir>` | Export all frames of every named action (color PNG + `f*_m.png` channel mask per frame when the action carries tint channels) |
 | `anm_render.py <jar> <entry> --composite <actor.anm>` | Bake skeletal gesture tracks (`AnimSort_*`, `AnimCombat`, weapon banks `Anim*.anm`…) over a body set |
+| `anm_flip.py <anims_root> [set…]` | One-time migration: flip exported frames vertically + adjust `meta.oy` (the emitter used gw_2's Y-up vertex math verbatim — GL flips at display, our PNGs do not, so every pre-fix export was upside-down) |
+| `anm_mask_patch.py <jar> <anims_root> [set…]` | Backfill `f*_m.png` channel-coverage masks into already-exported sets (geometry-only replay — no texture sampling) |
 | `spell_names.py` | Merge FR spell names into `spells.json` (`nfr` slug → `AnimSort-<name>` casts) |
 | `npc_dialogs.py` | Merge i18n 29/59/60/10/37/48/49 into `npcdialogs.json` |
 | `card_names.py` | Merge card names into `cards.json` |
@@ -60,6 +62,14 @@ python3 tools/asset-import/anm_render.py \
 - Renderer: affine quads + color mul/add chains reproduce `gw_2` output;
   NPC 2001 (treant) `1_AnimHit` renders a correct 24-frame sequence,
   coach `805.anm` renders a correct dark-bird sprite.
+- Tint channels (`ju_2.CZ&0x3F`): 1=skin, 2=hair, 8=pupil; propagated
+  through composite retargets (costume channels 6/7/9 stay authored) and
+  emitted as `f*_m.png` masks (R/G/B coverage) for runtime recoloring —
+  `AnmSprite.tints` + `gamedata/palettes.gd` (apH/agl_0/tn_0 tables,
+  ×1.25 like retail `aaV`).
+- Paper-doll coaches: `Players/700{0,1}.anm` bodies + `AnimCommunes.anm`
+  gestures → `coach_700{0,1}` sets (the old `coach_805` stand-in was an
+  NPC bird).
 - Known gaps: frame-part effects (particles) are parsed but not rendered;
   sound triggers (`Sons*` → `meta.sfx`) and script hooks (`pb_1` runScript →
   `meta.scr` → `anm_scripts.json`) ARE exported; external `.anmx`

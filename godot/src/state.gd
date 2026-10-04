@@ -28,6 +28,10 @@ static var my_coach_id := -1
 ## record). Used for local chat echo.
 static var my_coach_name := "me"
 
+## Our coach paper-doll appearance from 2052 CoachInfo — {skin, hair, sex}
+## (apH/agl_0 indices on channels 1/2, body file 700<sex>).
+static var my_coach_look := {}
+
 ## Fighter roster from the lobby burst (6006 FighterInformationList):
 ## [{id, name, breed, sex, type, spells, cards, ...}] — et_2 blobs decoded.
 static var roster := []
