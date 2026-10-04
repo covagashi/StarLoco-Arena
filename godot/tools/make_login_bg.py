@@ -296,12 +296,19 @@ def main():
         dr.line([sc(479), sc(fy + 42), sc(801), sc(fy + 42)],
                 fill=(76, 72, 50), width=sc(1))
 
-    # baybayin columns flanking the well
-    fcol = ImageFont.truetype(F_BAY, sc(44))
-    for gx in (400, 880):
-        for i, gch in enumerate("ᜃᜄᜅᜆᜇ"):
-            engraved(dr, (gx - 22, 350 + i * 50), gch, fcol,
-                     (50, 47, 30), (84, 79, 54), off=1)
+    # baybayin proverbs flanking the form well
+    # L: matira ang matibay · lakas ng loob · karangalan · sipag at tiyaga
+    # R: digmaan · paglalakbay · panalo · bayanihan
+    fprov = ImageFont.truetype(F_BAY, sc(30))
+    prov_l = ["ᜋᜆᜒᜇ ᜀᜅ᜔ ᜋᜆᜒᜊᜌ᜔", "ᜎᜃᜐ᜔ ᜈᜅ᜔ ᜎᜓᜂᜊ᜔",
+              "ᜃᜇᜅ᜔ᜄᜎᜈ᜔", "ᜐᜒᜉᜄ᜔ ᜀᜆ᜔ ᜆᜒᜌᜄ"]
+    prov_r = ["ᜇᜒᜄ᜔ᜋᜀᜈ᜔", "ᜉᜄ᜔ᜎᜎᜃ᜔ᜊᜌ᜔",
+              "ᜉᜈᜎᜓ", "ᜊᜌᜈᜒᜑᜈ᜔"]
+    for col, proverbs in ((244, prov_l), (1036, prov_r)):
+        for i, t in enumerate(proverbs):
+            tb = dr.textbbox((0, 0), t, font=fprov)
+            engraved(dr, (col - (tb[2] - tb[0]) / S / 2, 350 + i * 62),
+                     t, fprov, (56, 52, 35), (96, 91, 65), off=1)
 
     # ---- connect button (baked art, transparent Button overlays it) -------
     bx0, by0, bx1, by1 = 530, 608, 750, 660

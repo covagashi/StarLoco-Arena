@@ -44,6 +44,8 @@ func get_value(name: String, field: String = ""):
 ## name="teamManagement.teamManager" means a direct child of teamManager.
 ## Drop the redundant head and walk the rest.
 func _field_parts(name: String, field: String) -> PackedStringArray:
+	if field == "":
+		return PackedStringArray()
 	var parts := field.split(".")
 	if parts.size() <= 1:
 		return parts
