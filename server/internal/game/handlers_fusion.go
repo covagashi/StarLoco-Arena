@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"math/rand"
+	"sync"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
@@ -15,20 +16,41 @@ const (
 	fusionResultError uint8 = 1 // malformed / invalid request
 )
 
-// fusionSuccessPercent is the altar's base success chance. Historically each
-// fusion altar had a power level; we model a single altar. On success the
-// player obtains a new card; on failure they recover one input as leftovers.
-const fusionSuccessPercent = 60
+// The altar's SUCCESS die is its own quality field: `roll < lab.Quality +
+// Σ inputs' FusionQuality` wins. Evidence: the fusion panel (`ajt_1`) exposes
+// exactly three numbers — "labPower" (the altar's power), "kardsPower"
+// (Σ inputs' RequiredLevel − target.FusionPower) and "quality" (the altar's
+// tA byte). Power and quality are the only lab stats the player is shown,
+// and the boost cards (family 27) carry exactly the same pair: FusionPower
+// for the power side, FusionQuality for the quality side. Quality runs
+// 1..50 across the 30 labs — a percentage scale, and the only field left to
+// roll on once power covers the recipe cost.
+const fusionMaxRoll = 100
 
 // maxFusionInputs bounds the ids accepted from a single 5490 request.
 const maxFusionInputs = 32
 
-// fusionRand is the RNG used for fusion rolls/picks; tests may reseed it via
-// SeedFusionRand for deterministic outcomes.
-var fusionRand = rand.New(rand.NewSource(1))
+// fusionRand is the RNG used for fusion rolls; tests may reseed it via
+// SeedFusionRand for deterministic outcomes. Guarded by its own mutex —
+// rand.Rand is not goroutine-safe and every session shares this stream.
+var (
+	fusionRand   = rand.New(rand.NewSource(1))
+	fusionRandMu sync.Mutex
+)
 
 // SeedFusionRand reseeds the fusion RNG (test hook for deterministic outcomes).
-func SeedFusionRand(seed int64) { fusionRand = rand.New(rand.NewSource(seed)) }
+func SeedFusionRand(seed int64) {
+	fusionRandMu.Lock()
+	fusionRand = rand.New(rand.NewSource(seed))
+	fusionRandMu.Unlock()
+}
+
+// fusionRoll draws one 0..fusionMaxRoll-1 outcome from the shared stream.
+func fusionRoll() int {
+	fusionRandMu.Lock()
+	defer fusionRandMu.Unlock()
+	return fusionRand.Intn(fusionMaxRoll)
+}
 
 func registerFusionHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpFusionRequest, handleFusionRequest)
@@ -44,10 +66,11 @@ func registerFusionHandlers(r *Router, d *Deps) {
 // trying to MAKE. Reading every id as an input, as this used to, both consumed
 // the player's chosen card as fuel and threw away their choice.
 //
-// The outcome is therefore the CHOSEN card, not a random one. It is still
-// constrained to the inputs' CardSet: the target being player-supplied means an
-// unconstrained server would let anyone name the best card in the game and fuse
-// two commons into it.
+// The outcome is therefore the CHOSEN card, not a random one. The gate on what
+// may be chosen is the client's own ("mustBeFusionCard"): only cards carrying
+// FusionPower/FusionQuality may be named — plus the value ceiling below, since
+// a player-supplied target otherwise lets anyone fuse two commons into the best
+// card in the game.
 //
 // Replies with FusionResult(5491) carrying [obtained][notObtained][recovered],
 // which the client renders as four distinct outcomes (`cp_0`, case 5491):
@@ -80,51 +103,68 @@ func handleFusionRequest(s *Session, f *protocol.C2SFrame) error {
 	target := ids[len(ids)-1]
 	inputs := ids[:len(ids)-1]
 
-	// The altar bounds how many cards may be fed in ("slotCount" = azi() - 1).
-	if lab := s.fusionLab(); lab != nil && len(inputs) > int(lab.Slots) {
+	// The altar bounds how many cards may be fed in — the record's slot count
+	// is azi(), which the client renders minus one because it counts the
+	// TARGET slot alongside the inputs ("slotCount" = azi() - 1).
+	if lab := s.fusionLab(); lab != nil && len(inputs) > int(lab.Slots)-1 {
 		return s.sendFusionResult(fusionResultError, 0, 0, 0)
 	}
 
-	// The target must be a real card in the same set as the inputs.
-	set, ok := s.commonCardSet(inputs)
-	if !ok {
-		return s.sendFusionResult(fusionResultOK, 0, 0, 0) // mixed sets -> plain fail
-	}
+	// The target must be a FUSION card — the client's own slot gate
+	// (`add.java` case 20172: `xj.tz() != 0 || xj.tA() != 0`, else the toast
+	// "mustBeFusionCard"). Exactly 7 cards qualify — all family-27 "boost"
+	// cards in set 149 — because the 2.70 fusion lab's only output is boost
+	// cards; it is not a generic card upgrader. (The same-set constraint that
+	// used to sit here was an invention and was strictly wrong: boost inputs
+	// are level 0, so same-set recipes could never cover any cost.)
 	tc := s.deps.Cards.Get(target)
-	if tc == nil || tc.CardSet != set {
+	if tc == nil || (tc.FusionPower == 0 && tc.FusionQuality == 0) {
 		return s.sendFusionResult(fusionResultOK, 0, 0, 0)
 	}
 
-	// The target's own COST, straight out of the client's formula. Only 7 cards in
-	// the game carry these (all type 27, set 149): FusionPower 5/15/30/50 and
-	// FusionQuality 5/15/30. For the other 900 both are 0 and these two checks are
-	// no-ops, which is exactly why they are safe to apply — ordinary fusion is
-	// unchanged, and the handful of expensive targets now actually cost something.
+	// The recipe, straight out of the client's formula plus the altar the
+	// coach is standing at. Both power terms push on the same side:
 	//
-	//	kardsPower = Σ inputs' RequiredLevel − target's FusionPower   (must cover the cost)
-	//	the altar's quality must reach the target's FusionQuality
-	if kards := s.kardsPower(inputs, tc); kards < 0 {
+	//	kardsPower = Σ inputs' RequiredLevel − target's FusionPower
+	//	power      = kardsPower + lab.Power + Σ inputs' FusionPower ≥ 0
+	//	quality    = lab.Quality + Σ inputs' FusionQuality — the success die,
+	//	             and the floor the target's FusionQuality demands
+	//
+	// Inputs that are themselves fusion cards feed their fp/fq into the
+	// matching side: that is what the "boost" cards are for.
+	var boostPower, boostQuality int32
+	for _, id := range inputs {
+		if c := s.deps.Cards.Get(id); c != nil {
+			boostPower += int32(c.FusionPower)
+			boostQuality += int32(c.FusionQuality)
+		}
+	}
+	var labPower, labQuality int32
+	if lab := s.fusionLab(); lab != nil {
+		labPower, labQuality = int32(lab.Power), int32(lab.Quality)
+	}
+	if power := s.kardsPower(inputs, tc) + labPower + boostPower; power < 0 {
 		return s.sendFusionResult(fusionResultOK, 0, target, 0) // cannot afford it
 	}
-	if lab := s.fusionLab(); lab != nil && int32(lab.Quality) < int32(tc.FusionQuality) {
-		return s.sendFusionResult(fusionResultOK, 0, target, 0) // altar not fine enough
+	quality := labQuality + boostQuality
+	if quality < int32(tc.FusionQuality) {
+		return s.sendFusionResult(fusionResultOK, 0, target, 0) // not fine enough
 	}
 
 	// SECURITY: the target may not be worth more than what was consumed.
 	//
-	// The two gates above are the client's own formula, and they are no-ops for
-	// ~900 of 907 cards (only 7 carry FusionPower/FusionQuality, and 543 have
-	// RequiredLevel 0) - so for nearly the whole catalogue both evaluated 0 >= 0.
-	// The target is player-supplied, so two cheap commons of a set could be fused
-	// into the most valuable card in that set at a flat 60%, repeatedly. Card
-	// CONSERVATION was always correct (ConsumeAndGrant is transactional and tallies
-	// duplicates); this was a VALUE break, and it fed handleDemonAffiliate, which
-	// scores clan reputation by card value.
+	// The recipe above covers a card's fusion COST (RequiredLevel/FusionPower),
+	// not its kama VALUE — a handful of cheap high-level inputs could still
+	// meet the recipe for a 46 100-value target. Card CONSERVATION was always
+	// correct (ConsumeAndGrant is transactional and tallies duplicates); this
+	// is a VALUE break, and it fed handleDemonAffiliate, which scores clan
+	// reputation by card value.
 	//
-	// A value ceiling is the smallest rule that closes it without inventing a new
-	// mechanic: fusion may transform what you own, not multiply its worth. The
-	// allowance keeps ordinary fusion useful - the point of the feature is to trade
-	// several cards for one better one - while removing the unbounded jump.
+	// A value ceiling is the smallest rule that closes it without inventing a
+	// new mechanic: fusion may transform what you own, not multiply its worth.
+	// The allowance keeps ordinary fusion useful - the point of the feature is
+	// to trade several cards for one better one - while removing the unbounded
+	// jump.
 	// SECURITY: an "undestructible" card may not be fused away. The client blocks
 	// the gesture (add.java:22-24) and 65 shipped cards carry the flag; consuming
 	// one is irreversible player-data loss.
@@ -143,13 +183,10 @@ func handleFusionRequest(s *Session, f *protocol.C2SFrame) error {
 		return s.sendFusionResult(fusionResultOK, 0, target, 0)
 	}
 
-	// Roll the altar. The probability CURVE is the one piece of this mechanic the
-	// data does not settle: the panel shows "labPower" beside "kardsPower" and
-	// "quality", but the server owns the roll and no client code reveals how they
-	// combine. A hard kardsPower >= labPower gate would be wrong — 543 of the 907
-	// cards have RequiredLevel 0, so most fusions would become impossible. Left as
-	// a flat chance until the real curve is known.
-	if fusionRand.Intn(100) < fusionSuccessPercent {
+	// Roll the altar's quality die. The flat 60% this replaces was a stand-in:
+	// with the real fields read off the panel, the lab's quality is the only
+	// die-shaped number left — and it is what the fq boost cards feed.
+	if int32(fusionRoll()) < quality {
 		if err := s.deps.Store.Coaches.ConsumeAndGrant(s.Coach.ID, inputs, target); err != nil {
 			if errors.Is(err, store.ErrCardNotOwned) {
 				return s.sendFusionResult(fusionResultOK, 0, 0, 0)
@@ -228,24 +265,6 @@ func (s *Session) fusionLab() *gamedata.FusionLab {
 		}
 	}
 	return s.deps.FusionLabs.Default()
-}
-
-// commonCardSet returns the shared non-zero CardSet of the inputs, or ok=false
-// if they don't all belong to one set (or any id is unknown / ungrouped).
-func (s *Session) commonCardSet(inputs []int32) (int32, bool) {
-	var set int32
-	for _, id := range inputs {
-		card := s.deps.Cards.Get(id)
-		if card == nil || card.CardSet == 0 {
-			return 0, false
-		}
-		if set == 0 {
-			set = card.CardSet
-		} else if card.CardSet != set {
-			return 0, false
-		}
-	}
-	return set, set != 0
 }
 
 // sendFusionResult replies with FusionResult(5491):

@@ -22,6 +22,12 @@ type Deps struct {
 	// FusionLabs is the type-1100 altar table (power / quality / slot count). The
 	// 5490 request names no altar, so the fusion handler uses FusionLabs.Default().
 	FusionLabs *gamedata.FusionLabs // nil if data files absent
+	// MapBonuses is the type-1600 per-map table (eliteDropBonus + akw_0
+	// actions: AI19 drop chance on arenas 86-109, AI1 XP% on 24-28).
+	MapBonuses *gamedata.MapBonuses // nil if data files absent
+	// DrawTable is the alb_1 card-draw table (built from Cards). nil means the
+	// drop draw is inert — lazily built from Cards when unset (drops.go).
+	DrawTable *gamedata.DrawTable // nil builds lazily from Cards
 	// TournamentDefs is the type-1000/1001 tournament table. Read-only reference
 	// data: the standing tournaments the server actually runs are built in
 	// tournaments.go and validated against this.

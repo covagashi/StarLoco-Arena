@@ -849,6 +849,15 @@ func (d *Deps) checkFightEnd(f *Fight) {
 				// left that panel blank on the very fight that paid out.
 				wonCardsByCoach[mem.Coach.ID] = d.recordChallengeVictory(mem.Coach.ID, mem.Session, f.ChallengeID)
 			}
+			// The retail drop draw (alb_1.cl) — one card per victorious real
+			// coach, bucketed at its evolution level, with the map's and the
+			// equipment's drop-chance modifiers. Runs on every win, challenge
+			// or not: the pet i18n says drops apply "dans tous les modes de jeu".
+			if won && !isSyntheticCoach(mem.Coach.ID) {
+				if dropped := d.rollFightDrops(f, mem.Coach, mem.Session); len(dropped) > 0 {
+					wonCardsByCoach[mem.Coach.ID] = append(wonCardsByCoach[mem.Coach.ID], dropped...)
+				}
+			}
 			entry := endFightCoach{ID: mem.Coach.ID, Strength: mem.Coach.Strength}
 			if won {
 				winners = append(winners, entry)

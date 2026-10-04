@@ -361,6 +361,8 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 		achievements  *gamedata.Achievements
 		cardSets      *gamedata.CardSets
 		fusionLabs    *gamedata.FusionLabs
+		mapBonuses    *gamedata.MapBonuses
+		drawTable     *gamedata.DrawTable
 		tournDefs     *gamedata.Tournaments
 		sphereBoards  *gamedata.SphereBoards
 		equipPools    *gamedata.EquipmentPools
@@ -424,6 +426,12 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 		if fusionLabs, err = gdStore.LoadFusionLabs(); err != nil {
 			log.Warn("fusion-lab load failed", "err", err)
 		}
+		if mapBonuses, err = gdStore.LoadMapBonuses(); err != nil {
+			log.Warn("map-bonus load failed", "err", err)
+		}
+		// The drop table derives only from the card set, so it can build
+		// straight from what LoadCards just produced.
+		drawTable = gamedata.NewDrawTable(cards, nil)
 		if tournDefs, err = gdStore.LoadTournaments(); err != nil {
 			log.Warn("tournament-definition load failed", "err", err)
 		}
@@ -493,6 +501,8 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 		MapsRoot:       loc.MapsRoot,
 		CardSets:       cardSets,
 		FusionLabs:     fusionLabs,
+		MapBonuses:     mapBonuses,
+		DrawTable:      drawTable,
 		TournamentDefs: tournDefs,
 		SphereBoards:   sphereBoards,
 		EquipmentPools: equipPools,

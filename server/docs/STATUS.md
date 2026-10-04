@@ -91,6 +91,7 @@ implementing** (§9).
 
 | # | What |
 |---|---|
+| B-169 | **The two "unrecoverable" mechanics were recoverable.** The drop table is shipped dead in the client (`alb_1` — shared server-side library code): 51 `ka_1.bK(value)` buckets, uniform pick walking down empties, keep iff `DropPercent + bonus >= 100 || rand(100) - bonus <= DropPercent` — one card per call, paid via the existing 8300 blob. Ported as `gamedata.DrawTable`; `n2` = coach evolution level (+equipped AI20/21), `n3` = the arena's own **type-1600 AI19 action** (newly decoded `mw_0`: arenas 86-109 → +1..25%, maps 24-28 → AI1 XP%) + equipped AI18/19. Fusion in the same pass: the invented same-set gate replaced by the client's real `fp||fq` gate ("mustBeFusionCard" — the 7 family-27 boosts), altar cap fixed to `azi()-1`, and the flat 60% replaced by the real die `roll(100) < lab.Quality + Σ inputs.FusionQuality` — quality being the only die-shaped number the `ajt_1` panel exposes |
 | GODOT | **Spell `.xps` particle FX** (B-167): `spell_sounds.py` → `spell_fx.json` (**116 spells**) — its Lua mini-evaluator follows the cast scripts properly: `invoke(expr,1,"fn",args…)` (constants, `time`/`time+k`, `invoke (` spacing), direct `displayEffect()` calls, invoke-arg param binding, per-call-site `startMobileDirection` id picks (`{"1":…,"3":…,"5":…,"7":…,"_":def}`), and commented-out code is no longer scraped. Rows: `[t,id,anchor]` bursts, `[t,id,"tw",angle,coef]` **avw_0 ballistic projectiles** (`addTweenParticleSystem` — v0=√(g·d/sin2θ), ms=2·v0·sinθ/g·1000/coef), `["tw#i+k",id,anchor]` arrivals on landing. `xps_dump.py` decodes **364/364** `0x5001` systems → `xps/<id>.json` + `xps_index.json`, **253/275** TGA→`assets/fx/<id>.png` (`81.xps` legacy `XPS` zlib — skipped). `xps_fx.gd` `pick_id` + `spawn_projectile` (`arrived` signal drives the impact queue); `_cast_fx` on `8110`. Every decoded emitter spawns its own `CPUParticles2D` (systems stack 1–14; 154/182 spell-referenced are multi-emitter) under per-emitter `startSpawnTime`/`endSpawnTime` windows (`_schedule_emit`; projectile trails stay live until `arrived`). The three hot affectors are ported from the decompiled `ua_0` update math: `LinearForceEx` (vel += F·33·dt → iso-projected `gravity`), `FrictionalForce` (vel·= 1−(33−f)·dt → `damping`), `ColorFader` (c += (t−c)·speed·dt inside `TimeCondition` windows → `color_ramp` gradient sim), `Rebound` (`arx_0` orbital curl — dvel=R90(offset)·restitution·dt → `tangential_accel`, 29 spell-referenced systems). The fixed-0.03s keyframed layer is ported too: `Deformer` (~160 systems — scaleX/Y/rot += per tick → piecewise `scale_amount_curve` + `angular_velocity`) and `LinearForce` (origin attractor → `radial_accel`). `DirectionFollower` (`aie_1` — velocity-aligned billboards) is approximated on projectiles by rotating the streak body to the instantaneous screen velocity. Unported: sub-emitters (7 systems, none spell-referenced), lights (1 corpus entry). Verified: `test_xps.py` 364/364, `fight_smoke` + `carry_smoke` + `displace_smoke` green, projectile lands on the aimed cell |
 | GODOT | **Animation-frame script audio** (B-166): `.anm` `pb_1` runScript parts (83 files, 1,657 parts — `AnimSort_*`, `AnimCombat`, `AnimEmotes`, weapon banks, `npc_2000`) now export as `meta.scr {frameIdx: [scriptIds]}` in both `anm_render.py` paths; `spell_sounds.py` resolves `scripts/anm/<id>.lua` boilerplate into `anm_scripts.json` (409 scripts → `{s:[[soundId,gain]…], stop}` — `playLocalSound` singles + `playLocalRandomSound` uniform `(id,gain)` sets; `playBark`/`playGroundSound` skipped, retail tables unshipped). `AnmSprite` fires them per-frame through the sfx pool at authored gain, honours `stopOnAnimationChange`; `anm_scr_patch.py` backfilled 3,144 metas in place. Verified: `fight_smoke` green, tackle/hit/KO/cast/emote/weapon-draw triggers all mapped |
 | GODOT | **Lua-driven cast fidelity**: spell/card/weapon plays now reproduce the script layer — casters snap their facing to the aimed cell (every script leads with `setMobileLookAt`, agv_0.D Direction8 snap), crit/fumble punches the camera to the attacker↔target midpoint at 1.4× and restores (re_0), and `dumpspells`' new `script` id + `tools/asset-import/spell_sounds.py` extract `Sound.playSound` ids with their `invoke()` delays into `spell_sfx.json` (88 spells, 76 ids, 75 oggs) which `AnmSprite.play_sound` pools per caster. Weapon cards (scripts 800x) play the per-family armed gesture `AnimStatique03(-Debut)-<fam>` — 219 fists (also the unarmed 8111), 110 sword, 112 dagger, 117 bow, 108 wand, 114 hammer, 111 shovel — composited from `animations/Players/Anim*.anm` banks onto every `fighter_*` set (`dumpfightercards` exports the card's `script` field so the client maps card→family). Summons carrying a death-particle id (type-300 field 17 → `npcdialogs.json` `particle`; only templates 52/53) dissolve instead of greying. Also B-165: opcode 2050 had no handler |
@@ -177,18 +178,22 @@ Ordered by value. Item 1 is the biggest unlock; item 2 is the cheapest concrete 
 > tackle existed, it just used a hardcoded 67% instead of the real stats (B-063). Verify a
 > claim of absence against the code before acting on it.
 
-1. **The drop table** (AI 18-21) — the last inert corner of the META layer.
-   **Deliberately not implemented.** The client exposes only the four MODIFIERS
-   (`avh_0`/`yt_0`/`aqm_0`/`akl` — drop bonus, drop chance, min/max level of dropped
-   items); each is a pure accessor whose `a(et_2)` does nothing, i.e. the client never
-   consumes them. The pool and the base rate are server-side and are **not recoverable
-   from the data**, so building this means inventing the core mechanic — the same class
-   of unknown as `baseXPPerFight`, but for a whole system rather than one constant.
-   What IS evidenced and could be assembled if the rule ever turns up: the draw pool is
-   `CoachCard.ObtainableInDraw` weighted by `DropPercent`, filtered by
-   `RequiredLevel`; the payout channel is the 8300 won-cards blob (done, B-069); and
-   the i18n says pets "augmentent les drops dans tous les modes de jeu, simulant un
-   niveau de plus pour le joueur", which is AI 20/21 in prose.
+1. ~~**The drop table** (AI 18-21)~~ — **implemented** (B-169). The "not
+   recoverable" verdict was wrong: the client ships the whole algorithm dead in
+   `alb_1` — registered by every card via `eh_2` (`la_0.XJ().a(card)`) with no
+   call site, because the drawing lived server-side and the class is shared
+   Ankama library code. Ported verbatim as `gamedata.DrawTable`: cards bucket
+   into 51 value tiers (`ka_1.bK`), `pk(n)` picks uniformly walking down empty
+   buckets, `cl(n2,n3)` keeps the pick iff `DropPercent + n3 >= 100 ||
+   rand(100) - n3 <= DropPercent` — exactly one card per call. The two call-site
+   arguments fall out of the data: `n2` is the coach's evolution level
+   (`StandingToLevel`, shifted by equipped AI20/AI21 params — the pet i18n's
+   "simule un niveau de plus") and `n3` is the arena's own **AI19 action from
+   its type-1600 record** (24 arenas, 86-109, carry +1..25%) plus equipped
+   AI18/AI19 params. The record's `eliteDropBonus` byte is read as N extra
+   draws on non-practice wins. Payout rides the existing 8300 won-cards blob.
+   Residual interpretation risk is documented in `drops.go`: n2-as-level and
+   eliteDropBonus-as-count are the two arg choices data can't fully arbitrate.
 2. **The CLIENT mangles accented names it receives** (B-068 residual). Proven with two
    controlled experiments: every server-provided name gains exactly one UTF-8→cp1252
    hop, and no input can undo it — pre-compensating makes it worse. Our encoding is
@@ -268,8 +273,15 @@ Ordered by value. Item 1 is the biggest unlock; item 2 is the cheapest concrete 
    previous one was fixed. Read the client's validation path *before* writing code.
 9. **Tournament live-match layer** (brackets, scheduling, prizes) — deferred by the
    maintainer; blocks the other 25 stranded achievements.
-10. **Fusion success probability** — genuinely unknown; no client code reveals the curve.
-    Everything else about fusion is implemented (item 22).
+10. ~~**Fusion success probability**~~ — **resolved** (B-169). The flat 60%
+    was a stand-in; the real die is the altar's own `quality` field plus the
+    inputs' `FusionQuality` — `roll(100) < quality` wins. Evidence: the fusion
+    panel (`ajt_1`) exposes exactly three numbers (labPower, kardsPower,
+    quality), the boost cards carry the matching `FusionPower`/`FusionQuality`
+    pair, and `quality` runs 1..50 across the 30 labs — a percentage scale and
+    the only die-shaped number left. In the same pass the invented same-set
+    constraint was removed (it made fusion impossible — boost inputs are level
+    0) and the altar input cap corrected to `azi()-1`.
 11. **Server-invented constants** - now **configurable** under `rules:` in config.yaml
     (`base_xp_per_fight`, `standing_win`, `standing_loss`,
     `max_social_list_entries`; 0 means "use the default"). They and the
@@ -571,7 +583,7 @@ independent in everything except two package-level globals in `internal/game`:
 - `turnClock` - every test set it to the same 12s, so it is set ONCE in `TestMain` rather than
   per test. A per-test override is a data race the moment anything runs in parallel.
 - `fusionRand` - the fusion tests seed it to *different* values on purpose (one to force a
-  success, one a failure), so **`fusion_test.go` is deliberately NOT parallel** and says so at
+  success, one a failure), so **`handlers_fusion_test.go` is deliberately NOT parallel** and says so at
   the top of the file. Sequential tests complete before the parallel phase resumes, which is
   what keeps that safe.
 

@@ -189,14 +189,17 @@ wanted.value > 0). On success consumes the given cards + grants the wanted card
 (ConsumeAndGrant), pushes 5200 and a success 5403; insufficient value or unowned
 cards → 5403 result 1.
 
-Fusion Lab (5490→5491): the original was recipe-based (~100 recipes, per the
-2011 "Confrontation" release notes — fusion altars "create cards and pets"). The
-recipe table is NOT in the decoded gamedata, so we implement a faithful
-approximation: submitting ≥2 cards of one CardSet rolls the altar
-(fusionSuccessPercent=60) → success grants a random other card of that set
-(obtained); failure returns one input as leftovers (recovered); mixed-set/<2/
-unowned → plain fail. Inputs are consumed atomically (ConsumeAndGrant) and a
-fresh 5200 inventory is pushed. Deferred: 5400 card-for-card barter, 5470
+Fusion Lab (5490→5491): the wire's last id is the player-chosen TARGET, not an
+input (`add.java`/`ahg_0`). The gates are the client's own panel fields: the
+target must carry `FusionPower||FusionQuality` ("mustBeFusionCard" — exactly
+the 7 family-27 boost cards qualify), `Σ inputs.RequiredLevel + lab.Power +
+Σ inputs.FusionPower ≥ target.FusionPower`, the altar input cap is `azi()-1`,
+and the success die is `roll(100) < lab.Quality + Σ inputs.FusionQuality`
+(replacing the flat-60% stand-in). Success → target granted; failure → inputs
+consumed, one returned as leftovers and the target named in `notObtained`. The
+value ceiling (target ≤ 3× inputs' worth) and the bound/undestructible-input
+refusal remain as anti-abuse gates. Inputs are consumed atomically
+(ConsumeAndGrant) and a fresh 5200 inventory is pushed. Deferred: 5400 card-for-card barter, 5470
 Demon II affiliation.
 
 ## Ladder (1v1 leaderboard)
@@ -403,8 +406,8 @@ missing feature manifests to the client as a *hang*. Prioritized:
   routing are not modelled yet.
 - **Shop extras** — Card Master token buy (5450), open/catalog (5300/5401),
   card-for-card barter (5400), the fight-win token faucet, and Fusion Lab
-  (5490/5491) are done; still missing: 5470 Demon II affiliation, a real fusion
-  recipe table (we approximate same-set fusion), and other faucets (daily login).
+  (5490/5491) are done; still missing: 5470 Demon II affiliation and other
+  faucets (daily login).
 - **Inventory invariant**: BuyCards/ConsumeAndGrant assume one unequipped
   (pos=0) row per (coach, template). All server grant paths stack to preserve
   this; only raw test seeding can create duplicate rows.

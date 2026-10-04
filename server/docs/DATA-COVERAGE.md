@@ -39,13 +39,12 @@ objects.
 
 ## 2. Record-type coverage
 
-**19 of 24 populated types are decoded.** Legend: ✅ decoded · ⚠️ partially used · ❌ not read.
+**20 of 24 populated types are decoded.** Legend: ✅ decoded · ⚠️ partially used · ❌ not read.
 
-The 4 still unread are all deliberate, not backlog: **1** is a singleton of standard
+The 3 still unread are all deliberate, not backlog: **1** is a singleton of standard
 fight parameters we override per-ruleset anyway, **700** is superseded by the real
-tournament records (1000/1001), **1400** Pro League is served empty because the mode
-does not exist in this build, and **1600** is per-map music/background refs — client
-rendering, which the server does none of. **1500** is client-only by design (§NPC
+tournament records (1000/1001), and **1400** Pro League is served empty because the mode
+does not exist in this build. **1500** is client-only by design (§NPC
 dialog trees).
 
 | Type | Records | Client record → runtime | What it is | Status | Our decoder |
@@ -73,7 +72,7 @@ dialog trees).
 | 1100 | 30 | `ajd_0` → `abe_1` | Fusion-laboratory definitions | ✅ 4/4 | `LoadFusionLabs` |
 | 1400 | 2 | `cb_2` → `atk_0` | Pro League definitions | ❌ | served empty |
 | 1500 | 148 | `atF` → `ana_2` | NPC dialog replies | **n/a** | client-only (`xs_0`) |
-| 1600 | 29 | `mw_0` → — | Per-map metadata (music/background refs) | ❌ | — |
+| 1600 | 29 | `mw_0` → `afh_1` | Per-map bonuses: `eliteDropBonus` + `akw_0` actions — AI19 drop chance on arenas 86-109 (+1..25%), AI1 XP% on maps 24-28 (+5..25) | ✅ | feeds the post-fight draw (B-169) |
 
 Declared in `atr_0` but **absent from this store** (9): 110, 231, 232, 500, 600, 1101,
 1102, 1200, 1300. Type **200** (`Ht`, the effect row) is never a standalone record — it is
@@ -182,7 +181,7 @@ mis-described here before they were built, and re-reading the client is what fix
 
 **What is actually left is no longer a data-decoding problem.** The remaining holes are
 the two deferred systems (2v2 → item 30, tournament matches → item 32, which between them
-strand 47 achievements), the fusion success curve (no client code reveals it), and the
+strand 47 achievements), and the
 handful of **server-invented constants** that the client receives pre-computed and so
 cannot arbitrate — `baseXPPerFight`, `standingForResult`, the reputation-per-card rate and
 the clan-board score. Those are stated in tests rather than buried, but they are ours, and
@@ -321,9 +320,10 @@ Decoding more records was never going to change that; building the owning system
 
 1. ~~**The coach META layer, slice 2**~~ (wounds / death / drops) — done, and it was
    indeed the biggest unlock per unit of work: it activated the ~78 set effects, most
-   coach-card effects and the type-902 condition layer at once. *Drops are the deliberate
-   exception* — the pool and base rate are not recoverable from the client, so building
-   them means inventing the mechanic (see "out of scope").
+   coach-card effects and the type-902 condition layer at once. *Drops closed the last
+   gap later (B-169)* — the "not recoverable" verdict was wrong: the client ships the
+   full draw algorithm dead in `alb_1` and the arena modifiers live in type-1600
+   records.
 2. ~~**`np_1[]` element layout**~~ — DONE (B-071). Was: one unknown that unblocks 8 coach-card fields *and*
    parts of the challenge and tournament records. Decode it once, gain three records.
 3. ~~**Spell `TargetMasks` + `MaxActive`**~~ — TargetMasks implemented (B-081); MaxActive
@@ -431,3 +431,4 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 | 2026-10-03 | `spell_sounds.py`'s particle pass is now a **scoped Lua mini-evaluator** instead of a regex scan → `spell_fx.json` grows to **116 spells** (all 107 spell-bound particle scripts covered — 7 lost to un-`invoke()`d `displayEffect()` entry points, 9+ to `invoke (` spacing / variable ids). Rows: `[t_ms, xpsId, "caster"|"target"]` bursts; `[t, xpsId|"dir-map", "tw", angleDeg, coef]` for `addTweenParticleSystem` (retail `avw_0` ballistics — `v0=√(g·d/sin2θ)`, `ms=2·v0·sinθ/g·1000/coef`); `["tw#i+k", id, anchor]` fires `k` ms after tween `i` lands (`invoke(time+k, …)`). Variable ids become `{"1":…,"3":…,"5":…,"7":…,"_"}` direction maps resolved per call site by `xps_fx.gd`'s `pick_id`. `fight_view._cast_fx` spawns tweens, queues arrival rows, and picks dir ids by the caster's Direction8. The 6 fighter-card scripts (8001–8007) emit no particles → 8108 needs no FX gating. Verified: `test_xps.py` 364/364, `fight_smoke`/`carry_smoke` green headless; retail ballistic duration reproduced to ~0.3ms (0.654s on a 5-cell shot). |
 | 2026-10-02 | The **anm-frame `runScript` audio channel** (B-166) is now exported: 83 `.anm` files carry 1,657 `pb_1` parts that run `scripts/anm/<id>.lua` on frame enter (`anm_dump.py` parses them as `script`; `anm_render.py` collects `scr_hits` in both flat and composite paths → `meta.scr {frameIdx: [scriptIds]}`; `anm_scr_patch.py` backfilled 3,144 exported metas without re-rendering). `spell_sounds.py`'s new `scripts/anm/*.lua` pass emits `anm_scripts.json` — 409 scripts resolved to `{s: [[soundId, gain]…], stop}`: `playLocalSound`'s `soundFileId`/`gain`/`stopOnAnimationChange` locals, and `playLocalRandomSound`'s literal `(id, gain)` pairs picked uniformly per `agO.c`. 20 scripts skip (18 `playBark` npc-voice, 4 `playGroundSound` footsteps — tables not shipped); `playCount` and `rollOffPreset` unsupported (never used / no positional audio in the pool). `AnmSprite` fires them per-frame at authored gain, stops `stop`-flagged streams on action change. |
 | 2026-10-03 | **`xps_fx.gd` visual-parity pass**: each decoded system now builds **one `CPUParticles2D` per emitter** (retail stacks 1–14 layers — 154/182 spell-referenced systems are multi-emitter, e.g. `10110` staggers 6 emitters across 0.6–3.0s), honouring per-emitter `startSpawnTime`/`endSpawnTime` via `_schedule_emit` timers and `spawnFrequency`→continuous-stream `amount` (projectile trails hold `flying` until `arrived`). The three hottest affectors run the real `ua_0` update math: `LinearForceEx` (208/208 corpus uses `geocentric` → iso-projected `gravity`), `FrictionalForce` (→ `damping`), `ColorFader` (`TimeCondition` windows → simulated exponential-chase `color_ramp`). Emitter `offset*` now projects through the same iso+z (`aNA()=10`) transform. `Rebound` (`arx_0` — dvel = R90(offset)·restitution·dt, an orbital curl on 29 spell-referenced systems) approximated by `tangential_accel`. The **keyframed affector layer** (fixed 0.03s tick inside `TimeCondition` windows — `ua_02.b(0.03f, …)` in `Emitter.b`) is ported: `Deformer` (`ir_1` — scaleX/Y += p0/p1, rot += p2 per tick; ~160 spell-referenced systems incl. the Cra arrows) → piecewise-linear `scale_amount_curve` + `angular_velocity`, and `LinearForce` (`af_0` — attract toward a point along an axis mask; every authored target is the origin) → `radial_accel` (10335's swirl+inward-pull = the retail vortex combo). `DirectionFollower` (`aie_1` — billboards track the particle's screen motion; those emitters are motionless so the visible motion is the parent system's) is approximated on projectiles by rotating the streak body to the instantaneous screen velocity — the arc-following arrow streaks on `1002000`–`1002003`. Still unported: sub-emitters (7 decoded systems — `1013120`/`1013130`/`1013321`/`30000` family — none spell-referenced), lights (a single corpus entry). Verified: `test_xps.py` 364/364, `fight_smoke`/`carry_smoke`/`displace_smoke` green (0 script errors). |
+| 2026-10-04 | **The post-fight draw mechanic is no longer a gap** (B-169). The client ships the whole algorithm dead in `alb_1` — a 51-bucket `ka_1.bK(value)` table fed by every card's `ObtainableInDraw`, where `cl(n2,n3)` picks uniformly (walking down empty buckets) and keeps the card iff `DropPercent + n3 >= 100 || rand(100) - n3 <= DropPercent`. Ported verbatim as `gamedata.DrawTable`. The two call-site args fall out of the data: `n2` = coach evolution level (shifted by equipped AI20/21 — the pet "simule un niveau de plus"), `n3` = the map's **type-1600 record** (`mw_0`, newly decoded: 29 records — arenas 86-109 carry an AI19 +1..25% drop-chance action, maps 24-28 an AI1 +5..25% XP action, plus an `eliteDropBonus` byte read as extra draws) and equipped AI18/19 params. 137 of 907 cards are in the pool; the 16 `DropPercent=0` cards are the bonus-gated rares. Fusion in the same pass: the invented same-set gate removed, the real gate is the client's `tz()!=0||tA()!=0` (the 7 family-27 boost cards), the altar cap is `azi()-1`, and the success die is `roll(100) < lab.Quality + Σ inputs.FusionQuality`. |

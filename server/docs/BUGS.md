@@ -11,6 +11,44 @@ decompiled client, no runtime).
 
 ---
 
+### B-169 · The "unrecoverable" mechanics were recoverable — drop table invented-free, fusion gates invented
+
+- **Symptom:** two systems sat on the "cannot be recovered from the client"
+  list while carrying an *invented* implementation and an *empty* one
+  respectively: fusion required all inputs+target to share a `CardSet` and
+  rolled a flat 60% (an invented rule that made fusion impossible — boost
+  inputs are `RequiredLevel` 0, so no recipe ever covered the cost), and the
+  post-fight card drop did not exist at all.
+- **Root cause:** both verdicts were premature. The drop algorithm is shipped
+  *in the client*: `alb_1` is registered by every card (`eh_2`) but has no call
+  site because the drawing ran server-side — the class is shared Ankama
+  library code. Its `cl(n2,n3)` is the whole mechanic: uniform pick from value
+  bucket `n2` (`ka_1.bK`, 51 buckets, walk down on empty), keep iff
+  `DropPercent + n3 >= 100 || rand(100) - n3 <= DropPercent`. The arena half
+  of `n3` was equally present — in the never-decoded **type-1600** map records
+  (`mw_0`): arenas 86-109 each carry an AI19 action (+1..25%) plus an
+  `eliteDropBonus` byte. And fusion's real gate is the client's own slot rule
+  (`add.java` "mustBeFusionCard": `tz()!=0 || tA()!=0`) — only the 7 family-27
+  boost cards are valid targets, which is what `FusionPower`/`FusionQuality`
+  are *for*.
+- **Fix:** `gamedata.DrawTable` ports `alb_1` verbatim; `gamedata.MapBonuses`
+  decodes type 1600; `rollFightDrops` runs 1 (+eliteDropBonus, non-practice)
+  draws per victorious coach at `n2 = StandingToLevel + equipped AI20/21`,
+  `n3 = map AI19 + equipped AI18/19`, paid through the existing 8300 won-cards
+  blob. Fusion drops the same-set gate for the real `fp||fq` target gate,
+  corrects the altar input cap to `azi()-1` (the stored count includes the
+  target slot), feeds `lab.Power + Σ input.FusionPower` into the recipe check
+  and rolls `rand(100) < lab.Quality + Σ input.FusionQuality` as the success
+  die — quality being the only die-shaped number the panel exposes.
+- **Verified:** `audit` (`alb_1`, `add.java`, `ajt_1`, `mw_0`, `AI.java`) +
+  unit — `carddraw_test.go` pins the bucket curve/walk-down/acceptance,
+  `mapbonuses_real_test.go` pins all 29 real records, `drops_test.go` covers
+  grant/elite-draws/equipped-bonus, `handlers_fusion_test.go` covers
+  target-gate/slot-limit/recipe/success/failure/boost-die.
+- **Honest flags:** `n2`-as-evolution-level and `eliteDropBonus`-as-extra-draws
+  are interpretations (documented in `drops.go`); the quality die's exact
+  scale (100) is inferred from the 1..50 lab range.
+
 ### B-168 · Match-decline notice emitted on an opcode the client cannot decode
 
 - **Symptom:** when one coach declined a match, the still-waiting opponent's
