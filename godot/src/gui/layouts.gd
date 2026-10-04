@@ -13,9 +13,8 @@ const ALIGN := {
 
 
 static func apply(c: GWidget) -> void:
-	if c.layout.is_empty():
-		return
-	match c.layout.get("type", ""):
+	# retail widgets default to static layout when no layout tag is set
+	match c.layout.get("type", "sl"):
 		"sl":
 			_static(c)
 		"bl":
@@ -47,11 +46,140 @@ static func _child_pref(ch: GWidget) -> Vector2:
 	if ch.pref_size.x >= 0 and ch.pref_size.y >= 0:
 		return ch.pref_size
 	var s: Vector2 = ch.get_minimum_size()
+	if s == Vector2.ZERO and _has_widget_children(ch):
+		# container whose sl layout doesn't adapt reports pref=(0,0) —
+		# retail falls back to the content min extent (azC.getContentMinSize),
+		# which is what keeps sld-less wrapper containers from collapsing
+		s = _measure_sl(ch)
 	if ch.pref_size.x >= 0:
 		s.x = ch.pref_size.x
 	if ch.pref_size.y >= 0:
 		s.y = ch.pref_size.y
 	return s
+
+
+static func _has_widget_children(c: GWidget) -> bool:
+	for ch in c.get_children():
+		if ch is GWidget:
+			return true
+	return false
+
+
+## ---- Preferred-size measure --------------------------------------------
+## Ports azC.getContentPreferedSize + the rl/bl/gl equivalents — a
+## container's natural size is the extent of its children at their own
+## preferred sizes. sl only measures when adaptToContentSize is set (retail
+## gates it on dnU); the other layouts always do.
+static func measure(c: GWidget) -> Vector2:
+	match String(c.layout.get("type", "sl")):
+		"sl":
+			if c.layout.is_empty() \
+					or c.layout.get("adaptToContentSize") in [true, "true"]:
+				return _measure_sl(c)
+		"rl":
+			return _measure_rl(c)
+		"bl":
+			return _measure_bl(c)
+		"gl":
+			return _measure_gl(c)
+	return Vector2.ZERO
+
+
+## sl: max over visible children of (x + resolved_w) / (y + resolved_h).
+static func _measure_sl(c: GWidget) -> Vector2:
+	var mx := 0.0
+	var my := 0.0
+	for ch in _visible_children(c):
+		var ld: Dictionary = ch.layout_data
+		var x := float(ld.get("x", 0))
+		var y := float(ld.get("y", 0))
+		mx = maxf(mx, x + _measure_axis(ch, 0))
+		my = maxf(my, y + _measure_axis(ch, 1))
+	return Vector2(mx, my)
+
+
+## One axis of a child's sld size spec resolved to pixels for measuring:
+## "N%" means the child's pref is N% of the parent (retail inverts:
+## parent_w = pref_w * 100 / pct); -1 = min size, -2 = pref size.
+static func _measure_axis(ch: GWidget, axis: int) -> float:
+	var ld: Dictionary = ch.layout_data
+	var pref := _child_pref(ch)
+	if not ld.has("size"):
+		return pref[axis]
+	var s: Variant = ld["size"][axis]
+	if s is String and String(s).ends_with("%"):
+		var pct := float(String(s).rstrip("%"))
+		return pref[axis] * 100.0 / maxf(pct, 1.0)
+	var f := float(s)
+	if f == -1:
+		return ch.get_minimum_size()[axis]
+	return f
+
+
+## rl: sum on the flow axis + gaps, max on the cross axis.
+static func _measure_rl(c: GWidget) -> Vector2:
+	var kids := _visible_children(c)
+	var horiz: bool = c.layout.get("horizontal", "false") == "true"
+	var hgap := float(c.layout.get("hgap", 0))
+	var vgap := float(c.layout.get("vgap", 0))
+	var w := 0.0
+	var h := 0.0
+	for ch in kids:
+		var p := _child_pref(ch)
+		if horiz:
+			w += p.x
+			h = maxf(h, p.y)
+		else:
+			h += p.y
+			w = maxf(w, p.x)
+	if horiz:
+		w += max(0, kids.size() - 1) * hgap + 2 * hgap
+		h += 2 * vgap
+	else:
+		h += max(0, kids.size() - 1) * vgap + 2 * vgap
+		w += 2 * hgap
+	return Vector2(w, h)
+
+
+## bl: north+south stack over the middle row (east + center + west).
+static func _measure_bl(c: GWidget) -> Vector2:
+	var hgap := float(c.layout.get("hgap", 0))
+	var vgap := float(c.layout.get("vgap", 0))
+	var by := {}
+	for ch in _visible_children(c):
+		by[String(ch.layout_data.get("data", "center")).to_lower()] = ch
+	var n := _pref_or_zero(by.get("north"))
+	var s := _pref_or_zero(by.get("south"))
+	var e := _pref_or_zero(by.get("east"))
+	var wt := _pref_or_zero(by.get("west"))
+	var ctr := _pref_or_zero(by.get("center"))
+	var w := maxf(n.x, maxf(s.x, e.x + ctr.x + wt.x + 2 * hgap))
+	var h := n.y + s.y + maxf(e.y, maxf(ctr.y, wt.y)) + 2 * vgap
+	return Vector2(w, h)
+
+
+static func _pref_or_zero(ch: Variant) -> Vector2:
+	return _child_pref(ch) if ch is GWidget else Vector2.ZERO
+
+
+## gl: cols/rows resolved like _grid; extent = cols×maxW / rows×maxH.
+static func _measure_gl(c: GWidget) -> Vector2:
+	var kids := _visible_children(c)
+	var cols := int(c.layout.get("numColumns", 0))
+	var rows := int(c.layout.get("numRows", 0))
+	if cols <= 0 and rows <= 0:
+		cols = ceili(sqrt(float(kids.size())))
+	if cols > 0:
+		rows = maxi(rows, ceili(float(kids.size()) / cols))
+	elif rows > 0:
+		cols = ceili(float(kids.size()) / rows)
+	var cw := 0.0
+	var chh := 0.0
+	for ch in kids:
+		var p := _child_pref(ch)
+		cw = maxf(cw, p.x)
+		chh = maxf(chh, p.y)
+	return Vector2(cw * maxi(cols, 1), chh * maxi(rows, 1))
 
 
 ## ---- StaticLayout (azC) ----------------------------------------------

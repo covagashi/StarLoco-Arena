@@ -22,6 +22,15 @@ const COND_OPS := ["isNull", "isNotNull", "isTrue", "isFalse", "isGreater",
 	"Not", "not", "and", "or"]
 const LAYOUT_TAGS := ["sl", "bl", "rl", "gl", "tl", "SPL", "al"]
 const LDATA_TAGS := ["sld", "bld", "rld", "gld", "tld", "spl", "ald"]
+## capitalized typed widgets used inside <template> files
+## (themeElementName/themeElementParentType pick their theme element)
+const CAP_WIDGET_TAGS := {
+	"Container": "container",
+	"WindowMovePoint": "windowMovePoint",
+	"WRP": "container",          # window resize point — thin edge strip
+	"Label": "label",
+	"Button": "button",
+}
 
 var theme: GuiTheme
 var i18n := {}
@@ -266,7 +275,8 @@ func load_file(path: String) -> GWidget:
 					if not p.is_empty():
 						stack.append({"w": parent, "tag": tag,
 							"structural": true, "item_ev": a})
-				elif tag in WIDGET_TAGS or _looks_like_widget(tag):
+				elif tag in WIDGET_TAGS or CAP_WIDGET_TAGS.has(tag) \
+						or _looks_like_widget(tag):
 					var w: GWidget = _make_widget(tag, a)
 					if parent != null:
 						parent.add_child(w)
@@ -296,7 +306,10 @@ func load_file(path: String) -> GWidget:
 										"template": w})
 								if owner.item_renderer == null:
 									owner.item_renderer = w
-					else:
+					elif root == null:
+						# first unparented widget is the dialog root — a
+						# widget under an unresolved <templateElement>
+						# must never clobber the real template root
 						root = w
 					if not p.is_empty():
 						stack.append({"w": w, "tag": tag})
@@ -385,6 +398,14 @@ func _apply_telem(tgt: GWidget, a: Dictionary) -> void:
 		var e: Dictionary = theme.elem(tgt.kind, tgt.type_style)
 		if not e.is_empty():
 			tgt.states = e.get("states", {}).duplicate(true)
+	var telem: String = a.get("themeElementName", "")
+	if telem != "":
+		var e2: Dictionary = theme.elem(
+			a.get("themeElementParentType", "") + telem.capitalize())
+		if e2.is_empty():
+			e2 = theme.elem(telem)
+		if not e2.is_empty():
+			tgt.states = e2.get("states", {}).duplicate(true)
 	if a.get("visible", "") == "false":
 		tgt.visible = false
 	if a.has("prefSize"):
@@ -423,11 +444,22 @@ func _looks_like_widget(tag: String) -> bool:
 
 
 func _make_widget(tag: String, a: Dictionary) -> GWidget:
+	tag = CAP_WIDGET_TAGS.get(tag, tag)
 	var w := GWidget.new()
 	w.guitheme = theme
 	w.kind = tag
 	w.type_style = a.get("style", "")
 	var e: Dictionary = theme.elem(_type_name(tag), w.type_style)
+	# retail typed elements: themeElementName="content" scoped under
+	# themeElementParentType="window" -> theme key "windowContent"
+	var telem: String = a.get("themeElementName", "")
+	if telem != "":
+		var pe: Dictionary = theme.elem(
+			a.get("themeElementParentType", "") + telem.capitalize())
+		if pe.is_empty():
+			pe = theme.elem(telem)
+		if not pe.is_empty():
+			e = pe
 	w.states = e.get("states", {}).duplicate(true)
 	if e.get("margin") != null:
 		w.margin = e["margin"]

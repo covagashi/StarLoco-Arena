@@ -143,7 +143,10 @@ func _content_pref() -> Vector2:
 		"textEditor", "texteditor":
 			return Vector2(80, 20)
 		_:
-			return Vector2.ZERO
+			# containers report their layout's natural extent (retail
+			# getContentPreferedSize — adaptToContentSize windows size to
+			# their content); leaf kinds have no GWidget children → ZERO
+			return GuiLayouts.measure(self)
 
 
 func _font(la: Dictionary) -> Font:

@@ -115,10 +115,20 @@ func load_theme(path: String) -> void:
 						elif a.has("color"):
 							cur_appear["color_value"] = _parse_color(a["color"])
 					"themeElement", "ThemeElement":
-						# may carry name="..." for engine-internal elements
-						elem_stack.append(a.get("name", ""))
-						if a.has("name"):
-							cur_element = a["name"]
+						# may carry name="..." for engine-internal elements —
+						# scope it under the enclosing type wrapper so that
+						# <window><themeElement name="content"> registers as
+						# "windowContent" (flat "content" collides across the
+						# six different parents that define one)
+						var nm: String = a.get("name", "")
+						if nm != "":
+							var par := ""
+							for i in range(elem_stack.size() - 1, -1, -1):
+								if elem_stack[i] != "":
+									par = elem_stack[i]
+									break
+							cur_element = par + nm.capitalize() if par != "" else nm
+						elem_stack.append(nm)
 					_:
 						if tag.ends_with("Appearance"):
 							# appearance decl — attrs on the tag itself

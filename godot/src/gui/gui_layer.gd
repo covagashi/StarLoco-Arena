@@ -41,8 +41,9 @@ func open(name: String, model_values := {}) -> GWidget:
 	var root := gui.open_dialog(fname, model_values)
 	if root == null:
 		return null
-	root.size = get_viewport().get_visible_rect().size
+	var vp := get_viewport().get_visible_rect().size
 	add_child(root)
+	_place_root(root, vp)
 	dialogs[fname] = root
 	GuiLayouts.apply(root)
 	root.resized.connect(func(): GuiLayouts.apply(root))
@@ -75,8 +76,40 @@ func on(method: String, cb: Callable) -> void:
 
 
 func _relayout(root: GWidget) -> void:
-	root.size = get_viewport().get_visible_rect().size
+	_place_root(root, get_viewport().get_visible_rect().size)
 	GuiLayouts.apply(root)
+
+
+## Places a dialog root inside the viewport like the retail layer does:
+## the root's own <sld> (align/size/xOff/yOff) resolves against the
+## viewport; roots that specify nothing get their preferred size centered,
+## and only truly sizeless roots stretch to the screen.
+func _place_root(root: GWidget, vp: Vector2) -> void:
+	var ld: Dictionary = root.layout_data
+	var want := root.get_minimum_size()
+	var size := want
+	if ld.has("size"):
+		var sv: Array = ld["size"]
+		size = Vector2(_ld_axis(sv[0], want.x, vp.x),
+			_ld_axis(sv[1], want.y, vp.y))
+	elif root.layout.get("adaptToContentSize") in [true, "true"]:
+		size = want
+	elif want == Vector2.ZERO:
+		size = vp
+	var a: Vector2 = GuiLayouts.ALIGN.get(
+		String(ld.get("align", "center")).to_lower(), Vector2(0.5, 0.5))
+	root.position = a * (vp - size) + Vector2(
+		float(ld.get("xOff", 0)), float(ld.get("yOff", 0)))
+	root.size = size
+
+
+static func _ld_axis(spec: Variant, want: float, avail: float) -> float:
+	if spec is String and String(spec).ends_with("%"):
+		return avail * float(String(spec).rstrip("%")) / 100.0
+	var f := float(spec)
+	if f <= 0:  # -1 min / -2 pref / 0 — resolve to the preferred extent
+		return want
+	return f
 
 
 func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void:
