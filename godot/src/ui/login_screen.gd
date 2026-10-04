@@ -28,7 +28,9 @@ func _init() -> void:
 	add_child(_box)
 
 	var bg := TextureRect.new()
-	bg.texture = load("res://assets/ui/login_bg.png")
+	var img := Image.new()
+	if img.load(ProjectSettings.globalize_path("res://assets/ui/login_bg.png")) == OK:
+		bg.texture = ImageTexture.create_from_image(img)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
