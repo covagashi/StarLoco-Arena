@@ -101,7 +101,8 @@ func show_world(world_id: int, my_pos: Vector3) -> void:
 	_sorted.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		return a.x + a.y < b.x + b.y or (a.x + a.y == b.x + b.y and a.x < b.x))
 	_loaded = not _cells.is_empty()
-	_spawn_coach(State.my_coach_id, "you", int(my_pos.x), int(my_pos.y), int(my_pos.z))
+	_spawn_coach(State.my_coach_id, State.my_coach_name,
+		int(my_pos.x), int(my_pos.y), int(my_pos.z))
 	_cam.make_current()
 	_cam.zoom = Vector2(0.85, 0.85)
 	_cam.position = _sprites[State.my_coach_id].position
@@ -392,52 +393,82 @@ func _face_step(id: int, a: Vector3i, b: Vector3i) -> void:
 func click_to(cell: Vector2i) -> void:
 	if not _loaded or not _pos.has(State.my_coach_id):
 		return
-	var path := _find_path(Vector2i(_pos[State.my_coach_id].x, _pos[State.my_coach_id].y), cell)
+	var path := _find_path(_pos[State.my_coach_id], cell)
 	if path.size() < 2:
 		return
-	var steps := []
-	for p in path:
-		var c: Dictionary = _cells.get(p, {})
-		steps.append(Vector3i(p.x, p.y, int(c.get("alt", 0))))
-	_walk[State.my_coach_id] = {"steps": steps, "seg": 1, "t": 0.0}
-	_pos[State.my_coach_id] = steps[steps.size() - 1]
-	_face_step(State.my_coach_id, steps[0], steps[1])
+	_walk[State.my_coach_id] = {"steps": path, "seg": 1, "t": 0.0}
+	_pos[State.my_coach_id] = path[path.size() - 1]
+	_face_step(State.my_coach_id, path[0], path[1])
 	var w := WireWriter.new()
-	for s in steps:
+	for s in path:
 		w.put_i32(s.x)
 		w.put_i32(s.y)
 		w.put_i16(s.z)
 	State.net.send_message(OP_COACH_MOVE, w.raw(), 0)
 
 
-func _find_path(from: Vector2i, to: Vector2i) -> Array:
-	if not _cells.get(to, {}).get("ground", false):
+## Per-cell floor altitudes: layered cells can stack a bridge over ground —
+## `layers` holds every floored z; plain cells expose just `alt`.
+func _layers_of(cd: Dictionary) -> Array:
+	var l = cd.get("layers")
+	if l is Array and l.size() > 0:
+		return l
+	return [cd.alt] if cd.get("ground", false) else []
+
+
+## Max altitude change per step — ramps climb in +2/+3 increments; real
+## floor jumps are ≥8. Retail penalizes big dz but the wall-blocking itself
+## comes from having no reachable layer.
+const MAX_STEP := 5
+
+
+## BFS over (cell, z) states — retail seeds its A* on cell+altitude and a
+## step is legal only onto a floor layer reachable from the current z,
+## picking the layer closest to it (walk UNDER arches, ONTO bridges).
+func _find_path(from: Vector3i, to: Vector2i) -> Array:
+	var target = _cells.get(to)
+	if target == null or not target.ground:
 		return []
-	var frontier := [from]
-	var came := {from: from}
 	const DIRS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	var start := Vector3i(from.x, from.y, from.z)
+	var frontier := [start]
+	var came := {start: start}
+	var goal := Vector3i(-99999, -99999, 0)
 	var head := 0
 	while head < frontier.size():
-		var c: Vector2i = frontier[head]
+		var c: Vector3i = frontier[head]
 		head += 1
-		if c == to:
+		var cp := Vector2i(c.x, c.y)
+		if cp == to:
+			goal = c
 			break
 		for d in DIRS:
-			var n: Vector2i = c + d
-			if came.has(n):
-				continue
-			var nc = _cells.get(n)
+			var np: Vector2i = cp + d
+			var nc = _cells.get(np)
 			if nc == null or not nc.ground:
 				continue
-			came[n] = c
-			frontier.append(n)
-	if not came.has(to):
+			var best := -1
+			var bd := 1 << 30
+			for l in _layers_of(nc):
+				var dd := absi(int(l) - c.z)
+				if dd <= MAX_STEP and dd < bd:
+					bd = dd
+					best = int(l)
+			if best == -1:
+				continue
+			var nk := Vector3i(np.x, np.y, best)
+			if came.has(nk):
+				continue
+			came[nk] = c
+			frontier.append(nk)
+	if not came.has(goal):
 		return []
-	var path := [to]
-	var cur := to
-	while cur != from:
-		cur = came[cur]
+	var path := []
+	var cur := goal
+	while cur != start:
 		path.push_front(cur)
+		cur = came[cur]
+	path.push_front(start)
 	return path
 
 
@@ -446,21 +477,42 @@ func _iso(x: float, y: float, z: int) -> Vector2:
 
 
 func screen_to_cell(pos: Vector2) -> Variant:
-	# inverse projection: screen_x/(HW) = x-y ; screen_y/HH ≈ x+y+z' — z unknown,
-	# so unproject at each candidate altitude in range and keep the cell whose
-	# diamond contains the point.
-	var x := pos.x / (2.0 * HW) + pos.y / (2.0 * HH)
-	var y := pos.y / (2.0 * HH) - pos.x / (2.0 * HW)
-	for dy in range(2):
-		for dx in range(2):
-			var c := Vector2i(int(floor(x)) + dx, int(floor(y)) + dy)
-			var cd = _cells.get(c)
+	# A click can only land inside diamonds whose center column d = x-y sits
+	# within |rel.x| <= HW — three integer diagonals. Altitudes just shift
+	# the diamond up by z*EL, so enumerate the diagonals over the s = x+y
+	# band spanning every possible layer height and diamond-test each cell
+	# at each of its floor layers. Overlapping diamonds resolve to the one
+	# painted last (painter z-key = what the cursor actually points at).
+	var d0 := int(floor(pos.x / HW))
+	var smin := int(floor((pos.y + _alt_min * EL - HH - 4.0) / HH)) - 1
+	var smax := int(ceil((pos.y + _alt_max * EL + HH + 4.0) / HH)) + 1
+	var best: Variant = null
+	var best_key := -1
+	for d in range(d0 - 1, d0 + 2):
+		for s in range(smin, smax + 1):
+			if (d + s) & 1:
+				continue
+			var cx := (d + s) / 2
+			var cy := (s - d) / 2
+			var cd = _cells.get(Vector2i(cx, cy))
 			if cd == null or not cd.ground:
 				continue
-			var rel := pos - _iso(c.x + 0.5, c.y + 0.5, cd.alt)
-			if absf(rel.x) / HW + absf(rel.y) / HH <= 1.0:
-				return c
-	return null
+			for l in _layers_of(cd):
+				var rel := pos - _iso(cx + 0.5, cy + 0.5, int(l))
+				if absf(rel.x) / HW + absf(rel.y) / HH <= 1.0:
+					var key := ((cy + 131071) << 32) | ((cx + 131071) << 14)
+					if key > best_key:
+						best_key = key
+						best = Vector2i(cx, cy)
+					break
+	return best
+
+
+func zoom_by(f: float) -> void:
+	if _cam == null:
+		return
+	var z: float = clampf(_cam.zoom.x * f, 0.45, 1.6)
+	_cam.zoom = Vector2(z, z)
 
 
 func set_hover(pos: Vector2) -> void:

@@ -49,6 +49,9 @@ func open(name: String, model_values := {}) -> GWidget:
 	root.resized.connect(func(): GuiLayouts.apply(root))
 	get_viewport().size_changed.connect(func(): _relayout(root))
 	dialog_opened.emit(fname)
+	if OS.has_environment("GUI_DEBUG"):
+		print("[gui] open %s rect=%s scale=%s filter=%d" % [
+			fname, root.get_global_rect(), root.scale, root.mouse_filter])
 	return root
 
 

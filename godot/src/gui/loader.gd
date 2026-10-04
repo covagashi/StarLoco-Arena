@@ -506,6 +506,26 @@ func _make_widget(tag: String, a: Dictionary) -> GWidget:
 		w.cell_size = _size_spec(a["cellSize"])
 	if a.get("nonBlocking", "false") == "true":
 		w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	elif tag == "container":
+		# retail hit-tests painted pixels — a container whose default state
+		# draws nothing (no bg/border/pixmap/plain_bg) is invisible chrome:
+		# it must not swallow clicks (menuBarDialog's root is 500px of
+		# mostly transparent space). Containers with declared events keep
+		# STOP — they may be clickable regions.
+		var draws := false
+		var d: Dictionary = w.states.get("default", {})
+		for k in ["plain_bg", "bg", "bg_inline", "border",
+				"border_inline", "pixmap"]:
+			if d.has(k):
+				draws = true
+				break
+		var has_events := false
+		for k in a:
+			if String(k).begins_with("on"):
+				has_events = true
+				break
+		if not draws and not has_events:
+			w.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if a.get("visible", "true") == "false":
 		w.visible = false
 	if a.get("enabled", "true") == "false":

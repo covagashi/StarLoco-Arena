@@ -1625,6 +1625,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not world.visible:
 		return
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			world.zoom_by(1.12)
+			return
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			world.zoom_by(1.0 / 1.12)
+			return
 	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		var mpos := world.get_global_mouse_position()
