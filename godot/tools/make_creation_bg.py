@@ -219,12 +219,10 @@ def main():
                  (40, 28, 8) if gold else (16, 14, 8),
                  (238, 208, 120) if gold else (140, 134, 100), off=1)
 
-    # quit socket top-right
-    dr.ellipse([sc(1205), sc(28), sc(1249), sc(72)], fill=(20, 19, 11))
-    dr.ellipse([sc(1205), sc(28), sc(1249), sc(72)],
+    # top-right rivet (no quit button — retail X removed)
+    dr.ellipse([sc(1215), sc(38), sc(1239), sc(62)], fill=(38, 35, 22))
+    dr.ellipse([sc(1215), sc(38), sc(1239), sc(62)],
                outline=(90, 85, 62), width=sc(2))
-    fq = ImageFont.truetype(F_COPPER, sc(22))
-    engraved(dr, (1217, 38), "X", fq, (198, 190, 152), (10, 9, 5), off=1)
 
     # baybayin columns flanking the form well
     fcol = ImageFont.truetype(F_BAY, sc(40))

@@ -237,6 +237,7 @@ var _shop_cards := []         # [{id, qty}] of the open catalogue
 var _barter_wanted := -1      # card id picked for exchange
 var _gui: GuiLayer            # retail XULOR2 dialog layer
 var _login_screen             # baked-art login (PippopLogin via preload)
+var _create_screen            # baked-art coach creation (PippopCoachCreation)
 var _pending_login := ""      # login queued while connecting
 var _pending_pass := ""       # password queued while connecting
 
@@ -788,6 +789,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if _login_screen != null:
 				_login_screen.queue_free()
 				_login_screen = null
+			if _create_screen != null:
+				_create_screen.queue_free()
+				_create_screen = null
 			_mount_lobby_menubar(d)
 		OP_ENTER_INSTANCE:
 			var d := Codec.decode(opcode, payload)
@@ -2655,6 +2659,9 @@ func _on_equip_wear() -> void:
 ## 2048 COACH_CREATE_REQ → retail coachCreationDialog (sex/skin/hair/name +
 ## live paper-doll preview). localCoach is the model the XML binds to.
 func _open_coach_creation() -> void:
+	if _login_screen != null:
+		_login_screen.queue_free()
+		_login_screen = null
 	_gui.gui.model.set_value("localCoach", {
 		"sex": 0, "skin": 1, "hair": 1,
 		"name": login_edit.text.strip_edges().left(20),
@@ -2662,9 +2669,18 @@ func _open_coach_creation() -> void:
 		"actorAnimation": "AnimStatique",
 		"actorDirection": 3,
 		"actorMaterial": Palettes.coach_tints(1, 1)})
-	_gui.open("coachCreationDialog")
 	if not _gui.gui.model.changed.is_connected(_on_localcoach_changed):
 		_gui.gui.model.changed.connect(_on_localcoach_changed)
+	_create_screen = preload("res://src/ui/creation_screen.gd").new()
+	$UI.add_child(_create_screen)
+	_create_screen.bind_model(_gui.gui.model)
+	_create_screen.dir_pressed.connect(
+		func(d): _on_coach_dir([], null, d))
+	_create_screen.random_pressed.connect(
+		func(): _on_coach_random([], null))
+	_create_screen.submit.connect(func(): _on_coach_create([], null))
+	_create_screen.closed.connect(func():
+		Session.client.disconnect_from())
 
 
 ## localCoach.sex/hair/skin drive the preview's paper-doll set + channel tints
@@ -2684,18 +2700,17 @@ func _on_coach_dir(_args: Array, _w, d: int) -> void:
 	var lc = _gui.gui.model.get_value("localCoach")
 	if not (lc is Dictionary):
 		return
-	lc["actorDirection"] = (int(lc.get("actorDirection", 3)) + d) & 7
-	_gui.gui.model.set_value("localCoach", lc)
+	_gui.gui.model.set_value("localCoach",
+		(int(lc.get("actorDirection", 3)) + d) & 7, "actorDirection")
 
 
 func _on_coach_random(_args: Array, _w) -> void:
-	var lc = _gui.gui.model.get_value("localCoach")
-	if not (lc is Dictionary):
+	var m = _gui.gui.model
+	if not (m.get_value("localCoach") is Dictionary):
 		return
-	lc["sex"] = randi() % 2
-	lc["skin"] = randi() % Palettes.SKIN.size()
-	lc["hair"] = randi() % Palettes.HAIR.size()
-	_gui.gui.model.set_value("localCoach", lc)
+	m.set_value("localCoach", randi() % 2, "sex")
+	m.set_value("localCoach", randi() % Palettes.SKIN.size(), "skin")
+	m.set_value("localCoach", randi() % Palettes.HAIR.size(), "hair")
 
 
 func _on_coach_create(_args: Array, _w) -> void:
@@ -2713,6 +2728,9 @@ func _on_coach_create(_args: Array, _w) -> void:
 	w.put_u8(int(lc.get("hair", 0)) & 0xFF)
 	w.put_u8(int(lc.get("sex", 0)) & 0xFF)
 	Session.send(OP_COACH_CREATE, w.raw(), 2)
+	if _create_screen != null:
+		_create_screen.queue_free()
+		_create_screen = null
 	_gui.close("coachCreationDialog")
 	_log_line("coach creation sent — '%s'" % name)
 

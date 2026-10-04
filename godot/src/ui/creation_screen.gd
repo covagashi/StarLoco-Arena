@@ -24,8 +24,8 @@ const R_NEXT := Rect2(1055, 330, 48, 38)
 const R_RANDOM := Rect2(430, 620, 200, 52)
 const R_VALIDATE := Rect2(650, 620, 200, 52)
 const R_QUIT := Rect2(1205, 28, 44, 44)
-const DOLL_POS := Vector2(875, 545)
-const DOLL_SCALE := 1.6
+const DOLL_POS := Vector2(875, 548)
+const DOLL_SCALE := 3.65
 
 var _box: Control
 var _model                   # GuiLib model — localCoach lives here
@@ -90,7 +90,6 @@ func _init() -> void:
 	_ghost(R_NEXT, func(): dir_pressed.emit(1))
 	_ghost(R_RANDOM, func(): random_pressed.emit())
 	_ghost(R_VALIDATE, func(): submit.emit())
-	_ghost(R_QUIT, func(): closed.emit())
 
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
 	_spr.foot_pivot = true
@@ -118,11 +117,7 @@ func bind_model(m) -> void:
 func _set_lc(field: String, v) -> void:
 	if _model == null:
 		return
-	var lc = _model.get_value("localCoach")
-	if not (lc is Dictionary):
-		return
-	lc[field] = v
-	_model.set_value("localCoach", lc)
+	_model.set_value("localCoach", v, field)
 
 
 func _on_lc_changed(n: String, _f: String, _v) -> void:

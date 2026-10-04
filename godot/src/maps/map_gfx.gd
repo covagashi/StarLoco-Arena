@@ -18,11 +18,13 @@ var _dynamic := {}
 var debug := OS.has_environment("MAPGFX_DEBUG")
 
 
-## Retail sort key for a live actor on cell (x,y): the same ctu field the
-## file elements carry — intra 8191 sits mid-band, so floor decals under the
-## feet stay under and same-cell props sort by their own cts.
+## Retail sort key for a live actor on cell (x,y): the feet sit on the
+## diamond's south vertex — the corner shared with cells (x+1,y)/(x,y+1)/
+## (x+1,y+1) — so the actor must sort in the (x+1,y+1) band, after its
+## ground tiles+decals but under the band's tall props. intra 8224 sits
+## between the ground/decal band (~8223) and tall-prop values (8239+).
 static func actor_key(x: int, y: int) -> int:
-	return ((y + 131071) << 32) | ((x + 131071) << 14) | 8191
+	return ((y + 131072) << 32) | ((x + 131072) << 14) | 8224
 
 
 static func actor_key_cell(p: Vector3i) -> int:

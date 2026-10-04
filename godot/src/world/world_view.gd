@@ -103,7 +103,7 @@ func show_world(world_id: int, my_pos: Vector3) -> void:
 	_loaded = not _cells.is_empty()
 	_spawn_coach(State.my_coach_id, "you", int(my_pos.x), int(my_pos.y), int(my_pos.z))
 	_cam.make_current()
-	_cam.zoom = Vector2(0.7, 0.7)
+	_cam.zoom = Vector2(0.85, 0.85)
 	_cam.position = _sprites[State.my_coach_id].position
 	visible = true
 	var sp: Vector3i = _pos[State.my_coach_id]
@@ -176,20 +176,39 @@ func _spawn_coach(id: int, cname: String, x: int, y: int, z: int,
 		_gfx.register_dynamic(id,
 			func(): return MapGfx.actor_key_cell(
 				_pos.get(id, Vector3i.ZERO)),
-			func(ci): spr.draw_on(ci, spr.position))
+			func(ci): _draw_actor(ci, id))
 	_names[id] = cname
 	var tag := spr.get_node_or_null("Tag")
 	if tag == null:
 		tag = Label.new()
 		tag.name = "Tag"
-		tag.add_theme_font_size_override("font_size", 11)
+		tag.add_theme_font_size_override("font_size", 13)
 		tag.add_theme_color_override("font_color", Color(1, 1, 1))
 		tag.add_theme_color_override("font_shadow_color", Color(0, 0, 0))
 		tag.add_theme_constant_override("shadow_offset_x", 1)
 		tag.add_theme_constant_override("shadow_offset_y", 1)
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tag.size = Vector2(140, 18)
 		spr.add_child(tag)
 	tag.text = cname
-	tag.position = Vector2(-tag.size.x / 2.0, -70)
+	tag.position = Vector2(-70, -95)
+
+
+## Merged-painter draw for one live coach: ground ring (gold for the local
+## coach, pale for others) squashed to iso proportions, then the frame.
+func _draw_actor(ci: CanvasItem, id: int) -> void:
+	var spr: AnmSprite = _sprites.get(id)
+	if spr == null:
+		return
+	if OS.has_environment("DRAW_ACTOR_DEBUG"):
+		print("[actor] id=%d pos=%s scale=%s frames=%d" % [
+			id, spr.position, spr.scale, spr._frames.size()])
+	var ring := Color(1.0, 0.82, 0.25, 0.55) if id == State.my_coach_id \
+		else Color(1.0, 1.0, 1.0, 0.35)
+	ci.draw_set_transform(spr.position, 0.0, Vector2(1.0, 0.45))
+	ci.draw_circle(Vector2.ZERO, 14.0, ring)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	spr.draw_on(ci, spr.position)
 
 
 func actor_spawned(id: int, cname: String, x: int, y: int, z: int,
