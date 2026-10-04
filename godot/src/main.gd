@@ -499,6 +499,7 @@ func _ready() -> void:
 	_gui.on("destroyCoach", _on_destroy_coach)
 	_gui.dialog_opened.connect(_on_gui_dialog_opened)
 	$UI/VBox.visible = false
+	$UI/Chat.visible = false
 	if State.my_coach_id <= 0:
 		_gui.open("logonDialog")
 	else:
@@ -4897,6 +4898,7 @@ func _push_local_coach() -> void:
 ## menuBarDialog binds (equipedEmotes + name today; more land as screens port).
 func _mount_lobby_menubar(d: Dictionary) -> void:
 	State.my_coach_name = str(d.get("name", State.my_coach_name))
+	$UI/Chat.visible = true
 	_push_local_coach()
 	_gui.gui.model.set_value("showToolsInMenuBar", 0)
 	_gui.gui.model.set_value("menuBar", {

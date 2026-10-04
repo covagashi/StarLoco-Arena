@@ -80,25 +80,39 @@ func _relayout(root: GWidget) -> void:
 	GuiLayouts.apply(root)
 
 
+## The retail UI was authored for a fixed ~1024×768 window — XULOR2
+## positions are absolute pixels. Scale the whole dialog so the authored
+## layout fills whatever viewport we actually have.
+const REF_SIZE := Vector2(1024, 768)
+
+
 ## Places a dialog root inside the viewport like the retail layer does:
 ## the root's own <sld> (align/size/xOff/yOff) resolves against the
-## viewport; roots that specify nothing get their preferred size centered,
-## and only truly sizeless roots stretch to the screen.
+## viewport in reference space; roots that specify nothing get their
+## preferred size centered, and only truly sizeless roots stretch.
 func _place_root(root: GWidget, vp: Vector2) -> void:
+	var want0 := root.get_minimum_size()
+	var s := minf(vp.x / REF_SIZE.x, vp.y / REF_SIZE.y)
+	if want0.x >= 700 or want0.y >= 500:
+		# full-screen-class dialogs (login art, map, team mgmt) scale so
+		# their authored size fills the viewport like the retail client
+		s = minf(vp.x / maxf(want0.x, 1.0), vp.y / maxf(want0.y, 1.0))
+	root.scale = Vector2(s, s)
+	var lvp := vp / s
 	var ld: Dictionary = root.layout_data
-	var want := root.get_minimum_size()
+	var want := want0
 	var size := want
 	if ld.has("size"):
 		var sv: Array = ld["size"]
-		size = Vector2(_ld_axis(sv[0], want.x, vp.x),
-			_ld_axis(sv[1], want.y, vp.y))
+		size = Vector2(_ld_axis(sv[0], want.x, lvp.x),
+			_ld_axis(sv[1], want.y, lvp.y))
 	elif root.layout.get("adaptToContentSize") in [true, "true"]:
 		size = want
 	elif want == Vector2.ZERO:
-		size = vp
+		size = lvp
 	var a: Vector2 = GuiLayouts.ALIGN.get(
 		String(ld.get("align", "center")).to_lower(), Vector2(0.5, 0.5))
-	root.position = a * (vp - size) + Vector2(
+	root.position = a * (lvp - size) + Vector2(
 		float(ld.get("xOff", 0)), float(ld.get("yOff", 0)))
 	root.size = size
 

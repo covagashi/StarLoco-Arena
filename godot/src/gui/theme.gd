@@ -99,6 +99,8 @@ func load_theme(path: String) -> void:
 							}
 					"PlainBackground":
 						cur_appear["plain_bg"] = true
+						if a.has("color"):
+							cur_appear["color_value"] = _parse_color(a["color"])
 					"margin":
 						var ins := _parse_insets(a.get("insets", a.get("spacing", "0,0,0,0")))
 						if cur_element != "":
@@ -181,8 +183,15 @@ func elem(type: String, style: String = "") -> Dictionary:
 	var key := type + style.capitalize()
 	if elements.has(key):
 		return elements[key]
+	# tag names and theme element names drift in case across the
+	# retail XML (<texteditor> tag vs. textEditor lookups, etc.)
+	var lk := type.to_lower() + style.capitalize()
+	if elements.has(lk):
+		return elements[lk]
 	if elements.has(type):
 		return elements[type]
+	if elements.has(type.to_lower()):
+		return elements[type.to_lower()]
 	return {}
 
 
