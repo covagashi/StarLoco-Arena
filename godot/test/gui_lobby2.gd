@@ -149,7 +149,45 @@ func _init() -> void:
 		"readyButtonEnabled": true})
 	var ex := _gui.open_dialog("exchangeDialog")
 	print("[smoke] exchange:", "ok" if ex != null else "FAIL")
-	for r in [sd, cs, ld, cd, ad, od, cb, gc, gm, gs, mb, nm, cm, ex]:
+	_gui.model.set_value("teamManagement", {
+		"fighters": [{"id": 7, "fighterId": 7, "name": "Iopette",
+			"breedId": 1, "sex": 1, "state": 0, "level": 42,
+			"moraleForProgressBar": 50, "tirednessForProgressBar": 10,
+			"actorDescriptorLibrary": "fighter_-110",
+			"actorAnimation": "AnimStatique", "actorDirection": 3,
+			"actorMaterial": [], "iconUrl": "10", "typeIconUrl": ""}]},
+		"editableTeamPreset")
+	_gui.model.set_value("evolutionTeam",
+		{"fightersOnBench": [null]})
+	_gui.model.set_value("tomeManager", {"evolutionSets": [
+		{"name": "Wabbits", "description": "", "collection": []}]})
+	var tm := _gui.open_dialog("teamManagementDialog")
+	print("[smoke] teamMgmt:", "ok" if tm != null else "FAIL")
+	_gui.model.set_value("teamManagement", {
+		"id": 7, "fighterId": 7, "name": "Iopette", "breedId": 1, "sex": 1,
+		"maxHealthPoints": 400, "maxActionPoints": 6, "maxMovePoints": 3,
+		"initiativePoints": 0, "criticalHitBonus": 0, "rangeBonus": 0,
+		"healBonus": 0, "damagesRebound": 0, "dodgePercent": 0,
+		"tacklePercent": 0,
+		"resEarthPercent": 0, "resFirePercent": 0, "resWaterPercent": 0,
+		"resWindPercent": 0,
+		"dmgEarthPercent": 0, "dmgFirePercent": 0, "dmgWaterPercent": 0,
+		"dmgWindPercent": 0,
+		"actorDescriptorLibrary": "fighter_-110",
+		"actorAnimation": "AnimStatique", "actorDirection": 3,
+		"actorMaterial": [],
+		"weaponEquipment": null, "petEquipment": null,
+		"cloakEquipment": null, "hatEquipment": null,
+		"dofusEquipment": null,
+		"spells": [null], "breedSpells": [
+			{"id": 31, "name": "Cloudy Attack", "iconUrl": "31",
+				"actionPoints": 4, "range": "1-4", "value": 250,
+				"cardType": "spell"}]},
+		"editableFighter")
+	_gui.model.set_value("teamManagement", [], "selectedItemCardList")
+	var fe := _gui.open_dialog("fighterEquipmentDialog")
+	print("[smoke] fighterEquip:", "ok" if fe != null else "FAIL")
+	for r in [sd, cs, ld, cd, ad, od, cb, gc, gm, gs, mb, nm, cm, ex, tm, fe]:
 		if r != null:
 			vp.add_child(r)
 	if sd != null:

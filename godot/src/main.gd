@@ -263,6 +263,38 @@ func _ready() -> void:
 	_gui.on("launchTeamTest", func(_a, _w): _on_practice_pressed())
 	_gui.on("createNewEvolutionFighter", _on_new_fighter_dialog)
 	_gui.on("deleteFighter", _on_gui_delete_fighter)
+	# dofusarena.evolution:* — teamManagementEvolution roster component
+	_gui.on("selectFighter", _on_evo_select_fighter)
+	_gui.on("changeFighterStatus", _on_evo_fighter_status)
+	_gui.on("becomeALegend", func(_a, _w): pass)
+	_gui.on("openCloseSphereBoard", _on_evo_sphere_board)
+	_gui.on("selectConsumableSet", _on_evo_select_set)
+	_gui.on("goBackToList", _on_evo_back_to_list)
+	_gui.on("selectCard", _on_evo_card_infos)
+	_gui.on("showCoachCardInfosEvolution", _on_evo_card_infos)
+	_gui.on("hideCoachCardInfosEvolution", func(_a, _w): pass)
+	_gui.on("showPopup", func(_a, _w): pass)
+	_gui.on("hidePopup", func(_a, _w): pass)
+	_gui.on("editFighter", _on_eq_edit_fighter)
+	# dofusarena.teamManagement:* — fighterEquipmentDialog loadout editor
+	_gui.on("changeItemCardType", _on_eq_change_type)
+	_gui.on("increaseList", func(a, w): _on_eq_page(a, w, 1))
+	_gui.on("decreaseList", func(a, w): _on_eq_page(a, w, -1))
+	_gui.on("addEquipment", _on_eq_add_equipment)
+	_gui.on("removeEquipment", _on_eq_remove_equipment)
+	_gui.on("addSpell", _on_eq_add_spell)
+	_gui.on("removeSpell", _on_eq_remove_spell)
+	_gui.on("dragEquipment", _on_eq_drag_equipment)
+	_gui.on("dropEquipment", _on_eq_drop_equipment)
+	_gui.on("dropSpell", _on_eq_drop_spell)
+	_gui.on("validateEquipmentDrop", func(_a, _w): pass)
+	_gui.on("validateSpellDrop", func(_a, _w): pass)
+	_gui.on("showEquipmentInfos", _on_eq_show_infos)
+	_gui.on("showSpellInfos", _on_eq_show_infos)
+	_gui.on("showHelp", _on_eq_show_help)
+	_gui.on("saveEditableFighter", _on_eq_save)
+	_gui.on("closeFighterEditionDialog",
+		func(_a, _w): _gui.close("fighterEquipmentDialog"))
 	_gui.on("createFighter", _on_gui_create_fighter)
 	_gui.on("closeFighterCreationDialog",
 		func(_a, _w): _gui.close("fighterCreationDialog"))
@@ -2682,33 +2714,405 @@ func _push_team_model() -> void:
 	var playing: Array = []
 	var bench: Array = []
 	for fr in State.roster:
-		var breed := clampi(int(fr.get("breed", 1)), 1, 12)
-		var sex := clampi(int(fr.get("sex", 0)), 0, 1)
-		var item := {
-			"id": int(fr.get("id", 0)),
-			"fighterId": int(fr.get("id", 0)),
-			"name": str(fr.get("name", "")),
-			"breedId": breed, "sex": sex,
-			"state": str(fr.get("state", 0)),
-			"description": "", "conditions": [],
-			"torsoInjury": [], "otherInjury": [], "legInjury": [],
-			"headInjury": [], "armInjury": [],
-			"actorDescriptorLibrary": "fighter_%s" % \
-				_FV.FIGHTER_FILES[(breed - 1) * 2 + sex],
-			"actorAnimation": "AnimStatique",
-			"actorDirection": 3,
-			"actorMaterial": Palettes.fighter_tints(
-				int(fr.get("skin", 0)), int(fr.get("hair", 0)),
-				int(fr.get("eye", 0)))}
-		if int(fr.get("state", 0)) == 1:
+		var item := _evo_fighter_item(fr)
+		if int(fr.get("state", 0)) == 1 or int(fr.get("state", 0)) == 5:
 			bench.append(item)
-		else:
+		elif int(fr.get("type", 2)) == 2:
 			playing.append(item)
+	while playing.size() < 6:
+		playing.append(null)
 	_gui.gui.model.set_value("teamManagement",
 		{"fighters": playing}, "editableTeamPreset")
 	_gui.gui.model.set_value("evolutionTeam",
 		{"fightersOnBench": bench})
+	_gui.gui.model.set_value("tomeManager",
+		_all_card_sets(), "evolutionSets")
 	_gui.gui.model.set_value("onlyTabEnabledId", -1)
+
+
+## The fighter-card item the evolution rows bind — raw roster dict merged
+## with the display fields the renderers read (level, morale, paper-doll…).
+func _evo_fighter_item(fr: Dictionary) -> Dictionary:
+	var breed := clampi(int(fr.get("breed", 1)), 1, 12)
+	var sex := clampi(int(fr.get("sex", 0)), 0, 1)
+	var item := {
+		"id": int(fr.get("id", 0)),
+		"fighterId": int(fr.get("id", 0)),
+		"name": str(fr.get("name", "")),
+		"breedId": breed, "sex": sex,
+		"state": int(fr.get("state", 0)),
+		"level": int(fr.get("xp", 0)),
+		"isHeavy": int(fr.get("tiredness", 0)) >= 80,
+		"moraleForProgressBar": int(fr.get("morale", 0)),
+		"moraleForTooltip": str(fr.get("morale", 0)),
+		"tirednessForProgressBar": int(fr.get("tiredness", 0)),
+		"tirednessForTooltip": str(fr.get("tiredness", 0)),
+		"tirednessIsDangerous": int(fr.get("tiredness", 0)) >= 80,
+		"teamLeague": int(fr.get("board", 0)),
+		"maxHealthPoints": 0, "maxActionPoints": 6,
+		"maxMovePoints": 3, "initiativePoints": 0,
+		"description": "", "conditions": fr.get("conditions", []),
+		"torsoInjury": [], "otherInjury": [], "legInjury": [],
+		"headInjury": [], "armInjury": [],
+		"iconUrl": str(breed * 10),
+		"illustrationUrl": str(breed * 10),
+		"typeIconUrl": "",
+		"actorDescriptorLibrary": "fighter_%s" % \
+			_FV.FIGHTER_FILES[(breed - 1) * 2 + sex],
+		"actorAnimation": "AnimStatique",
+		"actorDirection": 3,
+		"actorMaterial": Palettes.fighter_tints(
+			int(fr.get("skin", 0)), int(fr.get("hair", 0)),
+			int(fr.get("eye", 0)))}
+	item.merge(fr, true)
+	item["actorDescriptorLibrary"] = "fighter_%s" % \
+		_FV.FIGHTER_FILES[(breed - 1) * 2 + sex]
+	item["actorMaterial"] = Palettes.fighter_tints(
+		int(fr.get("skin", 0)), int(fr.get("hair", 0)),
+		int(fr.get("eye", 0)))
+	item["state"] = int(fr.get("state", 0))
+	return item
+
+
+## evolution:selectFighter — row becomes the details panel's fighter.
+func _on_evo_select_fighter(args: Array, w: GWidget) -> void:
+	var row: Variant = args[0] if args.size() > 0 \
+		and args[0] is Dictionary else _row_item(w)
+	if not (row is Dictionary):
+		return
+	_gui.gui.model.set_value("evolutionTeam",
+		row, "selectedFighter")
+
+
+## evolution:changeFighterStatus — the per-row swap button AND the dndc drop
+## between the team/bench lists both land here → 23000 state toggle.
+func _on_evo_fighter_status(_args: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	if not (row is Dictionary):
+		row = dnd.get("item")
+	if not (row is Dictionary):
+		return
+	var fid := int(row.get("id", row.get("fighterId", 0)))
+	if fid <= 0:
+		return
+	var f: Variant = _fighter_by_id(fid)
+	if f == null or int(f.get("state", 0)) == 3:
+		return
+	var wr := WireWriter.new()
+	wr.put_i64(fid)
+	wr.put_u8(1 if int(f.get("state", 0)) >= 4 else 0)
+	Session.send(OP_FIGHTER_SET_STATE, wr.raw(), 2)
+
+
+## evolution:openCloseSphereBoard(fighter) — the Kanodo grid. The retail
+## sphereBoard widget isn't implemented yet; open the existing board panel.
+func _on_evo_sphere_board(args: Array, w: GWidget) -> void:
+	var row: Variant = args[0] if args.size() > 0 \
+		and args[0] is Dictionary else _row_item(w)
+	if not (row is Dictionary):
+		return
+	var f: Variant = _fighter_by_id(
+		int(row.get("id", row.get("fighterId", 0))))
+	if f == null or int(f.get("type", 1)) != 2:
+		_log_line("[i]Kanodo is for evolution fighters only[/i]")
+		return
+	_kanodo_fid = int(f.id)
+	_kanodo_pick = {}
+	$UI/KanodoDlg/VBox/Title.text = "Kanodo — %s" % f.get("name", "?")
+	$UI/KanodoDlg/VBox/Hint.text = "Click a lit sphere."
+	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = true
+	_refresh_kanodo()
+	$UI/KanodoDlg.visible = true
+
+
+## evolution:selectConsumableSet(setList,setDescription) — pick a tome set →
+## coachManagement.currentSet {name, description, collectionForEvolution}.
+func _on_evo_select_set(args: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if row is Dictionary:
+		var coll: Array = []
+		for c in row.get("collection", []):
+			if c is Dictionary \
+					and int(State.inventory.get(int(c.get("id", 0)), 0)) > 0:
+				coll.append(c)
+		_gui.gui.model.set_value("coachManagement",
+			{"name": str(row.get("name", "")),
+				"description": str(row.get("description", "")),
+				"collectionForEvolution": coll}, "currentSet")
+	if args.size() >= 2:
+		if args[0] is GWidget: args[0].visible = false
+		if args[1] is GWidget: args[1].visible = true
+
+
+## evolution:goBackToList(setList,setDescription) — back to the summary.
+func _on_evo_back_to_list(args: Array, _w: GWidget) -> void:
+	if args.size() >= 2:
+		if args[0] is GWidget: args[0].visible = true
+		if args[1] is GWidget: args[1].visible = false
+
+
+## evolution:selectCard / showCoachCardInfosEvolution — hover/click a set
+## card → coachManagement.selectedCard preview.
+func _on_evo_card_infos(_args: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if row is Dictionary:
+		_gui.gui.model.set_value("coachManagement",
+			row, "selectedCard")
+
+
+## --- fighterEquipmentDialog (6011 loadout editor) ----------------------------
+## editableFighter = working copy of the fighter being dressed: equipment
+## slots {0..4 → card}, spells list, breedSpells offer. Save → 6011.
+const _EQ_FIELDS := ["weaponEquipment", "petEquipment", "cloakEquipment",
+	"hatEquipment", "dofusEquipment"]
+const _EQ_PER_PAGE := 8
+
+var _eq_fid := -1
+var _eq_cards := {}          # slot int 0-4 -> card template id
+var _eq_spells: Array = []   # spell ids currently equipped
+var _eq_type := 0            # selectedItemCardListType (slot filter)
+var _eq_page := 0
+
+
+## evolution:editFighter(fighter) → open the equipment editor on that row.
+func _on_eq_edit_fighter(args: Array, w: GWidget) -> void:
+	var row: Variant = args[0] if args.size() > 0 \
+		and args[0] is Dictionary else _row_item(w)
+	if not (row is Dictionary):
+		return
+	var f: Variant = _fighter_by_id(
+		int(row.get("id", row.get("fighterId", 0))))
+	if f == null:
+		return
+	_eq_fid = int(f.id)
+	_eq_cards = {}
+	for c in f.get("cards", []):
+		_eq_cards[int(c.get("slot", 0))] = int(c.get("id", 0))
+	_eq_spells = []
+	for s in f.get("spells", []):
+		_eq_spells.append(int(s))
+	_eq_type = 0
+	_eq_page = 0
+	_push_fequip_model()
+	_gui.open("fighterEquipmentDialog")
+
+
+## Spell-id → the item shape spellFighterCard binds (icons live in
+## spells/icons/<id>.png; ap/min/max come from the exported table).
+func _spell_item(sid: int) -> Dictionary:
+	var m := Spells.meta(sid)
+	return {"id": sid, "name": str(m.get("name", "Spell %d" % sid)),
+		"iconUrl": str(sid), "illustrationUrl": str(sid),
+		"actionPoints": int(m.get("ap", 0)),
+		"range": "%d-%d" % [int(m.get("min", 0)), int(m.get("max", 0))],
+		"aoe": "", "aoeSize": 0, "cooldown": 0, "target": "",
+		"description": "", "backgroundDescription": "",
+		"value": int(m.get("value", 0)), "cardType": "spell"}
+
+
+## Equipment slot item — the slot dndc binds itemIconUrl on top of the
+## shared card fields.
+func _equip_slot_item(cid: int) -> Variant:
+	if cid <= 0 or int(State.inventory.get(cid, 0)) <= 0:
+		return null
+	var it := _card_item(cid)
+	it["itemIconUrl"] = str(cid)
+	return it
+
+
+func _push_fequip_model() -> void:
+	var f: Variant = _fighter_by_id(_eq_fid)
+	if f == null:
+		return
+	var model := _gui.gui.model
+	var breed := clampi(int(f.get("breed", 1)), 1, 12)
+	var sex := clampi(int(f.get("sex", 0)), 0, 1)
+	var spells: Array = []
+	for sid in _eq_spells:
+		spells.append(_spell_item(sid))
+	while spells.size() < 7:
+		spells.append(null)
+	var offers: Array = []
+	for s in Spells.for_breed(breed):
+		var it := _spell_item(int(s.id))
+		it["equipped"] = _eq_spells.has(int(s.id))
+		offers.append(it)
+	var ef := {"id": _eq_fid, "fighterId": _eq_fid,
+		"name": str(f.get("name", "")), "breedId": breed, "sex": sex,
+		"maxHealthPoints": 0, "maxActionPoints": 6, "maxMovePoints": 3,
+		"initiativePoints": 0, "criticalHitBonus": 0, "rangeBonus": 0,
+		"healBonus": 0, "damagesRebound": 0, "dodgePercent": 0,
+		"tacklePercent": 0,
+		"resEarthPercent": 0, "resFirePercent": 0, "resWaterPercent": 0,
+		"resWindPercent": 0,
+		"dmgEarthPercent": 0, "dmgFirePercent": 0, "dmgWaterPercent": 0,
+		"dmgWindPercent": 0,
+		"value": int(f.get("budget", 0)),
+		"actorDescriptorLibrary": "fighter_%s" % \
+			_FV.FIGHTER_FILES[(breed - 1) * 2 + sex],
+		"actorMaterial": Palettes.fighter_tints(
+			int(f.get("skin", 0)), int(f.get("hair", 0)),
+			int(f.get("eye", 0))),
+		"spells": spells, "breedSpells": offers}
+	for s in _EQ_FIELDS.size():
+		ef[_EQ_FIELDS[s]] = _equip_slot_item(int(_eq_cards.get(s, 0)))
+	model.set_value("teamManagement", ef, "editableFighter")
+	model.set_value("teamManagement", _eq_type,
+		"selectedItemCardListType")
+	var pool: Array = []
+	for cid in State.inventory:
+		if int(Cards.meta(int(cid)).get("type", 0)) == _eq_type + 1 \
+				and int(State.inventory[cid]) > 0:
+			pool.append(_equip_slot_item(int(cid)))
+	var max_page := maxi(0, (pool.size() - 1) / _EQ_PER_PAGE)
+	_eq_page = clampi(_eq_page, 0, max_page)
+	model.set_value("teamManagement",
+		pool.slice(_eq_page * _EQ_PER_PAGE,
+			(_eq_page + 1) * _EQ_PER_PAGE), "selectedItemCardList")
+
+
+## changeItemCardType(N) — pick which slot's card pool the strip lists.
+func _on_eq_change_type(args: Array, _w: GWidget) -> void:
+	for a in args:
+		if a is int or a is float:
+			_eq_type = clampi(int(a), 0, 4)
+	_eq_page = 0
+	_push_fequip_model()
+
+
+## increaseList/decreaseList(itemList) — page the equipment strip.
+func _on_eq_page(_a: Array, _w: GWidget, delta: int) -> void:
+	_eq_page += delta
+	_push_fequip_model()
+
+
+## addEquipment(fighter) — double-click a strip card → its type's slot.
+func _on_eq_add_equipment(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	var cid := int(row.get("id", 0))
+	var t := int(Cards.meta(cid).get("type", 0))
+	if t >= 1 and t <= 5:
+		_eq_cards[t - 1] = cid
+		_push_fequip_model()
+
+
+## removeEquipment(fighter,N) — double-click the equipped slot → unequip.
+func _on_eq_remove_equipment(args: Array, w: GWidget) -> void:
+	var slot := -1
+	for a in args:
+		if a is int or a is float:
+			slot = int(a)
+	if slot < 0:
+		var row: Variant = _row_item(w)
+		if row is Dictionary:
+			for s in _EQ_FIELDS.size():
+				if _eq_cards.get(s, -1) == int(row.get("id", -2)):
+					slot = s
+	if slot >= 0:
+		_eq_cards.erase(slot)
+		_push_fequip_model()
+
+
+## addSpell/removeSpell — double-click a breed-spell row ↔ equipped row.
+func _on_eq_add_spell(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if not (row is Dictionary):
+		return
+	var sid := int(row.get("id", 0))
+	if sid > 0 and not _eq_spells.has(sid) and _eq_spells.size() < 6:
+		_eq_spells.append(sid)
+		_push_fequip_model()
+
+
+func _on_eq_remove_spell(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if row is Dictionary:
+		_eq_spells.erase(int(row.get("id", 0)))
+		_push_fequip_model()
+
+
+## dragEquipment(fighter,N) fires at drag start — remember the source slot
+## so a drop elsewhere unequips it (the payload is the slot's own item).
+func _on_eq_drag_equipment(args: Array, _w: GWidget) -> void:
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	for a in args:
+		if a is int or a is float:
+			dnd["from_slot"] = int(a)
+
+
+## dropEquipment(fighter,N) — a strip card (or another slot's item) onto
+## slot N; the card's record type must match (type = slot+1, vi_1 order).
+func _on_eq_drop_equipment(args: Array, _w: GWidget) -> void:
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	var payload: Variant = dnd.get("item")
+	if not (payload is Dictionary):
+		return
+	var slot := -1
+	for a in args:
+		if a is int or a is float:
+			slot = int(a)
+	var cid := int(payload.get("id", 0))
+	if slot < 0 or cid <= 0:
+		return
+	if int(Cards.meta(cid).get("type", 0)) != slot + 1:
+		return
+	if dnd.has("from_slot"):
+		_eq_cards.erase(int(dnd["from_slot"]))
+	_eq_cards[slot] = cid
+	_push_fequip_model()
+
+
+## dropSpell(fighter) — a breed-spell row dragged onto the equipped list.
+func _on_eq_drop_spell(_a: Array, _w: GWidget) -> void:
+	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	var payload: Variant = dnd.get("item")
+	if payload is Dictionary and str(payload.get("cardType", "")) == "spell":
+		var sid := int(payload.get("id", 0))
+		if sid > 0 and not _eq_spells.has(sid) and _eq_spells.size() < 6:
+			_eq_spells.append(sid)
+			_push_fequip_model()
+
+
+## showEquipmentInfos/showSpellInfos — hover → selectedCard preview.
+func _on_eq_show_infos(_a: Array, w: GWidget) -> void:
+	var row: Variant = _row_item(w)
+	if row is Dictionary:
+		_gui.gui.model.set_value("teamManagement",
+			row, "selectedCard")
+
+
+## showHelp(key) — the spell-card stat labels' rollover help.
+func _on_eq_show_help(args: Array, _w: GWidget) -> void:
+	if args.is_empty():
+		return
+	var model := _gui.gui.model
+	model.set_value("teamManagement",
+		_gui.gui.loader.i18n_str(str(args[0])), "help")
+	model.set_value("teamManagement", str(args[0]), "helpIcon")
+
+
+## saveEditableFighter(fighter) → 6011 [i64 fid][i16 team][u16 spellLen]
+## {i32 spells}[u16 cardLen]{i16 slot,i32 card} — same layout as the
+## debug editor (spells blob first, equipment positions after).
+func _on_eq_save(_a: Array, _w: GWidget) -> void:
+	if _eq_fid < 0:
+		return
+	var wr := WireWriter.new()
+	wr.put_i64(_eq_fid)
+	wr.put_u16(0)
+	wr.put_u16(_eq_spells.size() * 4)
+	for s in _eq_spells:
+		wr.put_i32(int(s))
+	wr.put_u16(_eq_cards.size() * 6)
+	for s in _eq_cards.keys():
+		wr.put_u16(int(s))
+		wr.put_i32(int(_eq_cards[s]))
+	Session.send(OP_FIGHTER_LOADOUT, wr.raw(), 2)
+	_log_line("loadout saved: %d spells, %d items" % [
+		_eq_spells.size(), _eq_cards.size()])
 	_gui.gui.model.set_value("coachManagement", {"currentSet": ""})
 	_gui.gui.model.set_value("tomeManager", false)
 
@@ -2728,8 +3132,10 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_push_guild_mgmt_model()
 		"coachStatisticsDialog":
 			_push_local_coach()
-		"teamManagementDialog":
+		"teamManagementDialog", "evolutionDialog":
 			_push_team_model()
+		"fighterEquipmentDialog":
+			_push_fequip_model()
 		"ladderInformationDialog":
 			_request_all_ladders()
 			_push_ladder_model()

@@ -1,0 +1,15 @@
+extends SceneTree
+const GuiLib := preload("res://src/gui/guilib.gd")
+func _init() -> void:
+	var _gui := GuiLib.new("en")
+	var d := _gui.open_dialog("evolutionDialog")
+	print("[smoke] evolution:", "ok" if d != null else "FAIL")
+	var d2 := _gui.open_dialog("demonAffiliationDialog")
+	print("[smoke] demon:", "ok" if d2 != null else "FAIL")
+	var d3 := _gui.open_dialog("fireworkDialog")
+	print("[smoke] firework:", "ok" if d3 != null else "FAIL")
+	var d4 := _gui.open_dialog("mapDialog")
+	print("[smoke] map:", "ok" if d4 != null else "FAIL")
+	var d5 := _gui.open_dialog("miniMapDialog")
+	print("[smoke] miniMap:", "ok" if d5 != null else "FAIL")
+	quit()
