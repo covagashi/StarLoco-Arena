@@ -43,6 +43,11 @@ COPY --from=build /src/data-dist /app/data-dist
 # "permission denied" while the report itself still saves.
 RUN mkdir -p /app/bugreports && chown arena:arena /app/bugreports
 
+# Same problem for the SQLite state dir: the sqlite compose stack mounts a
+# named volume at /state, and a path absent from the image mounts root-owned,
+# which the uid-10001 server cannot write -> "unable to open database file".
+RUN mkdir -p /state && chown arena:arena /state
+
 # The DB (sqlite) or connection (postgres/mysql) is configured via config/env.
 USER arena
 
