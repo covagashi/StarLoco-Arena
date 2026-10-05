@@ -25,6 +25,60 @@ var _image_index := {}    # basename.png -> res path (built lazily)
 
 func _init(path := GUI_ROOT + "xml/theme/default.xml") -> void:
 	load_theme(path)
+	_install_app_skin()
+
+
+## Retail's application skin supplies resources omitted from default.xml.
+## Register only missing resources, so complete/custom themes keep priority.
+func _install_app_skin() -> void:
+	var sides := {"NORTH_WEST": "TopLeft", "NORTH": "Top",
+		"NORTH_EAST": "TopRight", "WEST": "Left", "EAST": "Right",
+		"SOUTH_WEST": "BottomLeft", "SOUTH": "Bottom", "SOUTH_EAST": "BottomRight"}
+	if not pixmap_borders.has("windowBorder"):
+		var parts := {}
+		for side in sides:
+			parts[side] = _app_skin_pixmap("Border" + sides[side])
+		pixmap_borders["windowBorder"] = parts
+	if not pixmap_bgs.has("windowTitleBackground"):
+		pixmap_bgs["windowTitleBackground"] = {
+			"pixmap": _app_skin_pixmap("BorderTop"), "scaled": true, "enabled": true}
+	# Nested WindowAppearance tags in the stock XML leave the root empty.
+	# Restore only missing appearance fields, retaining custom theme values.
+	if not elements.has("window"):
+		elements["window"] = {"states": {"default": {}}}
+	var window: Dictionary = elements["window"].get("states", {}).get("default", {})
+	if not window.has("border"):
+		window["border"] = "windowBorder"
+		elements["window"]["states"]["default"] = window
+	# String.capitalize() splits camelCase: titleBar -> "Title Bar".
+	var title_key := "window" + "titleBar".capitalize()
+	if not elements.has(title_key):
+		elements[title_key] = {"states": {"default": {"bg": "windowTitleBackground"}}}
+	var close_key := "window" + "closeButton".capitalize()
+	if not elements.has(close_key) or elements[close_key].get("states", {}).is_empty():
+		elements[close_key] = {"states": {
+			"default": {"pixmap": _app_skin_pixmap("BtnCloseDefault")},
+			"mouseHover": {"pixmap": _app_skin_pixmap("BtnCloseOver")},
+			"pressed": {"pixmap": _app_skin_pixmap("BtnCloseOver")}}}
+
+
+func close_icon(hover: bool) -> Texture2D:
+	var file := "BtnCloseOver" if hover else "BtnCloseDefault"
+	var id := "__appSkin_" + file
+	if not textures.has(id):
+		_app_skin_pixmap(file)
+	return texture(id)
+
+
+func _app_skin_pixmap(file: String) -> Dictionary:
+	var id := "__appSkin_" + file
+	var path := GUI_ROOT + "misc/appSkin/" + file + ".png"
+	textures[id] = path
+	var tex := texture(id)
+	if tex == null:
+		return {}
+	return {"texture": id, "rect": Rect2(Vector2.ZERO, tex.get_size()),
+		"flip_h": false, "flip_v": false}
 
 
 func load_theme(path: String) -> void:

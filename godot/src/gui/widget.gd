@@ -238,6 +238,11 @@ func _draw() -> void:
 				draw_texture(t, cr.position + (cr.size - t.get_size()) / 2.0)
 	# 3. 9-slice border
 	_draw_border()
+	# Native app-skin close glyph: templates retain their existing click event.
+	if kind == "button" and template_id == "closeButton" and guitheme != null:
+		var close_tex := guitheme.close_icon(_hover or _pressed)
+		if close_tex != null:
+			draw_texture(close_tex, (size - close_tex.get_size()) / 2.0)
 	# 4. text
 	if text != "" and kind != "image":
 		_draw_text()
