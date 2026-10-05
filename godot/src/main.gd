@@ -239,6 +239,8 @@ var _shop_id := -1            # catalogue id echoed back on buy/barter
 var _shop_cards := []         # [{id, qty}] of the open catalogue
 var _barter_wanted := -1      # card id picked for exchange
 var _gui: GuiLayer            # retail XULOR2 dialog layer
+var _lobby_screen
+var _lobby_ready := false
 var _login_screen             # baked-art login (PippopLogin via preload)
 var _create_screen            # baked-art coach creation (PippopCoachCreation)
 var _pending_login := ""      # login queued while connecting
@@ -508,6 +510,7 @@ func _ready() -> void:
 	if State.my_coach_id <= 0:
 		_show_login_screen()
 	else:
+		_lobby_ready = Session.is_online() and State.current_world >= 0
 		_mount_lobby_menubar({"name": State.my_coach_name})
 	connect_btn.pressed.connect(_on_connect_pressed)
 	login_btn.pressed.connect(_on_login_pressed)
@@ -670,6 +673,10 @@ func _on_retail_logon(args: Array, _widget: GWidget) -> void:
 
 
 func _on_disconnected() -> void:
+	_lobby_ready = false
+	if is_instance_valid(_lobby_screen):
+		_lobby_screen.set_actions_ready(false)
+		_lobby_screen.show_bubble("Conexión perdida")
 	status_lbl.text = "offline"
 	login_btn.disabled = true
 	connect_btn.text = "Connect"
@@ -807,6 +814,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line("entering instance world=%d pos=(%s,%s)" % [
 				State.current_world, d.get("x"), d.get("y")])
 		OP_INSTANCE_READY:
+			_lobby_ready = true
 			_log_line("[color=green]instance ready — in world[/color]")
 			$UI/VBox/AuthRow/PracticeBtn.disabled = false
 			$UI/VBox/AuthRow/FightBtn.disabled = false
@@ -820,7 +828,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if world != null:
 				world.show_world(State.current_world, _my_pos)
 			else:
-				_show_lobby_backdrop()
+				_show_lobby_screen()
 			# Post-fight re-entry: the debrief was decoded on 8300 — pop the
 			# result panel now that the island is up.
 			if not State.fight_result.is_empty():
@@ -4992,8 +5000,7 @@ func _mount_lobby_menubar(d: Dictionary) -> void:
 	_gui.gui.model.set_value("showToolsInMenuBar", 0)
 	_gui.gui.model.set_value("menuBar", {
 		"coachInventoryButton": true, "socialButton": true})
-	if not _gui.is_open("menuBarDialog"):
-		_gui.open("menuBarDialog")
+	_show_lobby_screen()
 
 
 func _log_line(s: String) -> void:
@@ -5104,31 +5111,59 @@ func _zone_triggers_at(cell: Vector2i) -> Array:
 	return out
 
 
-## Backdrop so dialogs aren't floating over the engine void until the
-## dedicated lobby screen lands. The login artwork is loaded as an
-## external file — no import-cache dependency.
-func _show_lobby_backdrop() -> void:
-	if $UI.get_node_or_null("LobbyBG") != null:
+## CanvasLayer shell; the existing XML layer remains above it.
+func _show_lobby_screen() -> void:
+	if not is_instance_valid(_lobby_screen):
+		_lobby_screen = preload("res://src/ui/lobby_screen.gd").new()
+		_lobby_screen.name = "LobbyScreen"
+		$UI.add_child(_lobby_screen)
+		$UI.move_child(_lobby_screen, 0)
+		_lobby_screen.bind_model(_gui.gui.model, $UI/Chat)
+		_lobby_screen.dialog_requested.connect(func(n): _gui.toggle(n))
+		_lobby_screen.action_requested.connect(_on_lobby_action)
+		_lobby_screen.item_requested.connect(_on_lobby_item)
+		_lobby_screen.debug_requested.connect(func(): $UI/VBox.visible = not $UI/VBox.visible)
+		log.emote.connect(func(id, anim):
+			if id == State.my_coach_id:
+				_lobby_screen.show_bubble(anim))
+		log.bubble.connect(func(id, text):
+			if id == State.my_coach_id:
+				_lobby_screen.show_bubble(text))
+	_lobby_screen.set_actions_ready(_lobby_ready)
+	$UI/Chat.show()
+
+
+func _on_lobby_action(action: String) -> void:
+	match action:
+		"practice": _on_practice_pressed()
+		"fight": _on_fight_pressed()
+		"quick": _on_quick_search()
+		"evo": _on_evo_search()
+		"duo": _open_duo_dlg()
+		"team": _gui.toggle("teamManagementDialog")
+
+
+func _on_lobby_item(event: String, item: Variant) -> void:
+	# Preserve the retail item-event context for registered handlers.
+	if _gui.handlers.has(event):
+		var widget := GWidget.new()
+		widget.item_value = item
+		_gui._on_event("dofusarena", event, [], widget)
+		widget.free()
 		return
-	var img := Image.load_from_file(
-		ProjectSettings.globalize_path("res://assets/ui/login_bg.png"))
-	if img == null:
-		var bg := ColorRect.new()
-		bg.name = "LobbyBG"
-		bg.color = Color(0.09, 0.07, 0.05)
-		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-		$UI.add_child(bg)
-		$UI.move_child(bg, 0)
-		return
-	var tr := TextureRect.new()
-	tr.name = "LobbyBG"
-	tr.texture = ImageTexture.create_from_image(img)
-	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	tr.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	$UI.add_child(tr)
-	$UI.move_child(tr, 0)
+	if event == "playEmote" and item is Dictionary:
+		var id := int(item.get("id", 0))
+		for command in log.EMOTES:
+			if int(log.EMOTES[command][0]) == absi(id):
+				# Same JY/4701 layout as retail avv_0.playEmote.
+				var w := WireWriter.new()
+				w.put_str(str(log.EMOTES[command][1]), "u8")
+				w.put_i32(id)
+				Session.send(4701, w.raw(), 3)
+				return
+	# This checkout has no tool executor or persisted emote equipment API.
+	# Keep unknown model entries explicit rather than silently dropping clicks.
+	_toast("Esta acción todavía no está disponible")
 
 
 func _use_element(id: int) -> void:
