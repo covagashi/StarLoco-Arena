@@ -223,10 +223,6 @@ const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 car
 @onready var password_edit: LineEdit = $UI/VBox/AuthRow/Password
 @onready var login_btn: Button = $UI/VBox/AuthRow/LoginBtn
 @onready var log := $UI/Chat
-## The walkable overworld island is deprecated — code preserved in
-## godot/deprecated_hall/. `world` stays null; every call site below is
-## guarded so dropping the node back in re-enables it.
-var world: Node2D = null
 
 var _my_pos := Vector3.ZERO   # last EnterInstance position
 var _challenge_handle := -1   # pending 26300 handle (-1 = none)
@@ -563,10 +559,6 @@ func _ready() -> void:
 	$UI/DuoAskDlg.confirmed.connect(_answer_duo.bind(true))
 	$UI/DuoAskDlg.canceled.connect(_answer_duo.bind(false))
 	$UI/VBox/AuthRow/CancelSearchBtn.pressed.connect(_on_cancel_search)
-	if world != null:
-		log.bubble.connect(world.chat_bubble)
-		log.emote.connect(world.emote)
-		world.cell_entered.connect(_check_zone_trigger)
 	$UI/VBox/TeamRow/AssignBtn.pressed.connect(func(): _on_assign(true))
 	$UI/VBox/TeamRow/UnassignBtn.pressed.connect(func(): _on_assign(false))
 	$UI/VBox/TeamRow/SaveTeamBtn.pressed.connect(_open_save_team)
@@ -828,10 +820,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/CoachBtn.disabled = false
 			$UI/VBox/AuthRow/SearchBtn.disabled = false
 			$UI/VBox/AuthRow/EvoBtn.disabled = false
-			if world != null:
-				world.show_world(State.current_world, _my_pos)
-			else:
-				_show_lobby_screen()
+			_show_lobby_screen()
 			# Post-fight re-entry: the debrief was decoded on 8300 — pop the
 			# result panel now that the island is up.
 			if not State.fight_result.is_empty():
@@ -849,28 +838,23 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				w.put_i16(1)
 				State.net.send_message(OP_STAT_UPD, w.raw(), 2)
 		OP_ACTOR_SPAWN:
-			_spawn_world_actors(payload)
+			_read_coach_spawns(payload)
 		OP_ACTOR_DESPAWN:
 			var n := payload.get_i32()
 			for i in n:
 				var did := int(payload.get_i64())
 				_coach_names.erase(did)
-				if world != null:
-					world.actor_despawned(did)
 		OP_ACTOR_MOVEMENT:
-			var aid := int(payload.get_i64())
-			var path := []
+			# Other coaches walking — [i64 id]{i32 x, i32 y, i16 z}+; the lobby
+			# renders nobody, decoded only to document the wire.
+			payload.get_i64()
 			while payload.remaining() >= 10:
-				path.append(Vector3i(int(payload.get_i32()),
-					int(payload.get_i32()), int(payload.get_i16())))
-			if world != null:
-				world.actor_moved(aid, path)
+				payload.get_i32()
+				payload.get_i32()
+				payload.get_i16()
 		OP_ACTOR_TELEPORTS:
 			# 4510 — actor snapped to a cell (GM /tp, zaap arrival effects).
-			var tp := Codec.decode(opcode, payload)
-			if world != null:
-				world.actor_teleported(
-					int(tp.f0), int(tp.f1), int(tp.f2), int(tp.f3))
+			Codec.decode(opcode, payload)
 		OP_FIGHT_CREATION:
 			State.fight_world = State.current_world
 			State.fight_data = Codec.decode(opcode, payload)
@@ -1134,8 +1118,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				if e.get("desc", "") == "" and info != null:
 					e.desc = info.desc
 				State.elements[id] = e
-				if world != null:
-					world.element_spawned(e)
 				# Zone triggers spawn AFTER the coach — re-check so a coach
 				# already standing inside the zone still fires it.
 				if e.get("kind") == 8:
@@ -1144,8 +1126,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			for id in d.get("ids", []):
 				State.elements.erase(int(id))
-			if world != null:
-				world.element_despawned(d.get("ids", []))
 		OP_WALLET:
 			var d := Codec.decode(opcode, payload)
 			for c in d.get("currencies", []):
@@ -1411,11 +1391,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_fill_guild()
 			if _gui.is_open("guildDialog") or _gui.is_open("socialDialog"):
 				_push_social_model()
-		554:  # GuildTags — clan tags for nearby coaches (name labels)
-			var d := Codec.decode(opcode, payload)
-			for row in d.rows:
-				if world != null and world.has_method("set_coach_guild"):
-					world.set_coach_guild(int(row.coach_id), row.guild)
+		554:  # GuildTags — clan tags for nearby coaches. Fed the world name
+			# labels; the lobby keeps only the decode for the wire.
+			Codec.decode(opcode, payload)
 		556:  # GuildMemberGone — a coach left/was kicked
 			var d := Codec.decode(opcode, payload)
 			if int(d.coach_id) == State.my_coach_id:
@@ -1613,7 +1591,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 ## i32 x, i32 y, i16 z, u8 dir, u8 skin, u8 hair, u8 sex, i16 look, i32
 ## standing, u8 sit, i16 guild, i16 desc, u8 strPairs, i32 adminRight}
 ## (server writeCoachActor — aez_0.b flags 3179 source order)
-func _spawn_world_actors(payload: WireReader) -> void:
+func _read_coach_spawns(payload: WireReader) -> void:
 	var d := Codec.decode(OP_ACTOR_SPAWN, payload)
 	var body := WireReader.new(d.get("actors_raw", PackedByteArray()))
 	var count := body.get_i32()
@@ -1640,46 +1618,14 @@ func _spawn_world_actors(payload: WireReader) -> void:
 		body.get_u8()  # strength pairs
 		body.get_i32() # admin right
 		if id == State.my_coach_id:
-			continue   # we already render ourselves from the 4600 position
+			continue   # our own coach is tracked from the 4600 position
 		_coach_names[id] = cname
-		if world != null:
-			world.actor_spawned(id, cname, x, y, z, look)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	var in_world := world != null and world.visible
 	if event is InputEventKey and event.pressed \
 			and event.keycode == KEY_ENTER and State.my_coach_id >= 0:
 		log.grab_chat_focus()
-		return
-	if not in_world:
-		return
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			world.zoom_by(1.12)
-			return
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			world.zoom_by(1.0 / 1.12)
-			return
-	if event is InputEventMouseButton and event.pressed \
-			and event.button_index == MOUSE_BUTTON_LEFT:
-		var mpos := world.get_global_mouse_position()
-		var who: int = world.actor_at(mpos)
-		if who >= 0:
-			_challenge_target = who
-			$UI/ChallengeAskDlg.dialog_text = \
-				"Challenge %s to a training fight?" % world.actor_name(who)
-			$UI/ChallengeAskDlg.popup_centered()
-			return
-		var elem: int = world.element_at(mpos)
-		if elem >= 0:
-			_use_element(elem)
-			return
-		var cell: Variant = world.screen_to_cell(mpos)
-		if cell != null:
-			world.click_to(cell)
-	elif event is InputEventMouseMotion:
-		world.set_hover(world.get_global_mouse_position())
 
 
 func _on_practice_pressed() -> void:
@@ -5077,9 +5023,8 @@ var _guild_invite := {}         # pending 502 {type, inviter, guild}
 var _coach_names := {}   # coach id -> display name (from 4096 spawns)
 
 
-## Lobby-era replacement for the deprecated world's element registry —
-## same shape world_view.element_info returned, fed from State.elements
-## (the raw 200/206 wire dicts).
+## Element registry lookup — same shape the hall's element_info returned,
+## fed from State.elements (the raw 200/206 wire dicts).
 func _element_info(id: int) -> Dictionary:
 	var e: Dictionary = State.elements.get(id, {})
 	return {"pos": Vector3i(int(e.get("x", 0)), int(e.get("y", 0)),
@@ -5088,8 +5033,7 @@ func _element_info(id: int) -> Dictionary:
 		"cells": e.get("cells", [])}
 
 
-## Coach display name -> id, over the 4096 spawn registry (was
-## world.coach_id_by_name).
+## Coach display name -> id, over the 4096 spawn registry.
 func _coach_id_by_name(cname: String) -> int:
 	for id in _coach_names:
 		if String(_coach_names[id]).to_lower() == cname.to_lower():

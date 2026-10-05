@@ -19,7 +19,7 @@ const WireReader := preload("res://src/net/wire_reader.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const State := preload("res://src/state.gd")
 
-signal bubble(actor_id: int, text: String)   # hooked to world_view bubbles
+signal bubble(actor_id: int, text: String)   # hooked to lobby bubbles
 
 const COLORS := {
 	"say": "white",
