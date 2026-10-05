@@ -239,6 +239,7 @@ var _shop_id := -1            # catalogue id echoed back on buy/barter
 var _shop_cards := []         # [{id, qty}] of the open catalogue
 var _barter_wanted := -1      # card id picked for exchange
 var _gui: GuiLayer            # retail XULOR2 dialog layer
+const NativeLobbyPanel := preload("res://src/ui/lobby_panel.gd")
 var _lobby_screen
 var _lobby_ready := false
 var _login_screen             # baked-art login (PippopLogin via preload)
@@ -257,6 +258,8 @@ func _ready() -> void:
 	Session.client.scene_active = true
 	# retail XULOR2 layer — logonDialog replaces the wire-test login row
 	_gui = GuiLayer.new()
+	for panel_name in preload("res://src/ui/lobby_panels.gd").TITLES:
+		_gui.native_factories[panel_name] = _make_native_lobby_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -3874,8 +3877,10 @@ func _push_ladder_model() -> void:
 ## The retail ladder tab order matches LADDER_TABS[0..6]; read the live
 ## selection off the dialog's tabbedContainer widget.
 func _ladder_gui_tab() -> int:
-	var root: GWidget = _gui.dialogs.get("ladderInformationDialog")
-	if root != null:
+	var root: Control = _gui.dialogs.get("ladderInformationDialog")
+	if root is NativeLobbyPanel:
+		return root.tab
+	if root is GWidget:
 		var tc := _find_kind(root, "tabbedContainer")
 		if tc != null:
 			return clampi(int(tc.selected_index), 0, 6)
@@ -5131,6 +5136,38 @@ func _show_lobby_screen() -> void:
 				_lobby_screen.show_bubble(text))
 	_lobby_screen.set_actions_ready(_lobby_ready)
 	$UI/Chat.show()
+
+
+func _make_native_lobby_panel(panel_name: String) -> Control:
+	var panel := preload("res://src/ui/lobby_panels.gd").new()
+	panel.panel_name = panel_name
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
+## Native controls reuse existing handlers with the same item-event context.
+func _on_native_lobby_action(event: String, args: Array, item: Variant, index: int) -> void:
+	match event:
+		"nativeOpen":
+			_gui.open(str(args[0]))
+			return
+		"nativeLadderTab":
+			_ladder_tab = int(args[0])
+			_ladder_start = 0
+			_ladder_request()
+			return
+		"nativeDisconnect":
+			Session.client.disconnect_from()
+			State.my_coach_id = -1
+			State.current_world = -1
+			get_tree().change_scene_to_file("res://src/main.tscn")
+			return
+	var context := GWidget.new()
+	context.item_value = item
+	context.selected_index = index
+	_gui._on_event("dofusarena", event, args, context)
+	context.free()
 
 
 func _on_lobby_action(action: String) -> void:
