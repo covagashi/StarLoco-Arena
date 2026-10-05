@@ -223,7 +223,10 @@ const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 car
 @onready var password_edit: LineEdit = $UI/VBox/AuthRow/Password
 @onready var login_btn: Button = $UI/VBox/AuthRow/LoginBtn
 @onready var log := $UI/Chat
-@onready var world: Node2D = $World
+## The walkable overworld island is deprecated — code preserved in
+## godot/deprecated_hall/. `world` stays null; every call site below is
+## guarded so dropping the node back in re-enables it.
+var world: Node2D = null
 
 var _my_pos := Vector3.ZERO   # last EnterInstance position
 var _challenge_handle := -1   # pending 26300 handle (-1 = none)
@@ -554,9 +557,10 @@ func _ready() -> void:
 	$UI/DuoAskDlg.confirmed.connect(_answer_duo.bind(true))
 	$UI/DuoAskDlg.canceled.connect(_answer_duo.bind(false))
 	$UI/VBox/AuthRow/CancelSearchBtn.pressed.connect(_on_cancel_search)
-	log.bubble.connect(world.chat_bubble)
-	log.emote.connect(world.emote)
-	world.cell_entered.connect(_check_zone_trigger)
+	if world != null:
+		log.bubble.connect(world.chat_bubble)
+		log.emote.connect(world.emote)
+		world.cell_entered.connect(_check_zone_trigger)
 	$UI/VBox/TeamRow/AssignBtn.pressed.connect(func(): _on_assign(true))
 	$UI/VBox/TeamRow/UnassignBtn.pressed.connect(func(): _on_assign(false))
 	$UI/VBox/TeamRow/SaveTeamBtn.pressed.connect(_open_save_team)
@@ -797,6 +801,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			State.current_world = int(d.get("world_id", -1))
 			State.elements = {}   # registry drops with the old world
+			_coach_names = {}
 			_my_pos = Vector3(float(d.get("x", 0.0)), float(d.get("y", 0.0)),
 				float(d.get("alt", 0)))
 			_log_line("entering instance world=%d pos=(%s,%s)" % [
@@ -812,7 +817,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			$UI/VBox/AuthRow/CoachBtn.disabled = false
 			$UI/VBox/AuthRow/SearchBtn.disabled = false
 			$UI/VBox/AuthRow/EvoBtn.disabled = false
-			world.show_world(State.current_world, _my_pos)
+			if world != null:
+				world.show_world(State.current_world, _my_pos)
+			else:
+				_show_lobby_backdrop()
 			# Post-fight re-entry: the debrief was decoded on 8300 — pop the
 			# result panel now that the island is up.
 			if not State.fight_result.is_empty():
@@ -834,19 +842,24 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_ACTOR_DESPAWN:
 			var n := payload.get_i32()
 			for i in n:
-				world.actor_despawned(int(payload.get_i64()))
+				var did := int(payload.get_i64())
+				_coach_names.erase(did)
+				if world != null:
+					world.actor_despawned(did)
 		OP_ACTOR_MOVEMENT:
 			var aid := int(payload.get_i64())
 			var path := []
 			while payload.remaining() >= 10:
 				path.append(Vector3i(int(payload.get_i32()),
 					int(payload.get_i32()), int(payload.get_i16())))
-			world.actor_moved(aid, path)
+			if world != null:
+				world.actor_moved(aid, path)
 		OP_ACTOR_TELEPORTS:
 			# 4510 — actor snapped to a cell (GM /tp, zaap arrival effects).
 			var tp := Codec.decode(opcode, payload)
-			world.actor_teleported(
-				int(tp.f0), int(tp.f1), int(tp.f2), int(tp.f3))
+			if world != null:
+				world.actor_teleported(
+					int(tp.f0), int(tp.f1), int(tp.f2), int(tp.f3))
 		OP_FIGHT_CREATION:
 			State.fight_world = State.current_world
 			State.fight_data = Codec.decode(opcode, payload)
@@ -1110,16 +1123,18 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				if e.get("desc", "") == "" and info != null:
 					e.desc = info.desc
 				State.elements[id] = e
-				world.element_spawned(e)
+				if world != null:
+					world.element_spawned(e)
 				# Zone triggers spawn AFTER the coach — re-check so a coach
 				# already standing inside the zone still fires it.
 				if e.get("kind") == 8:
-					_check_zone_trigger(world.my_cell())
+					_check_zone_trigger(_my_cell())
 		OP_ELEMENT_DESPAWN:
 			var d := Codec.decode(opcode, payload)
 			for id in d.get("ids", []):
 				State.elements.erase(int(id))
-			world.element_despawned(d.get("ids", []))
+			if world != null:
+				world.element_despawned(d.get("ids", []))
 		OP_WALLET:
 			var d := Codec.decode(opcode, payload)
 			for c in d.get("currencies", []):
@@ -1388,7 +1403,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		554:  # GuildTags — clan tags for nearby coaches (name labels)
 			var d := Codec.decode(opcode, payload)
 			for row in d.rows:
-				if world.has_method("set_coach_guild"):
+				if world != null and world.has_method("set_coach_guild"):
 					world.set_coach_guild(int(row.coach_id), row.guild)
 		556:  # GuildMemberGone — a coach left/was kicked
 			var d := Codec.decode(opcode, payload)
@@ -1615,15 +1630,18 @@ func _spawn_world_actors(payload: WireReader) -> void:
 		body.get_i32() # admin right
 		if id == State.my_coach_id:
 			continue   # we already render ourselves from the 4600 position
-		world.actor_spawned(id, cname, x, y, z, look)
+		_coach_names[id] = cname
+		if world != null:
+			world.actor_spawned(id, cname, x, y, z, look)
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var in_world := world != null and world.visible
 	if event is InputEventKey and event.pressed \
-			and event.keycode == KEY_ENTER and world.visible:
+			and event.keycode == KEY_ENTER and State.my_coach_id >= 0:
 		log.grab_chat_focus()
 		return
-	if not world.visible:
+	if not in_world:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -1772,7 +1790,7 @@ func _on_bench_fighter() -> void:
 ## the spectator deck + actor appear + timeline), which the normal fight
 ## handlers already decode. 8300 → 26321 ack returns us to the overworld.
 func _watch_coach(cname: String) -> void:
-	var tid: int = world.coach_id_by_name(cname)
+	var tid: int = _coach_id_by_name(cname)
 	if tid < 0:
 		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
 		return
@@ -2087,7 +2105,7 @@ func _on_guild_invite() -> void:
 	var cname := edit.text.strip_edges()
 	if cname.is_empty():
 		return
-	var tid: int = world.coach_id_by_name(cname)
+	var tid: int = _coach_id_by_name(cname)
 	if tid < 0:
 		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
 		return
@@ -5044,8 +5062,77 @@ var _guild_ranks_mode := false  # GuildDlg list shows ranks instead of members
 var _guild_invite := {}         # pending 502 {type, inviter, guild}
 
 
+var _coach_names := {}   # coach id -> display name (from 4096 spawns)
+
+
+## Lobby-era replacement for the deprecated world's element registry —
+## same shape world_view.element_info returned, fed from State.elements
+## (the raw 200/206 wire dicts).
+func _element_info(id: int) -> Dictionary:
+	var e: Dictionary = State.elements.get(id, {})
+	return {"pos": Vector3i(int(e.get("x", 0)), int(e.get("y", 0)),
+			int(e.get("z", 0))),
+		"kind": int(e.get("kind", -1)), "desc": str(e.get("desc", "")),
+		"cells": e.get("cells", [])}
+
+
+## Coach display name -> id, over the 4096 spawn registry (was
+## world.coach_id_by_name).
+func _coach_id_by_name(cname: String) -> int:
+	for id in _coach_names:
+		if String(_coach_names[id]).to_lower() == cname.to_lower():
+			return int(id)
+	return -1
+
+
+## Current coach cell without the hall — the last EnterInstance position
+## (no walking in the lobby; used only for zone-trigger checks at spawn).
+func _my_cell() -> Vector2i:
+	return Vector2i(int(_my_pos.x), int(_my_pos.y))
+
+
+## Zone triggers (kind 8) covering a cell — over State.elements.
+func _zone_triggers_at(cell: Vector2i) -> Array:
+	var out := []
+	for id in State.elements:
+		var e: Dictionary = State.elements[id]
+		if int(e.get("kind", -1)) != 8:
+			continue
+		if Vector2i(int(e.get("x", 0)), int(e.get("y", 0))) == cell \
+				or e.get("cells", []).has(cell):
+			out.append(int(id))
+	return out
+
+
+## Backdrop so dialogs aren't floating over the engine void until the
+## dedicated lobby screen lands. The login artwork is loaded as an
+## external file — no import-cache dependency.
+func _show_lobby_backdrop() -> void:
+	if $UI.get_node_or_null("LobbyBG") != null:
+		return
+	var img := Image.load_from_file(
+		ProjectSettings.globalize_path("res://assets/ui/login_bg.png"))
+	if img == null:
+		var bg := ColorRect.new()
+		bg.name = "LobbyBG"
+		bg.color = Color(0.09, 0.07, 0.05)
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		$UI.add_child(bg)
+		$UI.move_child(bg, 0)
+		return
+	var tr := TextureRect.new()
+	tr.name = "LobbyBG"
+	tr.texture = ImageTexture.create_from_image(img)
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	tr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$UI.add_child(tr)
+	$UI.move_child(tr, 0)
+
+
 func _use_element(id: int) -> void:
-	var e: Dictionary = world.element_info(id)
+	var e: Dictionary = _element_info(id)
 	var kind := int(e.get("kind", -1))
 	var w := WireWriter.new()
 	w.put_i64(id)
@@ -5322,10 +5409,10 @@ func _ach_done(id: int) -> bool:
 ## the required achievement must be done, the blocking one NOT. The script is
 ## a client-side Lua scenario (anr_0) — the tutorial monologues.
 func _check_zone_trigger(cell: Vector2i) -> void:
-	for id in world.zone_triggers_at(cell):
+	for id in _zone_triggers_at(cell):
 		if _fired_triggers.has(id):
 			continue
-		var e: Dictionary = world.element_info(id)
+		var e: Dictionary = _element_info(id)
 		var fields := _desc_fields(str(e.get("desc", "")))
 		var script := int(fields[0]) if fields.size() > 0 else -1
 		var req := int(fields[1]) if fields.size() > 1 else 0
@@ -6264,7 +6351,7 @@ func _on_mail_sel(i: int) -> void:
 ## qty 1). Act = ready toggle (5109), Alt = cancel (5111). Both-ready commits
 ## server-side and ends with 5114.
 func _invite_exchange(cname: String) -> void:
-	var tid: int = world.coach_id_by_name(cname)
+	var tid: int = _coach_id_by_name(cname)
 	if tid < 0:
 		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
 		return
@@ -6548,7 +6635,7 @@ func _on_fw_delay(args: Array, _w: GWidget) -> void:
 ## launchFirework — schedule each staged card; delay is in deciseconds
 ## (maxChars=3 on the field). One 22095 per launch, element pos/id on wire.
 func _on_fw_launch(_a: Array, _w: GWidget) -> void:
-	var e: Dictionary = world.element_info(_fw_elem)
+	var e: Dictionary = _element_info(_fw_elem)
 	var pos: Vector3i = e.get("pos", Vector3i.ZERO)
 	var delay_acc := 0.0
 	var sent := 0
@@ -6695,7 +6782,7 @@ func _on_element_act() -> void:
 			var sel := list.get_selected_items()
 			if sel.is_empty():
 				return
-			var e: Dictionary = world.element_info(_elem_id)
+			var e: Dictionary = _element_info(_elem_id)
 			var pos: Vector3i = e.get("pos", Vector3i.ZERO)
 			var w := WireWriter.new()
 			w.put_i32(int(list.get_item_metadata(sel[0])))
