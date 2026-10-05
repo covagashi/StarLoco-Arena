@@ -7,7 +7,8 @@ signal dialog_opened(name: String)
 
 var gui: GuiLib
 var handlers := {}          # method -> Callable(args, widget)
-var dialogs := {}           # name -> GWidget root
+var dialogs := {}           # canonical name -> native Control or GWidget
+var native_factories := {}  # canonical name -> Callable returning Control
 var settings_path := "user://gui_settings.cfg"
 
 ## event-name → xml file when they differ (retail registers screens under
@@ -23,7 +24,8 @@ const DIALOG_ALIASES := {
 
 
 func _file_for(name: String) -> String:
-	return DIALOG_ALIASES.get(name, name)
+	var canonical := name.left(1).to_lower() + name.substr(1)
+	return DIALOG_ALIASES.get(canonical, canonical)
 
 
 func _init() -> void:
@@ -36,28 +38,43 @@ func _ready() -> void:
 	_load_settings()
 
 
-func open(name: String, model_values := {}) -> GWidget:
+func open(name: String, model_values := {}) -> Control:
 	var fname := _file_for(name)
-	var root := gui.open_dialog(fname, model_values)
+	if is_open(fname):
+		return dialogs[fname]
+	for key in model_values:
+		gui.model.set_value(key, model_values[key])
+	var native := native_factories.has(fname)
+	var root: Control = native_factories[fname].call(fname) if native else gui.open_dialog(fname)
 	if root == null:
 		return null
-	var vp := get_viewport().get_visible_rect().size
 	add_child(root)
-	_place_root(root, vp)
 	dialogs[fname] = root
-	GuiLayouts.apply(root)
-	root.resized.connect(func(): GuiLayouts.apply(root))
-	get_viewport().size_changed.connect(func(): _relayout(root))
+	if native:
+		root.closed.connect(close.bind(fname))
+	else:
+		_place_root(root, get_viewport().get_visible_rect().size)
+		GuiLayouts.apply(root)
+		root.resized.connect(func(): GuiLayouts.apply(root))
+		var resize := _relayout.bind(root)
+		get_viewport().size_changed.connect(resize)
+		root.tree_exiting.connect(func():
+			if get_viewport().size_changed.is_connected(resize):
+				get_viewport().size_changed.disconnect(resize))
 	dialog_opened.emit(fname)
-	if OS.has_environment("GUI_DEBUG"):
-		print("[gui] open %s rect=%s scale=%s filter=%d" % [
-			fname, root.get_global_rect(), root.scale, root.mouse_filter])
 	return root
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE and not dialogs.is_empty():
+		close(str(dialogs.keys().back()))
+		get_viewport().set_input_as_handled()
 
 
 func close(name: String) -> void:
 	var fname := _file_for(name)
 	if dialogs.has(fname):
+		dialogs[fname].hide()
 		dialogs[fname].queue_free()
 		dialogs.erase(fname)
 
@@ -67,7 +84,7 @@ func is_open(name: String) -> bool:
 
 
 ## openClose<XxxDialog> toggles; close<XxxDialog> always closes.
-func toggle(name: String, model_values := {}) -> GWidget:
+func toggle(name: String, model_values := {}) -> Control:
 	if is_open(name):
 		close(name)
 		return null
@@ -131,6 +148,14 @@ static func _ld_axis(spec: Variant, want: float, avail: float) -> float:
 
 func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void:
 	match method:
+		"unloadDialog":
+			var ancestor: Node = widget
+			while ancestor != null:
+				for name in dialogs:
+					if dialogs[name] == ancestor:
+						close(name)
+						return
+				ancestor = ancestor.get_parent()
 		"setLanguage":
 			var lang := str(args[0]) if args.size() > 0 else "en"
 			gui.model.set_value("gamePreferences", lang, "language")
@@ -142,6 +167,11 @@ func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void
 		"quit":
 			get_tree().quit()
 		_:
+			var h: Callable = handlers.get(method, Callable())
+			if h.is_valid():
+				h.call(args, widget)
+				_save_settings()
+				return
 			# dofusarena:openCloseXxxDialog / closeXxxDialog are generic
 			# dialog toggles — the name is already the file name
 			if method.begins_with("openClose") and \
@@ -152,10 +182,6 @@ func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void
 					method.ends_with("Dialog"):
 				close(method.trim_prefix("close"))
 				return
-			var h: Callable = handlers.get(method, Callable())
-			if h.is_valid():
-				h.call(args, widget)
-				_save_settings()
 
 
 func _rebuild_open_dialogs() -> void:

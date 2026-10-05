@@ -53,6 +53,9 @@ func _dispatch(action: String, w: GWidget, _loader: GuiLoader) -> void:
 
 
 func _dispatch_one(action: String, w: GWidget) -> void:
+	if action == "unloadDialog" and event_sink.is_valid():
+		event_sink.call("", action, [], w)
+		return
 	var m := RegEx.new()
 	m.compile("^([\\w.]+):(\\w+)(?:\\((.*)\\))?$")
 	var r := m.search(action)
