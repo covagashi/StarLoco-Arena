@@ -20,6 +20,7 @@ const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const State := preload("res://src/state.gd")
+const DebugLog := preload("res://src/util/debug_log.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const Elements := preload("res://src/gamedata/elements.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
@@ -27,11 +28,16 @@ const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const Topology := preload("res://src/maps/topology.gd")
 const Scenarios := preload("res://src/gamedata/scenarios.gd")
+const BugReport := preload("res://src/ui/bug_report.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
 const OP_INVALID_VERSION := 8
 const OP_AUTH_RESULT := 1024
+## Godot-only extension pair — the retail client never uses these: 60000 asks
+## for server runtime config, 60001 answers a key/value map (web_base_url).
+const OP_CLIENT_CONFIG_REQ := 60000
+const OP_CLIENT_CONFIG := 60001
 const OP_COACH_CREATE_REQ := 2048
 const OP_COACH_CREATE := 2049
 const OP_COACH_CREATION_RESULT := 2050
@@ -629,17 +635,19 @@ func _on_connect_pressed() -> void:
 	if Session.is_online():
 		Session.client.disconnect_from()
 		return
-	_log_line("connecting to %s:%s…" % [host_edit.text, port_edit.text])
+	_log_line(I18n.t("net.connecting", {"host": host_edit.text,
+		"port": port_edit.text}))
 	var err := Session.connect_to(host_edit.text, int(port_edit.text))
 	if err != OK:
-		_log_line("[color=red]connect failed: %s[/color]" % error_string(err))
+		_log_line("[color=red]%s[/color]" % I18n.t("net.failed",
+			{"err": error_string(err)}))
 
 
 func _on_connected() -> void:
-	status_lbl.text = "connected"
+	status_lbl.text = I18n.t("net.status_connected")
 	login_btn.disabled = false
-	connect_btn.text = "Disconnect"
-	_log_line("[color=green]connected[/color]")
+	connect_btn.text = I18n.t("net.disconnect")
+	_log_line("[color=green]%s[/color]" % I18n.t("net.connected"))
 	if _pending_login != "":
 		_send_auth(_pending_login, _pending_pass)
 		_pending_login = ""
@@ -663,7 +671,8 @@ func _on_retail_logon(args: Array, _widget: GWidget) -> void:
 			proxy = "140.238.172.196:3000"
 		var hp := proxy.split(":")
 		Session.connect_to(hp[0], int(hp[1]) if hp.size() > 1 else 5555)
-		_log_line("connecting to %s…" % proxy)
+		_log_line(I18n.t("net.connecting", {"host": hp[0],
+			"port": hp[1] if hp.size() > 1 else "5555"}))
 	_gui._save_settings()
 
 
@@ -671,13 +680,13 @@ func _on_disconnected() -> void:
 	_lobby_ready = false
 	if is_instance_valid(_lobby_screen):
 		_lobby_screen.set_actions_ready(false)
-		_lobby_screen.show_bubble("Conexión perdida")
-	status_lbl.text = "offline"
+		_lobby_screen.show_bubble(I18n.t("net.disconnected"))
+	status_lbl.text = I18n.t("net.status_offline")
 	login_btn.disabled = true
-	connect_btn.text = "Connect"
-	_log_line("[color=red]disconnected[/color]")
+	connect_btn.text = I18n.t("net.connect")
+	_log_line("[color=red]%s[/color]" % I18n.t("net.disconnected"))
 	if _login_screen != null and _pending_login != "":
-		_login_screen.set_error("No se pudo conectar al servidor")
+		_login_screen.set_error(I18n.t("login.connect_failed"))
 		_pending_login = ""
 
 
@@ -715,7 +724,8 @@ func _on_login_submit(login: String, password: String, proxy: String) -> void:
 			proxy = "140.238.172.196:3000"
 		var hp := proxy.split(":")
 		Session.connect_to(hp[0], int(hp[1]) if hp.size() > 1 else 5555)
-		_log_line("connecting to %s…" % proxy)
+		_log_line(I18n.t("net.connecting", {"host": hp[0],
+			"port": hp[1] if hp.size() > 1 else "5555"}))
 	_gui._save_settings()
 
 
@@ -740,7 +750,7 @@ func _send_auth(login_txt: String, pass_txt: String) -> void:
 	auth.put_bytes(password)
 	Session.send(OP_CLIENT_AUTH, auth.raw(), 1)
 	State.my_coach_name = login_txt.strip_edges()
-	_log_line("sent version + auth for '%s'" % login_txt)
+	DebugLog.add("sent version + auth for '%s'" % login_txt)
 
 
 func _on_message(opcode: int, raw: PackedByteArray) -> void:
@@ -749,17 +759,17 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		return  # chat family handled by the chat box
 	match opcode:
 		OP_INVALID_VERSION:
-			_log_line("[color=red]server rejected client version — closing[/color]")
+			_log_line("[color=red]%s[/color]" % I18n.t("net.version_refused"))
 			Session.client.disconnect_from()
 		OP_AUTH_RESULT:
 			var code := payload.get_u8()
 			if code == 0:
-				_log_line("[color=green]auth OK[/color]")
+				_log_line("[color=green]%s[/color]" % I18n.t("net.auth_ok"))
 			else:
-				_log_line("[color=red]auth refused, code %d[/color]" % code)
+				_log_line("[color=red]%s[/color]" % I18n.t(
+					"net.auth_refused", {"code": code}))
 				if _login_screen != null:
-					_login_screen.set_error(
-						"Cuenta o contraseña incorrectas")
+					_login_screen.set_error(I18n.t("login.bad_credentials"))
 		OP_COACH_CREATE_REQ:
 			_open_coach_creation()
 		OP_COACH_CREATION_RESULT:
@@ -767,8 +777,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# COACH_INFO + ENTER_INSTANCE, failures only carry the code.
 			var res := payload.get_u8()
 			if res != 0:
-				_log_line("[color=red]coach create refused, code %d[/color]"
-					% res)
+				_log_line("[color=red]%s[/color]" % I18n.t(
+					"net.coach_refused", {"code": res}))
 		OP_COACH_INFO:
 			var d := Codec.decode(opcode, payload)
 			State.my_coach_id = int(d.get("id", -1))
@@ -786,11 +796,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			while cb.remaining() >= 4:
 				State.criteria[cb.get_u16()] = cb.get_u16()
 			if not State.guild.is_empty():
-				_log_line("guild: '%s' — rank %s, demon %d" % [
+				DebugLog.add("guild: '%s' — rank %s, demon %d" % [
 					State.guild.get("guild", "?"),
 					State.guild.get("rank_name", "?"),
 					int(State.guild.get("demon_id", 0))])
-			_log_line("[color=green]coach info received — in lobby[/color]")
+			_log_line("[color=green]%s[/color]" % I18n.t("net.in_lobby"))
+			# Ask for the server's public web address (60000 → 60001): the
+			# bug reporter POSTs to it, and a TCP link carries no http URL.
+			State.net.send_message(OP_CLIENT_CONFIG_REQ, PackedByteArray(), 3)
 			_gui.close("logonDialog")
 			if _login_screen != null:
 				_login_screen.queue_free()
@@ -806,11 +819,11 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_coach_names = {}
 			_my_pos = Vector3(float(d.get("x", 0.0)), float(d.get("y", 0.0)),
 				float(d.get("alt", 0)))
-			_log_line("entering instance world=%d pos=(%s,%s)" % [
+			DebugLog.add("entering instance world=%d pos=(%s,%s)" % [
 				State.current_world, d.get("x"), d.get("y")])
 		OP_INSTANCE_READY:
 			_lobby_ready = true
-			_log_line("[color=green]instance ready — in world[/color]")
+			_log_line("[color=green]%s[/color]" % I18n.t("net.in_world"))
 			$UI/VBox/AuthRow/PracticeBtn.disabled = false
 			$UI/VBox/AuthRow/FightBtn.disabled = false
 			$UI/VBox/AuthRow/DuoBtn.disabled = false
@@ -855,12 +868,22 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_ACTOR_TELEPORTS:
 			# 4510 — actor snapped to a cell (GM /tp, zaap arrival effects).
 			Codec.decode(opcode, payload)
+		OP_CLIENT_CONFIG:
+			# [u8 n] n × {[u8 klen][key][u16 vlen][value]} — see the server's
+			# handlers_clientconfig.go. Today carries web_base_url.
+			var n := payload.get_u8() if payload.remaining() >= 1 else 0
+			for i in n:
+				var k := payload.get_str("u8", "utf8")
+				var v := payload.get_str("u16", "utf8")
+				if k == "web_base_url":
+					State.web_base_url = _web_base_url(v)
+			DebugLog.add("client config: web_base_url=%s" % State.web_base_url)
 		OP_FIGHT_CREATION:
 			State.fight_world = State.current_world
 			State.fight_data = Codec.decode(opcode, payload)
 			State.index_fighters(State.fight_data)
-			_log_line("[color=green]fight created on arena %d — %d fighters[/color]"
-				% [State.fight_world, State.fighters.size()])
+			_log_line("[color=green]%s[/color]" % I18n.t("fight.created",
+				{"n": State.fighters.size()}))
 			get_tree().change_scene_to_file("res://src/fight/fight_view.tscn")
 		OP_FIGHTER_LIST:
 			# Lobby roster (et_2 blobs) — fills the selectable fighter list.
@@ -880,7 +903,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				names.append(label)
 				roster_list.add_item(label)
 				roster_list.set_item_metadata(roster_list.item_count - 1, int(f.id))
-			_log_line("roster: %s" % (", ".join(names) if names else "empty"))
+			_log_line(I18n.t("lobby.roster", {"list": ", ".join(names)})
+				if not names.is_empty() else I18n.t("lobby.roster_empty"))
 			_push_team_model()
 			if _elem_kind == 10 and $UI/ElementDlg.visible:
 				_fill_graveyard()
@@ -888,25 +912,25 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			State.presets = d.get("presets", [])
 			var real := State.presets.filter(func(p): return int(p.type) != -4)
-			_log_line("team presets: %d saved (%d shown incl. bench)" % [
-				real.size(), State.presets.size()])
+			_log_line(I18n.t("lobby.presets", {"n": real.size(),
+				"shown": State.presets.size()}))
 			_refresh_presets()
 		OP_FIGHTER_CREATE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
-				_log_line("[color=green]fighter created: %s[/color]"
-					% d.fighter.get("name", "?"))
+				_log_line("[color=green]%s[/color]" % I18n.t("fighter.created",
+					{"name": d.fighter.get("name", "?")}))
 				$UI/CreateDlg.visible = false
 			else:
-				_log_line("[color=red]fighter create refused, code %d[/color]"
-					% int(d.result))
+				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
+					{"code": int(d.result)}))
 		OP_FIGHTER_DELETE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
-				_log_line("fighter %d deleted" % int(d.fighter_id))
+				_log_line(I18n.t("fighter.deleted", {"id": int(d.fighter_id)}))
 			else:
-				_log_line("[color=red]fighter delete refused, code %d[/color]"
-					% int(d.result))
+				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
+					{"code": int(d.result)}))
 		OP_FIGHTER_LOADOUT_RESULT:
 			# 6010: [i64 fid][u8 result][u16 spellsLen]{i32}[u16 cardsLen]{i32}
 			var fid := int(payload.get_i64())
@@ -919,11 +943,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				for f in State.roster:
 					if int(f.get("id", -1)) == fid:
 						f.spells = spells
-				_log_line("[color=green]loadout saved — %d spells[/color]"
-					% spells.size())
+				_log_line("[color=green]%s[/color]" % I18n.t(
+					"fighter.loadout_saved", {"n": spells.size()}))
 				$UI/LoadoutDlg.visible = false
 			else:
-				_log_line("[color=red]loadout refused, code %d[/color]" % res)
+				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
+					{"code": res}))
 		OP_SEARCH_RESULT:
 			# 23104 [i16 preset][u8 accepted] — the "Recherche en cours" ack
 			payload.get_i16()
@@ -931,51 +956,52 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_searching = true
 				_search_kind = 1
 				$UI/VBox/AuthRow/CancelSearchBtn.visible = true
-				_log_line("searching for an opponent…")
+				_log_line(I18n.t("search.searching"))
 		OP_SEARCH_CANCEL_RESULT:
 			# 23102 [u8] — reply that closes the searching state
 			payload.get_u8()
 			_searching = false
 			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
-			_log_line("search cancelled")
+			_log_line(I18n.t("search.cancelled"))
 		OP_FIGHT_STARTING:
 			# 23106 — paired, fight incoming (8000 follows)
 			_searching = false
 			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
-			_log_line("[color=green]opponent found — fight starting![/color]")
+			_log_line("[color=green]%s[/color]" % I18n.t("search.found"))
 		OP_SEARCH_ERROR:
 			var code := payload.get_u8()
 			if code >= 3:
 				_searching = false
 				_search_kind = 0
 				$UI/VBox/AuthRow/CancelSearchBtn.visible = false
-			_log_line("[color=red]search error %d[/color]" % code)
+			DebugLog.add("classic search error %d" % code)
+			_log_line("[color=red]%s[/color]" % _search_error_text(code))
 		OP_QUICK_SEARCH_ACK:
 			# 2304 empty — the random-fight search is live
 			_searching = true
 			_search_kind = 2
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = true
-			_log_line("searching for an opponent…")
+			_log_line(I18n.t("search.searching"))
 		OP_QUICK_CANCEL_RES:
 			# 2306 [u8 result] — quick-search cancelled (or was idempotent)
 			payload.get_u8()
 			_searching = false
 			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
-			_log_line("search cancelled")
+			_log_line(I18n.t("search.cancelled"))
 		OP_MATCH_FOUND:
 			# 23110 — paired pending match; retail asks before the accept.
 			var d := Codec.decode(opcode, payload)
 			_match = d
 			$UI/MatchAskDlg.dialog_text = \
-				"Fight against %s?" % str(d.get("opp_name", "?"))
+				I18n.t("search.match_ask", {"name": str(d.get("opp_name", "?"))})
 			$UI/MatchAskDlg.popup_centered()
 		OP_MATCH_CONFIRM:
 			# 23116 [i32 n] — 0 rows means our match fell through
 			if payload.get_i32() == 0:
-				_log_line("[i]the match fell through[/i]")
+				_log_line("[i]%s[/i]" % I18n.t("search.fell_through"))
 		OP_EVO_SEARCH_RES:
 			# 23004 [i16 preset][u8 accepted]
 			payload.get_i16()
@@ -983,31 +1009,31 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_searching = true
 				_search_kind = 3
 				$UI/VBox/AuthRow/CancelSearchBtn.visible = true
-				_log_line("searching an evolution opponent…")
+				_log_line(I18n.t("search.searching_evo"))
 		OP_EVO_CANCEL_RES:
 			payload.get_i8()
 			_searching = false
 			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
-			_log_line("search cancelled")
+			_log_line(I18n.t("search.cancelled"))
 		OP_EVO_STARTING:
 			_searching = false
 			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
-			_log_line("[color=green]evolution fight starting![/color]")
+			_log_line("[color=green]%s[/color]" % I18n.t("search.found_evo"))
 		OP_EVO_ERROR:
 			var code := payload.get_i8()
 			_searching = false
 			_search_kind = 0
 			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
-			_log_line("[color=red]evolution search refused (%d)[/color]"
-				% code)
+			DebugLog.add("evolution search error %d" % code)
+			_log_line("[color=red]%s[/color]" % _search_error_text(code, true))
 		OP_RECONNECT_Q:
 			# 26333 — a dropped fight is still alive; resume it (26334).
 			var w := WireWriter.new()
 			w.put_u8(1)
 			Session.send(OP_RECONNECT_A, w.raw(), 2)
-			_log_line("resuming the dropped fight…")
+			_log_line(I18n.t("fight.resuming"))
 		OP_TOURN_TREE:
 			# 28650 bracket — render slot→name into the pane's second list.
 			var d := Codec.decode(opcode, payload)
@@ -1027,16 +1053,15 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_duo_pending = {"team": team,
 				"inviter": int(payload.get_i64()),
 				"invited": int(payload.get_i64())}
-			$UI/DuoAskDlg.dialog_text = \
-				"%s invites you to 2v2 team '%s'." % [who, team]
+			$UI/DuoAskDlg.dialog_text = I18n.t("duo.invite_ask",
+				{"name": who, "team": team})
 			$UI/DuoAskDlg.popup_centered()
 		OP_DUO_REFUSED:
-			_log_line("[color=red]2v2 refused or unavailable[/color]")
+			_log_line("[color=red]%s[/color]" % I18n.t("duo.refused"))
 		OP_DUO_ACCEPTED:
-			_log_line("[color=green]2v2 team formed — both press "
-				+ "Combattre[/color]")
+			_log_line("[color=green]%s[/color]" % I18n.t("duo.formed"))
 		OP_DUO_GONE:
-			_log_line("[i]your 2v2 partner left[/i]")
+			_log_line("[i]%s[/i]" % I18n.t("duo.left"))
 		OP_SPECTATE_REPLY:
 			# 2261 [i8 1/0] — 1 = coach is in a live fight; join as viewer.
 			if _watch_target >= 0 and payload.get_u8() == 1:
@@ -1044,12 +1069,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				w.put_i64(_watch_target)
 				Session.send(OP_SPECTATE_JOIN, w.raw(), 2)
 				State.spectating = true
-				_log_line("joining the fight as spectator…")
+				_log_line(I18n.t("watch.joining"))
 			else:
-				_log_line("[i]that coach is not fighting[/i]")
+				_log_line("[i]%s[/i]" % I18n.t("watch.none"))
 				_watch_target = -1
 		OP_SPECTATE_DOWN:
-			_log_line("[i]spectator view closed[/i]")
+			_log_line("[i]%s[/i]" % I18n.t("watch.closed"))
 			State.spectating = false
 		OP_LADDER_1V1, OP_LADDER_GUILD, OP_LADDER_2V2, OP_LADDER_TOURN, \
 				OP_LADDER_COACH, OP_LADDER_DEMON, OP_LADDER_PRO:
@@ -1067,7 +1092,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.fight_world = -1
 			State.fighters = {}
 			Session.send(OP_END_FIGHT_DONE, PackedByteArray(), 3)
-			_log_line("[i]fight over — back to the island[/i]")
+			_log_line("[i]%s[/i]" % I18n.t("fight.over"))
 			_show_fight_result()
 		OP_CHALLENGE_INVITATION:
 			# 26300 [i64 handle][u8 outgoing][u8 evo][u8 n]{[i32 len][name]}
@@ -1078,28 +1103,29 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for i in payload.get_u8():
 				cname = payload.get_str("i32")
 			if outgoing:
-				_log_line("challenge sent — waiting for %s…" % cname)
+				_log_line(I18n.t("challenge.sent", {"name": cname}))
 			else:
-				$UI/ChallengeDlg.dialog_text = \
-					"%s challenges you to a training fight — accept?" % cname
+				$UI/ChallengeDlg.dialog_text = I18n.t("challenge.ask",
+					{"name": cname})
 				$UI/ChallengeDlg.popup_centered()
 		OP_CHALLENGE_ACCEPTED:
 			# 26302 [i64 handle][u8 evo] — both sides now pick a team (26303)
 			payload.get_i64()
 			_challenge_evo = payload.get_u8()
-			_log_line("[color=green]challenge accepted — pick your team[/color]")
+			_log_line("[color=green]%s[/color]" % I18n.t("challenge.accepted"))
 			_open_team_pick()
 		OP_CHALLENGE_CANCELLED:
 			payload.get_i64()
 			_challenge_handle = -1
 			$UI/ChallengeDlg.hide()
 			$UI/TeamPickDlg.visible = false
-			_log_line("[i]challenge cancelled[/i]")
+			_log_line("[i]%s[/i]" % I18n.t("challenge.cancelled"))
 		OP_TEAM_PRESET_SAVED:
 			# 6020 [u8 status] — only sent on failure (25 = name taken)
 			var st := payload.get_u8()
 			if st != 0:
-				_log_line("[color=red]preset save refused, code %d[/color]" % st)
+				_log_line("[color=red]%s[/color]" % I18n.t("preset.err",
+					{"code": st}))
 		OP_TEAM_PRESET_DELETED:
 			# 6022 [u8 status][i16 teamId on success]
 			if payload.get_u8() == 0:
@@ -1136,7 +1162,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.inventory = {}
 			for c in d.get("cards", []):
 				State.inventory[int(c.card_id)] = int(c.qty)
-			_log_line("inventory: %d card stack(s)" % State.inventory.size())
+			_log_line(I18n.t("inv.stacks", {"n": State.inventory.size()}))
 			if $UI/EquipDlg.visible:
 				_fill_equip()
 		OP_SHOP_CATALOG:
@@ -1150,34 +1176,33 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				# empty detail list) — label it as the offering result.
 				_awaiting_offer = false
 				if res == 0:
-					_log_line("[color=green]demon accepted the offering[/color]")
+					_log_line("[color=green]%s[/color]" % I18n.t("demon.accepted"))
 				else:
-					_log_line("[color=red]demon offering failed "
-						+ "(guild leader + unaffiliated required)[/color]")
+					_log_line("[color=red]%s[/color]" % I18n.t("demon.failed"))
 			else:
 				for c in d.get("currencies", []):
 					State.wallet[int(c.type)] = int(c.amount)
 				_refresh_wallet_label()
 				match res:
-					0: _log_line("[color=green]shop: deal done[/color]")
-					1: _log_line("[color=red]shop: not enough tokens[/color]")
-					_: _log_line("[color=red]shop: refused (code %d)[/color]"
-						% res)
+					0: _log_line("[color=green]%s[/color]" % I18n.t("shop.done"))
+					1: _log_line("[color=red]%s[/color]" % I18n.t("shop.tokens"))
+					_: _log_line("[color=red]%s[/color]" % I18n.t(
+						"shop.refused", {"code": res}))
 		OP_FUSION_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.get("result", 0)) != 0:
-				_log_line("[color=red]fusion: request refused[/color]")
+				_log_line("[color=red]%s[/color]" % I18n.t("fusion.refused"))
 			elif int(d.get("obtained", 0)) > 0:
-				_log_line("[color=green]fusion: got %s![/color]"
-					% Cards.name_of(int(d.obtained)))
+				_log_line("[color=green]%s[/color]" % I18n.t("fusion.got",
+					{"name": Cards.name_of(int(d.obtained))}))
 			elif int(d.get("not_obtained", 0)) > 0:
-				_log_line("[color=red]fusion: missed %s[/color]"
-					% Cards.name_of(int(d.not_obtained)))
+				_log_line("[color=red]%s[/color]" % I18n.t("fusion.missed",
+					{"name": Cards.name_of(int(d.not_obtained))}))
 			elif int(d.get("recovered", 0)) > 0:
-				_log_line("fusion: leftovers returned (%s)"
-					% Cards.name_of(int(d.recovered)))
+				_log_line(I18n.t("fusion.leftovers",
+					{"name": Cards.name_of(int(d.recovered))}))
 			else:
-				_log_line("[color=red]fusion failed — cards consumed[/color]")
+				_log_line("[color=red]%s[/color]" % I18n.t("fusion.failed"))
 			# the tray is consumed either way — reset the lab
 			_fusion_inputs = []
 			_fusion_failed = int(d.get("obtained", 0)) <= 0 \
@@ -1198,7 +1223,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 						int(d.get("demon", -1)), d.get("rows", []).size(),
 						int(d.get("affiliation", 0))]
 			else:
-				_log_line("demon ladder: %d row(s)" % d.get("rows", []).size())
+				DebugLog.add("demon ladder: %d row(s)" % d.get("rows", []).size())
 		OP_TOURN_CALENDAR, OP_TOURN_LIST_RES:
 			var d := Codec.decode(opcode, payload)
 			var rows: Array = d.get("events", d.get("tournaments", []))
@@ -1212,39 +1237,39 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					var tid := int(r0.get("id", r0.get("tid", -1)))
 					var label := str(r0.get("name", "?"))
 					if r0.get("reg_open", 1) == 0:
-						label += "  (closed)"
+						label += "  " + I18n.t("tourn.closed")
 					list.add_item(label)
 					list.set_item_metadata(list.item_count - 1, tid)
-				$UI/ElementDlg/VBox/Hint.text = "%d tournament(s)" % [
-					$UI/ElementDlg/VBox/Scroll/List.item_count]
+				$UI/ElementDlg/VBox/Hint.text = I18n.t("ladder.tournaments",
+					{"n": $UI/ElementDlg/VBox/Scroll/List.item_count})
 				var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-				act.text = "Register"
+				act.text = I18n.t("btn.register")
 				act.visible = true
 				act.disabled = true
 			else:
-				_log_line("tournaments: %d" % rows.size())
+				_log_line(I18n.t("tourn.count", {"n": rows.size()}))
 		OP_TOURN_REG_RES:
 			var d := Codec.decode(opcode, payload)
 			var tid := int(d.tournament_id)
-			var msg := "registration accepted" if int(d.code) == 0 \
-				else ("tournament full" if int(d.code) == 2
-					else "registration refused (%d)" % int(d.code))
+			var msg := I18n.t("tourn.registered") if int(d.code) == 0 \
+				else (I18n.t("tourn.full") if int(d.code) == 2
+					else I18n.t("tourn.reg_refused", {"code": int(d.code)}))
 			if int(d.code) == 0:
 				_registered_tids[tid] = true
-			_log_line("tournament %d: %s" % [tid, msg])
+			_log_line(I18n.t("tourn.msg", {"tid": tid, "msg": msg}))
 			if $UI/ElementDlg.visible and _elem_kind == 13:
 				$UI/ElementDlg/VBox/Hint.text = msg
 		OP_TOURN_SEARCH_PERIOD:
 			var d := Codec.decode(opcode, payload)
 			_search_open[int(d.tournament_id)] = int(d.open) != 0
-			_log_line("tournament %d opponent search %s" % [
-				int(d.tournament_id),
-				"OPEN" if int(d.open) != 0 else "closed"])
+			_log_line(I18n.t("tourn.search_state", {"tid": int(d.tournament_id),
+				"state": I18n.t("tourn.open" if int(d.open) != 0
+					else "tourn.closed")}))
 		OP_TOURN_SEARCH_RES:
 			var d := Codec.decode(opcode, payload)
-			_log_line("tournament %d search %s" % [int(d.tournament_id),
-				"accepted — waiting for opponents"
-				if int(d.accepted) != 0 else "refused"])
+			_log_line(I18n.t("tourn.msg", {"tid": int(d.tournament_id),
+				"msg": I18n.t("tourn.search_wait") if int(d.accepted) != 0
+					else I18n.t("tourn.search_refused")}))
 			if int(d.accepted) != 0:
 				_tourn_search_tid = int(d.tournament_id)
 			else:
@@ -1252,21 +1277,23 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TOURN_CANCEL_RES:
 			# 28610 [i8 accepted] — the search we cancelled is dead
 			_tourn_search_tid = -1
-			_log_line("tournament search cancelled")
+			_log_line(I18n.t("tourn.cancelled"))
 		OP_TOURN_SEARCH_ERR:
 			var d := Codec.decode(opcode, payload)
 			_tourn_search_tid = -1
-			_log_line("[color=red]tournament search error %d/%d[/color]" % [
+			DebugLog.add("tournament search error %d/%d" % [
 				int(d.code), int(d.sub_code)])
+			_log_line("[color=red]%s[/color]" % I18n.t("tourn.err"))
 		OP_TOURN_SEARCH_END:
 			var d := Codec.decode(opcode, payload)
 			_tourn_search_tid = -1
-			_log_line("tournament %d search ended%s" % [int(d.tournament_id),
-				" — winner by forfeit" if int(d.forfeit) != 0 else ""])
+			_log_line(I18n.t("tourn.ended", {"tid": int(d.tournament_id)})
+				+ (I18n.t("tourn.ended_forfeit") if int(d.forfeit) != 0 else ""))
 		28614:  # TournamentFightStarting [i64 tid] — bracket match launching
 			var d := Codec.decode(opcode, payload)
 			_tourn_search_tid = -1
-			_log_line("tournament %d: fight starting!" % int(d.f0))
+			_log_line("[color=green]%s[/color]" % I18n.t("tourn.starting",
+				{"tid": int(d.f0)}))
 		28620:  # TournamentFinale (Yq) — [u8 status]1=add/2=remove; on add:
 			# [i64 tid][i32 n][i64 coaches][i32 m][str32 names][str32 tname]
 			# (both arrays written reversed — the retail reader Yq.a fills
@@ -1284,9 +1311,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					# same indices Yq.a fills (names[0] VS names[1])
 					names.insert(0, payload.get_str("u32", "utf8"))
 				var tname := payload.get_str("u32", "utf8")
-				_toast("Finale du tournoi %s — %s VS %s" % [
-					tname, names[0] if names.size() > 0 else "?",
-					names[1] if names.size() > 1 else "?"])
+				_toast(I18n.t("tourn.finale", {"name": tname,
+					"a": names[0] if names.size() > 0 else "?",
+					"b": names[1] if names.size() > 1 else "?"}))
 			else:
 				pass  # remove — the toast already aged out
 		28644:  # TournamentSearchUpcoming [i64 tid][i64 startUnixMs] — zN
@@ -1295,28 +1322,29 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var start_ms := int(payload.get_i64())
 			var mins := 1 + int((start_ms -
 				int(Time.get_unix_time_from_system() * 1000)) / 60000)
-			_log_line("tournament %d: opponent search opens in %d min" % [
-				tid2, max(mins, 0)])
+			_log_line(I18n.t("tourn.opens_in", {"tid": tid2,
+				"min": max(mins, 0)}))
 		OP_GUILD_RESULT:
 			var d := Codec.decode(opcode, payload)
 			match int(d.code):
-				403: _log_line("[color=green]guild created[/color]")
-				404: _log_line("[color=green]joined the guild[/color]")
-				11: _log_line("[color=red]guild name invalid or taken[/color]")
-				20: _log_line("[color=red]guild is full[/color]")
-				35: _log_line("[color=red]guild: coach not found[/color]")
-				40: _log_line("[color=red]guild invite refused[/color]")
-				_: _log_line("guild result %d" % int(d.code))
+				403: _log_line("[color=green]%s[/color]" % I18n.t("guild.created"))
+				404: _log_line("[color=green]%s[/color]" % I18n.t("guild.joined"))
+				11: _log_line("[color=red]%s[/color]" % I18n.t("guild.name_taken"))
+				20: _log_line("[color=red]%s[/color]" % I18n.t("guild.full"))
+				35: _log_line("[color=red]%s[/color]" % I18n.t("guild.not_found"))
+				40: _log_line("[color=red]%s[/color]" % I18n.t("guild.refused"))
+				_: _log_line(I18n.t("guild.result", {"code": int(d.code)}))
 		OP_GUILD_FEED:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[i]%s founded the guild '%s'[/i]" % [d.coach, d.guild])
+			_log_line("[i]%s[/i]" % I18n.t("guild.founded",
+				{"coach": d.coach, "guild": d.guild}))
 		OP_GUILD_INVITATION:
 			# 502 [u8 type][str8 inviter][str8 guild] — ask before answering.
 			var d := Codec.decode(opcode, payload)
 			_guild_invite = {"type": int(d.type), "inviter": d.inviter,
 				"guild": d.guild}
-			$UI/GuildAskDlg.dialog_text = \
-				"%s invites you to join '%s'" % [d.inviter, d.guild]
+			$UI/GuildAskDlg.dialog_text = I18n.t("guild.invite_ask",
+				{"name": d.inviter, "guild": d.guild})
 			$UI/GuildAskDlg.popup_centered()
 		OP_GUILD_MEMBER_REPORT:
 			var d := Codec.decode(opcode, payload)
@@ -1324,7 +1352,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for s in d.stats:
 				lines.append("  stat %d (type %d) = %s" % [
 					int(s.id), int(s.type), str(s.value)])
-			_log_line("\n".join(lines))
+			DebugLog.add("\n".join(lines))
 			# retail raises the stats dialog on the reply
 			if not _guild_stats_member.is_empty():
 				_gui.open("guildCoachStatsDialog")
@@ -1338,10 +1366,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if not bool(ainfo.get("hid", false)):
 				var pts := int(ainfo.get("pts", 0))
 				var aname := NpcDialogs.achievement_name(aid)
-				_toast("Achievement unlocked — %s%s" % [aname,
-					" (+%d pts)" % pts if pts > 0 else ""])
-				_log_line("[color=yellow]achievement unlocked: %s[/color]"
-					% aname)
+				_toast(I18n.t("ach.unlocked_toast", {"name": aname,
+					"pts": " (+%d pts)" % pts if pts > 0 else ""}))
+				_log_line("[color=yellow]%s[/color]" % I18n.t("ach.unlocked",
+					{"name": aname}))
 		OP_STAT_DATA:
 			# 22002 — reply to opening the achievements tab; the pairs also
 			# refresh the local criterion map the pane evaluates against.
@@ -1374,7 +1402,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for row in d.rows:
 				State.guild.merge(row, true)
 			if not State.guild.is_empty():
-				_log_line("guild membership: '%s' — %s (demon %d)" % [
+				DebugLog.add("guild membership: '%s' — %s (demon %d)" % [
 					State.guild.get("guild", "?"),
 					State.guild.get("rank_name", "?"),
 					int(State.guild.get("demon_id", 0))])
@@ -1387,7 +1415,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for m in d.rows:
 				names.append("%s%s" % [m.get("name", "?"),
 					"*" if m.get("online", false) else ""])
-			_log_line("guild roster: %s" % ", ".join(names))
+			DebugLog.add("guild roster: %s" % ", ".join(names))
 			_fill_guild()
 			if _gui.is_open("guildDialog") or _gui.is_open("socialDialog"):
 				_push_social_model()
@@ -1398,21 +1426,22 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			if int(d.coach_id) == State.my_coach_id:
 				State.guild = {}
-				_log_line("[i]you are no longer in a guild[/i]")
+				_log_line("[i]%s[/i]" % I18n.t("guild.left"))
 			else:
-				_log_line("[i]coach %d left the guild[/i]" % int(d.coach_id))
+				_log_line("[i]%s[/i]" % I18n.t("guild.member_left",
+					{"id": int(d.coach_id)}))
 			_fill_guild()
 		560:  # GuildMemberFeed — "X joined / X was thrown out"
 			var d := Codec.decode(opcode, payload)
-			_log_line("[i]%s %s[/i]" % [d.coach,
-				"was kicked out of the guild" if int(d.removed) != 0
-				else "joined the guild"])
+			_log_line("[i]%s[/i]" % I18n.t(
+				"guild.kicked" if int(d.removed) != 0 else "guild.member_joined",
+				{"coach": d.coach}))
 		OP_MAIL_LIST:
 			var d := Codec.decode(opcode, payload)
 			_mails = d.mails
 			if $UI/ElementDlg.visible and _elem_kind == 2:
 				_fill_mails()
-			_log_line("mailbox: %d letter(s)" % _mails.size())
+			_log_line(I18n.t("mail.count", {"n": _mails.size()}))
 			# the retail client opens the dialog when the list lands
 			if _elem_kind == 2 or _gui.is_open("mailboxDialog") or \
 					_gui.is_open("newMailDialog"):
@@ -1423,29 +1452,30 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var cid := int(d.get("coach_id", 0))
 			_gui.gui.model.set_value("mailbox.newMail.receiverId", cid)
 			if cid <= 0:
-				_toast("No such coach")
+				_toast(I18n.t("chat.user_not_found_toast"))
 		OP_MAIL_SEND_RES:
 			var d := Codec.decode(opcode, payload)
 			var res := int(d.result)
 			if res > 0:
-				_log_line("[color=green]mail %d sent to %s[/color]" % [
-					res, d.mail.get("receiver", "?")])
+				_log_line("[color=green]%s[/color]" % I18n.t("mail.sent",
+					{"id": res, "to": d.mail.get("receiver", "?")}))
 			elif res == -2:
-				_log_line("[color=red]mail refused: mailbox full or "
-					+ "unknown recipient[/color]")
+				_log_line("[color=red]%s[/color]" % I18n.t("mail.refused"))
 			else:
-				_log_line("[color=red]mail send failed (%d)[/color]" % res)
+				_log_line("[color=red]%s[/color]" % I18n.t("mail.err",
+					{"code": res}))
 		OP_MAIL_NOTICE:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[i]you have %d new letter(s)[/i]" % int(d.new_count))
+			_log_line("[i]%s[/i]" % I18n.t("mail.new", {"n": int(d.new_count)}))
 		OP_MAIL_TAKEN:
 			var d := Codec.decode(opcode, payload)
 			for cid in d.cards:
 				State.inventory[int(cid)] = int(
 					State.inventory.get(int(cid), 0)) + 1
 			if int(d.coach_id) == State.my_coach_id and not d.cards.is_empty():
-				_log_line("[color=green]collected: %s[/color]" % ", ".join(
-					d.cards.map(func(c): return Cards.name_of(int(c)))))
+				_log_line("[color=green]%s[/color]" % I18n.t("mail.collected",
+					{"list": ", ".join(d.cards.map(
+						func(c): return Cards.name_of(int(c))))}))
 			# Drop the emptied mail from the open mailbox.
 			for i in range(_mails.size() - 1, -1, -1):
 				if int(_mails[i].get("id", -1)) == int(d.mail_id):
@@ -1457,8 +1487,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_ex = {"id": int(d.ex_id), "my_side": 1,
 				"other_name": d.inviter, "accepted": false,
 				"staged": {0: {}, 1: {}}, "ready": {0: false, 1: false}}
-			$UI/ExchangeAskDlg.dialog_text = \
-				"%s wants to trade with you." % d.inviter
+			$UI/ExchangeAskDlg.dialog_text = I18n.t("trade.ask",
+				{"name": d.inviter})
 			$UI/ExchangeAskDlg.popup_centered()
 		OP_EX_CONFIRM:
 			var d := Codec.decode(opcode, payload)
@@ -1470,15 +1500,15 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_ex["staged"] = {0: {}, 1: {}}
 					_ex["ready"] = {0: false, 1: false}
 					_ex["accepted"] = false
-					_log_line("trade invitation sent…")
+					_log_line(I18n.t("trade.invited"))
 				2:
-					_log_line("[color=red]trade refused[/color]")
+					_log_line("[color=red]%s[/color]" % I18n.t("trade.refused"))
 					_ex = {}
 					if _elem_kind == ELEM_EXCHANGE:
 						$UI/ElementDlg.visible = false
 				3:
 					_ex["accepted"] = true
-					_log_line("[color=green]trade accepted[/color]")
+					_log_line("[color=green]%s[/color]" % I18n.t("trade.accepted"))
 					if _gui.open("exchangeDialog") == null:
 						_open_exchange()
 					_push_exchange_model()
@@ -1496,78 +1526,83 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_EX_USER_READY:
 			var d := Codec.decode(opcode, payload)
 			_ex.ready[int(d.side)] = true
-			var who: String = "You" if int(d.side) == _ex.get("my_side", -1) \
+			var who: String = I18n.t("trade.you") \
+				if int(d.side) == _ex.get("my_side", -1) \
 				else _ex.get("other_name", "?")
-			_log_line("%s %s ready" % [who,
-				"are" if int(d.side) == _ex.get("my_side", -1) else "is"])
+			_log_line(I18n.t("trade.ready", {"name": who}))
 			_refresh_exchange()
 			_push_exchange_model()
 		OP_EX_ERROR:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[color=red]trade error: %s[/color]" % (
-				"they already own that unique card" if int(d.code) == 1
-				else "card is linked / undestructible"))
+			_log_line("[color=red]%s[/color]" % I18n.t(
+				"trade.err_unique" if int(d.code) == 1 else "trade.err_linked"))
 		OP_EX_END:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[color=green]trade complete[/color]"
-				if int(d.reason) == 0 else "[i]trade cancelled[/i]")
+			_log_line(("[color=green]%s[/color]" % I18n.t("trade.done"))
+				if int(d.reason) == 0 else "[i]%s[/i]" % I18n.t("trade.cancelled"))
 			_ex = {}
 			_gui.close("exchangeDialog")
 			if _elem_kind == ELEM_EXCHANGE:
 				$UI/ElementDlg.visible = false
 		OP_FIREWORK_SHOW:
 			var d := Codec.decode(opcode, payload)
-			_log_line("firework! %s at (%d,%d)" % [
+			DebugLog.add("firework! %s at (%d,%d)" % [
 				Cards.name_of(int(d.get("card", 0))),
 				int(d.get("x", 0)), int(d.get("y", 0))])
 		OP_FRIEND_LIST:
 			var d := Codec.decode(opcode, payload)
 			State.friends = d.get("friends", [])
 			if not State.friends.is_empty():
-				_log_line("friends: %s" % ", ".join(
-					State.friends.map(func(f): return str(f.name))))
+				_log_line(I18n.t("chat.friends_list", {"list": ", ".join(
+					State.friends.map(func(f): return str(f.name)))}))
 		OP_IGNORE_LIST:
 			var d := Codec.decode(opcode, payload)
 			State.ignored = d.get("names", [])
 			if not State.ignored.is_empty():
-				_log_line("ignored: %s" % ", ".join(State.ignored))
+				_log_line(I18n.t("chat.ignored_list",
+					{"list": ", ".join(State.ignored)}))
 		OP_FRIEND_ADDED:
 			var d := Codec.decode(opcode, payload)
 			State.friends.append({"name": d.name,
 				"id": int(d.get("id", -1)), "online": true, "notify": 1})
-			_log_line("[color=light_green]%s added to friends[/color]" % d.name)
+			_log_line("[color=light_green]%s[/color]" % I18n.t("social.added",
+				{"name": d.name}))
 		OP_FRIEND_REMOVED:
 			var d := Codec.decode(opcode, payload)
 			State.friends = State.friends.filter(
 				func(f): return f.name != d.name)
-			_log_line("%s removed from friends" % d.name)
+			_log_line(I18n.t("social.removed", {"name": d.name}))
 		OP_IGNORE_ADDED:
 			var d := Codec.decode(opcode, payload)
 			State.ignored.append(d.name)
-			_log_line("[i]%s ignored[/i]" % d.name)
+			_log_line("[i]%s[/i]" % I18n.t("social.ignored", {"name": d.name}))
 		OP_IGNORE_REMOVED:
 			var d := Codec.decode(opcode, payload)
 			State.ignored.erase(d.name)
-			_log_line("%s un-ignored" % d.name)
+			_log_line(I18n.t("social.unignored", {"name": d.name}))
 		OP_FRIEND_ONLINE:
 			var d := Codec.decode(opcode, payload)
 			for f in State.friends:
 				if f.name == d.name:
 					f.online = true
 					f.id = int(d.get("id", -1))
-			_log_line("[color=light_green]%s is online[/color]" % d.name)
+			_log_line("[color=light_green]%s[/color]" % I18n.t("social.online",
+				{"name": d.name}))
 		OP_FRIEND_OFFLINE:
 			var d := Codec.decode(opcode, payload)
 			for f in State.friends:
 				if f.name == d.name:
 					f.online = false
-			_log_line("[i]%s went offline[/i]" % d.name)
+			_log_line("[i]%s[/i]" % I18n.t("social.offline_name",
+				{"name": d.name}))
 		OP_IGNORE_ONLINE:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[i](ignored) %s is online[/i]" % d.name)
+			_log_line("[i]%s[/i]" % I18n.t("social.ignored_online",
+				{"name": d.name}))
 		OP_IGNORE_OFFLINE:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[i](ignored) %s went offline[/i]" % d.name)
+			_log_line("[i]%s[/i]" % I18n.t("social.ignored_offline",
+				{"name": d.name}))
 		_:
 			pass
 	# friend/ignore/guild pushes — keep the social dialog's model fresh
@@ -1579,12 +1614,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 	match opcode:
 		OP_FIGHT_ERROR:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[color=red]fight refused (code %d)[/color]"
-				% int(d.get("f1", -1)))
+			DebugLog.add("fight creation refused, code %d" % int(d.get("f1", -1)))
+			_log_line("[color=red]%s[/color]" % I18n.t("fight.refused",
+				{"code": int(d.get("f1", -1))}))
 		OP_PONG:
 			pass  # keepalive reply
 		_:
-			_log_line("S2C opcode [b]%d[/b] — %d bytes" % [opcode, payload.remaining()])
+			# Wire noise a player cannot act on — the bug-report log keeps it.
+			DebugLog.add("S2C opcode %d — %d bytes" % [opcode, payload.remaining()])
 
 
 ## ActorSpawn inner body: [i32 count]{u8 type=1 coach: i64 id, str8 name,
@@ -1598,7 +1635,7 @@ func _read_coach_spawns(payload: WireReader) -> void:
 	for i in count:
 		var atype := body.get_u8()
 		if atype != 1:
-			_log_line("[color=red]actor spawn: unknown type %d[/color]" % atype)
+			DebugLog.add("actor spawn: unknown type %d" % atype)
 			return
 		var id := int(body.get_i64())
 		var cname := body.get_str("u8")
@@ -1628,6 +1665,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		log.grab_chat_focus()
 
 
+## Localized search refusal — retail codes (search_handshake.go):
+## 1 cannot start (already fighting/queued), 2 bad team, 3 cancelled,
+## 4 no opponent. Code 5 is silent.
+func _search_error_text(code: int, evo := false) -> String:
+	var key := ("evo.err." if evo else "search.err.") + str(code)
+	var s := I18n.t(key)
+	if s == key:
+		s = I18n.t("evo.err.unknown" if evo else "search.err.unknown",
+			{"code": code})
+	return s
+
+
 func _on_practice_pressed() -> void:
 	# TeamTest 26330 doubles as overworld challenge launch:
 	# [i32 challengeId][i16 99] — 34 = "Démon de la 58ème minute" practice
@@ -1636,7 +1685,8 @@ func _on_practice_pressed() -> void:
 	w.put_i32(34)
 	w.put_u16(99)
 	Session.send(26330, w.raw(), 2)
-	_log_line("practice challenge 34 sent — waiting for fight…")
+	DebugLog.add("practice challenge 34 sent")
+	_log_line(I18n.t("search.practice"))
 
 
 ## --- Combattre: ranked search queue -------------------------------------
@@ -1658,7 +1708,7 @@ func _on_fight_pressed() -> void:
 	w.put_i64(partner)
 	w.put_i16(pid)
 	Session.send(OP_COMBATTRE, w.raw(), 2)
-	_log_line("combattre sent — team %d%s" % [pid,
+	DebugLog.add("combattre sent — team %d%s" % [pid,
 		" (2v2 with ally %d)" % partner if partner != State.my_coach_id
 		else ""])
 
@@ -1687,6 +1737,18 @@ func _on_quick_search() -> void:
 func _on_evo_search() -> void:
 	if _searching:
 		return
+	# Preflight the same rule the server applies (handlers_evolution_search.go):
+	# the evolution team is the TITULAR line-up — evolution fighters (type 2)
+	# not on the bench (state 1/5). With an empty line-up the server answers
+	# search error 2; tell the player what to do instead of a bare refusal.
+	var titulars := 0
+	for fr in State.roster:
+		if int(fr.get("type", 2)) == 2 and int(fr.get("state", 0)) not in [1, 5]:
+			titulars += 1
+	if titulars == 0:
+		DebugLog.add("evolution search blocked: no titular fighters")
+		_log_line("[color=red]%s[/color]" % I18n.t("evo.err.need_fighter"))
+		return
 	# 23003 [i64 coachId][i16 99] — 99 is the evolution pseudo-preset.
 	var w := WireWriter.new()
 	w.put_i64(State.my_coach_id)
@@ -1713,7 +1775,8 @@ func _answer_match(yes: bool) -> void:
 			w.put_i64(int(ids[i]))
 		w.put_u8(1)
 		Session.send(OP_MATCH_ACCEPT, w.raw(), 2)
-		_log_line("accepted match vs %s" % str(_match.get("opp_name", "?")))
+		_log_line(I18n.t("search.accepted",
+			{"name": str(_match.get("opp_name", "?"))}))
 	else:
 		Session.send(OP_QUICK_CANCEL, PackedByteArray(), 2)
 	_match = {}
@@ -1738,7 +1801,7 @@ func _on_bench_fighter() -> void:
 	w.put_i64(fid)
 	w.put_u8(1 if st >= 4 else 0)
 	Session.send(OP_FIGHTER_SET_STATE, w.raw(), 2)
-	_log_line("state toggle sent for %s" % str(f.get("name", "?")))
+	DebugLog.add("state toggle sent for %s" % str(f.get("name", "?")))
 
 
 ## --- Spectate (2260/2261/26331) ------------------------------------------------
@@ -1749,7 +1812,7 @@ func _on_bench_fighter() -> void:
 func _watch_coach(cname: String) -> void:
 	var tid: int = _coach_id_by_name(cname)
 	if tid < 0:
-		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
+		_log_line("[color=red]%s[/color]" % I18n.t("watch.not_found", {"name": cname}))
 		return
 	_watch_target = tid
 	var w := WireWriter.new()
@@ -1836,17 +1899,16 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 					" [%s]" % g if g != "" else "",
 					int(r0.get("rating", 0)), int(r0.get("wins", 0)),
 					int(r0.get("losses", 0)), int(r0.get("streak", 0))])
-			hint.text = "%d ranked — your rank: %s" % [
-				int(d.get("total", 0)),
-				str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
-					else "unranked"]
+			hint.text = I18n.t("ladder.ranked", {"n": int(d.get("total", 0)),
+				"rank": str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
+					else I18n.t("ladder.unranked")})
 			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
 		OP_LADDER_GUILD:
 			for r0 in d.get("rows", []):
 				list.add_item("%s (leader %s) — %d pts" % [
 					str(r0.get("guild", "?")), str(r0.get("leader", "?")),
 					int(r0.get("score", 0))])
-			hint.text = "%d clan(s)" % d.get("rows", []).size()
+			hint.text = I18n.t("ladder.clans", {"n": d.get("rows", []).size()})
 			more.disabled = d.get("rows", []).size() < 20
 		OP_LADDER_2V2:
 			for r0 in d.get("rows", []):
@@ -1854,14 +1916,15 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 					str(r0.get("team", "?")), str(r0.get("coaches", "?")),
 					str(r0.get("guild", "")), int(r0.get("rating", 0)),
 					int(r0.get("wins", 0)), int(r0.get("losses", 0))])
-			hint.text = "%d teams" % int(d.get("total", 0))
+			hint.text = I18n.t("ladder.teams", {"n": int(d.get("total", 0))})
 			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
 		OP_LADDER_TOURN:
 			_ladder_tourn = {"m": int(d.get("month", 0)),
 				"t": int(d.get("trimester", 0)),
 				"y": int(d.get("year", 0))}
 			var wins: Array = d.get("windows", [])
-			var labels := ["month", "trimester", "year"]
+			var labels := [I18n.t("ladder.month"), I18n.t("ladder.trimester"),
+				I18n.t("ladder.year")]
 			var pts: Array = d.get("my_points", [0, 0, 0])
 			for i in wins.size():
 				list.add_item("— %s —" % labels[i])
@@ -1869,8 +1932,8 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 					list.add_item("%s — %d pts" % [
 						str(r0.get("name", "?")),
 						int(r0.get("points", 0))])
-			hint.text = "your points — month %d · trimester %d · year %d" % [
-				int(pts[0]), int(pts[1]), int(pts[2])]
+			hint.text = I18n.t("ladder.points", {"m": int(pts[0]),
+				"t": int(pts[1]), "y": int(pts[2])})
 			more.disabled = true
 		OP_LADDER_COACH:
 			for r0 in d.get("rows", []):
@@ -1878,7 +1941,7 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 					str(r0.get("coach", "?")), int(r0.get("rep", 0)),
 					int(r0.get("wins", 0)), int(r0.get("losses", 0)),
 					int(r0.get("demon", 0))])
-			hint.text = "%d coaches" % int(d.get("total", 0))
+			hint.text = I18n.t("ladder.coaches", {"n": int(d.get("total", 0))})
 			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
 		OP_LADDER_DEMON:
 			for r0 in d.get("rows", []):
@@ -1887,17 +1950,16 @@ func _fill_ladder(d: Dictionary, opcode: int) -> void:
 					str(r0.get("guild", "")) if str(r0.get("guild", "")) \
 						!= "" else "unaffiliated",
 					int(r0.get("rep", 0))])
-			hint.text = "24 demons"
+			hint.text = I18n.t("ladder.demons", {"n": 24})
 			more.disabled = d.get("rows", []).size() < 12
 		OP_LADDER_PRO:
 			for r0 in d.get("rows", []):
 				list.add_item("%s [%s] — rating %d" % [
 					str(r0.get("name", "?")), str(r0.get("guild", "")),
 					int(r0.get("rating", 0))])
-			hint.text = "league %d — your rank %s" % [
-				int(d.get("league", 0)),
-				str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
-					else "unranked"]
+			hint.text = I18n.t("ladder.league", {"n": int(d.get("league", 0)),
+				"rank": str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
+					else I18n.t("ladder.unranked")})
 			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
 
 
@@ -1926,8 +1988,8 @@ func _fill_achievements(list: ItemList, hint: Label, more: Button) -> void:
 		list.add_item("%s = %d" % [
 			NpcDialogs.criterion_name(int(cid)), int(State.criteria[cid])])
 		list.set_item_metadata(list.item_count - 1, {"crit": int(cid)})
-	hint.text = "%d achievements · %d pts earned · %d criteria" % [
-		rows.size(), earned, State.criteria.size()]
+	hint.text = I18n.t("ach.summary", {"n": rows.size(), "pts": earned,
+		"crit": State.criteria.size()})
 	more.disabled = true
 
 
@@ -1949,10 +2011,11 @@ func _on_ladder_sel(idx: int) -> void:
 			conds.append("%s %s" % [Cards.name_of(int(c.id)),
 				"✓" if int(State.inventory.get(int(c.id), 0)) > 0 else "—"])
 	var desc := NpcDialogs.achievement_desc(aid)
-	$UI/LadderDlg/VBox/Hint.text = "%s — %d pts%s%s" % [
-		NpcDialogs.achievement_name(aid), int(info.get("pts", 0)),
-		"\n" + desc if desc != "" else "",
-		"\n" + " · ".join(conds) if not conds.is_empty() else ""]
+	$UI/LadderDlg/VBox/Hint.text = I18n.t("ach.detail", {
+		"name": NpcDialogs.achievement_name(aid),
+		"pts": int(info.get("pts", 0)),
+		"desc": "\n" + desc if desc != "" else "",
+		"conds": "\n" + " · ".join(conds) if not conds.is_empty() else ""})
 
 
 ## --- Clan panel (501-557, 2600/2601) ------------------------------------------
@@ -2011,14 +2074,14 @@ func _fill_guild() -> void:
 	var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
 	list.clear()
 	if State.guild.is_empty():
-		title.text = "Clan"
-		hint.text = "no clan — found one with /guild <name>"
+		title.text = I18n.t("guild.title")
+		hint.text = I18n.t("guild.none")
 		return
-	title.text = "Clan — %s" % str(State.guild.get("guild", "?"))
-	hint.text = "you: %s · demon %d · %d member(s)" % [
-		str(State.guild.get("rank_name", "?")),
-		int(State.guild.get("demon_id", 0)),
-		State.guild.get("members", []).size()]
+	title.text = I18n.t("guild.title_name", {"name": str(State.guild.get("guild", "?"))})
+	hint.text = I18n.t("guild.you", {
+		"rank": str(State.guild.get("rank_name", "?")),
+		"demon": int(State.guild.get("demon_id", 0)),
+		"n": State.guild.get("members", []).size()})
 	if _guild_ranks_mode:
 		for rk in State.guild.get("ranks", []):
 			list.add_item("rank %d — %s (rights %d)" % [
@@ -2045,9 +2108,9 @@ func _guild_mode_ui() -> void:
 	btns.get_node("PromoteBtn").visible = not _guild_ranks_mode
 	btns.get_node("DemoteBtn").visible = not _guild_ranks_mode
 	var kick: Button = btns.get_node("KickBtn")
-	kick.text = "Delete" if _guild_ranks_mode else "Kick"
+	kick.text = I18n.t("btn.delete") if _guild_ranks_mode else I18n.t("btn.kick")
 	var ranks: Button = btns.get_node("RanksBtn")
-	ranks.text = "Members" if _guild_ranks_mode else "Ranks"
+	ranks.text = I18n.t("btn.members") if _guild_ranks_mode else I18n.t("btn.ranks")
 	# right-gating mirrors retail's hidden entries (server rechecks anyway)
 	var in_guild := not State.guild.is_empty()
 	$UI/GuildDlg/VBox/InviteRow/InviteBtn.disabled = \
@@ -2064,7 +2127,7 @@ func _on_guild_invite() -> void:
 		return
 	var tid: int = _coach_id_by_name(cname)
 	if tid < 0:
-		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
+		_log_line("[color=red]%s[/color]" % I18n.t("watch.not_found", {"name": cname}))
 		return
 	var w := WireWriter.new()
 	w.put_u8(0)                                  # guild type (clan)
@@ -2122,8 +2185,8 @@ func _on_guild_set_rank(delta: int) -> void:
 		elif delta > 0 and lvl > cur and (want < 0 or lvl < want):
 			want = lvl    # demote → lowest level above current
 	if want < 0:
-		_log_line("[i]no rank to %s to[/i]" % [
-			"promote" if delta < 0 else "demote"])
+		_log_line("[i]%s[/i]" % I18n.t("guild.no_rank", {"dir":
+			"up" if delta < 0 else "down"}))
 		return
 	var w := WireWriter.new()
 	w.put_i64(int(State.guild.get("guild_id", 0)))
@@ -2233,7 +2296,8 @@ func _open_duo_dlg() -> void:
 		opt.add_item(fr.get("name", "?"))
 		opt.set_item_metadata(opt.item_count - 1, fid)
 	if opt.item_count == 0:
-		_log_line("[i]no friends — /friend &lt;name&gt; first[/i]")
+		_log_line("[i]%s[/i]" % I18n.t("duo.no_friends"))
+		_gui.open("socialDialog")
 		return
 	opt.select(0)
 	$UI/DuoDlg.visible = true
@@ -2252,7 +2316,7 @@ func _on_duo_create() -> void:
 	w.put_i64(int(opt.get_item_metadata(opt.selected)))
 	Session.send(OP_DUO_REQUEST, w.raw(), 2)
 	$UI/DuoDlg.visible = false
-	_log_line("2v2 invitation sent")
+	_log_line(I18n.t("duo.sent"))
 
 
 func _answer_duo(accept: bool) -> void:
@@ -2357,7 +2421,7 @@ func _on_team_confirmed() -> void:
 	w.put_i64(State.my_coach_id)
 	w.put_i16(team_id)
 	Session.send(OP_TEAM_CONFIRM, w.raw(), 2)
-	_log_line("team confirmed (%d) — waiting for opponent…" % team_id)
+	_log_line(I18n.t("team.confirmed", {"id": team_id}))
 
 
 ## --- Team presets ----------------------------------------------------------
@@ -2367,7 +2431,7 @@ func _on_assign(add: bool) -> void:
 	var sel := roster_list.get_selected_items()
 	var team_id := _selected_preset_id()
 	if sel.is_empty() or team_id <= 0:
-		_log_line("[i]select a roster fighter and a preset first[/i]")
+		_log_line("[i]%s[/i]" % I18n.t("team.pick"))
 		return
 	var fid: int = roster_list.get_item_metadata(sel[0])
 	var w := WireWriter.new()
@@ -2376,7 +2440,7 @@ func _on_assign(add: bool) -> void:
 	w.put_i16(team_id if add else -1)   # dst: pool (-1) when removing
 	w.put_i64(State.my_coach_id)
 	Session.send(OP_FIGHTER_ASSIGN, w.raw(), 2)
-	_log_line("assign %s sent (fid %d %s team %d)" % [
+	DebugLog.add("assign %s sent (fid %d %s team %d)" % [
 		"6013", fid, "→" if add else "←", team_id])
 
 
@@ -2411,7 +2475,7 @@ func _open_save_team() -> void:
 func _on_save_team() -> void:
 	var tname: String = $UI/SaveTeamDlg/VBox/Name.text.strip_edges()
 	if tname.is_empty():
-		_log_line("[color=red]team needs a name[/color]")
+		_log_line("[color=red]%s[/color]" % I18n.t("team.need_name"))
 		return
 	var w := WireWriter.new()
 	w.put_i16(0)
@@ -2432,7 +2496,7 @@ func _on_save_team() -> void:
 	w.put_u8(0)   # trailing pad byte
 	Session.send(OP_TEAM_PRESET_SAVE, w.raw(), 2)
 	$UI/SaveTeamDlg.visible = false
-	_log_line("team preset '%s' sent (%d fighters)" % [tname, members.size()])
+	DebugLog.add("team preset '%s' sent (%d fighters)" % [tname, members.size()])
 
 
 ## 6001 FighterCreate [u8 flag][i16 slot][u16 blobLen][et_2 blob] (arch 2).
@@ -2441,7 +2505,7 @@ func _on_create_fighter() -> void:
 	var dlg := $UI/CreateDlg/VBox
 	var fname: String = dlg.get_node("Name").text.strip_edges()
 	if fname.is_empty():
-		_log_line("[color=red]fighter needs a name[/color]")
+		_log_line("[color=red]%s[/color]" % I18n.t("fighter.need_name"))
 		return
 	var blob: PackedByteArray = Overrides.encode_fighter_blob(
 		dlg.get_node("Breed").get_selected_id(), fname,
@@ -2453,7 +2517,7 @@ func _on_create_fighter() -> void:
 	w.put_u16(blob.size())
 	w.put_bytes(blob)
 	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
-	_log_line("fighter create sent: %s" % fname)
+	DebugLog.add("fighter create sent: %s" % fname)
 
 
 ## 6003 FighterDelete [i64 fighterId][i16 slot] (arch 2).
@@ -2467,7 +2531,7 @@ func _on_delete_fighter() -> void:
 	w.put_i64(fid)
 	w.put_u16(0)
 	Session.send(OP_FIGHTER_DELETE, w.raw(), 2)
-	_log_line("fighter delete sent: %d" % fid)
+	DebugLog.add("fighter delete sent: %d" % fid)
 
 
 ## Loadout editor — lists the fighter's breed-legal spells (from the exported
@@ -2487,7 +2551,7 @@ func _open_loadout() -> void:
 	if f == null:
 		return
 	var dlg := $UI/LoadoutDlg/VBox
-	dlg.get_node("Title").text = "Loadout — %s" % f.get("name", "?")
+	dlg.get_node("Title").text = I18n.t("loadout.title", {"name": f.get("name", "?")})
 	var box: VBoxContainer = dlg.get_node("Scroll/Spells")
 	for c in box.get_children():
 		c.queue_free()
@@ -2512,7 +2576,7 @@ func _on_save_loadout() -> void:
 		if cb.button_pressed:
 			picked.append(int(cb.get_meta("id")))
 	if picked.size() > 6:
-		_log_line("[color=red]max 6 spells[/color]")
+		_log_line("[color=red]%s[/color]" % I18n.t("fighter.max_spells"))
 		return
 	# keep the fighter's existing card slots untouched
 	var cards := []
@@ -2530,20 +2594,21 @@ func _on_save_loadout() -> void:
 		w.put_u16(int(c.slot))
 		w.put_i32(int(c.id))
 	Session.send(OP_FIGHTER_LOADOUT, w.raw(), 2)
-	_log_line("loadout sent — %d spells" % picked.size())
+	DebugLog.add("loadout sent — %d spells" % picked.size())
 
 
 ## --- Coach statistics (2401 / 2400) ------------------------------------------
 ## The 2401 login push carries the coach's lifetime counters as an rs_2 stat
 ## map (server statistics.go — PlayerStatisticsReport field ids). Sparse: a
 ## stat the server never tracked simply isn't there and reads as 0.
-const COACH_STAT_LABELS := {1: "time played", 2: "time in fights",
-	3: "fights", 4: "wins", 5: "losses", 7: "win streak", 8: "loss streak"}
+const COACH_STAT_LABELS := {1: "stats.time_played", 2: "stats.time_fights",
+	3: "stats.fights", 4: "stats.wins", 5: "stats.losses",
+	7: "stats.win_streak", 8: "stats.loss_streak"}
 const COACH_STAT_ORDER := [3, 4, 5, 7, 8, 1, 2]  # fights first, times last
 
 func _open_coach_stats() -> void:
-	_element_text("Coach — %s" % State.my_coach_name,
-		"lifetime statistics:")
+	_element_text(I18n.t("stats.title", {"name": State.my_coach_name}),
+		I18n.t("stats.lifetime"))
 	_elem_kind = ELEM_COACH
 	_fill_coach_stats()
 
@@ -2554,17 +2619,18 @@ func _fill_coach_stats() -> void:
 	for id in COACH_STAT_ORDER:
 		var v := int(State.coach_stats.get(id, 0))
 		var text := _fmt_secs(v) if id in [1, 2] else str(v)
-		list.add_item("%s: %s" % [COACH_STAT_LABELS[id], text])
+		list.add_item("%s: %s" % [I18n.t(COACH_STAT_LABELS[id]), text])
 	var fights := int(State.coach_stats.get(3, 0))
 	if fights > 0:
-		$UI/ElementDlg/VBox/Hint.text = "win rate: %d%%" % [
-			int(State.coach_stats.get(4, 0)) * 100 / fights]
+		$UI/ElementDlg/VBox/Hint.text = I18n.t("stats.winrate",
+			{"pct": int(State.coach_stats.get(4, 0)) * 100 / fights})
 
 
+## Stats arrive in seconds; players read them as minutes (h + m past 1h).
 static func _fmt_secs(secs: int) -> String:
-	var h := secs / 3600
-	var m := (secs % 3600) / 60
-	return "%dh %02dm" % [h, m] if h > 0 else "%dm %02ds" % [m, secs % 60]
+	var m := int(round(secs / 60.0))
+	var h := m / 60
+	return "%dh %02dm" % [h, m % 60] if h > 0 else "%d min" % m
 
 
 ## --- Coach equipment (5201) -------------------------------------------------
@@ -2573,9 +2639,10 @@ static func _fmt_secs(secs: int) -> String:
 ## the client owns the state and re-sends all 14 slots on Wear.
 const COACH_SLOT_FOR_TYPE := {2: 5, 3: 2, 4: 1, 5: 4, 6: 10, 7: 3,
 	8: 8, 9: 6, 10: 11, 11: 0, 12: 7, 13: 9}
-const COACH_SLOT_NAMES := {0: "Chapeau", 1: "Tatouages", 2: "Coiffure",
-	3: "Epaulette", 4: "Brassard", 5: "Culotte", 6: "Pantalon",
-	7: "Baton", 8: "Cape", 9: "Familier", 10: "Bottes", 11: "Chemise"}
+const COACH_SLOT_NAMES := {0: "slot.hat", 1: "slot.tattoo", 2: "slot.hair",
+	3: "slot.epaulettes", 4: "slot.bracer", 5: "slot.breeches",
+	6: "slot.pants", 7: "slot.staff", 8: "slot.cape", 9: "slot.pet",
+	10: "slot.boots", 11: "slot.shirt"}
 
 var _equip_slots: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -2595,7 +2662,8 @@ func _fill_equip() -> void:
 	var cards: ItemList = $UI/EquipDlg/VBox/Cards
 	slots.clear()
 	for i in 14:
-		var label: String = COACH_SLOT_NAMES.get(i, "slot %d" % i)
+		var label: String = I18n.t(COACH_SLOT_NAMES[i]) \
+			if COACH_SLOT_NAMES.has(i) else "slot %d" % i
 		var cid := int(_equip_slots[i])
 		slots.add_item("%d %s — %s" % [i, label,
 			Cards.name_of(cid) if cid != 0 else "(empty)"])
@@ -2634,7 +2702,7 @@ func _on_equip_wear() -> void:
 	for i in 14:
 		w.put_i32(int(_equip_slots[i]))
 	Session.send(OP_EQUIP_REQ, w.raw(), 3)
-	_log_line("equipment layout sent — %d card(s) worn" %
+	DebugLog.add("equipment layout sent — %d card(s) worn" %
 		(14 - _equip_slots.count(0)))
 
 
@@ -2714,7 +2782,7 @@ func _on_coach_create(_args: Array, _w) -> void:
 		_create_screen.queue_free()
 		_create_screen = null
 	_gui.close("coachCreationDialog")
-	_log_line("coach creation sent — '%s'" % name)
+	DebugLog.add("coach creation sent — '%s'" % name)
 
 
 ## --- fighter creation (teamManagement.editableFighter) --------------------
@@ -2732,7 +2800,7 @@ var _create_fighter_evo := false
 func _on_new_fighter_dialog(_args: Array, _w, evo := false) -> void:
 	_create_fighter_evo = evo
 	_gui.gui.model.set_value("teamManagement", {
-		"breedId": 1, "sex": 0, "version": 1,
+		"breedId": 1, "sex": 0, "version": 2 if evo else 1,
 		"skin": 0, "hair": 0, "eye": 0, "name": "",
 		"actorAnimation": "AnimStatique", "actorDirection": 3},
 		"editableFighter")
@@ -2784,6 +2852,9 @@ func _on_fighter_version(args: Array, _w) -> void:
 	for a in args:
 		if a is int or a is float:
 			f["version"] = int(a)
+	# the version radio also picks which roster the recruit lands in:
+	# 2 = evolution (Wakfu-era), 1 = classic (Dofus-era)
+	_create_fighter_evo = int(f.get("version", 1)) == 2
 	_gui.gui.model.set_value("teamManagement", f, "editableFighter")
 
 
@@ -2812,7 +2883,7 @@ func _on_gui_create_fighter(_args: Array, _w) -> void:
 	w.put_bytes(blob)
 	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
 	_gui.close("fighterCreationDialog")
-	_log_line("fighter create sent: %s" % fname)
+	DebugLog.add("fighter create sent: %s" % fname)
 
 
 func _on_gui_delete_fighter(args: Array, _w) -> void:
@@ -3180,7 +3251,7 @@ func _on_tm_add_team_xvsx(_args: Array, _w: GWidget) -> void:
 			if str(fr.get("name", "")) == mname:
 				mate_id = int(fr.get("id", fr.get("coach_id", -1)))
 	if mate_id <= 0:
-		_log_line("[i]pick a teammate for the 2v2 team first[/i]")
+		_log_line("[i]%s[/i]" % I18n.t("duo.pick"))
 		return
 	var wr := WireWriter.new()
 	wr.put_str(tname.strip_edges(), "u8")
@@ -3330,12 +3401,12 @@ func _on_evo_sphere_board(args: Array, w: GWidget) -> void:
 	var f: Variant = _fighter_by_id(
 		int(row.get("id", row.get("fighterId", 0))))
 	if f == null or int(f.get("type", 1)) != 2:
-		_log_line("[i]Kanodo is for evolution fighters only[/i]")
+		_log_line("[i]%s[/i]" % I18n.t("kanodo.evo_only"))
 		return
 	_kanodo_fid = int(f.id)
 	_kanodo_pick = {}
-	$UI/KanodoDlg/VBox/Title.text = "Kanodo — %s" % f.get("name", "?")
-	$UI/KanodoDlg/VBox/Hint.text = "Click a lit sphere."
+	$UI/KanodoDlg/VBox/Title.text = I18n.t("kanodo.title", {"name": f.get("name", "?")})
+	$UI/KanodoDlg/VBox/Hint.text = I18n.t("kanodo.hint")
 	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = true
 	_refresh_kanodo()
 	$UI/KanodoDlg.visible = true
@@ -3626,7 +3697,7 @@ func _on_eq_save(_a: Array, _w: GWidget) -> void:
 		wr.put_u16(int(s))
 		wr.put_i32(int(_eq_cards[s]))
 	Session.send(OP_FIGHTER_LOADOUT, wr.raw(), 2)
-	_log_line("loadout saved: %d spells, %d items" % [
+	DebugLog.add("loadout saved: %d spells, %d items" % [
 		_eq_spells.size(), _eq_cards.size()])
 	_gui.gui.model.set_value("coachManagement", {"currentSet": ""})
 	_gui.gui.model.set_value("tomeManager", false)
@@ -3654,8 +3725,6 @@ func _on_gui_dialog_opened(name: String) -> void:
 		"ladderInformationDialog":
 			_request_all_ladders()
 			_push_ladder_model()
-		"zaapDialog":
-			_push_zaap_model()
 		"cardBookDialog":
 			_push_cardbook_model()
 		"calendarDialog":
@@ -3892,52 +3961,6 @@ func _request_all_ladders() -> void:
 	_ladder_start = saved_start
 
 
-## --- zaapDialog --------------------------------------------------------------
-## tomeManager.zaapSets = the special card sets (those holding type-20
-## zaap cards); each set's `collection` feeds the card grid.
-
-func _push_zaap_model() -> void:
-	var sets := {}     # set id -> {cards, owned}
-	for cid in Cards.all_ids():
-		var m := Cards.meta(int(cid))
-		var sid := int(m.get("set", 0))
-		if sid <= 0:
-			continue
-		var has_zaap := int(m.get("type", 0)) == 20
-		if not sets.has(sid):
-			sets[sid] = {"cards": [], "owned": 0, "zaap": false}
-		sets[sid]["cards"].append(int(cid))
-		sets[sid]["zaap"] = sets[sid]["zaap"] or has_zaap
-		if int(State.inventory.get(int(cid), 0)) > 0:
-			sets[sid]["owned"] += 1
-	var zs: Array = []
-	for sid in sets:
-		var sd: Dictionary = sets[sid]
-		if not sd["zaap"]:
-			continue
-		var coll: Array = []
-		for cid in sd["cards"]:
-			var qty := int(State.inventory.get(cid, 0))
-			coll.append({
-				"id": cid, "name": Cards.name_of(cid),
-				"illustrationUrl": str(cid),
-				"tomeStyle": "" if qty > 0 else "BackZaapCoachCard",
-				"globalQuantity": qty,
-				"isInTome": qty > 0, "quantity": qty})
-		coll.sort_custom(func(a, b): return int(a.id) < int(b.id))
-		zs.append({
-			"name": _set_name(sd["cards"]),
-			"size": sd["cards"].size(),
-			"completion": sd["owned"],
-			"description": "",
-			"collection": coll,
-			"illustrationUrl": str(sd["cards"][0]),
-			"isInTome": int(sd["owned"]) == sd["cards"].size(),
-			"tomeStyle": ""})
-	zs.sort_custom(func(a, b): return str(a.name) < str(b.name))
-	_gui.gui.model.set_value("tomeManager", {"zaapSets": zs})
-
-
 ## Card-set display name — longest shared prefix of its cards (family
 ## names like "Weerdtrot" / "Zatrox"), else the first card's name.
 func _set_name(cards: Array) -> String:
@@ -4040,9 +4063,11 @@ func _on_card_unhover(_a: Array, _w: GWidget) -> void:
 	_gui.gui.model.set_value("coachManagement", null, "selectedCard")
 
 
-## useSpecialCard — zaap-type (20) cards teleport via the shared zaap
-## path; the 21-23 special actions (rename, firework…) are UI events we
-## don't support yet, so non-zaap cards no-op here.
+## useSpecialCard — zaap-type (20) cards were teleports in the walkable
+## overworld; this lobby-menu build has nowhere to teleport to, so the
+## card stays a collectible and the click is a documented no-op. The
+## 21-23 special actions (rename, firework…) are UI events we don't
+## support yet either.
 func _on_use_special_card(_a: Array, w: GWidget) -> void:
 	var card = w.item_value if w != null else null
 	if not (card is Dictionary):
@@ -4050,7 +4075,7 @@ func _on_use_special_card(_a: Array, w: GWidget) -> void:
 			"coachManagement", {}).get("selectedCard")
 	if card is Dictionary \
 			and int(card.get("cardType", card.get("type", 0))) == 20:
-		_on_zaap_change_instance(_a, w)
+		_toast(I18n.t("zaap.unavailable"))
 
 
 func _step_set(args: Array, delta: int) -> void:
@@ -4064,24 +4089,10 @@ func _step_set(args: Array, delta: int) -> void:
 	args[0].queue_redraw()
 
 
-## changeInstance(card) — double-click a zaap card teleports (retail
-## sends its own opcode; ours is OP_ZAAP [i32 cardTemplateId]). The
-## cardBook's detail-panel button passes the hovered selectedCard.
-func _on_zaap_change_instance(_args: Array, w: GWidget) -> void:
-	var card = w.item_value if w != null else null
-	if not (card is Dictionary):
-		card = _gui.gui.model.values.get(
-			"coachManagement", {}).get("selectedCard")
-	if not (card is Dictionary):
-		return
-	var cid := int(card.get("id", 0))
-	if cid <= 0 or int(Cards.meta(cid).get("type", 0)) != 20:
-		return
-	if int(State.inventory.get(cid, 0)) <= 0:
-		return
-	var wr := WireWriter.new()
-	wr.put_i32(cid)
-	Session.send(OP_ZAAP, wr.raw(), 3)
+## changeInstance(card) — retail's double-click-a-zaap teleport. No
+## walkable world here: keep the handler registered (the cardBook XML can
+## still emit the event) but it only closes the dialog, never sends 4512.
+func _on_zaap_change_instance(_args: Array, _w: GWidget) -> void:
 	_gui.close("zaapDialog")
 
 
@@ -4125,7 +4136,6 @@ func _set_name_for(sid: int) -> String:
 
 func _push_cardbook_model() -> void:
 	var equip: Array = []
-	var zaap: Array = []
 	var special: Array = []
 	var all_cards: Array = []
 	var owned := State.inventory.keys()
@@ -4135,9 +4145,9 @@ func _push_cardbook_model() -> void:
 		var it := _card_item(int(cid))
 		all_cards.append(it)
 		match t:
-			20:
-				zaap.append(it)
-			21, 22, 23:
+			# 20 zaap teleports have no walkable world here — they fold into
+			# the special-cards tab as collectibles
+			20, 21, 22, 23:
 				special.append(it)
 			_:
 				if t >= 1 and t <= 19 \
@@ -4147,7 +4157,7 @@ func _push_cardbook_model() -> void:
 	_sync_equip_filter_model()
 	# the inventory tabs all bind localCoach.<field>
 	model.set_value("localCoach", equip, "filtredEquipmentCardInventory")
-	model.set_value("localCoach", zaap, "zaapInventory")
+	model.set_value("localCoach", [], "zaapInventory")
 	model.set_value("localCoach", special, "specialCardInventory")
 	model.set_value("localCoach", all_cards, "filtredCardInventory")
 	model.set_value("localCoach", all_cards, "cardInventory")
@@ -4189,7 +4199,7 @@ func _push_cardbook_model() -> void:
 	model.set_value("tomeManager", {"cheapSets": cheap,
 		"expensiveSets": expensive, "specialSets": spec,
 		"fightSets": fight, "evolutionSets": evo,
-		"zaapSets": spec})
+		"zaapSets": []})
 
 
 ## Every card set in cards.json (for the tome + set-tab pickers).
@@ -4486,7 +4496,7 @@ func _on_destroy_coach(_a: Array, _w: GWidget) -> void:
 	if not State.fight_data.is_empty():
 		return  # retail: cantDestroyCoachDuringFight
 	var d := ConfirmationDialog.new()
-	d.dialog_text = "Destroy your coach? This cannot be undone."
+	d.dialog_text = I18n.t("coach.destroy_confirm")
 	d.confirmed.connect(func():
 		Session.send(OP_DESTROY_COACH, PackedByteArray(), 2))
 	add_child(d)
@@ -4560,7 +4570,7 @@ func _on_guild_create(_a: Array, _w: GWidget) -> void:
 	var name := str(_gui.gui.model.get_value("guildCreationName")) \
 		.strip_edges()
 	if name.length() < 5:
-		_toast("Guild name must be at least 5 characters")
+		_toast(I18n.t("guild.name_short"))
 		return
 	var w := WireWriter.new()
 	w.put_u8(2)                              # kG.Fi — the clan guild type
@@ -4871,7 +4881,7 @@ func _on_mail_send(_a: Array, _w: GWidget) -> void:
 	var title := str(nm.get("title", ""))
 	var message := str(nm.get("message", ""))
 	if receiver.is_empty():
-		_toast("Mail needs a recipient")
+		_toast(I18n.t("mail.no_recipient"))
 		return
 	var extra := WireWriter.new()
 	var tb := title.to_utf8_buffer()
@@ -4998,7 +5008,6 @@ var _watch_target := -1       # coach id asked in the pending 2260
 var _npc := {}                # open NPC dialog {name, replies}
 var _fired_triggers := {}     # zone-trigger element ids already run this session
 var _scenario_queue := []     # pending tutorial monologues (overlapping zones)
-var _pending_zaap_page := 0   # scenario 108 follow-up: show once the Zaap opens
 
 ## Ranking window tabs (retail ladderInformationDialog order): the request
 ## opcode and a payload builder; replies land in _on_message below.
@@ -5070,11 +5079,6 @@ func _show_lobby_screen() -> void:
 		_lobby_screen.bind_model(_gui.gui.model, $UI/Chat)
 		_lobby_screen.dialog_requested.connect(func(n): _gui.toggle(n))
 		_lobby_screen.action_requested.connect(_on_lobby_action)
-		_lobby_screen.item_requested.connect(_on_lobby_item)
-		_lobby_screen.debug_requested.connect(func(): $UI/VBox.visible = not $UI/VBox.visible)
-		log.emote.connect(func(id, anim):
-			if id == State.my_coach_id:
-				_lobby_screen.show_bubble(anim))
 		log.bubble.connect(func(id, text):
 			if id == State.my_coach_id:
 				_lobby_screen.show_bubble(text))
@@ -5107,11 +5111,42 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			State.current_world = -1
 			get_tree().change_scene_to_file("res://src/main.tscn")
 			return
+		"openBugReport":
+			_open_bug_report()
+			return
 	var context := GWidget.new()
 	context.item_value = item
 	context.selected_index = index
 	_gui._on_event("dofusarena", event, args, context)
 	context.free()
+
+
+## Resolve the announced portal address for HTTP: a wildcard bind host
+## ("0.0.0.0"/"::") only means "wherever the game socket reached", so the
+## connected game host replaces it. Returns "" when nothing was announced.
+func _web_base_url(announced: String) -> String:
+	var u := announced.strip_edges().trim_suffix("/")
+	if u == "":
+		return ""
+	var host := ""
+	if Session.client != null:
+		host = Session.client.last_host
+	if host == "":
+		return u
+	for wild in ["0.0.0.0", "[::]", "::"]:
+		if u.contains("://" + wild + ":") or u.ends_with("://" + wild):
+			return u.replace(wild, host)
+	return u
+
+
+func _open_bug_report() -> void:
+	var d := BugReport.new(State.web_base_url)
+	# Capture the arena before the modal covers it.
+	var img := get_viewport().get_texture().get_image()
+	if img != null and not img.is_empty():
+		d.set_screenshot(img.save_jpg_to_buffer(0.85))
+	add_child(d)
+	d.popup_centered()
 
 
 func _on_lobby_action(action: String) -> void:
@@ -5122,29 +5157,6 @@ func _on_lobby_action(action: String) -> void:
 		"evo": _on_evo_search()
 		"duo": _open_duo_dlg()
 		"team": _gui.toggle("teamManagementDialog")
-
-
-func _on_lobby_item(event: String, item: Variant) -> void:
-	# Preserve the retail item-event context for registered handlers.
-	if _gui.handlers.has(event):
-		var widget := GWidget.new()
-		widget.item_value = item
-		_gui._on_event("dofusarena", event, [], widget)
-		widget.free()
-		return
-	if event == "playEmote" and item is Dictionary:
-		var id := int(item.get("id", 0))
-		for command in log.EMOTES:
-			if int(log.EMOTES[command][0]) == absi(id):
-				# Same JY/4701 layout as retail avv_0.playEmote.
-				var w := WireWriter.new()
-				w.put_str(str(log.EMOTES[command][1]), "u8")
-				w.put_i32(id)
-				Session.send(4701, w.raw(), 3)
-				return
-	# This checkout has no tool executor or persisted emote equipment API.
-	# Keep unknown model entries explicit rather than silently dropping clicks.
-	_toast("Esta acción todavía no está disponible")
 
 
 func _use_element(id: int) -> void:
@@ -5160,9 +5172,9 @@ func _use_element(id: int) -> void:
 	_elem_offer = false
 	match kind:
 		1:   # Card Master — server pushes the 5401 catalogue
-			_log_line("%s — opening shop…" % label)
-		4:   # Zaap — local dialog of owned Zaap cards (type 20) → 4512
-			_open_zaap()
+			_log_line(I18n.t("shop.opening", {"label": label}))
+		4:   # Zaap — no walkable world in this build; teleport is a no-op
+			_toast(I18n.t("zaap.unavailable"))
 		2:   # Mailbox — the server answers 15000 with the full list (15001)
 			_element_text("Mailbox", "Loading letters…")
 			Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
@@ -5249,7 +5261,7 @@ func _on_npc_reply(i: int) -> void:
 			w.put_i32(chal)
 			w.put_u16(99)
 			Session.send(OP_TEAM_TEST, w.raw(), 2)
-			_log_line("challenge %d accepted" % chal)
+			_log_line(I18n.t("challenge.accepted_id", {"id": chal}))
 		$UI/ElementDlg.visible = false
 		return
 	if _elem_kind != 15:
@@ -5310,7 +5322,7 @@ func _open_challenge_picker(e: Dictionary) -> void:
 ## dialog for every kind that has no specific alt action.
 func _elem_close_btn() -> void:
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Close"
+	alt.text = I18n.t("btn.close")
 	alt.visible = true
 
 
@@ -5329,11 +5341,11 @@ func _open_demon_challenge(e: Dictionary) -> void:
 		NpcDialogs.npc_name(
 			accept_txt if task != 0 or _ach_done(278) else refuse_txt))
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Refuse"
+	alt.text = I18n.t("btn.refuse")
 	alt.visible = true
 	if task != 0 or _ach_done(278):
 		var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-		act.text = "Accept"
+		act.text = I18n.t("btn.accept")
 		act.visible = true
 		act.disabled = chal < 0
 		_npc["chal"] = chal
@@ -5390,7 +5402,7 @@ func _npc_page_show(title: String) -> void:
 	_element_text(title, NpcDialogs.npc_name(int(pages[page]))
 		if pages.size() > page else "")
 	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = "OK" if last else "Next"
+	act.text = I18n.t("btn.ok") if last else I18n.t("btn.next")
 	act.visible = true
 	act.disabled = false
 	_elem_close_btn()
@@ -5462,16 +5474,24 @@ func _run_scenario(id: int) -> void:
 		w.put_i16(1)
 		State.net.send_message(OP_STAT_UPD, w.raw(), 2)
 		State.criteria[ach] = 1   # local shadow for same-session gates
-	_pending_zaap_page = int(s.get("zaap", 0))
 	_npc = {"pages": s.get("pages", []), "page": 0, "chals": []}
 	_elem_kind = ELEM_SCENARIO
 	_npc_page_show("Tutorial")
-	_log_line("tutorial scenario %d fired" % id)
+	DebugLog.add("tutorial scenario %d fired" % id)
 
 
 ## Generic element dialog: title + hint + a list + two optional action
 ## buttons. _elem_kind decides what ActBtn/AltBtn do.
 func _element_text(title: String, hint: String) -> void:
+	var panel: PanelContainer = $UI/ElementDlg
+	panel.theme = null
+	panel.offset_left = -200
+	panel.offset_right = 200
+	panel.offset_top = -210
+	panel.offset_bottom = 210
+	$UI/ElementDlg/VBox/Title.add_theme_font_size_override("font_size", 16)
+	$UI/ElementDlg/VBox/Hint.add_theme_font_size_override("font_size", 12)
+	$UI/ElementDlg/VBox/Btns/CloseBtn.text = I18n.t("panel.close")
 	$UI/ElementDlg/VBox/Title.text = title
 	$UI/ElementDlg/VBox/Hint.text = hint
 	_elem_offer = false
@@ -5523,36 +5543,37 @@ func _show_fight_result() -> void:
 	var me := int(State.my_coach_id)
 	var in_win: bool = r.get("win_str", {}).has(me)
 	var in_lose: bool = r.get("lose_str", {}).has(me)
-	var title := "Fight over"
+	var title := I18n.t("debrief.over")
 	if int(r.get("flee", 0)) != 0:
-		title = "Fight over — abandoned"
+		title = I18n.t("debrief.abandoned")
 	elif in_win:
-		title = "Victory!"
+		title = I18n.t("fight.result.victory")
 	elif in_lose:
-		title = "Defeat"
+		title = I18n.t("fight.result.defeat")
 	var hints := []
 	if in_win:
-		hints.append("strength → %d" % int(r.win_str[me]))
+		hints.append(I18n.t("debrief.strength", {"n": int(r.win_str[me])}))
 	elif in_lose:
-		hints.append("strength → %d" % int(r.lose_str[me]))
+		hints.append(I18n.t("debrief.strength", {"n": int(r.lose_str[me])}))
 	if int(r.get("standing", 0)) != 0:
-		hints.append("standing %+d" % int(r.standing))
+		hints.append(I18n.t("debrief.standing", {"n": "%+d" % int(r.standing)}))
 	if int(r.get("killed", 0)) > 0 or int(r.get("injured", 0)) > 0:
-		hints.append("killed %d / injured %d" % [
-			int(r.killed), int(r.injured)])
+		hints.append(I18n.t("debrief.casualties", {"killed": int(r.killed),
+			"injured": int(r.injured)}))
 	_element_text(title, "   ".join(hints))
+	_style_fight_debrief()
 	_elem_kind = ELEM_RESULT
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 	for c in r.get("winners", []):
 		var cid := int(c.id)
 		var str_new: Variant = r.get("win_str", {}).get(cid)
 		list.add_item("★ %s%s" % [_coach_result_name(cid),
-			"  → str %d" % int(str_new) if str_new != null else ""])
+			"  " + I18n.t("debrief.strength", {"n": int(str_new)}) if str_new != null else ""])
 	for c in r.get("losers", []):
 		var cid := int(c.id)
 		var str_new: Variant = r.get("lose_str", {}).get(cid)
 		list.add_item("   %s%s" % [_coach_result_name(cid),
-			"  → str %d" % int(str_new) if str_new != null else ""])
+			"  " + I18n.t("debrief.strength", {"n": int(str_new)}) if str_new != null else ""])
 	for rep in r.get("reports", []):
 		# Retail applies the OW report to the roster fighter (adY.dz) — keep
 		# the lobby panel's morale/tiredness/xp current without a 6006 re-push.
@@ -5567,27 +5588,59 @@ func _show_fight_result() -> void:
 		if int(rep.get("xp_final", 0)) != 0:
 			var xp := "%+d XP" % int(rep.xp_final)
 			if int(rep.get("morale_bonus", 0)) != 0:
-				xp += " (morale %+d%%)" % int(rep.morale_bonus)
+				xp += " " + I18n.t("debrief.morale_bonus", {"n": "%+d" % int(rep.morale_bonus)})
 			parts.append(xp)
 		if int(rep.get("morale_delta", 0)) != 0:
-			parts.append("morale %+d → %d" % [
-				int(rep.morale_delta), int(rep.get("morale", 0))])
+			parts.append(I18n.t("debrief.morale", {"delta": "%+d" % int(rep.morale_delta),
+				"n": int(rep.get("morale", 0))}))
 		if int(rep.get("tiredness_delta", 0)) != 0:
-			parts.append("tired %+d → %d" % [
-				int(rep.tiredness_delta), int(rep.get("tiredness", 0))])
+			parts.append(I18n.t("debrief.tired", {"delta": "%+d" % int(rep.tiredness_delta),
+				"n": int(rep.get("tiredness", 0))}))
 		if rep.get("dead", false):
-			parts.append("dead")
+			parts.append(I18n.t("debrief.dead"))
 		elif int(rep.get("wound", 0)) != 0:
-			parts.append("wounded")
+			parts.append(I18n.t("debrief.wounded"))
 		list.add_item(", ".join(parts))
 	var won_cards: Array = r.get("won_cards", [])
 	if not won_cards.is_empty():
-		list.add_item("— cards won —")
+		list.add_item("— %s —" % I18n.t("fight.result.won"))
 		var counts := {}
 		for cid in won_cards:
 			counts[cid] = int(counts.get(cid, 0)) + 1
 		for cid in counts:
 			list.add_item("%s ×%d" % [Cards.name_of(int(cid)), int(counts[cid])])
+
+
+func _style_fight_debrief() -> void:
+	var panel: PanelContainer = $UI/ElementDlg
+	panel.offset_left = -320
+	panel.offset_right = 320
+	panel.offset_top = -240
+	panel.offset_bottom = 240
+	var theme := Theme.new()
+	var font := FontFile.new()
+	font.load_dynamic_font("res://assets/gui/fonts/TAHOMA.TTF")
+	theme.default_font = font
+	theme.default_font_size = 16
+	var surface := StyleBoxFlat.new()
+	surface.bg_color = Color("292c20")
+	surface.border_color = Color("ad965a")
+	surface.set_border_width_all(2)
+	surface.set_corner_radius_all(8)
+	surface.set_content_margin_all(18)
+	theme.set_stylebox("panel", "PanelContainer", surface)
+	for type in ["Label", "ItemList", "Button"]:
+		theme.set_color("font_color", type, Color("f1e5c1"))
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color.TRANSPARENT
+	focus.border_color = Color("f6d583")
+	focus.set_border_width_all(2)
+	theme.set_stylebox("focus", "Button", focus)
+	panel.theme = theme
+	$UI/ElementDlg/VBox/Title.add_theme_font_size_override("font_size", 23)
+	$UI/ElementDlg/VBox/Hint.add_theme_font_size_override("font_size", 14)
+	$UI/ElementDlg/VBox/Btns/CloseBtn.text = I18n.t("fight.result.continue")
+	$UI/ElementDlg/VBox/Btns/CloseBtn.grab_focus.call_deferred()
 
 
 ## Graveyard: dead (2) / interred (3) fighters from the roster, plus the owned
@@ -5614,7 +5667,7 @@ func _fill_graveyard() -> void:
 				"interred" if st == 3 else "dead"])
 			list.set_item_metadata(list.item_count - 1, int(f.get("id", -1)))
 	if dead == 0:
-		$UI/ElementDlg/VBox/Hint.text = "No dead fighters."
+		$UI/ElementDlg/VBox/Hint.text = I18n.t("card.no_dead")
 		return
 	var revive := -1
 	for cid in State.inventory:
@@ -5625,7 +5678,7 @@ func _fill_graveyard() -> void:
 	if revive < 0:
 		$UI/ElementDlg/VBox/Hint.text += "  (no resurrection card owned)"
 	else:
-		act.text = "Resurrect (%s)" % Cards.name_of(revive)
+		act.text = I18n.t("card.resurrect_btn", {"name": Cards.name_of(revive)})
 		act.disabled = true
 		act.visible = true
 		list.item_selected.connect(
@@ -5735,7 +5788,7 @@ func _on_fusion_request(_a: Array, _w: GWidget) -> void:
 		wr.put_i32(int(cid))
 	wr.put_i32(_fusion_target)
 	Session.send(OP_FUSION_REQ, wr.raw(), 3)
-	_log_line("fusion sent: %d cards → %s" % [_fusion_inputs.size(),
+	DebugLog.add("fusion sent: %d cards → %s" % [_fusion_inputs.size(),
 		Cards.name_of(_fusion_target)])
 
 
@@ -5893,7 +5946,7 @@ func _on_cm_buy(_a: Array, _w: GWidget) -> void:
 		wr.put_i32(int(cid))
 		wr.put_u16(int(_cm_given[cid]))
 	Session.send(OP_SHOP_BARTER, wr.raw(), 3)
-	_log_line("barter sent: %d kinds → %s" % [_cm_given.size(),
+	DebugLog.add("barter sent: %d kinds → %s" % [_cm_given.size(),
 		Cards.name_of(_cm_selected)])
 
 
@@ -5970,7 +6023,7 @@ func _on_demon_affiliate(_a: Array, _w: GWidget) -> void:
 	Session.send(OP_DEMON_OFFER, wr.raw(), 3)
 	_gui.close("demonAffiliationDialog")
 	$UI/ElementDlg.visible = false
-	_log_line("demon %d offering sent: %d card(s)" % [_demon_id, total])
+	DebugLog.add("demon %d offering sent: %d card(s)" % [_demon_id, total])
 
 
 ## --- exchangeDialog (player trade, 5101-5116) ---------------------------------
@@ -6079,7 +6132,7 @@ func _open_fusion() -> void:
 	$UI/ElementDlg/VBox/Scroll2.visible = true
 	$UI/ElementDlg/VBox/Btns/ActBtn.visible = true
 	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = "Fuse"
+	act.text = I18n.t("fusion.fuse")
 	act.disabled = true
 	_on_fusion_inputs()
 
@@ -6105,10 +6158,10 @@ func _on_fusion_inputs() -> void:
 	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
 	act.disabled = true
 	if inputs.size() < 2:
-		$UI/ElementDlg/VBox/Hint.text = "Pick 2+ cards of one set to feed…"
+		$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.pick_inputs")
 		return
 	if mixed or set_id <= 0:
-		$UI/ElementDlg/VBox/Hint.text = "Inputs must share a card set."
+		$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.same_set")
 		return
 	# Every template of the set is a legal target (need not be owned).
 	for cid in Cards.all_ids():
@@ -6116,7 +6169,7 @@ func _on_fusion_inputs() -> void:
 			list2.add_item("%s  (value %d)" % [
 				Cards.name_of(cid), Cards.value_of(cid)])
 			list2.set_item_metadata(list2.item_count - 1, cid)
-	$UI/ElementDlg/VBox/Hint.text = "Now pick the card to fuse toward…"
+	$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.pick_target")
 
 
 ## Challenge bubble (env 3/7 desc idx2 = challengeId; breed master idx4):
@@ -6135,11 +6188,11 @@ func _open_challenge_bubble(e: Dictionary) -> void:
 	_element_text(title, "Challenge #%d — accept?"
 		% _bubble_challenge)
 	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = "Accept"
+	act.text = I18n.t("btn.accept")
 	act.visible = true
 	act.disabled = _bubble_challenge < 0
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Refuse"
+	alt.text = I18n.t("btn.refuse")
 	alt.visible = true
 
 
@@ -6157,7 +6210,7 @@ func _open_demon_totem(e: Dictionary) -> void:
 	# Retail gates the affiliate control on rank 1 AND demon_id == 0
 	# (pq_1.java:56 guildCanAffiliate) — mirror it on the Alt button.
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Offer cards"
+	alt.text = I18n.t("trade.offer_cards")
 	alt.visible = int(State.guild.get("rank_level", 0)) == 1 \
 		and int(State.guild.get("demon_id", 0)) == 0
 	var w := WireWriter.new()
@@ -6188,7 +6241,8 @@ func _on_tournament_sel(i: int) -> void:
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 	var tid := int(list.get_item_metadata(i))
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Cancel search" if _tourn_search_tid == tid else "Find opponent"
+	alt.text = I18n.t("tourn.cancel_search") if _tourn_search_tid == tid \
+			else I18n.t("tourn.find")
 	alt.visible = _registered_tids.has(tid) \
 		and (_search_open.get(tid, false) or _tourn_search_tid == tid)
 	# Entrants get the bracket straight away (retail opens the tree with the
@@ -6218,13 +6272,13 @@ func _fill_mails() -> void:
 			label = "* " + label
 		list.add_item(label)
 		list.set_item_metadata(i, i)
-	$UI/ElementDlg/VBox/Hint.text = "%d letter(s) — select to read" % _mails.size()
+	$UI/ElementDlg/VBox/Hint.text = I18n.t("mail.select", {"n": _mails.size()})
 	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = "Take cards"
+	act.text = I18n.t("mail.take")
 	act.visible = true
 	act.disabled = true
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Delete"
+	alt.text = I18n.t("btn.delete")
 	alt.visible = true
 	alt.disabled = true
 	if not list.item_selected.is_connected(_on_mail_sel):
@@ -6252,12 +6306,12 @@ func _open_kanodo() -> void:
 	var f: Variant = _fighter_by_id(
 		roster_list.get_item_metadata(sel[0]))
 	if f == null or int(f.get("type", 1)) != 2:
-		_log_line("[i]Kanodo is for evolution fighters only[/i]")
+		_log_line("[i]%s[/i]" % I18n.t("kanodo.evo_only"))
 		return
 	_kanodo_fid = int(f.id)
 	_kanodo_pick = {}
-	$UI/KanodoDlg/VBox/Title.text = "Kanodo — %s" % f.get("name", "?")
-	$UI/KanodoDlg/VBox/Hint.text = "Click a lit sphere."
+	$UI/KanodoDlg/VBox/Title.text = I18n.t("kanodo.title", {"name": f.get("name", "?")})
+	$UI/KanodoDlg/VBox/Hint.text = I18n.t("kanodo.hint")
 	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = true
 	_refresh_kanodo()
 	$UI/KanodoDlg.visible = true
@@ -6283,8 +6337,8 @@ func _refresh_kanodo() -> void:
 	if cursor == Vector2i.ZERO:
 		var root: Array = Kanodo.boards.get(board, {}).get("root", [0, 0])
 		cursor = Vector2i(int(root[0]), int(root[1]))
-	$UI/KanodoDlg/VBox/XP.text = "xp %d / %d total" % [
-		int(f.get("xp", 0)), int(f.get("total_xp", 0))]
+	$UI/KanodoDlg/VBox/XP.text = I18n.t("kanodo.xp",
+		{"cur": int(f.get("xp", 0)), "total": int(f.get("total_xp", 0))})
 	$UI/KanodoDlg/VBox/Scroll/Board.set_state(board,
 		f.get("spheres", []), cursor)
 
@@ -6292,20 +6346,21 @@ func _refresh_kanodo() -> void:
 func _on_sphere_pick(n: Dictionary) -> void:
 	_kanodo_pick = n
 	var kind := String(n.get("kind", "empty"))
-	var lines := ["sphere %d  (%d,%d) — %s" % [
-		int(n.id), int(n.x), int(n.y), KIND_LABEL.get(kind, kind)]]
+	var lines := [I18n.t("kanodo.node", {"id": int(n.id), "x": int(n.x),
+		"y": int(n.y), "kind": KIND_LABEL.get(kind, kind)})]
 	if int(n.get("spell", 0)) != 0:
 		lines.append("→ %s" % Spells.name_of(int(n.spell)))
 	if int(n.get("pool", 0)) != 0:
-		lines.append("→ equipment set %d" % int(n.pool))
+		lines.append(I18n.t("kanodo.pool", {"id": int(n.pool)}))
 	if n.get("barrier", []).size() > 0:
 		var names := []
 		for c in n.barrier:
 			names.append(Cards.name_of(int(c)))
-		lines.append("needs one of: %s" % ", ".join(names))
+		lines.append(I18n.t("kanodo.barrier",
+			{"list": ", ".join(names)}))
 	if n.get("fx", []).size() > 0:
-		lines.append("effect %s" % str(n.fx))
-	lines.append("cost %d xp" % int(n.get("xp", 0)))
+		lines.append(I18n.t("kanodo.fx", {"fx": str(n.fx)}))
+	lines.append(I18n.t("kanodo.cost", {"xp": int(n.get("xp", 0))}))
 	$UI/KanodoDlg/VBox/Hint.text = "\n".join(lines)
 	var board := $UI/KanodoDlg/VBox/Scroll/Board
 	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = \
@@ -6343,8 +6398,8 @@ func _on_sphere_buy() -> void:
 	if not f.spheres.has(int(_kanodo_pick.id)):
 		f.spheres.append(int(_kanodo_pick.id))
 	f.xp = int(f.xp) - cost
-	_log_line("Kanodo: sphere %d bought (-%d xp)" % [
-		int(_kanodo_pick.id), cost])
+	_log_line(I18n.t("kanodo.bought",
+		{"id": int(_kanodo_pick.id), "cost": cost}))
 	_refresh_kanodo()
 
 
@@ -6369,7 +6424,7 @@ func _on_mail_sel(i: int) -> void:
 func _invite_exchange(cname: String) -> void:
 	var tid: int = _coach_id_by_name(cname)
 	if tid < 0:
-		_log_line("[color=red]no coach '%s' nearby[/color]" % cname)
+		_log_line("[color=red]%s[/color]" % I18n.t("watch.not_found", {"name": cname}))
 		return
 	_invite_exchange_id(tid, cname)
 
@@ -6413,11 +6468,11 @@ func _open_exchange() -> void:
 	if not list.item_selected.is_connected(_exchange_unstage_row):
 		list.item_selected.connect(_exchange_unstage_row)
 	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = "Ready"
+	act.text = I18n.t("trade.ready_btn")
 	act.visible = true
 	act.disabled = false
 	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = "Cancel trade"
+	alt.text = I18n.t("trade.cancel")
 	alt.visible = true
 	alt.disabled = false
 	_refresh_exchange()
@@ -6466,9 +6521,9 @@ func _refresh_exchange() -> void:
 				{"side": side, "card": int(card)})
 	var me_r: bool = _ex.ready.get(int(_ex.my_side), false)
 	var them_r: bool = _ex.ready.get(1 - int(_ex.my_side), false)
-	$UI/ElementDlg/VBox/Hint.text = "ready: you %s / %s %s" % [
-		"✓" if me_r else "·", _ex.get("other_name", "?"),
-		"✓" if them_r else "·"]
+	$UI/ElementDlg/VBox/Hint.text = I18n.t("trade.ready_state", {
+		"me": "✓" if me_r else "·", "name": _ex.get("other_name", "?"),
+		"them": "✓" if them_r else "·"})
 
 
 ## --- mapDialog / miniMapDialog ------------------------------------------------
@@ -6689,7 +6744,7 @@ func _open_firework_debug() -> void:
 			Cards.name_of(int(cid)), int(State.inventory[cid])])
 		list.set_item_metadata(list.item_count - 1, int(cid))
 	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = "Launch"
+	act.text = I18n.t("fight.launch")
 	act.visible = true
 	act.disabled = true
 	list.item_selected.connect(
@@ -6716,7 +6771,7 @@ func _on_element_act() -> void:
 			w.put_i32(revive)
 			Session.send(OP_USE_ITEM, w.raw(), 3)
 			$UI/ElementDlg.visible = false
-			_log_line("resurrect card used: %s" % Cards.name_of(revive))
+			_log_line(I18n.t("card.resurrect", {"name": Cards.name_of(revive)}))
 		14:  # fusion — inputs + the List2 target LAST (server reads it so)
 			var inputs := []
 			for idx in list.get_selected_items():
@@ -6732,7 +6787,7 @@ func _on_element_act() -> void:
 			w.put_i32(int(list2.get_item_metadata(sel2[0])))
 			Session.send(OP_FUSION_REQ, w.raw(), 3)
 			$UI/ElementDlg.visible = false
-			_log_line("fusion sent: %d cards → %s" % [inputs.size(),
+			DebugLog.add("fusion sent: %d cards → %s" % [inputs.size(),
 				Cards.name_of(int(list2.get_item_metadata(sel2[0])))])
 		5, 7:  # breedmaster/demon challenge accepted → 26330 {id, 99}
 			var chal := int(_npc.get("chal", _bubble_challenge))
@@ -6743,7 +6798,7 @@ func _on_element_act() -> void:
 			w.put_u16(99)
 			Session.send(OP_TEAM_TEST, w.raw(), 2)
 			$UI/ElementDlg.visible = false
-			_log_line("challenge %d accepted" % chal)
+			_log_line(I18n.t("challenge.accepted_id", {"id": chal}))
 		6, 9, ELEM_SCENARIO:  # monologue — Next advances, last closes/pickers
 			_npc_page_next()
 		13:  # tournament register → 4607 [tid][coach][preset=-1][card=0]
@@ -6756,7 +6811,7 @@ func _on_element_act() -> void:
 			w.put_i16(-1)
 			w.put_i32(0)
 			Session.send(OP_TOURN_REGISTER, w.raw(), 3)
-			_log_line("tournament register sent (tid %d)"
+			DebugLog.add("tournament register sent (tid %d)"
 				% int(list.get_item_metadata(sel[0])))
 		11:  # demon offering — only meaningful in offer mode
 			if not _elem_offer:
@@ -6775,7 +6830,7 @@ func _on_element_act() -> void:
 			_awaiting_offer = true
 			Session.send(OP_DEMON_OFFER, w.raw(), 3)
 			$UI/ElementDlg.visible = false
-			_log_line("demon %d offering sent: %d card(s)" % [
+			DebugLog.add("demon %d offering sent: %d card(s)" % [
 				_demon_id, offers.size()])
 		ELEM_EXCHANGE:  # "Ready" toggle → 5109
 			var w := WireWriter.new()
@@ -6792,7 +6847,7 @@ func _on_element_act() -> void:
 			w.put_i64(int(m.id))
 			w.put_u8(0)
 			Session.send(OP_MAIL_TAKE, w.raw(), 3)
-			_log_line("collecting %d card(s) from mail %d…" % [
+			DebugLog.add("collecting %d card(s) from mail %d…" % [
 				m.cards.size(), int(m.id)])
 		12:  # firework
 			var sel := list.get_selected_items()
@@ -6831,7 +6886,7 @@ func _on_element_alt() -> void:
 		Session.send(OP_MAIL_DELETE, w.raw(), 3)
 		_mails.remove_at(idx)
 		_fill_mails()
-		_log_line("mail %d deleted" % int(m.id))
+		_log_line(I18n.t("mail.deleted", {"id": int(m.id)}))
 		return
 	if _elem_kind == 13:
 		# Opponent search → 28611 [i64 tid][i64 coach][i16 preset], arch 2.
@@ -6848,10 +6903,10 @@ func _on_element_alt() -> void:
 		if _tourn_search_tid == tid:
 			# The same button cancels a live search (retail toggles it).
 			Session.send(OP_TOURN_CANCEL, w.raw(), 2)
-			_log_line("tournament search cancel sent (tid %d)" % tid)
+			DebugLog.add("tournament search cancel sent (tid %d)" % tid)
 		else:
 			Session.send(28611, w.raw(), 2)
-			_log_line("tournament search sent (tid %d)" % tid)
+			DebugLog.add("tournament search sent (tid %d)" % tid)
 		return
 	if _elem_kind == 11 and not _elem_offer:
 		# "Offer cards" — the retail demonAffiliationDialog barter; debug
@@ -6868,11 +6923,11 @@ func _on_element_alt() -> void:
 			list.add_item("%s  ×%d" % [
 				Cards.name_of(int(cid)), int(State.inventory[cid])])
 			list.set_item_metadata(list.item_count - 1, int(cid))
-		$UI/ElementDlg/VBox/Title.text = "Demon %d — offering" % _demon_id
+		$UI/ElementDlg/VBox/Title.text = I18n.t("demon.offering", {"id": _demon_id})
 		$UI/ElementDlg/VBox/Hint.text = \
 			"Pick cards to give (reputation = their value):"
 		var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-		act.text = "Offer"
+		act.text = I18n.t("demon.offer")
 		act.visible = true
 		act.disabled = false
 		return
@@ -6882,53 +6937,10 @@ func _on_element_alt() -> void:
 		_run_scenario(_scenario_queue.pop_front())
 
 
-## Zaap dialog: reuse the shop panel in "teleport" mode — the stocked list is
-## our own type-20 cards (Zaap destinations); clicking one sends 4512.
-var _zaap_mode := false
-
-func _open_zaap() -> void:
-	# retail zaapDialog — the tome of special sets; debug list as fallback
-	if _gui.open("zaapDialog") != null:
-		if _pending_zaap_page > 0:
-			var page := _pending_zaap_page
-			_pending_zaap_page = 0
-			_npc = {"pages": [page], "page": 0, "chals": []}
-			_elem_kind = ELEM_SCENARIO
-			_npc_page_show("Tutorial")
-		return
-	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
-	list.clear()
-	var owned := []
-	for cid in State.inventory:
-		if int(Cards.meta(int(cid)).get("type", 0)) == 20:
-			owned.append(int(cid))
-	owned.sort()
-	_zaap_mode = true
-	_shop_cards = []
-	for cid in owned:
-		list.add_item("%s  ×%d" % [Cards.name_of(cid), State.inventory[cid]])
-		list.set_item_metadata(list.item_count - 1, cid)
-	$UI/ShopDlg/VBox/Title.text = "Zaap"
-	$UI/ShopDlg/VBox/Hint.text = "Pick a destination."
-	$UI/ShopDlg/VBox/Btns/BuyBtn.text = "Teleport"
-	$UI/ShopDlg/VBox/Btns/TradeBtn.visible = false
-	$UI/ShopDlg.visible = true
-	_on_shop_pick(-1)
-	# Scenario 108's useZaap step: once the Zaap dialog is open the tutorial
-	# shows one more floating page explaining the teleport click.
-	if _pending_zaap_page > 0:
-		var page := _pending_zaap_page
-		_pending_zaap_page = 0
-		_npc = {"pages": [page], "page": 0, "chals": []}
-		_elem_kind = ELEM_SCENARIO
-		_npc_page_show("Tutorial")
-
-
 ## --- Card Master shop --------------------------------------------------------
 ## 5401 catalogue → list of cards w/ names+prices. Buy sends 5450
 ## [i32 shopId][i16 n]{i32 cardId}; Exchange opens the barter pane (5400).
 func _open_shop(d: Dictionary) -> void:
-	_zaap_mode = false
 	_shop_id = int(d.get("shop_id", -1))
 	_shop_cards = d.get("cards", [])
 	_cm_given = {}
@@ -6947,9 +6959,9 @@ func _open_shop(d: Dictionary) -> void:
 		line += "  (%s)" % price if price != "" else "  (barter only)"
 		list.add_item(line)
 		list.set_item_metadata(list.item_count - 1, cid)
-	$UI/ShopDlg/VBox/Title.text = "Card Master"
-	$UI/ShopDlg/VBox/Hint.text = "Click a card — buy with tokens, or exchange yours."
-	$UI/ShopDlg/VBox/Btns/BuyBtn.text = "Buy (tokens)"
+	$UI/ShopDlg/VBox/Title.text = I18n.t("shop.title")
+	$UI/ShopDlg/VBox/Hint.text = I18n.t("shop.hint")
+	$UI/ShopDlg/VBox/Btns/BuyBtn.text = I18n.t("shop.buy")
 	$UI/ShopDlg/VBox/Btns/TradeBtn.visible = true
 	_refresh_wallet_label()
 	$UI/ShopDlg.visible = true
@@ -6961,10 +6973,8 @@ func _on_shop_pick(_idx: int) -> void:
 	var sel := list.get_selected_items()
 	var has := not sel.is_empty()
 	$UI/ShopDlg/VBox/Btns/BuyBtn.disabled = not has
-	$UI/ShopDlg/VBox/Btns/TradeBtn.disabled = not has and not _zaap_mode
-	if _zaap_mode:
-		$UI/ShopDlg/VBox/Btns/BuyBtn.text = "Teleport"
-	elif has:
+	$UI/ShopDlg/VBox/Btns/TradeBtn.disabled = not has
+	if has:
 		var cid := int(list.get_item_metadata(sel[0]))
 		$UI/ShopDlg/VBox/Btns/BuyBtn.disabled = \
 			not _priced(cid) or not _affordable(cid)
@@ -6991,19 +7001,12 @@ func _on_shop_buy() -> void:
 	if sel.is_empty():
 		return
 	var cid := int(list.get_item_metadata(sel[0]))
-	if _zaap_mode:
-		var w := WireWriter.new()
-		w.put_i32(cid)
-		Session.send(OP_ZAAP, w.raw(), 3)
-		$UI/ShopDlg.visible = false
-		_log_line("zaap: %s" % Cards.name_of(cid))
-		return
 	var w := WireWriter.new()
 	w.put_i32(_shop_id)
 	w.put_u16(1)
 	w.put_i32(cid)
 	Session.send(OP_SHOP_BUY, w.raw(), 3)
-	_log_line("buy 5450 sent: %s" % Cards.name_of(cid))
+	DebugLog.add("buy 5450 sent: %s" % Cards.name_of(cid))
 
 
 ## Barter: offer owned tradable cards whose summed value ≥ wanted card's.
@@ -7014,8 +7017,8 @@ func _open_barter() -> void:
 		return
 	_barter_wanted = int(list.get_item_metadata(sel[0]))
 	var wanted_value := Cards.value_of(_barter_wanted)
-	$UI/BarterDlg/VBox/Wanted.text = "wanted: %s (value %d)" % [
-		Cards.name_of(_barter_wanted), wanted_value]
+	$UI/BarterDlg/VBox/Wanted.text = I18n.t("barter.wanted",
+		{"name": Cards.name_of(_barter_wanted), "v": wanted_value})
 	var box: VBoxContainer = $UI/BarterDlg/VBox/Scroll/Mine
 	for c in box.get_children():
 		c.queue_free()
@@ -7025,8 +7028,9 @@ func _open_barter() -> void:
 			continue
 		for i in mini(int(State.inventory[cid]), 9):
 			var cb := CheckBox.new()
-			cb.text = "%s (value %d)" % [Cards.name_of(int(cid)),
-				Cards.value_of(int(cid))]
+			cb.text = I18n.t("barter.card_value",
+				{"name": Cards.name_of(int(cid)),
+				"v": Cards.value_of(int(cid))})
 			cb.set_meta("id", int(cid))
 			cb.toggled.connect(func(_on): _update_barter_sum())
 			box.add_child(cb)
@@ -7039,8 +7043,8 @@ func _update_barter_sum() -> void:
 	for cb in $UI/BarterDlg/VBox/Scroll/Mine.get_children():
 		if cb.button_pressed:
 			total += Cards.value_of(int(cb.get_meta("id")))
-	$UI/BarterDlg/VBox/Sum.text = "offered value: %d / %d" % [
-		total, Cards.value_of(_barter_wanted)]
+	$UI/BarterDlg/VBox/Sum.text = I18n.t("barter.sum",
+		{"a": total, "b": Cards.value_of(_barter_wanted)})
 	$UI/BarterDlg/VBox/Btns/TradeBtn.disabled = \
 		total < Cards.value_of(_barter_wanted) or total <= 0
 
@@ -7062,7 +7066,7 @@ func _on_barter_trade() -> void:
 		w.put_u16(given[cid])
 	Session.send(OP_SHOP_BARTER, w.raw(), 3)
 	$UI/BarterDlg.visible = false
-	_log_line("barter 5400 sent: %d cards for %s" % [
+	DebugLog.add("barter 5400 sent: %d cards for %s" % [
 		given.values().reduce(func(a, b): return a + b, 0),
 		Cards.name_of(_barter_wanted)])
 
@@ -7072,4 +7076,4 @@ func _refresh_wallet_label() -> void:
 	for t in State.wallet:
 		parts.append("%d t%d" % [int(State.wallet[t]), int(t)])
 	var node: Label = $UI/ShopDlg/VBox/Wallet
-	node.text = "wallet: %s" % (", ".join(parts) if parts else "—")
+	node.text = I18n.t("wallet.label", {"list": ", ".join(parts) if parts else "—"})

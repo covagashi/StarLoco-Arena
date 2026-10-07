@@ -178,6 +178,19 @@ type WebConfig struct {
 	// default BLOB caps at 64 KB, and anything in the database lands in every
 	// backup. Empty disables screenshot storage (reports are still recorded).
 	BugReportDir string `yaml:"bug_report_dir"`
+	// BugReportWebhook, when set, forwards every accepted bug report to that
+	// URL as a Discord-compatible webhook POST ({content, embeds[]} JSON — the
+	// shape Discord, Slack-compatible bots and most "incoming webhook"
+	// integrations accept). The report is stored locally first; a webhook
+	// failure is logged, never fatal, and never delays the player's 200/OK.
+	BugReportWebhook string `yaml:"bug_report_webhook"`
+	// PublicURL is the portal's address AS PLAYERS REACH IT — e.g.
+	// "https://arena.example.com" or "http://203.0.113.7:8080". The Godot
+	// client asks for it over the game socket (opcode 60001) to learn where to
+	// POST bug reports; it cannot derive an http URL from a TCP connection.
+	// Empty announces the locally-bound listener instead (fine for same-host
+	// play; remote players need this set).
+	PublicURL string `yaml:"public_url"`
 	// TrustedProxies lists the peer addresses whose X-Forwarded-For header may
 	// be believed, as IPs or CIDRs ("127.0.0.1", "10.0.0.0/8"). It is EMPTY by
 	// default, and while it is empty no proxy header is trusted at all — the
@@ -410,6 +423,14 @@ func (c *Config) applyEnv() {
 	}
 	if v := os.Getenv("ARENA_WEB_BUG_REPORT_ADDR"); v != "" {
 		c.Web.BugReportAddr = v
+	}
+	// A webhook is a credential (anyone holding it can post to the channel),
+	// so like the session secret it is deliberately env-overridable.
+	if v := os.Getenv("ARENA_WEB_BUG_REPORT_WEBHOOK"); v != "" {
+		c.Web.BugReportWebhook = v
+	}
+	if v := os.Getenv("ARENA_WEB_PUBLIC_URL"); v != "" {
+		c.Web.PublicURL = v
 	}
 	// Comma-separated, so a container can set it without a config file.
 	if v := os.Getenv("ARENA_WEB_TRUSTED_PROXIES"); v != "" {

@@ -143,6 +143,12 @@ func run(configPath, dataOverride string) error {
 		}
 	}
 
+	// Announce the portal's address to Godot clients that ask (opcode 60000 ->
+	// 60001): their in-game bug reporter POSTs to it, and a TCP connection
+	// gives no way to learn an http URL. A wildcard bind ("0.0.0.0:8080") is
+	// announced as-is; the client substitutes the game host it connected to.
+	deps.WebBaseURL = webBaseURL(cfg, webLn)
+
 	srv.StartDebugInject(cfg.DebugAddr) // no-op unless debug_addr is set
 
 	banner(cfg, gameLn, webLn, createdConfig, configPath, deps, dataLoc)
@@ -515,6 +521,19 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 		Tournaments:    tm,
 		Log:            log,
 	}, loc
+}
+
+// webBaseURL is what the game socket announces for opcode-60000 queries:
+// the operator's public_url when set, else the locally-bound listener. Empty
+// when the portal is off.
+func webBaseURL(cfg config.Config, ln net.Listener) string {
+	if u := strings.TrimSpace(cfg.Web.PublicURL); u != "" {
+		return strings.TrimRight(u, "/")
+	}
+	if ln == nil {
+		return ""
+	}
+	return "http://" + ln.Addr().String()
 }
 
 func parseLevel(s string) slog.Level {

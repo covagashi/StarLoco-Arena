@@ -96,6 +96,10 @@ type Server struct {
 	bugLimiter *limiter
 	started    time.Time
 
+	// webhookClient POSTs bug reports to bug_report_webhook. nil = the default
+	// 10s-timeout client; tests swap it for one pointed at httptest.
+	webhookClient *http.Client
+
 	// trustedProxies are the reverse proxies allowed to tell us, via
 	// X-Forwarded-For, who the real visitor is. Empty means "believe nobody",
 	// which is the safe default for a directly-reachable portal.

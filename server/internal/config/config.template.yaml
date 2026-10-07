@@ -215,6 +215,21 @@ web:
   # you would rather not accept in-game reports at all.
   # bug_report_addr: ""
 
+  # Forward every accepted bug report to a Discord-compatible webhook. The POST
+  # body is the standard webhook JSON ({content, embeds[]}), so Discord,
+  # Slack-compatible bridges and most "incoming webhook" bots all accept it.
+  # The report is stored locally first; a webhook failure is only logged.
+  # Treat the URL like a password - anyone holding it can post to the channel;
+  # prefer the ARENA_WEB_BUG_REPORT_WEBHOOK env var over writing it here.
+  # bug_report_webhook: ""
+
+  # The portal's address AS PLAYERS REACH IT - e.g.
+  # "https://arena.example.com" or "http://203.0.113.7:8080". The Godot client
+  # asks the game socket for it (opcode 60001) so its built-in bug reporter
+  # knows where to POST; it cannot derive an http URL from a TCP connection.
+  # Empty announces the locally-bound listener (right for same-host play).
+  # public_url: ""
+
 
 # -----------------------------------------------------------------------------
 #  Game data - the card, spell and map files copied out of the game client.

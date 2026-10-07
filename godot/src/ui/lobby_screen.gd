@@ -10,17 +10,25 @@ extends Control
 
 signal action_requested(action: String)
 signal dialog_requested(dialog: String)
-signal item_requested(event: String, item: Variant)
-signal debug_requested
+signal coach_rotated(delta: int)
 
+const Direction8 := preload("res://src/util/direction8.gd")
 const REF := Vector2(1280, 720)
 const CHAT_RECT := Rect2(50, 524, 630, 134)
 const MENUS := [
-	["Menú", "menuDialog"], ["Equipo", "teamManagementDialog"],
-	["Estadísticas", "coachStatisticsDialog"], ["Inventario", "coachInventoryDialog"],
-	["Clasificación", "ladderInformationDialog"], ["Calendario", "calendarDialog"],
-	["Logros", "achievementDialog"], ["Social", "socialDialog"],
-	["Ayuda", "tooltipDialog"],
+	["nav.team", "teamManagementDialog"],
+	["nav.stats", "coachStatisticsDialog"], ["nav.inventory", "coachInventoryDialog"],
+	["nav.ladder", "ladderInformationDialog"], ["nav.calendar", "calendarDialog"],
+	["nav.achievements", "achievementDialog"], ["nav.social", "socialDialog"],
+	["nav.help", "tooltipDialog"],
+]
+const ACTIONS := [
+	["lobby.action.practice", "practice", "lobby.action.practice.tip"],
+	["lobby.action.fight", "fight", "lobby.action.fight.tip"],
+	["lobby.action.quick", "quick", "lobby.action.quick.tip"],
+	["lobby.action.evo", "evo", "lobby.action.evo.tip"],
+	["lobby.action.duo", "duo", "lobby.action.duo.tip"],
+	["lobby.action.team", "team", "lobby.action.team.tip"],
 ]
 
 var _box: Control
@@ -32,9 +40,13 @@ var _spr
 var _model
 var _chat: Control
 var _look := ""
+var _dir := Direction8.FRONT    # wire dir the coach sprite faces
+var _title: Label
+var _subtitle: Label
+var _hint: Label
+var _menu_buttons: Array = []
 var _actions: Array[Button] = []
-var _emotes: MenuButton
-var _tools: MenuButton
+var _social_btn: Button
 
 
 func _init() -> void:
@@ -57,44 +69,44 @@ func _init() -> void:
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
 	_spr.foot_pivot = true
 	_spr.position = Vector2(200, 443)
-	_spr.scale = Vector2(-2.5, 2.5)
+	_spr.scale = Vector2(2.5, 2.5)
 	_box.add_child(_spr)
 	_bubble = _label(Rect2(70, 460, 260, 30), "", 16)
-	_label(Rect2(400, 159, 824, 32), "Elige tu próximo combate", 24)
-	var actions := [
-		["Entrenamiento", "practice", "Practica contra la IA"],
-		["Combate", "fight", "Buscar rival · Clasificado"],
-		["Aleatorio", "quick", "Buscar partida aleatoria"],
-		["Evolución", "evo", "Combate de evolución"],
-		["2v2 dúo", "duo", "Gestionar tu equipo de dos"],
-		["Equipo", "team", "Luchadores y composiciones"],
-	]
-	for i in range(actions.size()):
-		var row: Array = actions[i]
+	_title = _label(Rect2(400, 159, 824, 32), "", 24)
+	for i in range(ACTIONS.size()):
+		var row: Array = ACTIONS[i]
 		var r := Rect2(400 + (i % 3) * 280, 210 if i < 3 else 352, 264, 126 if i < 3 else 92)
-		var b := _button(r, str(row[0]), func(): action_requested.emit(str(row[1])), 24)
-		b.tooltip_text = str(row[2])
+		var b := _button(r, "", func(): action_requested.emit(str(row[1])), 24)
 		_actions.append(b)
-	_label(Rect2(400, 456, 824, 30), "Prepara tu equipo y entra en la arena", 16)
-	_emotes = _item_menu(Rect2(40, 90, 106, 40), "Emotes")
-	_tools = _item_menu(Rect2(152, 90, 134, 40), "Herramientas")
-	_button(Rect2(292, 90, 84, 40), "Social", func(): dialog_requested.emit("socialDialog"), 16)
+	_subtitle = _label(Rect2(400, 456, 824, 30), "", 16)
+	# Coach rotation: << turns the paper-doll one step anticlockwise, >> the
+	# other way. Purely cosmetic — the direction is a qc_0 index like in
+	# retail's coach-creation screen.
+	var prev := _button(Rect2(60, 400, 44, 34), "«",
+		func(): _rotate(-1), 18)
+	prev.tooltip_text = _t("lobby.rotate.tip")
+	var next := _button(Rect2(296, 400, 44, 34), "»",
+		func(): _rotate(1), 18)
+	next.tooltip_text = _t("lobby.rotate.tip")
+	_social_btn = _button(Rect2(120, 90, 120, 40), "",
+		func(): dialog_requested.emit("socialDialog"), 16)
 	var icons := ImageTexture.create_from_image(Image.load_from_file(
 		ProjectSettings.globalize_path("res://assets/ui/lobby_icons.png")))
 	for i in range(MENUS.size()):
 		var entry: Array = MENUS[i]
 		var button := _button(Rect2(732 + (i % 3) * 164, 526 + (i / 3) * 43, 158, 37),
-			str(entry[0]), func(): dialog_requested.emit(str(entry[1])), 14)
+			"", func(): dialog_requested.emit(str(entry[1])), 14)
 		var icon := AtlasTexture.new()
 		icon.atlas = icons
 		icon.region = Rect2(i * 32, 0, 32, 32)
 		button.icon = icon
 		button.expand_icon = true
 		button.add_theme_constant_override("icon_max_width", 20)
-		button.tooltip_text = str(entry[0])
-	_button(Rect2(1152, 674, 78, 26), "Debug", func(): debug_requested.emit(), 13)
-	_label(Rect2(40, 672, 650, 24), "Enter para escribir en el chat", 13)
+		_menu_buttons.append(button)
+	_hint = _label(Rect2(40, 672, 650, 24), "", 13)
 	resized.connect(_relayout)
+	I18n.locale_changed.connect(func(_l): _retranslate())
+	_retranslate()
 
 
 func _ready() -> void:
@@ -123,7 +135,7 @@ func show_bubble(text: String) -> void:
 
 
 func _on_model_changed(model_name: String, _field: String, _value: Variant) -> void:
-	if model_name in ["localCoach", "tools"]:
+	if model_name == "localCoach":
 		_sync()
 
 
@@ -132,49 +144,47 @@ func _sync() -> void:
 	if not coach is Dictionary:
 		return
 	_name.text = str(coach.get("name", ""))
-	_level.text = "Nivel %d" % int(coach.get("level", 0))
-	var look := "%s/%s/%s" % [coach.get("sex", 0), coach.get("skin", 0), coach.get("hair", 0)]
+	_level.text = I18n.t("lobby.level", {"n": int(coach.get("level", 0))})
+	# actorDirection is a qc_0 wire dir the rest of the client already writes
+	# (creation screen arrows). Honor it when present.
+	_dir = int(coach.get("actorDirection", _dir)) & 7
+	var look := "%s/%s/%s/%d" % [coach.get("sex", 0), coach.get("skin", 0),
+		coach.get("hair", 0), _dir]
 	if look != _look:
 		_look = look
 		_spr.tints = Palettes.coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
 		var lib := "res://assets/anims/coach_700%d" % int(coach.get("sex", 0))
-		for dir in [3, 5, 2, 0, 6, 1, 7, 4]:
-			if _spr.load_action(lib, "%d_AnimStatique" % dir):
-				_spr.scale.x = -2.5 if dir in [1, 2, 3] else 2.5
-				break
-	_fill_items(_emotes, coach.get("equipedEmotes", []), true)
-	var tools: Variant = coach.get("tools", _model.get_value("tools"))
-	_fill_items(_tools, tools if tools is Array else [], false)
+		if not Direction8.load_idle(_spr, lib, _dir):
+			Direction8.load_idle_any(_spr, lib)
 
 
-func _item_menu(r: Rect2, title: String) -> MenuButton:
-	var b := MenuButton.new()
-	b.position = r.position
-	b.size = r.size
-	b.text = title
-	_style_button(b, 16)
-	_box.add_child(b)
-	b.get_popup().index_pressed.connect(func(index: int):
-		var data: Dictionary = b.get_popup().get_item_metadata(index)
-		item_requested.emit(data.event, data.item))
-	return b
+func _rotate(delta: int) -> void:
+	_dir = (_dir + delta) & 7
+	_look = ""
+	_sync()
+	if _model != null:
+		var coach: Variant = _model.get_value("localCoach")
+		if coach is Dictionary:
+			_model.set_value("localCoach", _dir, "actorDirection")
+	coach_rotated.emit(delta)
 
 
-func _fill_items(b: MenuButton, items: Array, emotes: bool) -> void:
-	var popup := b.get_popup()
-	popup.clear()
-	if items.is_empty():
-		popup.add_item("Sin emotes equipados" if emotes else "Sin herramientas")
-		popup.set_item_disabled(0, true)
-	for item in items:
-		if item == null:
-			continue
-		var title := str(item.get("name", item.get("id", ""))) if item is Dictionary else str(item)
-		popup.add_item(title)
-		popup.set_item_metadata(popup.item_count - 1, {"event": "playEmote" if emotes else "useToolRequest", "item": item})
-		if emotes:
-			popup.add_item("Desequipar: " + title)
-			popup.set_item_metadata(popup.item_count - 1, {"event": "unequipEmote", "item": item})
+func _retranslate() -> void:
+	_title.text = _t("lobby.title")
+	_subtitle.text = _t("lobby.subtitle")
+	_hint.text = _t("lobby.chat_hint")
+	for i in range(_actions.size()):
+		_actions[i].text = _t(str(ACTIONS[i][0]))
+		_actions[i].tooltip_text = _t(str(ACTIONS[i][2]))
+	for i in range(_menu_buttons.size()):
+		_menu_buttons[i].text = _t(str(MENUS[i][0]))
+		_menu_buttons[i].tooltip_text = _t(str(MENUS[i][0]))
+	if _social_btn != null:
+		_social_btn.text = _t("lobby.social")
+
+
+static func _t(key: String, args: Dictionary = {}) -> String:
+	return I18n.t(key, args)
 
 
 func _label(r: Rect2, text: String, font_size: int) -> Label:

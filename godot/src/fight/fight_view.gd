@@ -21,7 +21,9 @@ const Effects := preload("res://src/gamedata/effects.gd")
 const Areas := preload("res://src/gamedata/areas.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
+const DebugLog := preload("res://src/util/debug_log.gd")
 const Palettes := preload("res://src/gamedata/palettes.gd")
+const LobbyPanel := preload("res://src/ui/lobby_panel.gd")
 
 ## Player coach paper-doll: Players/700<sex>.anm body + AnimCommunes
 ## gestures, channel-tinted per coach (ch1 skin=apH, ch2 hair=agl_0).
@@ -70,22 +72,27 @@ var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 
 
 func _ready() -> void:
+	_skin_fight_ui()
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
 	_face_btn.pressed.connect(_on_face_pressed)
+	_end_turn.text = I18n.t("fight.end_turn")
+	_face_btn.text = I18n.t("fight.face")
+	_face_btn.tooltip_text = I18n.t("fight.face.tip")
+	$UI/TopBar/SurrenderBtn.text = I18n.t("fight.surrender")
+	$UI/TopBar/SurrenderBtn.tooltip_text = I18n.t("fight.surrender.tip")
+	$UI/TopBar/BackBtn.text = I18n.t("fight.leave")
 	if State.spectating:
 		# Read-only viewer: no actions leave the client, but the phase acks
 		# (8011/8031) still fire — the fight actor ignores them for
 		# non-combatants either way.
 		_end_turn.disabled = true
 		_face_btn.disabled = true
-		_end_turn.text = "Spectating"
+		_end_turn.text = I18n.t("fight.spectating")
 		$UI/TopBar/SurrenderBtn.disabled = true
 	else:
-		$UI/TopBar/SurrenderBtn.pressed.connect(func():
-			if State.net != null:
-				State.net.send_message(8151, PackedByteArray(), 3))
-	$UI/TopBar/BackBtn.pressed.connect(func(): get_tree().change_scene_to_file("res://src/main.tscn"))
+		$UI/TopBar/SurrenderBtn.pressed.connect(_confirm_surrender)
+	$UI/TopBar/BackBtn.pressed.connect(_on_back_pressed)
 	$UI/Chat.bubble.connect(chat_bubble)
 	$UI/Chat.emote.connect(func(id, anim):
 		chat_bubble(id, "* %s *" % anim.trim_prefix("AnimEmote-")
@@ -111,20 +118,148 @@ func _ready() -> void:
 	# When we arrived here from a live fight the world id is the arena id.
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
+	if not State.fighters.is_empty():
+		# Live fight: the map-id field + Load button are preview tools, not
+		# player UI — hide them and show the arena name as a plain label.
+		$UI/TopBar/MapId.visible = false
+		$UI/TopBar/LoadBtn.visible = false
+		_map_lbl = Label.new()
+		_map_lbl.name = "MapLbl"
+		_map_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_map_lbl.text = I18n.t("fight.arena", {"id": State.fight_world})
+		$UI/TopBar.add_child(_map_lbl)
+		$UI/TopBar.move_child(_map_lbl, 0)
 	_load()
 	_build_timeline()
 	# Challenge fights (kind 5, aKl) name themselves via the second i64 —
 	# retail's ahy_1.axg().dC(asy()) resolves the same content.30 table.
 	# It rides the persistent TopBar label, not `info` (rewritten per turn).
 	if int(State.fight_data.get("fight_type", 0)) == 5:
-		$UI/TopBar/MapId.text += " — défi: %s" % NpcDialogs.challenge_name(
-			int(State.fight_data.get("fight_id", 0)))
+		var suffix := " — %s: %s" % [I18n.t("fight.challenge"),
+			NpcDialogs.challenge_name(int(State.fight_data.get("fight_id", 0)))]
+		if _map_lbl != null:
+			_map_lbl.text += suffix
+		else:
+			$UI/TopBar/MapId.text += suffix
 	if State.net != null:
 		for m in State.net.drain():
 			_on_net_message(m.op, m.raw)
 		State.net.message_received.connect(_on_net_message)
 		State.net.scene_active = true
-	_mount_fight_hud()
+	# Combat controls use the same native Godot visual family as the lobby.
+	# The XML fight controls obscured both the map and the functional buttons.
+	get_viewport().size_changed.connect(_layout_fight_ui)
+	_layout_fight_ui()
+	_wire_fight_focus.call_deferred()
+
+
+func _skin_fight_ui() -> void:
+	var theme := _lobby_theme()
+	for node in [$UI/TopBar, $UI/SpellScroll, $UI/Chat]:
+		node.theme = theme
+	var surface := StyleBoxFlat.new()
+	surface.bg_color = Color("292c20")
+	surface.border_color = Color("ad965a")
+	surface.set_border_width_all(2)
+	surface.set_corner_radius_all(8)
+	$UI/TopBacking.add_theme_stylebox_override("panel", surface)
+	$UI/ActionBacking.add_theme_stylebox_override("panel", surface.duplicate())
+	for lbl in [info, _turn_timer]:
+		lbl.add_theme_color_override("font_color", Color("f1e5c1"))
+		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+		lbl.add_theme_constant_override("shadow_offset_x", 1)
+		lbl.add_theme_constant_override("shadow_offset_y", 2)
+	_end_turn.add_theme_color_override("font_color", Color("fff0c5"))
+	$UI/TopBar/MapId.custom_minimum_size.x = 76
+	$UI/TopBar/MapId.max_length = 6
+	$UI/Chat/Display.add_theme_stylebox_override("normal", _chat_surface())
+	$UI/Chat/Display.add_theme_color_override("default_color", Color("f1e5c1"))
+	$UI/Chat/Display.custom_minimum_size.y = 80
+	$UI/Chat/Row/Input.theme = theme
+	$UI/Chat/Row/SendBtn.theme = theme
+	for tab in $UI/Chat/Tabs.get_children():
+		tab.add_theme_font_size_override("font_size", 13)
+
+
+func _lobby_theme() -> Theme:
+	var panel := LobbyPanel.new()
+	var theme: Theme = panel._theme()
+	panel.free()
+	return theme
+
+
+func _chat_surface() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("20251d")
+	style.border_color = Color("656849")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	return style
+
+
+func _layout_fight_ui() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	_anchor_rect($UI/TopBacking, Vector4(0, 0, 1, 0), Rect2(12, 10, -24, 48))
+	_anchor_rect($UI/TopBar, Vector4(0, 0, 1, 0), Rect2(24, 17, -48, 34))
+	_anchor_rect($UI/Info, Vector4(0, 0, 0.58, 0), Rect2(24, 70, -36, 26))
+	$UI/Info.clip_text = true
+	$UI/Info.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_anchor_rect($UI/EventCards, Vector4(0.58, 0, 1, 0), Rect2(12, 70, -24, 30))
+	if vp.x < 960:
+		# Keep both controls reachable when they cannot fit side by side.
+		$UI/Chat/Display.custom_minimum_size.y = 64
+		_anchor_rect($UI/Chat, Vector4(0, 1, 1, 1), Rect2(16, -252, -32, 152))
+		_anchor_rect($UI/ActionBacking, Vector4(0, 1, 1, 1), Rect2(16, -96, -32, 84))
+		_anchor_rect($UI/SpellScroll, Vector4(0, 1, 1, 1), Rect2(28, -83, -56, 58))
+	else:
+		$UI/Chat/Display.custom_minimum_size.y = 80
+		_anchor_rect($UI/Chat, Vector4(0, 1, 0.42, 1), Rect2(16, -180, 0, 168))
+		_anchor_rect($UI/ActionBacking, Vector4(0.42, 1, 1, 1), Rect2(16, -116, -32, 104))
+		_anchor_rect($UI/SpellScroll, Vector4(0.42, 1, 1, 1), Rect2(28, -103, -56, 78))
+
+
+func _anchor_rect(node: Control, anchors: Vector4, rect: Rect2) -> void:
+	node.anchor_left = anchors.x
+	node.anchor_top = anchors.y
+	node.anchor_right = anchors.z
+	node.anchor_bottom = anchors.w
+	node.offset_left = rect.position.x
+	node.offset_top = rect.position.y
+	node.offset_right = rect.position.x + rect.size.x
+	node.offset_bottom = rect.position.y + rect.size.y
+
+
+func _wire_fight_focus() -> void:
+	var controls: Array[Control] = []
+	for node in [$UI/TopBar/EndTurnBtn, $UI/TopBar/FaceBtn,
+			$UI/TopBar/SurrenderBtn, $UI/TopBar/BackBtn]:
+		if node.visible and not node.disabled:
+			controls.append(node)
+	for child in _timeline.get_children():
+		if child is Button and not child.is_queued_for_deletion():
+			controls.append(child)
+	for child in $UI/SpellScroll/SpellBar.get_children():
+		if child is Button and not child.disabled and not child.is_queued_for_deletion():
+			controls.append(child)
+	var tabs := $UI/Chat.get_node_or_null("Tabs")
+	if tabs != null:
+		for child in tabs.get_children():
+			if child is Button:
+				controls.append(child)
+	controls.append($UI/Chat/Row/Input)
+	controls.append($UI/Chat/Row/SendBtn)
+	for i in controls.size():
+		var current := controls[i]
+		current.focus_mode = Control.FOCUS_ALL
+		current.focus_next = current.get_path_to(controls[(i + 1) % controls.size()])
+		current.focus_previous = current.get_path_to(controls[(i - 1 + controls.size()) % controls.size()])
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus == null or (focus is BaseButton and focus.disabled):
+		controls[0].grab_focus()
 
 
 func _load() -> void:
@@ -147,10 +282,16 @@ func _load() -> void:
 	_sorted.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		return a.x + a.y < b.x + b.y or (a.x + a.y == b.x + b.y and a.x < b.x))
 	var n_teams: int = _fmd.get("team0", []).size() + _fmd.get("team1", []).size()
-	info.text = "map %d — %d cells, alt %d..%d, spawns t0=%d t1=%d coach=%d" % [
-		map_id, _cells.size(), _alt_min, _alt_max,
-		_fmd.get("team0", []).size(), _fmd.get("team1", []).size(),
-		_fmd.get("coach", []).size()] if not _cells.is_empty() else "map %d: no arena data" % map_id
+	if _cells.is_empty():
+		info.text = I18n.t("fight.no_arena", {"id": map_id})
+	elif State.fighters.is_empty():
+		# Preview mode keeps the debug dump; live fights get phase text instead.
+		info.text = "map %d — %d cells, alt %d..%d, spawns t0=%d t1=%d coach=%d" % [
+			map_id, _cells.size(), _alt_min, _alt_max,
+			_fmd.get("team0", []).size(), _fmd.get("team1", []).size(),
+			_fmd.get("coach", []).size()]
+	else:
+		info.text = ""
 	_spawn_actors()
 	queue_redraw()
 	if topo.has("bounds"):
@@ -233,6 +374,7 @@ const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
 	12: [75, 6, 3]}
 
 var _fight_over := false
+var _map_lbl: Label = null   # replaces the debug MapId field in live fights
 var _actor_cells := {}   # id -> Vector3i
 var _current_fid := -1   # fighter whose turn is running (8104 → 8106)
 var _spell_mode := -1    # >=0: next click targets this spell id (8109)
@@ -304,7 +446,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 	if $UI/Chat.feed(opcode, payload):
 		return  # chat family handled by the chat box
 	if opcode >= 8010 and opcode <= 8040:
-		print("[fight] phase op %d" % opcode)
+		DebugLog.add("fight: phase op %d" % opcode)
 	match opcode:
 		OP_ACTOR_APPEAR:
 			var d := Codec.decode(opcode, payload)
@@ -318,39 +460,45 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# (arch 3, empty payload) before advancing to placement.
 			if State.net != null:
 				State.net.send_message(OP_READY_PLACEMENT, PackedByteArray(), 3)
-			info.text += " | presentation"
+			info.text += " | " + I18n.t("fight.phase.presentation")
 		OP_START_PLACEMENT:
 			# Placement window: our team's start cells light up; clicking one
 			# sends 8021 for the selected fighter. Ready = 8023.
 			_placement = true
 			_turn_left = TURN_CLOCK          # placementClock is the same 30s
-			_end_turn.text = "Ready"
+			_end_turn.text = I18n.t("fight.ready")
 			_end_turn.disabled = false
 			for fid in State.fighters:
 				var f: Dictionary = State.fighters[fid]
 				if int(f.get("coach", -1)) == State.my_coach_id:
 					_selected = int(fid)
 					break
-			info.text += " | placement — click a spawn cell"
+			# Facing is free during placement (4521, no turn yet).
+			_face_btn.disabled = State.spectating or _selected < 0
+			_wire_fight_focus.call_deferred()
+			info.text += " | " + I18n.t("fight.phase.placement")
 			placement_began.emit()
 			queue_redraw()
 		OP_END_PLACEMENT:
 			_placement = false
 			_turn_left = -1.0
 			_turn_timer.text = ""
-			_end_turn.text = "End turn"
+			_end_turn.text = I18n.t("fight.end_turn")
 			_end_turn.disabled = true
+			_face_btn.disabled = true
+			_wire_fight_focus.call_deferred()
 		OP_START_OBSERVATION:
 			# third gate: 8031 (arch 3, empty) advances to the action phase.
 			_placement = false
 			_turn_left = -1.0
 			_turn_timer.text = ""
-			_end_turn.text = "End turn"
+			_end_turn.text = I18n.t("fight.end_turn")
+			_face_btn.disabled = true
 			if State.net != null:
 				State.net.send_message(OP_READY_ACTION, PackedByteArray(), 3)
-			info.text += " | observation"
+			info.text += " | " + I18n.t("fight.phase.observation")
 		OP_START_ACTION:
-			info.text += " | combat!"
+			info.text += " | " + I18n.t("fight.phase.combat")
 		OP_TABLE_TURN:
 			var d := Codec.decode(opcode, payload)
 			_table_turn = int(d.get("f2", 0))
@@ -359,9 +507,9 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# retail's card popup.
 			var ev := int(d.get("f3", 0))
 			var evname := NpcDialogs.event_name(ev)
-			info.text = "map %s — turn %d%s" % [$UI/TopBar/MapId.text,
-				_table_turn,
-				" — %s" % evname if not evname.is_empty() else ""]
+			info.text = I18n.t("fight.map_turn", {"id": $UI/TopBar/MapId.text,
+				"n": _table_turn,
+				"extra": " — %s" % evname if not evname.is_empty() else ""})
 			_add_event_card(ev, evname)
 			_age_buffs()
 			_age_areas()
@@ -388,16 +536,16 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			if not miss and payload.remaining() >= 10:
 				aimed = Vector2i(payload.get_i32(), payload.get_i32())
 			_float_text(caster,
-				"miss!" if miss else
-				("critical! " if crit else "") + Spells.name_of(sid),
+				I18n.t("fight.miss") if miss else
+				(I18n.t("fight.crit") if crit else "") + Spells.name_of(sid),
 				Color(1, 1, 0.4) if miss else
 				Color(1.0, 0.6, 0.2) if crit else Color(0.6, 0.8, 1.0))
 			# retail fight info channel: "[name] casts the spell [s] [(…)]."
 			var cname := str(State.fighters.get(caster, {}).get("name", ""))
-			var marker := "(Critical Failure)" if miss else \
-				"(critical hit)" if crit else ""
-			_fight_log("%s casts the spell %s %s." % [
-				cname, Spells.name_of(sid), marker])
+			var marker := I18n.t("fight.mark_fail") if miss else \
+				I18n.t("fight.mark_crit") if crit else ""
+			_fight_log(I18n.t("fight.log_cast", {"name": cname,
+				"spell": Spells.name_of(sid), "mark": marker}))
 			# even a fumble counts against the frequency limits (the server
 			# storeCasts after the roll); a bare-cell cast has no target
 			_note_cast(caster, sid, aimed)
@@ -423,15 +571,15 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				wcrit = int(payload.get_i8())
 				waim = Vector2i(payload.get_i32(), payload.get_i32())
 				payload.get_i16()
-			_float_text(atk, "miss!" if wmiss else
-				"critical hit!" if wcrit else "hit!",
+			_float_text(atk, I18n.t("fight.miss") if wmiss else
+				I18n.t("fight.crit_hit") if wcrit else I18n.t("fight.hit"),
 				Color(1, 1, 0.4) if wmiss else
 				Color(1.0, 0.6, 0.2) if wcrit else Color(1.0, 0.7, 0.3))
 			# fight.closeCombat: "[name] attacks [(…)] in close combat."
 			var aname := str(State.fighters.get(atk, {}).get("name", ""))
-			_fight_log("%s attacks %s in close combat." % [aname,
-				"(Critical Failure)" if wmiss else
-				"(critical hit)" if wcrit else ""])
+			_fight_log(I18n.t("fight.log_attack", {"name": aname,
+				"mark": (I18n.t("fight.mark_fail") if wmiss else
+					I18n.t("fight.mark_crit") if wcrit else "")}))
 			if waim.x > -999:
 				_face_toward(atk, waim)
 			if wmiss or wcrit:
@@ -455,15 +603,16 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				caim = Vector2i(payload.get_i32(), payload.get_i32())
 				if payload.remaining() >= 2:
 					payload.get_i16()
-			_float_text(user, "miss!" if cmiss else
-				("critical! " if ccrit else "") + FighterCards.label(cid),
+			_float_text(user, I18n.t("fight.miss") if cmiss else
+				(I18n.t("fight.crit") if ccrit else "") + FighterCards.label(cid),
 				Color(1, 1, 0.4) if cmiss else
 				Color(1.0, 0.6, 0.2) if ccrit else Color(0.9, 0.6, 1.0))
 			# fight.cardUse: "[name] uses [card][(…)]." (marker glued on)
 			var uname := str(State.fighters.get(user, {}).get("name", ""))
-			_fight_log("%s uses %s%s." % [uname, FighterCards.label(cid),
-				"(Critical Failure)" if cmiss else
-				"(critical hit)" if ccrit else ""])
+			_fight_log(I18n.t("fight.log_card", {"name": uname,
+				"card": FighterCards.label(cid),
+				"mark": (I18n.t("fight.mark_fail") if cmiss else
+					I18n.t("fight.mark_crit") if ccrit else "")}))
 			if caim.x > -999:
 				_face_toward(user, caim)
 			if cmiss or ccrit:
@@ -518,15 +667,15 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			payload.get_i32()
 			var tackled := int(payload.get_i64())
 			_walk.erase(tackled)
-			_float_text(tackled, "tackled!", Color(1.0, 0.5, 0.3))
+			_float_text(tackled, I18n.t("fight.tackled"), Color(1.0, 0.5, 0.3))
 			# Retail also logs "[name] has been tackled." to the fight info
 			# channel and plays AnimTacle on the held fighter — a skeletal
 			# track in AnimCombat.anm, rendered for players via the
 			# composite bake; sets that lack it keep just the float.
 			_play_combat(tackled, "AnimTacle")
 			var tn := str(State.fighters.get(tackled, {}).get("name", ""))
-			_fight_log("%s has been tackled." % tn
-				if not tn.is_empty() else "Fighter tackled.")
+			_fight_log(I18n.t("fight.log_tackled", {"name": tn})
+				if not tn.is_empty() else I18n.t("fight.log_tackled_unknown"))
 		OP_FIGHTER_OUCH:
 			# [i32][i32][i64 fid] — retail pops "ouch !" over the fighter who
 			# just lost HP to a CRITICAL cast (B-138).
@@ -540,7 +689,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var dead := int(payload.get_i64())
 			# fight.die: "[name] is dead."
 			var dname := str(State.fighters.get(dead, {}).get("name", ""))
-			_fight_log("%s is dead." % dname)
+			_fight_log(I18n.t("fight.log_dead", {"name": dname}))
 			_kill_actor(dead)
 		OP_RUNNING_EFFECT:
 			_on_running_effect(Codec.decode(opcode, payload))
@@ -567,7 +716,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_turn_left = -1.0
 			_turn_timer.text = ""
 			State.spectating = false
-			info.text = "map %s — fight over" % $UI/TopBar/MapId.text
+			info.text = I18n.t("fight.map_over", {"id": $UI/TopBar/MapId.text})
 			if not _show_fight_result():
 				_end_fight_ack()
 		OP_ENTER_INSTANCE:
@@ -842,7 +991,7 @@ func _spawn_summon(d: Dictionary) -> void:
 		tl.insert(at, fid)
 	_build_timeline()
 	_float_text(fid, sname, Color(0.7, 0.9, 1.0))
-	print("[fight] summon %d '%s' spawned by %d at (%d,%d)" % [
+	DebugLog.add("fight: summon %d '%s' spawned by %d at (%d,%d)" % [
 		fid, sname, caster_fid, int(d.get("x", 0)), int(d.get("y", 0))])
 
 
@@ -1220,6 +1369,7 @@ func _add_event_card(ev: int, evname: String) -> void:
 	if ev == 0 or strip == null:
 		return
 	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _chat_surface())
 	var lab := Label.new()
 	lab.text = evname if not evname.is_empty() else "Event %d" % ev
 	lab.add_theme_font_size_override("font_size", 11)
@@ -1358,13 +1508,14 @@ func _on_turn_begin(fid: int) -> void:
 		var res := Label.new()
 		res.name = "APMP"
 		res.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		$UI/SpellBar.add_child(res)
+		$UI/SpellScroll/SpellBar.add_child(res)
 		_refresh_apmp()
-	info.text = "map %s — turn: %s%s" % [$UI/TopBar/MapId.text,
-		f.get("name", str(fid)),
-		" (yours — click a cell to move)" if ours else ""]
+	info.text = I18n.t("fight.map_turn_of", {"id": $UI/TopBar/MapId.text,
+		"name": f.get("name", str(fid)),
+		"extra": I18n.t("fight.turn_hint") if ours else ""})
 	_refresh_timeline()
 	_hud_push()
+	_wire_fight_focus.call_deferred()
 	turn_began.emit(fid, ours)
 
 
@@ -1386,15 +1537,17 @@ func _build_timeline() -> void:
 		var b := Button.new()
 		b.text = str(f.get("name", fid))
 		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_NONE
+		b.focus_mode = Control.FOCUS_ALL
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		b.add_theme_font_size_override("font_size", 11)
+		b.add_theme_font_size_override("font_size", 13)
+		b.custom_minimum_size.y = 32
 		b.add_theme_color_override("font_color", tint)
 		b.add_theme_color_override("font_pressed_color", tint.lightened(0.35))
-		b.tooltip_text = "turn order — click to centre"
+		b.tooltip_text = b.text
 		b.pressed.connect(_on_timeline_chip.bind(int(fid)))
 		_timeline.add_child(b)
 	_refresh_timeline()
+	_wire_fight_focus.call_deferred()
 
 
 func _refresh_timeline() -> void:
@@ -1421,21 +1574,23 @@ func _on_timeline_chip(fid: int) -> void:
 
 func _build_spell_bar(f: Dictionary) -> void:
 	_clear_spell_bar()
-	var bar: HBoxContainer = $UI/SpellBar
+	var bar: HBoxContainer = $UI/SpellScroll/SpellBar
 	for sid in f.get("spells", []):
 		var b := Button.new()
 		var sm := Spells.meta(int(sid))
 		b.text = sm.get("name", "S%d" % int(sid))
-		b.tooltip_text = "%s — %d AP, range %d-%d — click a target cell" % [
-			b.text, int(sm.get("ap", -1)), int(sm.get("min", 0)),
-			int(sm.get("max", 0))]
+		b.tooltip_text = I18n.t("fight.spell_tip", {"name": b.text,
+			"ap": int(sm.get("ap", -1)), "min": int(sm.get("min", 0)),
+			"max": int(sm.get("max", 0))})
 		b.disabled = _spell_locked(int(sid)) or not _spell_affordable(int(sid))
+		_style_action(b)
 		b.pressed.connect(_on_spell_button.bind(int(sid)))
 		bar.add_child(b)
 		_spell_btns[int(sid)] = b
 	var wb := Button.new()
-	wb.text = "Wpn"
-	wb.tooltip_text = "weapon attack — click an adjacent cell"
+	wb.text = I18n.t("fight.weapon_short")
+	wb.tooltip_text = I18n.t("fight.weapon_tip")
+	_style_action(wb)
 	wb.pressed.connect(_on_spell_button.bind(-2))
 	bar.add_child(wb)
 	# Equipped fighter cards with an ACTIVE ability (server jb_2.isUsable)
@@ -1447,9 +1602,10 @@ func _build_spell_bar(f: Dictionary) -> void:
 		var eb := Button.new()
 		var ab := FighterCards.ability(cid)
 		eb.text = FighterCards.label(cid)
-		eb.tooltip_text = "%s — %d AP, range %d-%d (equipment)" % [
-			eb.text, int(ab.get("ap", -1)), int(ab.get("min", 0)),
-			int(ab.get("max", 0))]
+		eb.tooltip_text = I18n.t("fight.card_tip", {"name": eb.text,
+			"ap": int(ab.get("ap", -1)), "min": int(ab.get("min", 0)),
+			"max": int(ab.get("max", 0))})
+		_style_action(eb)
 		eb.pressed.connect(_on_card_button.bind(cid))
 		bar.add_child(eb)
 	var res := Label.new()
@@ -1459,8 +1615,16 @@ func _build_spell_bar(f: Dictionary) -> void:
 	_refresh_apmp()
 
 
+func _style_action(button: Button) -> void:
+	button.custom_minimum_size = Vector2(100, 52)
+	button.custom_minimum_size.x = minf(maxf(button.text.length() * 8.0 + 20.0, 100.0), 156.0)
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	button.add_theme_font_size_override("font_size", 14)
+
+
 func _clear_spell_bar() -> void:
-	for c in $UI/SpellBar.get_children():
+	for c in $UI/SpellScroll/SpellBar.get_children():
 		c.queue_free()
 	_spell_btns.clear()
 
@@ -1475,7 +1639,7 @@ func _refresh_spell_locks() -> void:
 
 
 func _refresh_apmp() -> void:
-	var res := $UI/SpellBar.get_node_or_null("APMP") as Label
+	var res := $UI/SpellScroll/SpellBar.get_node_or_null("APMP") as Label
 	if res != null:
 		res.text = "  AP %d  MP %d" % [_ap_left, _mp_left]
 	_refresh_spell_locks()   # AP debit may have priced spells out
@@ -1655,16 +1819,18 @@ func _ray_clear(from: Vector2i, to: Vector2i, z0: int, z1: int) -> bool:
 func _on_spell_button(sid: int) -> void:
 	_spell_mode = -2 if _spell_mode == sid else sid
 	_card_mode = -1
-	info.text = "map %s — %s: click a target" % [$UI/TopBar/MapId.text,
-		"weapon" if sid == -2 else "spell %d" % sid]
+	var what := I18n.t("fight.weapon") if sid == -2 else \
+		I18n.t("fight.spell_n", {"id": sid})
+	info.text = I18n.t("fight.map_target", {"id": $UI/TopBar/MapId.text,
+		"what": what})
 	_refresh_range_overlay()
 
 
 func _on_card_button(cid: int) -> void:
 	_card_mode = -1 if _card_mode == cid else cid
 	_spell_mode = -1
-	info.text = "map %s — card %s: click a target" % [
-		$UI/TopBar/MapId.text, FighterCards.label(cid)]
+	info.text = I18n.t("fight.map_target", {"id": $UI/TopBar/MapId.text,
+		"what": FighterCards.label(cid)})
 	_refresh_range_overlay()
 
 
@@ -1692,7 +1858,7 @@ func request_cast_at(sid: int, cell: Vector2i) -> bool:
 	w.put_i16(int(c.get("alt", 0)))
 	State.net.send_message(
 		OP_SPELL_CAST_REQ if sid >= 0 else OP_CLOSE_COMBAT_REQ, w.raw(), 3)
-	print("[fight] %s fid=%d -> (%d,%d)" % [
+	DebugLog.add("fight: %s fid=%d -> (%d,%d)" % [
 		"cast %d" % sid if sid >= 0 else "weapon", _current_fid, cell.x, cell.y])
 	_spell_mode = -1
 	_range_overlay.clear()
@@ -1713,7 +1879,7 @@ func request_card_at(cid: int, cell: Vector2i) -> bool:
 	w.put_i32(cell.y)
 	w.put_i16(int(c.get("alt", 0)))
 	State.net.send_message(OP_CARD_USE_REQ, w.raw(), 3)
-	print("[fight] card %d fid=%d -> (%d,%d)" % [cid, _current_fid,
+	DebugLog.add("fight: card %d fid=%d -> (%d,%d)" % [cid, _current_fid,
 		cell.x, cell.y])
 	_card_mode = -1
 	_range_overlay.clear()
@@ -1738,6 +1904,41 @@ func _on_action_button() -> void:
 		confirm_placement()
 	else:
 		request_end_turn()
+
+
+## Surrender is irreversible (8151 forfeits the fight) — confirm first.
+func _confirm_surrender() -> void:
+	var d := ConfirmationDialog.new()
+	d.theme = _lobby_theme()
+	d.title = I18n.t("common.confirm")
+	d.dialog_text = I18n.t("fight.surrender.confirm")
+	d.confirmed.connect(func():
+		if State.net != null:
+			State.net.send_message(8151, PackedByteArray(), 3)
+		d.queue_free())
+	d.canceled.connect(d.queue_free)
+	add_child(d)
+	d.popup_centered()
+
+
+## Back during a live fight means abandoning it — there is no rejoin path for
+## a player who left the scene, so confirm and surrender on the way out.
+## Spectators and finished fights leave directly.
+func _on_back_pressed() -> void:
+	if not _fight_over and not State.spectating:
+		var d := ConfirmationDialog.new()
+		d.theme = _lobby_theme()
+		d.title = I18n.t("common.confirm")
+		d.dialog_text = I18n.t("fight.leave.confirm")
+		d.confirmed.connect(func():
+			if State.net != null:
+				State.net.send_message(8151, PackedByteArray(), 3)
+			get_tree().change_scene_to_file("res://src/main.tscn"))
+		d.canceled.connect(d.queue_free)
+		add_child(d)
+		d.popup_centered()
+		return
+	get_tree().change_scene_to_file("res://src/main.tscn")
 
 
 ## --- placement phase -------------------------------------------------------
@@ -1794,7 +1995,8 @@ func request_place_at(cell: Vector2i) -> bool:
 	w.put_i32(cell.y)
 	w.put_i16(z)
 	State.net.send_message(OP_PLACE_REQ, w.raw(), 3)
-	print("[fight] place req fid=%d -> (%d,%d,%d)" % [_selected, cell.x, cell.y, z])
+	DebugLog.add("fight: place req fid=%d -> (%d,%d,%d)" % [
+		_selected, cell.x, cell.y, z])
 	return true
 
 
@@ -2328,19 +2530,34 @@ func _play_cast(fid: int, sid: int) -> void:
 	_play_combat(fid, "AnimCast")
 
 
-## Face button: cycle the acting fighter's facing one diagonal clockwise and
-## send 4521 — a free action the server broadcasts back as 4522.
+## Face button: cycle the facing one diagonal clockwise and send 4521 — a
+## free action the server broadcasts back as 4522. During placement it turns
+## the selected (own) fighter; in combat the acting one on our turn.
 func _on_face_pressed() -> void:
-	var cur: int = _actor_dir.get(_current_fid, 1)
+	var fid := _face_target()
+	var cur: int = _actor_dir.get(fid, 1)
 	var dirs := [1, 3, 5, 7]
-	_send_fighter_dir(dirs[(dirs.find(cur) + 1) % dirs.size()])
+	_send_fighter_dir(fid, dirs[(dirs.find(cur) + 1) % dirs.size()])
 
 
-func _send_fighter_dir(nxt: int) -> void:
-	if not _is_my_turn() or State.net == null:
+## Which fighter a facing command applies to: the selected one during
+## placement, the acting one in combat.
+func _face_target() -> int:
+	return _selected if _placement else _current_fid
+
+
+func _send_fighter_dir(fid: int, nxt: int) -> void:
+	if State.net == null or fid < 0:
+		return
+	# The server validates the same two cases: own fighter in placement, or
+	# the acting fighter on our turn.
+	if _placement:
+		if fid != _selected:
+			return
+	elif fid != _current_fid or not _is_my_turn():
 		return
 	var w := WireWriter.new()
-	w.put_i64(_current_fid)
+	w.put_i64(fid)
 	w.put_u8(nxt)
 	State.net.send_message(OP_DIR_CHANGE_REQ, w.raw(), 3)
 
@@ -2354,13 +2571,14 @@ var _hud: GWidget = null
 var _hud_tl: GWidget = null
 var _hud_mb: GWidget = null
 var _hud_menu: GWidget = null
-var _hud_res: GWidget = null
+var _result_modal: Control = null
+var _focus_before_result: Control = null
 var _hud_layer: CanvasLayer = null
 var _ack_pending := false
 
 
 func _mount_fight_hud() -> void:
-	_gui = GuiLib.new("es")
+	_gui = GuiLib.new(I18n.lang)
 	_gui.event_sink = _on_gui_event
 	_hud_layer = CanvasLayer.new()
 	_hud_layer.layer = 5
@@ -2406,24 +2624,87 @@ func _end_fight_ack() -> void:
 ## fightResultDialog on 8300 — model: localWinner/cards/teamFighters.
 ## Returns false when the dialog can't load (caller acks right away).
 func _show_fight_result() -> bool:
-	if _gui == null or _hud_layer == null:
-		return false
 	var res: Dictionary = State.fight_result
-	_hud_res = _gui.open_dialog("fightResultDialog")
-	if _hud_res == null:
-		return false
-	var vs := get_viewport().get_visible_rect().size
-	_hud_layer.add_child(_hud_res)
-	_hud_res.position = (vs - _hud_res.size) / 2.0
-	_gui.model.set_value("replayMode", false)
-	_gui.model.set_value("fight.localWinner",
-		res.get("win_str", {}).has(State.my_coach_id))
-	_gui.model.set_value("fight.wonCards",
-		_card_items(res.get("won_cards", [])))
-	_gui.model.set_value("fight.bonusCards", [])
-	_gui.model.set_value("fight.lostCards",
-		_card_items(res.get("lost_cards", [])))
+	_focus_before_result = get_viewport().gui_get_focus_owner()
+	_result_modal = Control.new()
+	_result_modal.name = "FightResult"
+	_result_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	$UI.add_child(_result_modal)
+	var shade := ColorRect.new()
+	shade.color = Color(0.02, 0.025, 0.018, 0.76)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_result_modal.add_child(shade)
+	var panel := Panel.new()
+	panel.theme = _lobby_theme()
+	var style := _chat_surface()
+	style.bg_color = Color("292c20")
+	style.border_color = Color("ad965a")
+	style.set_border_width_all(2)
+	panel.add_theme_stylebox_override("panel", style)
+	_result_modal.add_child(panel)
+	var vp := get_viewport().get_visible_rect().size
+	panel.size = Vector2(minf(480, vp.x - 32), minf(220, vp.y - 32))
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 0.5
+	var column := VBoxContainer.new()
+	column.position = Vector2(24, 24)
+	column.size = panel.size - Vector2(48, 48)
+	column.add_theme_constant_override("separation", 14)
+	panel.add_child(column)
+	var title := Label.new()
+	title.text = I18n.t("fight.result.victory") if res.get("win_str", {}).has(State.my_coach_id) \
+		else I18n.t("fight.result.defeat")
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	var title_font := FontFile.new()
+	title_font.load_dynamic_font("res://assets/gui/fonts/COPRGTB.TTF")
+	title.add_theme_font_override("font", title_font)
+	column.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(scroll)
+	var rewards := VBoxContainer.new()
+	rewards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rewards.add_theme_constant_override("separation", 6)
+	scroll.add_child(rewards)
+	for entry in [["won_cards", "fight.result.won"], ["lost_cards", "fight.result.lost"]]:
+		var cards: Array = res.get(entry[0], [])
+		if cards.is_empty():
+			continue
+		var names: Array[String] = []
+		for id in cards:
+			names.append(CardsDB.name_of(int(id)))
+		var label := Label.new()
+		label.text = I18n.t(entry[1]) + ": " + ", ".join(names)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rewards.add_child(label)
+	var done := Button.new()
+	done.text = I18n.t("fight.result.continue")
+	done.custom_minimum_size.y = 42
+	done.pressed.connect(_close_fight_result)
+	column.add_child(done)
+	panel.position = (vp - panel.size) / 2.0
+	done.focus_next = done.get_path()
+	done.focus_previous = done.get_path()
+	done.focus_neighbor_left = done.get_path()
+	done.focus_neighbor_right = done.get_path()
+	done.focus_neighbor_top = done.get_path()
+	done.focus_neighbor_bottom = done.get_path()
+	done.grab_focus.call_deferred()
 	return true
+
+
+func _close_fight_result() -> void:
+	if _result_modal != null and is_instance_valid(_result_modal):
+		_result_modal.queue_free()
+		_result_modal = null
+	if is_instance_valid(_focus_before_result) and _focus_before_result.is_visible_in_tree():
+		_focus_before_result.grab_focus.call_deferred()
+	_focus_before_result = null
+	_end_fight_ack()
 
 
 func _card_items(ids: Array) -> Array:
@@ -2562,13 +2843,13 @@ func _on_gui_event(ns: String, method: String, args: Array, _w) -> void:
 			if cd is Dictionary:
 				_on_card_button(int(cd.get("id", -1)))
 		"fighterSetNorthWestDirection":
-			_send_fighter_dir(7)
+			_send_fighter_dir(_face_target(), 7)
 		"fighterSetNorthEastDirection":
-			_send_fighter_dir(1)
+			_send_fighter_dir(_face_target(), 1)
 		"fighterSetSouthWestDirection":
-			_send_fighter_dir(5)
+			_send_fighter_dir(_face_target(), 5)
 		"fighterSetSouthEastDirection":
-			_send_fighter_dir(3)
+			_send_fighter_dir(_face_target(), 3)
 		"openCloseFighterInformations":
 			var it = args[0] if args.size() > 0 else null
 			if it is Dictionary and it.has("fid"):
@@ -2580,10 +2861,7 @@ func _on_gui_event(ns: String, method: String, args: Array, _w) -> void:
 		"openCloseFightMenuDialog":
 			_toggle_fight_menu()
 		"closeFightResultDialog", "quit":
-			if _hud_res != null and is_instance_valid(_hud_res):
-				_hud_res.queue_free()
-				_hud_res = null
-			_end_fight_ack()
+			_close_fight_result()
 		"disconnect":
 			get_tree().change_scene_to_file("res://src/main.tscn")
 
@@ -2695,7 +2973,7 @@ func request_move_to(cell: Vector2i) -> bool:
 		w.put_i32(p.y)
 		w.put_i16(p.z)
 	State.net.send_message(OP_MOVE_REQ, w.raw(), 3)
-	print("[fight] move req fid=%d -> (%d,%d) %d steps" % [
+	DebugLog.add("fight: move req fid=%d -> (%d,%d) %d steps" % [
 		_current_fid, cell.x, cell.y, path.size()])
 	return true
 
@@ -2894,6 +3172,11 @@ func _draw_overlays() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _result_modal != null and event is InputEventKey and event.pressed \
+			and event.keycode == KEY_ESCAPE:
+		_close_fight_result()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed \
 			and event.keycode == KEY_ENTER:
 		$UI/Chat.grab_chat_focus()

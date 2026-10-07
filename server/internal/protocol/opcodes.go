@@ -570,6 +570,14 @@ const (
 	OpFriendOffline = 3150 // S2C: [u8 name][u8 note]
 	OpIgnoreOnline  = 3164 // S2C: [u8 name][i64 id]
 	OpIgnoreOffline = 3166 // S2C: [u8 name]
+
+	// Godot-client extensions — the retail client neither sends 60000 nor
+	// understands 60001, so these never appear on a retail session. The reply
+	// is a key/value map ({u8 n} n×{u8 keyLen,key,u16 valueLen,value}) so new
+	// runtime settings need no new opcode. Registered in the router so the
+	// request isn't "unhandled opcode" noise.
+	OpClientConfigRequest = 60000 // C2S (Godot only): empty
+	OpClientConfig        = 60001 // S2C (Godot only): key/value map; key "web_base_url"
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

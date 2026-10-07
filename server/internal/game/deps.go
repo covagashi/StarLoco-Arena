@@ -72,7 +72,11 @@ type Deps struct {
 	Tournaments *TournamentManager
 	// TeamUps holds pending 2v2 invitations and the duos they form.
 	TeamUps *teamUps
-	Log     *slog.Logger
+	// WebBaseURL is the portal address announced to Godot clients that ask
+	// (opcode 60000 -> 60001). Set from web.public_url, else derived from the
+	// bound portal listener; empty when the portal is disabled.
+	WebBaseURL string
+	Log        *slog.Logger
 }
 
 // RegisterAll wires every feature handler group onto the router.
@@ -115,4 +119,5 @@ func RegisterAll(r *Router, d *Deps) {
 	registerSphereHandlers(r, d)
 	registerTotemHandlers(r, d)
 	registerTeamUpHandlers(r, d)
+	registerClientConfigHandlers(r, d)
 }

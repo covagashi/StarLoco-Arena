@@ -11,6 +11,62 @@ decompiled client, no runtime).
 
 ---
 
+### B-172 · Godot UI keyboard gaps and bug form clipped on small windows
+
+- **Symptom:** the login action, coach creation swatches and baked buttons were
+  mouse-only. The bug report kept Godot's grey dialog styling and could extend
+  below an 800×600 window. The post-fight debrief and chat send action still
+  showed English strings in other locales.
+- **Root cause:** invisible overlays disabled focus, the bug form had unbounded
+  content, and those strings bypassed the native i18n table.
+- **Fix:** added visible focus to baked controls and login tab order; styled and
+  bounded the bug report with scrolling, focused its title, and captured its
+  screenshot before opening it; localized chat and debrief strings in es/en/fr.
+  The wire protocol and server data are unchanged.
+- **Verified:** windowed `test/ui_review_preview.tscn` at 1280×720 and 800×600
+  covers login, creation, lobby, all twenty native panel routes and bug report;
+  checks focus and viewport bounds. Headless project parse passed.
+
+### B-171 · Godot combat HUD obscured the map and conflicted with the lobby
+
+- **Symptom:** combat showed unstyled debug controls together with the legacy
+  XULOR2 fighter controls, timeline and menu bar. The overlays covered the
+  arena and duplicated turn actions; the result dialog did not share the
+  native lobby style.
+- **Root cause:** `fight_view.tscn` still used its debug layout while
+  `_mount_fight_hud` added three retail XML dialogs above it. The lobby had
+  already moved to native Godot controls.
+- **Fix:** the combat controls, timeline, chat, spell bar and result panel now
+  share the lobby's olive and gold theme. The legacy controls are no longer
+  mounted; existing move, cast, turn and acknowledgement handlers remain the
+  action path. This is a Godot presentation fix; server data and wire frames
+  are unchanged.
+- **Verified:** windowed Godot preview of a populated turn and victory result
+  at 1280×720 and 800×600 via `test/fight_ui_preview.tscn`; the fixture checks
+  initial focus, modal focus and focus restoration. Scene startup had no
+  script errors.
+
+### B-170 · Fighter facing (4521) silently dropped during placement
+
+- **Symptom:** the Godot client's rotate control did nothing while the fight
+  was still in placement — the player could not pick their fighter's facing
+  before locking the roster.
+- **Root cause:** `handleFighterDirectionChange` gated on
+  `Phase() != PhaseAction`, and `applyDirectionChange` additionally required
+  `isCurrentTurn(wireID)`. During PhasePlacement no turn exists at all, so
+  every 4521 sent while the placement picker was open was a silent no-op —
+  the request reached the fight actor and was dropped without a log line.
+- **Fix:** the handler now accepts `PhasePlacement` alongside `PhaseAction`,
+  and `applyDirectionChange` branches on the phase: placement skips the
+  current-turn check (there is none), action keeps it. Ownership
+  (`ff.CoachID != coachID`), liveness (`HP <= 0`) and unknown-wire-id
+  rejection are unchanged, as is the 4522 broadcast shape.
+- **Verified:** `unit` — `direction_test.go` gained
+  `TestFighterDirectionChangePlacement` (own fighter turns freely during
+  placement; another coach's fighter still refuses) while
+  `TestFighterDirectionChangeValidation` now pins the action-phase turn rule
+  under an explicit `PhaseAction`.
+
 ### B-169 · The "unrecoverable" mechanics were recoverable — drop table invented-free, fusion gates invented
 
 - **Symptom:** two systems sat on the "cannot be recovered from the client"
@@ -3711,7 +3767,10 @@ method demands, and it stops at entry 1: the client cannot even DISPLAY a type-4
 condition. It goes further than that. wi_0.a(mv_1) hands the decoded condition
 to the fight via mv_1.b(mp_2), and **mv_1.b is an empty method**; the
 three-argument evaluator (mv_1, yg_0, yg_0) has **no call site anywhere in the
-client**; and h()/i()/j() (is_necessary, victory_points, affected_team)
+client**; and
+h()/
+i()/
+j() (is_necessary, victory_points, affected_team)
 have no callers either. Retail arbitrated victory conditions entirely
 server-side and the client kept the machinery as dead reference.
 

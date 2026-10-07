@@ -30,3 +30,11 @@ The existing localCoach producer supplies level 0 and an empty equipped-emote li
 The dialog registry normalizes event names, prevents duplicate opens, supports nested native panels, and disconnects resize callbacks when legacy dialogs close. Plain `unloadDialog` from legacy templates also reaches the close router. Explicit close handlers take precedence so equipment and exchange cleanup keep their original behavior.
 
 `test/native_panels.gd` exercises real mouse and Escape input on every route, duplicate opening, viewport bounds, a smaller window, tab switching, fighter preview, parent/child closing, menu-to-options navigation, and local populated fixtures. Fixture action spies prevent synthetic fighter IDs from reaching the server. Captures are written to `/private/tmp/panels-*.png`.
+
+## Native combat HUD
+
+`fight_view.tscn` now presents a native olive and gold combat HUD: arena and turn controls above the map, initiative chips at the upper right, chat at the lower left, and a horizontally scrolling spell and card bar at the lower right. Below 960 px wide, anchored chat and actions stack to keep both reachable. Turn controls, spell buttons and chat have a keyboard focus path. The result panel uses the same palette and Copperplate heading, with a fixed Continue action, scrolling card rewards, trapped focus and return to the prior focus on close. The old XULOR2 controls no longer mount over the map. `test/fight_ui_preview.tscn` renders combat and result captures to `/private/tmp/fight-ui.png` and `/private/tmp/fight-result-ui.png` for visual checks at multiple window sizes.
+
+## Full UI review
+
+`test/ui_review_preview.tscn` captures login, creation, lobby, representative panels and the bug form at 1280×720 and 800×600. It traverses all twenty native panel routes, checks frame bounds and initial focus, and checks that baked creation controls stay keyboard reachable. Login's submit overlay has a visible focus ring and explicit Tab path. The bug form uses the native olive/gold palette, scrolls in small windows and receives a screenshot captured before it covers the arena. Chat send and the post-fight debrief use the es/en/fr string tables. The fixed baked screen artwork still contains Spanish lettering; its localization requires separate art variants.

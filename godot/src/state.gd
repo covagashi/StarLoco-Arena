@@ -91,6 +91,14 @@ const BREED_NAMES := {1: "Feca", 2: "Osamoda", 3: "Enutrof", 4: "Sram",
 ## Scenes read `net.message_received` and `net.drain()`.
 static var net: Node = null
 
+## Server-announced portal address (opcode 60001, key web_base_url) — the bug
+## reporter POSTs to "<base>/<lang>/bug-report". "" = portal not announced.
+static var web_base_url := ""
+
+## Active UI locale ("es"/"en"/"fr") — set by the I18n autoload at boot and on
+## every language switch; chat/bug-report payloads read it for user[lang].
+static var locale := "en"
+
 ## Populate the fighter index from a decoded fight_creation dict.
 static func index_fighters(d: Dictionary) -> void:
 	fighters = {}

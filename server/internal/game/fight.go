@@ -519,13 +519,24 @@ func (f *Fight) currentFighter() *FightFighter {
 
 // applyDirectionChange validates and applies a fighter's facing change, returning
 // the fighter on success or nil when the change is not allowed. A coach may only
-// turn its OWN, LIVING fighter, and only on that fighter's turn (facing is a free
-// action of the acting fighter). The caller broadcasts 4522 on success. Cosmetic
-// only — no AP/MP/position changes — so a rejected change is a silent no-op.
+// turn its OWN, LIVING fighter. During placement there is no turn yet, so facing
+// is free; once the fight runs (PhaseAction) it is a free action of the acting
+// fighter only. The caller broadcasts 4522 on success. Cosmetic only — no
+// AP/MP/position changes — so a rejected change is a silent no-op.
 // Called from inside the actor (no lock needed).
 func (f *Fight) applyDirectionChange(coachID uint, wireID int64, dir uint8) *FightFighter {
 	ff := f.fighterByWireID(wireID)
-	if ff == nil || ff.CoachID != coachID || ff.HP <= 0 || !f.isCurrentTurn(wireID) {
+	if ff == nil || ff.CoachID != coachID || ff.HP <= 0 {
+		return nil
+	}
+	switch f.Phase() {
+	case PhasePlacement:
+		// No turn exists yet: facing is free for your own fighter.
+	case PhaseAction:
+		if !f.isCurrentTurn(wireID) {
+			return nil
+		}
+	default:
 		return nil
 	}
 	ff.Orientation = dir

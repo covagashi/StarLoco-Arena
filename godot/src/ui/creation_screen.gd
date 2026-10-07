@@ -86,10 +86,10 @@ func _init() -> void:
 		_skin_cells[i] = _swatch(cell, Palettes.SKIN[i],
 			func(): _set_lc("skin", i))
 
-	_ghost(R_PREV, func(): dir_pressed.emit(-1))
-	_ghost(R_NEXT, func(): dir_pressed.emit(1))
-	_ghost(R_RANDOM, func(): random_pressed.emit())
-	_ghost(R_VALIDATE, func(): submit.emit())
+	_ghost(R_PREV, func(): dir_pressed.emit(-1), "creation.rotate_left")
+	_ghost(R_NEXT, func(): dir_pressed.emit(1), "creation.rotate_right")
+	_ghost(R_RANDOM, func(): random_pressed.emit(), "creation.random")
+	_ghost(R_VALIDATE, func(): submit.emit(), "creation.validate")
 
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
 	_spr.foot_pivot = true
@@ -169,6 +169,7 @@ func _toggle(r: Rect2, text: String, font: Font, cb: Callable) -> Button:
 	b.add_theme_font_override("font", font)
 	b.add_theme_font_size_override("font_size", 19)
 	b.add_theme_color_override("font_color", Color(0.85, 0.80, 0.60))
+	b.add_theme_stylebox_override("focus", _focus_style())
 	b.pressed.connect(cb)
 	_box.add_child(b)
 	return b
@@ -203,7 +204,7 @@ func _swatch(r: Rect2, v: Vector3, cb: Callable) -> Control:
 	var b := Button.new()
 	b.set_anchors_preset(Control.PRESET_FULL_RECT)
 	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_stylebox_override("focus", _focus_style())
 	b.pressed.connect(cb)
 	holder.add_child(b)
 	holder.set_meta("_ring", ring)
@@ -211,15 +212,25 @@ func _swatch(r: Rect2, v: Vector3, cb: Callable) -> Control:
 	return holder
 
 
-func _ghost(r: Rect2, cb: Callable) -> Button:
+func _ghost(r: Rect2, cb: Callable, hint_key: String) -> Button:
 	var b := Button.new()
 	b.position = r.position
 	b.size = r.size
 	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
+	b.tooltip_text = I18n.t(hint_key)
+	b.add_theme_stylebox_override("focus", _focus_style())
 	b.pressed.connect(cb)
 	_box.add_child(b)
 	return b
+
+
+func _focus_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color.TRANSPARENT
+	style.border_color = Color("ffe6a0")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(5)
+	return style
 
 
 func _relayout() -> void:

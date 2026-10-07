@@ -536,6 +536,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 28648 | S2C | E | TournamentSearchEnded (df_1) | `[i64 tid][i8 forfeit]` - closes an opponent-search period. forfeit=0 is *"the other player was not searching while you were, so you are declared winner by forfeit"*; forfeit=1 is the same sentence reversed. The ONLY server-side way to dismiss `tournamentsSearchStatusDialog` (`zN` case 28648), so an unopposed coach that never gets this waits in it forever |
 | 28649 | C2S | H | TournamentTreeReq (alf_0) | `handleTournamentTreeRequest` - `[i64 tournamentId][i32 page][i32 len][utf8 highlightName]`. The page is driven by the tree dialog's paging buttons (20069) and the name by its search box (20068) |
 | 28650 | S2C | E | TournamentTree (IL) | `encodeTournamentTree` - `[i32 page][i32 n]{[i32 slot][i32 len][utf8 name]}[i32 unread]`. A 1-indexed binary heap: 1 winner, 2-3 finale, 4-7 semi, 8-15 quarter, 16-31 first round (`ah_1.getFieldValue`). Names are **UTF-8**, not cp1252. Upper rounds stay empty until a match layer decides them |
+| 60000 | C2S | H | Godot extension (no retail class) | `handleClientConfigRequest` - empty request; the Godot client asks once after auth to learn the portal's `web_base_url` for its built-in bug reporter. Retail never sends it |
+| 60001 | S2C | E | Godot extension (no retail class) | answer to 60000 - `[u8 n] n×{[u8 keyLen][key][u16 valueLen][value]}`; today only `web_base_url` (from `web.public_url` or the bound listener). Key/value so new settings need no new opcode |
 
 ---
 
@@ -543,8 +545,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 
 ### Where to start (highest value first)
 
-Coverage today (counted from the table 2026-10-05): **345 rows - 109 C2S
-handled, 150 S2C emitted, 6 inactive, 4 never-implement, 76 unimplemented**. Of the remainder, **every row now carries its evidence** - unreachable constructors, inert consumers, Test-Lua-only console actions, client-local identifiers, Ankama-internal pipelines, missing game models - rather than a bare "unknown". The pass produced these real changes:
+Coverage today (counted from the table 2026-10-06): **347 rows - 110 C2S
+handled, 151 S2C emitted, 6 inactive, 4 never-implement, 76 unimplemented**. Of the remainder, **every row now carries its evidence** - unreachable constructors, inert consumers, Test-Lua-only console actions, client-local identifiers, Ankama-internal pipelines, missing game models - rather than a bare "unknown". The pass produced these real changes:
 
 1. ~~Chat errors (`om_0`, 3206/3210/3216)~~ - **all four already emitted** (3206
    malformed `/` cmd, 3210 non-admin `/`, 3214 self-whisper, 3216 social-list-full),

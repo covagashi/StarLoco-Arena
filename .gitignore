@@ -93,6 +93,7 @@ __pycache__/
 # data, and it can contain other people's account names and chat, so it must
 # never be committed.
 /server/bugreports/
+/server/internal/web/bugreports/
 # ============================================================================
 # Godot client — editor/import cache. Generated locally on first open; never
 # commit it (it is machine-local and huge).

@@ -31,7 +31,9 @@ const (
 // for out-of-range), so relaying the client's byte verbatim can never crash a peer.
 func handleFighterDirectionChange(s *Session, frame *protocol.C2SFrame) error {
 	f := s.deps.Fights.ByCoach(coachID(s))
-	if f == nil || f.Phase() != PhaseAction {
+	// Placement accepts facing too: the fighter has no turn yet, and the
+	// placement picker is exactly where a player wants to set it.
+	if f == nil || (f.Phase() != PhaseAction && f.Phase() != PhasePlacement) {
 		return nil
 	}
 	r := protocol.NewReader(frame.Payload)

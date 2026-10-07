@@ -41,6 +41,7 @@ func TestFighterDirectionChangeWire(t *testing.T) {
 // turn only its OWN, LIVING fighter, and only on that fighter's turn.
 func TestFighterDirectionChangeValidation(t *testing.T) {
 	f := buildTestFight() // coach 1 (team 0) vs coach 2 (team 1), one fighter each
+	f.setPhase(PhaseAction)
 
 	var mine, theirs *FightFighter
 	for i, ff := range f.Timeline {
@@ -90,5 +91,42 @@ func TestFighterDirectionChangeValidation(t *testing.T) {
 	mine.HP = 0
 	if f.applyDirectionChange(1, mine.WireID, 1) != nil {
 		t.Error("a dead fighter was allowed to change facing")
+	}
+}
+
+// TestFighterDirectionChangePlacement: during PhasePlacement there is no turn
+// yet, so a coach may face its own fighter freely — but still nobody else's.
+func TestFighterDirectionChangePlacement(t *testing.T) {
+	f := buildTestFight()
+	f.setPhase(PhasePlacement)
+	f.turnIndex = -1 // no current turn in placement
+
+	var mine, theirs *FightFighter
+	for _, ff := range f.Timeline {
+		switch ff.CoachID {
+		case 1:
+			mine = ff
+		case 2:
+			theirs = ff
+		}
+	}
+	if mine == nil || theirs == nil {
+		t.Fatal("expected one fighter per coach in the test fight")
+	}
+
+	// Owner turns its fighter during placement — no turn check applies.
+	if got := f.applyDirectionChange(1, mine.WireID, 7); got != mine {
+		t.Fatalf("placement facing returned %v, want the fighter", got)
+	}
+	if mine.Orientation != 7 {
+		t.Errorf("orientation = %d, want 7", mine.Orientation)
+	}
+
+	// Still not the other coach's fighter.
+	if f.applyDirectionChange(1, theirs.WireID, 2) != nil {
+		t.Error("a coach turned another coach's fighter during placement")
+	}
+	if f.applyDirectionChange(2, mine.WireID, 2) != nil {
+		t.Error("a non-owner turned a fighter during placement")
 	}
 }

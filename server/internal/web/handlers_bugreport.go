@@ -153,6 +153,12 @@ func (s *Server) handleBugReport(w http.ResponseWriter, r *http.Request) {
 		"id", report.ID, "title", report.Title, "type", report.Type,
 		"account", report.AccountName, "coach", report.CoachName,
 		"screenshot", report.ScreenshotFile != "")
+	// Optional operator notification (Discord-compatible webhook). Async on
+	// purpose: the report is already stored, and a chat outage must not delay
+	// or fail the reply to a player.
+	if s.cfg.BugReportWebhook != "" {
+		go s.forwardBugReportWebhook(report)
+	}
 	writeBugOK(w)
 }
 

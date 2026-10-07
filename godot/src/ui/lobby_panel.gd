@@ -42,7 +42,7 @@ func _ready() -> void:
 	var font := FontFile.new()
 	font.load_dynamic_font("res://assets/gui/fonts/COPRGTB.TTF")
 	title.add_theme_font_override("font", font)
-	close_button = button(header, "Cerrar · Esc", func(): closed.emit())
+	close_button = button(header, I18n.t("panel.close"), func(): closed.emit())
 	close_button.name = "Close"
 	column.add_child(HSeparator.new())
 	var scroll := ScrollContainer.new()
@@ -56,10 +56,11 @@ func _ready() -> void:
 	scroll.add_child(body)
 	pinned_actions = row(column)
 	pinned_actions.hide()
-	label(column, "Esc para volver · Enter confirma el campo activo", 13)
+	label(column, I18n.t("panel.hint"), 13)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	model.changed.connect(_model_changed)
+	I18n.locale_changed.connect(func(_l): schedule_refresh())
 	refresh()
 	_layout.call_deferred()
 	_bind_focus.call_deferred()
@@ -209,7 +210,7 @@ func table(parent: Node, headings: Array, fields: Array, items: Array, callback:
 	parent.add_child(tree)
 	if items.is_empty():
 		var empty := tree.create_item(root)
-		empty.set_text(0, "No hay elementos disponibles")
+		empty.set_text(0, I18n.t("common.empty"))
 		for i in headings.size():
 			empty.set_selectable(i, false)
 	if callback.is_valid():
@@ -223,7 +224,7 @@ func table(parent: Node, headings: Array, fields: Array, items: Array, callback:
 
 func confirm_action(text: String, callback: Callable) -> void:
 	var dialog := ConfirmationDialog.new()
-	dialog.title = "Confirmar"
+	dialog.title = I18n.t("common.confirm")
 	dialog.dialog_text = text
 	dialog.confirmed.connect(callback)
 	dialog.confirmed.connect(dialog.queue_free)

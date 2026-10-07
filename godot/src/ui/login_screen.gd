@@ -41,8 +41,33 @@ func _init() -> void:
 	var plain := StyleBoxEmpty.new()
 
 	name_edit = _field(R_NAME, false, font, plain)
+	name_edit.placeholder_text = I18n.t("login.user")
 	pass_edit = _field(R_PASS, true, font, plain)
 	pass_edit.secret = true
+	pass_edit.placeholder_text = I18n.t("login.pass")
+
+	# locale picker — top-right, flags the i18n table the lobby will use
+	var lang_opt := OptionButton.new()
+	lang_opt.position = Vector2(1040, 24)
+	lang_opt.size = Vector2(190, 36)
+	lang_opt.flat = true
+	lang_opt.add_theme_font_override("font", font)
+	lang_opt.add_theme_font_size_override("font_size", 18)
+	lang_opt.add_theme_color_override("font_color", Color(0.85, 0.80, 0.60))
+	lang_opt.add_theme_stylebox_override("normal", plain)
+	lang_opt.add_theme_stylebox_override("hover", plain)
+	lang_opt.add_theme_stylebox_override("pressed", plain)
+	lang_opt.get_popup().add_theme_stylebox_override("panel",
+		_solid(Color(0.10, 0.09, 0.05, 0.95)))
+	lang_opt.get_popup().add_theme_color_override("font_color",
+		Color(0.85, 0.80, 0.60))
+	for code in ["es", "en", "fr"]:
+		lang_opt.add_item(I18n.NAMES[code])
+	var cur := ["es", "en", "fr"].find(I18n.lang)
+	lang_opt.select(cur if cur >= 0 else 0)
+	lang_opt.item_selected.connect(func(i):
+		I18n.set_locale(["es", "en", "fr"][i]))
+	_box.add_child(lang_opt)
 
 	proxy_opt = OptionButton.new()
 	proxy_opt.position = R_PROXY.position
@@ -64,9 +89,15 @@ func _init() -> void:
 	btn.position = R_BTN.position
 	btn.size = R_BTN.size
 	btn.flat = true           # the art draws the button; we catch the click
-	btn.focus_mode = Control.FOCUS_NONE
+	btn.tooltip_text = I18n.t("net.connect")
+	btn.add_theme_stylebox_override("focus", _focus_style())
 	btn.pressed.connect(_do_submit)
 	_box.add_child(btn)
+	name_edit.focus_next = name_edit.get_path_to(pass_edit)
+	pass_edit.focus_next = pass_edit.get_path_to(proxy_opt)
+	proxy_opt.focus_next = proxy_opt.get_path_to(btn)
+	btn.focus_next = btn.get_path_to(lang_opt)
+	lang_opt.focus_next = lang_opt.get_path_to(name_edit)
 
 	err_lbl = Label.new()
 	err_lbl.position = R_ERR.position
@@ -119,6 +150,14 @@ func _solid(c: Color) -> StyleBoxFlat:
 	return s
 
 
+func _focus_style() -> StyleBoxFlat:
+	var style := _solid(Color.TRANSPARENT)
+	style.border_color = Color("ffe6a0")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(7)
+	return style
+
+
 func _relayout() -> void:
 	if _box == null:
 		return
@@ -133,7 +172,7 @@ func _relayout() -> void:
 func _do_submit() -> void:
 	var login := name_edit.text.strip_edges()
 	if login == "":
-		err_lbl.text = "Escribe tu cuenta"
+		err_lbl.text = I18n.t("login.enter_account")
 		return
 	var proxy := ""
 	if proxy_opt.selected >= 0:

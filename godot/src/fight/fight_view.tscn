@@ -14,9 +14,13 @@ position_smoothing_enabled = true
 
 [node name="UI" type="CanvasLayer" parent="."]
 
+[node name="TopBacking" type="Panel" parent="UI"]
+mouse_filter = 2
+
 [node name="TopBar" type="HBoxContainer" parent="UI"]
-offset_left = 10.0
-offset_top = 10.0
+offset_left = 24.0
+offset_top = 17.0
+theme_override_constants/separation = 8
 
 [node name="MapId" type="LineEdit" parent="UI/TopBar"]
 custom_minimum_size = Vector2(80, 0)
@@ -50,9 +54,14 @@ theme_override_constants/separation = 3
 
 [node name="TurnTimer" type="Label" parent="UI/TopBar"]
 
-[node name="SpellBar" type="HBoxContainer" parent="UI"]
-offset_left = 10.0
-offset_top = 44.0
+[node name="ActionBacking" type="Panel" parent="UI"]
+mouse_filter = 2
+
+[node name="SpellScroll" type="ScrollContainer" parent="UI"]
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 3
+
+[node name="SpellBar" type="HBoxContainer" parent="UI/SpellScroll"]
 theme_override_constants/separation = 4
 
 [node name="EventCards" type="HBoxContainer" parent="UI"]
@@ -68,8 +77,8 @@ theme_override_constants/separation = 6
 alignment = 2
 
 [node name="Info" type="Label" parent="UI"]
-offset_left = 10.0
-offset_top = 78.0
+offset_left = 24.0
+offset_top = 72.0
 text = "iso grid — drag to pan, wheel to zoom"
 
 [node name="Chat" parent="UI" instance=ExtResource("2")]

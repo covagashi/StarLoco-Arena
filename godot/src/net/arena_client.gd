@@ -22,6 +22,10 @@ var _recv_buf := PackedByteArray()
 var _connected := false
 var _established := false
 
+## Host of the current connection — used to resolve wildcard web_base_url
+## announcements ("http://0.0.0.0:8080" is only meaningful for same-host play).
+var last_host := ""
+
 ## Messages received while no scene consumes them (e.g. ACTOR_APPEAR racing
 ## a scene change) buffer here; the entering scene drains them in _ready.
 ## While scene_active is set, messages are emit-only — otherwise every new
@@ -47,6 +51,7 @@ func drain() -> Array:
 func connect_to(host: String, port: int) -> Error:
 	_recv_buf.clear()
 	_established = false
+	last_host = host
 	var err := _peer.connect_to_host(host, port)
 	if err != OK:
 		return err

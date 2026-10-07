@@ -1,9 +1,9 @@
 extends VBoxContainer
 
-## ChatBox — reusable chat panel: scrollback + input with retail-style
-## channel prefixes (/s vicinity, /t trade, /w name whisper, /p group,
-## /c clan; anything else starting with '/' is forwarded verbatim for the
-## server's GM-command handler). Emitted wire ops:
+## ChatBox — reusable chat panel: channel filter tabs + scrollback + input
+## with retail-style channel prefixes (/s vicinity, /t trade, /w name whisper,
+## /p group, /c clan; anything else starting with '/' is forwarded verbatim for
+## the server's GM-command handler). Emitted wire ops:
 ##   C2S 3153 vicinity arch3 [u16 msg]      S2C 3152 [u8 name][i64 id][u16 msg]
 ##   C2S 3155 private  arch4 [u8 tgt][u8 m] S2C 3154 [u8 name][i64 id][u8 msg]
 ##   C2S 3159 trade    arch3 [u16 msg]      S2C 3168 same as 3152
@@ -13,6 +13,9 @@ extends VBoxContainer
 ##   S2C 2070 server announcement [u32 msg]
 ##   S2C 3206/3210/3212/3214/3216 chat errors (empty payloads)
 ## Own outgoing lines are echoed locally — the server never sends them back.
+##
+## The tab row filters the scrollback by channel — a line is stored once and
+## re-rendered when the filter changes, so switching tabs loses nothing.
 
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -29,25 +32,73 @@ const COLORS := {
 	"clan": "cyan",
 	"channel": "light_blue",
 	"server": "red",
+	"system": "khaki",
 	"me": "khaki",
 	"error": "tomato",
 }
-const CHAT_ERRORS := {
-	3206: "malformed command",
-	3210: "not enough privileges",
-	3212: "not implemented",
-	3214: "target is yourself",
-	3216: "operation not permitted",
+const CHAT_ERROR_KEYS := {
+	3206: "chat.err.malformed",
+	3210: "chat.err.privileges",
+	3212: "chat.err.not_implemented",
+	3214: "chat.err.self",
+	3216: "chat.err.not_permitted",
 }
+
+## Filter tabs, in display order: every stored line maps its kind to one.
+## "channel" (named channels such as the global "*") shares the trade tab —
+## it is the same kind of opt-in broadcast pipe.
+const TABS := ["all", "say", "trade", "group", "clan", "whisper", "system"]
+const KIND_TAB := {
+	"say": "say", "me": "say", "channel": "trade", "trade": "trade",
+	"group": "group", "clan": "clan", "whisper": "whisper",
+	"server": "system", "system": "system", "error": "system",
+}
+const MAX_LINES := 300
 
 @onready var _display: RichTextLabel = $Display
 @onready var _input: LineEdit = $Row/Input
 
+var _tab := "all"
+var _tab_btns := {}
+var _lines: Array = []          # [{kind, text}] — pre-formatted bbcode
+
 
 func _ready() -> void:
+	var tabs := HBoxContainer.new()
+	tabs.name = "Tabs"
+	tabs.add_theme_constant_override("separation", 2)
+	for t in TABS:
+		var b := Button.new()
+		b.toggle_mode = true
+		b.text = I18n.t("chat.tab." + t)
+		b.add_theme_font_size_override("font_size", 11)
+		b.custom_minimum_size = Vector2(0, 20)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.button_pressed = t == _tab
+		b.pressed.connect(func(): _set_tab(t))
+		tabs.add_child(b)
+		_tab_btns[t] = b
+	add_child(tabs)
+	move_child(tabs, 0)
 	_input.text_submitted.connect(_on_submit)
 	$Row/SendBtn.pressed.connect(func(): _on_submit(_input.text))
-	_input.placeholder_text = "chat — /w, /t, /p, /c, /friend, /ignore, emotes /clap /laugh…"
+	_input.placeholder_text = I18n.t("chat.placeholder")
+	$Row/SendBtn.text = I18n.t("chat.send")
+	I18n.locale_changed.connect(func(_l): _retranslate())
+
+
+func _set_tab(t: String) -> void:
+	_tab = t
+	for k in _tab_btns:
+		_tab_btns[k].button_pressed = k == t
+	_render()
+
+
+func _retranslate() -> void:
+	_input.placeholder_text = I18n.t("chat.placeholder")
+	$Row/SendBtn.text = I18n.t("chat.send")
+	for t in _tab_btns:
+		_tab_btns[t].text = I18n.t("chat.tab." + t)
 
 
 ## Retail emote table (server handlers_emote.go — up_0 in the client).
@@ -102,7 +153,8 @@ func feed(opcode: int, payload: WireReader) -> bool:
 			var sname := payload.get_str("u8")
 			payload.get_i64()
 			var msg := payload.get_str("u8")
-			_line("whisper", "[i]%s whispers:[/i] %s" % [sname, msg])
+			_line("whisper", "[i]%s[/i] %s" % [
+				I18n.t("chat.whisper_in", {"name": sname}), msg])
 		3140:  # ChannelContent
 			var chan := payload.get_str("u8")
 			var sname := payload.get_str("u8")
@@ -112,25 +164,26 @@ func feed(opcode: int, payload: WireReader) -> bool:
 			var sname := payload.get_str("u8")
 			payload.get_i64()
 			var msg := payload.get_str("u16")
-			_line("trade", "[trade] %s: %s" % [sname, msg])
+			_line("trade", "[%s] %s: %s" % [I18n.t("chat.chan.trade"), sname, msg])
 		3170:  # GroupContent
 			var sname := payload.get_str("u8")
 			payload.get_i64()
 			var msg := payload.get_str("u16")
-			_line("group", "[group] %s: %s" % [sname, msg])
+			_line("group", "[%s] %s: %s" % [I18n.t("chat.chan.group"), sname, msg])
 		3198:  # ClanContent
 			var sname := payload.get_str("u8")
 			payload.get_i64()
 			var msg := payload.get_str("u16")
-			_line("clan", "[clan] %s: %s" % [sname, msg])
+			_line("clan", "[%s] %s: %s" % [I18n.t("chat.chan.clan"), sname, msg])
 		3204:  # UserNotFound — [u8 name]
 			var who := payload.get_str("u8")
-			_line("error", "[i]user '%s' not found[/i]" % who)
+			_line("error", "[i]%s[/i]" % I18n.t("chat.user_not_found", {"name": who}))
 		2070:  # ServerMessage — i32 length, JVM-charset body
 			var msg := payload.get_str("i32")
-			_line("server", "[b]SERVER:[/b] %s" % msg)
+			_line("server", "[b]%s[/b] %s" % [I18n.t("chat.server"), msg])
 		3206, 3210, 3212, 3214, 3216:
-			_line("error", "[i]%s[/i]" % CHAT_ERRORS.get(opcode, "chat error"))
+			_line("error", "[i]%s[/i]" % I18n.t(
+				CHAT_ERROR_KEYS.get(opcode, "chat.err.malformed")))
 		OP_EMOTE_PLAYED:  # [i64 actor][u8 anim] — relay to the world view
 			var aid := int(payload.get_i64())
 			var anim := payload.get_str("u8")
@@ -142,7 +195,8 @@ func feed(opcode: int, payload: WireReader) -> bool:
 			if rid != 0 and not pm.is_empty():
 				Session.send(539, pm.frame, 3)
 			elif not pm.is_empty():
-				_line("error", "[i]no coach named '%s'[/i]" % pm.to)
+				_line("error", "[i]%s[/i]" % I18n.t(
+					"chat.user_not_found", {"name": pm.to}))
 		_:
 			return false
 	return true
@@ -172,7 +226,7 @@ func _on_submit(text: String) -> void:
 			return
 		if SOCIAL_OPS.has(cmd):
 			if rest.is_empty():
-				_line("error", "[i]/%s &lt;name&gt;[/i]" % cmd)
+				_line("error", "[i]%s[/i]" % I18n.t("chat.usage.friend"))
 				return
 			var sw := WireWriter.new()
 			var nb := CP1252.encode(rest)
@@ -182,16 +236,17 @@ func _on_submit(text: String) -> void:
 			return
 		if cmd == "friends":
 			if State.friends.is_empty():
-				_line("server", "[i]no friends yet — /friend &lt;name&gt;[/i]")
+				_line("server", "[i]%s[/i]" % I18n.t("chat.no_friends"))
 			else:
-				_line("server", "friends: %s" % ", ".join(State.friends.map(
-					func(f): return "%s%s" % [f.name,
-						"" if f.get("online", false) else " (offline)"])))
+				_line("server", I18n.t("chat.friends_list", {"list": ", ".join(
+					State.friends.map(func(f): return "%s%s" % [f.name,
+						"" if f.get("online", false)
+						else " (%s)" % I18n.t("social.offline")]))}))
 			return
 		if cmd == "ignored":
-			_line("server", "ignored: %s" % (
+			_line("server", I18n.t("chat.ignored_list", {"list": (
 				", ".join(State.ignored) if not State.ignored.is_empty()
-				else "none"))
+				else I18n.t("chat.none"))}))
 			return
 		if cmd == "mail":
 			# Compose a letter — C2S 539 mail record (arch 3):
@@ -199,7 +254,7 @@ func _on_submit(text: String) -> void:
 			var sp2 := rest.find(" ")
 			var pipe := rest.find("|")
 			if sp2 <= 0 or pipe < 0:
-				_line("error", "[i]/mail &lt;name&gt; &lt;title&gt;|&lt;body&gt;[/i]")
+				_line("error", "[i]%s[/i]" % I18n.t("chat.usage.mail"))
 				return
 			var target := rest.substr(0, sp2)
 			var title := rest.substr(sp2 + 1, pipe - sp2 - 1).strip_edges()
@@ -233,14 +288,14 @@ func _on_submit(text: String) -> void:
 		if cmd == "watch":
 			# Spectate — resolve name → coach id, then 2260/26331.
 			if rest.is_empty():
-				_line("error", "[i]/watch &lt;coach name&gt;[/i]")
+				_line("error", "[i]%s[/i]" % I18n.t("chat.usage.watch"))
 				return
 			watch.emit(rest)
 			return
 		if cmd == "trade":
 			# Player exchange invite — the pane resolves name → coach id.
 			if rest.is_empty():
-				_line("error", "[i]/trade &lt;coach name&gt;[/i]")
+				_line("error", "[i]%s[/i]" % I18n.t("chat.usage.trade"))
 				return
 			trade.emit(rest)
 			return
@@ -254,9 +309,9 @@ func _on_submit(text: String) -> void:
 			# (jv_2) sends it then disconnects the session. Two-step: ask
 			# for /deletecoach CONFIRM to keep it deliberate.
 			if rest != "CONFIRM":
-				_line("error", "[i]destroys the coach + roster — /deletecoach CONFIRM[/i]")
+				_line("error", "[i]%s[/i]" % I18n.t("chat.deletecoach"))
 				return
-			_line("server", "[b]deleting coach…[/b]")
+			_line("server", "[b]%s[/b]" % I18n.t("chat.deletecoach"))
 			Session.send(27529, PackedByteArray(), 2)
 			Session.client.disconnect_from()
 			return
@@ -264,7 +319,7 @@ func _on_submit(text: String) -> void:
 			# Guild creation — C2S 509 [u8 type][u8 len][name], arch 3.
 			# The 504 result + 510/552/512 state pushes + 558 feed answer it.
 			if rest.is_empty():
-				_line("error", "[i]/guild &lt;name&gt;[/i]")
+				_line("error", "[i]%s[/i]" % I18n.t("chat.usage.guild"))
 				return
 			var gw := WireWriter.new()
 			var nb := CP1252.encode(rest)
@@ -287,7 +342,7 @@ func _on_submit(text: String) -> void:
 		var rest := text.substr(3).strip_edges()
 		var sp := rest.find(" ")
 		if sp <= 0:
-			_line("error", "[i]/w &lt;name&gt; &lt;message&gt;[/i]")
+			_line("error", "[i]%s[/i]" % I18n.t("chat.usage.w"))
 			return
 		priv_target = rest.substr(0, sp)
 		body = rest.substr(sp + 1).strip_edges()
@@ -349,7 +404,8 @@ func _on_submit(text: String) -> void:
 			_line("me", "%s: %s" % [me, body])
 			bubble.emit(State.my_coach_id, body)
 		"whisper":
-			_line("whisper", "[i]to %s:[/i] %s" % [priv_target, body])
+			_line("whisper", "[i]%s[/i] %s" % [
+				I18n.t("chat.whisper_out", {"name": priv_target}), body])
 		"channel":
 			_line("channel", "[*] %s: %s" % [me, body])
 		_:
@@ -357,11 +413,23 @@ func _on_submit(text: String) -> void:
 
 
 func _line(kind: String, s: String) -> void:
-	_display.append_text("[color=%s]%s[/color]\n" % [COLORS.get(kind, "white"), s])
+	_lines.append({"kind": kind, "text": "[color=%s]%s[/color]" % [
+		COLORS.get(kind, "white"), s]})
+	if _lines.size() > MAX_LINES:
+		_lines.remove_at(0)
+	if _tab == "all" or KIND_TAB.get(kind, "say") == _tab:
+		_display.append_text(_lines.back().text + "\n")
+
+
+func _render() -> void:
+	_display.clear()
+	for l in _lines:
+		if _tab == "all" or KIND_TAB.get(l.kind, "say") == _tab:
+			_display.append_text(l.text + "\n")
 
 
 func log_line(s: String) -> void:
-	_display.append_text(s + "\n")
+	_line("system", s)
 
 
 func grab_chat_focus() -> void:
