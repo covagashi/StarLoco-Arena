@@ -364,9 +364,21 @@ type Fight struct {
 	// startEffectsDone makes the np_1 type-12 fight-start effects apply once.
 	startEffectsDone bool
 
-	// rng is the fight's damage/dice source (lazily seeded via roll()). Tests may
-	// set it directly for deterministic rolls.
+	// rng is the fight's damage/dice source, derived from `seed` on first use
+	// (rngSource). Tests may set it directly for deterministic rolls.
 	rng *rand.Rand
+	// seed is this fight's STORED dice seed: every roll the fight makes derives
+	// from it, so the same seed replayed against the same inputs reproduces the
+	// same fight. Assigned once at creation (FightManager.Create) and kept
+	// server-side — it is never written to any frame, because a client that knew
+	// it could foresee its own crits and fumbles.
+	seed int64
+	// decisions is the per-turn decision log: one row per action a fighter takes
+	// (see fightlog.go). Capped at maxFightDecisions. turnActions counts the
+	// actions the CURRENT turn's fighter has taken so a turn that ends without
+	// one is still recorded, as a pass.
+	decisions   []fightDecision
+	turnActions int
 
 	// clock is the current phase/turn timer; clockGen guards a stale timer.
 	clock    *time.Timer
@@ -694,6 +706,13 @@ func (m *FightManager) Create(f *Fight) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	f.startedAt = time.Now()
+	// Every fight gets its dice seed HERE, at the one choke point every creation
+	// path funnels through (matchmaking, challenges, team-up, tournaments,
+	// evolution), so no path can start a fight whose rolls are unreproducible.
+	// A seed already set (a replay, a test) is left alone.
+	if f.seed == 0 {
+		f.seed = newFightSeed()
+	}
 	f.ID = m.nextID
 	m.nextID++
 	m.byID[f.ID] = f

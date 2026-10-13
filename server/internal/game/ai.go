@@ -37,6 +37,20 @@ const (
 	behaviorAggressive                   // damages enemies: close in and cast
 )
 
+// String names the archetype for the fight decision log (fightlog.go).
+func (b aiBehavior) String() string {
+	switch b {
+	case behaviorSelfBuff:
+		return "selfbuff"
+	case behaviorKite:
+		return "kite"
+	case behaviorAggressive:
+		return "aggressive"
+	default:
+		return "blocker"
+	}
+}
+
 // kiteMPThreshold: a damage summon with at least this much MP hits and runs
 // instead of standing and trading (e.g. a nimble Tofu).
 const kiteMPThreshold int32 = 4
@@ -49,7 +63,12 @@ func (f *Fight) runAITurn(ff *FightFighter) {
 	if f.Phase() != PhaseAction || !f.isCurrentTurn(ff.WireID) {
 		return
 	}
-	switch f.classifyAI(ff) {
+	behavior := f.classifyAI(ff)
+	// Record WHICH plan this fighter is playing before it plays it. Today that is
+	// the archetype; it is the slot a gambit engine's "rule fired" row occupies,
+	// so the action rows that follow need no change when rules arrive.
+	f.logDecision(ff, decisionBehavior, behavior.String())
+	switch behavior {
 	case behaviorSelfBuff:
 		f.playSelfBuffAI(ff)
 		f.closeCombatAI(ff)

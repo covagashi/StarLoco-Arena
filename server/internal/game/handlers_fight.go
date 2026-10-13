@@ -491,6 +491,11 @@ func (f *Fight) startFirstTurn() {
 // aiTurnClock so a practice fight never dead-waits on a dummy; a human fighter
 // gets the full turnClock to act.
 func (f *Fight) beginTurn(ff *FightFighter) {
+	// Reset the per-turn action counter FIRST: this turn has taken nothing yet,
+	// and endTurn reads it to decide whether to log a pass (fightlog.go). It is
+	// reset here rather than in endTurn because beginTurn can end the turn itself
+	// (a killer cell, a turn-start glyph, a fighter dead on arrival).
+	f.turnActions = 0
 	refillFighter(ff)
 	// Mirror the client's own per-fighter timeline counter (alh_1.aAw), which it
 	// bumps at exactly this point. Buff expiry is expressed against it.
@@ -622,6 +627,14 @@ func (f *Fight) endTurn(wireID int64) {
 	end, _ := protocol.EncodeS2C(protocol.OpFighterTurnEnd,
 		protocol.NewWriter().I32(f.nextActionUID()).I32(-1).I64(wireID).Bytes())
 	f.broadcast(end)
+
+	// A turn that ends having taken no action is itself a decision worth
+	// recording — a coach who passed, a petrified fighter, a disconnected coach's
+	// auto-pass. Logged BEFORE the timeline advances so the row carries the round
+	// and turn index the pass actually happened on.
+	if f.turnActions == 0 {
+		f.logDecision(f.fighterByWireID(wireID), decisionPass, "")
+	}
 
 	// A special cell's bonus lasts only the turn it was granted on.
 	f.revertSpecialCellBuffs(f.fighterByWireID(wireID))

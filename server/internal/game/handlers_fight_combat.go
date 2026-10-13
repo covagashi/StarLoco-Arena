@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
@@ -167,6 +169,11 @@ func (f *Fight) applyFighterMove(ff *FightFighter, path []Pos) {
 	f.broadcast(mp)
 	seq, _ := buildActionSequenceExecute()
 	f.broadcast(seq)
+
+	// Decision log before the trap sweep below: the walk itself is what the
+	// fighter decided; a trap it then sprang is a consequence, not a decision.
+	f.logAction(ff, decisionMove, fmt.Sprintf("from=(%d,%d) to=(%d,%d) steps=%d mp=%d",
+		origin.X, origin.Y, ff.Pos.X, ff.Pos.Y, len(path), cost))
 
 	// Trap/glyph triggers: walking onto a ground-effect area springs it. Checked
 	// per step (origin excluded) so a trap on ANY cell of the walk fires, not
@@ -630,6 +637,13 @@ func (f *Fight) castSpellByFighter(caster *FightFighter, spellID int32, target P
 	seq, _ := buildActionSequenceExecute()
 	f.broadcast(seq)
 
+	// Decision log: the cast is committed at this point (AP spent, effects
+	// resolved), so this is the row that belongs in the fight's trail — recorded
+	// here rather than in the handler so an AI cast and a client cast are logged
+	// identically (see fightlog.go).
+	f.logAction(caster, decisionCast, fmt.Sprintf("spell=%d target=(%d,%d) fumble=%v crit=%v ap=%d",
+		spellID, target.X, target.Y, fumble, crit, apCost))
+
 	// 5. Victory check (runs on the fight goroutine).
 	if f.deps != nil {
 		f.deps.checkFightEnd(f)
@@ -756,6 +770,8 @@ func (f *Fight) closeCombat(ff *FightFighter, target Pos) {
 	if seq, err := buildActionSequenceExecute(); err == nil {
 		f.broadcast(seq)
 	}
+	f.logAction(ff, decisionCloseCombat, fmt.Sprintf("target=(%d,%d) victim=%d fumble=%v crit=%v",
+		target.X, target.Y, victim.WireID, fumble, crit))
 	if f.deps != nil {
 		f.deps.checkFightEnd(f)
 	}

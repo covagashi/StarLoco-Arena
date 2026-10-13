@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
@@ -87,6 +89,9 @@ func (f *Fight) useFighterCard(user *FightFighter, cardID int32, target Pos) boo
 
 	seq, _ := buildActionSequenceExecute()
 	f.broadcast(seq)
+
+	f.logAction(user, decisionCard, fmt.Sprintf("card=%d target=(%d,%d) fumble=%v crit=%v ap=%d",
+		cardID, target.X, target.Y, fumble, crit, card.APCost))
 
 	if f.deps != nil {
 		f.deps.checkFightEnd(f)

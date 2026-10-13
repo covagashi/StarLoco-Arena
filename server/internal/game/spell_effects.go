@@ -1,8 +1,7 @@
 package game
 
 import (
-	"math/rand"
-	"time"
+	"sort"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
@@ -29,15 +28,6 @@ type activeBuff struct {
 	// (AP/MP-loss resist 86/87, damage rebound 89, heal power 78/79). delta holds
 	// the rolled value, reverted at expiry via Stats.apply(actionID, -delta).
 	statBuff bool
-}
-
-// rngSource returns the fight's damage/dice RNG, lazily seeding it. Tests may set
-// f.rng beforehand for deterministic rolls.
-func (f *Fight) rngSource() *rand.Rand {
-	if f.rng == nil {
-		f.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
-	}
-	return f.rng
 }
 
 // resolveSpellEffects applies every effect of a cast spell against the target
@@ -297,9 +287,23 @@ func (f *Fight) removeEffectByID(ff *FightFighter, rid, limit int32) {
 		}
 		ff.Buffs = kept
 	}
-	// Status states (e.g. the displaced mask).
-	for s, src := range ff.stateSrc {
-		if src == rid && take() {
+	// Status states (e.g. the displaced mask). stateSrc is a MAP, so the matches
+	// are collected and sorted before any is taken: with a finite limit, ranging
+	// the map directly would let Go's randomised iteration order decide WHICH of
+	// two states sharing one source effect survives, and the same seed would then
+	// replay a different fight. Sorting by state id makes the choice fixed.
+	if len(ff.stateSrc) > 0 {
+		matches := make([]fighterState, 0, len(ff.stateSrc))
+		for s, src := range ff.stateSrc {
+			if src == rid {
+				matches = append(matches, s)
+			}
+		}
+		sort.Slice(matches, func(i, j int) bool { return matches[i] < matches[j] })
+		for _, s := range matches {
+			if !take() {
+				break
+			}
 			delete(ff.States, s)
 			delete(ff.stateSrc, s)
 		}
