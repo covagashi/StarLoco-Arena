@@ -69,12 +69,12 @@ func TestNPCTalkersAreSpawned(t *testing.T) {
 func TestNPCDescriptorsCarryDialogGroups(t *testing.T) {
 	// instanceID -> {criterionId, defaultGroup, altGroup}
 	want := map[int64][3]int{
-		143: {228, 7, 7},   // bob — Baan, the tutorial guide
-		170: {-1, 56, 56},  // Sramette ghost
-		171: {-1, 45, 45},  // Iop ghost
-		172: {-1, 50, 50},  // Sacrieur ghost
-		173: {-1, 60, 60},  // Enutrof ghost
-		181: {-1, 65, 65},  // Demon I
+		143: {228, 7, 7},  // bob — Baan, the tutorial guide
+		170: {-1, 56, 56}, // Sramette ghost
+		171: {-1, 45, 45}, // Iop ghost
+		172: {-1, 50, 50}, // Sacrieur ghost
+		173: {-1, 60, 60}, // Enutrof ghost
+		181: {-1, 65, 65}, // Demon I
 	}
 	got := map[int64][3]int{}
 	for _, elems := range worldElements {
