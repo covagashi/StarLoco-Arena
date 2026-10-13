@@ -107,3 +107,7 @@ __pycache__/
 /godot/assets/sounds/
 /godot/assets/fx/
 /godot/assets/gui/
+# Agent worktrees: a full second checkout of this repo, created by Claude Code
+# for isolated work. Never committable. Project-level .claude/settings.json is
+# deliberately NOT ignored, so only this subtree is listed.
+/.claude/worktrees/
