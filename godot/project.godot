@@ -21,5 +21,10 @@ window/size/viewport_height=720
 
 [rendering]
 
+; Required by the macOS arm64 / universal export (Godot refuses the preset
+; without it). Harmless elsewhere: it only adds ETC2/ASTC variants for the
+; handful of imported PNGs under assets/ui.
+textures/vram_compression/import_etc2_astc=true
+
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
