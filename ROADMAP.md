@@ -4,11 +4,11 @@ Feature-by-feature state of the **from-scratch Go server** (`server/`) that is
 wire-compatible with the retail **DofusArena 2.70** client (Feb-2012, rev 72909),
 plus the reverse-engineering tooling around it.
 
-**Updated:** 2026-08-10 · **Released version:** 0.4.0 · **Branch:** `v2.70`
-· **Latest work:** **Tier 0 and Tier 1 both COMPLETE.** The AI now plays from a spell
-repertoire and was hardened by four bugs found in that work (B-084…B-087, all
-live- or mutation-verified); np_1's operand question and MaxActive both resolved
-by evidence rather than code
+**Updated:** 2026-10-13 · **Released version:** 0.4.0 · **Branch:** `main-covaga`
+(130 commits ahead of `v2.70`) · **Latest work:** the **Godot client** — lobby and
+combat migrated to native controls, i18n es/en/fr (718 keys each), in-game bug
+report (B-171, B-172), and placement facing fixed server-side (B-170). Current
+tanda and its evidence: [`sprints/S01`](./sprints/S01-client-test-net.md)
 
 This document answers two questions: *what actually works*, and *what is left*.
 It is deliberately granular — "the fight system" is not one line item, it is
@@ -32,9 +32,11 @@ per-record data audit see
 | ⬜ | **Not started** |
 | ⛔ | **Deliberately not implemented** — with a documented reason (usually: not recoverable from the client) |
 
-**Scale reference.** 278 Go files · 493 test functions (72 of them end-to-end
-over a real socket) · 82 C2S opcode handlers · 96 S2C frames emitted · 189
-opcode constants · 9 of 24 populated client record types decoded.
+**Scale reference.** 217 Go files + 292 test files · 1.077 test functions (151 of
+them end-to-end over a real socket, in `test/e2e`; 619 in `internal/game`) · 82
+C2S opcode handlers · 96 S2C frames emitted · 189 opcode constants · 9 of 24
+populated client record types decoded. On the client side: 48 GDScript files /
+21.072 lines in `godot/src`, 25 / 4.771 in `godot/test`.
 
 ---
 
@@ -61,6 +63,7 @@ opcode constants · 9 of 24 populated client record types decoded.
 | 2v2 | ✅ | DONE (item 30). Duo formation via the 2VS2 tab (60xx), four-coach fights, per-owner AI/absence/rewards, post-fight for all four. Live-verified with four retail clients |
 | Ops: config, releases, Docker, web portal | OK | Self-configuring, auto-released, full account + admin web portal |
 | RE tooling (MCP harness, deobf lab) | 🟡 | Live-client driver works; deobfuscation is class+field only |
+| **Godot client** (`godot/`) | 🟡 | Login → coach creation → native lobby → native combat, i18n es/en/fr, in-game bug report. Not covered by CI, and its asset-dependent tests can only run locally (assets are deliberately git-ignored) — see [`sprints/S01`](./sprints/S01-client-test-net.md) |
 
 ---
 

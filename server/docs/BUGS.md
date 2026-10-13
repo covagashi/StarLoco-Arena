@@ -7,9 +7,132 @@ it), the fix, and how it was verified.
 
 **Verification legend:** `unit` (Go unit test) · `e2e` (scripted wire client) ·
 `live` (real retail client via the control agent) · `audit` (byte-compared vs
-decompiled client, no runtime).
+decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
+`godot/run_tests.sh --headless`) · `client-ui` (windowed Godot preview,
+`godot/run_tests.sh --visual`).
 
 ---
+
+### B-175 · The new client test lane hung instead of failing, and CI could never have built it
+
+- **Symptom:** found while dry-running the CI steps against an asset-free copy
+  of the tree (the state a runner actually checks out), before the workflow had
+  ever executed. Two independent defects, both silent:
+  1. every `class_name` in `src/` was unknown — `Identifier "AssetPaths" not
+     declared in the current scope` — so `asset_paths_test.gd` failed to parse;
+  2. the unit runner then **hung forever** rather than reporting it.
+- **Root cause:** (1) a fresh checkout has no `.godot/`, and
+  `godot --headless --path . --quit` does **not** write
+  `.godot/global_script_class_cache.cfg`; without that file no global class
+  name resolves. Verified both ways in a throwaway project: `--quit` leaves no
+  cache, `--import` writes one containing `AssetPaths`. (2) `unit_runner.gd`
+  called `.new()` on the result of `load()` without checking it. A GDScript
+  that failed to compile aborts the calling function at that line, and the
+  abort happened *before* the `get_tree().quit()` at the end of `_ready()` — so
+  the process never exited. On a runner that is a job timeout, not a red X: the
+  worst possible failure mode for a gate meant to catch regressions.
+- **Fix:** the workflow's import step is `--import`, with the reason inline so
+  nobody "simplifies" it back. `unit_runner.gd` casts `load()` to `GDScript`
+  and checks `can_instantiate()`, recording a failure and continuing instead of
+  instantiating a broken script; a null instance is reported too.
+- **Verified:** `client-unit` — a deliberately broken suite dropped into
+  `test/unit/` now yields `[unit] suites=5 checks=85 failures=1` with
+  `FAIL broken_canary_test.gd: script did not load (parse error?)` and **exit
+  code 1**, instead of hanging. End-to-end dry run on a tree built from
+  `git ls-files -c -o --exclude-standard` (so `assets/` held only the tracked
+  `i18n` and `ui`): `--import` exit 0, then `./run_tests.sh --headless` →
+  `[unit] suites=4 checks=84 failures=0`, exit 0.
+
+### B-174 · Truncated generated JSON aborted the loader mid-function instead of degrading
+
+- **Symptom:** none visible, which is the problem. A half-written
+  `assets/gamedata/*.json`, per-action `meta.json` or map atlas — the state an
+  interrupted `tools/asset-import` run leaves behind — produced one line in the
+  log and then missing animations, missing map graphics or an empty sphere
+  board, with nothing pointing at the cause.
+- **Root cause:** 3 of 16 `JSON.parse_string` call sites assigned the result
+  straight into a **statically typed** `Dictionary`
+  (`maps/map_gfx.gd`, `anims/anm_sprite.gd`, `gamedata/kanodo.gd`); the other
+  13 guarded with `== null` or `is Dictionary`. GDScript treats that assignment
+  as a hard error — `Trying to assign value of type 'Nil' to a variable of type
+  'Dictionary'` — and **aborts the rest of the function**. In
+  `anm_sprite.load_action` the abort lands after the state reset, so `_frames`
+  stays empty and the action cache is never populated. Confirmed empirically in
+  a throwaway project rather than from memory: the typed form aborts, the
+  guarded form degrades.
+  A second, narrower hole came out of the B-173 migration: `AssetPaths.read_json`
+  only guarded `null`, so a file that is valid JSON of the **wrong kind** (an
+  array where an object belongs, e.g. after an importer changes shape) flowed
+  through into the same typed assignment.
+- **Fix:** `read_json`'s `default` argument now also declares the expected
+  shape — a parsed value whose type differs from the default's is replaced by
+  the default, while callers that pass no default keep Variant passthrough.
+  `anm_sprite.load_action` parses and shape-checks `meta.json` **before**
+  clearing any state, so an unusable file keeps the previous animation, exactly
+  as the missing-file branch above it already did.
+  Both sites also moved off the static `JSON.parse_string()` onto
+  `JSON.new().parse()`. The static helper pushes an engine-level
+  `Parse JSON failed` ERROR carrying no file path — in a CI log that reads like
+  a crash even when the caller handled it — while the instance API is silent
+  and returns a message plus a line number, so a broken generated asset now
+  produces one warning that names the file and the offset.
+- **Verified:** `client-unit` — `test/unit/json_shape_test.gd` covers truncated,
+  wrong-kind, missing and well-formed inputs for both the defaulted and the
+  Variant contract, plus a canary that performs the real
+  `var d: Dictionary = read_json(...)` assignment in its own function and sets a
+  flag on the last line, so an abort is *detected* rather than silently
+  shortening the run. Proven to catch the bug: with the shape check reverted the
+  lane reports `failures=2` naming both; with it restored, `suites=4 checks=84
+  failures=0`.
+
+### B-173 · Every raw asset read was hardcoded to `res://`, so no exported build could ever load them
+
+- **Symptom:** latent, and it would have surfaced as "the packaged client shows
+  no graphics at all". `godot/export_presets.cfg` does not exist — the project
+  has never been exported — so nothing had forced the issue yet.
+- **Root cause:** everything under `assets/` except `ui/` and `i18n/` is
+  `tools/asset-import` output, git-ignored on purpose (AGENTS.md — no Ankama
+  bytes in the repo), and read **raw** via `Image.load_from_file`, `FileAccess`
+  and `FontFile.load_dynamic_font` rather than through `ResourceLoader`. In the
+  editor `res://` is a real directory, so `res://assets/…` works; in an
+  exported build `res://` is the `.pck`, and loose files no importer claimed
+  were never packed. `ProjectSettings.globalize_path()` — used at five sites,
+  which is why two inconsistent idioms coexisted — does not rescue it either:
+  it maps `res://` to the directory holding the pack, where the files are
+  equally absent. Scope: ~50 hardcoded paths across 20 files.
+- **Fix:** `src/util/asset_paths.gd` (`AssetPaths`) is now the single
+  chokepoint: callers pass logical names ("gamedata/spells.json") and roots are
+  probed in order — `res://assets/`, then an `assets/` folder beside the
+  executable (mirroring how the server ships `data-dist/`), then
+  `user://assets/`. Probing is **per file, not per root**: `assets/ui/*.png`
+  and `assets/i18n/*.json` are tracked and imported, so `res://assets/` still
+  exists inside an exported pack and a root-level check would wrongly pin every
+  lookup to it. 54 call sites migrated, all `globalize_path` asset wrappers
+  removed, and legacy `res://assets/…` strings still normalize so the top-level
+  test scripts and `deprecated_hall/` compile untouched. `src/maps/jar.gd` is
+  deliberately untouched: its path points at the *server's* `data-dist/`, a
+  different distribution question.
+  Note on the `Loaded resource as image file, this will not work on export`
+  warning: it fires on `res://` paths that have an `.import` sibling, and Godot
+  auto-imports every PNG under `res://` — so it is a dev-time marker of this
+  bug, not the bug itself, and resolving to a dev `res://` path still triggers
+  it. `AssetPaths.load_image` therefore takes an **editor-gated** detour
+  through `globalize_path`, which is safe because a release build never reaches
+  that branch (the exe-sibling root already wins and is absolute).
+- **Regression gate:** `run_tests.sh` now lints `src/` for hardcoded
+  `res://assets/` literals before the unit lane (comment lines and
+  `asset_paths.gd`'s own `PREFIX` exempt), so the CI job fails if the class is
+  reintroduced. Pure grep — it needs no Godot, and it runs identically locally
+  and on the runner. Verified both ways: clean on the migrated tree, and
+  `exit 1` naming file and line when a literal is planted.
+- **Verified:** `client-unit` — `test/unit/asset_paths_test.gd` builds two
+  throwaway roots under `user://` and pins normalize, root precedence, per-file
+  fall-through, the missing-file shape, `read_text`/`read_json`, `load_image`,
+  `dir` and cache invalidation, touching no git-ignored asset. `client-ui` —
+  all four preview runs still pass after the migration
+  (`ui_review_preview` and `fight_ui_preview`, each at 1280×720 and 800×600:
+  exit 0, zero failed assertions, zero script errors), and the export warning
+  count in those runs went from 7 and 57 to **0**.
 
 ### B-172 · Godot UI keyboard gaps and bug form clipped on small windows
 
