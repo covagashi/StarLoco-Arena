@@ -2,9 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [v2.70]
+    # main-covaga is where the work actually happens: it ran 130 commits ahead
+    # of v2.70 without CI ever firing once, which is how an export-breaking
+    # asset-path bug class (B-173) reached 20 files unnoticed.
+    branches: [v2.70, main-covaga]
   pull_request:
-    branches: [v2.70]
+    branches: [v2.70, main-covaga]
   workflow_dispatch:
 
 # Only the latest run of a branch/PR matters; cancel superseded ones.
@@ -118,3 +121,47 @@ jobs:
             echo "building $GOOS/$GOARCH"
             go build -trimpath -o /dev/null ./cmd/server
           done
+
+  godot:
+    name: Godot client (headless unit lane)
+    runs-on: ubuntu-latest
+    env:
+      # Pinned deliberately: the client is developed against this exact build
+      # and a GDScript parse regression across a minor bump would look like a
+      # code failure. Bump this on purpose, never implicitly.
+      GODOT_VERSION: "4.7.1"
+    defaults:
+      run:
+        working-directory: godot
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Godot ${{ env.GODOT_VERSION }}
+        working-directory: .
+        run: |
+          url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSLo /tmp/godot.zip "$url"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo install -m 0755 "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          godot --version
+
+      # A fresh checkout has no .godot/, and `--quit` does NOT build it:
+      # verified on an asset-free copy of this tree, where the unit lane then
+      # died with 'Identifier "AssetPaths" not declared in the current scope'
+      # because .godot/global_script_class_cache.cfg had never been written,
+      # so every `class_name` in src/ was unknown. `--import` writes it. The
+      # pass doubles as a parse check of every GDScript in the project, which
+      # is the cheapest real gate we have on the client.
+      - name: Import pass (builds the global class cache; parse-checks every script)
+        run: godot --headless --path . --import
+
+      # ONLY the asset-free lane. godot/assets/ is git-ignored on purpose
+      # (AGENTS.md: no Ankama bytes in the repo), so the visual previews need
+      # coach_7000 plus the appSkin atlases and can never run on a runner.
+      # `run_tests.sh --visual` is the local pre-push ritual instead; the two
+      # lanes and why they are split are documented in sprints/S01.
+      - name: Lint + unit lane
+        env:
+          GODOT: /usr/local/bin/godot
+        run: ./run_tests.sh --headless
