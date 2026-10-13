@@ -41,9 +41,14 @@ func _init() -> void:
 	await process_frame
 	print("[smoke] tree:")
 	print(GuiLib.dump(root))
-	var img := vp.get_texture().get_image()
-	img.save_png("res://test/gui_logon.png")
-	print("[smoke] wrote test/gui_logon.png")
+	# The dummy/headless renderer has no viewport texture: get_image() is null,
+	# save_png() then aborts _init before quit() runs and the process hangs
+	# forever. The checks above are the point -- skip the capture there.
+	if DisplayServer.get_name() != "headless":
+		var img := vp.get_texture().get_image()
+		if img != null:
+			img.save_png("res://test/gui_logon.png")
+			print("[smoke] wrote test/gui_logon.png")
 	if gui.loader.unknown_tags.size() > 0:
 		print("[smoke] unknown tags: ", gui.loader.unknown_tags.keys())
 	quit(0)

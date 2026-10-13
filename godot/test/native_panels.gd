@@ -1,7 +1,10 @@
 extends SceneTree
 ## Windowed native lobby regression. -- host:port login password
 ## Uses actual input events for close controls and Escape, not close() calls.
-const PanelScript := preload("res://src/ui/lobby_panels.gd")
+# Loaded in run(), not preload()ed: lobby_panels.gd references the I18n autoload,
+# which does not exist yet while a -s script is being compiled, and the failed
+# preload leaves run() unable to start -- so quit() is never reached (hang).
+var PanelScript: GDScript
 var main
 var failures := 0
 
@@ -35,14 +38,22 @@ func key(code: int) -> void:
 		await process_frame
 
 func shot(name: String) -> void:
+	# The dummy/headless renderer has no viewport texture: get_image() is null,
+	# save_png() then aborts run() before quit() runs and the process hangs
+	# forever. The checks are the point -- skip the capture there.
+	if DisplayServer.get_name() == "headless":
+		return
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("/private/tmp/panels-" + name + ".png")
+	var img := root.get_texture().get_image()
+	if img != null:
+		img.save_png("/private/tmp/panels-" + name + ".png")
 
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() < 3:
 		quit(2)
 		return
+	PanelScript = load("res://src/ui/lobby_panels.gd")
 	main = load("res://src/main.tscn").instantiate()
 	root.add_child(main)
 	current_scene = main
@@ -60,7 +71,7 @@ func run() -> void:
 			main._on_new_fighter_dialog([], null, true)
 		var panel = main._gui.open(name)
 		await create_timer(0.15).timeout
-		check(panel is PanelScript, "native " + name)
+		check(is_instance_of(panel, PanelScript), "native " + name)
 		check(main._gui.open(name) == panel, "opening twice is idempotent " + name)
 		check(panel.frame.get_global_rect().end.x <= root.get_visible_rect().size.x + 1 and panel.frame.get_global_rect().end.y <= root.get_visible_rect().size.y + 1, "fits viewport " + name)
 		await shot(name)

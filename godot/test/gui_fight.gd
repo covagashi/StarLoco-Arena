@@ -52,8 +52,14 @@ func _init() -> void:
 			print("LIST id=", w.widget_id, " bind=", w.bind, " renderers=", w.renderers.size(), " items=", w.content_items.size())
 			for ch in w.get_children():
 				print("  child kind=", ch.kind, " vis=", ch.visible, " item=", ch.item_value)
-	vp.get_texture().get_image().save_png("res://test/gui_fight.png")
-	print("wrote gui_fight.png")
+	# The dummy/headless renderer has no viewport texture: get_image() is null,
+	# save_png() then aborts _init before quit() runs and the process hangs
+	# forever. The widget dump above is the point -- skip the capture there.
+	if DisplayServer.get_name() != "headless":
+		var img := vp.get_texture().get_image()
+		if img != null:
+			img.save_png("res://test/gui_fight.png")
+			print("wrote gui_fight.png")
 	if _gui.loader.unknown_tags.size() > 0:
 		print("unknown: ", _gui.loader.unknown_tags.keys())
 	quit()

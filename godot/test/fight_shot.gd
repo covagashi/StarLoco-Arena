@@ -5,7 +5,17 @@ extends SceneTree
 ##   godot --path godot -s test/fight_shot.gd -- <map_id> <out.png>
 
 
-func _init() -> void:
+# _initialize, not _init: fight_view.gd references autoloads (I18n), which are
+# only registered once the tree is up -- loading it from _init fails to compile.
+func _initialize() -> void:
+	# This tool exists only to produce a PNG. The dummy/headless renderer has no
+	# viewport texture, so there is nothing useful to do there -- fail fast
+	# instead of erroring mid-function and leaving the process hung.
+	if DisplayServer.get_name() == "headless":
+		printerr("[shot] fight_shot needs a real display, not --headless. "
+			+ "Run: godot --path godot -s test/fight_shot.gd -- <map_id> <out.png>")
+		quit(1)
+		return
 	var args := OS.get_cmdline_user_args()
 	var map_id := int(args[0]) if args.size() > 0 else 10
 	var out := args[1] if args.size() > 1 else "/tmp/fight.png"

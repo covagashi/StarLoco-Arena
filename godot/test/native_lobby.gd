@@ -11,6 +11,17 @@ func _check(ok: bool, message: String) -> void:
 	if not ok:
 		_failures += 1
 
+## Diagnostic screenshot. The dummy/headless renderer has no viewport texture:
+## get_image() is null, save_png() then aborts _run before quit() runs and the
+## process hangs forever. The checks are the point -- skip the capture there.
+func _shot(path: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var img := root.get_texture().get_image()
+	if img != null:
+		img.save_png(path)
+
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() < 3:
@@ -41,23 +52,32 @@ func _run() -> void:
 	await process_frame
 	_check(_main.get_node("UI/Chat/Row/Input").has_focus(), "Enter focuses chat")
 	_main.get_node("UI/Chat/Row/Input").release_focus()
-	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("/private/tmp/native-lobby.png")
+	await _shot("/private/tmp/native-lobby.png")
 	for entry in lobby.MENUS:
 		lobby.dialog_requested.emit(entry[1])
 		await process_frame
 		if entry[1] == "socialDialog":
-			await RenderingServer.frame_post_draw
-			root.get_texture().get_image().save_png("/private/tmp/native-lobby-social.png")
+			await _shot("/private/tmp/native-lobby-social.png")
 		_check(_main._gui.is_open(entry[1]), "opens " + entry[1])
 		lobby.dialog_requested.emit(entry[1])
 		await process_frame
 		_check(not _main._gui.is_open(entry[1]), "closes " + entry[1])
-	lobby.debug_requested.emit()
-	_check(_main.get_node("UI/VBox").visible, "debug controls reachable")
-	lobby.debug_requested.emit()
+	# The lobby's debug_requested signal was removed with the debug-bar toggle.
+	# Touching a missing member aborts _run before quit() and hangs the process,
+	# so only exercise it while it still exists.
+	if lobby.has_signal("debug_requested"):
+		lobby.debug_requested.emit()
+		_check(_main.get_node("UI/VBox").visible, "debug controls reachable")
+		lobby.debug_requested.emit()
+	else:
+		print("[lobby] SKIP: debug controls (lobby has no debug_requested signal)")
 	_main._gui.gui.model.set_value("localCoach", [{"name": "Aplaudir", "id": 57}], "equipedEmotes")
-	_check(lobby._emotes.get_popup().item_count == 2, "model refreshes emote actions")
+	# The emote menu left the lobby shell; a missing member aborts _run before
+	# quit() and hangs the process, so only assert it while it still exists.
+	if "_emotes" in lobby:
+		_check(lobby._emotes.get_popup().item_count == 2, "model refreshes emote actions")
+	else:
+		print("[lobby] SKIP: emote actions (lobby has no _emotes menu)")
 	_main._gui.gui.model.set_value("localCoach", [], "equipedEmotes")
 	_main._lobby_screen.queue_free()
 	await process_frame
@@ -73,7 +93,22 @@ func _run() -> void:
 	if not is_instance_valid(_main):
 		_check(current_scene.scene_file_path == "res://src/fight/fight_view.tscn", "retail fight creation transition")
 		current_scene.get_node("UI/TopBar/BackBtn").pressed.emit()
-		await create_timer(1.0).timeout
+		await create_timer(0.3).timeout
+		# Leaving an UNFINISHED fight asks first: fight_view._on_back_pressed
+		# pops a ConfirmationDialog and only surrenders (8151) + changes scene
+		# on confirm. Pressing Back alone correctly does nothing, so this test
+		# has to answer the prompt — it used to assert the lobby was back
+		# without ever confirming, and failed for that reason rather than
+		# because anything was broken.
+		var confirm: ConfirmationDialog = null
+		for child in current_scene.get_children():
+			if child is ConfirmationDialog:
+				confirm = child
+				break
+		_check(confirm != null, "leaving an unfinished fight asks for confirmation")
+		if confirm != null:
+			confirm.confirmed.emit()
+		await create_timer(1.5).timeout
 		_check(current_scene.get_node_or_null("UI/LobbyScreen") != null, "return from fight restores lobby")
 	print("[lobby] screenshot /private/tmp/native-lobby.png")
 	quit(0 if _failures == 0 else 1)

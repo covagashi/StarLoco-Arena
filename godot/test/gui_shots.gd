@@ -14,6 +14,14 @@ var _pending_name := ""
 
 
 func _init() -> void:
+	# This tool exists only to produce PNGs. The dummy/headless renderer has no
+	# viewport texture (get_image() is null, so save_png() aborts _process
+	# before quit() and the process hangs) -- fail fast instead.
+	if DisplayServer.get_name() == "headless":
+		printerr("[shots] gui_shots needs a real display, not --headless. "
+			+ "Run: godot --path godot -s test/gui_shots.gd")
+		quit(1)
+		return
 	DirAccess.make_dir_recursive_absolute(_out)
 	_vp = SubViewport.new()
 	_vp.size = Vector2i(1024, 768)
@@ -28,6 +36,8 @@ func _init() -> void:
 
 
 func _process(_dt: float) -> bool:
+	if _vp == null:   # headless bail-out in _init: keep its quit(1) exit code
+		return false
 	if _pending != null:
 		if _wait > 0:
 			_wait -= 1
