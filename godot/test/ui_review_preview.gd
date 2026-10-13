@@ -20,6 +20,11 @@ func _check(ok: bool, what: String) -> void:
 
 
 func _shot(name: String) -> void:
+	# No renderer to draw a frame for (or a viewport texture to grab) under
+	# --headless — skip the screenshot so the assertions can still run
+	# windowless instead of hanging forever on frame_post_draw.
+	if DisplayServer.get_name() == "headless":
+		return
 	await RenderingServer.frame_post_draw
 	var vp := get_viewport().get_visible_rect().size
 	get_viewport().get_texture().get_image().save_png(

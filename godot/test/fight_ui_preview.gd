@@ -20,8 +20,12 @@ func _ready() -> void:
 		push_error("Combat actions have no initial keyboard focus")
 		get_tree().quit(1)
 		return
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png("/private/tmp/fight-ui.png")
+	# No renderer under --headless — skip the screenshot (same hang this
+	# guards against in ui_review_preview.gd's _shot()) so the focus
+	# assertions still run windowless.
+	if DisplayServer.get_name() != "headless":
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("/private/tmp/fight-ui.png")
 	State.fight_result = {"win_str": {7: "Arel"}, "won_cards": [1], "lost_cards": []}
 	fight._show_fight_result()
 	await get_tree().process_frame
@@ -29,8 +33,9 @@ func _ready() -> void:
 		push_error("Result did not capture keyboard focus")
 		get_tree().quit(1)
 		return
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png("/private/tmp/fight-result-ui.png")
+	if DisplayServer.get_name() != "headless":
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("/private/tmp/fight-result-ui.png")
 	fight._close_fight_result()
 	await get_tree().process_frame
 	if get_viewport().gui_get_focus_owner() != fight.get_node("UI/TopBar/EndTurnBtn"):
