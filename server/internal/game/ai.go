@@ -27,6 +27,11 @@ import (
 // Every archetype except Kite then spends LEFTOVER AP on close combat. Kite is
 // excluded on purpose: its plan is to break contact, and trading blows would
 // undo the retreat it just made.
+//
+// The archetype is also the FALLBACK half of the gambit engine (gambit.go): a
+// fighter carrying an authored rule list plays that list first, and everything
+// below is what plays when the list has nothing to say — which, with no rules
+// stored anywhere yet, is still every fighter in every fight.
 
 type aiBehavior int
 
@@ -63,10 +68,31 @@ func (f *Fight) runAITurn(ff *FightFighter) {
 	if f.Phase() != PhaseAction || !f.isCurrentTurn(ff.WireID) {
 		return
 	}
+	// GAMBIT RULES FIRST, archetype second (gambit_eval.go). A fighter whose
+	// owner authored a rule list plays that list; the archetype is the fallback
+	// for a fighter with no rules and for a turn where no rule applies, which is
+	// every fighter in every fight today. Gambits sit on top of this AI, never
+	// instead of it.
+	if !f.gambitTurn(ff) {
+		f.runArchetypeTurn(ff)
+	}
+
+	// If the fighter died mid-turn (kamikaze cast / lethal cell) or its cast
+	// ended the fight, the turn already advanced centrally — don't end it again.
+	if ff.HP <= 0 || f.Phase() != PhaseAction || !f.isCurrentTurn(ff.WireID) {
+		return
+	}
+	f.endTurn(ff.WireID)
+}
+
+// runArchetypeTurn plays the turn from the fighter's derived archetype — the
+// behaviour this AI has always had, and the fallback whenever no gambit rule
+// applies. It does NOT end the turn; runAITurn owns that.
+func (f *Fight) runArchetypeTurn(ff *FightFighter) {
 	behavior := f.classifyAI(ff)
-	// Record WHICH plan this fighter is playing before it plays it. Today that is
-	// the archetype; it is the slot a gambit engine's "rule fired" row occupies,
-	// so the action rows that follow need no change when rules arrive.
+	// Record WHICH plan this fighter is playing before it plays it. Here that is
+	// the archetype; it is the same log slot a fired gambit rule occupies, so the
+	// action rows that follow read identically either way.
 	f.logDecision(ff, decisionBehavior, behavior.String())
 	switch behavior {
 	case behaviorSelfBuff:
@@ -83,13 +109,6 @@ func (f *Fight) runAITurn(ff *FightFighter) {
 		f.moveTowardNearestOpponent(ff)
 		f.closeCombatAI(ff)
 	}
-
-	// If the fighter died mid-turn (kamikaze cast / lethal cell) or its cast
-	// ended the fight, the turn already advanced centrally — don't end it again.
-	if ff.HP <= 0 || f.Phase() != PhaseAction || !f.isCurrentTurn(ff.WireID) {
-		return
-	}
-	f.endTurn(ff.WireID)
 }
 
 // classifyAI derives the fighter's behaviour archetype from its spell. No spell

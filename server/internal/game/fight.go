@@ -127,6 +127,17 @@ type FightFighter struct {
 	// So: if an AI fighter is silently doing nothing but walking and punching, this
 	// field being 0 is the first thing to check.
 	SummonSpellID int32
+	// Gambits is this fighter's ordered gambit rule list (gambit.go), or nil when
+	// it has none. On an AI-driven turn the rules are evaluated BEFORE the
+	// archetype AI, and the archetype plays whenever no rule applies — so nil
+	// here is the state every fighter is in today and behaves exactly as it
+	// always did.
+	//
+	// Only ever set through setGambitRulesJSON, which validates against the
+	// closed vocabulary: the field holds a ruleset this server fully understands
+	// or nothing at all. It is server-side state and never on the wire; phase 3
+	// fills it from a stored ghost snapshot, never from a client's claim.
+	Gambits *gambitRuleSet
 }
 
 // isSummon reports whether this fighter is a summoned creature.

@@ -24,9 +24,11 @@ import "fmt"
 type fightDecisionKind string
 
 const (
-	// decisionBehavior is the AI's archetype choice for the turn — today's
-	// equivalent of "which rule fired". A gambit engine would record the rule
-	// here instead, leaving the action rows below unchanged.
+	// decisionBehavior is WHICH PLAN the fighter is playing: the gambit rule that
+	// fired (gambit_eval.go) when it has an authored rule list, otherwise the
+	// AI's archetype choice. One slot for both, so the action rows below are
+	// unchanged either way and a replay reads a rule-driven turn exactly like an
+	// archetype-driven one.
 	decisionBehavior    fightDecisionKind = "behavior"
 	decisionCast        fightDecisionKind = "cast"
 	decisionMove        fightDecisionKind = "move"
