@@ -17,7 +17,9 @@ const SCOPE_ARENA := 0
 const SCOPE_WORLD := 1
 
 
-## world_id -> {cells: {"x,y": {alt, ground}}, bounds: Rect2i}
+## world_id -> {cells: {Vector2i: {alt, ground, layers?}}, bounds: Rect2i}
+## (the keys are Vector2i, NOT "x,y" strings — a stale doc line here already
+## cost one test that silently parsed garbage and passed)
 static func load_world(world_id: int, scope: int = SCOPE_WORLD) -> Dictionary:
 	var z := Jar.open(Jar.tplg_jar(world_id))
 	if z == null:
@@ -52,7 +54,15 @@ static func load_world(world_id: int, scope: int = SCOPE_WORLD) -> Dictionary:
 				bounds = Rect2i(x, y, 1, 1)
 				have_bounds = true
 			else:
-				bounds = bounds.expand(Vector2i(x, y))
+				# Rect2i's end is EXCLUSIVE, so expand(p) aligns the edge AT p
+				# and leaves p itself outside: has_point(p) comes back false
+				# for the extreme row and column. Expanding to p+1 as well is
+				# what makes the rect actually contain every cell. Caught by
+				# the island exporter, which was silently losing 26 cells on
+				# world 24 and 7 on world 34; fight_view only reads
+				# get_center(), so there it was half a tile of camera offset.
+				bounds = bounds.expand(Vector2i(x, y)).expand(
+					Vector2i(x, y) + Vector2i.ONE)
 	z.close()
 	return {"world": world_id, "cells": cells, "bounds": bounds}
 
