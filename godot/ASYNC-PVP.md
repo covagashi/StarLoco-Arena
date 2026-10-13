@@ -3,7 +3,7 @@
 Design for the PvP-first game StarLoco Arena should become, validated against
 the code that exists today.
 
-**Status: phase 1 is implemented** (deterministic fight RNG + per-turn decision
+**Status: phases 1 and 2 are implemented** (deterministic fight RNG + per-turn decision
 log, server-internal, no wire change). Phases 2-5 are still plan. See the
 Phasing section at the end for what phase 1 actually guarantees — and what it
 deliberately does not.
@@ -140,8 +140,17 @@ budget-random rosters with simple rules — no ML, no generation at runtime).
 
    Scope of the guarantee as it stands: **same seed + same fight record
    (roster, placement, arena) = same fight**, inside `internal/game`.
-2. **Gambit engine**: rule eval on top of `runAITurn`, archetype fallback,
-   JSON schema + unit tests over real spell data.
+2. ~~**Gambit engine**: rule eval on top of `runAITurn`, archetype fallback,
+   JSON schema + unit tests over real spell data.~~ **DONE.** Rules evaluate
+   top-down on a session-less fighter's turn, first match wins, ties broken by
+   rule order and never by map iteration so phase 1's determinism survives. No
+   rule firing — or a rule naming something unexpressible — leaves
+   `classifyAI` driving the turn as before, and a fired rule lands in the
+   phase-1 decision log. The v1 vocabulary stayed closed and versioned
+   exactly as specified above: an unknown kind falls back rather than growing
+   the engine. Casts go through the same range / line-of-sight / AP / cooldown
+   / friendly-fire validation a human cast does. 15 tests over the real spell
+   repertoire; stubbing the evaluator to never fire takes 6 of them red.
 3. **Ghost storage + opcodes** above, admin-visible at first.
 4. **Client**: ghost management panel (rules editor UI is the hard UX part —
    ordered rule list with condition/action pickers), "Fight a ghost" entry,

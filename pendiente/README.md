@@ -100,9 +100,14 @@ restricciones móviles del editor de reglas.
         la clave `elements` — y `zones`, que `topology.gd` no conoce y que casi seguro son
         los disparadores de tipo 8, o sea elementos — es un follow-up barato, no algo
         bloqueado.
-- [ ] Completar el exportador: clave `elements` (+ `zones`) desde `env/<id>.jar`, y el
-      `mapNN.png` de overview, que necesita `assets/mapgfx/` (gitignored, por eso se dejó
-      fuera en vez de emitirlo en blanco; `index.json` lista `not_exported`).
+- [x] Exportador completo salvo la imagen: `elements` y `zones` ya salen de
+      `env/<id>.jar`, offline, con el decodificado cruzado contra `cmd/dumpelements`
+      en las 42 islas (188 elementos, 0 discrepancias de campo). Las **zonas son los
+      elementos de tipo 8**, confirmado — y tienen huella real: las 38 rutas de los
+      datos retail pertenecen a los 9 disparadores de zona, y el decodificador Go las
+      descarta. La del mundo 37 cubre 15 celdas.
+- [ ] `mapNN.png` de overview — lo único que falta, y necesita `assets/mapgfx/`
+      (gitignored, por eso no se emite en blanco; `index.json` lista `not_exported`).
 - [ ] Si se quiere navegación tipo retail sin caminar: `mapDialog` + pines clicables sobre el
       overview (zaap → destinos, card master → tienda). El modelo ya se empuja en
       `_push_map_model`.
