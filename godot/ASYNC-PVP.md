@@ -1,8 +1,12 @@
 # Async PvP — ghost teams & gambits
 
 Design for the PvP-first game StarLoco Arena should become, validated against
-the code that exists today. Nothing here is implemented yet; this is the plan
-to review before building.
+the code that exists today.
+
+**Status: phase 1 is implemented** (deterministic fight RNG + per-turn decision
+log, server-internal, no wire change). Phases 2-5 are still plan. See the
+Phasing section at the end for what phase 1 actually guarantees — and what it
+deliberately does not.
 
 ## Problem
 
@@ -110,8 +114,32 @@ budget-random rosters with simple rules — no ML, no generation at runtime).
 
 ## Phasing
 
-1. **Determinism**: seed `f.rng` from a stored fight seed; add a fight-log
-   hook recording (turn, fighter, rule fired / action taken).
+1. ~~**Determinism**: seed `f.rng` from a stored fight seed; add a fight-log
+   hook recording (turn, fighter, rule fired / action taken).~~ **DONE.**
+   The seed lives on the `Fight` struct, assigned in `FightManager.Create`
+   (the one choke point every creation path funnels through); fights are
+   in-memory only, so this needed no migration. The decision log hooks the
+   **action** choke points rather than the AI, so a human coach's turn leaves
+   the same trail as a server-driven one — `runAITurn` logs the chosen
+   archetype, which is the slot a phase-2 gambit rule drops into.
+
+   The audit behind it corrected this document twice. The claim that the clock
+   seed was "the one structural change determinism requires" was nearly right:
+   the combat path was already deliberately slice-ordered, but
+   `removeEffectByID` ranged a map while decrementing a limit, so map order
+   decided which state a limited remove stripped (B-176, fixed).
+
+   **What the seed does not cover — phase 3 must handle these:**
+   - `pickArenaSeating` uses the **global** `math/rand`, so the seed alone does
+     not reproduce fight *creation*. A replay has to store the arena id beside
+     the seed.
+   - Post-fight card drops run on their own package-global stream, so loot is
+     not reproducible from the fight seed.
+   - `applyTiredness` reads the wall clock, so post-fight meta is time
+     dependent regardless of the seed.
+
+   Scope of the guarantee as it stands: **same seed + same fight record
+   (roster, placement, arena) = same fight**, inside `internal/game`.
 2. **Gambit engine**: rule eval on top of `runAITurn`, archetype fallback,
    JSON schema + unit tests over real spell data.
 3. **Ghost storage + opcodes** above, admin-visible at first.

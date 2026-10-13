@@ -13,6 +13,27 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-176 · Map iteration order decided which state a limited remove stripped
+
+- **Symptom:** none reportable by a player, and that is why it survived — the
+  same spell, cast twice from identical state, could strip a different one of
+  two states. It only became visible once fights were made replayable: a
+  same-seed replay diverged.
+- **Root cause:** `removeEffectByID` (`spell_effects.go`) ranged `ff.stateSrc`
+  — a **map** — while decrementing a finite `limit`. Go randomises map
+  iteration order deliberately, so with two states sharing one source effect
+  id the survivor was whichever the runtime happened to visit second. Not
+  theoretical with shipped data: `states.go` documents the Masqueraider
+  mask-switch spells stripping the previous mask through bundled action-149
+  removes.
+- **Fix:** matches are collected, sorted by state id, then taken. Unlimited
+  removal (`limit = -1`) takes every match and is byte-for-byte unchanged, so
+  only the limited path's tie-break moved.
+- **Verified:** `unit` — `TestRemoveEffectByIDLimitIsDeterministic` runs the
+  limited path 200 times and requires one answer. Found during the
+  randomness audit for deterministic fights, which also confirmed the rest of
+  the combat path was already slice-ordered on purpose.
+
 ### B-175 · The new client test lane hung instead of failing, and CI could never have built it
 
 - **Symptom:** found while dry-running the CI steps against an asset-free copy
