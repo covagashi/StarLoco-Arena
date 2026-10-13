@@ -5,7 +5,7 @@ extends RefCounted
 ## {"<id>": {name, type, set, value, price: {"<ctype>": amt}, unique, tradable}}.
 ## Names are the client's own content.23.<id> strings.
 
-const PATH := "res://assets/gamedata/cards.json"
+const PATH := "gamedata/cards.json"
 
 static var _by_id := {}       # card id int -> Dictionary
 static var _loaded := false
@@ -15,10 +15,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var data: Variant = AssetPaths.read_json(PATH)
 	if data == null:
 		return
 	for cid in data:
@@ -60,7 +57,7 @@ static func all_ids() -> Array:
 
 
 ## --- fusion altars (type-1100 records, server/cmd/dumpcards arg 3) ----------
-const LABS_PATH := "res://assets/gamedata/fusionlabs.json"
+const LABS_PATH := "gamedata/fusionlabs.json"
 
 static var _labs := {}
 
@@ -82,9 +79,8 @@ static func lab_default() -> Dictionary:
 
 
 static func _lab_ensure() -> void:
-	if not _labs.is_empty() or not FileAccess.file_exists(LABS_PATH):
+	if not _labs.is_empty():
 		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(LABS_PATH))
+	var data: Variant = AssetPaths.read_json(LABS_PATH)
 	if data is Dictionary:
 		_labs = data

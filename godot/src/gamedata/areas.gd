@@ -8,7 +8,7 @@ extends RefCounted
 ## and inner-effect list are resolved here — the same rf_2 catalog the retail
 ## client keeps.
 
-const PATH := "res://assets/gamedata/areas.json"
+const PATH := "gamedata/areas.json"
 
 static var _by_id := {}
 static var _loaded := false
@@ -18,10 +18,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var data: Variant = AssetPaths.read_json(PATH)
 	if data == null:
 		return
 	for k in data:

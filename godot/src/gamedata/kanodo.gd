@@ -9,7 +9,7 @@ extends RefCounted
 ## barrier | teleport | item | deadend | empty. "empty" nodes are the path
 ## segments between paying spheres — they are what Reachable may cross.
 
-const PATH := "res://assets/gamedata/spheres.json"
+const PATH := "gamedata/spheres.json"
 
 static var _loaded := false
 static var boards := {}          # int id -> {breed, season, root:[x,y]}
@@ -22,10 +22,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var d: Dictionary = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var d: Dictionary = AssetPaths.read_json(PATH, {})
 	for k in d.get("boards", {}):
 		var b: Dictionary = d.boards[k]
 		boards[int(k)] = b

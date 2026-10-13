@@ -411,9 +411,13 @@ func _sync_preview() -> void:
 	if look == _preview_look:
 		return
 	_preview_look = look
-	if not Direction8.load_idle(_preview,
-			"res://assets/anims/" + lib, _preview_dir):
-		Direction8.load_idle_any(_preview, "res://assets/anims/" + lib)
+	# actorDescriptorLibrary is normally a bare set name ("fighter_-110"),
+	# but tolerate an already-qualified or legacy res:// one.
+	var set_dir := AssetPaths.normalize(lib)
+	if not set_dir.begins_with("anims/"):
+		set_dir = "anims/" + set_dir
+	if not Direction8.load_idle(_preview, set_dir, _preview_dir):
+		Direction8.load_idle_any(_preview, set_dir)
 
 
 func _team_name() -> void:

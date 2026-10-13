@@ -4,7 +4,7 @@ extends RefCounted
 ## assets/gamedata/spells.json — {breed: [{id,name,ap,min,max,value}]}.
 ## Names are the client's own content.3.<id> strings.
 
-const PATH := "res://assets/gamedata/spells.json"
+const PATH := "gamedata/spells.json"
 
 static var _by_breed := {}    # breed int -> Array[Dictionary]
 static var _by_id := {}       # spell id -> Dictionary
@@ -17,10 +17,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var data: Variant = AssetPaths.read_json(PATH)
 	if data == null:
 		return
 	for breed in data:
@@ -30,20 +27,14 @@ static func _ensure() -> void:
 			_by_id[int(s.id)] = s
 	# script-driven cast/impact sfx (tools/asset-import/spell_sounds.py):
 	# the Lua cast script's Sound.playSound ids with their invoke() delays.
-	var sfx_path := "res://assets/gamedata/spell_sfx.json"
-	if FileAccess.file_exists(sfx_path):
-		var sfx: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string(sfx_path))
-		if sfx is Dictionary:
-			for k in sfx.keys():
-				_sfx[int(k)] = sfx[k]
-	var fx_path := "res://assets/gamedata/spell_fx.json"
-	if FileAccess.file_exists(fx_path):
-		var fx: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string(fx_path))
-		if fx is Dictionary:
-			for k in fx.keys():
-				_fx[int(k)] = fx[k]
+	var sfx: Variant = AssetPaths.read_json("gamedata/spell_sfx.json")
+	if sfx is Dictionary:
+		for k in sfx.keys():
+			_sfx[int(k)] = sfx[k]
+	var fx: Variant = AssetPaths.read_json("gamedata/spell_fx.json")
+	if fx is Dictionary:
+		for k in fx.keys():
+			_fx[int(k)] = fx[k]
 
 
 ## Timed sound events for the cast — [[t_ms, soundId], …] from the spell's

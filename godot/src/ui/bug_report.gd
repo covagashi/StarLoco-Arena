@@ -110,7 +110,7 @@ func _ready() -> void:
 func _theme() -> Theme:
 	var result := Theme.new()
 	var font := FontFile.new()
-	font.load_dynamic_font("res://assets/gui/fonts/TAHOMA.TTF")
+	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/TAHOMA.TTF"))
 	result.default_font = font
 	result.default_font_size = 16
 	result.set_stylebox("panel", "AcceptDialog", _surface(Color("292c20"), Color("ad965a"), 2))

@@ -16,7 +16,7 @@ extends RefCounted
 ## [challengeId][challengeModes[id]], 2 = 22003 criterion) then navigates to
 ## `next` — 0 closes the dialog.
 
-const PATH := "res://assets/gamedata/npcdialogs.json"
+const PATH := "gamedata/npcdialogs.json"
 
 static var _names := {}       # nameId int -> String (content.29: names + texts)
 static var _chal_names := {}  # challenge id int -> String (content.30)
@@ -47,10 +47,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var data: Variant = AssetPaths.read_json(PATH)
 	if not data is Dictionary:
 		return
 	for nid in _dict(data.get("names")):

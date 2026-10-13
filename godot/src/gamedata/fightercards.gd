@@ -6,7 +6,7 @@ extends RefCounted
 ## table (cards.gd — same id space); this file only carries what the fight UI
 ## needs to offer the weapon attack (server jb_2.isUsable mirror).
 
-const PATH := "res://assets/gamedata/fightercards.json"
+const PATH := "gamedata/fightercards.json"
 const Cards := preload("res://src/gamedata/cards.gd")
 
 static var _by_id := {}
@@ -17,10 +17,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var data: Variant = AssetPaths.read_json(PATH)
 	if data is Dictionary:
 		for k in data.keys():
 			_by_id[int(k)] = data[k]

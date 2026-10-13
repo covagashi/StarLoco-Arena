@@ -5619,7 +5619,7 @@ func _style_fight_debrief() -> void:
 	panel.offset_bottom = 240
 	var theme := Theme.new()
 	var font := FontFile.new()
-	font.load_dynamic_font("res://assets/gui/fonts/TAHOMA.TTF")
+	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/TAHOMA.TTF"))
 	theme.default_font = font
 	theme.default_font_size = 16
 	var surface := StyleBoxFlat.new()

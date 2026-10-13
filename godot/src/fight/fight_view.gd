@@ -28,8 +28,11 @@ const LobbyPanel := preload("res://src/ui/lobby_panel.gd")
 ## Player coach paper-doll: Players/700<sex>.anm body + AnimCommunes
 ## gestures, channel-tinted per coach (ch1 skin=apH, ch2 hair=agl_0).
 ## coach_805 was an NPC bird used as a stand-in — gone.
-const COACH_SET := "res://assets/anims/coach_7000"
-const FIGHTER_SET := "res://assets/anims/fighter_%s"
+## Anim set dirs are LOGICAL names ("anims/coach_7000") — AnmSprite
+## resolves them through AssetPaths, so these strings hold in an
+## exported build where the frames ship beside the executable.
+const COACH_SET := "anims/coach_7000"
+const FIGHTER_SET := "anims/fighter_%s"
 
 ## Breed -> Players/<file>.anm (client zh_1.cdN): entry i = breed i/2+1,
 ## sex i%2. 7000/7001 are special fighter skins appended at the end.
@@ -2336,7 +2339,7 @@ func _coach_look(coach_id: int) -> Dictionary:
 
 
 func _coach_set(coach_id: int) -> String:
-	return "res://assets/anims/coach_700%d" % int(
+	return "anims/coach_700%d" % int(
 		_coach_look(coach_id).get("sex", 0))
 
 
@@ -2353,7 +2356,7 @@ func _coach_tints(coach_id: int) -> Dictionary:
 func _anim_set(f: Dictionary) -> String:
 	var look := int(f.get("look", 0))
 	if look > 0:
-		return "res://assets/anims/npc_%d" % look
+		return "anims/npc_%d" % look
 	if look < 0:
 		return FIGHTER_SET % str(look)
 	var breed := int(f.get("breed", 1))
@@ -2365,7 +2368,7 @@ func _anim_set(f: Dictionary) -> String:
 ## Coach fallback check — _anim_set returns coach_700<sex>, so an exact
 ## COACH_SET compare leaks the female paper-doll into fighter probes.
 static func _is_coach_set(set_dir: String) -> bool:
-	return set_dir.begins_with("res://assets/anims/coach_")
+	return AssetPaths.normalize(set_dir).begins_with("anims/coach_")
 
 
 ## Fighter channel tints (ee_2): skin/hair/eye draw from tn_0 — the
@@ -2516,7 +2519,7 @@ func _play_cast(fid: int, sid: int) -> void:
 		sets.append(own)
 	var breed := int(f.get("breed", 0))
 	if breed >= 1:
-		sets.append("res://assets/anims/animsort_%d" % (breed * 10))
+		sets.append("anims/animsort_%d" % (breed * 10))
 	for set_dir in sets:
 		var dir := 1 if int(DIR_MAP.get(int(_actor_dir.get(fid, 1)), 1)) <= 2 else 5
 		for base in (["AnimSort-%s" % fr] if not fr.is_empty() else []) \
@@ -2659,7 +2662,7 @@ func _show_fight_result() -> bool:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 28)
 	var title_font := FontFile.new()
-	title_font.load_dynamic_font("res://assets/gui/fonts/COPRGTB.TTF")
+	title_font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
 	title.add_theme_font_override("font", title_font)
 	column.add_child(title)
 	var scroll := ScrollContainer.new()

@@ -1,8 +1,9 @@
 extends Node2D
 
 ## Painted map-art layer, fed by tools/asset-import/map_gfx.py output:
-##   res://assets/mapgfx/<world>.json  {tex:{id:{w,h}}, sprites:[{tex,sx,sy,w,h,uv,z}]}
-##   res://assets/mapgfx/tex/<gfx>.png
+##   <asset root>/mapgfx/<world>.json  {tex:{id:{w,h}}, sprites:[{tex,sx,sy,w,h,uv,z}]}
+##   <asset root>/mapgfx/tex/<gfx>.png
+## Both are read raw through AssetPaths (import output, not resources).
 ## Each sprite is an atlas region drawn at an authored scene position,
 ## z-sorted by the retail render key (ctu = y<<32|x<<14|intra). Live actors
 ## register via register_dynamic() and interleave into the same order —
@@ -49,21 +50,18 @@ func _process(_delta: float) -> void:
 
 func load_world(world_id: int) -> bool:
 	clear()
-	var json_path := "res://assets/mapgfx/%d.json" % world_id
-	if not FileAccess.file_exists(json_path):
+	var rel := "mapgfx/%d.json" % world_id
+	if not AssetPaths.exists(rel):
 		return false
-	var meta: Dictionary = JSON.parse_string(
-		FileAccess.get_file_as_string(json_path))
+	var meta: Dictionary = AssetPaths.read_json(rel, {})
 	var sprites: Array = meta.get("sprites", [])
 	sprites.sort_custom(func(a, b): return a.z < b.z)
 	var tex_meta: Dictionary = meta.get("tex", {})
 	for gfx in tex_meta:
 		# JSON object keys arrive as strings; sprite.tex is numeric
-		var p := "res://assets/mapgfx/tex/%s.png" % gfx
-		if FileAccess.file_exists(p):
-			var img := Image.load_from_file(p)
-			if img != null:
-				_tex[int(gfx)] = ImageTexture.create_from_image(img)
+		var img := AssetPaths.load_image("mapgfx/tex/%s.png" % gfx)
+		if img != null:
+			_tex[int(gfx)] = ImageTexture.create_from_image(img)
 	for s in sprites:
 		var t: Texture2D = _tex.get(int(s.tex))
 		if t == null:

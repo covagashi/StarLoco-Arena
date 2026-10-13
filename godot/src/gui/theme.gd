@@ -1,13 +1,17 @@
 class_name GuiTheme
 extends RefCounted
 ## XULOR2 theme loader — parses assets/gui/xml/theme/default.xml.
+## Every path in here is a LOGICAL asset name ("gui/images/foo.png")
+## resolved through AssetPaths at the point of the read: the retail GUI
+## tree is asset-import output and is read raw (XMLParser / Image), so it
+## cannot rely on res:// existing in an exported build.
 ## Resource registries: textures/pixmaps/pixmap_borders/pixmap_backgrounds/
 ## colors/fonts/cursors, plus per-widget theme elements keyed "typeStyle"
 ## (e.g. "buttonGreen") holding per-state appearance dicts.
 
-const GUI_ROOT := "res://assets/gui/"
+const GUI_ROOT := "gui/"
 
-var textures := {}        # id -> image path (res://...png)
+var textures := {}        # id -> logical image name ("gui/...png")
 var pixmaps := {}         # id -> {texture: String, rect: Rect2, flip_h: bool, flip_v: bool}
 var pixmap_borders := {}  # id -> {pos_name -> {texture, rect, flip_h, flip_v}}
 var pixmap_bgs := {}      # id -> {pixmap: {...}, scaled: bool, enabled: bool}
@@ -17,14 +21,14 @@ var cursors := {}
 var elements := {}        # "buttonGreen" -> {margin: Insets, states: {state -> appearance_dict}}
 var tooltip := {}
 
-var _tex_cache := {}      # res path -> Texture2D
+var _tex_cache := {}      # logical image name -> Texture2D
 var _atlas_cache := {}    # "tex|x,y,w,h" -> AtlasTexture
 var _font_cache := {}     # font id -> FontFile
-var _image_index := {}    # basename.png -> res path (built lazily)
+var _image_index := {}    # basename.png -> logical name (built lazily)
 
 
-func _init(path := GUI_ROOT + "xml/theme/default.xml") -> void:
-	load_theme(path)
+func _init(rel := GUI_ROOT + "xml/theme/default.xml") -> void:
+	load_theme(rel)
 	_install_app_skin()
 
 
@@ -72,8 +76,7 @@ func close_icon(hover: bool) -> Texture2D:
 
 func _app_skin_pixmap(file: String) -> Dictionary:
 	var id := "__appSkin_" + file
-	var path := GUI_ROOT + "misc/appSkin/" + file + ".png"
-	textures[id] = path
+	textures[id] = GUI_ROOT + "misc/appSkin/" + file + ".png"
 	var tex := texture(id)
 	if tex == null:
 		return {}
@@ -81,7 +84,8 @@ func _app_skin_pixmap(file: String) -> Dictionary:
 		"flip_h": false, "flip_v": false}
 
 
-func load_theme(path: String) -> void:
+func load_theme(rel: String) -> void:
+	var path := AssetPaths.resolve(rel)
 	var p := XMLParser.new()
 	if p.open(path) != OK:
 		push_error("[guitheme] cannot open " + path)
@@ -259,10 +263,10 @@ func font(id: String) -> Font:
 	var d: Dictionary = fonts.get(id, {})
 	var f := FontFile.new()
 	var p: String = d.get("path", "")
-	if p != "" and FileAccess.file_exists(GUI_ROOT + p):
-		f.load_dynamic_font(GUI_ROOT + p)
+	if p != "" and AssetPaths.exists(GUI_ROOT + p):
+		f.load_dynamic_font(AssetPaths.resolve(GUI_ROOT + p))
 	else:
-		f.load_dynamic_font(GUI_ROOT + "fonts/TAHOMA.TTF")
+		f.load_dynamic_font(AssetPaths.resolve(GUI_ROOT + "fonts/TAHOMA.TTF"))
 	_font_cache[id] = f
 	return f
 
@@ -282,8 +286,8 @@ func texture(id: String) -> Texture2D:
 	if _tex_cache.has(p):
 		return _tex_cache[p]
 	var t: Texture2D = null
-	var img := Image.new()
-	if img.load(p) == OK:
+	var img := AssetPaths.load_image(p)
+	if img != null:
 		t = ImageTexture.create_from_image(img)
 	_tex_cache[p] = t
 	return t
@@ -402,25 +406,29 @@ func _merge_appearance(base: Dictionary, over: Dictionary) -> Dictionary:
 	return out
 
 
+## Theme "path" attribute -> logical asset name: "images/login.tga"
+## becomes "gui/images/theme/images/login.png". Stays logical — the
+## root is picked later, when texture() actually reads it.
 func _resolve_image(path: String) -> String:
-	# "images/loginBackground.tga" -> assets/gui/images/theme/images/loginBackground.png
 	var bn := path.get_file().get_basename() + ".png"
 	var direct := GUI_ROOT + "images/theme/images/" + bn
-	if FileAccess.file_exists(direct):
+	if AssetPaths.exists(direct):
 		return direct
 	if _image_index.is_empty():
 		_scan_images(GUI_ROOT + "images")
 	return _image_index.get(bn, direct)
 
 
-func _scan_images(dir_path: String) -> void:
-	var d := DirAccess.open(dir_path)
+## Walks logical dirs (resolved one level at a time) so the index it
+## builds holds logical names too.
+func _scan_images(rel_dir: String) -> void:
+	var d := DirAccess.open(AssetPaths.dir(rel_dir))
 	if d == null:
 		return
 	d.list_dir_begin()
 	var f := d.get_next()
 	while f != "":
-		var p := dir_path + "/" + f
+		var p := rel_dir + "/" + f
 		if d.current_is_dir():
 			if not f.begins_with("."):
 				_scan_images(p)

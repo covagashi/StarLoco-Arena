@@ -5,7 +5,7 @@ extends RefCounted
 ## The wire payload (opcode 200) carries position again; this table supplies
 ## the element KIND (type) and descriptor, which never travel on the wire.
 
-const PATH := "res://assets/gamedata/elements.json"
+const PATH := "gamedata/elements.json"
 
 ## env type (asi factory) -> display label. Same numbering as server
 ## internal/gamedata/envmaps.go EnvType* constants.
@@ -24,10 +24,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var data: Variant = AssetPaths.read_json(PATH)
 	if data == null:
 		return
 	for w in data:

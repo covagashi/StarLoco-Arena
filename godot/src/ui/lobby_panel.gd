@@ -40,7 +40,7 @@ func _ready() -> void:
 	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var font := FontFile.new()
-	font.load_dynamic_font("res://assets/gui/fonts/COPRGTB.TTF")
+	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
 	title.add_theme_font_override("font", font)
 	close_button = button(header, I18n.t("panel.close"), func(): closed.emit())
 	close_button.name = "Close"
@@ -249,7 +249,7 @@ func _surface(fill: Color, border: Color, width := 1, margin := 10) -> StyleBoxF
 func _theme() -> Theme:
 	var result := Theme.new()
 	var font := FontFile.new()
-	font.load_dynamic_font("res://assets/gui/fonts/TAHOMA.TTF")
+	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/TAHOMA.TTF"))
 	result.default_font = font
 	result.default_font_size = 17
 	for type in ["Label", "Button", "OptionButton", "LineEdit", "Tree", "CheckButton", "CheckBox"]:

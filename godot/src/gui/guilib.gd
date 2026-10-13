@@ -4,7 +4,9 @@ extends RefCounted
 ## `dofusarena:*` widget events are forwarded to `event_sink` callable
 ## (main.gd / session code registers it).
 
-const GUI_ROOT := "res://assets/gui/"
+## Logical prefix — AssetPaths.resolve() turns it into a real path, so the
+## retail XML tree can ship beside the executable instead of in the .pck.
+const GUI_ROOT := "gui/"
 
 var theme: GuiTheme
 var model := GuiModel.new()
@@ -22,15 +24,13 @@ func _init(lang := "es") -> void:
 
 func load_i18n(lang: String) -> void:
 	var p := GUI_ROOT + "i18n_%s.json" % lang
-	if not FileAccess.file_exists(p):
+	if not AssetPaths.exists(p):
 		p = GUI_ROOT + "i18n_en.json"
-	var f := FileAccess.open(p, FileAccess.READ)
-	if f == null:
-		push_error("[guilib] missing " + p)
+	if not AssetPaths.exists(p):
+		push_error("[guilib] missing " + AssetPaths.resolve(p))
 		return
-	i18n = JSON.parse_string(f.get_as_text())
-	if i18n == null:
-		i18n = {}
+	var parsed: Variant = AssetPaths.read_json(p)
+	i18n = parsed if parsed is Dictionary else {}
 	loader.i18n = i18n
 
 
@@ -38,10 +38,13 @@ func load_i18n(lang: String) -> void:
 func open_dialog(name: String, model_values := {}) -> GWidget:
 	for k in model_values:
 		model.values[k] = model_values[k]
-	var path := GUI_ROOT + "xml/dialogs/%s.xml" % name
-	if not ResourceLoader.exists(path) and not FileAccess.file_exists(path):
-		path = GUI_ROOT + "xml/%s.xml" % name
-	var root := loader.load_file(path)
+	var rel := GUI_ROOT + "xml/dialogs/%s.xml" % name
+	if not AssetPaths.exists(rel):
+		rel = GUI_ROOT + "xml/%s.xml" % name
+	# The loader resolves <include>/<template> siblings against this path's
+	# base dir, so hand it the RESOLVED one — the whole tree then comes out
+	# of the root that actually holds the dialog.
+	var root := loader.load_file(AssetPaths.resolve(rel))
 	return root
 
 

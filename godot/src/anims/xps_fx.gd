@@ -17,25 +17,29 @@ extends Node2D
 ## spawn_projectile() returns a node whose `arrived` signal drives the
 ## script's invoke(time, …) impact scheduling.
 
-const INDEX_PATH := "res://assets/gamedata/xps_index.json"
-const DOC_DIR := "res://assets/gamedata/xps"
-const TEX_DIR := "res://assets/fx"
+## Logical asset names — resolved through AssetPaths so the same strings
+## work in the editor and against the `assets/` folder a release ships
+## beside the executable.
+const INDEX_PATH := "gamedata/xps_index.json"
+const DOC_DIR := "gamedata/xps"
+const TEX_DIR := "fx"
 
 const G := 9.81           # avw_0 dhf — projectile gravity (cells/s²)
 const ALT_Z := 8.6        # avw_0 — physics-z -> altitude units
 
 static var _index: Dictionary = {}
 static var _loaded := false
+## xps texture id -> Texture2D. The particle PNGs are read raw (they are
+## import-pipeline output, not project resources), so cache the decode —
+## one id is reused by every cast of the spell.
+static var _tex_cache := {}
 
 
 static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(INDEX_PATH):
-		return
-	var parsed: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(INDEX_PATH))
+	var parsed: Variant = AssetPaths.read_json(INDEX_PATH)
 	if parsed is Dictionary:
 		_index = parsed
 
@@ -62,10 +66,7 @@ static func pick_id(id: Variant, dir8: int) -> int:
 
 
 static func _load_doc(xps_id: int) -> Dictionary:
-	var path := "%s/%d.json" % [DOC_DIR, xps_id]
-	if not FileAccess.file_exists(path):
-		return {}
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var parsed: Variant = AssetPaths.read_json("%s/%d.json" % [DOC_DIR, xps_id])
 	return parsed if parsed is Dictionary else {}
 
 
@@ -89,7 +90,7 @@ static func _build(xps_id: int, flying := false,
 		tex_id = xps_id
 	var dur_ms := int(meta.get("durationMs", 1200))
 	var dst_blend := int(meta.get("dstBlend", 771))
-	var tex := load("%s/%d.png" % [TEX_DIR, tex_id]) as Texture2D
+	var tex := _texture(tex_id)
 	if tex == null:
 		return null
 
@@ -351,6 +352,20 @@ class _Projectile:
 			if (nx - position).length() > 0.01:
 				body.rotation = (nx - position).angle() \
 					- deg_to_rad(float(body.get_meta("df0", 0.0)))
+
+
+## The emitter sheet for an xps texture id — null when the fx tree was
+## not imported, which is a silent no-burst rather than an error (the
+## spell's damage numbers still land).
+static func _texture(tex_id: int) -> Texture2D:
+	if _tex_cache.has(tex_id):
+		return _tex_cache[tex_id]
+	var img := AssetPaths.load_image("%s/%d.png" % [TEX_DIR, tex_id])
+	var tex: Texture2D = null
+	if img != null:
+		tex = ImageTexture.create_from_image(img)
+	_tex_cache[tex_id] = tex
+	return tex
 
 
 static func _additive_mat() -> CanvasItemMaterial:

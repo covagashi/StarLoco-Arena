@@ -7,7 +7,7 @@ extends RefCounted
 ## hit/heal never produces a chip). Params matter for dispel: action 62's
 ## params[0] is the effectId it strips (server removeEffectByID).
 
-const PATH := "res://assets/gamedata/effects.json"
+const PATH := "gamedata/effects.json"
 
 static var _by_id := {}
 static var _loaded := false
@@ -17,10 +17,7 @@ static func _ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if not FileAccess.file_exists(PATH):
-		return
-	var data: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(PATH))
+	var data: Variant = AssetPaths.read_json(PATH)
 	if data == null:
 		return
 	for k in data:

@@ -7,9 +7,12 @@ extends Node
 ##   3. OS.get_locale() prefix — "es_ES" -> "es"
 ##   4. "en" fallback (the tables always carry an English row)
 ##
-## Tables live in assets/i18n/ui_<lang>.json: flat {key: text} maps. A missing
-## key falls back to English, then to the key itself so a typo is visible
-## rather than silent. `I18n.t("key")` / `I18n.t("key", {fmt args})`.
+## Tables live in assets/i18n/ui_<lang>.json: flat {key: text} maps, read
+## through AssetPaths like every other asset (these two are tracked in git,
+## so res:// normally wins — the resolver only matters for an operator who
+## overrides them beside the executable). A missing key falls back to
+## English, then to the key itself so a typo is visible rather than silent.
+## `I18n.t("key")` / `I18n.t("key", {fmt args})`.
 ##
 ## set_locale writes BOTH stores so the retail XML layer (gui_settings.cfg
 ## [gui] language) and the native panels stay on the same language. The
@@ -20,7 +23,7 @@ signal locale_changed(lang: String)
 const State := preload("res://src/state.gd")
 const LANGS := ["es", "en", "fr"]
 const NAMES := {"es": "Español", "en": "English", "fr": "Français"}
-const _PATH := "res://assets/i18n/ui_%s.json"
+const _PATH := "i18n/ui_%s.json"
 
 var lang := ""
 var _table := {}
@@ -68,11 +71,8 @@ func _load() -> void:
 	_fallback = _read(_PATH % "en")
 
 
-func _read(path: String) -> Dictionary:
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return {}
-	var d: Variant = JSON.parse_string(f.get_as_text())
+func _read(rel: String) -> Dictionary:
+	var d: Variant = AssetPaths.read_json(rel)
 	return d if d is Dictionary else {}
 
 

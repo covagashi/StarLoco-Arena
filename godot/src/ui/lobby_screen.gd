@@ -57,13 +57,13 @@ func _init() -> void:
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_box)
 	var bg := TextureRect.new()
-	bg.texture = ImageTexture.create_from_image(Image.load_from_file(
-		ProjectSettings.globalize_path("res://assets/ui/lobby_bg.png")))
+	bg.texture = ImageTexture.create_from_image(
+		AssetPaths.load_image("ui/lobby_bg.png"))
 	bg.size = REF
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.add_child(bg)
 	_font = FontFile.new()
-	_font.load_dynamic_font("res://assets/gui/fonts/COPRGTB.TTF")
+	_font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
 	_name = _label(Rect2(60, 158, 280, 36), "", 25)
 	_level = _label(Rect2(60, 194, 280, 26), "", 16)
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
@@ -90,8 +90,8 @@ func _init() -> void:
 	next.tooltip_text = _t("lobby.rotate.tip")
 	_social_btn = _button(Rect2(120, 90, 120, 40), "",
 		func(): dialog_requested.emit("socialDialog"), 16)
-	var icons := ImageTexture.create_from_image(Image.load_from_file(
-		ProjectSettings.globalize_path("res://assets/ui/lobby_icons.png")))
+	var icons := ImageTexture.create_from_image(
+		AssetPaths.load_image("ui/lobby_icons.png"))
 	for i in range(MENUS.size()):
 		var entry: Array = MENUS[i]
 		var button := _button(Rect2(732 + (i % 3) * 164, 526 + (i / 3) * 43, 158, 37),
@@ -153,7 +153,7 @@ func _sync() -> void:
 	if look != _look:
 		_look = look
 		_spr.tints = Palettes.coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
-		var lib := "res://assets/anims/coach_700%d" % int(coach.get("sex", 0))
+		var lib := "anims/coach_700%d" % int(coach.get("sex", 0))
 		if not Direction8.load_idle(_spr, lib, _dir):
 			Direction8.load_idle_any(_spr, lib)
 

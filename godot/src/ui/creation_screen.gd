@@ -43,9 +43,8 @@ func _init() -> void:
 	add_child(_box)
 
 	var bg := TextureRect.new()
-	var img := Image.new()
-	if img.load(ProjectSettings.globalize_path(
-			"res://assets/ui/creation_bg.png")) == OK:
+	var img := AssetPaths.load_image("ui/creation_bg.png")
+	if img != null:
 		bg.texture = ImageTexture.create_from_image(img)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -53,7 +52,7 @@ func _init() -> void:
 	_box.add_child(bg)
 
 	var font := FontFile.new()
-	font.load_dynamic_font("res://assets/gui/fonts/COPRGTB.TTF")
+	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
 	var plain := StyleBoxEmpty.new()
 
 	name_edit = LineEdit.new()
@@ -147,9 +146,10 @@ func _sync() -> void:
 
 
 func _sync_doll(lc: Dictionary) -> void:
-	var lib := str(lc.get("actorDescriptorLibrary", "coach_7000"))
-	if not lib.begins_with("res://"):
-		lib = "res://assets/anims/" + lib
+	var lib := AssetPaths.normalize(str(lc.get("actorDescriptorLibrary",
+		"coach_7000")))
+	if not lib.begins_with("anims/"):
+		lib = "anims/" + lib
 	var dir: int = int(lc.get("actorDirection", 3))
 	if lc.get("actorMaterial") is Dictionary:
 		_spr.tints = lc["actorMaterial"]

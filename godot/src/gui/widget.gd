@@ -832,23 +832,25 @@ func _set_item_texture(url: String) -> void:
 	var bn := url.get_file()
 	if bn.get_extension() == "":
 		bn += ".png"
-	var p := "res://assets/gui/images/" + bn
 	var px := {"texture": "", "rect": Rect2()}
-	var img := Image.new()
-	for cand in [p, "res://assets/gui/images/spells/" + bn,
-			"res://assets/gui/images/spells/icons/" + bn,
-			"res://assets/gui/images/breeds/fightTimeline/" + bn,
-			"res://assets/gui/images/equipments/coachs/illustrations/" + bn,
-			"res://assets/gui/images/equipments/coachs/icons/" + bn,
-			"res://assets/gui/images/equipments/fighters/illustrations/" + bn,
-			"res://assets/gui/images/equipments/fighters/icons/" + bn,
-			"res://assets/gui/images/equipments/" + bn,
-			"res://assets/gui/images/breeds/" + bn,
-			"res://assets/gui/images/miscellaneous/" + bn]:
-		if FileAccess.file_exists(cand):
-			if img.load(cand) == OK:
-				_appear("default")["pixmap_tex"] = ImageTexture.create_from_image(img)
-				return
+	# Logical names — AssetPaths probes each candidate in every asset root,
+	# so an icon can come from the pack while the rest of the retail GUI
+	# tree sits beside the executable.
+	for cand in ["gui/images/" + bn,
+			"gui/images/spells/" + bn,
+			"gui/images/spells/icons/" + bn,
+			"gui/images/breeds/fightTimeline/" + bn,
+			"gui/images/equipments/coachs/illustrations/" + bn,
+			"gui/images/equipments/coachs/icons/" + bn,
+			"gui/images/equipments/fighters/illustrations/" + bn,
+			"gui/images/equipments/fighters/icons/" + bn,
+			"gui/images/equipments/" + bn,
+			"gui/images/breeds/" + bn,
+			"gui/images/miscellaneous/" + bn]:
+		var img := AssetPaths.load_image(cand)
+		if img != null:
+			_appear("default")["pixmap_tex"] = ImageTexture.create_from_image(img)
+			return
 	# theme texture id fallback
 	if guitheme != null and guitheme.textures.has(url):
 		_appear("default")["pixmap"] = {"texture": url,
@@ -873,9 +875,11 @@ func _viewer_set(k: String, v) -> void:
 		_viewer_spr.foot_pivot = true   # pin feet like the retail portrait
 	_viewer_place()
 	if _viewer_spr != null and _viewer["lib"] != "":
-		var set_dir := str(_viewer["lib"])
-		if not set_dir.begins_with("res://"):
-			set_dir = "res://assets/anims/" + set_dir
+		# The model may carry a bare set name ("coach_7000"), a logical one
+		# ("anims/coach_7000") or a legacy "res://assets/anims/…" string.
+		var set_dir := AssetPaths.normalize(str(_viewer["lib"]))
+		if not set_dir.begins_with("anims/"):
+			set_dir = "anims/" + set_dir
 		var anim := str(_viewer["anim"]) if _viewer["anim"] != "" else "AnimStatique"
 		if _viewer["material"] is Dictionary:
 			_viewer_spr.tints = _viewer["material"]

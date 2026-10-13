@@ -28,8 +28,8 @@ func _init() -> void:
 	add_child(_box)
 
 	var bg := TextureRect.new()
-	var img := Image.new()
-	if img.load(ProjectSettings.globalize_path("res://assets/ui/login_bg.png")) == OK:
+	var img := AssetPaths.load_image("ui/login_bg.png")
+	if img != null:
 		bg.texture = ImageTexture.create_from_image(img)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -37,7 +37,7 @@ func _init() -> void:
 	_box.add_child(bg)
 
 	var font := FontFile.new()
-	font.load_dynamic_font("res://assets/gui/fonts/COPRGTB.TTF")
+	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
 	var plain := StyleBoxEmpty.new()
 
 	name_edit = _field(R_NAME, false, font, plain)
