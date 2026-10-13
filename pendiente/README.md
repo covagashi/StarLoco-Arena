@@ -86,11 +86,23 @@ restricciones móviles del editor de reglas.
 
 ## 5. Ideas / para tu server Dofus
 
-- [ ] **Exportador de islas** (`godot/tools/export_islands.gd` — por hacer; hoy `tools/` solo
-      tiene los generadores de fondos `make_*_bg.py`): por cada isla (ids 23–109, 34 total)
-      volcar JSON `{cells, layers, elements, zones}` + `mapNN.png` de overview. Materia prima
-      para mapas de eventos. La topología ya está parseada en `src/maps/topology.gd`;
-      los elementos llegan por 200/206 a `State.elements`.
+- [x] **Exportador de islas** — `godot/tools/export_islands.gd`, offline, desde los jars
+      versionados de `server/data-dist/maps/`. 42 islas, 4,5 MB, salida idéntica entre
+      corridas. Dos correcciones a lo que decía esta línea antes:
+      - **No son 34 islas, son 42** (23–35, 37, 78–80, 85–109). Hay 114 jars de topología
+        y nada en los datos dice cuáles son islas, así que el exportador clasifica: es isla
+        si no trae mapa de combate y tiene al menos una celda con suelo. Quedan fuera 40
+        arenas y 4 ids sin suelo, con el motivo anotado por id en `index.json`. Algunas de
+        las 42 son muñones (la 29 tiene 29 celdas; 30–33 son salas sueltas), y el índice
+        lleva los tamaños para filtrar. De dónde salía el 34 no se pudo reproducir.
+      - **Los elementos NO necesitan servidor.** Están offline en
+        `data-dist/maps/env/<id>.jar` y `server/cmd/genelements` ya los decodifica. Añadir
+        la clave `elements` — y `zones`, que `topology.gd` no conoce y que casi seguro son
+        los disparadores de tipo 8, o sea elementos — es un follow-up barato, no algo
+        bloqueado.
+- [ ] Completar el exportador: clave `elements` (+ `zones`) desde `env/<id>.jar`, y el
+      `mapNN.png` de overview, que necesita `assets/mapgfx/` (gitignored, por eso se dejó
+      fuera en vez de emitirlo en blanco; `index.json` lista `not_exported`).
 - [ ] Si se quiere navegación tipo retail sin caminar: `mapDialog` + pines clicables sobre el
       overview (zaap → destinos, card master → tienda). El modelo ya se empuja en
       `_push_map_model`.
