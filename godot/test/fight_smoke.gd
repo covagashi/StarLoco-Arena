@@ -156,22 +156,23 @@ func _on_placement() -> void:
 
 ## turn_began policy for the harness: one short move request, then pass.
 func _on_fight_turn(fid: int, ours: bool) -> void:
-	# Timeline check (runs on every 8104): chips = 8000 timeline size and
-	# exactly the acting fighter's chip pressed.
+	# Timeline check (runs on every 8104): one HUD card per 8000 timeline
+	# entry (S17 side columns) and exactly the acting fighter's card active.
 	if not _timeline_checked and fight_scene != null:
 		_timeline_checked = true
-		var tl: HBoxContainer = fight_scene.get_node("UI/TopBar/Timeline")
+		var hud = fight_scene._fight_hud
+		fight_scene._push_fight_hud()   # the push is deferred; force it
 		var want: Array = State.fight_data.get("timeline", [])
-		var pressed := 0
-		for i in tl.get_child_count():
-			if tl.get_child(i).button_pressed:
-				pressed += 1
-		print("[smoke] TIMELINE chips=%d expected=%d pressed=%d cur=%d" % [
-			tl.get_child_count(), want.size(), pressed, fid])
-		if tl.get_child_count() != want.size() or want.size() == 0:
-			push_error("timeline chips missing")
-		if pressed != 1:
-			push_error("timeline: acting chip not highlighted")
+		var active := 0
+		for id in hud.cards:
+			if hud.cards[id].active:
+				active += 1
+		print("[smoke] TIMELINE cards=%d expected=%d active=%d cur=%d" % [
+			hud.cards.size(), want.size(), active, fid])
+		if hud.cards.size() != want.size() or want.size() == 0:
+			push_error("timeline cards missing")
+		if active != 1:
+			push_error("timeline: acting card not highlighted")
 	# Turn clock — every 8104 (re)starts the 30s countdown (server turnClock);
 	# the label itself paints next frame so we only check the counter here.
 	if fight_scene != null and fight_scene._turn_left <= 0.0:
@@ -299,9 +300,13 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			for c in fspr.get_children():
 				if c is Label and not c.name in ["Plate", "Buffs"]:
 					floats += 1
+		# the line is localised — compare against the table, not English
+		# (autoloads have no global identifier under -s: fetch the node)
+		var tackled_line: String = root.get_node("I18n").t("fight.log_tackled", {"name":
+			str(State.fighters.get(fid, {}).get("name", ""))})
 		print("[smoke] TACKLE/OUCH chat=%s floats=%d" % [
-			chat_txt.contains("has been tackled"), floats])
-		if not chat_txt.contains("has been tackled"):
+			chat_txt.contains(tackled_line), floats])
+		if not chat_txt.contains(tackled_line):
 			push_error("4506 did not log the tackled line")
 		if floats < 2:
 			push_error("4506/4902 cue floats missing (got %d)" % floats)

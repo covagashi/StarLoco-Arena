@@ -13,6 +13,7 @@ const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
 const TeamAura := preload("res://src/fight/team_aura.gd")
+const FightHud := preload("res://src/fight/fight_hud.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
 const CardsDB := preload("res://src/gamedata/cards.gd")
@@ -73,26 +74,31 @@ var _onebit := false
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
 @onready var _actors: Node2D = $Actors
-@onready var _end_turn: Button = $UI/TopBar/EndTurnBtn
-@onready var _face_btn: Button = $UI/TopBar/FaceBtn
-@onready var _timeline: HBoxContainer = $UI/TopBar/Timeline
-@onready var _turn_timer: Label = $UI/TopBar/TurnTimer
+@onready var _end_turn: Button = $UI/PassBtn
+@onready var _face_btn: Button = $UI/Menu/FaceBtn
+@onready var _chat_btn: Button = $UI/Menu/ChatBtn
+var _fight_hud: FightHud   # S17 cards + medallion + turn banner (created in _ready)
+var _name_hover := -1      # fighter whose name shows over the map (hover)
+var _card_hover := -1      # fighter whose card the pointer is on
 var _dragging := false
 var _press_pos := Vector2.ZERO
 var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 
 
 func _ready() -> void:
+	_onebit = ArtStyle.onebit()
 	_skin_fight_ui()
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
 	_face_btn.pressed.connect(_on_face_pressed)
-	_end_turn.text = I18n.t("fight.end_turn")
+	_end_turn.text = I18n.t("fight.pass")
 	_face_btn.text = I18n.t("fight.face")
 	_face_btn.tooltip_text = I18n.t("fight.face.tip")
-	$UI/TopBar/SurrenderBtn.text = I18n.t("fight.surrender")
-	$UI/TopBar/SurrenderBtn.tooltip_text = I18n.t("fight.surrender.tip")
-	$UI/TopBar/BackBtn.text = I18n.t("fight.leave")
+	_chat_btn.text = I18n.t("fight.chat")
+	_chat_btn.tooltip_text = I18n.t("fight.chat.tip")
+	$UI/Menu/SurrenderBtn.text = I18n.t("fight.surrender")
+	$UI/Menu/SurrenderBtn.tooltip_text = I18n.t("fight.surrender.tip")
+	$UI/Menu/BackBtn.text = I18n.t("fight.leave")
 	if State.spectating:
 		# Read-only viewer: no actions leave the client, but the phase acks
 		# (8011/8031) still fire — the fight actor ignores them for
@@ -100,10 +106,14 @@ func _ready() -> void:
 		_end_turn.disabled = true
 		_face_btn.disabled = true
 		_end_turn.text = I18n.t("fight.spectating")
-		$UI/TopBar/SurrenderBtn.disabled = true
+		$UI/Menu/SurrenderBtn.disabled = true
 	else:
-		$UI/TopBar/SurrenderBtn.pressed.connect(_confirm_surrender)
-	$UI/TopBar/BackBtn.pressed.connect(_on_back_pressed)
+		$UI/Menu/SurrenderBtn.pressed.connect(_confirm_surrender)
+	$UI/Menu/BackBtn.pressed.connect(_on_back_pressed)
+	# The chat folds away in a fight (S17): the map stays clear, the fight
+	# log keeps filling it, and the button opens it on demand.
+	_chat_btn.toggled.connect(_set_chat_open)
+	_set_chat_open(false)
 	$UI/Chat.bubble.connect(chat_bubble)
 	$UI/Chat.emote.connect(func(id, anim):
 		chat_bubble(id, "* %s *" % anim.trim_prefix("AnimEmote-")
@@ -126,12 +136,20 @@ func _ready() -> void:
 	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside
 	add_child(_gfx)
 	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
-	_onebit = ArtStyle.onebit()
 	if _onebit:
 		_gfx.use_onebit(true)
 		AnmSprite.onebit_style = 3   # line art; reset in _exit_tree
 		# the void around the arena is ink, not Godot's grey
 		RenderingServer.set_default_clear_color(Color.BLACK)
+	_fight_hud = FightHud.new()
+	_fight_hud.onebit = _onebit
+	if ArtStyle.hud_life() == "ring":
+		_fight_hud.hp_style = FightHud.FighterCard.HpStyle.RING
+	_fight_hud.team_colors = TEAM_TINTS
+	$UI.add_child(_fight_hud)
+	$UI.move_child(_fight_hud, 0)   # under the buttons, the chat and modals
+	_fight_hud.card_pressed.connect(_on_timeline_chip)
+	_fight_hud.card_hovered.connect(_on_card_hover)
 	# When we arrived here from a live fight the world id is the arena id.
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
@@ -144,6 +162,8 @@ func _ready() -> void:
 		_map_lbl.name = "MapLbl"
 		_map_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_map_lbl.text = I18n.t("fight.arena", {"id": State.fight_world})
+		_map_lbl.add_theme_stylebox_override("normal", info.get_theme_stylebox("normal"))
+		_map_lbl.add_theme_font_size_override("font_size", 14)
 		$UI/TopBar.add_child(_map_lbl)
 		$UI/TopBar.move_child(_map_lbl, 0)
 	_load()
@@ -172,30 +192,114 @@ func _ready() -> void:
 
 func _skin_fight_ui() -> void:
 	var theme := _lobby_theme()
-	for node in [$UI/TopBar, $UI/SpellScroll, $UI/Chat]:
+	if _onebit:
+		_ink_theme(theme)
+	for node in [$UI/TopBar, $UI/Menu, $UI/SpellScroll, $UI/Chat, $UI/PassBtn]:
 		node.theme = theme
-	var surface := StyleBoxFlat.new()
-	surface.bg_color = Color("292c20")
-	surface.border_color = Color("ad965a")
-	surface.set_border_width_all(2)
-	surface.set_corner_radius_all(8)
-	$UI/TopBacking.add_theme_stylebox_override("panel", surface)
-	$UI/ActionBacking.add_theme_stylebox_override("panel", surface.duplicate())
-	for lbl in [info, _turn_timer]:
-		lbl.add_theme_color_override("font_color", Color("f1e5c1"))
+	var text := Color.WHITE if _onebit else Color("f1e5c1")
+	for lbl in [info]:
+		lbl.add_theme_color_override("font_color", text)
 		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
 		lbl.add_theme_constant_override("shadow_offset_x", 1)
 		lbl.add_theme_constant_override("shadow_offset_y", 2)
-	_end_turn.add_theme_color_override("font_color", Color("fff0c5"))
+	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# the hint sits on the map: a dark pill keeps it legible on any floor
+	# (the 1-bit dither especially); empty text hides it with the label
+	var pill := StyleBoxFlat.new()
+	pill.bg_color = Color(0, 0, 0, 0.82)
+	pill.set_corner_radius_all(0 if _onebit else 9)
+	pill.content_margin_left = 12
+	pill.content_margin_right = 12
+	info.add_theme_stylebox_override("normal", pill)
+	info.add_theme_font_size_override("font_size", 15)
+	# the menu is secondary: small buttons in the corner
+	for b in $UI/Menu.get_children():
+		if b is Button:
+			b.add_theme_font_size_override("font_size", 13)
+			b.custom_minimum_size = Vector2(0, 30)
+	_style_pass_button()
 	$UI/TopBar/MapId.custom_minimum_size.x = 76
 	$UI/TopBar/MapId.max_length = 6
-	$UI/Chat/Display.add_theme_stylebox_override("normal", _chat_surface())
-	$UI/Chat/Display.add_theme_color_override("default_color", Color("f1e5c1"))
+	var chat_bg := _chat_surface()
+	if _onebit:
+		chat_bg.bg_color = Color(0, 0, 0, 0.92)
+		chat_bg.border_color = Color.WHITE
+		chat_bg.set_corner_radius_all(0)
+	$UI/Chat/Display.add_theme_stylebox_override("normal", chat_bg)
+	$UI/Chat/Display.add_theme_color_override("default_color", text)
 	$UI/Chat/Display.custom_minimum_size.y = 80
 	$UI/Chat/Row/Input.theme = theme
 	$UI/Chat/Row/SendBtn.theme = theme
 	for tab in $UI/Chat/Tabs.get_children():
 		tab.add_theme_font_size_override("font_size", 13)
+
+
+## PASS (end turn / ready): the one big button, bottom-centre (S17).
+func _style_pass_button() -> void:
+	var b := _end_turn
+	b.custom_minimum_size = Vector2(PASS_SIZE.x, PASS_SIZE.y)
+	b.add_theme_font_size_override("font_size", 18)
+	var path := AssetPaths.resolve("gui/fonts/COPRGTB.TTF")
+	if not path.is_empty() and FileAccess.file_exists(path):
+		var f := FontFile.new()
+		if f.load_dynamic_font(path) == OK:
+			b.add_theme_font_override("font", f)
+	var ink := Color.WHITE if _onebit else Color("f6dc8c")
+	var base := StyleBoxFlat.new()
+	base.bg_color = Color.BLACK if _onebit else Color("8a5a12")
+	base.border_color = ink
+	base.set_border_width_all(3 if _onebit else 2)
+	base.set_corner_radius_all(0 if _onebit else 10)
+	var hover := base.duplicate()
+	hover.bg_color = Color(0.2, 0.2, 0.2) if _onebit else Color("a8701a")
+	var pressed := base.duplicate()
+	pressed.bg_color = Color(0.35, 0.35, 0.35) if _onebit else Color("6c4510")
+	var off := base.duplicate()
+	off.bg_color = Color.BLACK if _onebit else Color("3a3426")
+	off.border_color = Color(0.45, 0.45, 0.45) if _onebit else Color("6e6448")
+	var focus := base.duplicate()
+	focus.draw_center = false
+	focus.border_color = Color.WHITE
+	focus.set_border_width_all(2)
+	focus.expand_margin_left = 3
+	focus.expand_margin_right = 3
+	focus.expand_margin_top = 3
+	focus.expand_margin_bottom = 3
+	for st in [["normal", base], ["hover", hover], ["pressed", pressed],
+			["disabled", off], ["focus", focus]]:
+		b.add_theme_stylebox_override(st[0], st[1])
+	b.add_theme_color_override("font_color", Color.WHITE if _onebit else Color("fff0c5"))
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_color_override("font_disabled_color", Color(0.55, 0.55, 0.55))
+
+
+## The 1-bit look for the fight's own controls: ink buttons with a white
+## hairline, inverted when pressed or hovered. Mutates the lobby theme so
+## fonts and sizes stay the same.
+func _ink_theme(t: Theme) -> void:
+	var box := func(bg: Color, edge: Color, w := 1) -> StyleBoxFlat:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = bg
+		sb.border_color = edge
+		sb.set_border_width_all(w)
+		sb.content_margin_left = 8
+		sb.content_margin_right = 8
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 4
+		return sb
+	for type in ["Button", "OptionButton", "LineEdit"]:
+		t.set_stylebox("normal", type, box.call(Color.BLACK, Color.WHITE))
+		t.set_stylebox("hover", type, box.call(Color(0.22, 0.22, 0.22), Color.WHITE))
+		for st in ["pressed", "hover_pressed"]:
+			t.set_stylebox(st, type, box.call(Color.WHITE, Color.WHITE))
+		t.set_stylebox("disabled", type, box.call(Color.BLACK, Color(0.4, 0.4, 0.4)))
+		t.set_stylebox("focus", type, box.call(Color(0, 0, 0, 0), Color.WHITE, 2))
+		for c in ["font_color", "font_hover_color", "font_focus_color"]:
+			t.set_color(c, type, Color.WHITE)
+		t.set_color("font_pressed_color", type, Color.BLACK)
+		t.set_color("font_hover_pressed_color", type, Color.BLACK)
+		t.set_color("font_disabled_color", type, Color(0.45, 0.45, 0.45))
+	t.set_color("font_color", "Label", Color.WHITE)
 
 
 func _lobby_theme() -> Theme:
@@ -218,25 +322,54 @@ func _chat_surface() -> StyleBoxFlat:
 	return style
 
 
+const PASS_SIZE := Vector2(156, 46)
+const SPELL_SIDE := 44.0
+
+
+## Everything around the HUD's own pieces (cards, medallion, banner):
+## arena label top-left, menu top-right, hints and event cards under the
+## banner, spells beside the medallion, PASS bottom-centre (or bottom-right
+## when the spells would reach it), the chat over the bottom-right when open.
 func _layout_fight_ui() -> void:
 	var vp := get_viewport().get_visible_rect().size
-	_anchor_rect($UI/TopBacking, Vector4(0, 0, 1, 0), Rect2(12, 10, -24, 48))
-	_anchor_rect($UI/TopBar, Vector4(0, 0, 1, 0), Rect2(24, 17, -48, 34))
-	_anchor_rect($UI/Info, Vector4(0, 0, 0.58, 0), Rect2(24, 70, -36, 26))
-	$UI/Info.clip_text = true
-	$UI/Info.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_anchor_rect($UI/EventCards, Vector4(0.58, 0, 1, 0), Rect2(12, 70, -24, 30))
-	if vp.x < 960:
-		# Keep both controls reachable when they cannot fit side by side.
-		$UI/Chat/Display.custom_minimum_size.y = 64
-		_anchor_rect($UI/Chat, Vector4(0, 1, 1, 1), Rect2(16, -252, -32, 152))
-		_anchor_rect($UI/ActionBacking, Vector4(0, 1, 1, 1), Rect2(16, -96, -32, 84))
-		_anchor_rect($UI/SpellScroll, Vector4(0, 1, 1, 1), Rect2(28, -83, -56, 58))
-	else:
-		$UI/Chat/Display.custom_minimum_size.y = 80
-		_anchor_rect($UI/Chat, Vector4(0, 1, 0.42, 1), Rect2(16, -180, 0, 168))
-		_anchor_rect($UI/ActionBacking, Vector4(0.42, 1, 1, 1), Rect2(16, -116, -32, 104))
-		_anchor_rect($UI/SpellScroll, Vector4(0.42, 1, 1, 1), Rect2(28, -103, -56, 78))
+	_fight_hud.layout_hud()
+	var br := _fight_hud.banner_rect
+	var mr := _fight_hud.medal_rect
+	var right_edge := vp.x - maxf(_fight_hud.right_w, 12.0) - 8.0
+	_anchor_rect($UI/TopBar, Vector4(0, 0, 0, 0), Rect2(12, 12, br.position.x - 24, 32))
+	var info_w := minf(vp.x - 40.0, 640.0)
+	# zero-width rect growing both ways: the pill hugs the text, centred
+	_anchor_rect($UI/Info, Vector4(0.5, 0, 0.5, 0), Rect2(0, br.end.y + 4, 0, 24))
+	$UI/Info.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	$UI/Info.clip_text = false
+	$UI/EventCards.alignment = BoxContainer.ALIGNMENT_CENTER
+	_anchor_rect($UI/EventCards, Vector4(0.5, 0, 0.5, 0),
+		Rect2(-info_w * 0.5, br.end.y + 30, info_w, 26))
+	# spells: one row from the medallion; PASS takes the centre if it is free
+	var bar_x := mr.end.x + 4.0
+	var bar_y := vp.y - SPELL_SIDE - 14.0
+	var n := 0
+	for c in $UI/SpellScroll/SpellBar.get_children():
+		if c is Control and not c.is_queued_for_deletion():
+			n += 1
+	var spells_end := bar_x + n * (SPELL_SIDE + 4.0)
+	var pass_pos := Vector2((vp.x - PASS_SIZE.x) * 0.5, vp.y - PASS_SIZE.y - 12.0)
+	if pass_pos.x < spells_end + 12.0:
+		pass_pos.x = right_edge - PASS_SIZE.x
+	_anchor_rect($UI/PassBtn, Vector4(0, 0, 0, 0), Rect2(pass_pos, PASS_SIZE))
+	var bar_end := pass_pos.x - 12.0 if pass_pos.x > bar_x else right_edge
+	_anchor_rect($UI/SpellScroll, Vector4(0, 0, 0, 0),
+		Rect2(bar_x, bar_y, maxf(bar_end - bar_x, SPELL_SIDE), SPELL_SIDE + 12.0))
+	# chat: over the bottom-right, above the PASS row, inside the columns
+	var chat_w := minf(440.0, right_edge - _fight_hud.left_w - 16.0)
+	$UI/Chat/Display.custom_minimum_size.y = 64 if vp.y < 680 else 80
+	_anchor_rect($UI/Chat, Vector4(0, 0, 0, 0),
+		Rect2(right_edge - chat_w, vp.y - PASS_SIZE.y - 24.0 - 168.0, chat_w, 168))
+
+
+func _set_chat_open(on: bool) -> void:
+	$UI/Chat.visible = on
+	_chat_btn.set_pressed_no_signal(on)
 
 
 func _anchor_rect(node: Control, anchors: Vector4, rect: Rect2) -> void:
@@ -252,23 +385,25 @@ func _anchor_rect(node: Control, anchors: Vector4, rect: Rect2) -> void:
 
 func _wire_fight_focus() -> void:
 	var controls: Array[Control] = []
-	for node in [$UI/TopBar/EndTurnBtn, $UI/TopBar/FaceBtn,
-			$UI/TopBar/SurrenderBtn, $UI/TopBar/BackBtn]:
+	for node in [_end_turn, _face_btn, _chat_btn,
+			$UI/Menu/SurrenderBtn, $UI/Menu/BackBtn]:
 		if node.visible and not node.disabled:
 			controls.append(node)
-	for child in _timeline.get_children():
-		if child is Button and not child.is_queued_for_deletion():
-			controls.append(child)
 	for child in $UI/SpellScroll/SpellBar.get_children():
 		if child is Button and not child.disabled and not child.is_queued_for_deletion():
 			controls.append(child)
+	for fid in _fight_hud.cards:   # initiative order (the dict follows it)
+		var card: Control = _fight_hud.cards[fid]
+		if not card.is_queued_for_deletion():
+			controls.append(card)
 	var tabs := $UI/Chat.get_node_or_null("Tabs")
-	if tabs != null:
+	if tabs != null and $UI/Chat.visible:
 		for child in tabs.get_children():
 			if child is Button:
 				controls.append(child)
-	controls.append($UI/Chat/Row/Input)
-	controls.append($UI/Chat/Row/SendBtn)
+	if $UI/Chat.visible:
+		controls.append($UI/Chat/Row/Input)
+		controls.append($UI/Chat/Row/SendBtn)
 	for i in controls.size():
 		var current := controls[i]
 		current.focus_mode = Control.FOCUS_ALL
@@ -487,7 +622,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# (arch 3, empty payload) before advancing to placement.
 			if State.net != null:
 				State.net.send_message(OP_READY_PLACEMENT, PackedByteArray(), 3)
-			info.text += " | " + I18n.t("fight.phase.presentation")
+			_set_phase("fight.phase.presentation")
 		OP_START_PLACEMENT:
 			# Placement window: our team's start cells light up; clicking one
 			# sends 8021 for the selected fighter. Ready = 8023.
@@ -503,14 +638,13 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# Facing is free during placement (4521, no turn yet).
 			_face_btn.disabled = State.spectating or _selected < 0
 			_wire_fight_focus.call_deferred()
-			info.text += " | " + I18n.t("fight.phase.placement")
+			_set_phase("fight.phase.placement")
 			placement_began.emit()
 			queue_redraw()
 		OP_END_PLACEMENT:
 			_placement = false
 			_turn_left = -1.0
-			_turn_timer.text = ""
-			_end_turn.text = I18n.t("fight.end_turn")
+			_end_turn.text = I18n.t("fight.pass")
 			_end_turn.disabled = true
 			_face_btn.disabled = true
 			_wire_fight_focus.call_deferred()
@@ -518,14 +652,13 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# third gate: 8031 (arch 3, empty) advances to the action phase.
 			_placement = false
 			_turn_left = -1.0
-			_turn_timer.text = ""
-			_end_turn.text = I18n.t("fight.end_turn")
+			_end_turn.text = I18n.t("fight.pass")
 			_face_btn.disabled = true
 			if State.net != null:
 				State.net.send_message(OP_READY_ACTION, PackedByteArray(), 3)
-			info.text += " | " + I18n.t("fight.phase.observation")
+			_set_phase("fight.phase.observation")
 		OP_START_ACTION:
-			info.text += " | " + I18n.t("fight.phase.combat")
+			_set_phase("fight.phase.combat")
 		OP_TABLE_TURN:
 			var d := Codec.decode(opcode, payload)
 			_table_turn = int(d.get("f2", 0))
@@ -534,9 +667,9 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# retail's card popup.
 			var ev := int(d.get("f3", 0))
 			var evname := NpcDialogs.event_name(ev)
-			info.text = I18n.t("fight.map_turn", {"id": $UI/TopBar/MapId.text,
-				"n": _table_turn,
-				"extra": " — %s" % evname if not evname.is_empty() else ""})
+			# the banner carries the round; the hint line names its event
+			info.text = evname
+			_refresh_timeline()
 			_add_event_card(ev, evname)
 			_age_buffs()
 			_age_areas()
@@ -546,7 +679,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TURN_END:
 			_current_fid = -1
 			_turn_left = -1.0
-			_turn_timer.text = ""
 			_end_turn.disabled = true
 			_face_btn.disabled = true
 			_clear_spell_bar()
@@ -741,9 +873,9 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			State.fight_result = Codec.decode(opcode, payload)
 			_fight_over = true
 			_turn_left = -1.0
-			_turn_timer.text = ""
 			State.spectating = false
-			info.text = I18n.t("fight.map_over", {"id": $UI/TopBar/MapId.text})
+			info.text = ""
+			_refresh_timeline()
 			if not _show_fight_result():
 				_end_fight_ack()
 		OP_ENTER_INSTANCE:
@@ -1290,35 +1422,27 @@ func _kill_actor(fid: int) -> void:
 	queue_redraw()                    # the base ring dims over the corpse
 
 
-## Name + cumulative damage label above each fighter, childed to the sprite
-## so it follows walks. Coaches stay unlabeled.
+## The fighter's name over its head — hidden; it shows while the pointer is
+## on the fighter or on its card (S17: life and buffs live on the card).
+## Childed to the sprite so it follows walks. Coaches stay unlabeled.
 func _nameplate(spr: AnmSprite, fid: int) -> void:
-	var lbl := Label.new()
-	lbl.name = "Plate"
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.position = Vector2(-60, -96)
-	lbl.size = Vector2(120, 16)
-	lbl.add_theme_font_size_override("font_size", 11)
-	lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-	lbl.add_theme_constant_override("shadow_offset_x", 1)
-	lbl.add_theme_constant_override("shadow_offset_y", 1)
-	spr.add_child(lbl)
-	var hp := ProgressBar.new()
-	hp.name = "HP"
-	# show_percentage BEFORE size: while the percentage is on, the bar's
-	# minimum height is the font's (~27 px), and a size set then sticks —
-	# the 5-px bar came out as a 56x27 block.
-	hp.show_percentage = false
-	hp.position = Vector2(-28, -78)
-	hp.size = Vector2(56, 5)
-	hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if _onebit:
-		# ink track; the fill keeps its green→red health colour
-		# (_refresh_nameplate), which is gameplay information
-		var bg := StyleBoxFlat.new()
-		bg.bg_color = Color.BLACK
-		hp.add_theme_stylebox_override("background", bg)
-	spr.add_child(hp)
+	var lbl := spr.get_node_or_null("Plate") as Label
+	if lbl == null:
+		lbl = Label.new()
+		lbl.name = "Plate"
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.position = Vector2(-70, -100)
+		lbl.size = Vector2(140, 18)
+		lbl.add_theme_font_size_override("font_size", 13)
+		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+		lbl.add_theme_constant_override("shadow_offset_x", 1)
+		lbl.add_theme_constant_override("shadow_offset_y", 1)
+		lbl.add_theme_constant_override("outline_size", 4)
+		lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lbl.visible = false
+		spr.add_child(lbl)
+		lbl.scale.x = -1.0 if spr.scale.x < 0 else 1.0
 	_refresh_nameplate(fid)
 
 
@@ -1332,28 +1456,16 @@ func _set_flip(spr: AnmSprite, flip: bool) -> void:
 
 func _refresh_nameplate(fid: int) -> void:
 	var spr: AnmSprite = _sprites.get(fid)
-	if spr == null:
-		return
-	var lbl := spr.get_node_or_null("Plate") as Label
-	var f: Dictionary = State.fighters.get(fid, {})
-	if lbl == null:
-		return
-	var lost := int(_hp_lost.get(fid, 0))
-	lbl.text = str(f.get("name", fid)) + ("" if lost == 0 else "  -%d" % lost)
-	var hp := spr.get_node_or_null("HP") as ProgressBar
-	if hp != null:
-		var mx := _hp_max(f)
-		if mx <= 0:
-			hp.visible = false      # monsters carry no max on the wire
-		else:
-			hp.visible = true
-			hp.max_value = mx
-			hp.value = clampi(mx - lost, 0, mx)
-			var ratio := float(hp.value) / float(mx)
-			var fill := StyleBoxFlat.new()
-			fill.bg_color = Color(0.85, 0.15, 0.1).lerp(
-				Color(0.3, 0.9, 0.35), ratio)
-			hp.add_theme_stylebox_override("fill", fill)
+	if spr != null:
+		var lbl := spr.get_node_or_null("Plate") as Label
+		if lbl != null:
+			var f: Dictionary = State.fighters.get(fid, {})
+			lbl.text = str(f.get("name", fid))
+			var team := clampi(int(f.get("team", 0)), 0, 1)
+			lbl.add_theme_color_override("font_color",
+				TEAM_TINTS[team].lightened(0.45))
+			lbl.visible = fid == _name_hover or fid == _card_hover
+	_refresh_timeline()
 
 
 ## Max HP is data-side, never on the wire — players use the fixed breed
@@ -1405,7 +1517,12 @@ func _add_event_card(ev: int, evname: String) -> void:
 	if ev == 0 or strip == null:
 		return
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", _chat_surface())
+	var face := _chat_surface()
+	if _onebit:
+		face.bg_color = Color.BLACK
+		face.border_color = Color.WHITE
+		face.set_corner_radius_all(0)
+	card.add_theme_stylebox_override("panel", face)
 	var lab := Label.new()
 	lab.text = evname if not evname.is_empty() else "Event %d" % ev
 	lab.add_theme_font_size_override("font_size", 11)
@@ -1414,7 +1531,7 @@ func _add_event_card(ev: int, evname: String) -> void:
 	for i in strip.get_child_count():
 		var c := strip.get_child(i) as PanelContainer
 		if c != null:
-			c.modulate = Color(1.0, 1.0, 1.0, 0.55)
+			c.modulate = Color(0.6, 0.6, 0.6, 1.0)   # older: dimmed, still opaque
 	card.modulate = Color(1.0, 0.95, 0.6, 1.0)
 	while strip.get_child_count() > EVENT_STRIP_MAX:
 		strip.get_child(0).queue_free()
@@ -1469,29 +1586,9 @@ func _age_buffs() -> void:
 		_refresh_buffs(int(fid))
 
 
-func _refresh_buffs(fid: int) -> void:
-	var spr: AnmSprite = _sprites.get(fid)
-	if spr == null:
-		return
-	var lbl := spr.get_node_or_null("Buffs") as Label
-	if lbl == null:
-		lbl = Label.new()
-		lbl.name = "Buffs"
-		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lbl.position = Vector2(-80, -112)
-		lbl.size = Vector2(160, 14)
-		lbl.add_theme_font_size_override("font_size", 10)
-		lbl.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
-		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-		lbl.add_theme_constant_override("shadow_offset_x", 1)
-		lbl.add_theme_constant_override("shadow_offset_y", 1)
-		spr.add_child(lbl)
-		lbl.scale.x = -1.0 if spr.scale.x < 0 else 1.0   # counter-flip like Plate
-	var parts := []
-	for b in _buffs.get(fid, []):
-		parts.append(str(b.label) if b.inf else "%s·%d" % [b.label, b.left])
-	lbl.text = "  ".join(parts)
-	lbl.visible = not parts.is_empty()
+## Buff chips live on the fighter's card (S17); this only re-pushes it.
+func _refresh_buffs(_fid: int) -> void:
+	_refresh_timeline()
 
 
 ## 8121 — a buff re-attach for a viewer that missed the cast (reconnect /
@@ -1527,7 +1624,7 @@ func _on_turn_begin(fid: int) -> void:
 	# Summons share their caster's coach id but are server-AI-driven
 	# (Father set, ai.go) — no bar, no End turn for them.
 	var ours: bool = int(f.get("coach", -1)) == State.my_coach_id \
-		and not f.get("summon", false)
+		and not f.get("summon", false) and not State.spectating
 	_end_turn.disabled = not ours
 	_face_btn.disabled = not ours
 	# retail's bar tracks the ACTING fighter's AP/MP even on enemy turns —
@@ -1541,15 +1638,11 @@ func _on_turn_begin(fid: int) -> void:
 		_build_spell_bar(f)
 	else:
 		_clear_spell_bar()
-		var res := Label.new()
-		res.name = "APMP"
-		res.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		$UI/SpellScroll/SpellBar.add_child(res)
 		_refresh_apmp()
-	info.text = I18n.t("fight.map_turn_of", {"id": $UI/TopBar/MapId.text,
-		"name": f.get("name", str(fid)),
-		"extra": I18n.t("fight.turn_hint") if ours else ""})
+	# the banner names the fighter; the hint line only speaks to the player
+	info.text = I18n.t("fight.hint_move") if ours else ""
 	_refresh_timeline()
+	_layout_fight_ui.call_deferred()   # the spell row changed width
 	_hud_push()
 	_wire_fight_focus.call_deferred()
 	turn_began.emit(fid, ours)
@@ -1557,50 +1650,111 @@ func _on_turn_begin(fid: int) -> void:
 
 ## --- turn timeline ---------------------------------------------------------
 ## The 8000 `timeline` block is the initiative-descending fighter order —
-## retail renders it as the top-of-screen portrait strip. Here: one chip per
-## fighter, team-tinted like the placement cells (team0 blue / team1 red),
-## acting fighter pressed, dead dimmed; clicking a chip centres the camera.
+## retail renders it as the top-of-screen portrait strip. S17 turns it into
+## the HUD's two card columns (ours on the left, in that order), plus the
+## acting fighter's medallion and the turn banner; clicking a card centres
+## the camera. Every change marks the HUD dirty; one push per frame.
 const TEAM_TINTS := [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)]
+var _hud_dirty := false
 
 func _build_timeline() -> void:
-	for c in _timeline.get_children():
-		c.queue_free()
-	if State.fighters.is_empty():
-		return  # preview mode (Load) — no fight, no timeline
-	for fid in State.fight_data.get("timeline", []):
-		var f: Dictionary = State.fighters.get(fid, {})
-		var tint: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
-		var b := Button.new()
-		b.text = str(f.get("name", fid))
-		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_ALL
-		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		b.add_theme_font_size_override("font_size", 13)
-		b.custom_minimum_size.y = 32
-		b.add_theme_color_override("font_color", tint)
-		b.add_theme_color_override("font_pressed_color", tint.lightened(0.35))
-		b.tooltip_text = b.text
-		b.pressed.connect(_on_timeline_chip.bind(int(fid)))
-		_timeline.add_child(b)
 	_refresh_timeline()
-	_wire_fight_focus.call_deferred()
 
 
 func _refresh_timeline() -> void:
-	var tl: Array = State.fight_data.get("timeline", [])
-	var n: int = mini(tl.size(), _timeline.get_child_count())
-	for i in n:
-		var fid := int(tl[i])
-		var b: Button = _timeline.get_child(i)
-		b.set_pressed_no_signal(fid == _current_fid)
-		b.modulate = Color(0.45, 0.45, 0.5, 0.7) \
-			if _dead.get(fid, false) else Color.WHITE
+	if _hud_dirty or _fight_hud == null:
+		return
+	_hud_dirty = true
+	_push_fight_hud.call_deferred()
+
+
+func _push_fight_hud() -> void:
+	_hud_dirty = false
+	if not is_inside_tree():
+		return
+	var n := _fight_hud.cards.size()
+	_fight_hud.set_model(fight_hud_model())
+	if _fight_hud.cards.size() != n:
+		_wire_fight_focus.call_deferred()   # new cards join the Tab chain
+
+
+## The plain model fight_hud.gd draws (see FightHud.set_model).
+func fight_hud_model() -> Dictionary:
+	var order: Array = []
+	var fighters := {}
+	for fid in State.fight_data.get("timeline", []):
+		var f: Dictionary = State.fighters.get(fid, {})
+		if f.is_empty():
+			continue
+		order.append(int(fid))
+		var chips := []
+		var invisible := false
+		for b in _buffs.get(fid, []):
+			chips.append(str(b.label) if b.inf else "%s·%d" % [b.label, b.left])
+			invisible = invisible or str(b.label) == "Invisible"
+		var spr: AnmSprite = _sprites.get(fid)
+		if spr != null and spr.modulate.a < 0.5 and not _dead.get(fid, false):
+			invisible = true
+		fighters[int(fid)] = {
+			"team": int(f.get("team", 0)), "name": str(f.get("name", fid)),
+			"breed": int(f.get("breed", 0)), "sex": int(f.get("sex", 0)),
+			"look": int(f.get("look", 0)),
+			"hp_max": _hp_max(f), "lost": int(_hp_lost.get(fid, 0)),
+			"dead": _dead.get(fid, false), "invisible": invisible,
+			"summon": bool(f.get("summon", false)), "buffs": chips,
+		}
+	var cur: Dictionary = State.fighters.get(_current_fid, {})
+	var title := ""
+	if _fight_over:
+		title = I18n.t("fight.banner.over")
+	elif _placement:
+		title = I18n.t("fight.banner.placement")
+	elif _table_turn > 0:
+		title = I18n.t("fight.banner.turn", {"n": _table_turn})
+	return {
+		"left_team": maxi(_my_team(), 0) if not State.spectating else 0,
+		"order": order, "fighters": fighters,
+		"active": _current_fid if not cur.is_empty() else -1,
+		"ap": _ap_left, "mp": _mp_left,
+		"title": title,
+		"sub": str(cur.get("name", "")) if not _fight_over else "",
+	}
 
 
 func _on_timeline_chip(fid: int) -> void:
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr != null:
 		cam.position = spr.position
+
+
+## Pointer on a card: name the fighter on the map too.
+func _on_card_hover(fid: int, on: bool) -> void:
+	var was := _card_hover
+	_card_hover = fid if on else (-1 if _card_hover == fid else _card_hover)
+	for id in [was, _card_hover]:
+		if id >= 0:
+			_refresh_nameplate(id)
+
+
+## Pointer on the map: the fighter standing on the hovered cell gets its name.
+func _update_name_hover(cell: Variant) -> void:
+	var fid := -1
+	if cell != null:
+		fid = _occupied_fighter(cell)
+		var spr: AnmSprite = _sprites.get(fid)
+		if spr == null or spr.modulate.a < 0.05:
+			fid = -1   # an unseen (invisible) enemy keeps its secret
+	if fid == _name_hover:
+		return
+	var was := _name_hover
+	_name_hover = fid
+	for id in [was, fid]:
+		if id >= 0:
+			_refresh_nameplate(id)
+
+
+func _set_phase(key: String) -> void:
+	info.text = I18n.t(key)
 
 
 ## --- spell casting ---------------------------------------------------------
@@ -1612,22 +1766,22 @@ func _build_spell_bar(f: Dictionary) -> void:
 	_clear_spell_bar()
 	var bar: HBoxContainer = $UI/SpellScroll/SpellBar
 	for sid in f.get("spells", []):
-		var b := Button.new()
 		var sm := Spells.meta(int(sid))
-		b.text = sm.get("name", "S%d" % int(sid))
-		b.tooltip_text = I18n.t("fight.spell_tip", {"name": b.text,
+		var b := _action_button(str(sm.get("name", "S%d" % int(sid))),
+			"gui/images/spells/icons/%d.png" % int(sid), int(sm.get("ap", -1)))
+		b.tooltip_text = I18n.t("fight.spell_tip", {"name": b.get_meta("label"),
 			"ap": int(sm.get("ap", -1)), "min": int(sm.get("min", 0)),
 			"max": int(sm.get("max", 0))})
 		b.disabled = _spell_locked(int(sid)) or not _spell_affordable(int(sid))
-		_style_action(b)
 		b.pressed.connect(_on_spell_button.bind(int(sid)))
+		b.set_meta("sid", int(sid))
 		bar.add_child(b)
 		_spell_btns[int(sid)] = b
-	var wb := Button.new()
-	wb.text = I18n.t("fight.weapon_short")
+	var wb := _action_button(I18n.t("fight.weapon_short"),
+		"gui/images/theme/images/closeCombatIcon.png", -1)
 	wb.tooltip_text = I18n.t("fight.weapon_tip")
-	_style_action(wb)
 	wb.pressed.connect(_on_spell_button.bind(-2))
+	wb.set_meta("sid", -2)
 	bar.add_child(wb)
 	# Equipped fighter cards with an ACTIVE ability (server jb_2.isUsable)
 	# join the bar too — retail shows them as equipment icons feeding 8107.
@@ -1635,28 +1789,87 @@ func _build_spell_bar(f: Dictionary) -> void:
 		var cid := int(ec.get("id", -1))
 		if not FighterCards.usable(cid):
 			continue
-		var eb := Button.new()
 		var ab := FighterCards.ability(cid)
-		eb.text = FighterCards.label(cid)
-		eb.tooltip_text = I18n.t("fight.card_tip", {"name": eb.text,
+		var eb := _action_button(FighterCards.label(cid),
+			"gui/images/equipments/fighters/icons/%d.png" % cid, int(ab.get("ap", -1)))
+		eb.tooltip_text = I18n.t("fight.card_tip", {"name": eb.get_meta("label"),
 			"ap": int(ab.get("ap", -1)), "min": int(ab.get("min", 0)),
 			"max": int(ab.get("max", 0))})
-		_style_action(eb)
 		eb.pressed.connect(_on_card_button.bind(cid))
+		eb.set_meta("cid", cid)
 		bar.add_child(eb)
-	var res := Label.new()
-	res.name = "APMP"
-	res.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	bar.add_child(res)
 	_refresh_apmp()
 
 
-func _style_action(button: Button) -> void:
-	button.custom_minimum_size = Vector2(100, 52)
-	button.custom_minimum_size.x = minf(maxf(button.text.length() * 8.0 + 20.0, 100.0), 156.0)
-	button.clip_text = true
-	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	button.add_theme_font_size_override("font_size", 14)
+static var _icon_cache := {}
+var _armed_seen := Vector2i(-1, -1)
+
+
+## The armed spell/weapon/card slot stays pressed until it fires or is
+## dropped — whatever path resets _spell_mode, the bar follows next frame.
+func _sync_armed() -> void:
+	_armed_seen = Vector2i(_spell_mode, _card_mode)
+	for c in $UI/SpellScroll/SpellBar.get_children():
+		if c is Button:
+			var on: bool = (c.has_meta("sid") and int(c.get_meta("sid")) == _spell_mode) \
+				or (c.has_meta("cid") and int(c.get_meta("cid")) == _card_mode)
+			c.set_pressed_no_signal(on)
+
+## A square action slot: the retail icon (spell, weapon, card) with its AP
+## cost in the corner; a short text label when the icon is missing.
+func _action_button(label: String, icon_rel: String, ap: int) -> Button:
+	var b := Button.new()
+	b.toggle_mode = true   # pressed = armed (_sync_armed), the next click aims it
+	b.set_meta("label", label)
+	b.custom_minimum_size = Vector2(SPELL_SIDE, SPELL_SIDE)
+	b.focus_mode = Control.FOCUS_ALL
+	if not _icon_cache.has(icon_rel):
+		var img := AssetPaths.load_image(icon_rel)
+		_icon_cache[icon_rel] = ImageTexture.create_from_image(img) \
+			if img != null else null
+	var tex: Texture2D = _icon_cache[icon_rel]
+	if tex != null:
+		b.icon = tex
+		b.expand_icon = true
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	else:
+		b.text = label.left(4)
+		b.clip_text = true
+		b.add_theme_font_size_override("font_size", 11)
+	var slot := StyleBoxFlat.new()
+	slot.bg_color = Color.BLACK if _onebit else Color("1d2017")
+	slot.border_color = Color.WHITE if _onebit else Color("ad965a")
+	slot.set_border_width_all(1 if _onebit else 2)
+	slot.set_corner_radius_all(0 if _onebit else 6)
+	slot.content_margin_left = 3
+	slot.content_margin_right = 3
+	slot.content_margin_top = 3
+	slot.content_margin_bottom = 3
+	var hover := slot.duplicate()
+	hover.border_color = Color("f6dc8c") if not _onebit else Color(0.7, 0.7, 0.7)
+	hover.bg_color = slot.bg_color.lightened(0.12)
+	var armed := slot.duplicate()
+	armed.border_color = Color(1.0, 0.85, 0.3)
+	armed.set_border_width_all(3)
+	var off := slot.duplicate()
+	off.border_color = Color(0.35, 0.35, 0.33)
+	for st in [["normal", slot], ["hover", hover], ["pressed", armed],
+			["hover_pressed", armed], ["disabled", off], ["focus", hover]]:
+		b.add_theme_stylebox_override(st[0], st[1])
+	b.add_theme_color_override("icon_disabled_color", Color(0.4, 0.4, 0.4, 0.8))
+	if ap >= 0:
+		var cost := Label.new()
+		cost.name = "Cost"
+		cost.text = str(ap)
+		cost.add_theme_font_size_override("font_size", 11)
+		cost.add_theme_color_override("font_color", Color.WHITE)
+		cost.add_theme_constant_override("outline_size", 4)
+		cost.add_theme_color_override("font_outline_color", Color(0.1, 0.2, 0.55)
+			if not _onebit else Color.BLACK)
+		cost.position = Vector2(SPELL_SIDE - 13, SPELL_SIDE - 19)
+		cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(cost)
+	return b
 
 
 func _clear_spell_bar() -> void:
@@ -1675,10 +1888,8 @@ func _refresh_spell_locks() -> void:
 
 
 func _refresh_apmp() -> void:
-	var res := $UI/SpellScroll/SpellBar.get_node_or_null("APMP") as Label
-	if res != null:
-		res.text = "  AP %d  MP %d" % [_ap_left, _mp_left]
 	_refresh_spell_locks()   # AP debit may have priced spells out
+	_refresh_timeline()      # the medallion shows the live AP/MP
 	_hud_push()
 
 
@@ -1853,20 +2064,17 @@ func _ray_clear(from: Vector2i, to: Vector2i, z0: int, z1: int) -> bool:
 
 
 func _on_spell_button(sid: int) -> void:
-	_spell_mode = -2 if _spell_mode == sid else sid
+	_spell_mode = -1 if _spell_mode == sid else sid   # a second press disarms
 	_card_mode = -1
-	var what := I18n.t("fight.weapon") if sid == -2 else \
-		I18n.t("fight.spell_n", {"id": sid})
-	info.text = I18n.t("fight.map_target", {"id": $UI/TopBar/MapId.text,
-		"what": what})
+	var what := I18n.t("fight.weapon") if sid == -2 else Spells.name_of(sid)
+	info.text = I18n.t("fight.hint_target", {"what": what})
 	_refresh_range_overlay()
 
 
 func _on_card_button(cid: int) -> void:
 	_card_mode = -1 if _card_mode == cid else cid
 	_spell_mode = -1
-	info.text = I18n.t("fight.map_target", {"id": $UI/TopBar/MapId.text,
-		"what": FighterCards.label(cid)})
+	info.text = I18n.t("fight.hint_target", {"what": FighterCards.label(cid)})
 	_refresh_range_overlay()
 
 
@@ -2059,9 +2267,10 @@ const OP_MOVE_REQ := 4503
 func _process(delta: float) -> void:
 	if _turn_left >= 0.0:
 		_turn_left = maxf(_turn_left - delta, 0.0)
-		_turn_timer.text = "%d" % ceili(_turn_left)
-		_turn_timer.modulate = Color(1.0, 0.45, 0.3) if _turn_left <= 5.5 \
-			else Color(0.9, 0.9, 0.9)
+	_fight_hud.set_clock(_turn_left)
+	info.visible = not info.text.is_empty()   # no empty pill
+	if _armed_seen != Vector2i(_spell_mode, _card_mode):
+		_sync_armed()
 	if _spell_mode != -1 or _card_mode != -1:
 		# the reach ring follows the acting fighter — recompute after a move
 		var at: Vector3i = _actor_cells.get(_current_fid,
@@ -3241,8 +3450,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion:
 		if _dragging:
 			cam.position -= event.relative / cam.zoom
-		elif _is_my_turn() or _placement:
-			var cell: Variant = _cell_at(get_global_mouse_position())
+			return
+		var cell: Variant = _cell_at(get_global_mouse_position())
+		_update_name_hover(cell)
+		if _is_my_turn() or _placement:
 			var h: Vector2i = cell if cell != null else Vector2i(-9999, -9999)
 			if h != _hover:
 				_hover = h

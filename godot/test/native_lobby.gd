@@ -92,7 +92,7 @@ func _run() -> void:
 	_check(not is_instance_valid(_main), "practice enters the fight scene")
 	if not is_instance_valid(_main):
 		_check(current_scene.scene_file_path == "res://src/fight/fight_view.tscn", "retail fight creation transition")
-		current_scene.get_node("UI/TopBar/BackBtn").pressed.emit()
+		current_scene.get_node("UI/Menu/BackBtn").pressed.emit()
 		await create_timer(0.3).timeout
 		# Leaving an UNFINISHED fight asks first: fight_view._on_back_pressed
 		# pops a ConfirmationDialog and only surrenders (8151) + changes scene

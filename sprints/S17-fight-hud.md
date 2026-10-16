@@ -1,6 +1,6 @@
 # S17 — HUD de combate estilo Krosmaster
 
-**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟡 siguiente (S04 queda en pausa) · **Depende de:** S04
+**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟡 abierto — HUD hecho, a la espera del visto bueno del dueño · **Depende de:** S04
 
 > El número es el de creación; el orden lo da la tabla de
 > [`README.md`](./README.md), donde va detrás de S04.
@@ -50,26 +50,69 @@ dueño propuso que esa información esté en la carta del personaje.
 
 ## Tareas
 
-- [ ] Boceto de composición a 1280×720 y 800×600 (render con la herramienta de
-      S04 + HUD) para validar con el dueño **antes** de programar todo.
-- [ ] Carta de luchador: retrato, marco del color del equipo, vida, PA/PM,
-      estado (activo / muerto / invisible), buffs en iconos pequeños.
-- [ ] Columnas laterales por equipo, ordenadas por iniciativa (sustituyen a
-      la `Timeline` de arriba); clic en una carta = centrar la cámara (lo que
-      hoy hace el chip).
-- [ ] Medallón del luchador activo + barra de hechizos.
-- [ ] Banner de turno y botón PASAR (hoy "Fin de turno" en la `TopBar`).
-- [ ] Quitar de encima de las cabezas la barra de vida y la tira de buffs;
-      dejar nombre al pasar el ratón y los textos flotantes de daño.
-- [ ] Que funcione con los dos estilos (retail y 1 bit) y con espectador.
-- [ ] `test/fight_ui_preview.tscn` actualizado; carril visual en verde.
+- [x] Boceto de composición a 1280×720 y 800×600, en los dos estilos. Se
+      hizo directamente con el HUD real sobre `test/fight_ui_preview.tscn`
+      (4 contra 4 en el mapa 10, con daño, buffs, una invocación, un muerto y
+      un invisible), porque el dueño dormía y el boceto así ya es código.
+      Hojas en el Samba (abajo).
+- [x] Carta de luchador (`src/fight/fighter_card.gd`): retrato retail
+      (`breed*10 + sexo`, o el `look` de la invocación), marco del color del
+      equipo, vida (barra o anillo) con el número sobre el retrato, buffs en
+      chips hacia el mapa (máx. 3 + "+n"), y los estados: activo (sale 8 px
+      hacia el mapa, marco claro y muesca), muerto (gris + "KO"), invisible
+      (marco discontinuo, retrato al 40 %). Las invocaciones van un 20 % más
+      pequeñas.
+- [x] Columnas laterales por equipo en orden de iniciativa (`fight_hud.gd`):
+      la nuestra a la izquierda (el espectador ve el equipo 0 a la
+      izquierda). Sustituyen a la `Timeline`; clic = centrar la cámara.
+      Tamaño de carta adaptativo, el mismo en los dos lados; pasado ~9 una
+      columna se parte en dos.
+- [x] Medallón del luchador activo (`fight_medallion.gd`) abajo a la
+      izquierda: retrato redondo, vida en anillo y tres insignias (PM verde,
+      vida roja, PA azul, como Krosmaster), con los valores vivos también en
+      turno enemigo. La barra de hechizos va a su lado, ahora con los
+      iconos retail (`gui/images/spells/icons/`) y el coste en PA en la
+      esquina; el hechizo armado queda pulsado.
+- [x] Banner de turno arriba ("TURNO 7" + nombre en el color del equipo; en
+      colocación, "COLOCACIÓN") con el reloj en un círculo a su izquierda.
+      Botón **PASAR** grande abajo en el centro (a la derecha si los
+      hechizos llegarían a él). Girar / Chat / Rendirse / Salir, pequeños
+      arriba a la derecha.
+- [x] Fuera de encima de las cabezas la barra de vida y la tira de buffs. El
+      nombre sale al pasar el ratón por el luchador o por su carta; los
+      textos flotantes de daño siguen.
+- [x] Funciona con los dos estilos (en 1 bit los controles son tinta y
+      papel) y con espectador.
+- [x] `test/fight_ui_preview.tscn` actualizado (comprueba que hay una carta
+      por luchador y que no flota vida ni buffs); `./run_tests.sh` en verde.
+- [ ] Visto bueno del dueño en las dos resoluciones.
+
+## Decisiones tomadas sin el dueño (2026-10-17, revisables)
+
+El dueño pidió seguir sin parar y decidir de forma heurística. Todas son
+fáciles de cambiar:
+
+| Pregunta | Se eligió | Por qué | Alternativa lista |
+|---|---|---|---|
+| ¿Vida como barra o anillo? | **barra** bajo el retrato en las cartas; **anillo** en el medallión | a 40–56 px la barra se lee mejor; el anillo cuadrado queda fino | `[arena] hud_life = ring` en `user://settings.cfg` (o `ARENA_HUD_LIFE=ring`); hoja `04` |
+| ¿El chat se queda o se pliega? | **se pliega**: empieza cerrado y el botón *Chat* lo abre encima, abajo a la derecha | es lo que pide el sprint (mapa limpio); el registro del combate sigue llenándose | hoja `05` |
+| ¿2v2 / muchas invocaciones? | cartas adaptativas; con 8 por lado cabe una columna a 800×600, con 12 se parte en dos | se probó con `FIGHT_UI_CROWD` | hoja `06` |
+| ¿PA/PM en cada carta? | **solo en el medallión** | fuera del turno los PA/PM de los demás son los fijos de la raza: ruido | — |
+| ¿Retratos en 1 bit? | **en color** en los dos estilos | S04 dejó la GUI fuera del filtro | — |
+
+## Registro de toques
+
+Capturas en el Samba: recurso `codigo` → `capturas/s17/`.
+
+| Fecha | Petición | Cambio | Captura |
+|---|---|---|---|
+| 2026-10-17 | "sigue con s17… cualquier duda toma una decisión heurísticamente" | Primera versión completa del HUD (arriba) | `01-antes-despues.png` (combate real), `02-boceto-1280.png`, `03-boceto-800.png`, `04-vida-barra-o-anillo.png`, `05-chat.png`, `06-muchas-cartas.png`, `07-espectador-y-hover.png` |
 
 ## Decisiones abiertas (dueño)
 
-- ¿Vida como barra o como anillo alrededor del retrato?
-- ¿El chat se queda en combate o se pliega?
-- ¿Qué pasa con 2v2 o con muchas invocaciones? Las columnas tienen que
-  aguantar 8 o más cartas por lado.
+- Las de la tabla de arriba, si alguna no convence.
+- ¿Se quiere un **medallión a la derecha** para el enemigo (como el segundo
+  de Krosmaster), o basta con el de abajo a la izquierda, que sigue el turno?
 
 ## Criterio de cierre
 
