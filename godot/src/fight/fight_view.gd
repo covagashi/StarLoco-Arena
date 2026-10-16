@@ -61,6 +61,9 @@ var _sorted := []    # ground cell positions, back-to-front (x+y, then x)
 var _sprites := {}   # actor id -> AnmSprite
 var _gfx: Node2D           # painted backdrop layer (created in _ready)
 var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
+## Off only for art renders (tools/render_fightmap.gd): the map without the
+## spawn zones and placement rings drawn over it.
+var overlays_visible := true
 
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
@@ -3012,7 +3015,8 @@ func _draw() -> void:
 	if _gfx_active:
 		# painted backdrop already carries ground+walls — keep only the
 		# gameplay overlays (spawn zones, placement/hover rings)
-		_draw_overlays()
+		if overlays_visible:
+			_draw_overlays()
 		return
 	# pass 1: floor tops, back-to-front so lower rows paint over upper walls
 	for pos in _sorted:

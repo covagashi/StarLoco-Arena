@@ -1,6 +1,6 @@
 # S03 — Base en Linux headless
 
-**Planificado:** 2026-10-16 · **Hito:** M1 — Jugable de punta a punta · **Tamaño:** S · **Estado:** 🟡 abierto (2026-10-16) — solo falta la CI, que necesita un push
+**Planificado:** 2026-10-16 · **Hito:** M1 — Jugable de punta a punta · **Tamaño:** S · **Estado:** 🟡 a la espera del dueño — la CI no se dispara (ver el final)
 
 ## Objetivo
 
@@ -117,3 +117,11 @@ HUD y las celdas de colocación: render real, no el renderer *dummy*.
 pushes hoy, pero la API sigue mostrando **una sola ejecución**: un
 `workflow_dispatch` del 2026-10-13, que falló en `gofmt` (Linux). `gofmt -l`
 está limpio ahora. Para cerrar el sprint falta hacer un push y ver si dispara.
+
+**Push hecho (2026-10-16, `3f0fd24c`): la CI sigue sin dispararse.** Para ese
+commit GitHub creó suites de otras apps (vercel, claude, cursor…), pero **ninguna
+de GitHub Actions**: el evento push ni siquiera llega a Actions. En un fork, lo
+típico es que falte el botón *"I understand my workflows, go ahead and enable
+them"* de la pestaña Actions, que la API no muestra (`actions/permissions` dice
+`enabled: true`). Lo tiene que pulsar el dueño; después, un push cualquiera
+cierra el sprint.
