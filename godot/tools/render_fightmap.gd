@@ -10,7 +10,7 @@ extends SceneTree
 ##       [--detail=1] [--detail-radius=3] [--edge=0] [--edge-threshold=0.25] \
 ##       [--ambient=1] [--falloff=1.5] [--lights="x,y,r,i;..."] \
 ##       [--hud] [--overlays] [--debug=0..4] [--world=color|1bit] \
-##       [--actors=color|onebit|team] [--fighters]
+##       [--actors=color|onebit|team|line|duo] [--fighters]
 ##
 ## --actors picks the AnmSprite 1-bit style (onebit = 1 bit + the actor's own
 ## mask colours; team = that plus a team-colour outline). --fighters places
@@ -33,7 +33,7 @@ extends SceneTree
 
 const SHADER_PATH := "res://src/fight/onebit.gdshader"
 const AnmSpriteScript := preload("res://src/anims/anm_sprite.gd")
-const ACTOR_STYLES := {"color": 0, "onebit": 1, "team": 2}
+const ACTOR_STYLES := {"color": 0, "onebit": 1, "team": 2, "line": 3, "duo": 4}
 ## Demo fighters for --fighters: one breed set per spawn slot, with palette
 ## indices so each one gets different skin/hair/eye tints.
 const DEMO_FIGHTERS := [
@@ -183,7 +183,7 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				o.fighters = true
 			"actors":
 				if not ACTOR_STYLES.has(v):
-					printerr("[render] --actors is color, onebit or team, got '%s'" % v)
+					printerr("[render] --actors is color, onebit, team, line or duo, got '%s'" % v)
 					return {}
 				o.actors = v
 			"world":

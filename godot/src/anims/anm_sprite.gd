@@ -46,6 +46,11 @@ var tints := {}
 ##       (flat two-tone), plus a 1-px black outline so the silhouette does
 ##       not melt into the 1-bit ground
 ##   2 = the same with the outline in team_color
+##   3 = line art ("ink drawing"): black lines where the colour changes and
+##       around the silhouette, white fill, flat shade (checker / solid
+##       black) only for the darkest areas. No dither inside the body
+##   4 = team duotone: luminance mapped black -> team_color -> white, every
+##       bit of shading kept, no dither
 ## A static, because it is a renderer-wide choice, like the map art set.
 static var onebit_style := 0
 ## Outline colour for onebit_style 2 (alpha 0 = black, as in style 1).
@@ -147,7 +152,11 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 			mimg = AssetPaths.load_image_at("%s/%s" % [dir, fr.mask])
 		if not eff.is_empty() and mimg != null:
 			_apply_tints(img, mimg, eff)
-		if onebit_style > 0:
+		if onebit_style == 3:
+			_apply_lineart(img)
+		elif onebit_style == 4:
+			_apply_duotone(img, team_color if team_color.a > 0.0 else Color(0.5, 0.5, 0.5))
+		elif onebit_style > 0:
 			_apply_onebit(img, mimg, eff,
 				team_color if onebit_style >= 2 and team_color.a > 0.0 else Color.BLACK)
 		var w := int(fr.w)
@@ -396,6 +405,84 @@ static func _apply_onebit(img: Image, mimg: Image, tints: Dictionary,
 					or (y > 0 and solid[(y - 1) * w + x] == 1) \
 					or (y < h - 1 and solid[(y + 1) * w + x] == 1):
 				img.set_pixel(x, y, outline)
+
+
+## Line art (onebit_style 3). Lines where neighbouring colours differ by more
+## than LINE_EDGE, and around the silhouette; the rest white, except the
+## darkest areas: checker below LINE_MID, solid ink below LINE_DARK.
+const LINE_EDGE := 0.28
+const LINE_MID := 0.45
+const LINE_DARK := 0.2
+
+
+static func _apply_lineart(img: Image) -> void:
+	img.convert(Image.FORMAT_RGBA8)
+	var w := img.get_width()
+	var h := img.get_height()
+	var src := img.duplicate() as Image
+	for y in h:
+		for x in w:
+			var c := src.get_pixel(x, y)
+			if c.a < 0.5:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			var edge := false
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nx: int = x + d.x
+				var ny: int = y + d.y
+				if nx < 0 or ny < 0 or nx >= w or ny >= h:
+					edge = true
+					break
+				var n := src.get_pixel(nx, ny)
+				if n.a < 0.5:
+					edge = true
+					break
+				# only the darker side of a colour step draws the line, so
+				# lines stay one pixel wide instead of doubling up
+				var dr := c.r - n.r
+				var dg := c.g - n.g
+				var db := c.b - n.b
+				if sqrt(dr * dr + dg * dg + db * db) > LINE_EDGE \
+						and c.get_luminance() <= n.get_luminance():
+					edge = true
+					break
+			var lum := c.get_luminance()
+			var out := Color.WHITE
+			if edge or lum < LINE_DARK:
+				out = Color.BLACK
+			elif lum < LINE_MID and (x + y) % 2 == 0:
+				out = Color.BLACK
+			img.set_pixel(x, y, out)
+	# outer contour: a black ring just outside the silhouette, so a white
+	# figure still stands out on near-white ground (the heavy outline the
+	# Glagstone buildings carry)
+	for y in h:
+		for x in w:
+			if src.get_pixel(x, y).a >= 0.5:
+				continue
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nx: int = x + d.x
+				var ny: int = y + d.y
+				if nx >= 0 and ny >= 0 and nx < w and ny < h \
+						and src.get_pixel(nx, ny).a >= 0.5:
+					img.set_pixel(x, y, Color.BLACK)
+					break
+
+
+## Team duotone (onebit_style 4): black -> team -> white along luminance,
+## with a little contrast so the small sprites keep their volume.
+static func _apply_duotone(img: Image, team: Color) -> void:
+	img.convert(Image.FORMAT_RGBA8)
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a < 0.5:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			var t := clampf((c.get_luminance() - 0.5) * 1.3 + 0.5, 0.0, 1.0)
+			var out := Color.BLACK.lerp(team, t * 2.0) if t < 0.5 \
+				else team.lerp(Color.WHITE, (t - 0.5) * 2.0)
+			img.set_pixel(x, y, out)
 
 
 ## Per-pixel channel tint — mask.r/g/b hold ch1/ch2/ch8 coverage; the
