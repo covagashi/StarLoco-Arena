@@ -70,7 +70,7 @@ export interface MapInfo {
   isArena: boolean;
 }
 
-export interface MapCell {
+interface MapCell {
   x: number;
   y: number;
   alt: number;
@@ -83,7 +83,7 @@ export interface MapSpawn {
   z: number;
 }
 
-export interface MapDrawable {
+interface MapDrawable {
   gfxId: number;
   cellX: number;
   cellY: number;
@@ -96,20 +96,20 @@ export interface MapDrawable {
   flip: boolean;
 }
 
-export interface MapGfx {
+interface MapGfx {
   drawables: MapDrawable[];
   truncated: boolean;
   error: string;
 }
 
-export interface MapSprite {
+interface MapSprite {
   gfxId: number;
   dataUrl: string;
   w: number;
   h: number;
 }
 
-export interface MapRender {
+interface MapRender {
   dataUrl: string;
   worldX: number;
   worldY: number;
@@ -263,11 +263,6 @@ function app(): AppBindings | null {
 
 
 
-// connected reports whether we're running inside the Wails webview.
-export function connected(): boolean {
-  return app() !== null;
-}
-
 const NO_PATHS: Paths = { dataDir: "", dataDirValid: false, clientDir: "", clientDirValid: false };
 const NO_ENV: Env = { version: "dev", os: "browser" };
 const NO_COUNTS: DataCounts = {
@@ -380,21 +375,6 @@ export function onEvent(name: string, cb: (data: unknown) => void): () => void {
 
 export function listMaps(): Promise<MapInfo[]> {
   return app()?.ListMaps() ?? Promise.resolve([]);
-}
-
-export function getMapGfx(id: number): Promise<MapGfx> {
-  return app()?.GetMapGfx(id) ?? Promise.resolve({ drawables: [], truncated: false, error: "not connected" });
-}
-
-export function getMapSprites(ids: number[]): Promise<MapSprite[]> {
-  return app()?.GetMapSprites(ids) ?? Promise.resolve([]);
-}
-
-export function getMapRender(id: number): Promise<MapRender> {
-  return (
-    app()?.GetMapRender(id) ??
-    Promise.resolve({ dataUrl: "", worldX: 0, worldY: 0, worldW: 0, worldH: 0, empty: true, error: "not connected" })
-  );
 }
 
 export function getMapBounds(id: number): Promise<MapBounds> {

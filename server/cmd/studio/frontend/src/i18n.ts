@@ -18,10 +18,6 @@ export function setUILang(code: string): void {
   current = code === "fr" ? "fr" : "en";
 }
 
-export function uiLang(): Lang {
-  return current;
-}
-
 // t looks up a key in the current language table (English fallback), applying
 // {placeholder} interpolation from vars.
 export function t(key: string, vars?: Record<string, string | number>): string {

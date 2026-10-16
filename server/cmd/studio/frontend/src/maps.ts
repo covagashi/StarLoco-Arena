@@ -26,12 +26,6 @@ interface View {
   topo: boolean; // altitude blocks (analytical)
 }
 
-// spawn deep-link target (set by main.ts crosslink, optional).
-let pendingMapId: number | null = null;
-export function focusMap(id: number): void {
-  pendingMapId = id;
-}
-
 // withTimeout resolves to "timeout" if p doesn't settle within ms, so a stuck
 // backend call or image load can never hang the viewer forever.
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | "timeout"> {
@@ -567,13 +561,7 @@ export function viewMaps(container: HTMLElement): void {
       pick.addEventListener("change", () => void selectMap(Number(pick.value)));
       // Default to the smallest arena (a real fight map), not a huge overworld.
       const smallest = (list: MapInfo[]) => list.reduce((a, b) => (b.tiles < a.tiles ? b : a));
-      const initial =
-        pendingMapId != null && maps.some((m) => m.id === pendingMapId)
-          ? pendingMapId
-          : arenas.length
-            ? smallest(arenas).id
-            : smallest(maps).id;
-      pendingMapId = null;
+      const initial = arenas.length ? smallest(arenas).id : smallest(maps).id;
       pick.value = String(initial);
       void selectMap(initial);
     })

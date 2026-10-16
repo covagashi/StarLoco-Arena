@@ -59,11 +59,6 @@ function esc(v: unknown): string {
   );
 }
 
-export function fmtList(a: number[] | null | undefined): string {
-  if (!a || a.length === 0) return "\u2014";
-  return a.join(", ");
-}
-
 export function boolBadge(b: boolean): string {
   return b
     ? `<span class="tb-badge on">yes</span>`

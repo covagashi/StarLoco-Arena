@@ -122,6 +122,35 @@ jobs:
             go build -trimpath -o /dev/null ./cmd/server
           done
 
+  # The Go side of cmd/studio is covered above (Windows only); this is its
+  # TypeScript frontend, which no job looked at before. It needs no CGO and no
+  # Wails, so it runs on Linux. The build output is thrown away: the Go embed
+  # only needs the committed dist/.gitkeep placeholder.
+  studio-frontend:
+    name: Studio frontend (typecheck, oxlint, oxfmt, knip, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/cmd/studio/frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The pnpm version comes from package.json's packageManager field.
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: server/cmd/studio/frontend/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: server/cmd/studio/frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build
+
   godot:
     name: Godot client (headless unit lane)
     runs-on: ubuntu-latest
