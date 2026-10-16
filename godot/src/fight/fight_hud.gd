@@ -244,11 +244,12 @@ func _layout_column(col: Array, is_left: bool, top: float, p: float,
 
 
 func _draw_banner() -> void:
-	if _title.is_empty() and _sub.is_empty():
-		return
 	var r := Rect2(Vector2.ZERO, banner.size)
 	var ink := Color.WHITE if onebit else Color("ad965a")
 	var plate := Color.BLACK if onebit else Color("292c20")
+	_draw_clock(r, ink, plate)
+	if _title.is_empty() and _sub.is_empty():
+		return
 	# a ribbon: a box with notched ends
 	var n := 12.0
 	var pts := PackedVector2Array([Vector2(0, 0), Vector2(r.end.x, 0),
@@ -264,15 +265,21 @@ func _draw_banner() -> void:
 	_centered(font, _title, Vector2(r.size.x * 0.5, 23.0), 20, tc)
 	_centered(body, _sub, Vector2(r.size.x * 0.5, 43.0), 14,
 		_sub_col.lightened(0.25))
-	if _clock >= 0.0:
-		# left of the ribbon: the top-right corner belongs to the menu
-		var c := Vector2(-24.0, r.size.y * 0.5)
-		var urgent := _clock <= 5.5
-		banner.draw_circle(c, 18.0, plate)
-		banner.draw_arc(c, 18.0, 0.0, TAU, 40,
-			Color(1.0, 0.45, 0.3) if urgent else ink, 2.0, true)
-		_centered(body, str(ceili(_clock)), c + Vector2(0, 6), 16,
-			Color(1.0, 0.55, 0.4) if urgent else Color.WHITE)
+
+
+## The turn clock, a disc left of the ribbon (the top-right corner belongs to
+## the menu); it shows on its own too, e.g. before the first round.
+func _draw_clock(r: Rect2, ink: Color, plate: Color) -> void:
+	if _clock < 0.0:
+		return
+	var body := get_theme_default_font()
+	var c := Vector2(-24.0, r.size.y * 0.5)
+	var urgent := _clock <= 5.5
+	banner.draw_circle(c, 18.0, plate)
+	banner.draw_arc(c, 18.0, 0.0, TAU, 40,
+		Color(1.0, 0.45, 0.3) if urgent else ink, 2.0, true)
+	_centered(body, str(ceili(_clock)), c + Vector2(0, 6), 16,
+		Color(1.0, 0.55, 0.4) if urgent else Color.WHITE)
 
 
 func _centered(font: Font, s: String, at: Vector2, fs: int, col: Color) -> void:

@@ -675,7 +675,7 @@
   "fight.challenge": "défi",
   "fight.no_arena": "map {id} : pas de données d'arène",
   "fight.phase.presentation": "présentation",
-  "fight.phase.placement": "placement — clique sur une zone pour te déployer",
+  "fight.phase.placement": "Clique sur une zone pour te déployer",
   "fight.phase.observation": "observation",
   "fight.phase.combat": "combat !",
   "fight.weapon": "arme",

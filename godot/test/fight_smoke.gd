@@ -139,6 +139,11 @@ func _on_placement() -> void:
 	await create_timer(0.4).timeout
 	if finished or fight_scene == null:
 		return
+	if DisplayServer.get_name() != "headless":
+		# the placement HUD (S17 banner, Ready button) — once per fight
+		var img := root.get_texture().get_image()
+		if img != null:
+			img.save_png("/tmp/fight_placement.png")
 	var t: int = fight_scene._my_team()
 	var cur: Vector3i = fight_scene._actor_cells.get(
 		fight_scene._selected, Vector3i.ZERO)

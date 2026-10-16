@@ -164,6 +164,10 @@ func _ready() -> void:
 		_map_lbl.text = I18n.t("fight.arena", {"id": State.fight_world})
 		_map_lbl.add_theme_stylebox_override("normal", info.get_theme_stylebox("normal"))
 		_map_lbl.add_theme_font_size_override("font_size", 14)
+		# a long challenge name must not run under the banner
+		_map_lbl.clip_text = true
+		_map_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		_map_lbl.mouse_filter = Control.MOUSE_FILTER_PASS
 		$UI/TopBar.add_child(_map_lbl)
 		$UI/TopBar.move_child(_map_lbl, 0)
 	_load()
@@ -176,6 +180,7 @@ func _ready() -> void:
 			NpcDialogs.challenge_name(int(State.fight_data.get("fight_id", 0)))]
 		if _map_lbl != null:
 			_map_lbl.text += suffix
+			_map_lbl.tooltip_text = _map_lbl.text
 		else:
 			$UI/TopBar/MapId.text += suffix
 	if State.net != null:
@@ -336,7 +341,14 @@ func _layout_fight_ui() -> void:
 	var br := _fight_hud.banner_rect
 	var mr := _fight_hud.medal_rect
 	var right_edge := vp.x - maxf(_fight_hud.right_w, 12.0) - 8.0
-	_anchor_rect($UI/TopBar, Vector4(0, 0, 0, 0), Rect2(12, 12, br.position.x - 24, 32))
+	# up to the turn clock, which sits left of the banner
+	_anchor_rect($UI/TopBar, Vector4(0, 0, 0, 0), Rect2(12, 12, br.position.x - 64, 32))
+	if _map_lbl != null:
+		# the pill hugs the name, trimmed (…) where the clock begins
+		var want := _map_lbl.get_theme_font("font").get_string_size(_map_lbl.text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1,
+			_map_lbl.get_theme_font_size("font_size")).x + 26.0
+		_map_lbl.custom_minimum_size.x = minf(want, maxf(br.position.x - 64.0, 40.0))
 	var info_w := minf(vp.x - 40.0, 640.0)
 	# zero-width rect growing both ways: the pill hugs the text, centred
 	_anchor_rect($UI/Info, Vector4(0.5, 0, 0.5, 0), Rect2(0, br.end.y + 4, 0, 24))
@@ -640,9 +652,11 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_wire_fight_focus.call_deferred()
 			_set_phase("fight.phase.placement")
 			placement_began.emit()
+			_refresh_timeline()   # banner: PLACEMENT + its clock
 			queue_redraw()
 		OP_END_PLACEMENT:
 			_placement = false
+			_refresh_timeline()
 			_turn_left = -1.0
 			_end_turn.text = I18n.t("fight.pass")
 			_end_turn.disabled = true
@@ -651,6 +665,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_START_OBSERVATION:
 			# third gate: 8031 (arch 3, empty) advances to the action phase.
 			_placement = false
+			_refresh_timeline()
 			_turn_left = -1.0
 			_end_turn.text = I18n.t("fight.pass")
 			_face_btn.disabled = true
@@ -1629,9 +1644,7 @@ func _on_turn_begin(fid: int) -> void:
 	_face_btn.disabled = not ours
 	# retail's bar tracks the ACTING fighter's AP/MP even on enemy turns —
 	# summons read theirs off the type-300 template, players off breed stats.
-	var stats: Array = BREED_STATS.get(int(f.get("breed", 1)), [60, 6, 3])
-	if f.get("summon", false):
-		stats = [0, int(f.get("ap", 6)), int(f.get("mp", 3))]
+	var stats := _base_stats(f)
 	_ap_left = int(stats[1])
 	_mp_left = int(stats[2])
 	if ours:
@@ -1703,7 +1716,11 @@ func fight_hud_model() -> Dictionary:
 			"dead": _dead.get(fid, false), "invisible": invisible,
 			"summon": bool(f.get("summon", false)), "buffs": chips,
 		}
-	var cur: Dictionary = State.fighters.get(_current_fid, {})
+	# the medallion follows the turn — or, while placing, our selection
+	var shown := _current_fid
+	if _placement and _current_fid < 0:
+		shown = _selected
+	var cur: Dictionary = State.fighters.get(shown, {})
 	var title := ""
 	if _fight_over:
 		title = I18n.t("fight.banner.over")
@@ -1714,11 +1731,20 @@ func fight_hud_model() -> Dictionary:
 	return {
 		"left_team": maxi(_my_team(), 0) if not State.spectating else 0,
 		"order": order, "fighters": fighters,
-		"active": _current_fid if not cur.is_empty() else -1,
-		"ap": _ap_left, "mp": _mp_left,
+		"active": shown if not cur.is_empty() else -1,
+		"ap": _ap_left if shown == _current_fid else int(_base_stats(cur)[1]),
+		"mp": _mp_left if shown == _current_fid else int(_base_stats(cur)[2]),
 		"title": title,
 		"sub": str(cur.get("name", "")) if not _fight_over else "",
 	}
+
+
+## [hp, ap, mp] a fighter starts its turn with — players read the breed
+## stats, summons their type-300 template.
+func _base_stats(f: Dictionary) -> Array:
+	if f.get("summon", false):
+		return [0, int(f.get("ap", 6)), int(f.get("mp", 3))]
+	return BREED_STATS.get(int(f.get("breed", 1)), [60, 6, 3])
 
 
 func _on_timeline_chip(fid: int) -> void:
@@ -3191,6 +3217,7 @@ func _try_move() -> void:
 		var who := _own_fighter_at(cell)
 		if who >= 0:
 			_selected = who
+			_refresh_timeline()
 			queue_redraw()
 		else:
 			request_place_at(cell)
