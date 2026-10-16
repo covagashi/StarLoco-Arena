@@ -1,6 +1,6 @@
 # S01 — Red de pruebas del cliente + raíz de assets
 
-**Abierto:** 2026-10-13 · **Rama:** `main-covaga` · **Estado:** 🟢 cerrado salvo la primera corrida real de CI
+**Abierto:** 2026-10-13 · **Rama:** `main-covaga` · **Estado:** 🟢 cerrado (CI confirmada el 2026-10-16, ver al final)
 
 ## Objetivo
 
@@ -182,3 +182,9 @@ La lane de CI no ha corrido en un runner real todavía. Los comandos están
 probados en árbol sin assets y el YAML parsea, y el tag y el nombre del binario
 se comprobaron contra la API de GitHub (`Godot_v4.7.1-stable_linux.x86_64.zip`),
 pero el primer push es lo que lo confirma.
+
+**Confirmado (2026-10-16, en S02):** la lane corrió en un runner real —
+[run 38454218639](https://github.com/covagashi/StarLoco-Arena/actions/runs/38454218639),
+sobre `f56c0ae5`, lanzada a mano — y el job *Godot client (headless unit lane)*
+salió **success**. En esa misma ejecución el job de Ubuntu cayó en *Check
+formatting* por `npcdialog_test.go`, ya corregido en `d53662bc`.

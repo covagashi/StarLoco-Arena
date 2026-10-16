@@ -152,3 +152,21 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
   lleva la ruta.
 - Solo `godot/` se toca para GUI; protocolo sagrado; XMLs retail no se editan (se arregla
   el intérprete).
+
+## 8. Tooling y CI
+
+- [ ] **Hacer que la CI se dispare con los pushes** — bloqueante. Solo hay una
+      ejecución en todo el repo, lanzada a mano; ningún push lanza `ci.yml`. Mirar
+      *Actions* → habilitar workflows en el fork (detalle en [`S02`](./S02-studio-tooling.md)).
+- [x] Studio frontend con pnpm + oxlint + oxfmt + knip + lane de CI — [`S02`](./S02-studio-tooling.md).
+- [ ] **Decidir: ¿JS en el portal web?** HTMX en el panel de bug reports exige
+      `script-src 'self'` y romper el invariante que fija `security_headers_test.go`
+      (sin scripts → XSS almacenado inexplotable). Alternativa sin JS: mejorar el
+      panel con formularios y GET normales.
+- [ ] Studio: `GetMapGfx` / `GetMapSprites` / `GetMapRender` (Go) no tienen
+      consumidor en el frontend desde que knip borró sus envoltorios TS (S02).
+      Conectarlos a una vista o borrarlos.
+- [ ] (Opcional) `tools/proto-gen/gen_messages.py` es un generador de código, no
+      una tarea de datos: según la regla "CLI = Go" iría en `server/cmd/`.
+- [ ] (Pregunta) ¿Seguir soportando MySQL y Postgres o quedarse solo con SQLite?
+      Hoy hay tres drivers, tres configs y tres compose en `server/deploy/`.

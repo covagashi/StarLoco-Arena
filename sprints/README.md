@@ -35,3 +35,4 @@ posteriori**. El criterio ahora es que la evidencia vaya en el sprint.
 | Sprint | Estado | Tema |
 |---|---|---|
 | [S01](./S01-client-test-net.md) | 🟢 cerrado | Red de pruebas del cliente + raíz de assets (B-173, B-174, B-175) |
+| [S02](./S02-studio-tooling.md) | 🟢 cerrado | Tooling del stack en el studio: pnpm, oxlint, oxfmt, knip, lane de CI |

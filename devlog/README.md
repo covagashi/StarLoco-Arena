@@ -27,3 +27,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | Fecha | Entrada |
 |---|---|
 | 2026-10-16 | [Reorganización de docs: fuera el roadmap heredado, `pendiente/` → `sprints/`](./2026-10-16-docs-reorg.md) |
+| 2026-10-16 | [Permisos del checkout + S02 (tooling del studio)](./2026-10-16-s02-studio-tooling.md) |
