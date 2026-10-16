@@ -104,12 +104,21 @@ void fragment() {
 
 	float threshold = (float(bayer8(ivec2(cell))) + 0.5) / 64.0;
 	bool lit = tone * light > threshold;
+	bool colour_px = false;
+	vec4 colour = ink;
 	if (world_onebit) {
 		// The art is already at its own pixel grid: read the exact screen
 		// pixel, never the dither cell's centre, or pixel_size > 1 smears it.
 		vec3 own = texture(screen_tex, SCREEN_UV).rgb;
 		float raw = dot(own, vec3(0.2126, 0.7152, 0.0722));
 		lit = raw > threshold && light > threshold;
+		// Colour is deliberate here (actor accents, team outlines, tactical
+		// overlays): it passes through, only darkness can hide it.
+		float chroma = max(own.r, max(own.g, own.b)) - min(own.r, min(own.g, own.b));
+		if (chroma > 0.08) {
+			colour_px = true;
+			colour = light > threshold ? vec4(own, 1.0) : ink;
+		}
 	}
 
 	if (edge_strength > 0.0) {
@@ -125,7 +134,7 @@ void fragment() {
 		}
 	}
 
-	COLOR = lit ? paper : ink;
+	COLOR = colour_px ? colour : (lit ? paper : ink);
 	if (debug_view == 1) {
 		COLOR = vec4(art, 1.0);
 	} else if (debug_view == 2) {

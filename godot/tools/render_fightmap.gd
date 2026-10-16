@@ -9,7 +9,12 @@ extends SceneTree
 ##       [--pixel=2] [--black=0] [--white=1] [--gamma=1] [--levels=0] \
 ##       [--detail=1] [--detail-radius=3] [--edge=0] [--edge-threshold=0.25] \
 ##       [--ambient=1] [--falloff=1.5] [--lights="x,y,r,i;..."] \
-##       [--hud] [--overlays] [--debug=0..4] [--world=color|1bit]
+##       [--hud] [--overlays] [--debug=0..4] [--world=color|1bit] \
+##       [--actors=color|onebit|team] [--fighters]
+##
+## --actors picks the AnmSprite 1-bit style (onebit = 1 bit + the actor's own
+## mask colours; team = that plus a team-colour outline). --fighters places
+## three demo fighters per team on the map's spawn cells.
 ##
 ## --world=1bit loads the per-texture 1-bit art (assets/mapgfx_1bit, made by
 ## tools/asset-import/onebit.py) and leaves the shader only the darkness and
@@ -27,6 +32,16 @@ extends SceneTree
 ## Exits 0 on a written PNG, 1 on a render/save failure, 2 on bad usage.
 
 const SHADER_PATH := "res://src/fight/onebit.gdshader"
+const AnmSpriteScript := preload("res://src/anims/anm_sprite.gd")
+const ACTOR_STYLES := {"color": 0, "onebit": 1, "team": 2}
+## Demo fighters for --fighters: one breed set per spawn slot, with palette
+## indices so each one gets different skin/hair/eye tints.
+const DEMO_FIGHTERS := [
+	["fighter_-110", [1, 3, 5]], ["fighter_-131", [4, 0, 2]],
+	["fighter_-150", [6, 2, 1]], ["fighter_-171", [2, 5, 4]],
+	["fighter_-1100", [0, 1, 6]], ["fighter_-1121", [5, 4, 3]],
+]
+const TEAM_COLORS := [Color(0.9, 0.15, 0.1), Color(0.15, 0.4, 1.0)]
 
 
 # _initialize, not _init: fight_view.gd references autoloads (I18n), which are
@@ -53,12 +68,15 @@ func _run() -> void:
 	await process_frame
 	if opt.world == "1bit":
 		scene._gfx.use_onebit(true)
+	AnmSpriteScript.onebit_style = ACTOR_STYLES[opt.actors]
 	scene.get_node("UI/TopBar/MapId").text = str(opt.map)
 	scene._load()
 	if not opt.hud:
 		scene.get_node("UI").visible = false
 	scene.overlays_visible = opt.overlays
 	scene.queue_redraw()
+	if opt.fighters:
+		_spawn_demo_fighters(scene)
 	await create_timer(0.5).timeout
 
 	if opt.raw != "":
@@ -105,6 +123,28 @@ func _run() -> void:
 	quit(0)
 
 
+## Three fighters per team on the map's own spawn cells, so the actor styles
+## can be judged in place (the preview otherwise only shows pedestal coaches).
+func _spawn_demo_fighters(scene: Node2D) -> void:
+	var i := 0
+	for team in [0, 1]:
+		var cells: Array = scene._fmd.get("team%d" % team, [])
+		for k in mini(3, cells.size()):
+			var c: Dictionary = cells[k]
+			var spec: Array = DEMO_FIGHTERS[i]
+			i += 1
+			var spr: Node2D = AnmSpriteScript.new()
+			spr.foot_pivot = true
+			spr.team_color = TEAM_COLORS[team]
+			spr.tints = Palettes.fighter_tints(spec[1][0], spec[1][1], spec[1][2])
+			spr.position = scene._iso(c.x + 0.5, c.y + 0.5, c.z)
+			spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
+			if team == 1:
+				spr.scale.x = -1   # face the other team
+			scene._actors.add_child(spr)
+			spr.load_action("anims/" + spec[0], "1_AnimStatique")
+
+
 func _save(path: String) -> bool:
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
@@ -125,7 +165,8 @@ func _parse(args: PackedStringArray) -> Dictionary:
 	var o := {"map": 10, "out": "/tmp/fightmap.png", "raw": "", "hud": false,
 		"overlays": false, "pixel": 2.0, "black": 0.0, "white": 1.0,
 		"gamma": 1.0, "levels": 0.0, "edge": 0.0, "edge-threshold": 0.25,
-		"ambient": 1.0, "falloff": 1.5, "lights": [], "debug": 0.0, "world": "color", "detail": 1.0, "detail-radius": 3.0}
+		"ambient": 1.0, "falloff": 1.5, "lights": [], "debug": 0.0, "world": "color", "actors": "color",
+		"fighters": false, "detail": 1.0, "detail-radius": 3.0}
 	for a in args:
 		if not a.begins_with("--"):
 			printerr("[render] unexpected argument: %s" % a)
@@ -138,6 +179,13 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				o.map = int(v)
 			"out", "raw":
 				o[k] = v
+			"fighters":
+				o.fighters = true
+			"actors":
+				if not ACTOR_STYLES.has(v):
+					printerr("[render] --actors is color, onebit or team, got '%s'" % v)
+					return {}
+				o.actors = v
 			"world":
 				if v not in ["color", "1bit"]:
 					printerr("[render] --world is color or 1bit, got '%s'" % v)

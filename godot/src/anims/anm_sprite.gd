@@ -38,6 +38,24 @@ var external_draw := false
 ## the frame's mask (R=ch1, G=ch2, B=ch8) unless overridden per-call.
 var tints := {}
 
+## 1-bit actor styles (sprints/S04), applied to each frame at load:
+##   0 = off (retail colour)
+##   1 = 1 bit + the actor's own colours: the body goes ink/paper on an 8x8
+##       Bayer (ordered, so it does not flicker between frames), and only the
+##       mask regions (skin/hair/eyes) keep their tint
+##       (flat two-tone), plus a 1-px black outline so the silhouette does
+##       not melt into the 1-bit ground
+##   2 = the same with the outline in team_color
+## A static, because it is a renderer-wide choice, like the map art set.
+static var onebit_style := 0
+## Outline colour for onebit_style 2 (alpha 0 = black, as in style 1).
+var team_color := Color(0, 0, 0, 0)
+
+const _BAYER8 := [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26,
+	12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
+	3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25,
+	15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21]
+
 ## meta.json "sfx" — {frame index: [sound ids]} baked from Sons* parts.
 ## Played through a small round-robin pool; streams are cached by path.
 var _sfx: Dictionary = {}
@@ -70,6 +88,10 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 	var key := "%s/%s" % [set_dir, action]
 	if not eff.is_empty():
 		key += _tint_key(eff)
+	if onebit_style > 0:
+		key += "|1b%d" % onebit_style
+		if onebit_style >= 2 and team_color.a > 0.0:
+			key += team_color.to_html()
 	if _cache.has(key):
 		var c: Dictionary = _cache[key]
 		_fps = c.fps
@@ -120,10 +142,14 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 		var img := AssetPaths.load_image_at("%s/%s" % [dir, fr.png])
 		if img == null:
 			continue
-		if not eff.is_empty() and fr.get("mask", "") != "":
-			var mimg := AssetPaths.load_image_at("%s/%s" % [dir, fr.mask])
-			if mimg != null:
-				_apply_tints(img, mimg, eff)
+		var mimg: Image = null
+		if fr.get("mask", "") != "" and (not eff.is_empty() or onebit_style > 0):
+			mimg = AssetPaths.load_image_at("%s/%s" % [dir, fr.mask])
+		if not eff.is_empty() and mimg != null:
+			_apply_tints(img, mimg, eff)
+		if onebit_style > 0:
+			_apply_onebit(img, mimg, eff,
+				team_color if onebit_style >= 2 and team_color.a > 0.0 else Color.BLACK)
 		var w := int(fr.w)
 		var h := int(fr.h)
 		# lowest row containing visible pixels — the authored PNG bottom can
@@ -319,6 +345,57 @@ static func _tint_key(tints: Dictionary) -> String:
 		var v: Vector3 = tints[c]
 		parts.append("%d:%.3f,%.3f,%.3f" % [int(c), v.x, v.y, v.z])
 	return "@t" + ";".join(parts)
+
+
+## 1 bit + colour (see onebit_style). img is already tinted. Mask pixels keep
+## the hue of their dominant channel's tint as a two-tone (lit / shade);
+## everything else is ink/paper. Alpha goes hard at 0.5. With an outline
+## colour, every transparent pixel touching the silhouette takes it.
+static func _apply_onebit(img: Image, mimg: Image, tints: Dictionary,
+		outline: Color) -> void:
+	img.convert(Image.FORMAT_RGBA8)
+	if mimg != null:
+		mimg.convert(Image.FORMAT_RGBA8)
+	var w := img.get_width()
+	var h := img.get_height()
+	var accents := {}
+	for ch in [1, 2, 8]:
+		var t: Vector3 = tints.get(ch, Vector3.ONE) / 1.25
+		accents[ch] = Color(clampf(t.x, 0, 1), clampf(t.y, 0, 1), clampf(t.z, 0, 1))
+	var solid := PackedByteArray()
+	solid.resize(w * h)
+	for y in h:
+		for x in w:
+			var c := img.get_pixel(x, y)
+			if c.a < 0.5:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			solid[y * w + x] = 1
+			# a touch of gamma lift: the retail sprites are dark-ish
+			var lum := pow(clampf(c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722, 0, 1), 0.8)
+			var thr := (float(_BAYER8[(y & 7) * 8 + (x & 7)]) + 0.5) / 64.0
+			var on := lum > thr
+			var out := Color.WHITE if on else Color.BLACK
+			if mimg != null and x < mimg.get_width() and y < mimg.get_height():
+				var m := mimg.get_pixel(x, y)
+				var best := maxf(m.r, maxf(m.g, m.b))
+				if best > 0.4:
+					# flat two-tone, no dither: dithered colour reads as noise
+					var ch := 1 if best == m.r else (2 if best == m.g else 8)
+					var acc: Color = accents[ch]
+					out = acc if lum > 0.42 else acc.darkened(0.55)
+			img.set_pixel(x, y, out)
+	if outline.a <= 0.0:
+		return
+	for y in h:
+		for x in w:
+			if solid[y * w + x] == 1:
+				continue
+			if (x > 0 and solid[y * w + x - 1] == 1) \
+					or (x < w - 1 and solid[y * w + x + 1] == 1) \
+					or (y > 0 and solid[(y - 1) * w + x] == 1) \
+					or (y < h - 1 and solid[(y + 1) * w + x] == 1):
+				img.set_pixel(x, y, outline)
 
 
 ## Per-pixel channel tint — mask.r/g/b hold ch1/ch2/ch8 coverage; the

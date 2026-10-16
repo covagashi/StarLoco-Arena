@@ -114,6 +114,7 @@ adjuntar ficheros en la app.
 |---|---|---|---|
 | 2026-10-16 | "Primero haz la prueba de un mapa y vemos el arte" | Mapa 10. Cuatro variantes: original; día con celda de 1 px (`--pixel=1 --detail=3`); día con celda de 2 px (`--pixel=2 --detail=3 --black=0.05 --white=0.9`); noche (`--ambient=0.12 --falloff=1.0` + 4 luces) | `prueba1-mapa10.png` |
 | 2026-10-16 | "La de Instagram separa los efectos y consigue un resultado más fino; tú no haces el 1 bit por tile, sino por imagen, ¿verdad?" → "hazlo" | **Cambio de enfoque: 1 bit por textura.** `tools/asset-import/onebit.py` convierte cada textura de `mapgfx` (contraste local `--detail=4 --radius=2`, `--white=0.75 --gamma=0.75`, Atkinson, alfa binario) a `assets/mapgfx_1bit/`. `map_gfx.use_onebit()` la carga con filtro nearest y posiciones enteras. El shader (`world_onebit`) ya solo pone la oscuridad: el píxel del mundo sobrevive donde `luz > Bayer`. Render con `--world=1bit --pixel=1`, 5 luces en las losas brillantes y las salidas, `--ambient=0.12 --falloff=1.0` | `prueba2-capas.png` (WORLD / DARKNESS / LIGHTS / FINAL, recorte 1:1), `prueba2-antes-despues.png` |
+| 2026-10-16 | "El world de día me parece bien; los otros efectos solo para la animación ambiental; de noche es muy oscuro para una pelea; ¿los muñecos podrían ser 1 bit + color?" → "haz pruebas" | **Decidido:** el WORLD de día es el estilo base de los mapas de pelea; luz y oscuridad, solo para ambiente (efectos puntuales, ambiente suave, eventos), nunca una pelea a oscuras. **Personajes:** `AnmSprite.onebit_style` 1 = cuerpo en 1 bit (Bayer, estable entre frames) + piel/pelo/ojos con su tinte en dos tonos planos + contorno negro; 2 = lo mismo con contorno del color del equipo. El shader deja pasar los píxeles con color. Tres luchadores demo por equipo (`--fighters`) | `prueba3-personajes-zoom.png` (A color / B / B+C, ×3), `prueba3-mapa-equipos.png` (tamaño real) |
 
 ## Notas de la primera prueba (2026-10-16)
 
@@ -140,8 +141,12 @@ adjuntar ficheros en la app.
 - **Ojo al revisar capturas:** reducir una imagen 1 bit a la mitad borra filas
   enteras de puntos (la oscuridad parece negro puro). `contact_sheet.py --crop`
   recorta a 1:1.
-- **Pendiente:** los personajes siguen a color; el shader los pasa a 1 bit con
-  su propia luminancia. Lo fino sería convertir también sus frames (312k).
+- **Personajes (prueba 3):** la conversión va en `AnmSprite`, al cargar cada
+  acción, porque los tintes son por personaje (los colores que elige el
+  jugador) y no se pueden hornear offline. Bayer y no Atkinson: la difusión de
+  error cambia de frame a frame y la animación parpadearía. El color tramado se
+  veía ruidoso; en dos tonos planos, no. El contorno negro se pierde sobre el
+  suelo tramado; el de equipo se lee siempre.
 - **Para la integración**: hoy las ayudas tácticas (zonas de salida, anillos) se
   dibujan en el mismo canvas que el mapa, así que el filtro se las comería.
   Habrá que moverlas a una capa por encima del filtro.
