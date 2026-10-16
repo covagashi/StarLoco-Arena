@@ -57,3 +57,12 @@ static func hud_life() -> String:
 		if v in HUD_LIFE:
 			return v
 	return "bar"
+
+
+static func set_hud_life(v: String) -> void:
+	if not v in HUD_LIFE:
+		return
+	var cfg := ConfigFile.new()
+	cfg.load(PATH)
+	cfg.set_value("arena", "hud_life", v)
+	cfg.save(PATH)

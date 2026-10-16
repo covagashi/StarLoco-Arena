@@ -5,7 +5,9 @@
 ##                res://test/unit/unit_runner.tscn under --headless. No
 ##                git-ignored assets required — this is the CI lane.
 ##   --visual     Windowed preview lane only: test/ui_review_preview.tscn and
-##                test/fight_ui_preview.tscn, each at 1280x720 and 800x600.
+##                test/fight_ui_preview.tscn, each at 1280x720 and 800x600,
+##                plus the fight preview in the 1-bit style when its map art
+##                is converted (assets/mapgfx_1bit).
 ##                Needs assets/anims (coach_7000) + the appSkin atlases, so
 ##                it can only ever run locally.
 ##   (no flag)    Headless lane, then the visual lane too — but only if
@@ -101,6 +103,23 @@ run_visual() {
 			fi
 		done
 	done
+	# The fight HUD again in the 1-bit style (sprints/S04, S17): its own
+	# theme and the converted map art. Skipped when the art isn't converted.
+	if [[ -e assets/mapgfx_1bit/10.json ]]; then   # the preview's map, converted
+		for res in 1280x720 800x600; do
+			echo "--- test/fight_ui_preview.tscn @ $res (1-bit) ---"
+			scene_rc=0
+			ARENA_ART_STYLE=onebit FIGHT_UI_SHOT=/tmp/fight-ui-onebit.png \
+				${DISPLAY_WRAP[@]+"${DISPLAY_WRAP[@]}"} "$GODOT" --path . -w --resolution "$res" \
+				res://test/fight_ui_preview.tscn || scene_rc=$?
+			cleanup_godot
+			if [[ "$scene_rc" -ne 0 ]]; then
+				rc=$scene_rc
+			fi
+		done
+	else
+		echo "--- 1-bit fight preview: SKIPPED (assets/mapgfx_1bit missing, see tools/asset-import/onebit.py) ---"
+	fi
 	return "$rc"
 }
 

@@ -1,6 +1,7 @@
 extends "res://src/ui/lobby_panel.gd"
 
 const Direction8 := preload("res://src/util/direction8.gd")
+const ArtStyle := preload("res://src/util/art_style.gd")
 ## Native presentations over the existing GuiModel and action handlers.
 ## No XML layout or protocol serialization lives in these panels.
 
@@ -329,6 +330,19 @@ func _options() -> void:
 	volume.custom_minimum_size.y = 38
 	volume.value_changed.connect(func(value): model.set_value("gamePreferences", value, "musicVolume"); send("setMusicVolume"))
 	body.add_child(volume)
+	# client-only fight look (sprints/S04, S17) — user://settings.cfg, read
+	# when the next fight opens
+	label(body, I18n.t("opt.fight"), 22)
+	var style_bar := row(body)
+	label(style_bar, I18n.t("opt.art_style"))
+	choices(style_bar, [I18n.t("opt.style.retail"), I18n.t("opt.style.onebit")],
+		maxi(0, ArtStyle.STYLES.find(ArtStyle.current())),
+		func(i): ArtStyle.set_style(ArtStyle.STYLES[i]))
+	var life_bar := row(body)
+	label(life_bar, I18n.t("opt.hud_life"))
+	choices(life_bar, [I18n.t("opt.life.bar"), I18n.t("opt.life.ring")],
+		maxi(0, ArtStyle.HUD_LIFE.find(ArtStyle.hud_life())),
+		func(i): ArtStyle.set_hud_life(ArtStyle.HUD_LIFE[i]))
 	label(body, I18n.t("opt.account"), 22)
 	button(body, I18n.t("opt.destroy_coach"), func(): confirm_action(I18n.t("coach.destroy_confirm"), func(): send("destroyCoach")))
 

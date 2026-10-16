@@ -80,6 +80,12 @@ func _run() -> void:
 		if name in ["teamManagementDialog", "socialDialog", "cardBookDialog",
 				"fighterCreationDialog", "optionsDialog"]:
 			await _shot(name)
+		if name == "optionsDialog":
+			# the fight section (S04/S17) sits below the fold: scroll and shoot
+			for sc in panel.find_children("*", "ScrollContainer", true, false):
+				sc.scroll_vertical = 100000
+			await get_tree().process_frame
+			await _shot(name + "-end")
 		panel.queue_free()
 		await get_tree().process_frame
 	var bug := preload("res://src/ui/bug_report.gd").new("")

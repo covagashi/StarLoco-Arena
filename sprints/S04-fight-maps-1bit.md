@@ -97,9 +97,10 @@ herramienta): `pixel_size`, `black_point`/`white_point`, `gamma`, `detail` y
 - [~] Capa conmutable en `fight_view` (encendido/apagado en caliente), con la GUI
       y las ayudas tácticas por encima del filtro.
 - [x] Ajuste en la configuración del cliente: `[arena] art_style` en
-      `user://settings.cfg` (`ArtStyle`); se lee al entrar en el combate. Falta
-      la casilla en el panel de opciones.
-- [ ] `test/fight_ui_preview.tscn` también con el filtro encendido.
+      `user://settings.cfg` (`ArtStyle`); se lee al entrar en el combate. Se
+      cambia en Opciones → Combate.
+- [x] `test/fight_ui_preview.tscn` también con el filtro encendido (ver
+      "Estado al pausar").
 
 ### 5. Pasadas artísticas
 
@@ -192,11 +193,14 @@ estilos y con `./run_tests.sh` completo.
 
 **Falta para cerrar:**
 
-- [ ] Casilla en el panel de Opciones para cambiar de estilo (hoy solo el
-      fichero de ajustes o la variable de entorno).
+- [x] Casilla en el panel de Opciones para cambiar de estilo: sección
+      **Combate** (estilo original / 1 bit, y la vida de las cartas de S17),
+      2026-10-17. Captura: `ui_review_preview` → `/tmp/ui-review-optionsDialog-end-*.png`.
 - [ ] Modo lote del render (los 114 mapas con índice de fallos) — el
       criterio de cierre lo pide.
-- [ ] `test/fight_ui_preview.tscn` también con el estilo 1 bit.
+- [x] `test/fight_ui_preview.tscn` también con el estilo 1 bit: el carril
+      visual de `run_tests.sh` lo pasa en las dos resoluciones si el mapa 10
+      está convertido (2026-10-17).
 - [ ] Luces de ambiente: efectos puntuales (crítico, hechizo), antorchas;
       y decodificar `contents/maps/light/<id>.jar`.
 - [ ] Repasar los colores de las ayudas tácticas (zonas de colocación,
