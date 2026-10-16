@@ -70,8 +70,8 @@ Linux y Windows).
 | [S01](./S01-client-test-net.md) | — | — | 🟢 cerrado | Red de pruebas del cliente + raíz de assets (B-173, B-174, B-175) |
 | [S02](./S02-studio-tooling.md) | — | — | 🟢 cerrado | Tooling del stack en el studio: pnpm, oxlint, oxfmt, knip, lane de CI |
 | [S03](./S03-base-linux.md) | M1 | S | 🟡 a la espera del dueño (CI) | Base en Linux headless: Godot, render con xvfb, tests portables, CI viva |
-| [S04](./S04-fight-maps-1bit.md) | M2 | M | 🟡 abierto | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
-| [S17](./S17-fight-hud.md) | M2 | M | ⚪ detallado | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
+| [S04](./S04-fight-maps-1bit.md) | M2 | M | ⏸ en pausa | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
+| [S17](./S17-fight-hud.md) | M2 | M | 🟡 siguiente | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
 | [S05](./S05-lobby-services.md) | M1 | M | ⚪ esbozo | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
 | [S06](./S06-options-audio.md) | M1 | S | ⚪ esbozo | Opciones que no hacen nada, música y volúmenes |
 | [S07](./S07-gui-fidelity.md) | M2 | M | ⚪ esbozo | Fidelidad GUI retail y diálogos sin equivalente nativo |
@@ -85,7 +85,7 @@ Linux y Windows).
 | [S15](./S15-client-packaging.md) | M5 | L | ⚪ esbozo | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
 | [S16](./S16-release-1.0.md) | M5 | M | ⚪ esbozo | Release pública 1.0: pipeline, instancia segura, docs, legal |
 
-Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · 🟢 cerrado.
+Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · ⏸ en pausa · 🟢 cerrado.
 La tabla va en **orden de ejecución**; el número de un sprint es el de su
 creación, así que un sprint insertado más tarde (S17) puede ir antes que otros.
 Solo puede haber **un sprint abierto** a la vez; uno que solo espera una acción

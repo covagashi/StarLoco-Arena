@@ -1,6 +1,6 @@
 # S17 — HUD de combate estilo Krosmaster
 
-**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** ⚪ detallado (va justo después de S04) · **Depende de:** S04
+**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟡 siguiente (S04 queda en pausa) · **Depende de:** S04
 
 > El número es el de creación; el orden lo da la tabla de
 > [`README.md`](./README.md), donde va detrás de S04.

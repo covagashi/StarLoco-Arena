@@ -1,6 +1,6 @@
 # S04 — Mapas de pelea en 1 bit (dithering + capas de luz)
 
-**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** 🟡 abierto (2026-10-16) · **Depende de:** S03 (render sin pantalla)
+**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** ⏸ en pausa (2026-10-17) — se pasa a S17; lo que falta, al final · **Depende de:** S03 (render sin pantalla)
 
 ## Objetivo
 
@@ -74,15 +74,15 @@ herramienta): `pixel_size`, `black_point`/`white_point`, `gamma`, `detail` y
 `paper`, y `debug_view` (1 = arte muestreado, 2 = tono antes del dithering).
 
 - [x] Luminancia → umbral Bayer 8×8.
-- [ ] Parámetros: tamaño de píxel (bajar resolución antes del umbral, porque el
+- [x] Parámetros: tamaño de píxel (bajar resolución antes del umbral, porque el
       arte retail en color tiene demasiado detalle para el 1 bit a resolución
       nativa), contraste/gamma, sesgo del umbral, color de tinta y de papel.
-- [ ] Que el patrón quede fijo a la pantalla o al mundo al mover la cámara:
+- [x] Que el patrón quede fijo a la pantalla o al mundo al mover la cámara:
       **decisión artística**. Fijo a pantalla "hierve" al hacer scroll.
 
 ### 3. Capas de luz
 
-- [ ] Máscara de luces locales (degradado radial por fuente) compuesta antes del
+- [x] Máscara de luces locales (degradado radial por fuente) compuesta antes del
       umbral.
 - [ ] **Investigar `contents/maps/light/<id>.jar`**: el cliente retail trae datos
       de luz por mundo (114 jars; entradas `x_y` de 6 bytes, por trozo de mapa),
@@ -104,7 +104,7 @@ herramienta): `pixel_size`, `black_point`/`white_point`, `gamma`, `detail` y
 ### 5. Pasadas artísticas
 
 - [ ] Mapas de referencia elegidos por el dueño del proyecto.
-- [ ] Registro de toques (abajo), una fila por petición.
+- [x] Registro de toques (abajo), una fila por petición.
 
 ## Registro de toques artísticos
 
@@ -174,3 +174,34 @@ adjuntar ficheros en la app.
   tácticas legibles.
 - `./run_tests.sh --headless` en verde en Linux.
 - El dueño del proyecto da el visto bueno al aspecto en los mapas de referencia.
+
+## Estado al pausar (2026-10-17)
+
+**Decidido por el dueño:** el WORLD de día (1 bit por textura, suelo calmado y
+exposición adaptativa) es el estilo de los mapas de pelea; los personajes van
+en **línea + relleno** (`onebit_style` 3); los equipos se distinguen por un
+**aura** de puntos del color del equipo (`team_aura.gd`); la luz y la
+oscuridad, solo para ambiente, nunca una pelea a oscuras.
+
+**Ya está en el juego**, detrás de `[arena] art_style = onebit` (o
+`ARENA_ART_STYLE=onebit`); por defecto sigue `retail`. Los 114 mapas
+convertidos en `godot/assets/mapgfx_1bit/` (generado, fuera de git; se rehace
+con `python3 tools/asset-import/onebit.py godot/assets/mapgfx
+godot/assets/mapgfx_1bit`, unos 3 min). Verificado con `fight_smoke` en los dos
+estilos y con `./run_tests.sh` completo.
+
+**Falta para cerrar:**
+
+- [ ] Casilla en el panel de Opciones para cambiar de estilo (hoy solo el
+      fichero de ajustes o la variable de entorno).
+- [ ] Modo lote del render (los 114 mapas con índice de fallos) — el
+      criterio de cierre lo pide.
+- [ ] `test/fight_ui_preview.tscn` también con el estilo 1 bit.
+- [ ] Luces de ambiente: efectos puntuales (crítico, hechizo), antorchas;
+      y decodificar `contents/maps/light/<id>.jar`.
+- [ ] Repasar los colores de las ayudas tácticas (zonas de colocación,
+      alcance, casillas especiales) para que casen con el 1 bit.
+- [ ] Rendimiento: la conversión de actores a línea es GDScript por píxel al
+      cargar cada acción (con caché). Medir en un combate largo; si da tirones,
+      pasarla a un shader o a offline (la línea no usa tintes, se podría hornear).
+- [ ] Visto bueno final del dueño en sus mapas de referencia.
