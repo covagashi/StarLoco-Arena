@@ -4,20 +4,11 @@
 // Reproduces the v2.04 three-pane design; the 2.70 client is read-only so there
 // are no Edit/Replace actions.
 
-import {
-  listJars,
-  listJarEntries,
-  previewEntry,
-  type JarInfo,
-  type AssetEntry,
-} from "./backend";
+import { listJars, listJarEntries, previewEntry, type JarInfo, type AssetEntry } from "./backend";
 import { t } from "./i18n";
 
 function esc(v: unknown): string {
-  return String(v).replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string),
-  );
+  return String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
 
 function fmtBytes(n: number): string {
@@ -235,9 +226,7 @@ export function viewAssets(container: HTMLElement): void {
         if (prev.kind === "image" && prev.dataUrl) {
           bodyHtml = `<div class="preview-image insp-checker"><img src="${prev.dataUrl}" alt="${esc(prev.path)}" /></div>`;
         } else if (prev.kind === "text") {
-          bodyHtml = `<pre class="preview-text">${esc(prev.text)}${
-            prev.truncated ? "\n\u2026 (truncated)" : ""
-          }</pre>`;
+          bodyHtml = `<pre class="preview-text">${esc(prev.text)}${prev.truncated ? "\n\u2026 (truncated)" : ""}</pre>`;
         } else {
           bodyHtml = `<div class="preview-binary"><div class="big">${kindIcon.binary}</div><div>Binary asset \u2014 no inline preview.</div></div>`;
         }

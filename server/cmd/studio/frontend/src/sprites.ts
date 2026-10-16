@@ -8,10 +8,7 @@ import { listSprites, getSprite, exportAllSprites, onEvent, type SpriteInfo } fr
 import { t } from "./i18n";
 
 function esc(v: unknown): string {
-  return String(v).replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string),
-  );
+  return String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
 
 const SUB = "gfx.jar \u00B7 MAGT \u2192 PNG";
@@ -136,9 +133,7 @@ function render(container: HTMLElement, sprites: SpriteInfo[]): void {
 
   function draw(): void {
     const q = filter.trim().toLowerCase();
-    const list = q
-      ? sprites.filter((s) => s.name.toLowerCase().includes(q) || String(s.id).includes(q))
-      : sprites;
+    const list = q ? sprites.filter((s) => s.name.toLowerCase().includes(q) || String(s.id).includes(q)) : sprites;
     countEl.textContent = String(list.length);
     grid.innerHTML = list
       .map(
@@ -186,7 +181,13 @@ function render(container: HTMLElement, sprites: SpriteInfo[]): void {
         inspector.querySelector<HTMLButtonElement>("#inspDownload")!.addEventListener("click", () => {
           const a = document.createElement("a");
           a.href = s.dataUrl;
-          a.download = (gfxId || s.path.split("/").pop()?.replace(/\.tgam$/, "") || "sprite") + ".png";
+          a.download =
+            (gfxId ||
+              s.path
+                .split("/")
+                .pop()
+                ?.replace(/\.tgam$/, "") ||
+              "sprite") + ".png";
           a.click();
         });
         inspector.querySelector<HTMLButtonElement>("#inspCopy")!.addEventListener("click", async (ev) => {

@@ -19,10 +19,7 @@ import {
 } from "./backend";
 
 function esc(v: unknown): string {
-  return String(v).replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string),
-  );
+  return String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
 
 function pageHead(title: string, sub: string): string {
@@ -59,10 +56,12 @@ function yn(b: boolean): string {
 // --- Spells -----------------------------------------------------------------
 
 export function viewSpells(container: HTMLElement): void {
-  container.innerHTML = pageHead(t("nav.spells"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
+  container.innerHTML =
+    pageHead(t("nav.spells"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
   getSpells()
     .then((rows) => {
-      container.innerHTML = pageHead(t("nav.spells"), `${rows.length} spells \u00B7 data.bdat`) + `<div class="view-body"></div>`;
+      container.innerHTML =
+        pageHead(t("nav.spells"), `${rows.length} spells \u00B7 data.bdat`) + `<div class="view-body"></div>`;
       const host = container.querySelector<HTMLElement>(".view-body")!;
       const columns: Column<SpellDTO>[] = [
         { key: "id", label: "ID", align: "right", width: "64px", value: (r) => r.id },
@@ -72,8 +71,20 @@ export function viewSpells(container: HTMLElement): void {
         { key: "value", label: "Value", align: "right", value: (r) => r.value },
         { key: "scriptId", label: "Script", align: "right", value: (r) => r.scriptId },
         { key: "testLoS", label: "LoS", align: "center", value: (r) => r.testLoS, render: (r) => boolBadge(r.testLoS) },
-        { key: "onlyLine", label: "Line", align: "center", value: (r) => r.onlyLine, render: (r) => boolBadge(r.onlyLine) },
-        { key: "needFreeCell", label: "Free", align: "center", value: (r) => r.needFreeCell, render: (r) => boolBadge(r.needFreeCell) },
+        {
+          key: "onlyLine",
+          label: "Line",
+          align: "center",
+          value: (r) => r.onlyLine,
+          render: (r) => boolBadge(r.onlyLine),
+        },
+        {
+          key: "needFreeCell",
+          label: "Free",
+          align: "center",
+          value: (r) => r.needFreeCell,
+          render: (r) => boolBadge(r.needFreeCell),
+        },
         { key: "effects", label: "Fx", align: "right", value: (r) => r.effects },
       ];
       const facets: Facet<SpellDTO>[] = [
@@ -109,7 +120,8 @@ export function viewSpells(container: HTMLElement): void {
 // --- Cards (coach + fighter sub-tabs) ---------------------------------------
 
 export function viewCards(container: HTMLElement): void {
-  container.innerHTML = pageHead(t("nav.cards"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
+  container.innerHTML =
+    pageHead(t("nav.cards"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
   Promise.all([getCoachCards(), getFighterCards()])
     .then(([coach, fighter]) => {
       let tab: "coach" | "fighter" = "coach";
@@ -147,7 +159,13 @@ function mountCoach(host: HTMLElement, rows: CoachCardDTO[]): void {
       { key: "value", label: "Value", align: "right", value: (r) => r.value },
       { key: "rank", label: "Rank", align: "right", value: (r) => r.rank },
       { key: "price", label: "Price", value: (r) => r.price },
-      { key: "purchasable", label: "Buy", align: "center", value: (r) => r.purchasable, render: (r) => boolBadge(r.purchasable) },
+      {
+        key: "purchasable",
+        label: "Buy",
+        align: "center",
+        value: (r) => r.purchasable,
+        render: (r) => boolBadge(r.purchasable),
+      },
     ],
     facets: [
       { key: "cardSet", label: "Set", kind: "select", value: (r) => String(r.cardSet) },
@@ -202,10 +220,12 @@ function mountFighter(host: HTMLElement, rows: FighterCardDTO[]): void {
 // --- Summonings -------------------------------------------------------------
 
 export function viewSummonings(container: HTMLElement): void {
-  container.innerHTML = pageHead(t("nav.summonings"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
+  container.innerHTML =
+    pageHead(t("nav.summonings"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
   getSummonings()
     .then((rows) => {
-      container.innerHTML = pageHead(t("nav.summonings"), `${rows.length} summonings \u00B7 data.bdat`) + `<div class="view-body"></div>`;
+      container.innerHTML =
+        pageHead(t("nav.summonings"), `${rows.length} summonings \u00B7 data.bdat`) + `<div class="view-body"></div>`;
       const host = container.querySelector<HTMLElement>(".view-body")!;
       mountTable<SummoningDTO>(host, {
         rows,
@@ -242,10 +262,13 @@ export function viewSummonings(container: HTMLElement): void {
 // --- Static Effects ---------------------------------------------------------
 
 export function viewStaticEffects(container: HTMLElement): void {
-  container.innerHTML = pageHead(t("nav.staticEffects"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
+  container.innerHTML =
+    pageHead(t("nav.staticEffects"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
   getStaticEffects()
     .then((rows) => {
-      container.innerHTML = pageHead(t("nav.staticEffects"), `${rows.length} traps / glyphs \u00B7 data.bdat`) + `<div class="view-body"></div>`;
+      container.innerHTML =
+        pageHead(t("nav.staticEffects"), `${rows.length} traps / glyphs \u00B7 data.bdat`) +
+        `<div class="view-body"></div>`;
       const host = container.querySelector<HTMLElement>(".view-body")!;
       mountTable<StaticEffectDTO>(host, {
         rows,
@@ -256,7 +279,13 @@ export function viewStaticEffects(container: HTMLElement): void {
           { key: "label", label: "Label", value: (r) => r.label },
           { key: "areaShape", label: "Shape", align: "right", value: (r) => r.areaShape },
           { key: "maxExec", label: "Max exec", align: "right", value: (r) => r.maxExec },
-          { key: "unlimited", label: "Unltd", align: "center", value: (r) => r.unlimited, render: (r) => boolBadge(r.unlimited) },
+          {
+            key: "unlimited",
+            label: "Unltd",
+            align: "center",
+            value: (r) => r.unlimited,
+            render: (r) => boolBadge(r.unlimited),
+          },
           { key: "appCondition", label: "Cond", align: "right", value: (r) => r.appCondition },
           { key: "effects", label: "Fx", align: "right", value: (r) => r.effects },
         ],

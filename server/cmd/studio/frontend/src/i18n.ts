@@ -282,8 +282,7 @@ const EN: Record<string, string> = {
   "script.title": "Lua script",
   "script.loading": "Loading script\u2026",
   "script.noLink": "This record has no script link (ScriptID 0).",
-  "script.noFile":
-    "No script file {entry} in data.jar. This spell references a script id that ships no file.",
+  "script.noFile": "No script file {entry} in data.jar. This spell references a script id that ships no file.",
   "script.lines": "{n} lines \u00B7 {bytes} B",
   "script.save": "Save to data.jar",
   "script.revert": "Revert",
@@ -296,8 +295,7 @@ const EN: Record<string, string> = {
   "sim.defender": "Defender",
   "sim.dmgPct": "Dmg %",
   "sim.resPct": "Res %",
-  "sim.note":
-    "Physical damage ignores stats (base roll only). Values mirror the server's exact ComputeHPLoss formula.",
+  "sim.note": "Physical damage ignores stats (base roll only). Values mirror the server's exact ComputeHPLoss formula.",
 
   // shared record edit-form chrome
   "ef.save": "Save to .dat",

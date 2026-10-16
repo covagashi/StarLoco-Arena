@@ -1,13 +1,5 @@
 import "./style.css";
-import {
-  getEnv,
-  getPaths,
-  setDataDir,
-  setClientDir,
-  getDataCounts,
-  type Paths,
-  type DataCounts,
-} from "./backend";
+import { getEnv, getPaths, setDataDir, setClientDir, getDataCounts, type Paths, type DataCounts } from "./backend";
 import { viewSpells, viewCards, viewSummonings, viewStaticEffects } from "./views";
 import { viewAssets } from "./assets";
 import { viewSprites } from "./sprites";
@@ -50,7 +42,7 @@ let counts: DataCounts | null = null;
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
 function esc(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
 
 function renderShell(): void {

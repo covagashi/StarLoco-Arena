@@ -261,8 +261,6 @@ function app(): AppBindings | null {
   return w.go?.main?.App ?? null;
 }
 
-
-
 const NO_PATHS: Paths = { dataDir: "", dataDirValid: false, clientDir: "", clientDirValid: false };
 const NO_ENV: Env = { version: "dev", os: "browser" };
 const NO_COUNTS: DataCounts = {
@@ -344,10 +342,7 @@ export function listSprites(): Promise<SpriteInfo[]> {
 }
 
 export function getSprite(entryPath: string): Promise<SpriteImage> {
-  return (
-    app()?.GetSprite(entryPath) ??
-    Promise.resolve({ path: entryPath, width: 0, height: 0, dataUrl: "" })
-  );
+  return app()?.GetSprite(entryPath) ?? Promise.resolve({ path: entryPath, width: 0, height: 0, dataUrl: "" });
 }
 
 export function exportAllSprites(): Promise<SpriteExportResult> {

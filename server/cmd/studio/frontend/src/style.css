@@ -19,8 +19,7 @@
   --warn: #e6c84f;
   --radius: 10px;
   --radius-sm: 7px;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu,
-    "Helvetica Neue", sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
   --mono: "JetBrains Mono", "SF Mono", "Cascadia Code", Consolas, monospace;
 }
 
@@ -365,7 +364,9 @@ body {
   cursor: pointer;
   font-weight: 500;
   font-size: 14.5px;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   position: relative;
 }
 .nav-item:hover {
@@ -373,11 +374,7 @@ body {
   color: var(--text);
 }
 .nav-item.active {
-  background: linear-gradient(
-    90deg,
-    rgba(200, 184, 120, 0.16),
-    rgba(124, 92, 255, 0.05)
-  );
+  background: linear-gradient(90deg, rgba(200, 184, 120, 0.16), rgba(124, 92, 255, 0.05));
   color: #fff;
 }
 .nav-item.active::before {
@@ -508,7 +505,10 @@ button {
   border-radius: var(--radius-sm);
   padding: 8px 14px;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, transform 0.05s;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    transform 0.05s;
 }
 button:hover {
   background: var(--bg-hover);
@@ -620,7 +620,9 @@ button.primary:hover {
   font-size: 14.5px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
 }
 .tb-search:focus {
   border-color: var(--accent);
@@ -1199,7 +1201,10 @@ tr.tb-row.sel {
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
 }
 .tb-drawer-close:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -1329,7 +1334,9 @@ table.detail-tb td {
   font-size: 13.5px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
 }
 .edit-in:hover {
   border-color: var(--border-strong, var(--accent));
@@ -1585,8 +1592,7 @@ table.detail-tb td {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: repeating-conic-gradient(#14171f 0% 25%, #171b24 0% 50%) 50% / 20px
-    20px;
+  background: repeating-conic-gradient(#14171f 0% 25%, #171b24 0% 50%) 50% / 20px 20px;
 }
 .preview-image img {
   max-width: 100%;
@@ -1667,7 +1673,9 @@ table.detail-tb td {
   border-radius: var(--radius-sm);
   padding: 8px;
   cursor: pointer;
-  transition: border-color 0.12s, transform 0.06s;
+  transition:
+    border-color 0.12s,
+    transform 0.06s;
 }
 .sprite-tile:hover {
   border-color: var(--accent);
@@ -1677,8 +1685,7 @@ table.detail-tb td {
   height: 120px;
   display: grid;
   place-items: center;
-  background: repeating-conic-gradient(#14171f 0% 25%, #171b24 0% 50%) 50% / 16px
-    16px;
+  background: repeating-conic-gradient(#14171f 0% 25%, #171b24 0% 50%) 50% / 16px 16px;
   border-radius: 6px;
   overflow: hidden;
 }
@@ -1742,8 +1749,7 @@ table.detail-tb td {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: repeating-conic-gradient(#14171f 0% 25%, #171b24 0% 50%) 50% / 18px
-    18px;
+  background: repeating-conic-gradient(#14171f 0% 25%, #171b24 0% 50%) 50% / 18px 18px;
   border-radius: 6px;
   margin-bottom: 12px;
 }
@@ -2464,12 +2470,15 @@ button.mini:hover {
 
 /* ---------- Sprite inspector extras ---------- */
 .insp-checker {
-  background-image: linear-gradient(45deg, #1b1d24 25%, transparent 25%),
-    linear-gradient(-45deg, #1b1d24 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #1b1d24 75%),
-    linear-gradient(-45deg, transparent 75%, #1b1d24 75%);
+  background-image:
+    linear-gradient(45deg, #1b1d24 25%, transparent 25%), linear-gradient(-45deg, #1b1d24 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1b1d24 75%), linear-gradient(-45deg, transparent 75%, #1b1d24 75%);
   background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
   background-color: #22242c;
 }
 .insp-checker img {
@@ -3108,7 +3117,10 @@ button.mini-primary:hover {
   border-radius: 999px;
   padding: 3px 10px 3px 8px;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
 }
 .fe-tag input {
   margin: 0;
@@ -3267,7 +3279,9 @@ button.mini-primary:hover {
   font-size: 13.5px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
 }
 .ef-in:hover {
   border-color: var(--accent);
@@ -3440,7 +3454,9 @@ button.mini-primary:hover {
   border-radius: var(--radius);
   background: var(--bg-elev-2);
   border: 1px solid var(--border-soft);
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 .tr-savebar.active {
   border-color: var(--accent);
@@ -3477,7 +3493,8 @@ button.mini-primary:hover {
   padding: 26px 28px;
   border-radius: var(--radius);
   margin-bottom: 20px;
-  background: radial-gradient(120% 160% at 0% 0%, rgba(124, 92, 255, 0.2), transparent 55%),
+  background:
+    radial-gradient(120% 160% at 0% 0%, rgba(124, 92, 255, 0.2), transparent 55%),
     radial-gradient(120% 160% at 100% 0%, rgba(200, 184, 120, 0.18), transparent 55%),
     linear-gradient(180deg, var(--bg-elev-2), var(--bg-elev));
   border: 1px solid var(--border);
@@ -3520,7 +3537,9 @@ button.mini-primary:hover {
   border-radius: var(--radius-sm);
   padding: 16px;
   text-align: center;
-  transition: transform 0.14s, border-color 0.14s;
+  transition:
+    transform 0.14s,
+    border-color 0.14s;
 }
 .ov-statband .stat:hover {
   transform: translateY(-2px);
@@ -3631,7 +3650,10 @@ button.mini-primary:hover {
   border: 1px solid var(--border-soft);
   text-align: left;
   cursor: pointer;
-  transition: transform 0.14s, border-color 0.14s, background 0.14s;
+  transition:
+    transform 0.14s,
+    border-color 0.14s,
+    background 0.14s;
 }
 .ov-jump:hover {
   transform: translateY(-2px);
@@ -3664,7 +3686,9 @@ button.mini-primary:hover {
 }
 .ov-jump-arrow {
   color: var(--text-faint);
-  transition: transform 0.14s, color 0.14s;
+  transition:
+    transform 0.14s,
+    color 0.14s;
 }
 .ov-jump:hover .ov-jump-arrow {
   color: var(--accent);
@@ -3763,7 +3787,10 @@ button.mini-primary:hover {
   border: 1px solid var(--border-soft);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.12s, transform 0.12s, background 0.12s;
+  transition:
+    border-color 0.12s,
+    transform 0.12s,
+    background 0.12s;
 }
 .sb-spell:hover {
   border-color: var(--accent);
@@ -3832,7 +3859,9 @@ button.mini-primary:hover {
   background: rgba(200, 184, 120, 0.12);
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   cursor: pointer;
-  transition: background 0.12s, transform 0.12s;
+  transition:
+    background 0.12s,
+    transform 0.12s;
 }
 .xlink:hover {
   background: rgba(200, 184, 120, 0.22);
@@ -4033,7 +4062,9 @@ button.mini-primary:hover {
   background: var(--bg-elev-2);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
-  transition: border-color 0.12s, transform 0.12s;
+  transition:
+    border-color 0.12s,
+    transform 0.12s;
 }
 .fx-line:hover {
   border-color: var(--border);
@@ -4135,11 +4166,8 @@ button.mini-primary:hover {
   padding: 16px;
   margin-bottom: 14px;
   border-radius: var(--radius);
-  background: radial-gradient(
-      120% 140% at 0% 0%,
-      rgba(200, 184, 120, 0.14),
-      transparent 60%
-    ),
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(200, 184, 120, 0.14), transparent 60%),
     linear-gradient(180deg, var(--bg-elev-2), var(--bg-elev));
   border: 1px solid var(--border);
 }
@@ -4263,7 +4291,9 @@ button.mini-primary:hover {
   background: rgba(200, 184, 120, 0.08);
   border-radius: 999px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .rc-new:hover {
   background: var(--accent);
@@ -4293,7 +4323,9 @@ button.mini-primary:hover {
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--accent-glow);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px var(--accent-glow);
 }
 .rc-head {
   display: flex;
@@ -4781,7 +4813,9 @@ button.danger:disabled {
   cursor: pointer;
   text-align: left;
   color: var(--text-dim);
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
 .sv-item:hover {
   background: var(--bg-hover);

@@ -9,10 +9,7 @@ import { listMaps, getMap, getMapBounds, getMapView, type MapInfo, type MapData,
 import { t } from "./i18n";
 
 function esc(v: unknown): string {
-  return String(v).replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string),
-  );
+  return String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
 
 interface View {

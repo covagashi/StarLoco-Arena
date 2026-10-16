@@ -53,16 +53,11 @@ export interface TableOptions<T> {
 }
 
 function esc(v: unknown): string {
-  return String(v).replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string)
-  );
+  return String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
 
 export function boolBadge(b: boolean): string {
-  return b
-    ? `<span class="tb-badge on">yes</span>`
-    : `<span class="tb-badge off">no</span>`;
+  return b ? `<span class="tb-badge on">yes</span>` : `<span class="tb-badge off">no</span>`;
 }
 
 type ToggleState = "any" | "yes" | "no";
@@ -158,13 +153,17 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
     for (const row of opts.rows) set.add(String(f.value(row)));
     facetOptions.set(
       f.key,
-      [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
     );
   }
 
   const search =
     opts.searchText ??
-    ((row: T) => opts.columns.map((c) => c.value(row)).join(" ").toLowerCase());
+    ((row: T) =>
+      opts.columns
+        .map((c) => c.value(row))
+        .join(" ")
+        .toLowerCase());
 
   function facetPass(row: T): boolean {
     for (const f of facets) {
@@ -219,7 +218,7 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
       if (f.kind === "toggle") {
         const st = toggleStates.get(f.key)!;
         return `<button class="tb-facet-toggle ${st !== "any" ? "on " + st : ""}" data-facet-toggle="${esc(
-          f.key
+          f.key,
         )}" title="${esc(f.label)}: click to cycle any / yes / no">
             <span class="tb-facet-label">${esc(f.label)}</span>
             <span class="tb-facet-state">${st === "any" ? "any" : st}</span>
@@ -230,13 +229,12 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
         const optsHtml = [`<option value="">${esc(f.label)}: all</option>`]
           .concat(
             (facetOptions.get(f.key) ?? []).map(
-              (o) =>
-                `<option value="${esc(o)}" ${o === sel ? "selected" : ""}>${esc(o)}</option>`
-            )
+              (o) => `<option value="${esc(o)}" ${o === sel ? "selected" : ""}>${esc(o)}</option>`,
+            ),
           )
           .join("");
         return `<select class="tb-facet-select ${sel ? "on" : ""}" data-facet-select="${esc(
-          f.key
+          f.key,
         )}">${optsHtml}</select>`;
       }
       // range
@@ -246,8 +244,8 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
           <span class="tb-step" data-facet-range="${esc(f.key)}" data-bound="${bound}">
             <button type="button" class="tb-step-btn" data-step="-1" title="decrease">\u2212</button>
             <input type="number" class="tb-facet-${bound}" data-facet-range-${bound}="${esc(
-        f.key
-      )}" placeholder="${bound}" value="${(bound === "min" ? r.min : r.max) ?? ""}" />
+              f.key,
+            )}" placeholder="${bound}" value="${(bound === "min" ? r.min : r.max) ?? ""}" />
             <button type="button" class="tb-step-btn" data-step="1" title="increase">+</button>
           </span>`;
       return `<span class="tb-facet-range ${on ? "on" : ""}">
@@ -324,8 +322,8 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
         <div class="tb-search-wrap">
           <span class="tb-search-ico">\u2315</span>
           <input class="tb-search" placeholder="${esc(t("common.search", { n: opts.rows.length }))}" value="${esc(
-      query
-    )}" />
+            query,
+          )}" />
           ${query ? `<button class="tb-search-clear" data-search-clear title="Clear search">\u00D7</button>` : ""}
         </div>
         <span class="tb-count"><b>${data.length.toLocaleString()}</b> / ${opts.rows.length.toLocaleString()}</span>
@@ -363,13 +361,11 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
       ni.focus();
       if (pos != null) ni.setSelectionRange(pos, pos);
     });
-    container
-      .querySelector<HTMLButtonElement>("[data-search-clear]")
-      ?.addEventListener("click", () => {
-        query = "";
-        draw();
-        container.querySelector<HTMLInputElement>(".tb-search")?.focus();
-      });
+    container.querySelector<HTMLButtonElement>("[data-search-clear]")?.addEventListener("click", () => {
+      query = "";
+      draw();
+      container.querySelector<HTMLInputElement>(".tb-search")?.focus();
+    });
 
     container.querySelectorAll<HTMLElement>("th[data-sort]").forEach((th) => {
       th.addEventListener("click", () => {
@@ -404,9 +400,7 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
         r.min = el.value === "" ? null : Number(el.value);
         const pos = el.selectionStart;
         draw();
-        const ni = container.querySelector<HTMLInputElement>(
-          `[data-facet-range-min="${el.dataset.facetRangeMin}"]`
-        );
+        const ni = container.querySelector<HTMLInputElement>(`[data-facet-range-min="${el.dataset.facetRangeMin}"]`);
         ni?.focus();
         if (ni && pos != null) ni.setSelectionRange(pos, pos);
       });
@@ -417,9 +411,7 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
         r.max = el.value === "" ? null : Number(el.value);
         const pos = el.selectionStart;
         draw();
-        const ni = container.querySelector<HTMLInputElement>(
-          `[data-facet-range-max="${el.dataset.facetRangeMax}"]`
-        );
+        const ni = container.querySelector<HTMLInputElement>(`[data-facet-range-max="${el.dataset.facetRangeMax}"]`);
         ni?.focus();
         if (ni && pos != null) ni.setSelectionRange(pos, pos);
       });
@@ -476,14 +468,9 @@ export function mountTable<T>(container: HTMLElement, opts: TableOptions<T>) {
     scroll.addEventListener("keydown", (ev) => {
       if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
         ev.preventDefault();
-        cursor = Math.max(
-          0,
-          Math.min(data.length - 1, cursor + (ev.key === "ArrowDown" ? 1 : -1))
-        );
+        cursor = Math.max(0, Math.min(data.length - 1, cursor + (ev.key === "ArrowDown" ? 1 : -1)));
         draw();
-        container
-          .querySelector<HTMLElement>(".tb-row.cursor")
-          ?.scrollIntoView({ block: "nearest" });
+        container.querySelector<HTMLElement>(".tb-row.cursor")?.scrollIntoView({ block: "nearest" });
         container.querySelector<HTMLElement>(".tb-scroll")?.focus();
       } else if (ev.key === "Enter" && opts.detail && cursor >= 0 && cursor < data.length) {
         ev.preventDefault();
