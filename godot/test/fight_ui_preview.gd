@@ -25,7 +25,7 @@ func _ready() -> void:
 	# assertions still run windowless.
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png("/private/tmp/fight-ui.png")
+		get_viewport().get_texture().get_image().save_png("/tmp/fight-ui.png")
 	State.fight_result = {"win_str": {7: "Arel"}, "won_cards": [1], "lost_cards": []}
 	fight._show_fight_result()
 	await get_tree().process_frame
@@ -35,7 +35,7 @@ func _ready() -> void:
 		return
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png("/private/tmp/fight-result-ui.png")
+		get_viewport().get_texture().get_image().save_png("/tmp/fight-result-ui.png")
 	fight._close_fight_result()
 	await get_tree().process_frame
 	if get_viewport().gui_get_focus_owner() != fight.get_node("UI/TopBar/EndTurnBtn"):

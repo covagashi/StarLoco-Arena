@@ -16,7 +16,7 @@ The existing localCoach producer supplies level 0 and an empty equipped-emote li
 
 ## Validation
 
-`test/native_lobby.gd` runs the real windowed login, nine dialog toggles, chat focus, debug toggle, model refresh, shell remount, practice fight transition and return. Credentials are command-line arguments. Screenshots are written to `/private/tmp/native-lobby.png` and `/private/tmp/native-lobby-social.png`.
+`test/native_lobby.gd` runs the real windowed login, nine dialog toggles, chat focus, debug toggle, model refresh, shell remount, practice fight transition and return. Credentials are command-line arguments. Screenshots are written to `/tmp/native-lobby.png` and `/tmp/native-lobby-social.png`.
 
 `test/window_skin.gd` checks missing app-skin border/title resources and custom-theme precedence. Legacy XML resources remain available outside the native lobby routes.
 
@@ -29,11 +29,11 @@ The existing localCoach producer supplies level 0 and an empty equipped-emote li
 
 The dialog registry normalizes event names, prevents duplicate opens, supports nested native panels, and disconnects resize callbacks when legacy dialogs close. Plain `unloadDialog` from legacy templates also reaches the close router. Explicit close handlers take precedence so equipment and exchange cleanup keep their original behavior.
 
-`test/native_panels.gd` exercises real mouse and Escape input on every route, duplicate opening, viewport bounds, a smaller window, tab switching, fighter preview, parent/child closing, menu-to-options navigation, and local populated fixtures. Fixture action spies prevent synthetic fighter IDs from reaching the server. Captures are written to `/private/tmp/panels-*.png`.
+`test/native_panels.gd` exercises real mouse and Escape input on every route, duplicate opening, viewport bounds, a smaller window, tab switching, fighter preview, parent/child closing, menu-to-options navigation, and local populated fixtures. Fixture action spies prevent synthetic fighter IDs from reaching the server. Captures are written to `/tmp/panels-*.png`.
 
 ## Native combat HUD
 
-`fight_view.tscn` now presents a native olive and gold combat HUD: arena and turn controls above the map, initiative chips at the upper right, chat at the lower left, and a horizontally scrolling spell and card bar at the lower right. Below 960 px wide, anchored chat and actions stack to keep both reachable. Turn controls, spell buttons and chat have a keyboard focus path. The result panel uses the same palette and Copperplate heading, with a fixed Continue action, scrolling card rewards, trapped focus and return to the prior focus on close. The old XULOR2 controls no longer mount over the map. `test/fight_ui_preview.tscn` renders combat and result captures to `/private/tmp/fight-ui.png` and `/private/tmp/fight-result-ui.png` for visual checks at multiple window sizes.
+`fight_view.tscn` now presents a native olive and gold combat HUD: arena and turn controls above the map, initiative chips at the upper right, chat at the lower left, and a horizontally scrolling spell and card bar at the lower right. Below 960 px wide, anchored chat and actions stack to keep both reachable. Turn controls, spell buttons and chat have a keyboard focus path. The result panel uses the same palette and Copperplate heading, with a fixed Continue action, scrolling card rewards, trapped focus and return to the prior focus on close. The old XULOR2 controls no longer mount over the map. `test/fight_ui_preview.tscn` renders combat and result captures to `/tmp/fight-ui.png` and `/tmp/fight-result-ui.png` for visual checks at multiple window sizes.
 
 ## Full UI review
 

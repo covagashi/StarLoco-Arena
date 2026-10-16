@@ -83,7 +83,7 @@ func _on_message(opcode: int, payload) -> void:
 			_finish(0, "LOGIN OK — reached instance ready")
 		_:
 			print("[smoke]   opcode %d %s (%d bytes) -> %s" % [
-				opcode, msg_name, payload.remaining(), str(decoded).left(120)])
+				opcode, msg_name, payload.size(), str(decoded).left(120)])
 
 
 func _send_coach(coach_name: String) -> void:

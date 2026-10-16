@@ -101,12 +101,22 @@ __pycache__/
 /godot/export/
 # Converted retail art (tools/asset-import output) — derived from
 # client/compiled/, same no-redistribution rule applies.
-/godot/assets/anims/
-/godot/assets/mapgfx/
-/godot/assets/gamedata/
-/godot/assets/sounds/
-/godot/assets/fx/
-/godot/assets/gui/
+# Contents only: each folder's .gdignore IS tracked, so Godot never tries to
+# import this art (it is read raw through AssetPaths, and there are ~312k PNG
+# frames under anims/ alone). Git cannot re-include a file inside an excluded
+# directory, hence /dir/* rather than /dir/.
+/godot/assets/anims/*
+!/godot/assets/anims/.gdignore
+/godot/assets/mapgfx/*
+!/godot/assets/mapgfx/.gdignore
+/godot/assets/gamedata/*
+!/godot/assets/gamedata/.gdignore
+/godot/assets/sounds/*
+!/godot/assets/sounds/.gdignore
+/godot/assets/fx/*
+!/godot/assets/fx/.gdignore
+/godot/assets/gui/*
+!/godot/assets/gui/.gdignore
 # Agent worktrees: a full second checkout of this repo, created by Claude Code
 # for isolated work. Never committable. Project-level .claude/settings.json is
 # deliberately NOT ignored, so only this subtree is listed.

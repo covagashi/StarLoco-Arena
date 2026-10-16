@@ -46,7 +46,7 @@ func shot(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	var img := root.get_texture().get_image()
 	if img != null:
-		img.save_png("/private/tmp/panels-" + name + ".png")
+		img.save_png("/tmp/panels-" + name + ".png")
 
 func run() -> void:
 	var args := OS.get_cmdline_user_args()

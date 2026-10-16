@@ -52,12 +52,12 @@ func _run() -> void:
 	await process_frame
 	_check(_main.get_node("UI/Chat/Row/Input").has_focus(), "Enter focuses chat")
 	_main.get_node("UI/Chat/Row/Input").release_focus()
-	await _shot("/private/tmp/native-lobby.png")
+	await _shot("/tmp/native-lobby.png")
 	for entry in lobby.MENUS:
 		lobby.dialog_requested.emit(entry[1])
 		await process_frame
 		if entry[1] == "socialDialog":
-			await _shot("/private/tmp/native-lobby-social.png")
+			await _shot("/tmp/native-lobby-social.png")
 		_check(_main._gui.is_open(entry[1]), "opens " + entry[1])
 		lobby.dialog_requested.emit(entry[1])
 		await process_frame
@@ -110,5 +110,5 @@ func _run() -> void:
 			confirm.confirmed.emit()
 		await create_timer(1.5).timeout
 		_check(current_scene.get_node_or_null("UI/LobbyScreen") != null, "return from fight restores lobby")
-	print("[lobby] screenshot /private/tmp/native-lobby.png")
+	print("[lobby] screenshot /tmp/native-lobby.png")
 	quit(0 if _failures == 0 else 1)

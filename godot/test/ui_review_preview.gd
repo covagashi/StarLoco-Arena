@@ -28,7 +28,7 @@ func _shot(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	var vp := get_viewport().get_visible_rect().size
 	get_viewport().get_texture().get_image().save_png(
-		"/private/tmp/ui-review-%s-%dx%d.png" % [name, int(vp.x), int(vp.y)])
+		"/tmp/ui-review-%s-%dx%d.png" % [name, int(vp.x), int(vp.y)])
 
 
 func _run() -> void:

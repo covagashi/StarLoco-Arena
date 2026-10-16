@@ -14,19 +14,38 @@
 ##                assets/i18n), the visual lane is skipped with a notice
 ##                instead of failing.
 ##
-## GODOT overrides the binary; defaults to the usual local install path.
+## GODOT overrides the binary. Otherwise: `godot` on PATH (Linux, CI), then
+## the usual macOS install path.
+##
+## The visual lane needs a display. With no $DISPLAY (a headless Linux box)
+## it runs under xvfb-run, on Mesa's software GL — slow but real pixels.
+## --headless would not do: it swaps in the dummy renderer, which draws nothing.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
+if [[ -z "${GODOT:-}" ]]; then
+	if command -v godot >/dev/null 2>&1; then
+		GODOT="$(command -v godot)"
+	else
+		GODOT=/Applications/Godot.app/Contents/MacOS/Godot
+	fi
+fi
+
+## Empty on macOS; expanded with ${a[@]+...} below because bash 3.2 (macOS)
+## treats an empty array as unbound under set -u.
+DISPLAY_WRAP=()
+if [[ "$(uname -s)" != Darwin && -z "${DISPLAY:-}" ]]; then
+	DISPLAY_WRAP=(xvfb-run -a -s "-screen 0 1920x1080x24")
+fi
 
 ## sprints/BACKLOG.md §7's cleanup convention: the real argv never carries
 ## --headless, just "--path ." — so this one pattern catches a leftover
-## process from either lane.
+## process from either lane, as ".../Contents/MacOS/Godot --path ." on macOS
+## or ".../godot --path ." on Linux.
 cleanup_godot() {
-	pkill -f "Contents/MacOS/Godot --path \." >/dev/null 2>&1 || true
+	pkill -f "[Gg]odot[^ /]* --path \." >/dev/null 2>&1 || true
 }
 
 ## B-173 guard. Every raw asset read must go through AssetPaths, because a
@@ -69,7 +88,7 @@ run_visual() {
 		for res in 1280x720 800x600; do
 			echo "--- $scene @ $res ---"
 			scene_rc=0
-			"$GODOT" --path . -w --resolution "$res" "res://$scene" || scene_rc=$?
+			${DISPLAY_WRAP[@]+"${DISPLAY_WRAP[@]}"} "$GODOT" --path . -w --resolution "$res" "res://$scene" || scene_rc=$?
 			# Clean up before checking this run's result so a hung/crashed
 			# window never lingers, but don't let the cleanup's own exit
 			# status (e.g. "no process found") clobber scene_rc.
@@ -85,7 +104,7 @@ run_visual() {
 skip_visual_notice() {
 	cat <<'EOF'
 === visual preview lane: SKIPPED ===
-assets/anims is not present. It's git-ignored on purpose (redistribution
+assets/anims/coach_7000 is not present. The art is git-ignored on purpose (redistribution
 constraint on converted retail art — see AGENTS.md / sprints/BACKLOG.md),
 so a fresh checkout never has it, and the windowed previews (coach_7000
 anims + appSkin atlases) can't run without it.
@@ -115,7 +134,9 @@ case "$mode" in
 		run_headless || headless_rc=$?
 
 		visual_rc=0
-		if [[ -d assets/anims ]]; then
+		# coach_7000, not the folder itself: assets/anims/ exists in every
+		# checkout because its .gdignore is tracked.
+		if [[ -d assets/anims/coach_7000 ]]; then
 			run_visual || visual_rc=$?
 		else
 			skip_visual_notice
