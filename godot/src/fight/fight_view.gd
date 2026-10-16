@@ -11,6 +11,8 @@ const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
+const ArtStyle := preload("res://src/util/art_style.gd")
+const TeamAura := preload("res://src/fight/team_aura.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
 const CardsDB := preload("res://src/gamedata/cards.gd")
@@ -64,6 +66,9 @@ var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
 ## Off only for art renders (tools/render_fightmap.gd): the map without the
 ## spawn zones and placement rings drawn over it.
 var overlays_visible := true
+## 1-bit fight style (ArtStyle "onebit", sprints/S04): 1-bit map art, line-art
+## actors, team auras instead of base rings. Read once in _ready.
+var _onebit := false
 
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
@@ -121,6 +126,12 @@ func _ready() -> void:
 	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside
 	add_child(_gfx)
 	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
+	_onebit = ArtStyle.onebit()
+	if _onebit:
+		_gfx.use_onebit(true)
+		AnmSprite.onebit_style = 3   # line art; reset in _exit_tree
+		# the void around the arena is ink, not Godot's grey
+		RenderingServer.set_default_clear_color(Color.BLACK)
 	# When we arrived here from a live fight the world id is the arena id.
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
@@ -271,6 +282,12 @@ func _wire_fight_focus() -> void:
 func _load() -> void:
 	var map_id := int($UI/TopBar/MapId.text)
 	_gfx_active = _gfx.load_world(map_id)
+	if not _gfx_active and _onebit:
+		# not converted yet (tools/asset-import/onebit.py): retail art beats
+		# the placeholder floors
+		push_warning("fight: no 1-bit art for map %d, using the retail art" % map_id)
+		_gfx.use_onebit(false)
+		_gfx_active = _gfx.load_world(map_id)
 	_fmd = FightMap.load(map_id)
 	var topo := Topology.load_world(map_id, Topology.SCOPE_ARENA)
 	_cells = topo.get("cells", {})
@@ -438,6 +455,10 @@ const WEAPON_FAMILY := {
 
 
 func _exit_tree() -> void:
+	if _onebit:
+		AnmSprite.onebit_style = 0   # lobby and creation keep the retail art
+		RenderingServer.set_default_clear_color(
+			ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color"))
 	# If we leave the tree without being freed (e.g. replaced by an explicit
 	# add_child in tests), drop the net subscription — a stale instance would
 	# keep consuming the shared WireReader and starve the new scene.
@@ -3110,7 +3131,11 @@ func _draw_overlays() -> void:
 		var p: Vector3i = _actor_cells[id]
 		var ctr := _iso(p.x + 0.5, p.y + 0.5, p.z)
 		var col: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
-		if _dead.has(id):
+		if _onebit:
+			# 1-bit style: a team aura; corpses get none
+			if not _dead.has(id):
+				TeamAura.draw(self, ctr, col, id == _current_fid)
+		elif _dead.has(id):
 			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.15), 1.0)
 		elif id == _current_fid:
 			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.3), 5.0)

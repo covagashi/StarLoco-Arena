@@ -14,15 +14,17 @@ Per texture:
      of the atlas do not drag the edges of a sprite toward black. The retail
      art keeps greens and browns in one mid-grey band; this is what brings
      back cracks, slab edges and symbols;
-  3. levels (--black / --white) and --gamma;
+  3. levels (--black / --white) and --gamma, times an adaptive gamma that
+     moves the texture's median tone to --target (strength --auto, 0 = off);
   4. dither to ink/paper: Atkinson error diffusion (default; crisp, high
      contrast, no repeating pattern, so seams between tiles do not show) or
      an 8x8 Bayer matrix anchored at the texture origin;
   5. alpha thresholded at --alpha, so edges stay hard.
 
 Usage:
-  onebit.py <src mapgfx dir> <out dir> [--worlds=10,11] [--detail=4]
-            [--radius=2] [--black=0] [--white=0.75] [--gamma=0.75]
+  onebit.py <src mapgfx dir> <out dir> [--worlds=10,11] [--detail=3]
+            [--radius=2] [--black=0] [--white=1] [--gamma=1]
+            [--auto=0.85] [--target=0.72]
             [--dither=atkinson|bayer] [--alpha=0.5]
 
 <src>/<world>.json files are copied as is; <src>/tex/<gfx>.png are converted
@@ -77,8 +79,20 @@ def tone_map(rgba: np.ndarray, o: dict) -> tuple[np.ndarray, np.ndarray]:
         mean = blur(lum * alpha, o["radius"]) / np.maximum(w, 1e-4)
         lum = mean + (lum - mean) * o["detail"]
     span = max(o["white"] - o["black"], 1e-3)
-    lum = np.clip((lum - o["black"]) / span, 0.0, 1.0) ** o["gamma"]
-    return lum, alpha
+    lum = np.clip((lum - o["black"]) / span, 0.0, 1.0)
+    gamma = o["gamma"]
+    if o["auto"] > 0:
+        # Adaptive exposure: a gamma that moves this texture's median tone
+        # (opaque pixels) to --target, applied with strength --auto. Fixed
+        # levels tuned on one map burn the light maps (sand) white and leave
+        # the dark ones muddy; this evens them out. Per texture, so a texture
+        # shared by several maps still converts once, the same everywhere.
+        solid = lum[alpha >= o["alpha"]]
+        if solid.size:
+            med = float(np.clip(np.median(solid), 0.02, 0.98))
+            g_auto = np.log(o["target"]) / np.log(med)
+            gamma *= float(g_auto ** o["auto"])
+    return lum ** gamma, alpha
 
 
 def atkinson(t: np.ndarray, mask: np.ndarray) -> np.ndarray:
@@ -122,9 +136,11 @@ def convert(src: Path, dst: Path, o: dict) -> None:
 
 
 def parse(argv: list[str]) -> dict | None:
-    # Defaults from the first art pass on map 10 (sprints/S04): light ground
-    # with a dot texture, cracks drawn, foliage like an engraving.
-    o = {"detail": 4.0, "radius": 2.0, "black": 0.0, "white": 0.75, "gamma": 0.75,
+    # Defaults = the "calm ground" picked in the S04 art passes (test 4):
+    # near-white ground, cracks drawn, dots only in the shadows, so the
+    # line-art actors read on top of it.
+    o = {"detail": 3.0, "radius": 2.0, "black": 0.0, "white": 1.0, "gamma": 1.0,
+         "auto": 0.85, "target": 0.72,
          "dither": "atkinson", "alpha": 0.5, "worlds": None}
     pos = []
     for a in argv:

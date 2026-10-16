@@ -90,6 +90,8 @@ static var _anm_scripts = null
 func load_action(set_dir: String, action: String, tints := {}) -> bool:
 	set_dir = AssetPaths.normalize(set_dir)   # legacy res:// callers
 	var eff: Dictionary = tints if not tints.is_empty() else self.tints
+	if onebit_style == 3:
+		eff = {}   # line art ignores the tints: one conversion for every palette
 	var key := "%s/%s" % [set_dir, action]
 	if not eff.is_empty():
 		key += _tint_key(eff)

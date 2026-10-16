@@ -160,9 +160,8 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 ## 7. Convención de limpieza
 
 - Matar Godot tras probar: `pkill -f "Contents/MacOS/Godot --path \."` — el argv real no
-  lleva la ruta. Para los dos sistemas: `pkill -f "[Gg]odot[^ /]* --path \."`, el mismo patrón
-  que usa `run_tests.sh`. Ojo: si el patrón va escrito literal en la misma línea de shell
-  que otros comandos, `pkill -f` puede matar a esa shell; mejor por PID.
+  lleva la ruta. Para los dos sistemas: `pkill -f "^[^ ]*[Gg]odot[^ /]* --path \."`, el mismo patrón
+  que usa `run_tests.sh`, anclado al inicio para no matar a una shell cuyo texto lo contenga.
 - Solo `godot/` se toca para GUI; protocolo sagrado; XMLs retail no se editan (se arregla
   el intérprete).
 

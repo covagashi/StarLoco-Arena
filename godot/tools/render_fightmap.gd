@@ -34,6 +34,7 @@ extends SceneTree
 
 const SHADER_PATH := "res://src/fight/onebit.gdshader"
 const AnmSpriteScript := preload("res://src/anims/anm_sprite.gd")
+const TeamAura := preload("res://src/fight/team_aura.gd")
 const ACTOR_STYLES := {"color": 0, "onebit": 1, "team": 2, "line": 3, "duo": 4}
 ## Demo fighters for --fighters: one breed set per spawn slot, with palette
 ## indices so each one gets different skin/hair/eye tints.
@@ -126,7 +127,8 @@ func _run() -> void:
 
 ## Team-mark designs auditioned for the 1-bit style (sprints/S04):
 ##   cell = the cell's diamond filled with a checker of the team colour
-##   aura = a round glow of team-coloured Bayer dots fading outwards
+##   aura = a round glow of team-coloured Bayer dots fading outwards (chosen
+##          2026-10-17; drawn by src/fight/team_aura.gd, as in the game)
 ##   ring = a thick team-colour ground ellipse (the live ring, reinforced)
 ## The acting fighter's mark is drawn larger / denser.
 const HW := 43.0
@@ -144,7 +146,9 @@ func _draw_mark(ci: CanvasItem, kind: String, ctr: Vector2, col: Color,
 				var a := TAU * float(n) / 32.0
 				pts.append(ctr + Vector2(cos(a) * HW * k, sin(a) * HH * k))
 			ci.draw_polyline(pts, col, 4.0 if active else 2.5)
-		"cell", "aura":
+		"aura":
+			TeamAura.draw(ci, ctr, col, active)   # the design the game uses
+		"cell":
 			var key := "%s|%s|%s" % [kind, col.to_html(), active]
 			if not _mark_cache.has(key):
 				_mark_cache[key] = ImageTexture.create_from_image(

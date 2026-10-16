@@ -45,7 +45,10 @@ fi
 ## process from either lane, as ".../Contents/MacOS/Godot --path ." on macOS
 ## or ".../godot --path ." on Linux.
 cleanup_godot() {
-	pkill -f "[Gg]odot[^ /]* --path \." >/dev/null 2>&1 || true
+	# Anchored at the start of the command line: only a process whose
+	# executable IS Godot matches. Unanchored, it also matched any shell whose
+	# own command text contained "godot --path ." and killed the caller.
+	pkill -f "^[^ ]*[Gg]odot[^ /]* --path \." >/dev/null 2>&1 || true
 }
 
 ## B-173 guard. Every raw asset read must go through AssetPaths, because a

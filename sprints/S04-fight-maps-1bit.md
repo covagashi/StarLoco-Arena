@@ -94,9 +94,11 @@ herramienta): `pixel_size`, `black_point`/`white_point`, `gamma`, `detail` y
 
 ### 4. Integración en el combate
 
-- [ ] Capa conmutable en `fight_view` (encendido/apagado en caliente), con la GUI
+- [~] Capa conmutable en `fight_view` (encendido/apagado en caliente), con la GUI
       y las ayudas tácticas por encima del filtro.
-- [ ] Ajuste en la configuración del cliente.
+- [x] Ajuste en la configuración del cliente: `[arena] art_style` en
+      `user://settings.cfg` (`ArtStyle`); se lee al entrar en el combate. Falta
+      la casilla en el panel de opciones.
 - [ ] `test/fight_ui_preview.tscn` también con el filtro encendido.
 
 ### 5. Pasadas artísticas
@@ -117,6 +119,7 @@ adjuntar ficheros en la app.
 | 2026-10-16 | "El world de día me parece bien; los otros efectos solo para la animación ambiental; de noche es muy oscuro para una pelea; ¿los muñecos podrían ser 1 bit + color?" → "haz pruebas" | **Decidido:** el WORLD de día es el estilo base de los mapas de pelea; luz y oscuridad, solo para ambiente (efectos puntuales, ambiente suave, eventos), nunca una pelea a oscuras. **Personajes:** `AnmSprite.onebit_style` 1 = cuerpo en 1 bit (Bayer, estable entre frames) + piel/pelo/ojos con su tinte en dos tonos planos + contorno negro; 2 = lo mismo con contorno del color del equipo. El shader deja pasar los píxeles con color. Tres luchadores demo por equipo (`--fighters`) | `prueba3-personajes-zoom.png` (A color / B / B+C, ×3), `prueba3-mapa-equipos.png` (tamaño real) |
 | 2026-10-16 | "No me gusta ninguno… ¿qué otra técnica recomiendas?" → "dame pruebas" | Diagnóstico: los sprites retail (~36×87 px, muy pintados) no aguantan trama, y el suelo con puntos por todas partes compite con ellos. Tres cambios: **suelo calmado** (`onebit.py --white=0.55 --gamma=0.5 --detail=3 --radius=2`, casi blanco con las grietas dibujadas); `onebit_style` 3 = **línea + relleno** (líneas donde cambia el color y alrededor de la silueta, relleno blanco, damero/negro solo en lo más oscuro, contorno negro exterior); `onebit_style` 4 = **duotono por equipo** (negro → color del equipo → blanco, sin trama) | `prueba4-personajes-zoom.png` (×3), `prueba4-mapa.png` (tamaño real), `prueba4-suelo.png` (suelo antes/después) |
 | 2026-10-16 | "Me gusta el 1, y para distinguir el jugador poner una pequeña aura o lo que sea en el suelo o celda con el color" | **Decidido: personajes en línea + relleno (`onebit_style` 3).** Tres diseños de marca de equipo en `render_fightmap --marks`: `cell` (rombo de la casilla con damero del color y borde sólido), `aura` (halo redondo de puntos Bayer del color que se desvanece), `ring` (elipse gruesa, el anillo actual reforzado). El luchador activo lleva la marca más grande/densa. Se dibujan en el lienzo de `fight_view`, como sus anillos actuales (encima del mapa, debajo de los actores) | `prueba5-marcas-zoom.png` (×3), `prueba5-marcas-mapa.png` (tamaño real) |
+| 2026-10-17 | "aura :)" | **Decidido: aura.** `src/fight/team_aura.gd` (tamaño 1,15 casillas; 1,45 la del luchador activo; en la prueba 1,5 se pisaban). **Integrado en el juego**: `src/util/art_style.gd` (`user://settings.cfg` `[arena] art_style = retail\|onebit`, o `ARENA_ART_STYLE`); con `onebit`, `fight_view` carga `mapgfx_1bit` (y cae al arte retail si un mapa no está convertido), pone los actores en línea + relleno, cambia los anillos de equipo por auras (sin aura para los muertos) y el fondo a negro. **Exposición adaptativa** en `onebit.py` (`--auto=0.85 --target=0.72`): el ajuste fijo del mapa 10 quemaba los mapas claros (2, 59). Los 114 mapas convertidos (2.907 texturas, 2 min 46 s). Combate real verificado (`fight_smoke` con `ARENA_ART_STYLE=onebit`, exit 0, sin errores de script) | `prueba6-galeria-mapas.png` (6 mapas), `12-combate-real.png` |
 
 ## Notas de la primera prueba (2026-10-16)
 
