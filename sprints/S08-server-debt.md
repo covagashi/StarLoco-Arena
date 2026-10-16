@@ -56,6 +56,12 @@ estadísticas de evolución y puntos de torneo en 2052/4096.
 - [ ] Postgres (el de producción) en los tests del store, no solo SQLite.
 - [ ] Decisión del dueño: ¿seguir con MySQL? No hay constancia de que se haya
       corrido nunca.
+- [ ] `godot/test/displace_smoke.gd` se cuelga (timeout a 250 s) también en
+      `0a99cc6f`: el intercambio (hechizo 135) depende de la geometría del mapa
+      que toque y a veces nunca encuentra aliado. Visto en S17 (2026-10-17).
+- [ ] Los smokes que se cortan dejan luchadores `zz*` en la cuenta `test`; a
+      100 el servidor rechaza crear (código 20, "pool full"). Limpiarlos al
+      empezar, no solo al terminar.
 
 ## Criterio de cierre
 
