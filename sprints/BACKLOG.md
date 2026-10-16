@@ -1,15 +1,22 @@
 # Backlog — cola de trabajo viva
 
-Lo pendiente, sin plazos. Lo que se hace en cada tanda va en su sprint
+Lo pendiente, sin plazos. Cada sección tiene ya un sprint que la recoge (tabla del
+[`README.md`](./README.md)): §1–2 → S07, §4 → S12–S14, §5 (mapas) → S05/S07,
+§6 (MCP retail) → fuera de la 1.0, §8 → S03/S16, §9 → S04. Lo que se hace en cada tanda va en su sprint
 (`SNN-*.md`, índice en [`README.md`](./README.md)); esto es lo que queda por coger.
 
 Estado al **2026-10-16**. El trabajo FX/`.xps` quedó cerrado (abajo, §6 — referencia).
 El cliente Godot ya tiene **lobby + combate nativos, i18n y bug report in-game**
 (commit `00b0e33e`, 7 oct). Lo activo ahora: **async PvP** (fases 1–2 hechas, §4) y
-la **fidelidad GUI retail** (§1–2).
+la **fidelidad GUI retail** (§1–2). En curso: **mapas de pelea en 1 bit**
+([`S04`](./S04-fight-maps-1bit.md), §9).
+
+**Entorno:** desde el 2026-10-16 se desarrolla en Linux x86_64 **sin pantalla**, no en
+el Mac. Los comandos de abajo que citan `/Applications/Godot.app` son del Mac y están
+pendientes de adaptar ([`S03`](./S03-base-linux.md)).
 
 Servidor en producción: `140.238.172.196:3000` (Docker en VPS; el 5555 de OCI está bloqueado).
-Cliente: `cd godot && /Applications/Godot.app/Contents/MacOS/Godot --path .`
+Cliente: `cd godot && /Applications/Godot.app/Contents/MacOS/Godot --path .` (Mac; en Linux: pendiente, S03)
 Cuenta de prueba: `test1` / `dofus`. Log: `/tmp/arena_client.log`.
 
 Rama `main-covaga`; `v2.70` es la base heredada del fork.
@@ -140,16 +147,19 @@ python3 tools/asset-import/spell_sounds.py /tmp/spells_raw.json \
 python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 ```
 
-- [ ] **Validación MCP vs cliente retail — sigue bloqueada en macOS arm64**
+- [ ] **Validación MCP vs cliente retail — estaba bloqueada en macOS arm64**
       (verificado 2026-10-03): `client/compiled` local carece de `lib/`+natives; el display
       exige JOGL 1.x (`GLCanvas`, sin natives arm64). Caminos: Windows real/VM ARM con el
       bundle win32, o shim `javax.media.opengl`→JogAmp 2.x (trabajo grande).
       Detalle en `server/docs/CLIENT-TESTING.md`.
+      **En Linux x86_64 deja de estar bloqueada en principio**: JOGL 1.x sí tiene natives
+      para esta plataforma. Falta traer `compiled/lib/` (con natives Linux) y el JRE; aquí
+      solo está `compiled/game/`. Sin probar.
 
 ## 7. Convención de limpieza
 
 - Matar Godot tras probar: `pkill -f "Contents/MacOS/Godot --path \."` — el argv real no
-  lleva la ruta.
+  lleva la ruta. **Solo Mac**; el patrón para Linux está pendiente (S03).
 - Solo `godot/` se toca para GUI; protocolo sagrado; XMLs retail no se editan (se arregla
   el intérprete).
 
@@ -170,3 +180,18 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
       una tarea de datos: según la regla "CLI = Go" iría en `server/cmd/`.
 - [ ] (Pregunta) ¿Seguir soportando MySQL y Postgres o quedarse solo con SQLite?
       Hoy hay tres drivers, tres configs y tres compose en `server/deploy/`.
+
+## 9. Estilo visual
+
+- [ ] **Mapas de pelea en 1 bit** (dithering Bayer 8×8 + capas de luz, sobre el arte
+      retail) — [`S04`](./S04-fight-maps-1bit.md). Dirección artística del dueño.
+- [ ] Decodificar `contents/maps/light/<id>.jar` (datos de luz del retail, 114 jars, sin
+      estudiar). Lo necesita S04 para la capa de luces; sirve también al estilo normal.
+- Ideas aparcadas (2026-10-16), sin compromiso:
+  - **Modo ASCII opcional** (glifos por celda según brillo, con color; variante con
+    bordes `/ \ | -`). Como estilo principal se descartó por demasiado de nicho; como
+    modo cosmético y material para redes tiene sentido. Mismo enfoque de shader que S04.
+  - **N bits** (paleta de 4–16 colores) como variante del shader de S04.
+  - **Arte propio en 1 bit** para no depender de Ankama: sería un rebrand, otro proyecto.
+  - ASCILINE (https://github.com/YusufB5/ASCILINE) mirado y descartado: es un motor de
+    vídeo a ASCII, no de juego.
