@@ -4,10 +4,12 @@ Tiles PNG renders into one grid image, each with its label on a black bar, so
 several variants can be compared on a phone screen at a glance.
 
     python3 tools/contact_sheet.py OUT.png [--cols=2] [--width=640] \
-        LABEL=path.png [LABEL=path.png ...]
+        [--crop=x,y,w,h] LABEL=path.png [LABEL=path.png ...]
 
-Each tile is scaled to --width with nearest-neighbour, so the dither pattern
-stays crisp instead of turning grey.
+Each tile is scaled to --width with nearest-neighbour. For 1-bit renders
+prefer --crop: it cuts the same window out of every image at 1:1 (and then
+--width is ignored). Scaling a dither pattern down drops whole rows of dots,
+so darkness reads as solid black and fine detail disappears.
 """
 
 import sys
@@ -22,12 +24,15 @@ def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print(__doc__, file=sys.stderr)
         return 2
-    out, cols, width, tiles = argv[0], 2, 640, []
+    out, cols, width, crop, tiles = argv[0], 2, 640, None, []
     for a in argv[1:]:
         if a.startswith("--cols="):
             cols = int(a.split("=", 1)[1])
         elif a.startswith("--width="):
             width = int(a.split("=", 1)[1])
+        elif a.startswith("--crop="):
+            x, y, w, h = (int(v) for v in a.split("=", 1)[1].split(","))
+            crop = (x, y, x + w, y + h)
         elif "=" in a:
             label, path = a.split("=", 1)
             tiles.append((label, path))
@@ -41,8 +46,12 @@ def main(argv: list[str]) -> int:
     imgs = []
     for label, path in tiles:
         im = Image.open(path).convert("RGB")
+        if crop is not None:
+            imgs.append((label, im.crop(crop)))
+            continue
         h = round(im.height * width / im.width)
         imgs.append((label, im.resize((width, h), Image.NEAREST)))
+    width = imgs[0][1].width
     tile_h = max(im.height for _, im in imgs) + BAR
     rows = (len(imgs) + cols - 1) // cols
     sheet = Image.new("RGB", (cols * width, rows * tile_h), "black")

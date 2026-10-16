@@ -46,8 +46,16 @@ uniform int light_count = 0;
 uniform vec4 lights[16];
 uniform float light_falloff : hint_range(0.1, 8.0) = 1.5;
 
-// 0 = the 1-bit result; 1 = the art exactly as the shader samples it; 2 = the
-// tone after levels/posterize, before dithering. For tuning only.
+// The map underneath is already 1-bit, converted texture by texture
+// (tools/asset-import/onebit.py). Then this shader only lays the darkness
+// over it, Glagstone-style: a world pixel survives where light > bayer, and
+// is ink otherwise. Pixels that are not pure ink/paper (live actors, effects)
+// are thresholded by their own luminance on the same pattern.
+uniform bool world_onebit = false;
+
+// 0 = the result; 1 = the art exactly as the shader samples it; 2 = the tone
+// after levels/posterize; 3 = the darkness pattern alone (paper where
+// light > bayer); 4 = the light map in grey. For tuning and the layer sheets.
 uniform int debug_view = 0;
 
 uniform vec4 ink : source_color = vec4(0.0, 0.0, 0.0, 1.0);
@@ -96,6 +104,13 @@ void fragment() {
 
 	float threshold = (float(bayer8(ivec2(cell))) + 0.5) / 64.0;
 	bool lit = tone * light > threshold;
+	if (world_onebit) {
+		// The art is already at its own pixel grid: read the exact screen
+		// pixel, never the dither cell's centre, or pixel_size > 1 smears it.
+		vec3 own = texture(screen_tex, SCREEN_UV).rgb;
+		float raw = dot(own, vec3(0.2126, 0.7152, 0.0722));
+		lit = raw > threshold && light > threshold;
+	}
 
 	if (edge_strength > 0.0) {
 		float step_px = pixel_size;
@@ -115,5 +130,9 @@ void fragment() {
 		COLOR = vec4(art, 1.0);
 	} else if (debug_view == 2) {
 		COLOR = vec4(vec3(tone), 1.0);
+	} else if (debug_view == 3) {
+		COLOR = light > threshold ? paper : ink;
+	} else if (debug_view == 4) {
+		COLOR = vec4(vec3(light), 1.0);
 	}
 }

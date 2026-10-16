@@ -9,7 +9,11 @@ extends SceneTree
 ##       [--pixel=2] [--black=0] [--white=1] [--gamma=1] [--levels=0] \
 ##       [--detail=1] [--detail-radius=3] [--edge=0] [--edge-threshold=0.25] \
 ##       [--ambient=1] [--falloff=1.5] [--lights="x,y,r,i;..."] \
-##       [--hud] [--overlays] [--debug=0|1|2]
+##       [--hud] [--overlays] [--debug=0..4] [--world=color|1bit]
+##
+## --world=1bit loads the per-texture 1-bit art (assets/mapgfx_1bit, made by
+## tools/asset-import/onebit.py) and leaves the shader only the darkness and
+## the lights. --debug=3/4 show the darkness pattern / the light map alone.
 ##
 ## By default the map is drawn bare: no HUD and no tactical overlays (spawn
 ## zones, placement rings). --hud and --overlays put them back.
@@ -47,6 +51,8 @@ func _run() -> void:
 	var scene: Node2D = load("res://src/fight/fight_view.tscn").instantiate()
 	root.add_child(scene)
 	await process_frame
+	if opt.world == "1bit":
+		scene._gfx.use_onebit(true)
 	scene.get_node("UI/TopBar/MapId").text = str(opt.map)
 	scene._load()
 	if not opt.hud:
@@ -82,6 +88,7 @@ func _run() -> void:
 	mat.set_shader_parameter("ambient", opt.ambient)
 	mat.set_shader_parameter("light_falloff", opt.falloff)
 	mat.set_shader_parameter("debug_view", int(opt.debug))
+	mat.set_shader_parameter("world_onebit", opt.world == "1bit")
 	var lights := PackedVector4Array()
 	for l in opt.lights:
 		lights.append(Vector4(l.x * size.x, l.y * size.y, l.z * size.y, l.w))
@@ -118,7 +125,7 @@ func _parse(args: PackedStringArray) -> Dictionary:
 	var o := {"map": 10, "out": "/tmp/fightmap.png", "raw": "", "hud": false,
 		"overlays": false, "pixel": 2.0, "black": 0.0, "white": 1.0,
 		"gamma": 1.0, "levels": 0.0, "edge": 0.0, "edge-threshold": 0.25,
-		"ambient": 1.0, "falloff": 1.5, "lights": [], "debug": 0.0, "detail": 1.0, "detail-radius": 3.0}
+		"ambient": 1.0, "falloff": 1.5, "lights": [], "debug": 0.0, "world": "color", "detail": 1.0, "detail-radius": 3.0}
 	for a in args:
 		if not a.begins_with("--"):
 			printerr("[render] unexpected argument: %s" % a)
@@ -131,6 +138,11 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				o.map = int(v)
 			"out", "raw":
 				o[k] = v
+			"world":
+				if v not in ["color", "1bit"]:
+					printerr("[render] --world is color or 1bit, got '%s'" % v)
+					return {}
+				o.world = v
 			"hud", "overlays":
 				o[k] = true
 			"pixel", "black", "white", "gamma", "levels", "edge", \

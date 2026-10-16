@@ -17,6 +17,22 @@ var _ready_ok := false
 ## {id: {k: Callable -> int zkey, d: Callable(CanvasItem)}}.
 var _dynamic := {}
 var debug := OS.has_environment("MAPGFX_DEBUG")
+## Asset folder the art comes from. "mapgfx_1bit" is the per-texture 1-bit
+## conversion (tools/asset-import/onebit.py, sprints/S04); set it before
+## load_world(), together with use_onebit().
+var source_dir := "mapgfx"
+## Round sprite positions to whole pixels. The retail layout puts half the
+## rows at .5 px, which blurs crisp 1-bit art even under nearest filtering.
+var pixel_snap := false
+
+
+## Switch to the 1-bit art set: its own folder, nearest filtering, whole-pixel
+## positions. Reload the world afterwards.
+func use_onebit(on: bool) -> void:
+	source_dir = "mapgfx_1bit" if on else "mapgfx"
+	pixel_snap = on
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if on \
+		else CanvasItem.TEXTURE_FILTER_PARENT_NODE
 
 
 ## Retail sort key for a live actor on cell (x,y): the feet sit on the
@@ -50,7 +66,7 @@ func _process(_delta: float) -> void:
 
 func load_world(world_id: int) -> bool:
 	clear()
-	var rel := "mapgfx/%d.json" % world_id
+	var rel := "%s/%d.json" % [source_dir, world_id]
 	if not AssetPaths.exists(rel):
 		return false
 	var meta: Dictionary = AssetPaths.read_json(rel, {})
@@ -59,7 +75,7 @@ func load_world(world_id: int) -> bool:
 	var tex_meta: Dictionary = meta.get("tex", {})
 	for gfx in tex_meta:
 		# JSON object keys arrive as strings; sprite.tex is numeric
-		var img := AssetPaths.load_image("mapgfx/tex/%s.png" % gfx)
+		var img := AssetPaths.load_image("%s/tex/%s.png" % [source_dir, gfx])
 		if img != null:
 			_tex[int(gfx)] = ImageTexture.create_from_image(img)
 	for s in sprites:
@@ -118,13 +134,15 @@ func _draw() -> void:
 		if s.sy + s.h < world_rect.position.y or s.sy > world_rect.end.y:
 			continue
 		var uv = s.uv
+		var dst := Rect2(s.sx, s.sy, s.w, s.h)
+		if pixel_snap:
+			dst.position = dst.position.floor()
 		if uv != null:
-			draw_texture_rect_region(s.t,
-				Rect2(s.sx, s.sy, s.w, s.h),
+			draw_texture_rect_region(s.t, dst,
 				Rect2(uv[0], uv[1], uv[2], uv[3]))
 		else:
 			# static element — zl_1.d(): the whole texture stretched to w×h
-			draw_texture_rect(s.t, Rect2(s.sx, s.sy, s.w, s.h), false)
+			draw_texture_rect(s.t, dst, false)
 		drawn += 1
 	while di < dyn.size():
 		dyn[di].d.call(self)

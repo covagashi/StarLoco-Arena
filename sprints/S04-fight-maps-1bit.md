@@ -113,6 +113,7 @@ adjuntar ficheros en la app.
 | Fecha | Petición | Cambio (parámetro / código) | Captura |
 |---|---|---|---|
 | 2026-10-16 | "Primero haz la prueba de un mapa y vemos el arte" | Mapa 10. Cuatro variantes: original; día con celda de 1 px (`--pixel=1 --detail=3`); día con celda de 2 px (`--pixel=2 --detail=3 --black=0.05 --white=0.9`); noche (`--ambient=0.12 --falloff=1.0` + 4 luces) | `prueba1-mapa10.png` |
+| 2026-10-16 | "La de Instagram separa los efectos y consigue un resultado más fino; tú no haces el 1 bit por tile, sino por imagen, ¿verdad?" → "hazlo" | **Cambio de enfoque: 1 bit por textura.** `tools/asset-import/onebit.py` convierte cada textura de `mapgfx` (contraste local `--detail=4 --radius=2`, `--white=0.75 --gamma=0.75`, Atkinson, alfa binario) a `assets/mapgfx_1bit/`. `map_gfx.use_onebit()` la carga con filtro nearest y posiciones enteras. El shader (`world_onebit`) ya solo pone la oscuridad: el píxel del mundo sobrevive donde `luz > Bayer`. Render con `--world=1bit --pixel=1`, 5 luces en las losas brillantes y las salidas, `--ambient=0.12 --falloff=1.0` | `prueba2-capas.png` (WORLD / DARKNESS / LIGHTS / FINAL, recorte 1:1), `prueba2-antes-despues.png` |
 
 ## Notas de la primera prueba (2026-10-16)
 
@@ -130,6 +131,17 @@ adjuntar ficheros en la app.
 - **Se comprobó que el shader lee la pantalla bien**: `--debug=1` (el arte tal
   como lo muestrea) frente a la captura sin filtro da una diferencia media de
   2,8/255, sin desplazamiento ni volteo.
+- **Prueba 2 — por qué el 1 bit por textura es más fino:** cada tile se
+  convierte a su propia rejilla de píxeles, así que el dibujo llega nítido y el
+  dithering del shader solo afecta a la luz. Además, la trama viaja con el
+  sprite al mover la cámara en vez de "nadar" bajo ella. Atkinson en vez de
+  Bayer para el mundo: no repite un patrón, así que no se ven costuras entre
+  tiles vecinos. El mapa 10 (57 texturas) se convierte en 2,5 s.
+- **Ojo al revisar capturas:** reducir una imagen 1 bit a la mitad borra filas
+  enteras de puntos (la oscuridad parece negro puro). `contact_sheet.py --crop`
+  recorta a 1:1.
+- **Pendiente:** los personajes siguen a color; el shader los pasa a 1 bit con
+  su propia luminancia. Lo fino sería convertir también sus frames (312k).
 - **Para la integración**: hoy las ayudas tácticas (zonas de salida, anillos) se
   dibujan en el mismo canvas que el mapa, así que el filtro se las comería.
   Habrá que moverlas a una capa por encima del filtro.
