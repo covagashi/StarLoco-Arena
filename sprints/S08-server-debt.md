@@ -18,6 +18,9 @@ retail leídos y documentación que no se contradiga.
       visualmente.
 - [ ] Casillas especiales: confirmar en vivo que una se dispara.
 - [ ] B-111: de dónde salen los rosters de 10 objetos.
+- [ ] `pvp_smoke` se para en el intercambio (S03): el coach `test` no tiene cartas
+      intercambiables en la lista del cliente, aunque tiene 13 en `coach_cards`.
+      ¿Datos locales o regresión?
 - [ ] Nombres con acentos: el cliente retail los estropea; las cadenas de
       gamedata se leen como UTF-8 y no como cp1252.
 

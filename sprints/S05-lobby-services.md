@@ -32,7 +32,9 @@ del tutorial, pero es mucho más trabajo (ver `deprecated_hall/README.md`).
 - [ ] Zaap: hoy es un no-op explícito (`main.gd`). Destinos y viaje.
 - [ ] Cartas especiales 21–23 (renombrar, fuegos artificiales…), hoy sin soporte.
 - [ ] NPCs: árboles de `npcdialogs.gd` accesibles sin caminar.
-- [ ] `test/world_smoke.gd` reescrito contra las entradas nuevas.
+- [ ] `test/world_smoke.gd` reescrito contra las entradas nuevas. Hoy muere con
+      `Node not found: "World"` y se cuelga (comprobado en S03). Cubría opcodes que
+      `COVERAGE.md` da por verificados con él (26330, 28649…).
 
 ## Criterio de cierre
 

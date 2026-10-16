@@ -12,11 +12,12 @@ la **fidelidad GUI retail** (§1–2). En curso: **mapas de pelea en 1 bit**
 ([`S04`](./S04-fight-maps-1bit.md), §9).
 
 **Entorno:** desde el 2026-10-16 se desarrolla en Linux x86_64 **sin pantalla**, no en
-el Mac. Los comandos de abajo que citan `/Applications/Godot.app` son del Mac y están
-pendientes de adaptar ([`S03`](./S03-base-linux.md)).
+el Mac. `run_tests.sh` funciona en los dos ([`S03`](./S03-base-linux.md)); las capturas van
+a `/tmp`.
 
 Servidor en producción: `140.238.172.196:3000` (Docker en VPS; el 5555 de OCI está bloqueado).
-Cliente: `cd godot && /Applications/Godot.app/Contents/MacOS/Godot --path .` (Mac; en Linux: pendiente, S03)
+Cliente: `cd godot && godot --path .` (Linux, Godot 4.7.1 en `~/.local/bin`; sin pantalla,
+con `xvfb-run -a` delante). En el Mac: `/Applications/Godot.app/Contents/MacOS/Godot --path .`
 Cuenta de prueba: `test1` / `dofus`. Log: `/tmp/arena_client.log`.
 
 Rama `main-covaga`; `v2.70` es la base heredada del fork.
@@ -159,7 +160,9 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 ## 7. Convención de limpieza
 
 - Matar Godot tras probar: `pkill -f "Contents/MacOS/Godot --path \."` — el argv real no
-  lleva la ruta. **Solo Mac**; el patrón para Linux está pendiente (S03).
+  lleva la ruta. Para los dos sistemas: `pkill -f "[Gg]odot[^ /]* --path \."`, el mismo patrón
+  que usa `run_tests.sh`. Ojo: si el patrón va escrito literal en la misma línea de shell
+  que otros comandos, `pkill -f` puede matar a esa shell; mejor por PID.
 - Solo `godot/` se toca para GUI; protocolo sagrado; XMLs retail no se editan (se arregla
   el intérprete).
 

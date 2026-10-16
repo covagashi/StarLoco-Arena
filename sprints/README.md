@@ -69,7 +69,7 @@ Linux y Windows).
 |---|---|---|---|---|
 | [S01](./S01-client-test-net.md) | — | — | 🟢 cerrado | Red de pruebas del cliente + raíz de assets (B-173, B-174, B-175) |
 | [S02](./S02-studio-tooling.md) | — | — | 🟢 cerrado | Tooling del stack en el studio: pnpm, oxlint, oxfmt, knip, lane de CI |
-| [S03](./S03-base-linux.md) | M1 | S | 🟡 siguiente | Base en Linux headless: Godot, render con xvfb, tests portables, CI viva |
+| [S03](./S03-base-linux.md) | M1 | S | 🟡 abierto (falta la CI) | Base en Linux headless: Godot, render con xvfb, tests portables, CI viva |
 | [S04](./S04-fight-maps-1bit.md) | M2 | M | ⚪ detallado | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
 | [S05](./S05-lobby-services.md) | M1 | M | ⚪ esbozo | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
 | [S06](./S06-options-audio.md) | M1 | S | ⚪ esbozo | Opciones que no hacen nada, música y volúmenes |
