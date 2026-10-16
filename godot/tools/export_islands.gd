@@ -1,7 +1,7 @@
 extends SceneTree
 
 ## Island topology exporter — offline dump of every overworld island's floor
-## plan as JSON, raw material for event maps (pendiente/README.md §5).
+## plan as JSON, raw material for event maps (sprints/BACKLOG.md §5).
 ##
 ##   Godot --headless --path godot -s tools/export_islands.gd -- <outdir> \
 ##       [--ids=A-B] [--env-dir=<dir of <id>.jar env layers>]

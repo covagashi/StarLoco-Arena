@@ -22,7 +22,7 @@ cd "$SCRIPT_DIR"
 
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 
-## pendiente/README.md §7's cleanup convention: the real argv never carries
+## sprints/BACKLOG.md §7's cleanup convention: the real argv never carries
 ## --headless, just "--path ." — so this one pattern catches a leftover
 ## process from either lane.
 cleanup_godot() {
@@ -86,12 +86,12 @@ skip_visual_notice() {
 	cat <<'EOF'
 === visual preview lane: SKIPPED ===
 assets/anims is not present. It's git-ignored on purpose (redistribution
-constraint on converted retail art — see AGENTS.md / pendiente/README.md),
+constraint on converted retail art — see AGENTS.md / sprints/BACKLOG.md),
 so a fresh checkout never has it, and the windowed previews (coach_7000
 anims + appSkin atlases) can't run without it.
 
 Regenerate it with the asset-import pipeline — see the commands in
-pendiente/README.md §6.
+sprints/BACKLOG.md §6.
 EOF
 }
 

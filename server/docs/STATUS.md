@@ -31,7 +31,7 @@ by bugs found in live play. Current theme: **the client's data files are the sin
 of truth** — no hardcoded values, no values ported from v2.04b (a beta whose numbers were
 re-tuned). Every v2.04b-inherited value checked so far has turned out wrong in 2.70.
 
-**Tiers 0, 1 and 2 are COMPLETE** (see `ROADMAP.md`). Tier 3 is where work is now, and
+**Tiers 0, 1 and 2 are COMPLETE** (the retired `ROADMAP.md` backlog — `git show v2.70:ROADMAP.md`). Tier 3 is where work is now, and
 most of it is done too: **29 Sphere Board**, **31 guilds/clans**, **34 schema migrations**
 and **35 web admin panel** have all landed. What is left in Tier 3 is almost entirely the
 maintainer's own deferrals. **30 (2v2) is now DONE too** — live-verified with four retail

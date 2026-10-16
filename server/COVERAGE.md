@@ -445,7 +445,7 @@ missing feature manifests to the client as a *hang*. Prioritized:
   being true: **502 of 533 effect rows resolve (94.2 %)** across 31 mechanic
   kinds, with areas, buffs, poison DoTs, target conditions, cast criteria,
   altitude line-of-sight and full range validation. The real remaining gap is
-  **12 action ids / 31 rows** — see ROADMAP §8.5 for the itemised list.
+  **12 action ids / 31 rows** — see §8.5 of the retired `ROADMAP.md` (`git show v2.70:ROADMAP.md`) for the itemised list.
 - Bet stakes on a fight win (fights carry a bet field but it isn't wagered).
 - In-fight movement (4503) is fully validated (rooted, MP budget, walkable, not
   destroyed, adjacency, occupancy, stop-on-contact). Placement (8021) is gated to

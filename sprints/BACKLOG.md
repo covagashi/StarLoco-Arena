@@ -1,18 +1,21 @@
-# Pendiente — seguimiento local
+# Backlog — cola de trabajo viva
 
-Estado al **2026-10-13**. El trabajo FX/`.xps` quedó cerrado (abajo, §5 — referencia).
+Lo pendiente, sin plazos. Lo que se hace en cada tanda va en su sprint
+(`SNN-*.md`, índice en [`README.md`](./README.md)); esto es lo que queda por coger.
+
+Estado al **2026-10-16**. El trabajo FX/`.xps` quedó cerrado (abajo, §6 — referencia).
 El cliente Godot ya tiene **lobby + combate nativos, i18n y bug report in-game**
-(commit `00b0e33e`, 7 oct). Lo activo ahora: **fidelidad GUI retail** y decidir si
-se entra en **async PvP** (§4).
+(commit `00b0e33e`, 7 oct). Lo activo ahora: **async PvP** (fases 1–2 hechas, §4) y
+la **fidelidad GUI retail** (§1–2).
 
 Servidor en producción: `140.238.172.196:3000` (Docker en VPS; el 5555 de OCI está bloqueado).
 Cliente: `cd godot && /Applications/Godot.app/Contents/MacOS/Godot --path .`
 Cuenta de prueba: `test1` / `dofus`. Log: `/tmp/arena_client.log`.
 
-Rama `main-covaga`, 130 commits por delante de `v2.70`.
+Rama `main-covaga`; `v2.70` es la base heredada del fork.
 `cd server && go build ./...` limpio.
 Pruebas del cliente: `cd godot && ./run_tests.sh` (ver
-[`sprints/S01`](../sprints/S01-client-test-net.md) para los dos carriles y por
+[`S01`](./S01-client-test-net.md) para los dos carriles y por
 qué el visual no puede correr en CI).
 
 ---
@@ -65,17 +68,18 @@ las respuestas.
       `internal/config/config.template.yaml`.
 - [x] `4521`/`4522` facing en placement (B-170) — `direction_test.go`, `src/util/direction8.gd`.
 
-## 4. Async PvP — diseñado, sin implementar
+## 4. Async PvP — fases 1–2 hechas
 
 **[`godot/ASYNC-PVP.md`](../godot/ASYNC-PVP.md)**: ghost teams + gambits tipo FFXII, combate
-determinista, opcodes `60010`–`60014`, 5 fases. Nada implementado todavía; el doc es para
-revisar antes de construir.
+determinista, opcodes `60010`–`60014`, 5 fases. El doc lleva el detalle de cada fase hecha.
 
-- [ ] **Fase 1 — determinismo** (único cambio estructural; el resto depende de él):
-      sembrar `f.rng` desde un seed guardado en el registro de combate en lugar de
-      `time.Now()` (`internal/game/spell_effects.go:37`), + hook de log por turno
-      (turno, luchador, regla disparada / acción). Verificable con tests.
-- [ ] Fase 2 — motor de gambits sobre `runAITurn`, con `classifyAI` como fallback.
+- [x] **Fase 1 — determinismo** — seed por combate en el struct `Fight` (asignado en
+      `FightManager.Create`) + log de decisiones por turno en los puntos de acción
+      (`fightseed.go`, `fightlog.go`, `determinism_test.go`). De paso, B-176. `5bd7427a`.
+      No cubre: `pickArenaSeating` (rand global), drops post-combate y `applyTiredness`
+      (reloj) — la fase 3 tiene que guardar el id de arena junto al seed.
+- [x] **Fase 2 — motor de gambits** sobre `runAITurn`, `classifyAI` como fallback,
+      vocabulario v1 cerrado y versionado (`gambit.go`, `gambit_eval.go`, 15 tests). `8220cac4`.
 - [ ] Fase 3 — tabla `ghost_teams` + opcodes, visible solo a admin al principio.
 - [ ] Fase 4 — cliente: panel de gestión de ghosts (el editor de reglas es la parte dura
       de UX), entrada "Fight a ghost", pestaña de ladder.

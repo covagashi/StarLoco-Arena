@@ -1,18 +1,24 @@
 # Sprints
 
-Seguimiento por sprint del trabajo en curso. Complementa, no sustituye:
+El roadmap del proyecto: qué queda por hacer y qué se hizo en cada tanda.
 
 | Documento | Responde |
 |---|---|
-| [`ROADMAP.md`](../ROADMAP.md) | *qué funciona* del servidor, feature por feature |
+| [`BACKLOG.md`](./BACKLOG.md) | la cola de trabajo viva, sin plazos — lo que queda por coger |
+| `SNN-slug.md` (índice abajo) | **qué se hizo en cada tanda y con qué evidencia** |
 | [`server/docs/BUGS.md`](../server/docs/BUGS.md) | el log de bugs `B-NNN`, con causa raíz y verificación |
-| [`pendiente/README.md`](../pendiente/README.md) | la cola de trabajo viva, sin plazos |
-| **este directorio** | **qué se hizo en cada tanda y con qué evidencia** |
+| [`devlog/`](../devlog/README.md) | el diario del agente: qué hizo en cada sesión y qué encontró |
+
+Los comentarios de código que citan "ROADMAP item N" o "ROADMAP §N" apuntan al
+`ROADMAP.md` heredado de la base del fork, retirado el 2026-10-16 para no
+confundirlo con este directorio. Sigue legible: `git show v2.70:ROADMAP.md`.
 
 ## Convención
 
 - Un fichero por sprint: `SNN-slug.md`, con objetivo, alcance, tareas y
   **criterio de cierre**.
+- Un sprint se abre cogiendo ítems de `BACKLOG.md`; al cerrarlo, se marcan
+  allí como hechos con el enlace al sprint.
 - Al cerrar, el mismo fichero se completa con la sección *Resultado* — qué se
   hizo, qué no, y los comandos que lo demuestran. No se abre un fichero de
   informe aparte.
