@@ -10,7 +10,8 @@ extends SceneTree
 ##       [--detail=1] [--detail-radius=3] [--edge=0] [--edge-threshold=0.25] \
 ##       [--ambient=1] [--falloff=1.5] [--lights="x,y,r,i;..."] \
 ##       [--hud] [--overlays] [--debug=0..4] [--world=color|1bit] \
-##       [--actors=color|onebit|team|line|duo] [--fighters]
+##       [--actors=color|onebit|team|line|duo] [--fighters] \
+##       [--marks=none|cell|aura|ring]
 ##
 ## --actors picks the AnmSprite 1-bit style (onebit = 1 bit + the actor's own
 ## mask colours; team = that plus a team-colour outline). --fighters places
@@ -76,7 +77,7 @@ func _run() -> void:
 	scene.overlays_visible = opt.overlays
 	scene.queue_redraw()
 	if opt.fighters:
-		_spawn_demo_fighters(scene)
+		_spawn_demo_fighters(scene, opt.marks)
 	await create_timer(0.5).timeout
 
 	if opt.raw != "":
@@ -123,9 +124,74 @@ func _run() -> void:
 	quit(0)
 
 
+## Team-mark designs auditioned for the 1-bit style (sprints/S04):
+##   cell = the cell's diamond filled with a checker of the team colour
+##   aura = a round glow of team-coloured Bayer dots fading outwards
+##   ring = a thick team-colour ground ellipse (the live ring, reinforced)
+## The acting fighter's mark is drawn larger / denser.
+const HW := 43.0
+const HH := 21.5
+static var _mark_cache := {}
+
+
+func _draw_mark(ci: CanvasItem, kind: String, ctr: Vector2, col: Color,
+		active: bool) -> void:
+	match kind:
+		"ring":
+			var pts := PackedVector2Array()
+			var k := 0.62 if active else 0.55
+			for n in 33:
+				var a := TAU * float(n) / 32.0
+				pts.append(ctr + Vector2(cos(a) * HW * k, sin(a) * HH * k))
+			ci.draw_polyline(pts, col, 4.0 if active else 2.5)
+		"cell", "aura":
+			var key := "%s|%s|%s" % [kind, col.to_html(), active]
+			if not _mark_cache.has(key):
+				_mark_cache[key] = ImageTexture.create_from_image(
+					_mark_image(kind, col, active))
+			var tex: Texture2D = _mark_cache[key]
+			ci.draw_texture(tex, (ctr - tex.get_size() / 2.0).floor())
+
+
+static func _mark_image(kind: String, col: Color, active: bool) -> Image:
+	var bayer := AnmSpriteScript._BAYER8
+	var scale := 1.5 if kind == "aura" else 1.0
+	if active:
+		scale *= 1.25
+	var w := int(HW * 2.0 * scale)
+	var h := int(HH * 2.0 * scale)
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		for x in w:
+			var dx := (float(x) + 0.5 - w / 2.0) / (w / 2.0)
+			var dy := (float(y) + 0.5 - h / 2.0) / (h / 2.0)
+			var on := false
+			if kind == "cell":
+				# diamond |dx| + |dy| <= 1; checker fill, solid 1-px rim
+				var d := absf(dx) + absf(dy)
+				if d <= 1.0:
+					var rim := d > 1.0 - 2.5 / (h / 2.0)
+					on = rim or (x + y) % 2 == 0 or (active and (x / 2 + y) % 2 == 0)
+			else:
+				var d := sqrt(dx * dx + dy * dy)
+				var v := clampf(1.0 - d, 0.0, 1.0)
+				v = pow(v, 0.8) * (1.0 if active else 0.85)
+				on = v > (float(bayer[(y & 7) * 8 + (x & 7)]) + 0.5) / 64.0
+			if on:
+				img.set_pixel(x, y, col)
+	return img
+
+
 ## Three fighters per team on the map's own spawn cells, so the actor styles
 ## can be judged in place (the preview otherwise only shows pedestal coaches).
-func _spawn_demo_fighters(scene: Node2D) -> void:
+func _spawn_demo_fighters(scene: Node2D, marks: String) -> void:
+	# Team marks are drawn on fight_view's own canvas item, like its live base
+	# rings: above the map (a show_behind_parent child) and below the actors.
+	# The art pass only auditions designs here.
+	var spots := []
+	scene.draw.connect(func():
+		for sp in spots:
+			_draw_mark(scene, marks, sp.ctr, sp.col, sp.active))
 	var i := 0
 	for team in [0, 1]:
 		var cells: Array = scene._fmd.get("team%d" % team, [])
@@ -138,11 +204,15 @@ func _spawn_demo_fighters(scene: Node2D) -> void:
 			spr.team_color = TEAM_COLORS[team]
 			spr.tints = Palettes.fighter_tints(spec[1][0], spec[1][1], spec[1][2])
 			spr.position = scene._iso(c.x + 0.5, c.y + 0.5, c.z)
+			# the first fighter of team 0 plays the acting one (turn marker)
+			spots.append({"ctr": spr.position, "col": TEAM_COLORS[team],
+				"active": i == 1})
 			spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
 			if team == 1:
 				spr.scale.x = -1   # face the other team
 			scene._actors.add_child(spr)
 			spr.load_action("anims/" + spec[0], "1_AnimStatique")
+	scene.queue_redraw()
 
 
 func _save(path: String) -> bool:
@@ -166,7 +236,7 @@ func _parse(args: PackedStringArray) -> Dictionary:
 		"overlays": false, "pixel": 2.0, "black": 0.0, "white": 1.0,
 		"gamma": 1.0, "levels": 0.0, "edge": 0.0, "edge-threshold": 0.25,
 		"ambient": 1.0, "falloff": 1.5, "lights": [], "debug": 0.0, "world": "color", "actors": "color",
-		"fighters": false, "detail": 1.0, "detail-radius": 3.0}
+		"fighters": false, "marks": "none", "detail": 1.0, "detail-radius": 3.0}
 	for a in args:
 		if not a.begins_with("--"):
 			printerr("[render] unexpected argument: %s" % a)
@@ -181,6 +251,11 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				o[k] = v
 			"fighters":
 				o.fighters = true
+			"marks":
+				if not v in ["none", "cell", "aura", "ring"]:
+					printerr("[render] --marks is none, cell, aura or ring, got '%s'" % v)
+					return {}
+				o.marks = v
 			"actors":
 				if not ACTOR_STYLES.has(v):
 					printerr("[render] --actors is color, onebit, team, line or duo, got '%s'" % v)
