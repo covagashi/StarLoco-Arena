@@ -1305,10 +1305,19 @@ func _nameplate(spr: AnmSprite, fid: int) -> void:
 	spr.add_child(lbl)
 	var hp := ProgressBar.new()
 	hp.name = "HP"
+	# show_percentage BEFORE size: while the percentage is on, the bar's
+	# minimum height is the font's (~27 px), and a size set then sticks —
+	# the 5-px bar came out as a 56x27 block.
+	hp.show_percentage = false
 	hp.position = Vector2(-28, -78)
 	hp.size = Vector2(56, 5)
-	hp.show_percentage = false
 	hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _onebit:
+		# ink track; the fill keeps its green→red health colour
+		# (_refresh_nameplate), which is gameplay information
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color.BLACK
+		hp.add_theme_stylebox_override("background", bg)
 	spr.add_child(hp)
 	_refresh_nameplate(fid)
 

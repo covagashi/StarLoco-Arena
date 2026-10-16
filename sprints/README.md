@@ -51,7 +51,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | Hito | Qué se nota al llegar | Sprints |
 |---|---|---|
 | **M1 — Jugable de punta a punta** | desde el cliente Godot se llega a todo lo que el retail ofrece fuera del combate, con sonido y opciones | S03, S05, S06 |
-| **M2 — Identidad visual** | combates en 1 bit y GUI fiel al retail | S04, S07 |
+| **M2 — Identidad visual** | combates en 1 bit, HUD propio y GUI fiel al retail | S04, S17, S07 |
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16 |
@@ -71,6 +71,7 @@ Linux y Windows).
 | [S02](./S02-studio-tooling.md) | — | — | 🟢 cerrado | Tooling del stack en el studio: pnpm, oxlint, oxfmt, knip, lane de CI |
 | [S03](./S03-base-linux.md) | M1 | S | 🟡 a la espera del dueño (CI) | Base en Linux headless: Godot, render con xvfb, tests portables, CI viva |
 | [S04](./S04-fight-maps-1bit.md) | M2 | M | 🟡 abierto | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
+| [S17](./S17-fight-hud.md) | M2 | M | ⚪ detallado | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
 | [S05](./S05-lobby-services.md) | M1 | M | ⚪ esbozo | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
 | [S06](./S06-options-audio.md) | M1 | S | ⚪ esbozo | Opciones que no hacen nada, música y volúmenes |
 | [S07](./S07-gui-fidelity.md) | M2 | M | ⚪ esbozo | Fidelidad GUI retail y diálogos sin equivalente nativo |
@@ -85,6 +86,8 @@ Linux y Windows).
 | [S16](./S16-release-1.0.md) | M5 | M | ⚪ esbozo | Release pública 1.0: pipeline, instancia segura, docs, legal |
 
 Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · 🟢 cerrado.
+La tabla va en **orden de ejecución**; el número de un sprint es el de su
+creación, así que un sprint insertado más tarde (S17) puede ir antes que otros.
 Solo puede haber **un sprint abierto** a la vez; uno que solo espera una acción
 del dueño no cuenta (lo marca "a la espera del dueño").
 
