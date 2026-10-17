@@ -348,8 +348,10 @@ func _tabs_reflow() -> void:
 			continue
 		ch.visible = (i == selected_index)
 		ch.position = Vector2(strip.x, strip.y)
+		var before: Vector2 = ch.size
 		ch.size = size - Vector2(strip.x, strip.y)
-		if ch.visible:
+		# a size change already laid the tab out through its `resized`
+		if ch.visible and (ch.size == before or not ch.is_inside_tree()):
 			GuiLayouts.apply(ch)
 		i += 1
 
@@ -924,9 +926,22 @@ func apply_item(v) -> void:
 
 
 ## list row materialization — called when content_items changes
+func _rebuild_when_placed() -> void:
+	rebuild_items.call_deferred()
+
+
 func rebuild_items() -> void:
 	if kind != "list" and kind != "stackList" and kind != "comboboxplus" \
 			and kind != "comboBox" and kind != "renderableContainer":
+		return
+	# Bound while the dialog is still being wired (the model already holds the
+	# list — a reopened dialog): rows made now would then go through add_child
+	# and the dialog's whole layout pass one by one. That froze the client for
+	# 66 s on a reopened 845-card Card Master. Build them once it is placed,
+	# which is also what a first open does.
+	if not is_inside_tree():
+		if not tree_entered.is_connected(_rebuild_when_placed):
+			tree_entered.connect(_rebuild_when_placed, CONNECT_ONE_SHOT)
 		return
 	# drop old rows (renderer templates stay hidden, owned by us). free()
 	# now — queue_free defers and a same-frame rebuild would double them.

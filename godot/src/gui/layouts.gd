@@ -25,6 +25,18 @@ static func apply(c: GWidget) -> void:
 			_grid(c)
 
 
+## Size a child and lay it out exactly once. In the tree, a size change fires
+## the child's `resized`, which already runs apply() (widget.gd); applying it
+## again here laid every level out twice — 2^depth over a subtree, ~25 ms per
+## row of a Card Master list. Out of the tree, or with the size unchanged,
+## nothing fired, so apply here.
+static func _size_and_apply(ch: GWidget, s: Vector2) -> void:
+	var before := ch.size
+	ch.size = s
+	if not (ch.is_inside_tree() and ch.size != before):
+		apply(ch)
+
+
 static func content_size(c: GWidget) -> Vector2:
 	var cr := c.content_rect()
 	return cr.size
@@ -222,8 +234,7 @@ static func _static(c: GWidget) -> void:
 		pos.x += float(ld.get("xOff", 0))
 		pos.y += float(ld.get("yOff", 0))
 		ch.position = o + pos
-		ch.size = size
-		GuiLayouts.apply(ch)
+		_size_and_apply(ch, size)
 
 
 ## ---- BorderLayout (et_1) ----------------------------------------------
@@ -243,45 +254,40 @@ static func _border(c: GWidget) -> void:
 		var ch: GWidget = by["north"]
 		var p := _child_pref(ch)
 		var w := right - left if ch.expandable else p.x
-		ch.size = Vector2(w, p.y)
+		_size_and_apply(ch, Vector2(w, p.y))
 		ch.position = o + Vector2(left + (0.0 if ch.expandable else (right - left - w) / 2.0), top)
 		top += p.y + vgap
-		GuiLayouts.apply(ch)
 	if by.has("south"):
 		var ch: GWidget = by["south"]
 		var p := _child_pref(ch)
 		var w := right - left if ch.expandable else p.x
-		ch.size = Vector2(w, p.y)
+		_size_and_apply(ch, Vector2(w, p.y))
 		ch.position = o + Vector2(left + (0.0 if ch.expandable else (right - left - w) / 2.0), bottom - p.y)
 		bottom -= p.y + vgap
-		GuiLayouts.apply(ch)
 	if by.has("east"):
 		var ch: GWidget = by["east"]
 		var p := _child_pref(ch)
 		var h := bottom - top if ch.expandable else p.y
-		ch.size = Vector2(p.x, h)
+		_size_and_apply(ch, Vector2(p.x, h))
 		ch.position = o + Vector2(right - p.x, top + (0.0 if ch.expandable else (bottom - top - h) / 2.0))
 		right -= p.x + hgap
-		GuiLayouts.apply(ch)
 	if by.has("west"):
 		var ch: GWidget = by["west"]
 		var p := _child_pref(ch)
 		var h := bottom - top if ch.expandable else p.y
-		ch.size = Vector2(p.x, h)
+		_size_and_apply(ch, Vector2(p.x, h))
 		ch.position = o + Vector2(left, top + (0.0 if ch.expandable else (bottom - top - h) / 2.0))
 		left += p.x + hgap
-		GuiLayouts.apply(ch)
 	if by.has("center"):
 		var ch: GWidget = by["center"]
 		if ch.expandable:
-			ch.size = Vector2(right - left, bottom - top)
+			_size_and_apply(ch, Vector2(right - left, bottom - top))
 			ch.position = o + Vector2(left, top)
 		else:
 			var p := _child_pref(ch)
-			ch.size = p
+			_size_and_apply(ch, p)
 			ch.position = o + Vector2(left + (right - left - p.x) / 2.0,
 				top + (bottom - top - p.y) / 2.0)
-		GuiLayouts.apply(ch)
 
 
 ## ---- RowLayout (ei_1) ---------------------------------------------------
@@ -320,10 +326,9 @@ static func _row(c: GWidget) -> void:
 				var ay: float = ALIGN.get(String(ch.layout_data["align"]).to_lower(), Vector2(0.5, 0.5)).y
 				h = p.y
 				y = ay * (content_h - h)
-			ch.size = Vector2(w, h)
+			_size_and_apply(ch, Vector2(w, h))
 			ch.position = o + Vector2(x, vgap + y)
 			x += w + hgap
-			GuiLayouts.apply(ch)
 	else:
 		var content_w2 := cs.x - 2 * hgap
 		var content_h2 := cs.y - 2 * vgap
@@ -352,10 +357,9 @@ static func _row(c: GWidget) -> void:
 				var ax: float = ALIGN.get(String(ch.layout_data["align"]).to_lower(), Vector2(0.5, 0.5)).x
 				w = p.x
 				x2 = ax * (content_w2 - w)
-			ch.size = Vector2(w, h)
+			_size_and_apply(ch, Vector2(w, h))
 			ch.position = o + Vector2(hgap + x2, y2)
 			y2 += h + vgap
-			GuiLayouts.apply(ch)
 
 
 static func _row_align(c: GWidget) -> float:
@@ -387,5 +391,4 @@ static func _grid(c: GWidget) -> void:
 		var col := i % cols
 		var row := i / cols
 		ch.position = o + Vector2(col * cw, row * chh)
-		ch.size = Vector2(cw, chh)
-		GuiLayouts.apply(ch)
+		_size_and_apply(ch, Vector2(cw, chh))

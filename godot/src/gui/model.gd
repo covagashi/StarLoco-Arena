@@ -80,6 +80,22 @@ func set_value(name: String, value, field: String = "") -> void:
 	for e in _watchers.get(_wkey(name, ""), []):
 		if is_instance_valid(e["w"]):
 			e["w"].apply_model(get_value(name), e["bind"])
+	if field != "":
+		return
+	# The whole object was replaced: its field watchers changed too. Without
+	# this, a dialog opened before its model push (the usual order: wire, then
+	# dialog_opened -> _push_*) never saw its field-bound lists — the Card
+	# Master's catalogue stayed empty until the dialog was reopened.
+	var prefix := name + "|"
+	for k in _watchers:
+		if not k.begins_with(prefix):
+			continue
+		var sub: String = k.substr(prefix.length())
+		for e in _watchers[k]:
+			if is_instance_valid(e["w"]):
+				var fv = get_value(name, sub)
+				if fv != null:   # same rule as the initial bind in loader._wire
+					e["w"].apply_model(fv, e["bind"])
 
 
 func watch(w: GWidget, name: String, field: String = "", bind: Dictionary = {}) -> void:
