@@ -189,12 +189,16 @@ func feed(opcode: int, payload: WireReader) -> bool:
 			var anim := payload.get_str("u8")
 			emote.emit(aid, anim)
 		15507:  # MailNameResult — [i64 coachId], 0 = no such coach
+			# Only the answer to our own /mail; the mailbox's "Comprobar"
+			# shares the opcode and main.gd handles it. (Until S18 this
+			# took every 15507 and the mailbox never saw its reply.)
+			if _pending_mails.is_empty():
+				return false
 			var rid := int(payload.get_i64())
-			var pm: Dictionary = _pending_mails.pop_front() \
-				if not _pending_mails.is_empty() else {}
-			if rid != 0 and not pm.is_empty():
+			var pm: Dictionary = _pending_mails.pop_front()
+			if rid != 0:
 				Session.send(539, pm.frame, 3)
-			elif not pm.is_empty():
+			else:
 				_line("error", "[i]%s[/i]" % I18n.t(
 					"chat.user_not_found", {"name": pm.to}))
 		_:

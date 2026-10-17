@@ -7,12 +7,9 @@ extends "res://src/ui/lobby_panel.gd"
 ## and asks main.gd for every change through `nativeCm*` events — the wire
 ## stays in main.gd. Sketch: codigo/capturas/s18/opciones-cardmaster.png, B.
 
-const ART_DIRS := ["gui/images/equipments/coachs/illustrations/",
-	"gui/images/equipments/fighters/illustrations/"]
 const TILE := Vector2(150, 180)
 const COLUMNS := 4
 
-static var _art_cache := {}   # card id -> Texture2D (null when missing)
 static var _token_cache := {}
 
 var bartering := false
@@ -47,9 +44,7 @@ func refresh() -> void:
 	var keep_scroll := 0
 	if is_instance_valid(_grid_scroll) and _grid_mode == bartering:
 		keep_scroll = _grid_scroll.scroll_vertical
-	var focused := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
-	var keep_focus := String(focused.name) \
-		if focused != null and frame.is_ancestor_of(focused) else ""
+	var keep_focus := remember_focus()
 	_grid_scroll = null
 	_grid_mode = bartering
 	clear_body()
@@ -81,12 +76,7 @@ func _restore(scroll: int, focus_name: String) -> void:
 	await get_tree().process_frame   # the scroll range exists after sorting
 	if is_instance_valid(_grid_scroll):
 		_grid_scroll.scroll_vertical = scroll
-	if focus_name != "":
-		var target := frame.find_child(focus_name, true, false) as Control
-		if target != null and target.is_visible_in_tree() \
-				and target.focus_mode != Control.FOCUS_NONE \
-				and not (target is BaseButton and target.disabled):
-			target.grab_focus()
+	restore_focus(focus_name)
 
 
 # --- left: the grids ---------------------------------------------------------
@@ -422,26 +412,13 @@ func _framed_art(cid: int, size: Vector2) -> Control:
 
 func _art(cid: int, size: Vector2) -> Control:
 	var tr := TextureRect.new()
-	tr.texture = _card_art(cid)
+	tr.texture = OneBit.card_art(cid)
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tr.custom_minimum_size = size
 	tr.material = OneBit.art_material()
 	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return tr
-
-
-static func _card_art(cid: int) -> Texture2D:
-	if _art_cache.has(cid):
-		return _art_cache[cid]
-	var tex: Texture2D = null
-	for dir in ART_DIRS:
-		var img := AssetPaths.load_image(dir + "%d.png" % cid)
-		if img != null:
-			tex = ImageTexture.create_from_image(img)
-			break
-	_art_cache[cid] = tex
-	return tex
 
 
 static func _token(type: int) -> Texture2D:

@@ -45,6 +45,7 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-17 | Card Master nativo: **"Comprar" solo cuando la carta tiene precio**. La mayoría de sets del retail son solo trueque (precio 0), y entonces el trueque pasa a ser la acción principal. El trueque va en la misma ventana: tus cartas a la izquierda, la carta que quieres y lo ofrecido a la derecha | agente |
 | 2026-10-17 | **Arte de las cartas en trama 1 bit** (opción B), también los iconos de fichas: "el b". El azul del equipo y las muestras de pelo y piel siguen en color, porque significan algo | dueño |
 | 2026-10-17 | **El muñeco del coach y del luchador, en 1 bit**: "por mi pásalo a 1b". Dibujo a línea, el estilo de los luchadores en el combate 1 bit (`AnmSprite` estilo 3), en creación, lobby y nuevo luchador. Probé la trama de las cartas: el muñeco quedaba fantasmal y el pelo oscuro se perdía en el negro | dueño (el estilo, el agente) |
+| 2026-10-17 | **Muñeco en línea aprobado** (hoja `muneco-1bit.png`): "sí" | dueño |
 | 2026-10-17 | **Card Master nativo aprobado**: "sí, me parece perfecto" | dueño |
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
 
@@ -91,6 +92,35 @@ compra con fichas (5450), porque el coach `test` no tiene ninguna carta con
 precio a su alcance en los Card Masters; está en la vista previa y en el
 smoke, que la hace si la encuentra.
 
+## Tanda 2: el buzón (2026-10-17)
+
+`src/ui/mailbox_panel.gd` sustituye a `mailboxDialog` y `newMailDialog`
+(XML) y al panel de depuración que se abría mientras cargaba. Recibidos y
+enviados a la izquierda, el mensaje a la derecha ("Coger las cartas" como
+acción principal cuando trae cartas, "Responder", "Borrar" con un segundo
+clic de confirmación). Escribir va en la misma ventana: destinatario con
+"Comprobar", asunto, mensaje y hasta 10 cartas adjuntas. En los textos,
+un correo es un "mensaje" y una carta del juego es una "carta".
+
+Encontrado:
+- **El chat se comía todas las respuestas 15507** (comprobación de nombre)
+  aunque no fueran suyas: la del buzón nunca llegaba, tampoco al formulario
+  retail. Ahora el chat solo toma la de su propio `/mail`.
+- Al enviar con cartas, el cliente restaba la carta dos veces: el servidor
+  ya manda el inventario (5200) antes del 15003.
+- Un mensaje a uno mismo solo salía en "Enviados"; ahora sale también en
+  "Recibidos".
+
+Verificado: `test/mailbox_smoke.gd` en vivo, 8/8 (abre el panel nativo
+sin panel de depuración, escribe tecleando en los campos, comprueba el
+nombre, adjunta, envía, lo abre en recibidos, coge la carta y lo borra; el
+inventario acaba igual). `cardmaster_smoke`, `world_smoke` 57/57,
+`native_panels` 123 y `native_lobby` 28 PASS, `./run_tests.sh` exit 0, y
+la vista previa a 1280×720 y 800×600. Sin probar: el `/mail` del chat
+después del cambio (no tiene prueba).
+
+Hoja: `codigo/capturas/s18/tanda2-buzon.png`.
+
 ## Registro de toques artísticos
 
 | Fecha | Nota del dueño | Cambio | Fichero |
@@ -102,15 +132,16 @@ smoke, que la hace si la encuentra.
 
 ## Siguiente paso (para la próxima sesión)
 
-Card Master hecho y aprobado, con el arte en trama. Sigue la tanda 2 con el **buzón**
-(`mailboxDialog`), después el altar de fusión, el cementerio, las
+Card Master aprobado; buzón hecho, a la espera del visto bueno
+(`tanda2-buzon.png`). Sigue la tanda 2 con el **altar de fusión**
+(`fusionLabDialog`), después el cementerio, las
 conversaciones (`ElementDlg`) y los tótems, con el mismo patrón: un panel
 sobre `lobby_panel.gd`, registrado en `_gui.native_factories` con el nombre
 del diálogo retail, y eventos `native*` hacia los handlers de `main.gd`.
 `ShopDlg` y `BarterDlg` de `main.tscn` quedan de reserva y se retiran con
 los demás paneles de depuración.
 
-Pendiente del dueño: el visto bueno del muñeco en línea (`muneco-1bit.png`).
+Pendiente del dueño: el visto bueno del buzón.
 
 ## Tareas candidatas
 
@@ -127,7 +158,7 @@ Pendiente del dueño: el visto bueno del muñeco en línea (`muneco-1bit.png`).
 - [ ] Contenido de los paneles: hoy son tablas genéricas. Rehacerlos uno a
       uno (inventario con cartas, clasificación como el boceto…).
 - [ ] Servicios: sustituir los diálogos XML y `ElementDlg` por paneles
-      nativos (lista de S05). Card Master hecho (2026-10-17); faltan buzón,
+      nativos (lista de S05). Card Master y buzón hechos (2026-10-17); faltan
       altar, fuegos artificiales, cementerio, retos, demonios, tótems.
 - [ ] Retirar de `main.tscn` los paneles de depuración que queden sin uso.
 - [ ] `godot/PRODUCT.md` y `DESIGN.md` al día (hoy dicen que el dueño fija el

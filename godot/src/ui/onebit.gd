@@ -12,6 +12,7 @@ const ACCENT := Color(0.235, 0.47, 1.0)
 const SHADOW := Vector2(8, 8)
 
 static var _dither_cache := {}
+static var _card_art_cache := {}   # card id -> Texture2D (null when missing)
 
 
 ## Flat box: black fill, white border, square corners.
@@ -159,6 +160,22 @@ static func dither_material() -> ShaderMaterial:
 	return _art_mat
 
 
+## A card's illustration (coach or fighter equipment), cached; null if the
+## art is not installed. Draw it with art_material().
+static func card_art(cid: int) -> Texture2D:
+	if _card_art_cache.has(cid):
+		return _card_art_cache[cid]
+	var tex: Texture2D = null
+	for dir in ["gui/images/equipments/coachs/illustrations/",
+			"gui/images/equipments/fighters/illustrations/"]:
+		var img := AssetPaths.load_image(dir + "%d.png" % cid)
+		if img != null:
+			tex = ImageTexture.create_from_image(img)
+			break
+	_card_art_cache[cid] = tex
+	return tex
+
+
 ## The coach doll on menu screens is 1-bit too (owner, 2026-10-17): line
 ## art, the AnmSprite style of the 1-bit fights, so the coach looks the same
 ## in the lobby and in a fight. ARENA_DOLL_STYLE=dither lays the card-art
@@ -296,6 +313,15 @@ static func theme(pad := 10) -> Theme:
 	t.set_color("selection_color", "LineEdit", INK)
 	t.set_color("font_selected_color", "LineEdit", PAPER)
 	t.set_color("font_placeholder_color", "LineEdit", MUTED)
+	t.set_stylebox("normal", "TextEdit", box(PAPER, INK, 2, pad))
+	t.set_stylebox("focus", "TextEdit", box(PAPER, INK, 3, pad))
+	t.set_stylebox("read_only", "TextEdit", box(PAPER, MUTED, 1, pad))
+	for c in ["font_color", "font_readonly_color", "caret_color"]:
+		t.set_color(c, "TextEdit", INK)
+	t.set_color("selection_color", "TextEdit", INK)
+	t.set_color("font_selected_color", "TextEdit", PAPER)
+	t.set_color("font_placeholder_color", "TextEdit", MUTED)
+	t.set_color("background_color", "TextEdit", Color(0, 0, 0, 0))
 	# Tree (the tables): white header rule, inverted selected row.
 	t.set_stylebox("panel", "Tree", box(PAPER, INK, 2, 4))
 	t.set_stylebox("focus", "Tree", focus_ring())

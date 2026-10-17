@@ -263,6 +263,7 @@ func _ready() -> void:
 	for panel_name in preload("res://src/ui/lobby_panels.gd").TITLES:
 		_gui.native_factories[panel_name] = _make_native_lobby_panel
 	_gui.native_factories["cardMasterDialog"] = _make_card_master_panel
+	_gui.native_factories["mailboxDialog"] = _make_mailbox_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -1447,31 +1448,40 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_MAIL_LIST:
 			var d := Codec.decode(opcode, payload)
 			_mails = d.mails
+			_mail_loading = false
 			if $UI/ElementDlg.visible and _elem_kind == 2:
 				_fill_mails()
 			_log_line(I18n.t("mail.count", {"n": _mails.size()}))
-			# the retail client opens the dialog when the list lands
-			if _elem_kind == 2 or _gui.is_open("mailboxDialog") or \
-					_gui.is_open("newMailDialog"):
-				_gui.open("mailboxDialog")
+			if _gui.is_open("mailboxDialog"):
 				_push_mail_model()
 		OP_MAIL_NAME_RES:
 			var d := Codec.decode(opcode, payload)
 			var cid := int(d.get("coach_id", 0))
-			_gui.gui.model.set_value("mailbox.newMail.receiverId", cid)
-			if cid <= 0:
+			# -1 = checked and unknown; 0 stays "not checked yet"
+			_gui.gui.model.set_value("mailbox.newMail.receiverId",
+				cid if cid > 0 else -1)
+			if cid <= 0 and not _gui.is_open("mailboxDialog"):
 				_toast(I18n.t("chat.user_not_found_toast"))
 		OP_MAIL_SEND_RES:
 			var d := Codec.decode(opcode, payload)
 			var res := int(d.result)
+			var msg: String
 			if res > 0:
-				_log_line("[color=green]%s[/color]" % I18n.t("mail.sent",
-					{"id": res, "to": d.mail.get("receiver", "?")}))
+				# (the server pushes the inventory without the attachments, 5200)
+				msg = I18n.t("mail.sent", {"id": res, "to": d.mail.get("receiver", "?")})
 			elif res == -2:
-				_log_line("[color=red]%s[/color]" % I18n.t("mail.refused"))
+				msg = I18n.t("mail.refused")
 			else:
-				_log_line("[color=red]%s[/color]" % I18n.t("mail.err",
-					{"code": res}))
+				msg = I18n.t("mail.err", {"code": res})
+			_log_line("[color=%s]%s[/color]" % ["green" if res > 0 else "red", msg])
+			if _gui.is_open("mailboxDialog"):
+				_mail_status = {"text": I18n.t("mb.sent_ok", {"to": d.mail.get("receiver", "?")})
+					if res > 0 else msg, "ok": res > 0}
+				if res > 0:
+					_mail_mode = "list"
+					_mail_loading = true
+					Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
+				_push_mail_model()
 		OP_MAIL_NOTICE:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i]%s[/i]" % I18n.t("mail.new", {"n": int(d.new_count)}))
@@ -1490,6 +1500,16 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_mails[i]["cards"] = []
 			if $UI/ElementDlg.visible and _elem_kind == 2:
 				_fill_mails()
+			if _gui.is_open("mailboxDialog"):
+				if not d.cards.is_empty():
+					_mail_status = {"ok": true, "text": I18n.t("mail.collected",
+						{"list": ", ".join(d.cards.map(
+							func(c): return Cards.name_of(int(c))))})}
+				var open: Variant = _gui.gui.model.get_value("mailbox.mail")
+				if open is Dictionary and int(open.get("mailId", 0)) == int(d.mail_id):
+					open["cards"] = []
+					open["hasItems"] = false
+				_push_mail_model()
 		OP_EX_INVITATION:
 			var d := Codec.decode(opcode, payload)
 			_ex = {"id": int(d.ex_id), "my_side": 1,
@@ -3750,7 +3770,8 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_push_cardbook_model()   # the include's inventory tab needs it
 			_push_fusion_model()
 		"mailboxDialog":
-			if _mails.is_empty():
+			if _mails.is_empty() and not _mail_loading:
+				_mail_loading = true
 				Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
 			_push_mail_model()
 		"newMailDialog":
@@ -4880,15 +4901,34 @@ func _push_mail_model() -> void:
 	var recv: Array = []
 	var sent: Array = []
 	for m in _mails:
-		if int(m.get("sender_id", 0)) == State.my_coach_id:
+		var mine_out := int(m.get("sender_id", 0)) == State.my_coach_id
+		var mine_in := int(m.get("receiver_id", 0)) == State.my_coach_id
+		if mine_out:
 			sent.append(_mail_row(m))
-		else:
+		if mine_in or not mine_out:
 			recv.append(_mail_row(m))
 	model.set_value("mailManager",
 		{"receivedMails": recv, "sentMails": sent})
 	if not (model.get_value("mailbox.mail") is Dictionary):
-		model.set_value("mailbox.mail",
-			recv[0] if not recv.is_empty() else {})
+		model.set_value("mailbox.mail", {})
+	# Native panel (S18): mode, status and the cards that can be attached.
+	var draft: Variant = model.get_value("mailbox.newMail")
+	var attached := {}
+	if draft is Dictionary:
+		for c in draft.get("cards", []):
+			var cid := int(c.get("id", 0)) if c is Dictionary else int(c)
+			attached[cid] = int(attached.get(cid, 0)) + 1
+	var offer: Array = []
+	for cid in State.inventory:
+		var n := int(State.inventory[cid])
+		if n > 0 and bool(Cards.meta(int(cid)).get("tradable", false)):
+			offer.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+				"owned": n, "staged": int(attached.get(int(cid), 0))})
+	offer.sort_custom(func(a, b): return a.name < b.name)
+	model.set_value("mailbox.native", {"mode": _mail_mode,
+		"loading": _mail_loading, "offer": offer,
+		"status": str(_mail_status.get("text", "")),
+		"statusOk": bool(_mail_status.get("ok", false))})
 
 
 ## the clicked widget can be a child of the materialized row — the item
@@ -4921,9 +4961,15 @@ func _on_mail_delete(_a: Array, w: GWidget) -> void:
 		row = _gui.gui.model.get_value("mailbox.mail")
 	if not (row is Dictionary):
 		return
-	var mid := int(row.get("mailId", 0))
+	_mail_delete(int(row.get("mailId", 0)))
+
+
+func _mail_delete(mid: int) -> void:
 	if mid <= 0:
 		return
+	var open: Variant = _gui.gui.model.get_value("mailbox.mail")
+	if open is Dictionary and int(open.get("mailId", 0)) == mid:
+		_gui.gui.model.set_value("mailbox.mail", {})
 	var wr := WireWriter.new()
 	wr.put_u8(1)
 	wr.put_i64(mid)
@@ -4945,6 +4991,39 @@ func _on_mail_take(_a: Array, _w: GWidget) -> void:
 	w.put_i64(mid)
 	w.put_u8(0)
 	Session.send(OP_MAIL_TAKE, w.raw(), 3)
+
+
+## Native mailbox (S18): open a letter by id, marking it read.
+func _mail_open(mid: int) -> void:
+	for m in _mails:
+		if int(m.get("id", 0)) == mid:
+			m["read"] = true
+			_gui.gui.model.set_value("mailbox.mail", _mail_row(m))
+			_mail_status = {}
+			_push_mail_model()
+			return
+
+
+func _mail_compose(to: String) -> void:
+	_gui.gui.model.set_value("mailbox.newMail", {
+		"receiver": to, "receiverId": 0, "title": "",
+		"message": "", "cards": []})
+	_mail_mode = "compose"
+	_mail_status = {}
+	_push_mail_model()
+
+
+func _mail_attach(cid: int) -> void:
+	var nm: Variant = _gui.gui.model.get_value("mailbox.newMail")
+	if not (nm is Dictionary):
+		return
+	var cards: Array = nm.get("cards", [])
+	var have := cards.filter(func(c): return int(c.get("id", 0)) == cid).size()
+	if cards.size() >= 10 or have >= int(State.inventory.get(cid, 0)):
+		return
+	cards.append({"id": cid, "name": Cards.name_of(cid)})
+	nm["cards"] = cards
+	_push_mail_model()
 
 
 func _on_mail_new(_a: Array, _w: GWidget) -> void:
@@ -4988,7 +5067,11 @@ func _on_mail_send(_a: Array, _w: GWidget) -> void:
 	var title := str(nm.get("title", ""))
 	var message := str(nm.get("message", ""))
 	if receiver.is_empty():
-		_toast(I18n.t("mail.no_recipient"))
+		if _gui.is_open("mailboxDialog"):
+			_mail_status = {"text": I18n.t("mail.no_recipient"), "ok": false}
+			_push_mail_model()
+		else:
+			_toast(I18n.t("mail.no_recipient"))
 		return
 	var extra := WireWriter.new()
 	var tb := title.to_utf8_buffer()
@@ -5006,7 +5089,7 @@ func _on_mail_send(_a: Array, _w: GWidget) -> void:
 	w.put_i64(State.my_coach_id)
 	w.put_str(State.my_coach_name, "u8")
 	w.put_i32(0)                                   # senderGame
-	w.put_i64(int(nm.get("receiverId", 0)))
+	w.put_i64(maxi(0, int(nm.get("receiverId", 0))))   # the server resolves the name
 	w.put_str(receiver, "u8")
 	var eb := extra.raw()
 	w.put_i32(eb.size())
@@ -5106,6 +5189,9 @@ var _awaiting_offer := false  # a 5470 basket is in flight → next 5403 is its 
 var _search_open := {}        # tournament id -> opponent-search period open
 var _registered_tids := {}    # tournament ids this coach is registered in
 var _mails := []              # decoded mail records for the open mailbox
+var _mail_mode := "list"      # native mailbox: "list" or "compose"
+var _mail_status := {}        # its last result line: {text, ok}
+var _mail_loading := false    # a 15000 is out, the list has not landed
 var _ex := {}                 # active exchange {id, my_side, other_name,
                               # staged:{0:{card:qty},1:{}}, ready:{0,1}}
 var _kanodo_fid := -1         # fighter id of the open Kanodo board
@@ -5217,6 +5303,13 @@ func _make_card_master_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_mailbox_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/mailbox_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 ## Native controls reuse existing handlers with the same item-event context.
 func _on_native_lobby_action(event: String, args: Array, item: Variant, index: int) -> void:
 	match event:
@@ -5263,6 +5356,48 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeCmBarter":
 			_on_cm_buy([], null)
+			return
+		"nativeMailRead":
+			_mail_open(int(args[0]))
+			return
+		"nativeMailDelete":
+			_mail_status = {}
+			_mail_delete(int(args[0]))
+			return
+		"nativeMailTake":
+			_mail_status = {}
+			_on_mail_take([], null)
+			return
+		"nativeMailCompose":
+			_mail_compose(str(args[0]))
+			return
+		"nativeMailCancel":
+			_mail_mode = "list"
+			_mail_status = {}
+			_push_mail_model()
+			return
+		"nativeMailCheck":
+			_gui.gui.model.set_value("mailbox.newMail.receiver", str(args[0]).strip_edges())
+			_gui.gui.model.set_value("mailbox.newMail.receiverId", 0)
+			_on_mail_test_name([], null)
+			return
+		"nativeMailAttach":
+			_mail_attach(int(args[0]))
+			return
+		"nativeMailDetach":
+			var cards: Array = _gui.gui.model.get_value("mailbox.newMail", "cards")
+			if cards is Array and int(args[0]) < cards.size():
+				cards.remove_at(int(args[0]))
+			_push_mail_model()
+			return
+		"nativeMailSend":
+			var nm: Variant = _gui.gui.model.get_value("mailbox.newMail")
+			if nm is Dictionary:
+				nm["receiver"] = str(args[0]).strip_edges()
+				nm["title"] = str(args[1])
+				nm["message"] = str(args[2])
+			_mail_status = {}
+			_on_mail_send([], null)
 			return
 	var context := GWidget.new()
 	context.item_value = item
@@ -5326,8 +5461,11 @@ func _use_element(id: int) -> void:
 		4:   # Zaap — no worlds to travel in the lobby (owner, S05)
 			pass
 		2:   # Mailbox — the server answers 15000 with the full list (15001)
-			_element_text("Mailbox", "Loading letters…")
+			_mail_mode = "list"
+			_mail_status = {}
+			_mail_loading = true
 			Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
+			_gui.open("mailboxDialog")
 		10:  # Graveyard — dead/interred fighters + resurrection cards
 			_open_graveyard()
 		14:  # Fusion altar — retail lab: fuel tray + boost target → 5490

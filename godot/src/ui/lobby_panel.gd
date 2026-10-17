@@ -99,6 +99,25 @@ func refresh() -> void:
 	_bind_focus.call_deferred()
 
 
+## Name of the focused control inside the window, before a rebuild ("" if
+## none); restore_focus() grabs the rebuilt control with that name.
+func remember_focus() -> String:
+	var focused := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	return String(focused.name) if focused != null and frame.is_ancestor_of(focused) else ""
+
+
+func restore_focus(focus_name: String) -> void:
+	if focus_name == "":
+		return
+	var target := frame.find_child(focus_name, true, false) as Control
+	if target != null and target.is_visible_in_tree() \
+			and target.focus_mode != Control.FOCUS_NONE \
+			and not (target is BaseButton and target.disabled):
+		target.grab_focus()
+		if target is LineEdit:
+			target.caret_column = target.text.length()
+
+
 func clear_body() -> void:
 	for child in pinned_actions.get_children():
 		pinned_actions.remove_child(child)

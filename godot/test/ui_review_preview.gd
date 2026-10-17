@@ -86,6 +86,7 @@ func _run() -> void:
 		panel.queue_free()
 		await get_tree().process_frame
 	await _card_master(model, vp)
+	await _mailbox(model, vp)
 	var bug := preload("res://src/ui/bug_report.gd").new("")
 	add_child(bug)
 	bug.popup_centered()
@@ -162,4 +163,51 @@ func _card_master(model: GuiModel, vp: Vector2) -> void:
 	_check(cm.find_child("Trade", true, false) != null, "card master: Trade button")
 	await _shot("cardMaster-barter")
 	cm.queue_free()
+	await get_tree().process_frame
+
+
+## The native mailbox (S18) on sample data: an inbox with a letter that
+## carries cards, then the compose view with two cards attached.
+func _mailbox(model: GuiModel, vp: Vector2) -> void:
+	var cards := [{"id": 17, "name": "Jalatranki Armbands"},
+		{"id": 131, "name": "Weerdtrot Hat"}]
+	var recv := [
+		{"mailId": 7, "sender": "Kerubim", "receiver": "Arel",
+			"title": "Para tu equipo", "date": "17/10/2026 18:40", "read": true,
+			"hasItems": true, "cards": cards,
+			"message": "Te dejo dos cartas que me sobraban. Mañana jugamos la liga 2v2?"},
+		{"mailId": 6, "sender": "Lou", "receiver": "Arel", "title": "",
+			"date": "16/10/2026 21:05", "read": false, "hasItems": false,
+			"cards": [], "message": "gg"},
+		{"mailId": 5, "sender": "Torneo", "receiver": "Arel",
+			"title": "Inscripción confirmada", "date": "15/10/2026 10:00",
+			"read": true, "hasItems": false, "cards": [], "message": "Suerte."}]
+	model.set_value("mailManager", {"receivedMails": recv, "sentMails": []})
+	model.set_value("mailbox.mail", recv[0])
+	var offer: Array = []
+	for cid in [128, 129, 130, 131, 132, 133, 134]:
+		offer.append({"id": cid, "name": "Weerdtrot %d" % cid, "owned": 3,
+			"staged": 1 if cid == 131 else 0})
+	model.set_value("mailbox.native", {"mode": "list", "loading": false,
+		"offer": offer, "status": "", "statusOk": false})
+	var mb := preload("res://src/ui/mailbox_panel.gd").new()
+	mb.model = model
+	add_child(mb)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(mb.frame.get_global_rect().end.x <= vp.x + 1
+		and mb.frame.get_global_rect().end.y <= vp.y + 1,
+		"panel outside viewport: mailboxDialog")
+	_check(mb.find_child("Take", true, false) != null, "mailbox: Take button")
+	await _shot("mailbox")
+	model.set_value("mailbox.newMail", {"receiver": "Kerubim", "receiverId": 3,
+		"title": "", "message": "", "cards": cards})
+	model.set_value("mailbox.native", {"mode": "compose", "loading": false,
+		"offer": offer, "status": "", "statusOk": false})
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(mb.find_child("Send", true, false) != null, "mailbox: Send button")
+	_check(mb.find_child("Found", true, false) != null, "mailbox: recipient checked")
+	await _shot("mailbox-compose")
+	mb.queue_free()
 	await get_tree().process_frame

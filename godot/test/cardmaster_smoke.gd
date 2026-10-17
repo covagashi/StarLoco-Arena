@@ -96,9 +96,10 @@ func _barter(panel, catalog: Array) -> void:
 			break
 		tile.pressed.emit()
 		await create_timer(0.15).timeout
-		if guard == 1:
-			_record(1, "keeps scroll", low > 0
-				and panel._grid_scroll.scroll_vertical == low,
+		if guard == 1 and low == 0:
+			print("[audit] skip keeps scroll: the offer fits without scrolling")
+		elif guard == 1:
+			_record(1, "keeps scroll", panel._grid_scroll.scroll_vertical == low,
 				"%d → %d" % [low, panel._grid_scroll.scroll_vertical])
 	trade = _main._gui.gui.model.get_value("cardMasterTrade")
 	_record(1, "stage", bool(trade.canBuyCards),
