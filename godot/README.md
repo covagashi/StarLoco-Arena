@@ -40,7 +40,7 @@ go run ./server/cmd/seedaccount --login test --password test123
 | `assets/mapgfx/` | Painted-map sprites + atlases — **git-ignored**; regenerate with `tools/asset-import/map_gfx.py` |
 | `assets/gui/` | Retail GUI layer (`xml/` dialogs+components+theme, `images/` TGA→PNG skin art, `fonts/` TTFs, `i18n_*.json`) — **git-ignored**; regenerate with `tools/asset-import/gui_extract.py` |
 | `assets/fx/` | Particle textures (`<id>.png` from sfx.jar `particles/<id>.tga` via `tools/asset-import/xps_dump.py`) — **git-ignored** |
-| `assets/gamedata/` | Derived tables — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py`, `server/cmd/dumpelements`, `server/cmd/dumpcards` + `card_names.py`, `server/cmd/dumpspheres`, `server/cmd/dumpnpcdialogs` + `tools/asset-import/npc_dialogs.py`, `server/cmd/dumpeffects`, `tools/asset-import/spell_sounds.py` (spell script sfx → `spell_sfx.json`, anm script sfx → `anm_scripts.json`, spell script particles → `spell_fx.json`), `tools/asset-import/xps_dump.py` (→ `xps_index.json` + optional per-id JSON under `xps/`) |
+| `assets/gamedata/` | Derived tables — **git-ignored**; regenerate with `server/cmd/dumpspells` + `tools/asset-import/spell_names.py`, `server/cmd/dumpelements`, `server/cmd/dumpcards` + `card_names.py` (→ `cards.json` + `cardsets.json`), `server/cmd/dumpspheres`, `server/cmd/dumpnpcdialogs` + `tools/asset-import/npc_dialogs.py`, `server/cmd/dumpeffects`, `tools/asset-import/spell_sounds.py` (spell script sfx → `spell_sfx.json`, anm script sfx → `anm_scripts.json`, spell script particles → `spell_fx.json`), `tools/asset-import/xps_dump.py` (→ `xps_index.json` + optional per-id JSON under `xps/`) |
 
 ## Retail map art
 
@@ -80,17 +80,16 @@ repeat.
 
 `world_smoke` is the S05 service audit (rewritten 2026-10-17; the old hall
 walk died with the deprecated hall). It logs in, presses the lobby's
-**City** menu button and, island by island, presses every service button
-the City panel lists, checking the evidence each one leaves: Card Master
-`201`→`5401` + `cardMasterDialog`, mailbox `15000`→`15001` +
-`mailboxDialog`, graveyard / challenge / demon / breed-master / NPC panes,
-fusion and firework dialogs, demon totem `27510`→`27511`, tournament totem
-`17002`→`17003` (+ `28601`→`28602`). It travels with the panel's Zaap
-buttons (`4512` → `4600` + `4516`) over worlds 25, 23, 37, 24, 26, 27, 28,
-then uses GM `/world` for 35, 79, 80 and 85, which no Zaap card reaches.
-One `[audit]` line per service; exit 0 only if all pass (110 checks).
-`-- --worlds=25,37` runs part of the tour; `--shot-dir=D` (under
-`xvfb-run`) saves the lobby, each City panel and a Card Master.
+**City** menu button and presses every service button the panel lists, then
+checks the evidence each one leaves: Card Master `201`→`5401` +
+`cardMasterDialog`, mailbox `15000`→`15001` + `mailboxDialog`, graveyard /
+challenge / demon panes, fusion and firework dialogs, demon totem
+`27510`→`27511`, tournament totem `17002`→`17003` (+ `28601`→`28602`). The
+panel merges the services of every island and the coach never travels (the
+game has a lobby, not worlds): the server resolves each `201` in any world.
+One `[audit]` line per service; exit 0 only if all pass (57 checks).
+`--shot-dir=D` (under `xvfb-run`) saves the lobby, the City panel and a Card
+Master.
 
 What the old hall smoke also drove — chat, fighter creation and loadout,
 presets, the ranked queues, social and guild commands, mail compose and

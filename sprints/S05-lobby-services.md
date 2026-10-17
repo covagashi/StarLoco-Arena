@@ -53,20 +53,25 @@ Leído, no probado todavía. La prueba de punta a punta es la tarea 1.
 
 - [x] **Entrada "Ciudad" en el lobby**: novena casilla del menú, con su icono
       (casas; `tools/make_lobby_bg.py --icons` reescribe solo el atlas). Abre
-      un panel nativo (`lobby_panels.gd` `_city`) con los servicios del mundo
-      actual, agrupados por tipo, y los destinos Zaap. Un clic llama a
-      `_use_element()`. Buzón, cementerio y fuegos artificiales salen una vez
-      por mundo (todos los de un mundo hacen lo mismo); los disparadores de
-      zona (tipo 8) no salen.
+      un panel nativo (`lobby_panels.gd` `_city`) con los servicios de
+      **todas** las islas juntos (23–28 y 37), agrupados por tipo, sin decir
+      dónde estaban. Un clic llama a `_use_element()`. Buzón, cementerio y
+      fuegos artificiales salen una vez; cada Card Master con el nombre de su
+      set y cada altar con su nivel. Los disparadores de zona (tipo 8) no
+      salen.
+- [x] **Sin islas ni Zaap** (dueño, 2026-10-17: lobby y ligas, no mundos).
+      El servidor resuelve el 201 en cualquier mundo (`elementAnywhere`; los
+      ids de elemento son únicos en todo el juego, lo fija un test) y el
+      fusionado usa el altar del último 201 en vez del más cercano. Las
+      cartas Zaap no hacen nada.
 - [x] `_element_info()` cae a `Elements.for_world()` cuando el elemento no
       está en `State.elements`.
-- [x] **Zaap**: destinos desde las cartas tipo 20 del coach, viaje con 4512.
-      El lobby sigue al coach (el 4516 ya lo re-muestra). También desde el
-      inventario (`useSpecialCard`) y el `changeInstance` retail.
+- [x] ~~Zaap: viaje con 4512 desde el panel~~. Se hizo y se quitó el mismo
+      día: el juego no va de islas.
 - [x] Iconos del menú desplazados: arreglado (`(i + 1) * 32`).
 - [x] **Auditoría de punta a punta**: `test/world_smoke.gd` reescrito. Abre
       "Ciudad" con el botón real, pulsa cada servicio en el panel y comprueba
-      su evidencia; viaja con los botones Zaap. Resultado abajo.
+      su evidencia. Resultado abajo.
 - [x] Encontrado al auditar: el **Card Master** salía sin cartas la primera
       vez y **congelaba el cliente 66 s** al reabrirlo con un catálogo grande.
       Arreglado en la capa GUI (ver Resultado).
@@ -93,18 +98,29 @@ Leído, no probado todavía. La prueba de punta a punta es la tarea 1.
 ### Auditoría
 
 `godot --headless --path godot -s test/world_smoke.gd` contra el servidor
-local: **110 comprobaciones, 0 fallos, exit 0**.
+local: **57 comprobaciones, 0 fallos, exit 0**, todas desde el lobby, sin que
+el coach cambie de mundo:
 
-| Mundo | Cómo se llega | Servicios comprobados |
-|---|---|---|
-| 25 Veniviki (spawn) | — | Card Master ×2 (`5401` + diálogo), buzón (`15001` + diálogo), cementerio, altar de fusión |
-| 23 Maknala | Zaap 202 | lo mismo + fuegos artificiales, retos (Démon III, Tofu de SuperBidi), reto del demonio de la 37.ª seg. |
-| 37 Totem Arena | Zaap 255 | Card Master ×2, 5 retos de demonio, Démon I, 24 tótems de demonio (`27511`), tótem de torneos (`17003` + `28602`) |
-| 24, 26, 27, 28 | Zaap 203/208/206/207 | Card Master ×2, buzón, cementerio, altar (26 también fuegos) |
-| 35 reclutamiento | solo `/world` (GM) | Démon III, 12 maestros de raza |
-| 79 guarida de Démon I | solo `/world` (GM) | 5 retos de demonio, Démon I (NPC) |
-| 80 centro de Card Masters | solo `/world` (GM) | 7 Card Masters, tótem de torneos |
-| 85 Gostof | solo `/world` (GM) | 5 NPCs |
+| Servicio | Evidencia |
+|---|---|
+| 14 Card Masters (12 sets + 2 de Totem Arena) | `5401` + diálogo |
+| Buzón | `15001` + diálogo |
+| Cementerio | panel |
+| 6 altares de fusión (2/3/4/5 cartas, poderes 1–30) | `fusionLabDialog` |
+| Fuegos artificiales | `fireworkDialog` |
+| Retos (Démon III, Tofu de SuperBidi) y 6 retos de demonio | panel |
+| Démon I | panel |
+| 24 tótems de demonio | `27511` + panel |
+| Tótem de torneos | `17003` + `28602` |
+
+Servidor: `go test ./...` verde, con los tests nuevos
+`TestElementInstanceIDsAreUniqueAcrossWorlds`,
+`TestElementAnywhereFindsOtherWorlds`, `TestFusionLabRemembersTheOpenedAltar`
+y el e2e `TestShopOpenCatalogFromAnotherWorld` (falla sin el cambio:
+comprobado).
+
+(Antes de quitar las islas, la misma auditoría recorrió las 7 islas por Zaap
+y los mundos 35/79/80/85 por GM: 110/110. Esos mundos están descartados.)
 
 Lo que la prueba **no** hace: comprar, enviar cartas, fusionar, lanzar un
 fuego, aceptar un reto o registrarse en un torneo. Abre cada servicio y
@@ -142,11 +158,11 @@ del servidor (apuntado en S08).
 
 ### Capturas
 
-Samba `codigo/capturas/s05/`: `lobby.png` (la casilla "Ciudad"),
-`city-25.png`, `city-37.png`, `cardmaster-25.png`, `cardmaster-37.png`. Las
-del Card Master enseñan la pantalla legacy que hay que sustituir.
+Samba `codigo/capturas/s05/`: `lobby.png` (la casilla "Ciudad"), `city.png`
+(el panel sin islas) y `cardmaster.png` (la pantalla legacy que hay que
+sustituir).
 Se rehacen con `xvfb-run -a godot --path godot --accessibility disabled -s
-test/world_smoke.gd -- --worlds=25,37 --shot-dir=<dir>`.
+test/world_smoke.gd -- --shot-dir=<dir>`.
 
 ### Mundos sin Zaap
 
@@ -195,8 +211,14 @@ El servidor acepta 509 (crear clan) sin comprobar que el coach tenga la carta
 - El `cardMasterDialog` retail se ve roto (ventana beige) y los Card Masters
   de modo 1 deberían abrir `demonIIDialog` → S07.
 - Nombres de NPCs y cartas en inglés junto a la UI en español → S07.
-- Los nombres de isla del panel son provisionales (`world.N` en
-  `assets/i18n/`): el cliente no exporta `content.61`.
+- `Cards.lab()` nunca encontraba nada (claves de texto en el JSON, búsqueda
+  con entero): el altar de fusión del cliente nunca supo su nivel y usaba 3
+  casillas siempre. Arreglado; el panel distingue ya los 6 altares.
+- Nombres de set reales (`content.25`, es/en/fr) en
+  `assets/gamedata/cardsets.json`, exportados por
+  `tools/asset-import/card_names.py`. Los usan el panel y el inventario. Ese
+  script además ya no reproducía `cards.json` (tiraba `reqLevel`, que usa la
+  fórmula de fusión): ahora pasa todos los campos y lo reproduce idéntico.
 
 ## Criterio de cierre
 
