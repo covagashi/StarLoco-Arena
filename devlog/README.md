@@ -32,3 +32,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-16 | [S03 (base Linux) y S04 (combate en 1 bit), S17 abierto](./2026-10-16-s03-s04.md) |
 | 2026-10-17 | [S17: HUD de combate estilo Krosmaster (cartas, medallión, banner)](./2026-10-17-s17-hud.md) |
 | 2026-10-17 | [S05: el panel "Ciudad" (servicios del hall + Zaap) y tres bugs de la capa GUI](./2026-10-17-s05-ciudad.md) |
+| 2026-10-17 | [S18 tanda 2: Card Master y buzón nativos, arte y muñeco en 1 bit](./2026-10-17-s18-tanda2.md) |
