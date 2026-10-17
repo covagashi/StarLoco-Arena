@@ -1,14 +1,30 @@
 # Lobby visual contract
 
-The lobby extends login_screen.gd and creation_screen.gd. It is a fixed 1280×720 composition uniformly scaled and centered in the viewport. The existing art direction and requested composition are explicit; concept selection is not needed.
+**Since S18 (2026-10-17) the screens outside combat use the 1-bit UI system**
+(direction B, chosen by the owner): `src/ui/onebit.gd`. It means pure black and
+white, square corners, white borders, a hard white drop shadow, inverted
+selection and dither instead of grey or alpha. The one primary action of a
+screen is a white block (`OneBit.primary`). Colour appears only in content: the
+player's team blue, coach colour swatches, the paper doll and card art.
+Backdrops are a 1-bit arena when `assets/mapgfx_1bit/backdrop.png` exists
+(git-ignored, made locally by `tools/render_fightmap.gd -- --map=10
+--world=1bit --out=assets/mapgfx_1bit/backdrop.png`), else a dithered
+vignette shader. A threshold shader keeps either one pure black and white. The
+sketches that chose the direction come from `tools/mock_screens.py`; see
+`sprints/S18-screens-redesign.md`.
 
-- Copperplate bold (`COPRGTB.TTF`), pale gold control text, olive stone surfaces, green training and gold ranked fight buttons.
-- Inset stone frame with corner hardware, shaded button faces and soft shadows; title letters reuse `make_login_bg.word_tiles`.
-- Coach alcove at (40,150,320,350); six central actions in two rows; chat at (50,524,630,134); nine illustrated menu controls at lower right.
-- Every control has hover, pressed and keyboard focus feedback. Fight actions are disabled until ready and after disconnect. Emote/tool menus expose explicit empty states.
-- The paper doll uses the creation screen animation loader and Palettes tint mapping. Chat stays a sibling under UI; native lobby panels use the existing higher GUI layer and model bus.
+The lobby is a fixed 1280×720 composition, uniformly scaled and centred. It
+has a coach window at (40,150,320,350), six central actions in two rows with
+Combate as the primary, chat in (40,512,650,182) and nine menu controls in
+(720,512,510,182). The baked Pillow art (`lobby_bg.png`, `login_bg.png`,
+`creation_bg.png`) is no longer drawn; `tools/make_lobby_bg.py --icons` still
+makes the (white) menu icon atlas.
 
-Regenerate from godot/: `python3 tools/make_lobby_bg.py`. This uses the same Pillow/font prerequisites as the existing generators. Runtime textures are loaded from files without an import-cache dependency.
+- Every control has hover, pressed and keyboard focus feedback (a white ring
+  4 px outside). Fight actions are disabled until ready and after disconnect.
+- The paper doll uses the creation screen animation loader and Palettes tint
+  mapping. Chat stays a sibling under UI and takes the compact theme
+  (`OneBit.theme(3)`).
 
 ## Current data limits
 
@@ -23,7 +39,7 @@ The existing localCoach producer supplies level 0 and an empty equipped-emote li
 
 ## Native lobby panels
 
-`src/ui/lobby_panel.gd` is the common modal surface: olive/gold theme, Copperplate title, Tahoma controls, dimmed backdrop, bounded 1120×620 reference frame, and scrollable content. Containers own interior layout. Deferred layout resets prevent initial text minimum sizes from pushing the frame below the viewport. Close and Escape are shared, and Tab cycles inside the panel. Team combat actions stay in a fixed footer outside the scrolling roster/detail area.
+`src/ui/lobby_panel.gd` is the common modal surface: the 1-bit theme (`OneBit.theme()`), Copperplate title, Tahoma controls, dither shade, bounded 1120×620 reference frame, and scrollable content. Containers own interior layout. Deferred layout resets prevent initial text minimum sizes from pushing the frame below the viewport. Close and Escape are shared, and Tab cycles inside the panel. Team combat actions stay in a fixed footer outside the scrolling roster/detail area.
 
 `src/ui/lobby_panels.gd` provides native menu, team/evolution, statistics, inventory/collections, rankings, calendar, achievements, social, help, options, fighter creation with tinted preview, fighter equipment/spells, team creation, and clan creation/management/member statistics. These twenty logical dialog routes are registered in `main.gd`; runtime XML does not build them. The shared model still supplies content, and the existing handlers serialize all requests.
 

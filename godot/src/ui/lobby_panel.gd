@@ -1,5 +1,7 @@
 class_name LobbyPanel
 extends Control
+
+const OneBit := preload("res://src/ui/onebit.gd")
 ## Shared native modal surface. Containers own all interior geometry.
 ## The bounded reference frame scales down to fit; lists scroll internally.
 
@@ -18,17 +20,18 @@ var tab := 0
 var selected: Dictionary = {}
 var draft := {}
 var _refresh_pending := false
+var _shade: Control
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var shade := ColorRect.new()
-	shade.color = Color(0.02, 0.025, 0.018, 0.72)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(shade)
+	# 1-bit (S18): a dither shade instead of a translucent one, and a
+	# black window with a hard white shadow.
+	_shade = OneBit.shade()
+	add_child(_shade)
 	frame = PanelContainer.new()
 	frame.theme = _theme()
-	frame.add_theme_stylebox_override("panel", _surface(Color("292c20"), Color("ad965a"), 2, 22))
+	frame.add_theme_stylebox_override("panel", OneBit.window())
 	add_child(frame)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 16)
@@ -69,6 +72,10 @@ func _ready() -> void:
 
 func _layout() -> void:
 	var vp := get_viewport_rect().size
+	# Sized by hand: under a Node2D (the UI previews) full-rect anchors
+	# have no parent rect and the shade came out 0x0.
+	_shade.position = -position
+	_shade.size = vp
 	var factor := minf(1.0, minf((vp.x - 32) / REF.x, (vp.y - 32) / REF.y))
 	frame.size = REF
 	frame.scale = Vector2(factor, factor)
@@ -233,38 +240,8 @@ func confirm_action(text: String, callback: Callable) -> void:
 	dialog.popup_centered()
 
 
-func _surface(fill: Color, border: Color, width := 1, margin := 10) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(width)
-	style.set_corner_radius_all(8)
-	style.content_margin_left = margin
-	style.content_margin_right = margin
-	style.content_margin_top = margin
-	style.content_margin_bottom = margin
-	return style
-
-
 func _theme() -> Theme:
-	var result := Theme.new()
-	var font := FontFile.new()
-	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/TAHOMA.TTF"))
-	result.default_font = font
-	result.default_font_size = 17
-	for type in ["Label", "Button", "OptionButton", "LineEdit", "Tree", "CheckButton", "CheckBox"]:
-		for color in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color", "font_selected_color"]:
-			result.set_color(color, type, Color("f1e5c1"))
-		result.set_color("font_disabled_color", type, Color("9b9c85"))
-	for type in ["Button", "OptionButton", "LineEdit", "Tree", "PopupMenu"]:
-		for state in ["normal", "panel"]:
-			result.set_stylebox(state, type, _surface(Color("20251d"), Color("656849")))
-		for state in ["hover", "hover_pressed", "pressed", "selected", "selected_focus"]:
-			result.set_stylebox(state, type, _surface(Color("545534"), Color("c3ad69")))
-		result.set_stylebox("disabled", type, _surface(Color("292c24"), Color("494c3c")))
-		var focus := _surface(Color(0, 0, 0, 0), Color("f6d583"), 2)
-		result.set_stylebox("focus", type, focus)
-	return result
+	return OneBit.theme()
 
 
 ## Tab stays within the active modal instead of reaching the lobby behind it.

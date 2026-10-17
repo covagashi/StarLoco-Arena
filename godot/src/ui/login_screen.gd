@@ -1,18 +1,18 @@
 class_name PippopLogin
 extends Control
-## Custom login screen — Pillow-baked art (assets/ui/login_bg.png) with
-## real controls overlaid at the baked slot coordinates. Replaces the
-## retail logonDialog; emits `submit(login, password, proxy)`.
+## Login screen in the 1-bit UI system (S18, direction B; src/ui/onebit.gd):
+## a dithered arena backdrop, the title, one black window with the three
+## fields and one primary button. Replaces the retail logonDialog; emits
+## `submit(login, password, proxy)`.
 
 signal submit(login: String, password: String, proxy: String)
 
+const OneBit := preload("res://src/ui/onebit.gd")
 const REF := Vector2(1280, 720)
-# baked slot rects (final px of login_bg.png)
-const R_NAME := Rect2(475, 365, 330, 44)
-const R_PASS := Rect2(475, 445, 330, 44)
-const R_PROXY := Rect2(475, 525, 330, 44)
-const R_BTN := Rect2(530, 608, 220, 52)
-const R_ERR := Rect2(440, 662, 400, 20)
+const R_PANEL := Rect2(440, 262, 400, 330)
+const R_BTN := Rect2(520, 620, 240, 64)
+const R_LANG := Rect2(1080, 30, 170, 40)
+const R_ERR := Rect2(340, 690, 600, 24)
 
 var name_edit: LineEdit
 var pass_edit: LineEdit
@@ -23,44 +23,65 @@ var _box: Control  # REF-sized child, scaled+centered
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(OneBit.backdrop())
 	_box = Control.new()
 	_box.size = REF
+	_box.theme = OneBit.theme()
 	add_child(_box)
 
-	var bg := TextureRect.new()
-	var img := AssetPaths.load_image("ui/login_bg.png")
-	if img != null:
-		bg.texture = ImageTexture.create_from_image(img)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
-	_box.add_child(bg)
+	var title := Label.new()
+	title.text = "ARENA"
+	title.position = Vector2(0, 92)
+	title.size = Vector2(REF.x, 110)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_override("font", OneBit.title_font())
+	title.add_theme_font_size_override("font_size", 96)
+	# a black outline keeps white type clean over the dithered arena
+	title.add_theme_constant_override("outline_size", 14)
+	_box.add_child(title)
+	var tagline := Label.new()
+	tagline.text = I18n.t("login.tagline")
+	tagline.position = Vector2(0, 202)
+	tagline.size = Vector2(REF.x, 28)
+	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tagline.add_theme_font_size_override("font_size", 20)
+	tagline.add_theme_constant_override("outline_size", 10)
+	_box.add_child(tagline)
 
-	var font := FontFile.new()
-	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
-	var plain := StyleBoxEmpty.new()
-
-	name_edit = _field(R_NAME, false, font, plain)
-	name_edit.placeholder_text = I18n.t("login.user")
-	pass_edit = _field(R_PASS, true, font, plain)
+	var panel := PanelContainer.new()
+	panel.position = R_PANEL.position
+	panel.size = R_PANEL.size
+	panel.add_theme_stylebox_override("panel", OneBit.window(38))
+	_box.add_child(panel)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	panel.add_child(col)
+	col.add_child(OneBit.caption(I18n.t("login.user")))
+	name_edit = _field(col)
+	_gap(col)
+	col.add_child(OneBit.caption(I18n.t("login.pass")))
+	pass_edit = _field(col)
 	pass_edit.secret = true
-	pass_edit.placeholder_text = I18n.t("login.pass")
+	_gap(col)
+	col.add_child(OneBit.caption(I18n.t("login.server")))
+	proxy_opt = OptionButton.new()
+	proxy_opt.custom_minimum_size.y = 46
+	proxy_opt.add_theme_font_size_override("font_size", 19)
+	col.add_child(proxy_opt)
+
+	var btn := Button.new()
+	btn.text = I18n.t("net.connect").to_upper()
+	btn.position = R_BTN.position
+	btn.size = R_BTN.size
+	OneBit.primary(btn)
+	btn.pressed.connect(_do_submit)
+	_box.add_child(btn)
 
 	# locale picker — top-right, flags the i18n table the lobby will use
 	var lang_opt := OptionButton.new()
-	lang_opt.position = Vector2(1040, 24)
-	lang_opt.size = Vector2(190, 36)
-	lang_opt.flat = true
-	lang_opt.add_theme_font_override("font", font)
-	lang_opt.add_theme_font_size_override("font_size", 18)
-	lang_opt.add_theme_color_override("font_color", Color(0.85, 0.80, 0.60))
-	lang_opt.add_theme_stylebox_override("normal", plain)
-	lang_opt.add_theme_stylebox_override("hover", plain)
-	lang_opt.add_theme_stylebox_override("pressed", plain)
-	lang_opt.get_popup().add_theme_stylebox_override("panel",
-		_solid(Color(0.10, 0.09, 0.05, 0.95)))
-	lang_opt.get_popup().add_theme_color_override("font_color",
-		Color(0.85, 0.80, 0.60))
+	lang_opt.position = R_LANG.position
+	lang_opt.size = R_LANG.size
+	lang_opt.tooltip_text = I18n.t("login.language")
 	for code in ["es", "en", "fr"]:
 		lang_opt.add_item(I18n.NAMES[code])
 	var cur := ["es", "en", "fr"].find(I18n.lang)
@@ -69,30 +90,6 @@ func _init() -> void:
 		I18n.set_locale(["es", "en", "fr"][i]))
 	_box.add_child(lang_opt)
 
-	proxy_opt = OptionButton.new()
-	proxy_opt.position = R_PROXY.position
-	proxy_opt.size = R_PROXY.size
-	proxy_opt.flat = true
-	proxy_opt.add_theme_font_override("font", font)
-	proxy_opt.add_theme_font_size_override("font_size", 20)
-	proxy_opt.add_theme_color_override("font_color", Color(0.85, 0.80, 0.60))
-	proxy_opt.add_theme_stylebox_override("normal", plain)
-	proxy_opt.add_theme_stylebox_override("hover", plain)
-	proxy_opt.add_theme_stylebox_override("pressed", plain)
-	proxy_opt.get_popup().add_theme_stylebox_override("panel",
-		_solid(Color(0.10, 0.09, 0.05, 0.95)))
-	proxy_opt.get_popup().add_theme_color_override("font_color",
-		Color(0.85, 0.80, 0.60))
-	_box.add_child(proxy_opt)
-
-	var btn := Button.new()
-	btn.position = R_BTN.position
-	btn.size = R_BTN.size
-	btn.flat = true           # the art draws the button; we catch the click
-	btn.tooltip_text = I18n.t("net.connect")
-	btn.add_theme_stylebox_override("focus", _focus_style())
-	btn.pressed.connect(_do_submit)
-	_box.add_child(btn)
 	name_edit.focus_next = name_edit.get_path_to(pass_edit)
 	pass_edit.focus_next = pass_edit.get_path_to(proxy_opt)
 	proxy_opt.focus_next = proxy_opt.get_path_to(btn)
@@ -103,9 +100,8 @@ func _init() -> void:
 	err_lbl.position = R_ERR.position
 	err_lbl.size = R_ERR.size
 	err_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	err_lbl.add_theme_font_override("font", font)
-	err_lbl.add_theme_font_size_override("font_size", 15)
-	err_lbl.add_theme_color_override("font_color", Color(0.85, 0.35, 0.25))
+	err_lbl.add_theme_font_size_override("font_size", 16)
+	err_lbl.add_theme_constant_override("outline_size", 8)
 	_box.add_child(err_lbl)
 
 	resized.connect(_relayout)
@@ -128,34 +124,19 @@ func set_error(msg: String) -> void:
 	err_lbl.text = msg
 
 
-func _field(r: Rect2, _secret: bool, font: Font, plain: StyleBox) -> LineEdit:
+func _field(parent: Control) -> LineEdit:
 	var e := LineEdit.new()
-	e.position = r.position + Vector2(8, 0)
-	e.size = r.size - Vector2(16, 0)
-	e.flat = true
-	e.add_theme_font_override("font", font)
-	e.add_theme_font_size_override("font_size", 22)
-	e.add_theme_color_override("font_color", Color(0.90, 0.85, 0.62))
-	e.add_theme_color_override("caret_color", Color(0.90, 0.85, 0.62))
-	for s in ["normal", "focus", "read_only"]:
-		e.add_theme_stylebox_override(s, plain)
+	e.custom_minimum_size.y = 46
+	e.add_theme_font_size_override("font_size", 19)
 	e.text_submitted.connect(func(_t): _do_submit())
-	_box.add_child(e)
+	parent.add_child(e)
 	return e
 
 
-func _solid(c: Color) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = c
-	return s
-
-
-func _focus_style() -> StyleBoxFlat:
-	var style := _solid(Color.TRANSPARENT)
-	style.border_color = Color("ffe6a0")
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(7)
-	return style
+func _gap(parent: Control) -> void:
+	var g := Control.new()
+	g.custom_minimum_size.y = 12
+	parent.add_child(g)
 
 
 func _relayout() -> void:

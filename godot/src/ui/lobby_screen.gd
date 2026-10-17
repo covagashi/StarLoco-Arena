@@ -15,6 +15,10 @@ signal coach_rotated(delta: int)
 const Direction8 := preload("res://src/util/direction8.gd")
 const REF := Vector2(1280, 720)
 const CHAT_RECT := Rect2(50, 524, 630, 134)
+const CHAT_FRAME := Rect2(40, 512, 650, 182)
+const COACH_RECT := Rect2(40, 150, 320, 350)
+const MENU_RECT := Rect2(720, 512, 510, 182)
+const OneBit := preload("res://src/ui/onebit.gd")
 const MENUS := [
 	["nav.team", "teamManagementDialog"],
 	["nav.stats", "coachStatisticsDialog"], ["nav.inventory", "coachInventoryDialog"],
@@ -56,14 +60,30 @@ func _init() -> void:
 	_box.size = REF
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_box)
-	var bg := TextureRect.new()
-	bg.texture = ImageTexture.create_from_image(
-		AssetPaths.load_image("ui/lobby_bg.png"))
-	bg.size = REF
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_box.add_child(bg)
-	_font = FontFile.new()
-	_font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
+	# 1-bit UI (S18): dithered backdrop and native windows where the baked
+	# stone slabs used to be; the controls take the shared theme.
+	_box.theme = OneBit.theme()
+	var bd := OneBit.backdrop(REF)
+	_box.add_child(bd)
+	for r in [COACH_RECT, CHAT_FRAME, MENU_RECT]:
+		var w := Panel.new()
+		w.position = r.position
+		w.size = r.size
+		w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		w.add_theme_stylebox_override("panel", OneBit.window())
+		_box.add_child(w)
+	var pedestal := Panel.new()
+	pedestal.position = Vector2(95, 426)
+	pedestal.size = Vector2(210, 40)
+	pedestal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ps := OneBit.box(OneBit.PAPER, OneBit.INK, 2, 0)
+	ps.set_corner_radius_all(20)
+	ps.anti_aliasing = true
+	pedestal.add_theme_stylebox_override("panel", ps)
+	_box.add_child(pedestal)
+	_font = OneBit.title_font()
+	var logo := _label(Rect2(0, 52, REF.x, 90), "ARENA", 72)
+	logo.add_theme_constant_override("outline_size", 12)
 	_name = _label(Rect2(60, 158, 280, 36), "", 25)
 	_level = _label(Rect2(60, 194, 280, 26), "", 16)
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
@@ -77,6 +97,8 @@ func _init() -> void:
 		var row: Array = ACTIONS[i]
 		var r := Rect2(400 + (i % 3) * 280, 210 if i < 3 else 352, 264, 126 if i < 3 else 92)
 		var b := _button(r, "", func(): action_requested.emit(str(row[1])), 24)
+		if str(row[1]) == "fight":
+			OneBit.primary(b, 28)
 		_actions.append(b)
 	_subtitle = _label(Rect2(400, 456, 824, 30), "", 16)
 	# Coach rotation: << turns the paper-doll one step anticlockwise, >> the
@@ -94,7 +116,7 @@ func _init() -> void:
 		AssetPaths.load_image("ui/lobby_icons.png"))
 	for i in range(MENUS.size()):
 		var entry: Array = MENUS[i]
-		var button := _button(Rect2(732 + (i % 3) * 164, 526 + (i / 3) * 43, 158, 37),
+		var button := _button(Rect2(732 + (i % 3) * 164, 536 + (i / 3) * 50, 158, 40),
 			"", func(): dialog_requested.emit(str(entry[1])), 14)
 		var icon := AtlasTexture.new()
 		icon.atlas = icons
@@ -105,7 +127,7 @@ func _init() -> void:
 		button.expand_icon = true
 		button.add_theme_constant_override("icon_max_width", 20)
 		_menu_buttons.append(button)
-	_hint = _label(Rect2(40, 672, 650, 24), "", 13)
+	_hint = _label(Rect2(40, 697, 650, 22), "", 13)
 	resized.connect(_relayout)
 	I18n.locale_changed.connect(func(_l): _retranslate())
 	_retranslate()
@@ -118,6 +140,11 @@ func _ready() -> void:
 func bind_model(model, chat: Control) -> void:
 	_model = model
 	_chat = chat
+	if is_instance_valid(_chat):
+		_chat.theme = OneBit.theme(3)
+		var display: Control = _chat.get_node_or_null("Display")
+		if display != null:
+			display.add_theme_stylebox_override("normal", OneBit.box(OneBit.PAPER, OneBit.PAPER, 0, 8))
 	_model.changed.connect(_on_model_changed)
 	_sync()
 	_relayout()
@@ -197,7 +224,7 @@ func _label(r: Rect2, text: String, font_size: int) -> Label:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_override("font", _font)
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", Color("e5d9ae"))
+	label.add_theme_constant_override("outline_size", 6)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.add_child(label)
 	return label
@@ -217,19 +244,6 @@ func _button(r: Rect2, text: String, cb: Callable, font_size: int) -> Button:
 func _style_button(b: Button, font_size: int) -> void:
 	b.add_theme_font_override("font", _font)
 	b.add_theme_font_size_override("font_size", font_size)
-	b.add_theme_color_override("font_color", Color("fff0c5"))
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		var style := StyleBoxFlat.new()
-		style.bg_color = Color(0, 0, 0, 0)
-		style.set_corner_radius_all(10)
-		if state == "hover":
-			style.bg_color = Color(1, 0.9, 0.6, 0.13)
-		elif state == "pressed":
-			style.bg_color = Color(0, 0, 0, 0.25)
-		elif state == "focus":
-			style.border_color = Color("ffe6a0")
-			style.set_border_width_all(2)
-		b.add_theme_stylebox_override(state, style)
 
 
 func _relayout() -> void:

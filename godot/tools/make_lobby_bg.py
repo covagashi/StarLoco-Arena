@@ -69,14 +69,18 @@ ICON_PATHS = [
 ]
 
 
+# White since S18 (1-bit UI); the theme turns them black on inverted buttons.
+ICON_INK = (255, 255, 255)
+
+
 def make_icons():
     n = len(ICON_PATHS)
     icons = Image.new('RGBA', (32 * n * S, 32 * S))
     di = ImageDraw.Draw(icons)
     for i, strokes in enumerate(ICON_PATHS):
         for stroke in strokes:
-            di.line([(sc(i*32+x),sc(y)) for x,y in stroke], fill=(229,217,174), width=sc(2), joint='curve')
-    di.ellipse([sc(9+32),sc(4),sc(17+32),sc(12)], outline=(229,217,174), width=sc(2))
+            di.line([(sc(i*32+x),sc(y)) for x,y in stroke], fill=ICON_INK, width=sc(2), joint='curve')
+    di.ellipse([sc(9+32),sc(4),sc(17+32),sc(12)], outline=ICON_INK, width=sc(2))
     icons.resize((32*n,32), Image.Resampling.LANCZOS).save('assets/ui/lobby_icons.png')
 
 

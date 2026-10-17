@@ -1,7 +1,7 @@
 class_name PippopCoachCreation
 extends Control
-## Native coach creation screen — Pillow-baked art (assets/ui/creation_bg.png)
-## with real controls overlaid. Drives the shared `localCoach` model so the
+## Native coach creation screen in the 1-bit UI system (S18,
+## src/ui/onebit.gd), real controls only (no baked art). Drives the shared `localCoach` model so the
 ## existing handlers (_on_localcoach_changed/_on_coach_dir/_on_coach_random/
 ## _on_coach_create) keep working unchanged.
 
@@ -10,21 +10,15 @@ signal random_pressed
 signal submit
 signal closed
 
+const OneBit := preload("res://src/ui/onebit.gd")
 const REF := Vector2(1280, 720)
-const R_NAME := Rect2(260, 204, 340, 44)
-const R_SEX_M := Rect2(260, 286, 165, 40)
-const R_SEX_F := Rect2(435, 286, 165, 40)
-const GRID_X := 262
-const GRID_STEP := 42
-const CELL := Vector2(34, 34)
-const HAIR_ROWS := [362, 404]
-const SKIN_ROWS := [474, 516]
-const R_PREV := Rect2(665, 330, 48, 38)
-const R_NEXT := Rect2(1055, 330, 48, 38)
-const R_RANDOM := Rect2(430, 620, 200, 52)
-const R_VALIDATE := Rect2(650, 620, 200, 52)
-const R_QUIT := Rect2(1205, 28, 44, 44)
-const DOLL_POS := Vector2(875, 548)
+const R_FORM := Rect2(200, 150, 440, 450)
+const R_STAGE := Rect2(680, 150, 400, 450)
+const SWATCH := Vector2(34, 34)
+const SWATCH_COLS := 8
+const R_RANDOM := Rect2(420, 630, 200, 56)
+const R_VALIDATE := Rect2(660, 624, 220, 64)
+const DOLL_POS := Vector2(880, 540)
 const DOLL_SCALE := 3.65
 
 var _box: Control
@@ -36,59 +30,77 @@ var _hair_cells := {}
 var _skin_cells := {}
 
 
+## 1-bit UI (S18): the chrome is black and white; the swatches and the doll
+## keep their colours, because colour is what is being chosen — like the
+## 1-bit fights, where each actor keeps its own colours.
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_box = Control.new()
 	_box.size = REF
+	_box.theme = OneBit.theme()
 	add_child(_box)
+	_box.add_child(OneBit.backdrop(REF))
 
-	var bg := TextureRect.new()
-	var img := AssetPaths.load_image("ui/creation_bg.png")
-	if img != null:
-		bg.texture = ImageTexture.create_from_image(img)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
-	_box.add_child(bg)
+	var title := Label.new()
+	title.text = I18n.t("creation.title").to_upper()
+	title.position = Vector2(0, 56)
+	title.size = Vector2(REF.x, 80)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_override("font", OneBit.title_font())
+	title.add_theme_font_size_override("font_size", 60)
+	title.add_theme_constant_override("outline_size", 12)
+	_box.add_child(title)
 
-	var font := FontFile.new()
-	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
-	var plain := StyleBoxEmpty.new()
-
+	var form := _window(R_FORM)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	form.add_child(col)
+	col.add_child(OneBit.caption(I18n.t("creation.name")))
 	name_edit = LineEdit.new()
-	name_edit.position = R_NAME.position + Vector2(10, 0)
-	name_edit.size = R_NAME.size - Vector2(20, 0)
-	name_edit.flat = true
 	name_edit.max_length = 20
-	name_edit.add_theme_font_override("font", font)
-	name_edit.add_theme_font_size_override("font_size", 22)
-	name_edit.add_theme_color_override("font_color", Color(0.90, 0.85, 0.62))
-	name_edit.add_theme_color_override("caret_color", Color(0.90, 0.85, 0.62))
-	for s in ["normal", "focus", "read_only"]:
-		name_edit.add_theme_stylebox_override(s, plain)
+	name_edit.custom_minimum_size.y = 44
+	name_edit.add_theme_font_size_override("font_size", 20)
 	name_edit.text_changed.connect(func(t): _set_lc("name", t))
-	_box.add_child(name_edit)
-
-	_sex_btns[0] = _toggle(R_SEX_M, "♂  HOMBRE", font,
+	col.add_child(name_edit)
+	col.add_child(OneBit.caption(I18n.t("creation.sex")))
+	var sexes := HBoxContainer.new()
+	sexes.add_theme_constant_override("separation", 10)
+	col.add_child(sexes)
+	_sex_btns[0] = _toggle(sexes, "♂  " + I18n.t("creation.male"),
 		func(): _set_lc("sex", 0))
-	_sex_btns[1] = _toggle(R_SEX_F, "♀  MUJER", font,
+	_sex_btns[1] = _toggle(sexes, "♀  " + I18n.t("creation.female"),
 		func(): _set_lc("sex", 1))
-
+	col.add_child(OneBit.caption(I18n.t("creation.hair")))
+	var hair := _grid(col)
 	for i in range(14):
-		var cell := Rect2(GRID_X + (i % 8) * GRID_STEP,
-			HAIR_ROWS[i / 8], CELL.x, CELL.y)
-		_hair_cells[i] = _swatch(cell, Palettes.HAIR[i],
-			func(): _set_lc("hair", i))
+		_hair_cells[i] = _swatch(hair, Palettes.HAIR[i], func(): _set_lc("hair", i))
+	col.add_child(OneBit.caption(I18n.t("creation.skin")))
+	var skin := _grid(col)
 	for i in range(11):
-		var cell := Rect2(GRID_X + (i % 8) * GRID_STEP,
-			SKIN_ROWS[i / 8], CELL.x, CELL.y)
-		_skin_cells[i] = _swatch(cell, Palettes.SKIN[i],
-			func(): _set_lc("skin", i))
+		_skin_cells[i] = _swatch(skin, Palettes.SKIN[i], func(): _set_lc("skin", i))
 
-	_ghost(R_PREV, func(): dir_pressed.emit(-1), "creation.rotate_left")
-	_ghost(R_NEXT, func(): dir_pressed.emit(1), "creation.rotate_right")
-	_ghost(R_RANDOM, func(): random_pressed.emit(), "creation.random")
-	_ghost(R_VALIDATE, func(): submit.emit(), "creation.validate")
+	_window(R_STAGE)
+	_round(Rect2(R_STAGE.position + Vector2(24, R_STAGE.size.y - 64), Vector2(56, 40)),
+		"«", func(): dir_pressed.emit(-1), "creation.rotate_left")
+	_round(Rect2(R_STAGE.end - Vector2(80, 64), Vector2(56, 40)),
+		"»", func(): dir_pressed.emit(1), "creation.rotate_right")
+
+	var rnd := Button.new()
+	rnd.text = I18n.t("creation.random_btn")
+	rnd.position = R_RANDOM.position
+	rnd.size = R_RANDOM.size
+	rnd.tooltip_text = I18n.t("creation.random")
+	rnd.add_theme_font_size_override("font_size", 19)
+	rnd.pressed.connect(func(): random_pressed.emit())
+	_box.add_child(rnd)
+	var ok := Button.new()
+	ok.text = I18n.t("creation.validate_btn").to_upper()
+	ok.position = R_VALIDATE.position
+	ok.size = R_VALIDATE.size
+	ok.tooltip_text = I18n.t("creation.validate")
+	OneBit.primary(ok)
+	ok.pressed.connect(func(): submit.emit())
+	_box.add_child(ok)
 
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
 	_spr.foot_pivot = true
@@ -134,8 +146,7 @@ func _sync() -> void:
 		name_edit.text = str(lc.get("name", ""))
 	var sex: int = int(lc.get("sex", 0))
 	for k in _sex_btns:
-		_sex_btns[k].self_modulate = \
-			Color(1.0, 0.9, 0.45) if k == sex else Color(0.55, 0.53, 0.42)
+		_sex_btns[k].set_pressed_no_signal(k == sex)
 	var hair: int = int(lc.get("hair", 0)) % Palettes.HAIR.size()
 	var skin: int = int(lc.get("skin", 0)) % Palettes.SKIN.size()
 	for k in _hair_cells:
@@ -160,42 +171,56 @@ func _sync_doll(lc: Dictionary) -> void:
 	_spr.scale.x = absf(DOLL_SCALE) * (-1.0 if dir in [1, 2, 3] else 1.0)
 
 
-func _toggle(r: Rect2, text: String, font: Font, cb: Callable) -> Button:
+func _window(r: Rect2) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.position = r.position
+	p.size = r.size
+	p.add_theme_stylebox_override("panel", OneBit.window(26))
+	_box.add_child(p)
+	return p
+
+
+func _grid(parent: Control) -> GridContainer:
+	var g := GridContainer.new()
+	g.columns = SWATCH_COLS
+	g.add_theme_constant_override("h_separation", 10)
+	g.add_theme_constant_override("v_separation", 10)
+	parent.add_child(g)
+	return g
+
+
+## Sex choice: toggles that invert when picked (the theme's pressed style).
+func _toggle(parent: Control, text: String, cb: Callable) -> Button:
 	var b := Button.new()
-	b.position = r.position
-	b.size = r.size
 	b.text = text
-	b.flat = true
-	b.add_theme_font_override("font", font)
-	b.add_theme_font_size_override("font_size", 19)
-	b.add_theme_color_override("font_color", Color(0.85, 0.80, 0.60))
-	b.add_theme_stylebox_override("focus", _focus_style())
+	b.toggle_mode = true
+	b.custom_minimum_size = Vector2(0, 42)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.add_theme_font_size_override("font_size", 18)
 	b.pressed.connect(cb)
-	_box.add_child(b)
+	parent.add_child(b)
 	return b
 
 
-func _swatch(r: Rect2, v: Vector3, cb: Callable) -> Control:
+## A colour swatch in a white frame; the picked one gets a thick frame and the
+## hard shadow.
+func _swatch(parent: Control, v: Vector3, cb: Callable) -> Control:
 	var holder := Control.new()
-	holder.position = r.position
-	holder.size = r.size
+	holder.custom_minimum_size = SWATCH
 	var fill := Panel.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(clampf(v.x, 0.0, 1.0), clampf(v.y, 0.0, 1.0),
-		clampf(v.z, 0.0, 1.0))
-	sb.border_color = Color(0.08, 0.07, 0.03)
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(4)
+	var sb := OneBit.box(Color(clampf(v.x, 0.0, 1.0), clampf(v.y, 0.0, 1.0),
+		clampf(v.z, 0.0, 1.0)), OneBit.INK, 1, 0)
 	fill.add_theme_stylebox_override("panel", sb)
 	fill.set_anchors_preset(Control.PRESET_FULL_RECT)
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(fill)
 	var ring := Panel.new()
-	var rs := StyleBoxFlat.new()
-	rs.bg_color = Color(0, 0, 0, 0)
-	rs.border_color = Color(0.95, 0.80, 0.30)
-	rs.set_border_width_all(2)
-	rs.set_corner_radius_all(4)
+	var rs := OneBit.box(Color(0, 0, 0, 0), OneBit.INK, 3, 0)
+	rs.draw_center = false
+	rs.set_expand_margin_all(4)
+	rs.shadow_color = OneBit.INK
+	rs.shadow_size = 1
+	rs.shadow_offset = Vector2(3, 3)
 	ring.add_theme_stylebox_override("panel", rs)
 	ring.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -204,33 +229,24 @@ func _swatch(r: Rect2, v: Vector3, cb: Callable) -> Control:
 	var b := Button.new()
 	b.set_anchors_preset(Control.PRESET_FULL_RECT)
 	b.flat = true
-	b.add_theme_stylebox_override("focus", _focus_style())
+	b.add_theme_stylebox_override("focus", OneBit.focus_ring())
 	b.pressed.connect(cb)
 	holder.add_child(b)
 	holder.set_meta("_ring", ring)
-	_box.add_child(holder)
+	parent.add_child(holder)
 	return holder
 
 
-func _ghost(r: Rect2, cb: Callable, hint_key: String) -> Button:
+func _round(r: Rect2, text: String, cb: Callable, hint_key: String) -> Button:
 	var b := Button.new()
+	b.text = text
 	b.position = r.position
 	b.size = r.size
-	b.flat = true
 	b.tooltip_text = I18n.t(hint_key)
-	b.add_theme_stylebox_override("focus", _focus_style())
+	b.add_theme_font_size_override("font_size", 22)
 	b.pressed.connect(cb)
 	_box.add_child(b)
 	return b
-
-
-func _focus_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color.TRANSPARENT
-	style.border_color = Color("ffe6a0")
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(5)
-	return style
 
 
 func _relayout() -> void:

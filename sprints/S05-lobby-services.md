@@ -1,6 +1,6 @@
 # S05 — Lo que se perdió con el hall
 
-**Planificado:** 2026-10-16 · **Detallado:** 2026-10-17 · **Hito:** M1 — Jugable de punta a punta · **Tamaño:** M · **Estado:** 🟡 abierto
+**Planificado:** 2026-10-16 · **Detallado:** 2026-10-17 · **Hito:** M1 — Jugable de punta a punta · **Tamaño:** M · **Estado:** 🟡 a la espera del dueño (cierre): las pantallas pasaron a S18
 
 ## Objetivo
 
