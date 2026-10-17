@@ -63,7 +63,12 @@ func handleFireworkLaunch(s *Session, f *protocol.C2SFrame) error {
 //     debug-console opener, not a shop request).
 //   - Zaap / Fusion altar / mailbox / graveyard: open their dialog locally from
 //     client-side data; the server owes nothing here. Their follow-up actions
-//     arrive as their own opcodes (Zaap -> 4512, fusion -> 5490).
+//     arrive as their own opcodes (Zaap -> 4512, fusion -> 5490). A fusion
+//     altar's 201 is remembered, because the 5490 does not say which altar.
+//
+// The element is looked up in the coach's world first, then in any world: the
+// Godot client's lobby lists every island's services (instance ids are unique
+// across worlds, so the id is enough).
 func handleInteractiveElementAction(s *Session, f *protocol.C2SFrame) error {
 	if s.Coach == nil {
 		return nil
@@ -77,6 +82,10 @@ func handleInteractiveElementAction(s *Session, f *protocol.C2SFrame) error {
 
 	el, ok := elementAt(s.currentWorld, instanceID)
 	if !ok {
+		// The Godot lobby reaches every island's services without travelling.
+		el, ok = elementAnywhere(instanceID)
+	}
+	if !ok {
 		s.log.Debug("element action: unknown element",
 			"element", instanceID, "world", s.currentWorld, "action", action)
 		return nil
@@ -84,6 +93,11 @@ func handleInteractiveElementAction(s *Session, f *protocol.C2SFrame) error {
 	s.log.Debug("element action", "element", instanceID, "kind", el.kind.String(),
 		"action", action, "coach", s.Coach.Name)
 
+	if el.kind == kindFusionLab {
+		// Remember which altar was opened: the 5490 that follows names none.
+		s.fusionLabID = el.arg
+		return nil
+	}
 	if el.kind == kindCardMaster {
 		// el.arg is the Card Master's catalogue id (descriptor "cardListId"). The
 		// client treats the shopId as opaque and echoes it back on every purchase

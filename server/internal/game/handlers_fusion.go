@@ -228,8 +228,10 @@ func (s *Session) kardsPower(inputs []int32, target *gamedata.CoachCard) int32 {
 	return total
 }
 
-// fusionLab returns the altar this fusion runs on: the fusion-lab element
-// NEAREST the coach in its current world.
+// fusionLab returns the altar this fusion runs on: the one whose 201 the coach
+// sent last (s.fusionLabID), else the fusion-lab element NEAREST the coach in
+// its current world. The Godot lobby opens any island's altar from anywhere,
+// so position alone would pick the wrong tier there.
 //
 // Which altar you use matters — the six in-world altars are six different tiers
 // (ids 2-7 of the type-1100 table: power 1/10/20/30/5/15, slots 2/3/4/5/2/3) —
@@ -246,6 +248,11 @@ func (s *Session) kardsPower(inputs []int32, target *gamedata.CoachCard) int32 {
 func (s *Session) fusionLab() *gamedata.FusionLab {
 	if s.deps == nil || s.deps.FusionLabs == nil || s.Coach == nil {
 		return nil
+	}
+	if s.fusionLabID != 0 {
+		if lab := s.deps.FusionLabs.Get(int64(s.fusionLabID)); lab != nil {
+			return lab
+		}
 	}
 	var best *worldElement
 	var bestDist int32

@@ -42,6 +42,9 @@ type Session struct {
 	// instance-ready ack (4517) can re-spawn that world's interactive elements
 	// (Zaaps). Set on login and on Zaap teleport.
 	currentWorld int16
+	// fusionLabID is the lab-definition id of the fusion altar the coach last
+	// opened (its 201), 0 if none. 5490 names no altar; see fusionLab.
+	fusionLabID int32
 
 	// chat is this session's chat rate state (trade cooldown + anti-repeat),
 	// mirroring the client's own gates so a modified client cannot skip them.

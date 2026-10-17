@@ -192,6 +192,22 @@ func elementAt(world int16, instanceID int64) (worldElement, bool) {
 	return worldElement{}, false
 }
 
+// elementAnywhere finds an element by instanceId in any world. Instance ids are
+// unique across the whole env data (elements_lobby_test pins it), so the id
+// alone names the element. The Godot client has no walkable world: its lobby
+// lists the services of every island and sends their 201 from wherever the
+// coach is. The retail client only ever names elements of its own world.
+func elementAnywhere(instanceID int64) (worldElement, bool) {
+	for _, elems := range worldElements {
+		for _, e := range elems {
+			if e.instanceID == instanceID {
+				return e, true
+			}
+		}
+	}
+	return worldElement{}, false
+}
+
 // zaapAt returns a specific Zaap on a world by env instanceId.
 func zaapAt(world int16, instanceID int64) (worldElement, bool) {
 	e, ok := elementAt(world, instanceID)

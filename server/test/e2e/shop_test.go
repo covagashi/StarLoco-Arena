@@ -183,6 +183,30 @@ func TestShopOpenCatalog(t *testing.T) {
 	}
 }
 
+// TestShopOpenCatalogFromAnotherWorld: the Godot lobby has no walkable world and
+// sends a Card Master's 201 from wherever the coach is. Maknala's Card Master
+// (world 23, instance 5, cardListId 5) must answer while the coach stands on
+// the Venivici login island.
+func TestShopOpenCatalogFromAnotherWorld(t *testing.T) {
+	t.Parallel()
+	_, addr := testServerWithDeps(t, func(d *game.Deps) { d.Cards = shopCatalog() })
+	a, _ := dialLogin(t, addr, "cat_far", "CatFar")
+	reachWorld(t, a)
+	a.DrainReceived(200 * time.Millisecond)
+
+	click := testclient.NewW().I64(5).U16(0).Bytes()
+	_ = a.Send(3, testclient.OpInteractiveElementAction, click)
+	f, _, err := a.WaitFor(testclient.OpShopCatalog, testclient.DefaultTimeout)
+	if err != nil {
+		t.Fatalf("no ShopCatalog(5401) for another world's Card Master: %v", err)
+	}
+	r := testclient.NewR(f.Payload)
+	_ = r.U8()
+	if shop := r.I32(); shop != 5 {
+		t.Errorf("catalog shopId = %d, want 5 (Maknala's cardListId)", shop)
+	}
+}
+
 // TestShopBuyCard: buying a card debits tokens, grants the card, and replies
 // ShopResult(5403, result 0) with the new balance.
 func TestShopBuyCard(t *testing.T) {
