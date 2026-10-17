@@ -94,9 +94,9 @@ fáciles de cambiar:
 
 | Pregunta | Se eligió | Por qué | Alternativa lista |
 |---|---|---|---|
-| ¿Vida como barra o anillo? | **barra** bajo el retrato en las cartas; **anillo** en el medallión | a 40–56 px la barra se lee mejor; el anillo cuadrado queda fino | `[arena] hud_life = ring` en `user://settings.cfg` (o `ARENA_HUD_LIFE=ring`); hoja `04` |
-| ¿El chat se queda o se pliega? | **se pliega**: empieza cerrado y el botón *Chat* lo abre encima, abajo a la derecha | es lo que pide el sprint (mapa limpio); el registro del combate sigue llenándose | hoja `05` |
-| ¿2v2 / muchas invocaciones? | cartas adaptativas; con 8 por lado cabe una columna a 800×600, con 12 se parte en dos | se probó con `FIGHT_UI_CROWD` | hoja `06` |
+| ¿Vida como barra o anillo? | ~~barra~~ → **anillo** (el dueño, 2026-10-17); anillo también en el medallión | — | Opciones → Combate → barra; hoja `04` |
+| ¿El chat se queda o se pliega? | **se pliega** — confirmado por el dueño | — | hoja `05` |
+| ¿2v2 / muchas invocaciones? | cartas adaptativas; 8 por lado en una columna a 800×600 (confirmado por el dueño), con 12 se parte en dos | — | hoja `06` |
 | ¿PA/PM en cada carta? | **solo en el medallión** | fuera del turno los PA/PM de los demás son los fijos de la raza: ruido | — |
 | ¿Retratos en 1 bit? | **en color** en los dos estilos | S04 dejó la GUI fuera del filtro | — |
 
@@ -107,6 +107,9 @@ Capturas en el Samba: recurso `codigo` → `capturas/s17/`.
 | Fecha | Petición | Cambio | Captura |
 |---|---|---|---|
 | 2026-10-17 | "sigue con s17… cualquier duda toma una decisión heurísticamente" | Primera versión completa del HUD (arriba) | `01-antes-despues.png` (combate real), `02-boceto-1280.png`, `03-boceto-800.png`, `04-vida-barra-o-anillo.png`, `05-chat.png`, `06-muchas-cartas.png`, `07-espectador-y-hover.png` |
+| 2026-10-17 | "Me parece bien tu diseño; me gusta más el anillo, plegado por defecto, 8 por lado" | Anillo por defecto (`ArtStyle.hud_life()`); el test de reparto cubre barra y anillo | — |
+| 2026-10-17 | "Que coincida el área de colocación por tile, hay un offset raro" | **Media casilla de desfase**: el cliente (`aba_2.i/j`) y el arte ponen la celda (x, y) en `((x−y)·43, (x+y)·21,5)`; `fight_view` dibujaba zonas, anillos, auras y luchadores en `x+0,5, y+0,5`, 21,5 px más abajo. Corregido en `_iso`. Los luchadores usan ahora el ancla del `.anm`, como el cliente: `foot_pivot` (fila visible más baja) los subía ~8 px sobre su sombra y hasta 43 px a algunas invocaciones; el desfase anterior lo disimulaba | `10-casillas-alineadas.png` |
+| 2026-10-17 | "La imagen de colocación en 1 bit se ve rara; ¿aplicaste los filtros? Dijimos solo en animaciones" | En el juego **no hay filtro de luz/oscuridad** (`onebit.gdshader` solo lo usa la herramienta de render). Lo raro era: el suelo de la arena 48 convertido en un punteado gris uniforme, las zonas como relleno translúcido sobre la trama (puntos teñidos) y el aura sumándose a la zona. Cambiado: zonas como contorno doble del color del equipo (sin relleno) en 1 bit, sin aura durante la colocación, y las zonas de salida solo en la colocación (antes seguían todo el combate). Propuesta C: suelo más claro (`onebit.py --target=0.88 --detail=2.5`), **sin aplicar**, a elegir | `09-colocacion-1bit-ABC.png` |
 
 ## Decisiones abiertas (dueño)
 

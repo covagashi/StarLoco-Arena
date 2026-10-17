@@ -10,6 +10,15 @@ const FighterCard := preload("res://src/fight/fighter_card.gd")
 func run(t) -> void:
 	t.suite("fight_hud_layout")
 	var hud = FightHud.new()
+	for style in [FighterCard.HpStyle.RING, FighterCard.HpStyle.BAR]:
+		hud.hp_style = style
+		_run_style(t, hud, "ring" if style == FighterCard.HpStyle.RING else "bar")
+	for c in _made:
+		c.free()
+	hud.free()
+
+
+func _run_style(t, hud, tag: String) -> void:
 	for res in [Vector2(1280, 720), Vector2(800, 600)]:
 		# the left column stops above the medallion (~140 px at 800x600)
 		var bottom: float = res.y - 150.0
@@ -23,18 +32,15 @@ func run(t) -> void:
 			var low := 0.0
 			for c in col:
 				low = maxf(low, c.position.y + c.size.y)
-			t.ok(p >= 24.0, "%dx%d, %d cards: portrait %d px >= 24" % [
-				res.x, res.y, n, p])
+			t.ok(p >= 24.0, "%s %dx%d, %d cards: portrait %d px >= 24" % [
+				tag, res.x, res.y, n, p])
 			t.ok(low <= bottom + 1.0 or p <= 24.0,
-				"%dx%d, %d cards end above the medallion (y %d <= %d)" % [
-				res.x, res.y, n, low, bottom])
+				"%s %dx%d, %d cards end above the medallion (y %d <= %d)" % [
+				tag, res.x, res.y, n, low, bottom])
 			t.ok(cols <= 2, "%d cards: at most two columns" % n)
 		var one: Vector2 = hud._column_fit(_cards(8, 4), FightHud.TOP, bottom, res)
-		t.eq(int(one.y), 1, "%dx%d: 8 cards (4 summons) keep one column" % [
-			res.x, res.y])
-	for c in _made:
-		c.free()
-	hud.free()
+		t.eq(int(one.y), 1, "%s %dx%d: 8 cards (4 summons) keep one column" % [
+			tag, res.x, res.y])
 
 
 var _made: Array = []

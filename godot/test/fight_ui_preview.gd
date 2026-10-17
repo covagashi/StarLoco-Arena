@@ -9,7 +9,9 @@ extends Node2D
 ## the capture path (default /tmp/fight-ui.png). For the S17 option sheets:
 ## ARENA_HUD_LIFE=ring, FIGHT_UI_CHAT=open, FIGHT_UI_CROWD=<n> (n extra
 ## summons per team, to load the columns), FIGHT_UI_HOVER=<fid> (pointer on
-## that fighter's card), FIGHT_UI_SPECTATE=1 (watching, not playing).
+## that fighter's card), FIGHT_UI_SPECTATE=1 (watching, not playing),
+## FIGHT_UI_PLACEMENT=1 (the placement phase instead of turn 7),
+## FIGHT_UI_MAP=<arena> (default 10).
 
 const State := preload("res://src/state.gd")
 
@@ -26,7 +28,8 @@ const FIGHTERS := [
 
 
 func _ready() -> void:
-	State.fight_world = 10
+	State.fight_world = 10 if OS.get_environment("FIGHT_UI_MAP") == "" \
+		else int(OS.get_environment("FIGHT_UI_MAP"))
 	State.my_coach_id = 7
 	State.fighters = {}
 	var timeline := []
@@ -54,6 +57,12 @@ func _ready() -> void:
 	_stage(fight)
 	fight._table_turn = 7
 	fight._on_turn_begin(1)
+	if OS.get_environment("FIGHT_UI_PLACEMENT") == "1":
+		fight._placement = true
+		fight._current_fid = -1
+		fight._selected = 1
+		fight._refresh_timeline()
+		fight.queue_redraw()
 	if OS.get_environment("FIGHT_UI_HOVER") != "":
 		fight._on_card_hover(int(OS.get_environment("FIGHT_UI_HOVER")), true)
 	if OS.get_environment("FIGHT_UI_CHAT") == "open":

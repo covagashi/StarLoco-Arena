@@ -316,7 +316,6 @@ func _spawn_demo_fighters(scene: Node2D, marks: String) -> void:
 			var spec: Array = DEMO_FIGHTERS[i]
 			i += 1
 			var spr: Node2D = AnmSpriteScript.new()
-			spr.foot_pivot = true
 			spr.team_color = TEAM_COLORS[team]
 			spr.tints = Palettes.fighter_tints(spec[1][0], spec[1][1], spec[1][2])
 			spr.position = scene._iso(c.x + 0.5, c.y + 0.5, c.z)

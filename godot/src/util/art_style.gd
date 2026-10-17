@@ -42,9 +42,9 @@ static func set_style(style: String) -> void:
 	_cached = style
 
 
-## How the fight HUD's cards show life (sprints/S17): "bar" under the
-## portrait (default) or "ring" round it. [arena] hud_life, or the
-## ARENA_HUD_LIFE environment variable.
+## How the fight HUD's cards show life (sprints/S17): "ring" round the
+## portrait (default, the owner's pick on 2026-10-17) or "bar" under it.
+## [arena] hud_life, or the ARENA_HUD_LIFE environment variable.
 const HUD_LIFE := ["bar", "ring"]
 
 static func hud_life() -> String:
@@ -53,10 +53,10 @@ static func hud_life() -> String:
 		return env
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) == OK:
-		var v := str(cfg.get_value("arena", "hud_life", "bar"))
+		var v := str(cfg.get_value("arena", "hud_life", "ring"))
 		if v in HUD_LIFE:
 			return v
-	return "bar"
+	return "ring"
 
 
 static func set_hud_life(v: String) -> void:

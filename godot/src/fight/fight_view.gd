@@ -479,8 +479,13 @@ func _load() -> void:
 		cam.make_current()
 
 
+## Grid -> screen. Callers pass a cell's centre as (x + 0.5, y + 0.5); the
+## retail client (aba_2.i/j) and the painted map (map_gfx.py) put cell (x, y)
+## at ((x - y) * 43, (x + y) * 21.5), so the half cell is taken back out of y.
+## Without it, fighters, rings, auras and the placement zones sat half a cell
+## (21.5 px) below the floor art they belong to.
 func _iso(x: float, y: float, alt: float) -> Vector2:
-	return Vector2((x - y) * HW, (x + y) * HH - alt * EL)
+	return Vector2((x - y) * HW, (x + y - 1.0) * HH - alt * EL)
 
 
 func _spawn_actors() -> void:
@@ -495,7 +500,8 @@ func _spawn_actors() -> void:
 		if c.x <= -2047:
 			continue   # unused pedestal slot (arena.go emptyPedestalXY)
 		var spr := AnmSprite.new()
-		spr.foot_pivot = true
+		# authored .anm anchor on the cell centre, as the client draws it
+		# (see _place_actor)
 		# coaches stand on top of the pedestal they are parked on
 		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z + 1.0)
 		spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
@@ -918,7 +924,10 @@ func _place_actor(a: Dictionary) -> void:
 	var spr: AnmSprite = _sprites.get(a.id)
 	if spr == null:
 		spr = AnmSprite.new()
-		spr.foot_pivot = true
+		# The authored .anm anchor goes on the cell centre, as in the client.
+		# foot_pivot (lowest visible row) lifted every fighter ~8 px off its
+		# shadow and summons with long shadows/particles up to 43 px; the old
+		# half-cell error in _iso used to hide most of it.
 		_sprites[a.id] = spr
 		_actors.add_child(spr)
 	var dir: int = DIR_MAP.get(a.dir, 1)
@@ -3321,20 +3330,40 @@ func _draw() -> void:
 	_draw_overlays()
 
 
+## 1-bit: zones as a team-colour outline with an inset line, no fill — a
+## translucent fill over the dither came out as tinted noise (S17 note,
+## 2026-10-17). ARENA_ZONES=fill keeps the fill, for comparison sheets.
+var _zone_lines := OS.get_environment("ARENA_ZONES") != "fill"
+
+func _draw_zone(poly: PackedVector2Array, col: Color, alpha: float) -> void:
+	if not (_onebit and _zone_lines):
+		draw_colored_polygon(poly, Color(col.r, col.g, col.b, alpha))
+		return
+	var ctr := (poly[0] + poly[2]) * 0.5
+	var inner := PackedVector2Array()
+	for v in poly:
+		inner.append(ctr + (v - ctr) * 0.72)
+	draw_polyline(poly + PackedVector2Array([poly[0]]), col, 2.0)
+	draw_polyline(inner + PackedVector2Array([inner[0]]), col, 1.0)
+
+
 func _draw_overlays() -> void:
 	for pos in _cells:
 		var c = _cells[pos]
 		if not c.ground:
 			draw_polyline(_cell_poly(pos.x, pos.y, 0) + PackedVector2Array([
 				_cell_poly(pos.x, pos.y, 0)[0]]), Color(1, 1, 1, 0.06), 1.0)
-	for c in _fmd.get("team0", []):
-		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(0.3, 0.5, 1.0, 0.6))
-	for c in _fmd.get("team1", []):
-		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.4, 0.3, 0.6))
-	for c in _fmd.get("coach", []):
-		if c.x <= -2047:
-			continue
-		draw_colored_polygon(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.85, 0.2, 0.5))
+	# start zones and coach pedestals: only while placing (and in the map
+	# preview) — once the fight starts they are noise on the board
+	if _placement or State.fighters.is_empty():
+		for t in [0, 1]:
+			for c in _fmd.get("team%d" % t, []):
+				_draw_zone(_cell_poly(c.x, c.y, c.z),
+					[Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)][t], 0.6)
+		for c in _fmd.get("coach", []):
+			if c.x <= -2047:
+				continue
+			_draw_zone(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.85, 0.2), 0.5)
 	# special battlefield tiles — a small lettered diamond marks each
 	for sc in _fmd.get("specials", []):
 		var sp: Dictionary = sc.pos          # {x,y,z} — z is the altitude
@@ -3385,8 +3414,9 @@ func _draw_overlays() -> void:
 		var ctr := _iso(p.x + 0.5, p.y + 0.5, p.z)
 		var col: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
 		if _onebit:
-			# 1-bit style: a team aura; corpses get none
-			if not _dead.has(id):
+			# 1-bit style: a team aura; corpses get none, and none while
+			# placing (the zones already say the team)
+			if not _dead.has(id) and not (_placement and _zone_lines):
 				TeamAura.draw(self, ctr, col, id == _current_fid)
 		elif _dead.has(id):
 			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.15), 1.0)
@@ -3399,8 +3429,7 @@ func _draw_overlays() -> void:
 		# our start cells glow; selected fighter gets a ring
 		var t := _my_team()
 		for c in _fmd.get("team%d" % t, []):
-			draw_colored_polygon(_cell_poly(c.x, c.y, c.z),
-				Color(0.4, 0.9, 1.0, 0.55))
+			_draw_zone(_cell_poly(c.x, c.y, c.z), Color(0.4, 0.9, 1.0), 0.55)
 		if _selected >= 0 and _actor_cells.has(_selected):
 			var p: Vector3i = _actor_cells[_selected]
 			draw_arc(_iso(p.x + 0.5, p.y + 0.5, p.z), 14.0, 0, TAU, 24,
