@@ -92,6 +92,9 @@ Leído, no probado todavía. La prueba de punta a punta es la tarea 1.
       - `ElementDlg`: cementerio, conversaciones (retos, demonios, maestros de
         raza, NPCs), tótem de demonio y tótem de torneos.
       Cada una con hoja de opciones para el dueño antes de cerrarla.
+      → **Pasa a S18** (rediseño de todas las pantallas), junto con login,
+      creación y paneles. Inventario con capturas en
+      `codigo/capturas/s05/inventario/`.
 
 ## Resultado (parcial, 2026-10-17)
 

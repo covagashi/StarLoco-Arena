@@ -77,7 +77,9 @@ func _run() -> void:
 			and panel.frame.get_global_rect().end.x <= vp.x + 1
 			and panel.frame.get_global_rect().end.y <= vp.y + 1,
 			"panel outside viewport: " + name)
-		if name in ["teamManagementDialog", "socialDialog", "cardBookDialog",
+		# UI_REVIEW_ALL=1 shoots every panel (screen inventory, S05).
+		if OS.get_environment("UI_REVIEW_ALL") != "" or name in [
+				"teamManagementDialog", "socialDialog", "cardBookDialog",
 				"fighterCreationDialog", "optionsDialog"]:
 			await _shot(name)
 		panel.queue_free()

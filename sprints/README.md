@@ -51,7 +51,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | Hito | Qué se nota al llegar | Sprints |
 |---|---|---|
 | **M1 — Jugable de punta a punta** | desde el cliente Godot se llega a todo lo que el retail ofrece fuera del combate, con sonido y opciones | S03, S05, S06 |
-| **M2 — Identidad visual** | combates en 1 bit, HUD propio y GUI fiel al retail | S04, S17, S07 |
+| **M2 — Identidad visual** | combates en 1 bit, HUD propio y pantallas propias | S04, S17, S18, S07 |
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16 |
@@ -73,6 +73,7 @@ Linux y Windows).
 | [S04](./S04-fight-maps-1bit.md) | M2 | M | ⏸ en pausa | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
 | [S17](./S17-fight-hud.md) | M2 | M | 🟢 cerrado | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
 | [S05](./S05-lobby-services.md) | M1 | M | 🟡 abierto | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
+| [S18](./S18-screens-redesign.md) | M2 | L | ⚪ esbozo | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
 | [S06](./S06-options-audio.md) | M1 | S | ⚪ esbozo | Opciones que no hacen nada, música y volúmenes |
 | [S07](./S07-gui-fidelity.md) | M2 | M | ⚪ esbozo | Fidelidad GUI retail y diálogos sin equivalente nativo |
 | [S08](./S08-server-debt.md) | M3 | L | ⚪ esbozo | Deuda de servidor: bugs abiertos, datos sin leer, docs que se contradicen |

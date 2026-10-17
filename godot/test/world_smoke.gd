@@ -11,7 +11,8 @@ extends SceneTree
 ## the server's reply). The panel merges every island's services and the
 ## coach never travels: the server resolves each 201 in any world.
 ## --shot-dir (needs a real renderer: xvfb-run, not --headless) saves the
-## lobby, the City panel and the first Card Master it opens.
+## lobby, the City panel and the first Card Master it opens; add --shot-all
+## for one capture of each kind of service screen.
 ##
 ## Prints one "[audit]" line per service and exits 0 only if every one passed.
 ## It replaces the old hall walk (`_main.get_node("World")`), which died with
@@ -29,6 +30,8 @@ var _seen := {}                # opcode -> times seen since the last reset
 var _results: Array = []       # [kind, label, ok, detail]
 var _shot_dir := ""
 var _shot_taken := false
+var _shot_all := false         # --shot-all: one capture per service kind
+var _kind_shot := {}
 
 
 func _init() -> void:
@@ -47,6 +50,7 @@ func _init() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--shot-dir="):
 			_shot_dir = a.trim_prefix("--shot-dir=")
+		_shot_all = _shot_all or a == "--shot-all"
 	await create_timer(1.0).timeout
 	await _shot("lobby")
 	await _audit()
@@ -122,6 +126,9 @@ func _audit() -> void:
 		if kind == 1 and bool(res[0]) and not _shot_taken:
 			_shot_taken = true
 			await _shot("cardmaster")
+		elif _shot_all and bool(res[0]) and not _kind_shot.has(kind):
+			_kind_shot[kind] = true
+			await _shot("service-%d" % kind)
 		_record(kind, str(s.label), bool(res[0]), str(res[1]))
 		_close_all()
 		await create_timer(0.2).timeout
