@@ -262,6 +262,7 @@ func _ready() -> void:
 	_gui = GuiLayer.new()
 	for panel_name in preload("res://src/ui/lobby_panels.gd").TITLES:
 		_gui.native_factories[panel_name] = _make_native_lobby_panel
+	_gui.native_factories["cardMasterDialog"] = _make_card_master_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -1157,6 +1158,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for c in d.get("currencies", []):
 				State.wallet[int(c.type)] = int(c.amount)
 			_refresh_wallet_label()
+			if _gui.is_open("cardMasterDialog"):
+				_push_cardmaster_model()
 		OP_INVENTORY:
 			var d := Codec.decode(opcode, payload)
 			State.inventory = {}
@@ -1165,6 +1168,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_log_line(I18n.t("inv.stacks", {"n": State.inventory.size()}))
 			if $UI/EquipDlg.visible:
 				_fill_equip()
+			if _gui.is_open("cardMasterDialog"):
+				_push_cardmaster_model()
 		OP_SHOP_CATALOG:
 			var d := Codec.decode(opcode, payload)
 			_open_shop(d)
@@ -1183,11 +1188,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				for c in d.get("currencies", []):
 					State.wallet[int(c.type)] = int(c.amount)
 				_refresh_wallet_label()
-				match res:
-					0: _log_line("[color=green]%s[/color]" % I18n.t("shop.done"))
-					1: _log_line("[color=red]%s[/color]" % I18n.t("shop.tokens"))
-					_: _log_line("[color=red]%s[/color]" % I18n.t(
-						"shop.refused", {"code": res}))
+				var msg := I18n.t(["shop.done", "shop.tokens"][res] if res <= 1
+					else "shop.refused", {"code": res})
+				_log_line("[color=%s]%s[/color]" % ["green" if res == 0 else "red", msg])
+				if _gui.is_open("cardMasterDialog"):
+					if res == 0:
+						_cm_given = {}
+					_cm_status = {"text": msg, "ok": res == 0}
+					_push_cardmaster_model()
 		OP_FUSION_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.get("result", 0)) != 0:
@@ -5201,6 +5209,14 @@ func _make_native_lobby_panel(panel_name: String) -> Control:
 	return panel
 
 
+## S18: the native Card Master replaces the retail cardMasterDialog XML.
+func _make_card_master_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/card_master_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 ## Native controls reuse existing handlers with the same item-event context.
 func _on_native_lobby_action(event: String, args: Array, item: Variant, index: int) -> void:
 	match event:
@@ -5223,6 +5239,30 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeUseElement":
 			_use_element(int(args[0]))
+			return
+		"nativeCmSelect":
+			_cm_selected = int(args[0])
+			_cm_given = {}
+			_cm_status = {}
+			_push_cardmaster_model()
+			return
+		"nativeCmStage":
+			_cm_status = {}
+			_cm_stage(int(args[0]))
+			return
+		"nativeCmUnstage":
+			_cm_unstage(int(args[0]))
+			return
+		"nativeCmClear":
+			_cm_given = {}
+			_cm_status = {}
+			_push_cardmaster_model()
+			return
+		"nativeCmBuy":
+			_cm_buy_tokens()
+			return
+		"nativeCmBarter":
+			_on_cm_buy([], null)
 			return
 	var context := GWidget.new()
 	context.item_value = item
@@ -5966,24 +6006,63 @@ func _on_fusion_drop_target(_a: Array, _w: GWidget) -> void:
 
 var _cm_given := {}       # cid -> staged count for the barter
 var _cm_selected := -1    # catalog card being bought
+var _cm_status := {}      # last 5403 for the native panel: {text, ok}
 
 
 ## The retail dialog opens on the catalog reply (5401), like the mailbox.
+## The retail fields stay for the XML layout; the native panel (S18) reads
+## catalog/offer/staged/wallet/status.
 func _push_cardmaster_model() -> void:
 	var model := _gui.gui.model
 	var catalog: Array = []
+	var native: Array = []
+	var set_id := 0
 	for c in _shop_cards:
-		var it := _card_item(int(c.id))
+		var cid := int(c.id)
+		var it := _card_item(cid)
 		it["shopQty"] = int(c.qty)
 		catalog.append(it)
+		var m := Cards.meta(cid)
+		if set_id == 0:
+			set_id = int(m.get("set", 0))
+		var price: Array = []
+		for t in m.get("price", {}):
+			if int(m.price[t]) > 0:
+				price.append({"type": int(t), "amount": int(m.price[t])})
+		var owned := int(State.inventory.get(cid, 0))
+		var unique_owned := bool(m.get("unique", false)) and owned > 0
+		native.append({"id": cid, "name": Cards.name_of(cid),
+			"value": int(m.get("value", 0)), "owned": owned, "price": price,
+			"uniqueOwned": unique_owned,
+			"canBuyTokens": not price.is_empty() and _affordable(cid)
+				and not unique_owned})
 	var staged: Array = []
+	var staged_rows: Array = []
 	var sum := 0
 	for cid in _cm_given:
 		for i in int(_cm_given[cid]):
 			staged.append(_card_item(int(cid)))
+		staged_rows.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"count": int(_cm_given[cid])})
 		sum += Cards.value_of(int(cid)) * int(_cm_given[cid])
 	while staged.size() < 4:
 		staged.append(null)
+	# What the coach can put on the table: tradable cards they own, the most
+	# valuable first so a few clicks cover the price.
+	var offer: Array = []
+	for cid in State.inventory:
+		var n := int(State.inventory[cid])
+		if n <= 0 or int(cid) == _cm_selected \
+				or not bool(Cards.meta(int(cid)).get("tradable", false)):
+			continue
+		offer.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"value": Cards.value_of(int(cid)), "owned": n,
+			"staged": int(_cm_given.get(cid, 0))})
+	offer.sort_custom(func(a, b): return a.value > b.value \
+		or (a.value == b.value and a.id < b.id))
+	var wallet: Array = []
+	for t in State.wallet:
+		wallet.append({"type": int(t), "amount": int(State.wallet[t])})
 	var wanted_val := Cards.value_of(_cm_selected) if _cm_selected > 0 else 0
 	model.set_value("cardMasterTrade", {
 		"cardMasterCardExchange": catalog,
@@ -5992,7 +6071,13 @@ func _push_cardmaster_model() -> void:
 		"localCardsPrice": sum,
 		"canBuyCards": _cm_selected > 0 and sum >= wanted_val and sum > 0,
 		"selectedCard": _card_item(_cm_selected)
-			if _cm_selected > 0 else null})
+			if _cm_selected > 0 else null,
+		"setName": _set_name_for(set_id),
+		"catalog": native, "selectedId": _cm_selected,
+		"offer": offer, "staged": staged_rows,
+		"offered": sum, "wanted": wanted_val, "wallet": wallet,
+		"status": str(_cm_status.get("text", "")),
+		"statusOk": bool(_cm_status.get("ok", false))})
 	model.set_value("exchange.cardTrade", _shop_id, "exchangeId")
 
 
@@ -6030,9 +6115,11 @@ func _cm_stage(cid: int) -> void:
 ## removeCard on the exchange list — unstage one of the row's cards.
 func _on_cm_remove(_a: Array, w: GWidget) -> void:
 	var row: Variant = _row_item(w)
-	if not (row is Dictionary):
-		return
-	var cid := int(row.get("id", 0))
+	if row is Dictionary:
+		_cm_unstage(int(row.get("id", 0)))
+
+
+func _cm_unstage(cid: int) -> void:
 	if cid <= 0:
 		return
 	var cur := int(_cm_given.get(cid, 0))
@@ -6041,6 +6128,19 @@ func _on_cm_remove(_a: Array, w: GWidget) -> void:
 	else:
 		_cm_given[cid] = cur - 1
 	_push_cardmaster_model()
+
+
+## Native Card Master "Comprar": 5450 for the chosen card, one copy.
+func _cm_buy_tokens() -> void:
+	if _cm_selected <= 0 or not _priced(_cm_selected):
+		return
+	var w := WireWriter.new()
+	w.put_i32(_shop_id)
+	w.put_u16(1)
+	w.put_i32(_cm_selected)
+	Session.send(OP_SHOP_BUY, w.raw(), 3)
+	_cm_status = {}
+	DebugLog.add("buy 5450 sent: %s" % Cards.name_of(_cm_selected))
 
 
 ## buyCards → 5400 [i32 exId][i16 nW]{i32 wanted}[i16 nG]{i32,u16}.
@@ -7054,9 +7154,11 @@ func _open_shop(d: Dictionary) -> void:
 	_shop_id = int(d.get("shop_id", -1))
 	_shop_cards = d.get("cards", [])
 	_cm_given = {}
-	_cm_selected = -1
-	# the retail card-master dialog is the primary UI; the debug pane
-	# stays hidden unless the XML fails to load
+	_cm_status = {}
+	# the native panel shows the first card's detail straight away
+	_cm_selected = int(_shop_cards[0].id) if not _shop_cards.is_empty() else -1
+	# the card master (native since S18) is the primary UI; the debug pane
+	# stays hidden unless it fails to open
 	if _gui.open("cardMasterDialog") != null:
 		_push_cardmaster_model()
 		return

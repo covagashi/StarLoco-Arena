@@ -42,11 +42,16 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-17 | Título **PIPPOP ARENA** ("PIPPOP" pequeño encima de "ARENA"), en login y lobby | dueño ("sería Pippop arena") |
 | 2026-10-17 | Fondo elegido: **rayos** (sol de semitono), en `assets/ui/onebit_bg.png` | dueño ("el de rayos me parece bien") |
 | 2026-10-17 | El fondo deja de ser la arena retail: **fondo decorativo propio** (`tools/make_onebit_bg.py`, en git). Menú y marcos, aprobados | dueño |
+| 2026-10-17 | Card Master nativo: **"Comprar" solo cuando la carta tiene precio**. La mayoría de sets del retail son solo trueque (precio 0), y entonces el trueque pasa a ser la acción principal. El trueque va en la misma ventana: tus cartas a la izquierda, la carta que quieres y lo ofrecido a la derecha | agente |
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
 
 ## Por decidir con el dueño
 
-- La decisión "a confirmar" de arriba (el color en el contenido).
+- La decisión "a confirmar" de arriba (el color en el contenido). Hoja:
+  `codigo/capturas/s18/opciones-arte-cartas.png` (A, arte en color; B, arte
+  en trama 1 bit). Se cambia con `ARENA_CARD_ART=dither`
+  (`OneBit.art_material()`); por defecto, color.
+- Visto bueno del Card Master: `codigo/capturas/s18/tanda2-cardmaster.png`.
 
 ## Hojas de opciones
 
@@ -62,6 +67,29 @@ Hojas: `codigo/capturas/s18/tanda1-entrada.png` (login, creación, lobby) y
 `./run_tests.sh` exit 0, `native_lobby` 28 PASS, `native_panels` 123 PASS y
 `world_smoke` 57/57 con el lobby nuevo.
 
+## Tanda 2: el Card Master (2026-10-17)
+
+`src/ui/card_master_panel.gd` sustituye al `cardMasterDialog` XML (mismo
+nombre de diálogo, así que la auditoría sigue valiendo). Rejilla del set con
+su arte, detalle con precio en fichas (icono de `gui/images/tokens`), lo que
+ya tienes, y el trueque en la misma ventana con la barra de lo ofrecido. El
+modelo `cardMasterTrade` gana campos nativos (`catalog`, `offer`, `staged`,
+`wallet`, `status`); el cable sigue en `main.gd` (5450 compra, 5400 trueque).
+El resultado (5403) sale en el panel, no solo en el chat.
+
+Encontrado: `shop.done`, `shop.tokens` y `shop.refused` no existían en
+ninguna tabla de i18n; el chat mostraba las claves. Cada clic reconstruía la
+rejilla y la devolvía arriba: ahora conserva el desplazamiento y el foco
+(la prueba falla sin el arreglo: 151 → 0).
+
+Verificado: `test/cardmaster_smoke.gd` en vivo (abre el panel nativo,
+elige, ofrece, intercambia: 5403 OK y la carta en el inventario), 6/6;
+`world_smoke` 57/57; `native_panels` 123 y `native_lobby` 28 PASS;
+`./run_tests.sh` exit 0, mirado también a 800×600. Sin probar en vivo: la
+compra con fichas (5450), porque el coach `test` no tiene ninguna carta con
+precio a su alcance en los Card Masters; está en la vista previa y en el
+smoke, que la hace si la encuentra.
+
 ## Registro de toques artísticos
 
 | Fecha | Nota del dueño | Cambio | Fichero |
@@ -71,17 +99,17 @@ Hojas: `codigo/capturas/s18/tanda1-entrada.png` (login, creación, lobby) y
 
 ## Siguiente paso (para la próxima sesión)
 
-**Tanda 2: pantallas de los servicios**, empezando por el **Card Master
-nativo**, según el boceto B de `codigo/capturas/s18/opciones-cardmaster.png`:
-rejilla de cartas con su arte, detalle a la derecha y "Comprar" como acción
-principal (`OneBit.primary`). Sustituye `cardMasterDialog` (XML retail) y
-reutiliza `_open_shop` / `_push_cardmaster_model` y los handlers de compra y
-trueque de `main.gd`. Después: buzón, altar de fusión, cementerio,
-conversaciones (`ElementDlg`), tótems. La auditoría `test/world_smoke.gd`
-comprueba que cada servicio abre su diálogo; hay que actualizar su evidencia
-cuando cambie el diálogo.
+Card Master hecho, a la espera del dueño (hojas `tanda2-cardmaster.png` y
+`opciones-arte-cartas.png`). Sigue la tanda 2 con el **buzón**
+(`mailboxDialog`), después el altar de fusión, el cementerio, las
+conversaciones (`ElementDlg`) y los tótems, con el mismo patrón: un panel
+sobre `lobby_panel.gd`, registrado en `_gui.native_factories` con el nombre
+del diálogo retail, y eventos `native*` hacia los handlers de `main.gd`.
+`ShopDlg` y `BarterDlg` de `main.tscn` quedan de reserva y se retiran con
+los demás paneles de depuración.
 
-Pendiente del dueño: confirmar que el color se queda solo en el contenido.
+Pendiente del dueño: el arte en color o en trama, y el visto bueno del
+Card Master.
 
 ## Tareas candidatas
 
@@ -98,7 +126,8 @@ Pendiente del dueño: confirmar que el color se queda solo en el contenido.
 - [ ] Contenido de los paneles: hoy son tablas genéricas. Rehacerlos uno a
       uno (inventario con cartas, clasificación como el boceto…).
 - [ ] Servicios: sustituir los diálogos XML y `ElementDlg` por paneles
-      nativos (lista de S05).
+      nativos (lista de S05). Card Master hecho (2026-10-17); faltan buzón,
+      altar, fuegos artificiales, cementerio, retos, demonios, tótems.
 - [ ] Retirar de `main.tscn` los paneles de depuración que queden sin uso.
 - [ ] `godot/PRODUCT.md` y `DESIGN.md` al día (hoy dicen que el dueño fija el
       estilo de login y creación, y eso ya no vale).

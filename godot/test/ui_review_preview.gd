@@ -84,6 +84,7 @@ func _run() -> void:
 			await _shot(name)
 		panel.queue_free()
 		await get_tree().process_frame
+	await _card_master(model, vp)
 	var bug := preload("res://src/ui/bug_report.gd").new("")
 	add_child(bug)
 	bug.popup_centered()
@@ -109,3 +110,55 @@ func _run() -> void:
 	opts.queue_free()
 	await get_tree().process_frame
 	get_tree().quit(1 if _failures > 0 else 0)
+
+
+## The native Card Master (S18) on sample data: the Jalatranki set of the
+## sketch, one priced card, a wallet, and a few cards staged for barter.
+func _card_master(model: GuiModel, vp: Vector2) -> void:
+	var names := ["Jalatranki Boots", "Jalatranki Armbands", "The Purty",
+		"Jalatranki Headgear", "Jalatranki Haircut", "Jalatranki Shoulderpads",
+		"Jalatranki Skirt", "Jalatranki Mark"]
+	var catalog: Array = []
+	for i in names.size():
+		catalog.append({"id": 16 + i, "name": names[i], "value": 60 + 15 * i,
+			"owned": 2 if i == 3 else 0, "uniqueOwned": false,
+			"price": [{"type": 1, "amount": 300}] if i == 1 else [],
+			"canBuyTokens": i == 1})
+	var offer: Array = []
+	for cid in [128, 131, 137, 130, 134, 129]:
+		offer.append({"id": cid, "name": "Weerdtrot %d" % cid, "value": 40,
+			"owned": 2, "staged": 1 if cid in [128, 131] else 0})
+	var trade := {"setName": "Jalatranki", "catalog": catalog,
+		"selectedId": 17, "offer": offer,
+		"staged": [{"id": 128, "name": "Weerdtrot Boots", "count": 1},
+			{"id": 131, "name": "Weerdtrot Hat", "count": 1}],
+		"offered": 156, "wanted": 75, "canBuyCards": true,
+		"wallet": [{"type": 1, "amount": 1250}, {"type": 2, "amount": 40}],
+		"status": "", "statusOk": false}
+	model.set_value("cardMasterTrade", trade)
+	var cm := preload("res://src/ui/card_master_panel.gd").new()
+	cm.model = model
+	add_child(cm)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(cm.frame.get_global_rect().end.x <= vp.x + 1
+		and cm.frame.get_global_rect().end.y <= vp.y + 1,
+		"panel outside viewport: cardMasterDialog")
+	_check(cm.find_child("Buy", true, false) != null, "card master: Buy button")
+	_check(cm.find_child("Card23", true, false) != null, "card master: whole set")
+	await _shot("cardMaster")
+	trade = trade.duplicate()
+	trade["selectedId"] = 18   # barter-only: barter becomes the primary action
+	model.set_value("cardMasterTrade", trade)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(cm.find_child("Buy", true, false) == null, "card master: no Buy when unpriced")
+	await _shot("cardMaster-barteronly")
+	cm.bartering = true
+	cm.refresh()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(cm.find_child("Trade", true, false) != null, "card master: Trade button")
+	await _shot("cardMaster-barter")
+	cm.queue_free()
+	await get_tree().process_frame

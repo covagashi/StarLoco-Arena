@@ -124,6 +124,38 @@ void fragment() {
 }"""
 
 
+## Content art (card illustrations, token icons): the interface is black and
+## white, but content may keep its colour, like the 1-bit fights keep the
+## team blue (S18, pending the owner's word). ARENA_CARD_ART=dither turns
+## the art to ordered 1-bit dither instead, for comparing on a sheet.
+## Returns null when the art keeps its colour.
+const _ART_DITHER := """shader_type canvas_item;
+const float B[16] = float[](0., 8., 2., 10., 12., 4., 14., 6., 3., 11., 1., 9., 15., 7., 13., 5.);
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	ivec2 p = ivec2(FRAGCOORD.xy) % 4;
+	float t = (B[p.y * 4 + p.x] + 0.5) / 16.0;
+	float l = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+	COLOR = vec4(vec3(step(t, l)), step(0.5, c.a));
+}"""
+
+static var _art_mat: ShaderMaterial
+
+
+static func art_in_colour() -> bool:
+	return OS.get_environment("ARENA_CARD_ART") != "dither"
+
+
+static func art_material() -> ShaderMaterial:
+	if art_in_colour():
+		return null
+	if _art_mat == null:
+		_art_mat = ShaderMaterial.new()
+		_art_mat.shader = Shader.new()
+		_art_mat.shader.code = _ART_DITHER
+	return _art_mat
+
+
 ## `fixed` sizes it by hand (for a parent without a layout rect, like the
 ## lobby's scaled REF box); otherwise it anchors to the full parent rect.
 static func backdrop(fixed := Vector2.ZERO) -> Control:
