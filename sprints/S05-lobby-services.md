@@ -77,7 +77,17 @@ Leído, no probado todavía. La prueba de punta a punta es la tarea 1.
 - [x] Cartas especiales: la carta 214 "Pacte" abre la creación de clan, como
       en el retail. Los tipos 22 y 23 son partes del emblema de clan y no hay
       ninguna carta de esos tipos en los datos: descartados. El resto, abajo.
-- [ ] Visto bueno del dueño al panel "Ciudad" (capturas en el Samba).
+- [ ] **Pantallas nativas para cada servicio** (dueño, 2026-10-17: "esas
+      pantallas son legacy, hay que mejorarlas todas"). Hoy los servicios abren
+      diálogos retail XML o el panel de depuración `ElementDlg`. Hay que
+      sustituirlos por paneles nativos al estilo del lobby:
+      - XML retail: Card Master (`cardMasterDialog`), buzón (`mailboxDialog`,
+        `newMailDialog`), altar de fusión (`fusionLabDialog`), fuegos
+        artificiales (`fireworkDialog`), ofrenda al demonio
+        (`demonAffiliationDialog`), intercambio (`exchangeDialog`).
+      - `ElementDlg`: cementerio, conversaciones (retos, demonios, maestros de
+        raza, NPCs), tótem de demonio y tótem de torneos.
+      Cada una con hoja de opciones para el dueño antes de cerrarla.
 
 ## Resultado (parcial, 2026-10-17)
 
@@ -134,7 +144,8 @@ del servidor (apuntado en S08).
 ### Capturas
 
 Samba `codigo/capturas/s05/`: `lobby.png` (la casilla "Ciudad"),
-`city-25.png`, `city-37.png`, `cardmaster-25.png`, `cardmaster-37.png`.
+`city-25.png`, `city-37.png`, `cardmaster-25.png`, `cardmaster-37.png`. Las
+del Card Master enseñan la pantalla legacy que hay que sustituir.
 Se rehacen con `xvfb-run -a godot --path godot --accessibility disabled -s
 test/world_smoke.gd -- --worlds=25,37 --shot-dir=<dir>`.
 
@@ -162,8 +173,10 @@ lectura del código, con las citas en el devlog.
 - **85, Gostof**: isla de ayuda (Baan y los Gostof explican élite,
   evolución, 2v2 y torneos). Ruta retail desconocida.
 
-**Pregunta al dueño**: ¿se añaden 79, 80 y 85 a los destinos del panel
-"Ciudad" (lo más útil es la Démone II), o se quedan solo para GM?
+**Pregunta al dueño** (pendiente): ¿se añaden 79, 80 y 85 a los destinos del
+panel "Ciudad", o se quedan solo para GM? No son arenas: 79 repite los retos
+del 37, 80 es una tienda (con el catálogo roto, S08) y 85 son diálogos de
+ayuda, que encajan en S10.
 
 ### Cartas especiales
 
