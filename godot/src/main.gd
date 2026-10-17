@@ -3709,6 +3709,8 @@ func _on_eq_save(_a: Array, _w: GWidget) -> void:
 ## screen's model from State before its first draw.
 func _on_gui_dialog_opened(name: String) -> void:
 	match name:
+		"cityDialog":
+			_push_city_model()
 		"socialDialog":
 			_push_social_model()
 		"guildDialog":
@@ -4063,11 +4065,9 @@ func _on_card_unhover(_a: Array, _w: GWidget) -> void:
 	_gui.gui.model.set_value("coachManagement", null, "selectedCard")
 
 
-## useSpecialCard — zaap-type (20) cards were teleports in the walkable
-## overworld; this lobby-menu build has nowhere to teleport to, so the
-## card stays a collectible and the click is a documented no-op. The
-## 21-23 special actions (rename, firework…) are UI events we don't
-## support yet either.
+## useSpecialCard — a zaap-type (20) card teleports (4512), as in retail;
+## the lobby then follows the coach to the new world. The 21-23 special
+## actions (rename, firework…) are UI events we don't support yet.
 func _on_use_special_card(_a: Array, w: GWidget) -> void:
 	var card = w.item_value if w != null else null
 	if not (card is Dictionary):
@@ -4075,7 +4075,7 @@ func _on_use_special_card(_a: Array, w: GWidget) -> void:
 			"coachManagement", {}).get("selectedCard")
 	if card is Dictionary \
 			and int(card.get("cardType", card.get("type", 0))) == 20:
-		_toast(I18n.t("zaap.unavailable"))
+		_zaap_travel(int(card.get("id", -1)))
 
 
 func _step_set(args: Array, delta: int) -> void:
@@ -4089,11 +4089,110 @@ func _step_set(args: Array, delta: int) -> void:
 	args[0].queue_redraw()
 
 
-## changeInstance(card) — retail's double-click-a-zaap teleport. No
-## walkable world here: keep the handler registered (the cardBook XML can
-## still emit the event) but it only closes the dialog, never sends 4512.
-func _on_zaap_change_instance(_args: Array, _w: GWidget) -> void:
+## changeInstance(card) — retail's double-click-a-zaap teleport.
+func _on_zaap_change_instance(_args: Array, w: GWidget) -> void:
 	_gui.close("zaapDialog")
+	if w != null and w.item_value is Dictionary:
+		_zaap_travel(int(w.item_value.get("id", -1)))
+
+
+## Zaap card -> destination world, mirrored from server/internal/game/zaap.go
+## (zaapCardDest). Only used to label the City panel and mark "you are here";
+## the server picks the real destination. 859 (clan island) has no fixed one.
+const ZAAP_WORLD := {202: 23, 553: 23, 203: 24, 204: 25, 208: 26, 206: 27,
+	207: 28, 254: 37, 255: 37, 256: 37, 558: 37, 870: 37}
+
+## Env kinds whose instances on one world behave identically: the City panel
+## shows one button for the kind instead of one per element. Zaaps (4) are
+## listed as destinations instead, and zone triggers (8) fire on walk-on, so
+## neither gets a service button.
+const _CITY_ONE_PER_KIND := [2, 10, 12]
+const _CITY_HIDDEN := [4, 8]
+## Display order of the kinds in the City panel: shops and mail first.
+const _CITY_ORDER := [1, 2, 10, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
+
+
+## 4512 [i32 cardTemplateId]. The server answers 4600 + 4516 + 200, and the
+## 4516 handler re-shows the lobby for the new world.
+func _zaap_travel(card: int) -> void:
+	if card <= 0 or int(State.inventory.get(card, 0)) <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i32(card)
+	Session.send(OP_ZAAP, w.raw(), 3)
+	_log_line(I18n.t("zaap.travel", {"dest": Cards.name_of(card)}))
+
+
+func _world_name(world: int) -> String:
+	if world >= 86 and world <= 109:
+		return I18n.t("world.clan")
+	var key := "world.%d" % world
+	var t := I18n.t(key)
+	return I18n.t("world.unknown", {"id": world}) if t == key else t
+
+
+## One button label per service: the kind plus whatever names the element
+## (an NPC or demon name, a Card Master's catalogue).
+func _city_label(kind: int, e: Dictionary) -> String:
+	var base := I18n.t("elem.%d" % kind)
+	if base == "elem.%d" % kind:
+		base = Elements.kind_name(kind)
+	var f := str(e.get("desc", "")).split(";")
+	match kind:
+		1:   # "mode;cardListId[;title]"
+			if f.size() > 1:
+				return "%s %s" % [base, f[1]]
+		3, 5, 6, 7, 9, 15:   # first field is the speaker's name id
+			var n := NpcDialogs.npc_name(int(f[0])) if f.size() > 0 else ""
+			if n != "":
+				return n
+		11:   # demon id
+			return "%s %s" % [base, f[0]]
+		14:
+			return base
+	return base
+
+
+## coachManagement-free model for the native City panel (see lobby_panels
+## _city): every service of the current world from the client's own env
+## table, so nothing depends on the server's AoI or on walking.
+func _push_city_model() -> void:
+	var table := Elements.for_world(State.current_world)
+	var by_kind := {}
+	var ids := table.keys()
+	ids.sort()
+	for id in ids:
+		var e: Dictionary = table[id]
+		var kind := int(e.type)
+		if kind in _CITY_HIDDEN:
+			continue
+		if kind in _CITY_ONE_PER_KIND and by_kind.has(kind):
+			continue
+		if not by_kind.has(kind):
+			by_kind[kind] = []
+		by_kind[kind].append({"id": int(id), "label": _city_label(kind, e)})
+	var groups: Array = []
+	for kind in _CITY_ORDER:
+		if by_kind.has(kind):
+			var n := I18n.t("elem.%d" % kind)
+			groups.append({"kind": kind, "services": by_kind[kind],
+				"name": Elements.kind_name(kind) if n == "elem.%d" % kind else n})
+	var zaaps: Array = []
+	var cards := State.inventory.keys()
+	cards.sort()
+	for cid in cards:
+		if int(State.inventory[cid]) <= 0 \
+				or int(Cards.meta(int(cid)).get("type", 0)) != 20:
+			continue
+		var dest := int(ZAAP_WORLD.get(int(cid), -1))
+		var name := Cards.name_of(int(cid))
+		if dest > 0 and dest != 37 and not name.to_lower().contains(
+				_world_name(dest).to_lower()):
+			name = "%s — %s" % [_world_name(dest), name]
+		zaaps.append({"card": int(cid), "name": name,
+			"here": dest == State.current_world and dest != 37})
+	_gui.gui.model.set_value("city", {"world": _world_name(State.current_world),
+		"groups": groups, "zaaps": zaaps})
 
 
 ## --- cardBookDialog (coach inventory) ----------------------------------------
@@ -5036,6 +5135,14 @@ var _coach_names := {}   # coach id -> display name (from 4096 spawns)
 ## fed from State.elements (the raw 200/206 wire dicts).
 func _element_info(id: int) -> Dictionary:
 	var e: Dictionary = State.elements.get(id, {})
+	if e.is_empty():
+		# Out of the server's AoI (or never spawned): the lobby's City panel
+		# reaches every service of the world, so fall back to the client's
+		# own env table — same id, kind and descriptor, no wire payload.
+		var t: Variant = Elements.for_world(State.current_world).get(id)
+		if t != null:
+			e = {"x": t.x, "y": t.y, "z": t.z, "kind": int(t.type),
+				"desc": str(t.desc)}
 	return {"pos": Vector3i(int(e.get("x", 0)), int(e.get("y", 0)),
 			int(e.get("z", 0))),
 		"kind": int(e.get("kind", -1)), "desc": str(e.get("desc", "")),
@@ -5114,6 +5221,12 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 		"openBugReport":
 			_open_bug_report()
 			return
+		"nativeUseElement":
+			_use_element(int(args[0]))
+			return
+		"nativeZaap":
+			_zaap_travel(int(args[0]))
+			return
 	var context := GWidget.new()
 	context.item_value = item
 	context.selected_index = index
@@ -5173,8 +5286,8 @@ func _use_element(id: int) -> void:
 	match kind:
 		1:   # Card Master — server pushes the 5401 catalogue
 			_log_line(I18n.t("shop.opening", {"label": label}))
-		4:   # Zaap — no walkable world in this build; teleport is a no-op
-			_toast(I18n.t("zaap.unavailable"))
+		4:   # Zaap — the destinations live in the lobby's City panel
+			_gui.open("cityDialog")
 		2:   # Mailbox — the server answers 15000 with the full list (15001)
 			_element_text("Mailbox", "Loading letters…")
 			Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)

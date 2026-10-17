@@ -19,6 +19,7 @@ const TITLES := {
 	"guildDialog": "panel.guild", "guildCreationDialog": "panel.guild_create",
 	"guildManagementDialog": "panel.guild_ranks",
 	"guildCoachStatsDialog": "panel.guild_member",
+	"cityDialog": "panel.city",
 }
 var _preview
 var _preview_look := ""
@@ -46,6 +47,7 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		"guildDialog": ["friends", "ignore", "guild"],
 		"guildManagementDialog": ["guild", "guildSelectedRank"],
 		"guildCoachStatsDialog": ["guildCoachStats"],
+		"cityDialog": ["city"],
 	}
 	if model_name.split(".")[0] in watched.get(panel_name, []):
 		schedule_refresh()
@@ -78,6 +80,7 @@ func refresh() -> void:
 		"fighterCreationDialog": _fighter_creation()
 		"fighterEquipmentDialog": _equipment()
 		"teamNameDialog", "team2vs2NameDialog", "newTeamTournamentDialog": _team_name()
+		"cityDialog": _city()
 
 
 func _menu() -> void:
@@ -290,6 +293,47 @@ func _social() -> void:
 			button(toolbar, I18n.t("social.view_member"), func(): send("getMemberStats", [], selected), not selected.is_empty())
 			button(toolbar, I18n.t("social.ranks"), func(): send("nativeOpen", ["guildManagementDialog"]), bool(data("guild.canManage", false)))
 		button(toolbar, I18n.t("social.leave"), func(): confirm_action(I18n.t("social.leave_confirm"), func(): send("quitGuild")), not str(data("guild.name", "")).is_empty())
+
+
+## The services the walkable hall used to reach, for the world the coach is
+## in: one button per service (main pushes `city` from the client's env
+## table), plus the Zaap destinations the coach holds cards for.
+func _city() -> void:
+	var city: Dictionary = data("city", {})
+	title.text = I18n.t("panel.city") + " · " + str(city.get("world", ""))
+	var split := row(body)
+	var left := column(split)
+	label(left, I18n.t("city.services"), 22)
+	var groups: Array = city.get("groups", [])
+	if groups.is_empty():
+		label(left, I18n.t("city.none"))
+	for g in groups:
+		label(left, str(g.get("name", "")), 18)
+		var grid := GridContainer.new()
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		left.add_child(grid)
+		for s in g.get("services", []):
+			var b := button(grid, str(s.get("label", "")), func():
+				closed.emit()
+				send("nativeUseElement", [int(s.get("id", -1))]))
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var right := column(split)
+	label(right, I18n.t("city.zaap"), 22)
+	var dests: Array = city.get("zaaps", [])
+	if dests.is_empty():
+		label(right, I18n.t("city.zaap_none"))
+	for d in dests:
+		var here := bool(d.get("here", false))
+		var text := str(d.get("name", ""))
+		if here:
+			text += "  ·  " + I18n.t("city.here")
+		var b := button(right, text, func():
+			closed.emit()
+			send("nativeZaap", [int(d.get("card", -1))]), not here)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
 func _help() -> void:

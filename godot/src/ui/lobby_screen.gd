@@ -20,7 +20,7 @@ const MENUS := [
 	["nav.stats", "coachStatisticsDialog"], ["nav.inventory", "coachInventoryDialog"],
 	["nav.ladder", "ladderInformationDialog"], ["nav.calendar", "calendarDialog"],
 	["nav.achievements", "achievementDialog"], ["nav.social", "socialDialog"],
-	["nav.help", "tooltipDialog"],
+	["nav.help", "tooltipDialog"], ["nav.city", "cityDialog"],
 ]
 const ACTIONS := [
 	["lobby.action.practice", "practice", "lobby.action.practice.tip"],
@@ -98,7 +98,9 @@ func _init() -> void:
 			"", func(): dialog_requested.emit(str(entry[1])), 14)
 		var icon := AtlasTexture.new()
 		icon.atlas = icons
-		icon.region = Rect2(i * 32, 0, 32, 32)
+		# Slot 0 of the atlas is retail's "Menu" entry, which the lobby
+		# dropped (it lives on Esc): the nav menus start at slot 1.
+		icon.region = Rect2((i + 1) * 32, 0, 32, 32)
 		button.icon = icon
 		button.expand_icon = true
 		button.add_theme_constant_override("icon_max_width", 20)

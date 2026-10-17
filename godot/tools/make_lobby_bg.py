@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Lobby stonework. Contract: coach (40,150,320,350), actions
 (400,210,824,270), chat (40,516,650,150), menus (720,526,510,140).
-Run from godot/: python3 tools/make_lobby_bg.py.
+Run from godot/: python3 tools/make_lobby_bg.py [--icons]
+(--icons rewrites only lobby_icons.png; the background has random noise).
 """
 from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter
 from make_login_bg import S, W, H, sc, vgrad, word_tiles, engraved, F_COPPER, F_BAY
@@ -45,27 +46,40 @@ def main():
         slab((x,y,w,h),color)
     word_tiles(img, 'ARENA', ImageFont.truetype(F_COPPER, sc(72)), 104, 120,
                angles=[-5,3,-2,4,-3], yoffs=[0,3,0,4,0])
-    # Nine small carved-line menu symbols, in retail menu order.
-    icons = Image.new('RGBA', (32 * 9 * S, 32 * S))
-    paths = [
-        [[(6,8),(26,8)],[(6,16),(26,16)],[(6,24),(26,24)]],
-        [[(5,25),(5,20),(13,16),(21,20),(21,25)],[(22,10),(27,15),(27,25)]],
-        [[(6,26),(6,17)],[(15,26),(15,10)],[(24,26),(24,5)]],
-        [[(5,10),(27,10),(27,26),(5,26),(5,10)],[(11,10),(11,5),(21,5),(21,10)]],
-        [[(6,6),(26,6),(23,18),(16,22),(9,18),(6,6)],[(16,22),(16,27)],[(10,27),(22,27)]],
-        [[(5,8),(27,8),(27,27),(5,27),(5,8)],[(5,14),(27,14)],[(10,4),(10,10)],[(22,4),(22,10)]],
-        [[(16,4),(20,11),(28,12),(22,18),(24,27),(16,23),(8,27),(10,18),(4,12),(12,11),(16,4)]],
-        [[(5,6),(27,6),(27,22),(15,22),(8,28),(8,22),(5,22),(5,6)]],
-        [[(10,10),(11,6),(20,5),(24,9),(23,14),(16,19),(16,22)],[(16,26),(16,28)]],
-    ]
-    di = ImageDraw.Draw(icons)
-    for i, strokes in enumerate(paths):
-        for stroke in strokes:
-            di.line([(sc(i*32+x),sc(y)) for x,y in stroke], fill=(229,217,174), width=sc(2), joint='curve')
-    di.ellipse([sc(9+32),sc(4),sc(17+32),sc(12)], outline=(229,217,174), width=sc(2))
-    icons.resize((32*9,32), Image.Resampling.LANCZOS).save('assets/ui/lobby_icons.png')
+    make_icons()
     img.convert('RGB').resize((1280,720), Image.Resampling.LANCZOS).save('assets/ui/lobby_bg.png')
 
 
+# Carved-line menu symbols, in retail menu order (slot 0 is retail's "Menu",
+# which the lobby keeps on Esc), then the lobby's own additions: slot 9 is the
+# City panel (S05).
+ICON_PATHS = [
+    [[(6,8),(26,8)],[(6,16),(26,16)],[(6,24),(26,24)]],
+    [[(5,25),(5,20),(13,16),(21,20),(21,25)],[(22,10),(27,15),(27,25)]],
+    [[(6,26),(6,17)],[(15,26),(15,10)],[(24,26),(24,5)]],
+    [[(5,10),(27,10),(27,26),(5,26),(5,10)],[(11,10),(11,5),(21,5),(21,10)]],
+    [[(6,6),(26,6),(23,18),(16,22),(9,18),(6,6)],[(16,22),(16,27)],[(10,27),(22,27)]],
+    [[(5,8),(27,8),(27,27),(5,27),(5,8)],[(5,14),(27,14)],[(10,4),(10,10)],[(22,4),(22,10)]],
+    [[(16,4),(20,11),(28,12),(22,18),(24,27),(16,23),(8,27),(10,18),(4,12),(12,11),(16,4)]],
+    [[(5,6),(27,6),(27,22),(15,22),(8,28),(8,22),(5,22),(5,6)]],
+    [[(10,10),(11,6),(20,5),(24,9),(23,14),(16,19),(16,22)],[(16,26),(16,28)]],
+    # City: two houses, the taller one with a door.
+    [[(3,27),(29,27)],[(5,27),(5,15),(12,8),(19,15),(19,27)],[(10,27),(10,20),(14,20),(14,27)],
+     [(19,18),(24,13),(29,18),(29,27)],[(23,22),(25,22)]],
+]
+
+
+def make_icons():
+    n = len(ICON_PATHS)
+    icons = Image.new('RGBA', (32 * n * S, 32 * S))
+    di = ImageDraw.Draw(icons)
+    for i, strokes in enumerate(ICON_PATHS):
+        for stroke in strokes:
+            di.line([(sc(i*32+x),sc(y)) for x,y in stroke], fill=(229,217,174), width=sc(2), joint='curve')
+    di.ellipse([sc(9+32),sc(4),sc(17+32),sc(12)], outline=(229,217,174), width=sc(2))
+    icons.resize((32*n,32), Image.Resampling.LANCZOS).save('assets/ui/lobby_icons.png')
+
+
 if __name__ == '__main__':
-    main()
+    import sys
+    make_icons() if '--icons' in sys.argv else main()
