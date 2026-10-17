@@ -136,6 +136,7 @@ func _ready() -> void:
 	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside
 	add_child(_gfx)
 	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
+	_gfx.overlay_source = _depth_overlays   # ground marks in depth order
 	if _onebit:
 		_gfx.use_onebit(true)
 		AnmSprite.onebit_style = 3   # line art; reset in _exit_tree
@@ -3281,12 +3282,12 @@ func _cell_poly(x: int, y: int, alt: float) -> PackedVector2Array:
 
 
 ## Iso-proportioned ground ellipse for the fighter base rings.
-func _draw_base_ring(ctr: Vector2, col: Color, w: float) -> void:
+func _draw_base_ring(ci: CanvasItem, ctr: Vector2, col: Color, w: float) -> void:
 	var pts := PackedVector2Array()
 	for i in 25:
 		var a := TAU * float(i) / 24.0
 		pts.append(ctr + Vector2(cos(a) * HW * 0.55, sin(a) * HH * 0.55))
-	draw_polyline(pts, col, w)
+	ci.draw_polyline(pts, col, w)
 
 
 func _alt_color(alt: float) -> Color:
@@ -3298,8 +3299,10 @@ func _draw() -> void:
 	if _gfx_active:
 		# painted backdrop already carries ground+walls — keep only the
 		# gameplay overlays (spawn zones, placement/hover rings)
+		# (ground marks are merged into the map's depth order: map_gfx
+		# pulls them through overlay_source; only text stays up here)
 		if overlays_visible:
-			_draw_overlays()
+			_draw_top_overlays()
 		return
 	# pass 1: floor tops, back-to-front so lower rows paint over upper walls
 	for pos in _sorted:
@@ -3330,40 +3333,88 @@ func _draw() -> void:
 	_draw_overlays()
 
 
-## 1-bit: zones as a team-colour outline with an inset line, no fill — a
-## translucent fill over the dither came out as tinted noise (S17 note,
-## 2026-10-17). ARENA_ZONES=fill keeps the fill, for comparison sheets.
-var _zone_lines := OS.get_environment("ARENA_ZONES") != "fill"
+## --- tactical overlays --------------------------------------------------
+## Ground marks (zones, pedestals, special tiles, traps/glyphs, reach, path,
+## hovered cell) belong ON the floor: with the painted map they are merged
+## into map_gfx's depth order — after their cell's ground and flat decals,
+## before its props and before anything standing in front — so a rock or a
+## fighter in front covers them, as in retail. Team rings/auras go right
+## before their own fighter. Only text (MP cost) and debug marks stay on
+## top. Without the painted map everything draws straight onto this canvas.
 
-func _draw_zone(poly: PackedVector2Array, col: Color, alpha: float) -> void:
+## Zones are a translucent team-colour fill. ARENA_ZONES=lines draws the
+## 1-bit outline variant instead (auditioned 2026-10-17: once the zones sat
+## in depth, thin lines vanished under the 1-bit grass; the fill still reads).
+var _zone_lines := OS.get_environment("ARENA_ZONES") == "lines"
+var _zone_ghost := OS.get_environment("ARENA_ZONE_GHOST") != "0"   # on unless =0
+var _ov_collect := false   # true while _depth_overlays gathers, false = draw now
+var _ov: Array = []        # [{key, o, d: Callable(ci)}] gathered marks
+
+## Draw order inside one depth slot: zones under reach under path/hover.
+enum OvLayer { ZONE, SPECIAL, AREA, REACH, AOE, PATH, HOVER }
+
+
+## Hand the ground marks to map_gfx (its overlay_source); [] when hidden.
+func _depth_overlays() -> Array:
+	if not overlays_visible:
+		return []
+	_ov = []
+	_ov_collect = true
+	_draw_ground_overlays()
+	_ov_collect = false
+	return _ov
+
+
+## A mark lying on cell (x, y).
+func _ground(x: int, y: int, layer: int, fn: Callable) -> void:
+	if _ov_collect:
+		_ov.append({"key": MapGfx.ground_key(x, y), "o": layer, "d": fn})
+	else:
+		fn.call(self)
+
+
+## A mark under the fighter standing on p (ring, aura, selection).
+func _under_actor(p: Vector3i, fn: Callable) -> void:
+	if _ov_collect:
+		_ov.append({"key": MapGfx.actor_key_cell(p) - 1, "o": 0, "d": fn})
+	else:
+		fn.call(self)
+
+
+func _draw_zone(ci: CanvasItem, poly: PackedVector2Array, col: Color,
+		alpha: float) -> void:
 	if not (_onebit and _zone_lines):
-		draw_colored_polygon(poly, Color(col.r, col.g, col.b, alpha))
+		ci.draw_colored_polygon(poly, Color(col.r, col.g, col.b, alpha))
 		return
 	var ctr := (poly[0] + poly[2]) * 0.5
 	var inner := PackedVector2Array()
 	for v in poly:
 		inner.append(ctr + (v - ctr) * 0.72)
-	draw_polyline(poly + PackedVector2Array([poly[0]]), col, 2.0)
-	draw_polyline(inner + PackedVector2Array([inner[0]]), col, 1.0)
+	ci.draw_polyline(poly + PackedVector2Array([poly[0]]), col, 2.0)
+	ci.draw_polyline(inner + PackedVector2Array([inner[0]]), col, 1.0)
 
 
 func _draw_overlays() -> void:
-	for pos in _cells:
-		var c = _cells[pos]
-		if not c.ground:
-			draw_polyline(_cell_poly(pos.x, pos.y, 0) + PackedVector2Array([
-				_cell_poly(pos.x, pos.y, 0)[0]]), Color(1, 1, 1, 0.06), 1.0)
+	_draw_ground_overlays()
+	_draw_top_overlays()
+
+
+func _draw_ground_overlays() -> void:
 	# start zones and coach pedestals: only while placing (and in the map
 	# preview) — once the fight starts they are noise on the board
 	if _placement or State.fighters.is_empty():
 		for t in [0, 1]:
+			var tcol: Color = [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)][t]
 			for c in _fmd.get("team%d" % t, []):
-				_draw_zone(_cell_poly(c.x, c.y, c.z),
-					[Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)][t], 0.6)
+				var poly := _cell_poly(c.x, c.y, c.z)
+				_ground(c.x, c.y, OvLayer.ZONE,
+					func(ci): _draw_zone(ci, poly, tcol, 0.6))
 		for c in _fmd.get("coach", []):
 			if c.x <= -2047:
 				continue
-			_draw_zone(_cell_poly(c.x, c.y, c.z), Color(1.0, 0.85, 0.2), 0.5)
+			var poly := _cell_poly(c.x, c.y, c.z)
+			_ground(c.x, c.y, OvLayer.ZONE,
+				func(ci): _draw_zone(ci, poly, Color(1.0, 0.85, 0.2), 0.5))
 	# special battlefield tiles — a small lettered diamond marks each
 	for sc in _fmd.get("specials", []):
 		var sp: Dictionary = sc.pos          # {x,y,z} — z is the altitude
@@ -3372,10 +3423,12 @@ func _draw_overlays() -> void:
 		var dm := PackedVector2Array([ctr + Vector2(0, -7), ctr + Vector2(7, 0),
 			ctr + Vector2(0, 7), ctr + Vector2(-7, 0)])
 		var col: Color = sm[2]
-		draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
-		draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
-		draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), sm[0],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
+		var letter: String = sm[0]
+		_ground(int(sp.x), int(sp.y), OvLayer.SPECIAL, func(ci):
+			ci.draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
+			ci.draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
+			ci.draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), letter,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col))
 	# placed traps/glyphs/auras — footprint tinted per the type-210 template.
 	# Retail reveals own-team areas unconditionally (aX(true)); an enemy
 	# caster's only show while that caster is visible (aew_1.aoy) — an
@@ -3395,11 +3448,13 @@ func _draw_overlays() -> void:
 		for cell: Vector2i in Areas.footprint(int(a.tpl), actr):
 			var cz := int(_cells.get(cell, {}).get("alt", actr.z))
 			var fp := _cell_poly(cell.x, cell.y, cz)
-			draw_colored_polygon(fp, Color(acol.r, acol.g, acol.b, 0.14))
-			draw_polyline(fp + PackedVector2Array([fp[0]]),
-				Color(acol.r, acol.g, acol.b, 0.7), 1.0)
-		draw_circle(_iso(float(actr.x) + 0.5, float(actr.y) + 0.5,
-			float(actr.z)), 3.0, acol)
+			_ground(cell.x, cell.y, OvLayer.AREA, func(ci):
+				ci.draw_colored_polygon(fp, Color(acol.r, acol.g, acol.b, 0.14))
+				ci.draw_polyline(fp + PackedVector2Array([fp[0]]),
+					Color(acol.r, acol.g, acol.b, 0.7), 1.0))
+		var dot := _iso(float(actr.x) + 0.5, float(actr.y) + 0.5, float(actr.z))
+		_ground(actr.x, actr.y, OvLayer.AREA,
+			func(ci): ci.draw_circle(dot, 3.0, acol))
 	# team base rings — a ground ellipse under every live fighter so side
 	# reads at a glance; the acting fighter gets a brighter double ring
 	# (retail's current-turn marker). Corpses keep only a faint trace.
@@ -3413,44 +3468,52 @@ func _draw_overlays() -> void:
 		var p: Vector3i = _actor_cells[id]
 		var ctr := _iso(p.x + 0.5, p.y + 0.5, p.z)
 		var col: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
+		var dead: bool = _dead.has(id)
+		var acting: bool = id == _current_fid
 		if _onebit:
 			# 1-bit style: a team aura; corpses get none, and none while
-			# placing (the zones already say the team)
-			if not _dead.has(id) and not (_placement and _zone_lines):
-				TeamAura.draw(self, ctr, col, id == _current_fid)
-		elif _dead.has(id):
-			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.15), 1.0)
-		elif id == _current_fid:
-			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.3), 5.0)
-			_draw_base_ring(ctr, col.lightened(0.3), 2.0)
+			# placing (the zones already say the team; aura + zone fill
+			# dithered into a halo)
+			if not dead and not _placement:
+				_under_actor(p, func(ci): TeamAura.draw(ci, ctr, col, acting))
+		elif dead:
+			_under_actor(p, func(ci):
+				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.15), 1.0))
+		elif acting:
+			_under_actor(p, func(ci):
+				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.3), 5.0)
+				_draw_base_ring(ci, ctr, col.lightened(0.3), 2.0))
 		else:
-			_draw_base_ring(ctr, Color(col.r, col.g, col.b, 0.65), 1.5)
+			_under_actor(p, func(ci):
+				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.65), 1.5))
 	if _placement:
 		# our start cells glow; selected fighter gets a ring
 		var t := _my_team()
 		for c in _fmd.get("team%d" % t, []):
-			_draw_zone(_cell_poly(c.x, c.y, c.z), Color(0.4, 0.9, 1.0), 0.55)
+			var poly := _cell_poly(c.x, c.y, c.z)
+			_ground(c.x, c.y, OvLayer.ZONE,
+				func(ci): _draw_zone(ci, poly, Color(0.4, 0.9, 1.0), 0.55))
 		if _selected >= 0 and _actor_cells.has(_selected):
 			var p: Vector3i = _actor_cells[_selected]
-			draw_arc(_iso(p.x + 0.5, p.y + 0.5, p.z), 14.0, 0, TAU, 24,
-				Color(1, 1, 1), 2.0)
+			var sc := _iso(p.x + 0.5, p.y + 0.5, p.z)
+			_under_actor(p, func(ci):
+				ci.draw_arc(sc, 14.0, 0, TAU, 24, Color(1, 1, 1), 2.0))
 	for pos in _range_overlay:
 		var rc: Dictionary = _cells[pos]
 		var legal: bool = _range_overlay[pos] == 2
-		draw_colored_polygon(_cell_poly(pos.x, pos.y, rc.alt),
-			Color(1.0, 0.5, 0.1, 0.45) if legal
-			else Color(1.0, 0.5, 0.1, 0.12))
-	# movement path preview — retail dots the walk steps and floats the MP
-	# cost at the target; red once the path exceeds the MP we have left.
+		var rp := _cell_poly(pos.x, pos.y, rc.alt)
+		_ground(pos.x, pos.y, OvLayer.REACH, func(ci):
+			ci.draw_colored_polygon(rp, Color(1.0, 0.5, 0.1, 0.45) if legal
+				else Color(1.0, 0.5, 0.1, 0.12)))
+	# movement path preview — retail dots the walk steps (the MP cost floats
+	# on top, _draw_top_overlays); red once the path exceeds the MP left.
 	var path := _preview_path()
 	if not path.is_empty():
 		var pc := Color(0.4, 1.0, 0.4, 0.9) if path.size() <= _mp_left \
 			else Color(1.0, 0.35, 0.3, 0.9)
 		for p in path:
-			draw_circle(_iso(p.x + 0.5, p.y + 0.5, p.z), 3.5, pc)
-		draw_string(ThemeDB.fallback_font,
-			_iso(_hover.x + 0.5, _hover.y + 0.5, _cells[_hover].alt) + Vector2(8, -10),
-			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, pc)
+			var dc := _iso(p.x + 0.5, p.y + 0.5, p.z)
+			_ground(p.x, p.y, OvLayer.PATH, func(ci): ci.draw_circle(dc, 3.5, pc))
 	if not _placement and _is_my_turn() and _cells.has(_hover):
 		var hc: Dictionary = _cells[_hover]
 		# AoE preview — an armed spell/card's effect zones (data-side `zn`,
@@ -3469,12 +3532,38 @@ func _draw_overlays() -> void:
 					if _cells.has(cell):
 						var zp := _cell_poly(cell.x, cell.y,
 							int(_cells[cell].get("alt", 0)))
-						draw_colored_polygon(zp,
-							Color(1.0, 0.45, 0.15, 0.22))
+						_ground(cell.x, cell.y, OvLayer.AOE, func(ci):
+							ci.draw_colored_polygon(zp, Color(1.0, 0.45, 0.15, 0.22)))
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
-		draw_polyline(poly + PackedVector2Array([poly[0]]),
-			Color(1, 0.3, 0.25, 0.9) if _spell_mode != -1
-			else Color(1, 1, 1, 0.8), 2.0)
+		var hcol := Color(1, 0.3, 0.25, 0.9) if _spell_mode != -1 \
+			else Color(1, 1, 1, 0.8)
+		_ground(_hover.x, _hover.y, OvLayer.HOVER, func(ci):
+			ci.draw_polyline(poly + PackedVector2Array([poly[0]]), hcol, 2.0))
+
+
+func _draw_top_overlays() -> void:
+	# a faint outline of the start zones over everything: depth lets tall
+	# grass in front hide a whole placement cell (as in retail); this keeps
+	# it findable without covering rocks/fighters with colour.
+	if _gfx_active and _zone_ghost and (_placement or State.fighters.is_empty()):
+		for t in [0, 1]:
+			var gcol: Color = [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)][t]
+			for c in _fmd.get("team%d" % t, []):
+				var gp := _cell_poly(c.x, c.y, c.z)
+				draw_polyline(gp + PackedVector2Array([gp[0]]),
+					Color(gcol.r, gcol.g, gcol.b, 0.45), 1.0)
+	for pos in _cells:
+		var c = _cells[pos]
+		if not c.ground:
+			draw_polyline(_cell_poly(pos.x, pos.y, 0) + PackedVector2Array([
+				_cell_poly(pos.x, pos.y, 0)[0]]), Color(1, 1, 1, 0.06), 1.0)
+	var path := _preview_path()
+	if not path.is_empty():
+		var pc := Color(0.4, 1.0, 0.4, 0.9) if path.size() <= _mp_left \
+			else Color(1.0, 0.35, 0.3, 0.9)
+		draw_string(ThemeDB.fallback_font,
+			_iso(_hover.x + 0.5, _hover.y + 0.5, _cells[_hover].alt) + Vector2(8, -10),
+			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, pc)
 	if debug_overlay:
 		# white crosshair at each live actor's cell center
 		for id in _actor_cells:

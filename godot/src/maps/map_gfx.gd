@@ -48,6 +48,22 @@ static func actor_key_cell(p: Vector3i) -> int:
 	return actor_key(p.x, p.y)
 
 
+## Sort key for a mark lying on cell (x,y) — a placement zone, the reach
+## tint, a path dot: in the cell's own band, after its ground (intra 8191)
+## and flat decals (8207), before its props (8223+) and before everything
+## standing in front of it. Retail (wn_2.a) slots a cell highlight right
+## after the cell's ground element (+4, i.e. ~8195, under the decals); we
+## go just past the flat decals so grass tufts don't swallow the marks.
+static func ground_key(x: int, y: int) -> int:
+	return ((y + 131071) << 32) | ((x + 131071) << 14) | 8208
+
+
+## Optional Callable -> Array of {key: int, o: int, d: Callable(ci)}: extra
+## marks merged into the depth order like the actors (fight_view's tactical
+## overlays). `o` orders marks that share a key.
+var overlay_source := Callable()
+
+
 func register_dynamic(id: int, key_fn: Callable, draw_fn: Callable) -> void:
 	_dynamic[id] = {"k": key_fn, "d": draw_fn}
 	queue_redraw()
@@ -60,7 +76,7 @@ func unregister_dynamic(id: int) -> void:
 
 func _process(_delta: float) -> void:
 	# live actors animate/walk — the merged painter must repaint with them
-	if not _dynamic.is_empty():
+	if not _dynamic.is_empty() or overlay_source.is_valid():
 		queue_redraw()
 
 
@@ -122,8 +138,11 @@ func _draw() -> void:
 	var dyn := []
 	for id in _dynamic:
 		var d: Dictionary = _dynamic[id]
-		dyn.append({"key": d.k.call(), "d": d.d})
-	dyn.sort_custom(func(a, b): return a.key < b.key)
+		dyn.append({"key": d.k.call(), "o": 0, "d": d.d})
+	if overlay_source.is_valid():
+		dyn.append_array(overlay_source.call())
+	dyn.sort_custom(func(a, b): return a.key < b.key \
+		or (a.key == b.key and a.o < b.o))
 	var di := 0
 	for s in _sprites:
 		while di < dyn.size() and dyn[di].key <= s.z:
