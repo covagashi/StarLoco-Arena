@@ -60,7 +60,7 @@ Bocetos con Pillow, no la implementación: `godot/tools/mock_screens.py OUT`
 
 ## Tareas candidatas
 
-- [ ] Hoja de 2–3 direcciones sobre las mismas tres pantallas.
+- [x] Hoja de 3 direcciones sobre las mismas tres pantallas (2026-10-17).
 - [ ] Componentes comunes en `lobby_panel.gd` según la dirección elegida.
 - [ ] Login y creación de coach.
 - [ ] Lobby y sus 21 paneles.
