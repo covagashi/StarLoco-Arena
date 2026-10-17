@@ -37,21 +37,20 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 |---|---|---|
 | 2026-10-17 | Tres direcciones a comparar: A, la familia del HUD de combate de S17; B, el 1 bit de S04; C, una propia ("mesa de cartas": tapete verde y paneles de papel) | dueño ("sí, me parece bien") |
 | 2026-10-17 | **Dirección B (1 bit)**: "la b me gusta mucho" | dueño |
-| 2026-10-17 | En 1 bit, la interfaz es blanco y negro y el **contenido** conserva su color: el azul del equipo propio, las muestras de pelo y piel, el muñeco y el arte de las cartas. Es la regla de los combates en 1 bit | agente, a confirmar |
+| 2026-10-17 | En 1 bit, la interfaz es blanco y negro y el **contenido** conserva su color: el azul del equipo propio, las muestras de pelo y piel, el muñeco y el arte de las cartas. Es la regla de los combates en 1 bit. **Corregida abajo para el arte de las cartas** | agente |
 | 2026-10-17 | Fondo: la arena 10 en 1 bit, generada en local (git-ignored, es arte retail). Sustituida el mismo día por un fondo propio, ver abajo | agente |
 | 2026-10-17 | Título **PIPPOP ARENA** ("PIPPOP" pequeño encima de "ARENA"), en login y lobby | dueño ("sería Pippop arena") |
 | 2026-10-17 | Fondo elegido: **rayos** (sol de semitono), en `assets/ui/onebit_bg.png` | dueño ("el de rayos me parece bien") |
 | 2026-10-17 | El fondo deja de ser la arena retail: **fondo decorativo propio** (`tools/make_onebit_bg.py`, en git). Menú y marcos, aprobados | dueño |
 | 2026-10-17 | Card Master nativo: **"Comprar" solo cuando la carta tiene precio**. La mayoría de sets del retail son solo trueque (precio 0), y entonces el trueque pasa a ser la acción principal. El trueque va en la misma ventana: tus cartas a la izquierda, la carta que quieres y lo ofrecido a la derecha | agente |
+| 2026-10-17 | **Arte de las cartas en trama 1 bit** (opción B), también los iconos de fichas: "el b". El azul del equipo y las muestras de pelo y piel siguen en color, porque significan algo | dueño |
+| 2026-10-17 | **Card Master nativo aprobado**: "sí, me parece perfecto" | dueño |
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
 
 ## Por decidir con el dueño
 
-- La decisión "a confirmar" de arriba (el color en el contenido). Hoja:
-  `codigo/capturas/s18/opciones-arte-cartas.png` (A, arte en color; B, arte
-  en trama 1 bit). Se cambia con `ARENA_CARD_ART=dither`
-  (`OneBit.art_material()`); por defecto, color.
-- Visto bueno del Card Master: `codigo/capturas/s18/tanda2-cardmaster.png`.
+- Nada abierto. El muñeco del coach (creación, lobby) sigue en color: con
+  el arte de las cartas en trama, hay que preguntar si va también en 1 bit.
 
 ## Hojas de opciones
 
@@ -96,11 +95,11 @@ smoke, que la hace si la encuentra.
 |---|---|---|---|
 | 2026-10-17 | "¿Puedes cambiar el background y poner algo más decorativo por tu parte? El menú y el framing me gusta." | Tres fondos propios en 1 bit (tablero, rayos, cartas), tranquilos en el centro | `tools/make_onebit_bg.py`, `assets/ui/onebit_bg_*.png` |
 | 2026-10-17 | "Sería Pippop Arena" | "PIPPOP" encima de "ARENA" | `login_screen.gd`, `lobby_screen.gd` |
+| 2026-10-17 | Arte de las cartas: "el b" (hoja `opciones-arte-cartas.png`) | Trama por defecto; `ARENA_CARD_ART=color` para comparar | `src/ui/onebit.gd` |
 
 ## Siguiente paso (para la próxima sesión)
 
-Card Master hecho, a la espera del dueño (hojas `tanda2-cardmaster.png` y
-`opciones-arte-cartas.png`). Sigue la tanda 2 con el **buzón**
+Card Master hecho y aprobado, con el arte en trama. Sigue la tanda 2 con el **buzón**
 (`mailboxDialog`), después el altar de fusión, el cementerio, las
 conversaciones (`ElementDlg`) y los tótems, con el mismo patrón: un panel
 sobre `lobby_panel.gd`, registrado en `_gui.native_factories` con el nombre
@@ -108,8 +107,7 @@ del diálogo retail, y eventos `native*` hacia los handlers de `main.gd`.
 `ShopDlg` y `BarterDlg` de `main.tscn` quedan de reserva y se retiran con
 los demás paneles de depuración.
 
-Pendiente del dueño: el arte en color o en trama, y el visto bueno del
-Card Master.
+Pendiente del dueño: si el muñeco del coach pasa también a 1 bit.
 
 ## Tareas candidatas
 

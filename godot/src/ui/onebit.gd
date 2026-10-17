@@ -124,10 +124,10 @@ void fragment() {
 }"""
 
 
-## Content art (card illustrations, token icons): the interface is black and
-## white, but content may keep its colour, like the 1-bit fights keep the
-## team blue (S18, pending the owner's word). ARENA_CARD_ART=dither turns
-## the art to ordered 1-bit dither instead, for comparing on a sheet.
+## Content art (card illustrations, token icons) is 1-bit too: ordered
+## dither, chosen by the owner 2026-10-17 (S18, option B). The team blue and
+## the hair/skin swatches keep their colour: they carry meaning, not art.
+## ARENA_CARD_ART=color shows the art in colour, for comparing on a sheet.
 ## Returns null when the art keeps its colour.
 const _ART_DITHER := """shader_type canvas_item;
 const float B[16] = float[](0., 8., 2., 10., 12., 4., 14., 6., 3., 11., 1., 9., 15., 7., 13., 5.);
@@ -143,7 +143,7 @@ static var _art_mat: ShaderMaterial
 
 
 static func art_in_colour() -> bool:
-	return OS.get_environment("ARENA_CARD_ART") != "dither"
+	return OS.get_environment("ARENA_CARD_ART") == "color"
 
 
 static func art_material() -> ShaderMaterial:
