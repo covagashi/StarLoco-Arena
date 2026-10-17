@@ -3,19 +3,15 @@ extends SceneTree
 ## S05 service audit: every service the walkable hall used to reach, through
 ## the lobby's City panel, against a live server.
 ##
-##   godot --path godot -s test/world_smoke.gd [-- --worlds=35,79] [--shot-dir=D]
+##   godot --path godot -s test/world_smoke.gd [-- --shot-dir=D]
 ##
-## Needs a local server on 127.0.0.1:5555. The full tour takes ~4 minutes;
-## --worlds keeps only those stops (the Zaap/GM hop to each still runs).
+## Needs a local server on 127.0.0.1:5555 (~2 minutes). Login -> lobby ->
+## press the real "City" menu button -> press each service button in the
+## panel -> check the evidence that service leaves (its dialog, its pane, or
+## the server's reply). The panel merges every island's services and the
+## coach never travels: the server resolves each 201 in any world.
 ## --shot-dir (needs a real renderer: xvfb-run, not --headless) saves the
-## lobby, each world's City panel and the first Card Master it opens.
-##
-## Login -> lobby -> press the real "City" menu button -> press each service
-## button in the panel -> check the evidence that service leaves (its retail
-## dialog, its pane, or the server's reply) -> Zaap to the next island through
-## the panel's destination buttons. Worlds no Zaap card reaches (35, 79, 80,
-## 85) are visited with the GM /world command (the `test` account is admin)
-## and reported as such: their services work, but a player can't get there.
+## lobby, the City panel and the first Card Master it opens.
 ##
 ## Prints one "[audit]" line per service and exits 0 only if every one passed.
 ## It replaces the old hall walk (`_main.get_node("World")`), which died with
@@ -26,18 +22,13 @@ const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const State := preload("res://src/state.gd")
 
-## Island tour: [world, how to get there]. A card id travels through the City
-## panel's Zaap button; "gm" uses /world (not reachable by players).
-const TOUR := [[25, 204], [23, 202], [37, 255], [24, 203], [26, 208],
-	[27, 206], [28, 207], [35, "gm"], [79, "gm"], [80, "gm"], [85, "gm"]]
-
 var _sess: Node
 var _main
 var _ready_count := 0          # 4516s seen — one per world entry
 var _seen := {}                # opcode -> times seen since the last reset
-var _results: Array = []       # [world, kind, label, ok, detail]
+var _results: Array = []       # [kind, label, ok, detail]
 var _shot_dir := ""
-var _shot_taken := {}
+var _shot_taken := false
 
 
 func _init() -> void:
@@ -58,7 +49,7 @@ func _init() -> void:
 			_shot_dir = a.trim_prefix("--shot-dir=")
 	await create_timer(1.0).timeout
 	await _shot("lobby")
-	await _tour()
+	await _audit()
 	_report()
 
 
@@ -102,47 +93,16 @@ func _wait(cond: Callable, secs: float) -> bool:
 	return cond.call()
 
 
-func _tour() -> void:
-	var only := []
-	for a in OS.get_cmdline_user_args():
-		if a.begins_with("--worlds="):
-			for w in a.trim_prefix("--worlds=").split(","):
-				only.append(int(w))
-	for stop in TOUR:
-		var world := int(stop[0])
-		if not only.is_empty() and not world in only:
-			continue
-		if State.current_world != world:
-			var before := _ready_count
-			if str(stop[1]) == "gm":
-				_main.log._on_submit("/world %d" % world)
-			else:
-				var b := await _city_button("nativeZaap", int(stop[1]))
-				if b == null:
-					_record(world, 4, "Zaap", false,
-						"no enabled destination button for card %s" % stop[1])
-					continue
-				b.pressed.emit()
-			var ok: bool = await _wait(func(): return _ready_count > before \
-				and State.current_world == world, 8.0)
-			_record(world, 4, "Zaap" if str(stop[1]) != "gm" else "/world (GM)",
-				ok, "world now %d" % State.current_world)
-			if not ok:
-				continue
-			await create_timer(0.8).timeout
-		await _audit_world(world, str(stop[1]) == "gm")
-
-
-## Open City, then press every service button it lists for this world.
-func _audit_world(world: int, gm_only: bool) -> void:
+## Open City, then press every service button it lists.
+func _audit() -> void:
 	var panel = await _open_city()
 	if panel == null:
-		_record(world, -1, "City panel", false, "did not open")
+		_record(-1, "City panel", false, "did not open")
 		return
-	await _shot("city-%d" % world)
+	await _shot("city")
 	var city: Dictionary = _main._gui.gui.model.get_value("city")
 	if city == null or city.get("groups", []).is_empty():
-		_record(world, -1, "City panel", false, "no services listed")
+		_record(-1, "City panel", false, "no services listed")
 		return
 	var services: Array = []
 	for g in city.groups:
@@ -152,18 +112,17 @@ func _audit_world(world: int, gm_only: bool) -> void:
 	for entry in services:
 		var kind: int = entry[0]
 		var s: Dictionary = entry[1]
-		var b := await _city_button("nativeUseElement", int(s.id))
+		var b := await _service_button(int(s.id))
 		if b == null:
-			_record(world, kind, str(s.label), false, "button missing")
+			_record(kind, str(s.label), false, "button missing")
 			continue
 		_seen.clear()
 		b.pressed.emit()
 		var res: Array = await _evidence(kind)
-		if kind == 1 and bool(res[0]) and not _shot_taken.has(world):
-			_shot_taken[world] = true
-			await _shot("cardmaster-%d" % world)
-		var note := str(res[1]) + (" [GM-only world]" if gm_only else "")
-		_record(world, kind, str(s.label), bool(res[0]), note)
+		if kind == 1 and bool(res[0]) and not _shot_taken:
+			_shot_taken = true
+			await _shot("cardmaster")
+		_record(kind, str(s.label), bool(res[0]), str(res[1]))
 		_close_all()
 		await create_timer(0.2).timeout
 
@@ -235,28 +194,21 @@ func _open_city():
 	return _main._gui.dialogs.get("cityDialog")
 
 
-## The panel button that fires `event` with this id/card (opens City first).
-func _city_button(event: String, id: int) -> Button:
+## The panel button for service `id` (opens City first).
+func _service_button(id: int) -> Button:
 	var panel = await _open_city()
 	if panel == null:
 		return null
 	var city: Dictionary = _main._gui.gui.model.get_value("city")
 	var want := ""
-	if event == "nativeZaap":
-		for d in city.get("zaaps", []):
-			if int(d.card) == id and not bool(d.get("here", false)):
-				want = str(d.name)
-	else:
-		for g in city.get("groups", []):
-			for s in g.services:
-				if int(s.id) == id:
-					want = str(s.label)
+	for g in city.get("groups", []):
+		for s in g.services:
+			if int(s.id) == id:
+				want = str(s.label)
 	if want == "":
 		return null
 	var found: Array = []
 	_collect_buttons(panel, want, found)
-	# Same label twice (two Card Masters of one catalogue) — the panel lists
-	# them in id order, and so do we.
 	return found[0] if not found.is_empty() else null
 
 
@@ -273,13 +225,12 @@ func _close_all() -> void:
 	_main.get_node("UI/ElementDlg").visible = false
 
 
-func _record(world: int, kind: int, label: String, ok: bool, detail: String) -> void:
-	_results.append([world, kind, label, ok, detail])
-	print("[audit] %s world=%d kind=%d %s — %s" % [
-		"OK  " if ok else "FAIL", world, kind, label, detail])
+func _record(kind: int, label: String, ok: bool, detail: String) -> void:
+	_results.append([kind, label, ok, detail])
+	print("[audit] %s kind=%d %s — %s" % ["OK  " if ok else "FAIL", kind, label, detail])
 
 
 func _report() -> void:
-	var fails := _results.filter(func(r): return not r[3])
+	var fails := _results.filter(func(r): return not r[2])
 	print("[audit] %d checks, %d failed" % [_results.size(), fails.size()])
 	quit(0 if fails.is_empty() else 1)

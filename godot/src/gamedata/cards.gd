@@ -83,4 +83,30 @@ static func _lab_ensure() -> void:
 		return
 	var data: Variant = AssetPaths.read_json(LABS_PATH)
 	if data is Dictionary:
-		_labs = data
+		# JSON keys are strings; every caller asks with the int lab id. Until
+		# S05 lab() and lab_default() always came back empty, so the fusion
+		# altar never knew its tier and used the 3-slot default.
+		for k in data:
+			_labs[int(k)] = data[k]
+
+
+## --- card set names (content.25, tools/asset-import/card_names.py) ----------
+const SETS_PATH := "gamedata/cardsets.json"
+
+static var _sets := {}   # lang -> {set id int: name}
+
+
+## The set's retail name in the UI language (falls back to English), or "".
+static func card_set_name(id: int) -> String:
+	if _sets.is_empty():
+		var data: Variant = AssetPaths.read_json(SETS_PATH)
+		if data is Dictionary:
+			for lang in data:
+				var by_id := {}
+				for k in data[lang]:
+					by_id[int(k)] = str(data[lang][k])
+				_sets[lang] = by_id
+	var n: Variant = _sets.get(I18n.lang, {}).get(id)
+	if n == null:
+		n = _sets.get("en", {}).get(id)
+	return str(n) if n != null else ""
