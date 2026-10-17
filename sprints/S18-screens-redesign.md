@@ -40,15 +40,12 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-17 | En 1 bit, la interfaz es blanco y negro y el **contenido** conserva su color: el azul del equipo propio, las muestras de pelo y piel, el muñeco y el arte de las cartas. Es la regla de los combates en 1 bit | agente, a confirmar |
 | 2026-10-17 | Fondo: la arena 10 en 1 bit, generada en local (git-ignored, es arte retail). Sustituida el mismo día por un fondo propio, ver abajo | agente |
 | 2026-10-17 | Título **PIPPOP ARENA** ("PIPPOP" pequeño encima de "ARENA"), en login y lobby | dueño ("sería Pippop arena") |
+| 2026-10-17 | Fondo elegido: **rayos** (sol de semitono), en `assets/ui/onebit_bg.png` | dueño ("el de rayos me parece bien") |
 | 2026-10-17 | El fondo deja de ser la arena retail: **fondo decorativo propio** (`tools/make_onebit_bg.py`, en git). Menú y marcos, aprobados | dueño |
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
 
 ## Por decidir con el dueño
 
-- **Fondo**: 1 tablero, 2 rayos o 3 cartas
-  (`codigo/capturas/s18/fondo-{login,lobby}.png`). El elegido se copia a
-  `assets/ui/onebit_bg.png`; mientras tanto sale la viñeta tramada.
-  `ARENA_BACKDROP=<nombre>` fuerza uno para comparar.
 - La decisión "a confirmar" de arriba (el color en el contenido).
 
 ## Hojas de opciones

@@ -131,6 +131,9 @@ def cartas() -> Image.Image:
 
 
 PATTERNS = {"tablero": tablero, "rayos": rayos, "cartas": cartas}
+# Picked by the owner on 2026-10-17 (sprints/S18): written again as
+# onebit_bg.png, which src/ui/onebit.gd loads.
+CHOSEN = "rayos"
 
 
 def main(argv):
@@ -143,9 +146,13 @@ def main(argv):
             out = a
     os.makedirs(out, exist_ok=True)
     for name in only:
+        img = PATTERNS[name]().convert("1")
         p = os.path.join(out, "onebit_bg_%s.png" % name)
-        PATTERNS[name]().convert("1").save(p, optimize=True)
+        img.save(p, optimize=True)
         print("wrote", p)
+        if name == CHOSEN:   # the one the client draws
+            img.save(os.path.join(out, "onebit_bg.png"), optimize=True)
+            print("wrote", os.path.join(out, "onebit_bg.png"))
     return 0
 
 
