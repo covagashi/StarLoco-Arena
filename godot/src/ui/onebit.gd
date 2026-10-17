@@ -101,11 +101,11 @@ static func _grabber(ink := INK) -> ImageTexture:
 	return ImageTexture.create_from_image(img)
 
 
-## Backdrop for full screens (login, creation, lobby): a 1-bit arena if the
-## local asset pipeline made one (assets/mapgfx_1bit/backdrop.png, git-ignored,
-## from tools/render_fightmap.gd), else a dithered vignette drawn by a shader.
-## Either way a 50 % dither shade sits on top so the UI reads over it.
-const BACKDROP := "mapgfx_1bit/backdrop.png"
+## Backdrop for full screens (login, creation, lobby): our own 1-bit art,
+## assets/ui/onebit_bg.png (tools/make_onebit_bg.py; committed, not retail).
+## ARENA_BACKDROP=<name> picks assets/ui/onebit_bg_<name>.png instead, for
+## comparing candidates. Without the file, a dithered vignette shader.
+const BACKDROP := "ui/onebit_bg.png"
 
 const _THRESHOLD := """shader_type canvas_item;
 void fragment() {
@@ -130,7 +130,9 @@ static func backdrop(fixed := Vector2.ZERO) -> Control:
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var img := AssetPaths.load_image(BACKDROP)
+	var pick := OS.get_environment("ARENA_BACKDROP")
+	var img := AssetPaths.load_image(
+		"ui/onebit_bg_%s.png" % pick if pick != "" else BACKDROP)
 	var mat := ShaderMaterial.new()
 	mat.shader = Shader.new()
 	var art: Control
@@ -150,11 +152,8 @@ static func backdrop(fixed := Vector2.ZERO) -> Control:
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(art)
-	var sh := shade()
-	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(sh)
 	if fixed != Vector2.ZERO:
-		for c in [root, art, sh]:
+		for c in [root, art]:
 			c.set_anchors_preset(Control.PRESET_TOP_LEFT)
 			c.position = Vector2.ZERO
 			c.size = fixed

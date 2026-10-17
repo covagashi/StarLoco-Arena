@@ -29,6 +29,15 @@ func _init() -> void:
 	_box.theme = OneBit.theme()
 	add_child(_box)
 
+	var brand := Label.new()
+	brand.text = "PIPPOP"
+	brand.position = Vector2(0, 58)
+	brand.size = Vector2(REF.x, 44)
+	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	brand.add_theme_font_override("font", OneBit.title_font())
+	brand.add_theme_font_size_override("font_size", 36)
+	brand.add_theme_constant_override("outline_size", 10)
+	_box.add_child(brand)
 	var title := Label.new()
 	title.text = "ARENA"
 	title.position = Vector2(0, 92)

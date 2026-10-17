@@ -38,14 +38,18 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-17 | Tres direcciones a comparar: A, la familia del HUD de combate de S17; B, el 1 bit de S04; C, una propia ("mesa de cartas": tapete verde y paneles de papel) | dueño ("sí, me parece bien") |
 | 2026-10-17 | **Dirección B (1 bit)**: "la b me gusta mucho" | dueño |
 | 2026-10-17 | En 1 bit, la interfaz es blanco y negro y el **contenido** conserva su color: el azul del equipo propio, las muestras de pelo y piel, el muñeco y el arte de las cartas. Es la regla de los combates en 1 bit | agente, a confirmar |
-| 2026-10-17 | Fondo: la arena 10 en 1 bit, generada en local (`assets/mapgfx_1bit/backdrop.png`, git-ignored: es arte retail), con trama encima; sin ella, una viñeta tramada por shader | agente |
-| 2026-10-17 | Fuera del login el título es "ARENA" a secas: el "PIPPOP" del arte horneado no se ha mantenido | agente, a confirmar |
+| 2026-10-17 | Fondo: la arena 10 en 1 bit, generada en local (git-ignored, es arte retail). Sustituida el mismo día por un fondo propio, ver abajo | agente |
+| 2026-10-17 | Título **PIPPOP ARENA** ("PIPPOP" pequeño encima de "ARENA"), en login y lobby | dueño ("sería Pippop arena") |
+| 2026-10-17 | El fondo deja de ser la arena retail: **fondo decorativo propio** (`tools/make_onebit_bg.py`, en git). Menú y marcos, aprobados | dueño |
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
 
 ## Por decidir con el dueño
 
-- Visto bueno de la tanda 1 (`codigo/capturas/s18/tanda1-*.png`).
-- Las dos decisiones "a confirmar" de arriba.
+- **Fondo**: 1 tablero, 2 rayos o 3 cartas
+  (`codigo/capturas/s18/fondo-{login,lobby}.png`). El elegido se copia a
+  `assets/ui/onebit_bg.png`; mientras tanto sale la viñeta tramada.
+  `ARENA_BACKDROP=<nombre>` fuerza uno para comparar.
+- La decisión "a confirmar" de arriba (el color en el contenido).
 
 ## Hojas de opciones
 
@@ -65,6 +69,8 @@ Hojas: `codigo/capturas/s18/tanda1-entrada.png` (login, creación, lobby) y
 
 | Fecha | Nota del dueño | Cambio | Fichero |
 |---|---|---|---|
+| 2026-10-17 | "¿Puedes cambiar el background y poner algo más decorativo por tu parte? El menú y el framing me gusta." | Tres fondos propios en 1 bit (tablero, rayos, cartas), tranquilos en el centro | `tools/make_onebit_bg.py`, `assets/ui/onebit_bg_*.png` |
+| 2026-10-17 | "Sería Pippop Arena" | "PIPPOP" encima de "ARENA" | `login_screen.gd`, `lobby_screen.gd` |
 
 ## Tareas candidatas
 

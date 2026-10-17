@@ -82,6 +82,8 @@ func _init() -> void:
 	pedestal.add_theme_stylebox_override("panel", ps)
 	_box.add_child(pedestal)
 	_font = OneBit.title_font()
+	var brand := _label(Rect2(0, 14, REF.x, 34), "PIPPOP", 26)
+	brand.add_theme_constant_override("outline_size", 8)
 	var logo := _label(Rect2(0, 52, REF.x, 90), "ARENA", 72)
 	logo.add_theme_constant_override("outline_size", 12)
 	_name = _label(Rect2(60, 158, 280, 36), "", 25)
