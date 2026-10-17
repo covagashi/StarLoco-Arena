@@ -80,12 +80,6 @@ func _run() -> void:
 		if name in ["teamManagementDialog", "socialDialog", "cardBookDialog",
 				"fighterCreationDialog", "optionsDialog"]:
 			await _shot(name)
-		if name == "optionsDialog":
-			# the fight section (S04/S17) sits below the fold: scroll and shoot
-			for sc in panel.find_children("*", "ScrollContainer", true, false):
-				sc.scroll_vertical = 100000
-			await get_tree().process_frame
-			await _shot(name + "-end")
 		panel.queue_free()
 		await get_tree().process_frame
 	var bug := preload("res://src/ui/bug_report.gd").new("")
@@ -97,5 +91,19 @@ func _run() -> void:
 		"bug report outside viewport")
 	await _shot("bug-report")
 	bug.queue_free()
+	await get_tree().process_frame
+	# Options' fight section (S04/S17) sits below the fold: reopen, scroll,
+	# shoot. Last on purpose — scrolling before the bug-report window
+	# opened made Godot's accesskit (AT-SPI) adapter abort the run.
+	var opts := Panels.new()
+	opts.panel_name = "optionsDialog"
+	opts.model = model
+	add_child(opts)
+	await get_tree().process_frame
+	for sc in opts.find_children("*", "ScrollContainer", true, false):
+		sc.scroll_vertical = 100000
+	await get_tree().process_frame
+	await _shot("optionsDialog-end")
+	opts.queue_free()
 	await get_tree().process_frame
 	get_tree().quit(1 if _failures > 0 else 0)

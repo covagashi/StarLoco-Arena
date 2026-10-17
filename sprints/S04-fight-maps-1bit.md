@@ -233,9 +233,9 @@ xvfb-run -a godot --path godot --resolution 1280x720 -s tools/render_fightmap.gd
   llegado al mapa nuevo. Por eso el lote crea una escena por mapa y salta la
   cámara (`reset_smoothing`). El control de "fotograma en negro" (< 2 % de
   píxeles con luz) lo detectó; antes, el índice decía "ok" de mapas negros.
-- **Mapas 38 y 42 salen descentrados**: la cámara centra el rectángulo de la
-  topología, no el del arte. Es el mismo `fight_view._load()` que usa el
-  juego al entrar, así que en combate debería verse igual (no comprobado en
-  un combate real en esas dos arenas); sin arreglar.
+- **Mapas 38 y 42 salían descentrados**: la cámara centraba el rectángulo
+  de la topología, que cuenta los trozos vacíos alrededor. Ahora
+  `fight_view._load()` encuadra las celdas de suelo (también en el juego);
+  lote repetido: 47 arenas, 0 fallos.
 - El mapa 2 de la galería de la prueba 6 no es una arena (no tiene `.fmd`):
   vale como prueba de color, no como mapa de referencia.

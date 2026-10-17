@@ -464,7 +464,15 @@ func _load() -> void:
 		info.text = ""
 	_spawn_actors()
 	queue_redraw()
-	if topo.has("bounds"):
+	if not _sorted.is_empty():
+		# frame the floor you fight on: the topology rect also counts the
+		# empty chunks around it, and centred arenas 38 and 42 off screen
+		var box := Rect2(_iso(_sorted[0].x + 0.5, _sorted[0].y + 0.5, 0), Vector2.ZERO)
+		for pos in _sorted:
+			box = box.expand(_iso(pos.x + 0.5, pos.y + 0.5, _cells[pos].alt))
+		cam.position = box.get_center()
+		cam.make_current()
+	elif topo.has("bounds"):
 		var b: Rect2i = topo.bounds
 		var center := _iso(b.get_center().x, b.get_center().y, 0)
 		cam.position = center

@@ -42,6 +42,13 @@ if [[ "$(uname -s)" != Darwin && -z "${DISPLAY:-}" ]]; then
 	DISPLAY_WRAP=(xvfb-run -a -s "-screen 0 1920x1080x24")
 fi
 
+## The previews never need a screen reader. On a desktop session with a
+## D-Bus bus but no AT-SPI service (QT_ACCESSIBILITY set), Godot's "auto"
+## mode starts accesskit anyway and it aborts the run (panic in
+## accesskit_unix: InterfaceNotFound) once a scrolled panel or a new window
+## updates the tree. Seen 2026-10-17 on the headless Linux box.
+A11Y_OFF=(--accessibility disabled)
+
 ## sprints/BACKLOG.md §7's cleanup convention: the real argv never carries
 ## --headless, just "--path ." — so this one pattern catches a leftover
 ## process from either lane, as ".../Contents/MacOS/Godot --path ." on macOS
@@ -93,7 +100,7 @@ run_visual() {
 		for res in 1280x720 800x600; do
 			echo "--- $scene @ $res ---"
 			scene_rc=0
-			${DISPLAY_WRAP[@]+"${DISPLAY_WRAP[@]}"} "$GODOT" --path . -w --resolution "$res" "res://$scene" || scene_rc=$?
+			${DISPLAY_WRAP[@]+"${DISPLAY_WRAP[@]}"} "$GODOT" --path . -w "${A11Y_OFF[@]}" --resolution "$res" "res://$scene" || scene_rc=$?
 			# Clean up before checking this run's result so a hung/crashed
 			# window never lingers, but don't let the cleanup's own exit
 			# status (e.g. "no process found") clobber scene_rc.
@@ -110,7 +117,7 @@ run_visual() {
 			echo "--- test/fight_ui_preview.tscn @ $res (1-bit) ---"
 			scene_rc=0
 			ARENA_ART_STYLE=onebit FIGHT_UI_SHOT=/tmp/fight-ui-onebit.png \
-				${DISPLAY_WRAP[@]+"${DISPLAY_WRAP[@]}"} "$GODOT" --path . -w --resolution "$res" \
+				${DISPLAY_WRAP[@]+"${DISPLAY_WRAP[@]}"} "$GODOT" --path . -w "${A11Y_OFF[@]}" --resolution "$res" \
 				res://test/fight_ui_preview.tscn || scene_rc=$?
 			cleanup_godot
 			if [[ "$scene_rc" -ne 0 ]]; then
