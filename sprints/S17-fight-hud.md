@@ -1,6 +1,6 @@
 # S17 — HUD de combate estilo Krosmaster
 
-**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟡 abierto — HUD hecho, a la espera del visto bueno del dueño · **Depende de:** S04
+**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟢 cerrado (2026-10-17) · **Depende de:** S04
 
 > El número es el de creación; el orden lo da la tabla de
 > [`README.md`](./README.md), donde va detrás de S04.
@@ -85,7 +85,7 @@ dueño propuso que esa información esté en la carta del personaje.
       papel) y con espectador.
 - [x] `test/fight_ui_preview.tscn` actualizado (comprueba que hay una carta
       por luchador y que no flota vida ni buffs); `./run_tests.sh` en verde.
-- [ ] Visto bueno del dueño en las dos resoluciones.
+- [x] Visto bueno del dueño (2026-10-17): "me parece bien tu diseño" (hojas 01–08, las dos resoluciones).
 
 ## Decisiones tomadas sin el dueño (2026-10-17, revisables)
 
@@ -111,6 +111,7 @@ Capturas en el Samba: recurso `codigo` → `capturas/s17/`.
 | 2026-10-17 | "Que coincida el área de colocación por tile, hay un offset raro" | **Media casilla de desfase**: el cliente (`aba_2.i/j`) y el arte ponen la celda (x, y) en `((x−y)·43, (x+y)·21,5)`; `fight_view` dibujaba zonas, anillos, auras y luchadores en `x+0,5, y+0,5`, 21,5 px más abajo. Corregido en `_iso`. Los luchadores usan ahora el ancla del `.anm`, como el cliente: `foot_pivot` (fila visible más baja) los subía ~8 px sobre su sombra y hasta 43 px a algunas invocaciones; el desfase anterior lo disimulaba | `10-casillas-alineadas.png` |
 | 2026-10-17 | "La imagen de colocación en 1 bit se ve rara; ¿aplicaste los filtros? Dijimos solo en animaciones" | En el juego **no hay filtro de luz/oscuridad** (`onebit.gdshader` solo lo usa la herramienta de render). Lo raro era: el suelo de la arena 48 convertido en un punteado gris uniforme, las zonas como relleno translúcido sobre la trama (puntos teñidos) y el aura sumándose a la zona. Cambiado: zonas como contorno doble del color del equipo (sin relleno) en 1 bit, sin aura durante la colocación, y las zonas de salida solo en la colocación (antes seguían todo el combate). Propuesta C: suelo más claro (`onebit.py --target=0.88 --detail=2.5`), **sin aplicar**, a elegir | `09-colocacion-1bit-ABC.png` |
 | 2026-10-17 | "A o B, cualquiera; el problema es que no hay profundidad: el cuadrado va por delante de la roca y del pj" | Las marcas de suelo (zonas, pedestales, casillas especiales, trampas/glifos, alcance, ruta, casilla bajo el ratón) entran en el orden de profundidad de `map_gfx` (`overlay_source`, `ground_key`: tras el suelo y los adornos planos de su casilla, antes de sus objetos); anillos y auras, justo antes de su luchador; arriba solo el texto. El cliente hace lo mismo (`wn_2.a`: el resaltado va tras el elemento de suelo de su casilla). Consecuencia: el césped alto de delante puede ocultar casi una casilla de colocación (arena 48), así que las zonas de salida llevan además un **contorno tenue** encima de todo (`ARENA_ZONE_GHOST=0` lo quita). Con profundidad, los contornos de B se perdían bajo la hierba en 1 bit: **zonas en relleno (A)**, sin aura durante la colocación | `11-profundidad.png`, `12-colocacion-real-profundidad.png` |
+| 2026-10-17 | "Deja el que has elegido" | Se queda el contorno tenue de las zonas de salida (por defecto) | — |
 
 ## Decisiones abiertas (dueño)
 
@@ -123,3 +124,28 @@ Capturas en el Samba: recurso `codigo` → `capturas/s17/`.
 Un combate real (`fight_smoke`) muestra toda la información de los
 luchadores en sus cartas, nada de vida ni buffs flota sobre el mapa, y el
 dueño da el visto bueno en las dos resoluciones.
+
+## Resultado (2026-10-17)
+
+Hecho: el HUD de cartas, medallión y banner, en los dos estilos y con
+espectador; la vida y los buffs ya no flotan sobre el mapa. Por el camino:
+el desfase de media casilla de todo lo que se dibuja sobre el mapa, el ancla
+de los luchadores, y las marcas tácticas en el orden de profundidad del
+mapa, como en el retail.
+
+Evidencia (2026-10-17, en esta máquina):
+
+- `./run_tests.sh` → exit 0 (unit: 6 suites, 158 checks; carril visual en
+  1280×720 y 800×600, también en 1 bit).
+- `fight_smoke` contra el servidor local, `ARENA_ART_STYLE=retail` y
+  `onebit` → exit 0, `TIMELINE cards=N expected=N active=1`.
+- Capturas en `capturas/s17/` (01–12).
+
+No hecho / sin verificar:
+
+- Probarlo con ratón y teclado de verdad (hover, clic en carta, Tab entre
+  cartas): las pruebas llaman a los manejadores.
+- Segundo medallión a la derecha para el enemigo: no se pidió.
+- Que las zonas de salida desaparezcan tras la colocación también en el
+  retail: se hizo así por criterio propio, sin comprobarlo en el cliente.
+
