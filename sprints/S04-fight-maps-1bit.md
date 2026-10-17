@@ -206,8 +206,13 @@ estilos y con `./run_tests.sh` completo.
 - [x] `test/fight_ui_preview.tscn` también con el estilo 1 bit: el carril
       visual de `run_tests.sh` lo pasa en las dos resoluciones si el mapa 10
       está convertido (2026-10-17).
-- [ ] Luces de ambiente: efectos puntuales (crítico, hechizo), antorchas;
-      y decodificar `contents/maps/light/<id>.jar`.
+- [ ] Luces de ambiente: efectos puntuales (crítico, hechizo), antorchas.
+- [x] Decodificar `contents/maps/light/<id>.jar` (2026-10-17):
+      [`client/analysis/MAP-LIGHT.md`](../client/analysis/MAP-LIGHT.md). No
+      son fuentes de luz sino **sombreado horneado por elemento** (clave
+      x, y, layer; multiplicador mediano 0,86 en las arenas, 5 % por debajo
+      de 0,38). Sirve de máscara de sombra para el ambiente suave; las luces
+      tipo antorcha serían el campo dinámico de scripts, sin localizar.
 - [ ] Repasar los colores de las ayudas tácticas (zonas de colocación,
       alcance, casillas especiales) para que casen con el 1 bit.
 - [ ] Rendimiento: la conversión de actores a línea es GDScript por píxel al

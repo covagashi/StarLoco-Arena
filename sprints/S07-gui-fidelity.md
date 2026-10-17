@@ -33,6 +33,14 @@ nativo con otro nombre, así que lo primero es confirmarlo.
 
 ## También
 
+- [ ] **Color de los mapas** (visto 2026-10-17, S04): el retail tiñe cada
+      elemento del mapa (tinte por elemento en `gfx/*.jar`, 70 % de los
+      elementos de arena, y sombreado horneado en `light/*.jar`) y nuestro
+      `map_gfx` lo ignora, así que las arenas salen más planas y claras.
+      Formato en [`client/analysis/MAP-LIGHT.md`](../client/analysis/MAP-LIGHT.md);
+      falta confirmar la mezcla final (¿texel × 2·tinte × luz?) contra una
+      captura del cliente retail y exportar el color por sprite.
+
 - [ ] El arte de las pantallas lleva letras en español horneadas: hacen falta
       variantes en/fr (`godot/DESIGN.md`).
 - [ ] El nivel de coach siempre sale 0 (`DESIGN.md`, "Current data limits").
