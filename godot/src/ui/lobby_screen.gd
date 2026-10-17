@@ -89,6 +89,7 @@ func _init() -> void:
 	_name = _label(Rect2(60, 158, 280, 36), "", 25)
 	_level = _label(Rect2(60, 194, 280, 26), "", 16)
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
+	OneBit.doll(_spr)
 	_spr.foot_pivot = true
 	_spr.position = Vector2(200, 443)
 	_spr.scale = Vector2(2.5, 2.5)

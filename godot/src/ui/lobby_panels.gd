@@ -418,6 +418,7 @@ func _fighter_creation() -> void:
 	stage.custom_minimum_size = Vector2(320, 330)
 	split.add_child(stage)
 	_preview = preload("res://src/anims/anm_sprite.gd").new()
+	OneBit.doll(_preview)
 	_preview.foot_pivot = true
 	_preview.position = Vector2(160, 300)
 	_preview.scale = Vector2(2.5, 2.5)

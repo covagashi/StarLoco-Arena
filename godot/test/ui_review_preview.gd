@@ -35,7 +35,8 @@ func _run() -> void:
 	var model := GuiModel.new()
 	model.set_value("localCoach", {"name": "Arel", "level": 8, "sex": 0,
 		"skin": 0, "hair": 0, "actorDirection": 5,
-		"actorDescriptorLibrary": "coach_7000", "actorMaterial": {}})
+		"actorDescriptorLibrary": "coach_7000",
+		"actorMaterial": Palettes.coach_tints(0, 0)})
 	var login := Login.new()
 	add_child(login)
 	await get_tree().process_frame

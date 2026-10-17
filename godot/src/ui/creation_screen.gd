@@ -103,6 +103,7 @@ func _init() -> void:
 	_box.add_child(ok)
 
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
+	OneBit.doll(_spr)
 	_spr.foot_pivot = true
 	_spr.position = DOLL_POS
 	_spr.scale = Vector2(DOLL_SCALE, DOLL_SCALE)

@@ -53,6 +53,9 @@ var tints := {}
 ##       bit of shading kept, no dither
 ## A static, because it is a renderer-wide choice, like the map art set.
 static var onebit_style := 0
+## Per-sprite override of onebit_style (-1 = follow the static). The menu
+## screens' coach doll is 1-bit (S18) while the lobby keeps the static at 0.
+var style := -1
 ## Outline colour for onebit_style 2 (alpha 0 = black, as in style 1).
 var team_color := Color(0, 0, 0, 0)
 
@@ -90,14 +93,15 @@ static var _anm_scripts = null
 func load_action(set_dir: String, action: String, tints := {}) -> bool:
 	set_dir = AssetPaths.normalize(set_dir)   # legacy res:// callers
 	var eff: Dictionary = tints if not tints.is_empty() else self.tints
-	if onebit_style == 3:
+	var st := style if style >= 0 else onebit_style
+	if st == 3:
 		eff = {}   # line art ignores the tints: one conversion for every palette
 	var key := "%s/%s" % [set_dir, action]
 	if not eff.is_empty():
 		key += _tint_key(eff)
-	if onebit_style > 0:
-		key += "|1b%d" % onebit_style
-		if onebit_style >= 2 and team_color.a > 0.0:
+	if st > 0:
+		key += "|1b%d" % st
+		if st >= 2 and team_color.a > 0.0:
 			key += team_color.to_html()
 	if _cache.has(key):
 		var c: Dictionary = _cache[key]
@@ -150,17 +154,17 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 		if img == null:
 			continue
 		var mimg: Image = null
-		if fr.get("mask", "") != "" and (not eff.is_empty() or onebit_style > 0):
+		if fr.get("mask", "") != "" and (not eff.is_empty() or st > 0):
 			mimg = AssetPaths.load_image_at("%s/%s" % [dir, fr.mask])
 		if not eff.is_empty() and mimg != null:
 			_apply_tints(img, mimg, eff)
-		if onebit_style == 3:
+		if st == 3:
 			_apply_lineart(img)
-		elif onebit_style == 4:
+		elif st == 4:
 			_apply_duotone(img, team_color if team_color.a > 0.0 else Color(0.5, 0.5, 0.5))
-		elif onebit_style > 0:
+		elif st > 0:
 			_apply_onebit(img, mimg, eff,
-				team_color if onebit_style >= 2 and team_color.a > 0.0 else Color.BLACK)
+				team_color if st >= 2 and team_color.a > 0.0 else Color.BLACK)
 		var w := int(fr.w)
 		var h := int(fr.h)
 		# lowest row containing visible pixels — the authored PNG bottom can

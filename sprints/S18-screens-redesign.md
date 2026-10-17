@@ -44,13 +44,15 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-17 | El fondo deja de ser la arena retail: **fondo decorativo propio** (`tools/make_onebit_bg.py`, en git). Menú y marcos, aprobados | dueño |
 | 2026-10-17 | Card Master nativo: **"Comprar" solo cuando la carta tiene precio**. La mayoría de sets del retail son solo trueque (precio 0), y entonces el trueque pasa a ser la acción principal. El trueque va en la misma ventana: tus cartas a la izquierda, la carta que quieres y lo ofrecido a la derecha | agente |
 | 2026-10-17 | **Arte de las cartas en trama 1 bit** (opción B), también los iconos de fichas: "el b". El azul del equipo y las muestras de pelo y piel siguen en color, porque significan algo | dueño |
+| 2026-10-17 | **El muñeco del coach y del luchador, en 1 bit**: "por mi pásalo a 1b". Dibujo a línea, el estilo de los luchadores en el combate 1 bit (`AnmSprite` estilo 3), en creación, lobby y nuevo luchador. Probé la trama de las cartas: el muñeco quedaba fantasmal y el pelo oscuro se perdía en el negro | dueño (el estilo, el agente) |
 | 2026-10-17 | **Card Master nativo aprobado**: "sí, me parece perfecto" | dueño |
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
 
 ## Por decidir con el dueño
 
-- Nada abierto. El muñeco del coach (creación, lobby) sigue en color: con
-  el arte de las cartas en trama, hay que preguntar si va también en 1 bit.
+- Con el muñeco en línea, el color de pelo y piel que eliges en la creación
+  ya no se ve en el muñeco (solo en las muestras). Hoja:
+  `codigo/capturas/s18/muneco-1bit.png`.
 
 ## Hojas de opciones
 
@@ -96,6 +98,7 @@ smoke, que la hace si la encuentra.
 | 2026-10-17 | "¿Puedes cambiar el background y poner algo más decorativo por tu parte? El menú y el framing me gusta." | Tres fondos propios en 1 bit (tablero, rayos, cartas), tranquilos en el centro | `tools/make_onebit_bg.py`, `assets/ui/onebit_bg_*.png` |
 | 2026-10-17 | "Sería Pippop Arena" | "PIPPOP" encima de "ARENA" | `login_screen.gd`, `lobby_screen.gd` |
 | 2026-10-17 | Arte de las cartas: "el b" (hoja `opciones-arte-cartas.png`) | Trama por defecto; `ARENA_CARD_ART=color` para comparar | `src/ui/onebit.gd` |
+| 2026-10-17 | Muñeco: "por mi pásalo a 1b" | Línea 1 bit; estilo por sprite (`AnmSprite.style`), `ARENA_DOLL_STYLE` para comparar | `onebit.gd`, `anm_sprite.gd`, creación, lobby, paneles |
 
 ## Siguiente paso (para la próxima sesión)
 
@@ -107,7 +110,7 @@ del diálogo retail, y eventos `native*` hacia los handlers de `main.gd`.
 `ShopDlg` y `BarterDlg` de `main.tscn` quedan de reserva y se retiran con
 los demás paneles de depuración.
 
-Pendiente del dueño: si el muñeco del coach pasa también a 1 bit.
+Pendiente del dueño: el visto bueno del muñeco en línea (`muneco-1bit.png`).
 
 ## Tareas candidatas
 

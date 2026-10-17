@@ -147,13 +147,31 @@ static func art_in_colour() -> bool:
 
 
 static func art_material() -> ShaderMaterial:
-	if art_in_colour():
-		return null
+	return null if art_in_colour() else dither_material()
+
+
+## The ordered dither alone, whatever ARENA_CARD_ART says.
+static func dither_material() -> ShaderMaterial:
 	if _art_mat == null:
 		_art_mat = ShaderMaterial.new()
 		_art_mat.shader = Shader.new()
 		_art_mat.shader.code = _ART_DITHER
 	return _art_mat
+
+
+## The coach doll on menu screens is 1-bit too (owner, 2026-10-17): line
+## art, the AnmSprite style of the 1-bit fights, so the coach looks the same
+## in the lobby and in a fight. ARENA_DOLL_STYLE=dither lays the card-art
+## dither over the colour doll instead; a number picks that AnmSprite style
+## (0 colour, 2 dither with skin and hair in colour).
+static func doll(spr) -> void:
+	var pick := OS.get_environment("ARENA_DOLL_STYLE")
+	spr.team_color = INK
+	if pick == "dither":
+		spr.style = 0
+		spr.material = dither_material()
+	else:
+		spr.style = int(pick) if pick.is_valid_int() else 3
 
 
 ## `fixed` sizes it by hand (for a parent without a layout rect, like the
