@@ -69,6 +69,20 @@ Hojas: `codigo/capturas/s18/tanda1-entrada.png` (login, creación, lobby) y
 | 2026-10-17 | "¿Puedes cambiar el background y poner algo más decorativo por tu parte? El menú y el framing me gusta." | Tres fondos propios en 1 bit (tablero, rayos, cartas), tranquilos en el centro | `tools/make_onebit_bg.py`, `assets/ui/onebit_bg_*.png` |
 | 2026-10-17 | "Sería Pippop Arena" | "PIPPOP" encima de "ARENA" | `login_screen.gd`, `lobby_screen.gd` |
 
+## Siguiente paso (para la próxima sesión)
+
+**Tanda 2: pantallas de los servicios**, empezando por el **Card Master
+nativo**, según el boceto B de `codigo/capturas/s18/opciones-cardmaster.png`:
+rejilla de cartas con su arte, detalle a la derecha y "Comprar" como acción
+principal (`OneBit.primary`). Sustituye `cardMasterDialog` (XML retail) y
+reutiliza `_open_shop` / `_push_cardmaster_model` y los handlers de compra y
+trueque de `main.gd`. Después: buzón, altar de fusión, cementerio,
+conversaciones (`ElementDlg`), tótems. La auditoría `test/world_smoke.gd`
+comprueba que cada servicio abre su diálogo; hay que actualizar su evidencia
+cuando cambie el diálogo.
+
+Pendiente del dueño: confirmar que el color se queda solo en el contenido.
+
 ## Tareas candidatas
 
 - [x] Hoja de 3 direcciones sobre las mismas tres pantallas (2026-10-17).
