@@ -1,32 +1,46 @@
 extends SceneTree
 
-## Live overworld check: login -> EnterInstance -> world view + a scripted
-## click-move. Run: godot --path godot -s test/world_smoke.gd
-## Uses the real Session autoload (it IS instantiated under -s; only the
-## global identifier doesn't resolve, so we grab the node by name).
+## S05 service audit: every service the walkable hall used to reach, through
+## the lobby's City panel, against a live server.
+##
+##   godot --path godot -s test/world_smoke.gd [-- --worlds=35,79] [--shot-dir=D]
+##
+## Needs a local server on 127.0.0.1:5555. The full tour takes ~4 minutes;
+## --worlds keeps only those stops (the Zaap/GM hop to each still runs).
+## --shot-dir (needs a real renderer: xvfb-run, not --headless) saves the
+## lobby, each world's City panel and the first Card Master it opens.
+##
+## Login -> lobby -> press the real "City" menu button -> press each service
+## button in the panel -> check the evidence that service leaves (its retail
+## dialog, its pane, or the server's reply) -> Zaap to the next island through
+## the panel's destination buttons. Worlds no Zaap card reaches (35, 79, 80,
+## 85) are visited with the GM /world command (the `test` account is admin)
+## and reported as such: their services work, but a player can't get there.
+##
+## Prints one "[audit]" line per service and exits 0 only if every one passed.
+## It replaces the old hall walk (`_main.get_node("World")`), which died with
+## the deprecated hall in S03.
 
 const Codec := preload("res://src/net/codec.gd")
-const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const CP1252 := preload("res://src/net/cp1252.gd")
 const State := preload("res://src/state.gd")
 
+## Island tour: [world, how to get there]. A card id travels through the City
+## panel's Zaap button; "gm" uses /world (not reachable by players).
+const TOUR := [[25, 204], [23, 202], [37, 255], [24, 203], [26, 208],
+	[27, 206], [28, 207], [35, "gm"], [79, "gm"], [80, "gm"], [85, "gm"]]
+
 var _sess: Node
 var _main
-var _entered := false
-var _npc_fight := false        # 8000 seen after the NPC "défi" reply
-var _npc_fight_done := false   # 8300 seen + 26321 acked
-var _errors := 0               # failed checks — decides the exit code
-
-
-func _fail(msg: String) -> void:
-	_errors += 1
-	push_error(msg)
+var _ready_count := 0          # 4516s seen — one per world entry
+var _seen := {}                # opcode -> times seen since the last reset
+var _results: Array = []       # [world, kind, label, ok, detail]
+var _shot_dir := ""
+var _shot_taken := {}
 
 
 func _init() -> void:
-	# autoloads are already instanced when a -s script's deferred work runs;
-	# give them a frame then drive through the real Session node.
 	await process_frame
 	_sess = root.get_node("Session")
 	_main = load("res://src/main.tscn").instantiate()
@@ -35,6 +49,17 @@ func _init() -> void:
 	_sess.connect_to("127.0.0.1", 5555)
 	await create_timer(0.5).timeout
 	_send_login()
+	if not await _wait(func(): return _ready_count > 0, 15.0):
+		push_error("[audit] never reached the lobby (no 4516)")
+		quit(2)
+		return
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--shot-dir="):
+			_shot_dir = a.trim_prefix("--shot-dir=")
+	await create_timer(1.0).timeout
+	await _shot("lobby")
+	await _tour()
+	_report()
 
 
 func _send_login() -> void:
@@ -54,10 +79,10 @@ func _send_login() -> void:
 	_sess.send(1025, a.raw(), 1)
 
 
-func _on_msg(op: int, raw: PackedByteArray) -> void:
-	var payload := WireReader.new(raw)
+func _on_msg(op: int, _raw: PackedByteArray) -> void:
+	_seen[op] = int(_seen.get(op, 0)) + 1
 	match op:
-		2048:
+		2048:   # coach list -> pick "test"
 			var w := WireWriter.new()
 			w.put_u8(4)
 			w.put_bytes("test".to_ascii_buffer())
@@ -65,849 +90,196 @@ func _on_msg(op: int, raw: PackedByteArray) -> void:
 			w.put_u8(1)
 			w.put_u8(0)
 			_sess.send(2049, w.raw(), 2)
-		2052:
-			var d := Codec.decode(op, payload)
-			State.my_coach_id = int(d.get("id", -1))
-			State.guild = d.get("guild", {})
-			print("[smoke] coach id=", State.my_coach_id,
-				" guild=", State.guild)
-		4600:
-			var d := Codec.decode(op, payload)
-			print("[smoke] enter world=", d.get("world_id"), " pos=",
-				d.get("x"), ",", d.get("y"), " alt=", d.get("alt"))
 		4516:
-			if not _entered:
-				_entered = true
-				print("[smoke] instance ready — world shown")
-				_move_and_shoot()
-		6006:
-			var d := Codec.decode(op, payload)
-			print("[smoke] roster:", d.fighters.map(func(f): return "%s breed=%d spells=%d cards=%d" % [
-				f.get("name", "?"), int(f.get("breed", 0)),
-				f.get("spells", []).size(), f.get("cards", []).size()]))
-		6030:
-			var d := Codec.decode(op, payload)
-			print("[smoke] presets:", d.presets.map(func(p): return "type=%d '%s' f=%d c=%d" % [
-				int(p.type), p.name, p.fighters.size(), p.coaches.size()]))
-		4096:
-			var d := Codec.decode(op, payload)
-			var body := WireReader.new(d.get("actors_raw", PackedByteArray()))
-			var n := body.get_i32()
-			print("[smoke] actor spawn n=", n)
-		3152:
-			print("[smoke] CHAT vicinity arrived")
-		3204:
-			print("[smoke] CHAT user-not-found reply")
-		3214:
-			print("[smoke] CHAT target-is-yourself reply")
-		6000:
-			var d := Codec.decode(op, payload)
-			print("[smoke] CREATE result=", d.result, " fid=", d.get("fighter_id"),
-				" name=", d.get("fighter", {}).get("name"))
-		6010:
-			print("[smoke] LOADOUT result byte=", raw[8])
-		23104:
-			print("[smoke] SEARCH accepted — queue live")
-		23102:
-			print("[smoke] SEARCH cancel result=", raw[0])
-		6020:
-			print("[smoke] PRESET save status=", raw[0])
-		6022:
-			print("[smoke] PRESET deleted ack")
-		4700:
-			var p := WireReader.new(raw)
-			print("[smoke] EMOTE played actor=", p.get_i64(), " anim=", p.get_str("u8"))
-		200:
-			var d := Codec.decode(op, payload)
-			print("[smoke] ELEMENT spawn n=", d.elements.size(),
-				" first=", d.elements[0] if not d.elements.is_empty() else {})
-		206:
-			var d := Codec.decode(op, payload)
-			print("[smoke] ELEMENT despawn n=", d.ids.size())
-		4001:
-			var d := Codec.decode(op, payload)
-			print("[smoke] WALLET:", d.currencies)
-		5200:
-			var d := Codec.decode(op, payload)
-			print("[smoke] INVENTORY stacks=", d.cards.size())
-		5401:
-			var d := Codec.decode(op, payload)
-			print("[smoke] SHOP catalog shop=", d.shop_id, " cards=", d.cards.size())
-		5403:
-			var d := Codec.decode(op, payload)
-			print("[smoke] SHOP result=", d.result, " wallet=", d.currencies)
-		3144:
-			var d := Codec.decode(op, payload)
-			print("[smoke] FRIENDS:", d.friends.map(
-				func(f): return "%s(online=%s)" % [f.name, f.get("online", false)]))
-		3146:
-			var d := Codec.decode(op, payload)
-			print("[smoke] IGNORED:", d.names)
-		3156:
-			var d := Codec.decode(op, payload)
-			print("[smoke] FRIEND added:", d.name)
-		3158:
-			var d := Codec.decode(op, payload)
-			print("[smoke] IGNORE added:", d.name)
-		3160:
-			var d := Codec.decode(op, payload)
-			print("[smoke] FRIEND removed:", d.name)
-		3162:
-			var d := Codec.decode(op, payload)
-			print("[smoke] IGNORE removed:", d.name)
-		3148:
-			var d := Codec.decode(op, payload)
-			print("[smoke] FRIEND online:", d.name)
-		3150:
-			var d := Codec.decode(op, payload)
-			print("[smoke] FRIEND offline:", d.name)
-		27511:
-			var d := Codec.decode(op, payload)
-			print("[smoke] DEMON LADDER demon=", d.get("demon"),
-				" rows=", d.get("rows", []).size(),
-				" affiliation=", d.get("affiliation"))
-		17003:
-			var d := Codec.decode(op, payload)
-			print("[smoke] TOURNAMENT CALENDAR events=", d.get("events", []).size(),
-				" first=", d.events[0].name if not d.events.is_empty() else "-")
-		28602:
-			var d := Codec.decode(op, payload)
-			print("[smoke] TOURNAMENT LIST n=", d.get("tournaments", []).size(),
-				" first=", d.tournaments[0].name
-					if not d.tournaments.is_empty() else "-")
-		22094:
-			var d := Codec.decode(op, payload)
-			print("[smoke] FIREWORK show card=", d.get("card"),
-				" at=", d.get("x"), ",", d.get("y"))
-		27501, 27503, 27505, 27507, 27509, 27513, 27515:
-			var d := Codec.decode(op, payload)
-			var rows: Array = d.get("rows", d.get("windows", []))
-			print("[smoke] LADDER ", op, " total=", d.get("total", "-"),
-				" rows=", rows.size(),
-				" myRank=", d.get("my_rank", "-"))
-		5491:
-			var d := Codec.decode(op, payload)
-			print("[smoke] FUSION result=", d.get("result"),
-				" obtained=", d.get("obtained"),
-				" missed=", d.get("not_obtained"),
-				" recovered=", d.get("recovered"))
-		8000:
-			# NPC "Lancer un défi" reply → the challenge fight started. The
-			# world scene is being replaced by fight_view — surrender from here.
-			print("[smoke] NPC CHALLENGE fight started (8000)")
-			_npc_fight = true
-			await create_timer(3.0).timeout
-			_sess.send(8151, PackedByteArray(), 3)
-		8300:
-			print("[smoke] NPC CHALLENGE ended (8300) — ack 26321")
-			_sess.send(26321, PackedByteArray(), 3)
-			_npc_fight_done = true
-		504:
-			var d := Codec.decode(op, payload)
-			print("[smoke] GUILD result type=", d.get("type"),
-				" code=", d.get("code"))
-		558:
-			var d := Codec.decode(op, payload)
-			print("[smoke] GUILD feed:", d.get("coach"),
-				"founded", d.get("guild"))
-		510, 552, 512:
-			var d := Codec.decode(op, payload)
-			print("[smoke] GUILD push ", op, ": ", d)
-		554, 556, 560:
-			var d := Codec.decode(op, payload)
-			print("[smoke] GUILD push ", op, ": ", d)
-		15001:
-			var d := Codec.decode(op, payload)
-			print("[smoke] MAIL list n=", d.mails.size(),
-				" first=", d.mails[0] if not d.mails.is_empty() else "-")
-		15003:
-			var d := Codec.decode(op, payload)
-			print("[smoke] MAIL send result=", d.result,
-				" echo=", d.mail.get("title", "?"))
-		15005:
-			var d := Codec.decode(op, payload)
-			print("[smoke] MAIL notice new=", d.new_count)
-		15007:
-			var d := Codec.decode(op, payload)
-			print("[smoke] MAIL taken mail=", d.mail_id,
-				" coach=", d.coach_id, " cards=", d.cards)
-		28608:
-			var d := Codec.decode(op, payload)
-			print("[smoke] TOURNAMENT register tid=", d.get("tournament_id"),
-				" code=", d.get("code"))
-		28630:
-			var d := Codec.decode(op, payload)
-			print("[smoke] TOURNAMENT search period tid=",
-				d.get("tournament_id"), " open=", d.get("open"))
-		28612:
-			var d := Codec.decode(op, payload)
-			print("[smoke] TOURNAMENT search result tid=",
-				d.get("tournament_id"), " accepted=", d.get("accepted"))
-		28616:
-			var d := Codec.decode(op, payload)
-			print("[smoke] TOURNAMENT search error ", d)
-		28650:
-			var d := Codec.decode(op, payload)
-			print("[smoke] TOURNAMENT bracket page=",
-				d.get("page"), " slots=", d.get("slots", {}).size())
-		2304:
-			print("[smoke] SEARCH 2304 — quick-search live")
-		2306:
-			print("[smoke] SEARCH 2306 cancel result=", payload.get_u8())
-		23004:
-			print("[smoke] SEARCH 23004 evo accepted=",
-				payload.get_i16(), ",", payload.get_u8())
-		23002:
-			print("[smoke] SEARCH 23002 evo cancel=", payload.get_i8())
-		28610:
-			print("[smoke] TOURNAMENT cancel result=", payload.get_i8())
-		22002:
-			var d := Codec.decode(op, payload)
-			print("[smoke] STATS 22002 — ", d.get("rows", []).size(),
-				" criteria")
+			_ready_count += 1
 
 
-func _move_and_shoot() -> void:
-	await create_timer(2.0).timeout
-	var w = _main.get_node("World")
-	if w._pos.has(State.my_coach_id):
-		var p: Vector3i = w._pos[State.my_coach_id]
-		w.click_to(Vector2i(p.x + 4, p.y + 2))
-		print("[smoke] scripted world move -> ", p.x + 4, ",", p.y + 2)
-	# chat exercise: real ChatBox submit path — vicinity (local echo + bubble),
-	# whisper-to-self (server -> 3214), whisper to a ghost (-> 3204), trade send.
-	var chat = _main.get_node("UI/Chat")
-	chat._on_submit("hola isla")
-	chat._on_submit("/w test mensaje para mi")
-	chat._on_submit("/w coach_fantasma_zz hola")
-	chat._on_submit("/t vendo cartas")
-	print("[smoke] chat lines sent (vicinity + /w self + /w ghost + /t)")
-	# fighter creation: drive the real dialog path
-	_main.get_node("UI/CreateDlg/VBox/Name").text = "Humo"
-	_main.get_node("UI/CreateDlg/VBox/Breed").select(7)   # Iop
-	_main._on_create_fighter()
-	print("[smoke] fighter create sent — expecting 6000 + 6006 push")
-	await create_timer(1.5).timeout
-	# loadout: pick the new fighter, tick 3 spells, save via 6011
-	var roster_list: ItemList = _main.get_node("UI/VBox/RosterBox/Roster")
-	for i in roster_list.item_count:
-		if roster_list.get_item_text(i).begins_with("Humo"):
-			roster_list.select(i)
-			break
-	_main._open_loadout()
-	var sp_box = _main.get_node("UI/LoadoutDlg/VBox/Scroll/Spells")
-	var ticked := 0
-	for cb in sp_box.get_children():
-		cb.button_pressed = ticked < 3
-		ticked += 1
-	_main._on_save_loadout()
-	print("[smoke] loadout sent — expecting 6010")
-	await create_timer(1.5).timeout
-	# kanodo: fighter 1 is the seeded evolution fighter (5000 xp, board 20
-	# root (29,4)). Its only lit frontier node is 14739 (bonus, 2 xp) —
-	# buy through the real pick path and verify in SQLite afterwards.
-	for i in roster_list.item_count:
-		if int(roster_list.get_item_metadata(i)) == 1:
-			roster_list.select(i)
-			break
-	_main._open_kanodo()
-	if _main._kanodo_fid > 0:
-		var n = _main.Kanodo.nodes.get(14739, {})
-		if not n.is_empty() and _main.get_node(
-				"UI/KanodoDlg/VBox/Scroll/Board")._lit.has(14739):
-			_main._on_sphere_pick(n)
-			_main._on_sphere_buy()
-			print("[smoke] kanodo buy sent — 23009 for sphere 14739 "
-				+ "(silent; check fighter_spheres in DB)")
-		else:
-			print("[smoke] kanodo: sphere 14739 not lit (already bought?)")
-		_main.get_node("UI/KanodoDlg").visible = false
-	else:
-		print("[smoke] kanodo skipped — no evolution fighter selected")
-	# coach equipment: open the Gear pane, wear the first equippable card at
-	# its fixed slot, send the 14-slot layout (5201) — verify pos in SQLite.
-	_main._open_equip()
-	var eq_cards: ItemList = _main.get_node("UI/EquipDlg/VBox/Cards")
-	if eq_cards.item_count > 0:
-		eq_cards.select(0)
-		_main._on_equip_card_sel(0)
-		_main._on_equip_wear()
-		print("[smoke] equipment layout sent — expecting coach_cards.pos in DB")
-	else:
-		print("[smoke] no equippable cards in inventory — skipping gear")
-	await create_timer(1.0).timeout
-	_main.get_node("UI/EquipDlg").visible = false
-	# team preset: save the whole roster as "Escuadra" → 6021 → 6030 re-push
-	_main._open_save_team()
-	_main.get_node("UI/SaveTeamDlg/VBox/Name").text = "Escuadra"
-	_main._on_save_team()
-	print("[smoke] preset save sent — expecting 6030 refresh")
-	await create_timer(1.0).timeout
-	# assign: move the selected fighter into the new preset via 6013
-	var preset_opt: OptionButton = _main.get_node("UI/VBox/TeamRow/Preset")
-	for i in preset_opt.item_count:
-		if preset_opt.get_item_text(i).begins_with("Escuadra"):
-			preset_opt.select(i)
-			break
-	_main._on_assign(true)
-	await create_timer(0.8).timeout
-	# emote → server relays 4700 back to us
-	chat._on_submit("/laugh")
-	print("[smoke] emote sent — expecting 4700")
-	# combattre queue: 23103 → expect 23104 searching, then 23101 → 23102
-	_main._on_fight_pressed()
-	await create_timer(1.0).timeout
-	_main._on_cancel_search()
-	print("[smoke] combattre + cancel sent — expecting 23104/23102")
-	await create_timer(1.0).timeout
-	# interactive elements: the 200 burst arrives on entry + after our move.
-	# The lobby island's Card Masters sit far from spawn — walk toward one and
-	# let the AoI refresh (server sends 200s as it enters range).
-	print("[smoke] elements in view:", State.elements.size())
-	var w2 = _main.get_node("World")
-	var card_master := -1
-	for id in State.elements:
-		if int(State.elements[id].get("kind", -1)) == 1:
-			card_master = int(id)
-			break
-	if card_master < 0:
-		var table := preload("res://src/gamedata/elements.gd").for_world(
-			State.current_world)
-		var cm_pos := Vector2i.ZERO
-		for id in table:
-			if int(table[id].type) == 1:
-				cm_pos = Vector2i(int(table[id].x), int(table[id].y))
-				card_master = int(id)
-				break
-		if card_master >= 0:
-			# step inside the master's chunk AoI (range ~2 chunks of 18 cells)
-			var target := cm_pos + Vector2i(-6, 0)
-			w2.click_to(target)
-			print("[smoke] walking toward card master at ", cm_pos,
-				" (via ", target, ")")
-			await create_timer(2.5).timeout
-			print("[smoke] elements in view now:", State.elements.size())
-	if card_master >= 0 and State.elements.has(card_master):
-		_main._use_element(card_master)   # same path as a marker click (201)
-		print("[smoke] card master clicked (id ", card_master, ") — expecting 5401")
-		await create_timer(1.0).timeout
-		var shop_list: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
-		if shop_list.item_count > 0:
-			shop_list.select(0)
-			_main._on_shop_pick(0)
-			_main._on_shop_buy()   # island Card Masters are barter-only → 5403
-			print("[smoke] shop buy sent — expecting 5403")
-	elif card_master >= 0:
-		print("[smoke] card master %d still out of AoI — skipping shop" %
-			card_master)
-	else:
-		print("[smoke] no card master in view — skipping shop exercise")
-	await create_timer(1.0).timeout
-	# social: friend/ignore a real coach (3156/3158), ghost → 3204, list echoes
-	chat._on_submit("/friend test2")
-	chat._on_submit("/friend coach_fantasma_zz")
-	chat._on_submit("/ignore test2")
-	chat._on_submit("/friends")
-	chat._on_submit("/ignored")
-	# mail with name-check: 15506 -> 15507 gates the 539 send
-	chat._on_submit("/mail test2 asunto|cuerpo del chequeo")
-	chat._on_submit("/mail coach_fantasma_zz asunto|cuerpo")
-	print("[smoke] /mail sent — expecting 15507 gate + mailbox refresh")
-	print("[smoke] social commands sent — expecting 3156 + 3204 + 3158")
-	await create_timer(1.0).timeout
-	chat._on_submit("/unfriend test2")
-	chat._on_submit("/unignore test2")
-	print("[smoke] unfriend/unignore sent — expecting 3160 + 3162")
-	await create_timer(1.0).timeout
-	# delete the preset → 6022 + 6030 refresh
-	_main._on_del_team()
-	await create_timer(1.0).timeout
-	# guild creation → 504 (403) + 510/552/512 pushes + 558 feed; needs a
-	# unique name across runs.
-	chat._on_submit("/guild Hermandad%d" % (randi() % 9000 + 1000))
-	print("[smoke] guild create sent — expecting 504 "
-		+ "(403 first run, 11 once 'test' already leads a guild)")
-	await create_timer(1.5).timeout
-	# --- element dialogs -----------------------------------------------------
-	# Island 25: mailbox(2) @33,36 — graveyard(10) @4,45 — fusion(14) @-45,-25.
-	# Dialogs are client-local; just check they open with the right title.
-	await _click_elem(2, Vector2i(33, 36), "Mailbox")
-	await create_timer(1.2).timeout
-	# Read the seeded letter → take its attachments (15006) → delete (15004).
-	# Pick the row with cards — sent letters list too and carry none.
-	var mlist: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
-	var midx := -1
-	for i in _main._mails.size():
-		if not _main._mails[i].get("cards", []).is_empty():
-			midx = i
-			break
-	if midx >= 0:
-		mlist.select(midx)
-		mlist.item_selected.emit(midx)
-		_main._on_element_act()
-		print("[smoke] mail take sent — expecting 15007")
-		await create_timer(1.0).timeout
-		if mlist.item_count > 0:
-			mlist.select(0)
-			mlist.item_selected.emit(0)
-			_main._on_element_alt()
-			print("[smoke] mail delete sent")
-			await create_timer(0.5).timeout
-	else:
-		print("[smoke] mailbox empty — SKIP take/delete")
-	# Compose one to test2 → 539 → 15003 echo.
-	chat._on_submit("/mail test2 Re:Objet|Bien recu, merci !")
-	print("[smoke] mail send — expecting 15003")
-	await create_timer(1.0).timeout
-	# Graveyard: with a dead fighter + a resurrection card seeded, selecting
-	# the fighter sends 22099 (card 305 is 100% — the roster refresh that
-	# follows is the confirmation).
-	await _click_elem(10, Vector2i(4, 45), "Graveyard")
-	var glist: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
-	var gact: Button = _main.get_node("UI/ElementDlg/VBox/Btns/ActBtn")
-	if glist.item_count > 0 and gact.visible:
-		glist.select(0)
-		glist.item_selected.emit(0)
-		_main._on_element_act()
-		print("[smoke] resurrect 22099 sent — expecting 6006 refresh")
-		await create_timer(1.0).timeout
-	else:
-		print("[smoke] no dead fighter/revive card — graveyard flow skipped")
-	# Fusion altar: pick two same-set inputs + a target, then 5490 → 5491.
-	await _click_elem(14, Vector2i(-45, -25), "Fusion altar")
-	var fus_list: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
-	var by_set := {}
-	for i in fus_list.item_count:
-		var cid := int(fus_list.get_item_metadata(i))
-		var s := int(preload("res://src/gamedata/cards.gd")
-			.meta(cid).get("set", 0))
-		by_set[s] = by_set.get(s, []) + [i]
-	var fused := false
-	for s in by_set:
-		var idxs: Array = by_set[s]
-		if idxs.size() >= 2:
-			fus_list.select(idxs[0], false)
-			fus_list.select(idxs[1], false)
-			_main._on_fusion_inputs()
-			var list2: ItemList = _main.get_node(
-				"UI/ElementDlg/VBox/Scroll2/List2")
-			if list2.item_count > 0:
-				list2.select(0)
-				_main._on_element_act()
-				print("[smoke] fusion 5490 sent (set ", s, ") — expecting 5491")
-				fused = true
-				await create_timer(1.0).timeout
-			break
-	if not fused:
-		print("[smoke] no same-set tradable pair — fusion send skipped")
-	# Zaap (at spawn 40,-20): open the teleport list, card 255 → world 37's
-	# route totémique zaap (134,45) — the main landmass, where the demon
-	# totems/challenges live (the tournament islet is zaap-only on purpose).
-	var zid := await _goto_elem(4, Vector2i(40, -20))
-	if zid >= 0:
-		_main._use_element(zid)
-		await create_timer(0.3).timeout
-		var zlist: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
-		for i in zlist.item_count:
-			if int(zlist.get_item_metadata(i)) == 255:
-				zlist.select(i)
-				break
-		_main._on_shop_buy()
-		print("[smoke] zaap teleport sent (card 255 → world 37)")
-		var t := 0
-		while int(State.current_world) != 37 and t < 20:
-			await create_timer(0.5).timeout
-			t += 1
-		print("[smoke] now in world=", State.current_world)
-		await create_timer(1.5).timeout
-		# Demon totem 76 (108,64) is in the landing AoI → 27510 → 27511.
-		await _click_elem(11, Vector2i(108, 64), "Demon totem")
-		await create_timer(0.8).timeout
-		# "Offer cards" → affiliate basket → 5470 → 5403 (guild leader gate —
-		# the /guild call above makes 'test' a leader of an unaffiliated clan).
-		_main._on_element_alt()
-		var offer_list: ItemList = _main.get_node(
-			"UI/ElementDlg/VBox/Scroll/List")
-		var offered := 0
-		for i in offer_list.item_count:
-			if offered < 2:
-				offer_list.select(i, false)
-				offered += 1
-		if offered > 0:
-			_main._on_element_act()
-			print("[smoke] demon offering sent — expecting 5403")
-			await create_timer(1.0).timeout
-		else:
-			print("[smoke] no tradable cards to offer — SKIP")
-		# World 37 is an archipelago of zaap-linked islets — hop again:
-		# zaap 138 → card 254 → Demon-I islet (zaap 70 at 132,126), where the
-		# challenge element 55 spawns right away.
-		var z2 := _elem_in_view(4)
-		if z2 >= 0:
-			_main._use_element(z2)
-			await create_timer(0.3).timeout
-			var zlist2: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
-			for i in zlist2.item_count:
-				if int(zlist2.get_item_metadata(i)) == 254:
-					zlist2.select(i)
-					break
-			_main._on_shop_buy()
-			print("[smoke] zaap hop sent (card 254 → demon islet)")
-			await create_timer(2.0).timeout
-			var cid := _elem_in_view(7)
-			if cid >= 0:
-				_main._use_element(cid)
-				await create_timer(0.3).timeout
-				print("[smoke] challenge bubble: kind=", _main._elem_kind,
-					" challenge=", _main._bubble_challenge)
-				_main.get_node("UI/ElementDlg").visible = false
-			else:
-				print("[smoke] no demon challenge in AoI — SKIP")
-		# Third hop: zaap → card 256 → tournament islet (totem 119 in AoI).
-		var z3 := _elem_in_view(4)
-		if z3 >= 0:
-			_main._use_element(z3)
-			await create_timer(0.3).timeout
-			var zlist3: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
-			for i in zlist3.item_count:
-				if int(zlist3.get_item_metadata(i)) == 256:
-					zlist3.select(i)
-					break
-			_main._on_shop_buy()
-			print("[smoke] zaap hop sent (card 256 → tournament islet)")
-			await create_timer(2.0).timeout
-			await _click_elem(13, Vector2i(121, 190), "Tournament totem")
-			await create_timer(0.8).timeout
-			# Register for the first listed tournament → 4607 → 28608.
-			var tlist: ItemList = _main.get_node(
-				"UI/ElementDlg/VBox/Scroll/List")
-			if tlist.item_count > 0:
-				tlist.select(0)
-				tlist.item_selected.emit(0)
-				_main._on_element_act()
-				print("[smoke] tournament register sent — expecting 28608")
-				await create_timer(1.0).timeout
-				# "Find opponent" — only armed when registered + period open.
-				if not _main.get_node(
-						"UI/ElementDlg/VBox/Btns/AltBtn").visible:
-					print("[smoke] AltBtn hidden — re-selecting row")
-					tlist.item_selected.emit(0)
-				_main._on_element_alt()
-				print("[smoke] tournament search sent — expecting 28612")
-				await create_timer(1.0).timeout
-				# Same button again = cancel (28609 → 28610).
-				_main._on_element_alt()
-				print("[smoke] tournament cancel sent — expecting 28610")
-				await create_timer(0.8).timeout
-				# Bracket — re-selecting the registered tournament asks
-				# 28649; 28650 fills the pane's second list.
-				tlist.item_selected.emit(0)
-				await create_timer(0.8).timeout
-				var l2: ItemList = _main.get_node(
-					"UI/ElementDlg/VBox/Scroll2/List2")
-				print("[smoke] bracket rows=%d" % l2.item_count)
-		# Fourth hop: zaap → card 208 → world 26 → firework launcher → 22095.
-		var z4 := _elem_in_view(4)
-		if z4 >= 0:
-			_main._use_element(z4)
-			await create_timer(0.3).timeout
-			var zlist4: ItemList = _main.get_node("UI/ShopDlg/VBox/Scroll/Cards")
-			for i in zlist4.item_count:
-				if int(zlist4.get_item_metadata(i)) == 208:
-					zlist4.select(i)
-					break
-			_main._on_shop_buy()
-			print("[smoke] zaap hop sent (card 208 → world 26)")
-			var t26 := 0
-			while int(State.current_world) != 26 and t26 < 20:
-				await create_timer(0.5).timeout
-				t26 += 1
-			var fid := await _goto_elem(12, Vector2i(39, 2))
-			if fid >= 0:
-				_main._use_element(fid)
-				await create_timer(0.3).timeout
-				var flist: ItemList = _main.get_node(
-					"UI/ElementDlg/VBox/Scroll/List")
-				if flist.item_count > 0:
-					flist.select(0)
-					_main._on_element_act()   # Launch → 22095 → 22094 echo
-					print("[smoke] firework launch sent — expecting 22094")
-					await create_timer(1.0).timeout
-	# Rankings window: open it and page through all seven tabs (each sends
-	# its 2750x request on arch 2; replies fill the list — logged above).
-	_main._open_ladder()
-	await create_timer(0.3).timeout
-	var tabs: OptionButton = _main.get_node("UI/LadderDlg/VBox/Tabs")
-	for i in tabs.item_count:
-		tabs.select(i)
-		_main._on_ladder_tab(i)
-		await create_timer(0.6).timeout
-		if tabs.get_item_text(i) == "Achievements":
-			var alist: ItemList = _main.get_node(
-				"UI/LadderDlg/VBox/Scroll/List")
-			var row0 := alist.get_item_text(0) if alist.item_count > 0 \
-				else ""
-			print("[smoke] ACHIEVEMENTS rows=%d row0='%s'" % [
-				alist.item_count, row0])
-			if alist.item_count == 0 or row0.begins_with("criterion"):
-				_fail("achievements tab empty or raw rows")
-			# detail select: hint picks up the achievement's description +
-			# per-condition progress line
-			alist.select(0)
-			alist.item_selected.emit(0)
-			await create_timer(0.2).timeout
-			print("[smoke] ACHIEVEMENT detail hint='%s'" % [
-				_main.get_node("UI/LadderDlg/VBox/Hint").text \
-					.replace("\n", " | ")])
-	var more: Button = _main.get_node("UI/LadderDlg/VBox/Btns/MoreBtn")
-	if not more.disabled:
-		_main._on_ladder_more()      # demons page 2 (start 12 → demons 13-24)
-		await create_timer(0.6).timeout
-	_main.get_node("UI/LadderDlg").hide()
-	# Coach statistics pane (2401 login push → State.coach_stats): named
-	# rows, never the raw stat ids.
-	_main._open_coach_stats()
-	var cslist: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
-	var cs0 := cslist.get_item_text(0) if cslist.item_count > 0 else ""
-	print("[smoke] COACH STATS rows=%d row0='%s' hint='%s'" % [
-		cslist.item_count, cs0,
-		_main.get_node("UI/ElementDlg/VBox/Hint").text])
-	if cslist.item_count == 0 or not cs0.begins_with("fights:"):
-		_fail("coach stats pane empty or wrong")
-	_main.get_node("UI/ElementDlg").visible = false
-	# Achievement-unlock toast — fabricate the 22000 push ([i16 id]); a card
-	# must land in ToastBox (id 1 "Winning Streak" is not hidden).
-	var av := WireWriter.new()
-	av.put_i16(1)
-	_main._on_message(22000, av.raw())
-	await create_timer(0.2).timeout
-	var tbox: VBoxContainer = _main.get_node("UI/ToastBox")
-	var ttxt := ""
-	if tbox.get_child_count() > 0:
-		ttxt = (tbox.get_child(0).get_child(0) as Label).text
-	print("[smoke] ACHIEVEMENT TOAST cards=%d text='%s'" % [
-		tbox.get_child_count(), ttxt])
-	if tbox.get_child_count() == 0 or not ttxt.contains("Winning Streak"):
-		_fail("achievement toast missing or unnamed")
-	# Search lanes: quick-search (2301 → 2304 → 2303 → 2306) and the
-	# evolution queue (23003 → 23004 → 23001 → 23002), each ack+cancel.
-	_main._on_quick_search()
-	await create_timer(0.8).timeout
-	_main._on_cancel_search()
-	await create_timer(0.8).timeout
-	_main._on_evo_search()
-	await create_timer(0.8).timeout
-	_main._on_cancel_search()
-	await create_timer(0.8).timeout
-	# Roster bench/titular toggle (23000) — flips state 0↔1, server
-	# pushes a fresh 6006 with the [bench] tag on the row.
-	var roster: ItemList = _main.get_node("UI/VBox/RosterBox/Roster")
-	if roster.item_count > 0:
-		roster.select(0)
-		roster.item_selected.emit(0)
-		_main._on_bench_fighter()
-		await create_timer(0.8).timeout
-		roster.select(0)            # the 6006 refresh cleared the selection
-		roster.item_selected.emit(0)
-		_main._on_bench_fighter()   # and back
-		await create_timer(0.8).timeout
-	# /resetPosition — real chat command path → 4514 (spawn teleport).
-	_main.log._on_submit("/reset")
-	await create_timer(0.8).timeout
-	# The dummy/headless renderer has no viewport texture — skip the capture.
-	if DisplayServer.get_name() != "headless":
-		var tex := root.get_texture()
-		var img = tex.get_image() if tex != null else null
-		if img != null:
-			img.save_png("/tmp/world_live.png")
-			print("[smoke] shot -> /tmp/world_live.png")
+func _wait(cond: Callable, secs: float) -> bool:
+	var t := 0.0
+	while not cond.call() and t < secs:
+		await create_timer(0.1).timeout
+		t += 0.1
+	return cond.call()
 
-	# --- NPC / demon element tour -------------------------------------------
-	# GM /WORLD <id> re-sends 4600 for the island (the 'test' account is admin).
-	# NOTE: the défi launch at the end starts a fight, which swaps the whole
-	# scene (this _main instance is freed) — it must run LAST.
-	var dlg: PanelContainer = _main.get_node("UI/ElementDlg")
 
-	# World 37 — Demon I (kind 9, paged monologue) + a DemonChallenge (kind 7).
-	_main.log._on_submit("/world 37")
-	await create_timer(1.5).timeout
-	var d1 := await _goto_elem(9, Vector2i(136, 124))
-	if d1 >= 0:
-		_main._use_element(d1)
-		await create_timer(0.3).timeout
-		print("[smoke] DEMON I '", dlg.get_node("VBox/Title").text,
-			"' p0='", dlg.get_node("VBox/Hint").text.substr(0, 40), "'")
-		# page through the monologue (Next ×2 → OK on the last page)
-		for _i in 3:
-			_main._on_element_act()
-			await create_timer(0.25).timeout
-		print("[smoke] DEMON I done — dialog visible:", dlg.visible)
-	var d7 := await _goto_elem(7, Vector2i(137, 137))
-	if d7 >= 0:
-		_main._use_element(d7)
-		await create_timer(0.3).timeout
-		print("[smoke] DEMON-CHALLENGE '", dlg.get_node("VBox/Title").text,
-			"' text='", dlg.get_node("VBox/Hint").text.substr(0, 40),
-			"' accept=", dlg.get_node("VBox/Btns/ActBtn").visible)
-		_main._on_element_alt()   # Refuse — a fight here would end the scene
-
-	# World 35 — zone triggers first (kind 8: standing on their cell list
-	# fires a client-side tutorial scenario) BEFORE Demon III — trigger 60's
-	# script 100 is blocked once achievement 275 (criteria 210+219) completes.
-	_main.log._on_submit("/world 35")
-	await create_timer(1.5).timeout
-	for cell in [Vector2i(179, 194), Vector2i(81, 115), Vector2i(115, 136)]:
-		_main.log._on_submit("/tp %d %d" % [cell.x, cell.y])
-		await create_timer(1.6).timeout       # 4600 re-enter + 200 element spawn
-		var k8 := 0
-		for id in _main.world._elems:
-			if _main.world._elems[id].kind == 8:
-				k8 += 1
-		print("[smoke]   tp ", cell, " my_cell=", _main.world.my_cell(),
-			" triggers=", _main.world.zone_triggers_at(_main.world.my_cell()),
-			" kind8-in-aoi=", k8)
-		await _dismiss_pages(dlg)
-	print("[smoke] ZONE TRIGGERS — criteria221=", State.criteria.get(221, 0),
-		" 219=", State.criteria.get(219, 0),
-		" fired=", _main._fired_triggers.keys())
-
-	# Demon III (kind 6). First visit reports criterion 210 and pages the
-	# intro; the picker tail needs achievements we haven't earned.
-	var d3 := await _goto_elem(6, Vector2i(116, 133))
-	if d3 >= 0:
-		_main._use_element(d3)
-		await create_timer(0.3).timeout
-		print("[smoke] DEMON III '", dlg.get_node("VBox/Title").text,
-			"' p0='", dlg.get_node("VBox/Hint").text.substr(0, 40), "'")
-		for _i in 3:
-			_main._on_element_act()
-			await create_timer(0.25).timeout
-		print("[smoke] DEMON III done — visible:", dlg.visible,
-			" criteria210=", State.criteria.get(210, 0))
-
-	# World 85 — Baan (kind 15, record-1500 tree) then the défi reply → 26330.
-	_main.log._on_submit("/world 85")
-	await create_timer(1.5).timeout
-	var npc := await _goto_elem(15, Vector2i(7, 9))
-	if npc < 0:
-		print("[smoke] NPC never entered AoI — SKIP")
-	else:
-		_main._use_element(npc)
-		await create_timer(0.4).timeout
-		var npc_list: ItemList = _main.get_node("UI/ElementDlg/VBox/Scroll/List")
-		print("[smoke] NPC '", dlg.get_node("VBox/Title").text,
-			"' speech='", dlg.get_node("VBox/Hint").text.substr(0, 45),
-			"' replies=", npc_list.item_count)
-		# Baan group 7: a single act=2 reply (criterion 219 → 22003) → next 8.
-		if npc_list.item_count > 0:
-			npc_list.item_selected.emit(0)
-			await create_timer(0.4).timeout
-			print("[smoke] NPC node 8 speech='",
-				dlg.get_node("VBox/Hint").text.substr(0, 45), "'")
-		# Group 48 carries the two "Lancer un défi" rows (act=1 → 26330
-		# [challengeId][mode]) — drive it directly to exercise the wire path.
-		_main._npc_node(48)
-		await create_timer(0.2).timeout
-		if npc_list.item_count > 0:
-			# The défi launch row is the reply with act=1 — not necessarily
-			# row 0 once unlocked criteria grow the subject list.
-			var launch := -1
-			for ri in _main._npc.get("replies", []).size():
-				if int(_main._npc["replies"][ri].get("act", 0)) == 1:
-					launch = ri
-					break
-			if launch < 0:
-				print("[smoke] no défi reply in node 48 — SKIP")
-			else:
-				print("[smoke] NPC défi replies=", npc_list.item_count,
-					" — launching", npc_list.get_item_text(launch)
-					.substr(0, 40))
-				npc_list.item_selected.emit(launch)
-			# 8000 arrives → _on_msg surrenders; wait for the 8300 + world return.
-			var w8 := 0
-			while not _npc_fight_done and w8 < 30:
-				await create_timer(1.0).timeout
-				w8 += 1
-			print("[smoke] NPC fight lifecycle: started=", _npc_fight,
-				" done=", _npc_fight_done)
-	# The 8300 debrief → post-fight result panel on whichever main scene ran
-	# OP_INSTANCE_READY (the original _main survives scene changes as a root
-	# child, so scan every live instance and take the one that popped).
-	await create_timer(1.5).timeout
-	var found := false
-	for c in root.get_children():
-		var rdlg: PanelContainer = c.get_node_or_null("UI/ElementDlg")
-		if rdlg == null:
+func _tour() -> void:
+	var only := []
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--worlds="):
+			for w in a.trim_prefix("--worlds=").split(","):
+				only.append(int(w))
+	for stop in TOUR:
+		var world := int(stop[0])
+		if not only.is_empty() and not world in only:
 			continue
-		var list: ItemList = rdlg.get_node("VBox/Scroll/List")
-		print("[smoke] RESULT PANEL visible=", rdlg.visible,
-			" title='", rdlg.get_node("VBox/Title").text,
-			"' rows=", list.item_count,
-			" row0='", (list.get_item_text(0) if list.item_count else ""),
-			"'")
-		if rdlg.visible:
-			found = true
-	print("[smoke] RESULT PANEL shown=", found)
-	if not found:
-		_fail("result panel never shown")
-	quit(0 if _errors == 0 else 1)
+		if State.current_world != world:
+			var before := _ready_count
+			if str(stop[1]) == "gm":
+				_main.log._on_submit("/world %d" % world)
+			else:
+				var b := await _city_button("nativeZaap", int(stop[1]))
+				if b == null:
+					_record(world, 4, "Zaap", false,
+						"no enabled destination button for card %s" % stop[1])
+					continue
+				b.pressed.emit()
+			var ok: bool = await _wait(func(): return _ready_count > before \
+				and State.current_world == world, 8.0)
+			_record(world, 4, "Zaap" if str(stop[1]) != "gm" else "/world (GM)",
+				ok, "world now %d" % State.current_world)
+			if not ok:
+				continue
+			await create_timer(0.8).timeout
+		await _audit_world(world, str(stop[1]) == "gm")
 
 
-## First spawned element id of `kind`, or -1 while it's still out of the AoI.
-func _elem_in_view(kind: int) -> int:
-	for id in State.elements:
-		if int(State.elements[id].get("kind", -1)) == kind:
-			return int(id)
-	return -1
-
-
-## Walk toward `target` until an element of `kind` enters the AoI (the server
-## pushes 200 spawns as chunks refresh). Returns the element id or -1.
-func _goto_elem(kind: int, target: Vector2i) -> int:
-	var w = _main.get_node("World")
-	var eid := _elem_in_view(kind)
-	var tries := 0
-	while eid < 0 and tries < 8:
-		var cp: Vector3i = w._pos.get(State.my_coach_id, Vector3i.ZERO)
-		var path: Array = w._find_path(Vector2i(cp.x, cp.y), target) \
-			if w._pos.has(State.my_coach_id) else []
-		print("[smoke] goto kind=", kind, " try=", tries,
-			" coach=", cp, " path=", path.size(),
-			" loaded=", w._loaded, " cells=", w._cells.size())
-		w.click_to(target)
-		await create_timer(2.5).timeout
-		eid = _elem_in_view(kind)
-		tries += 1
-	return eid
-
-
-## Walk to the element if needed, click it (201 + local dialog), and report the
-## dialog title so the log shows which pane opened.
-func _click_elem(kind: int, target: Vector2i, want_title: String) -> void:
-	var eid := await _goto_elem(kind, target)
-	if eid < 0:
-		print("[smoke] element kind=", kind, " never entered AoI — SKIP")
+## Open City, then press every service button it lists for this world.
+func _audit_world(world: int, gm_only: bool) -> void:
+	var panel = await _open_city()
+	if panel == null:
+		_record(world, -1, "City panel", false, "did not open")
 		return
-	_main._use_element(eid)
-	await create_timer(0.4).timeout
-	var dlg = _main.get_node("UI/ElementDlg")
-	var shop = _main.get_node("UI/ShopDlg")
-	if dlg.visible:
-		print("[smoke] ELEM kind=", kind, " id=", eid,
-			" dialog='", dlg.get_node("VBox/Title").text, "'")
-	elif shop.visible:
-		print("[smoke] ELEM kind=", kind, " id=", eid, " → shop/zaap pane")
+	await _shot("city-%d" % world)
+	var city: Dictionary = _main._gui.gui.model.get_value("city")
+	if city == null or city.get("groups", []).is_empty():
+		_record(world, -1, "City panel", false, "no services listed")
+		return
+	var services: Array = []
+	for g in city.groups:
+		for s in g.services:
+			services.append([int(g.kind), s])
+	_close_all()
+	for entry in services:
+		var kind: int = entry[0]
+		var s: Dictionary = entry[1]
+		var b := await _city_button("nativeUseElement", int(s.id))
+		if b == null:
+			_record(world, kind, str(s.label), false, "button missing")
+			continue
+		_seen.clear()
+		b.pressed.emit()
+		var res: Array = await _evidence(kind)
+		if kind == 1 and bool(res[0]) and not _shot_taken.has(world):
+			_shot_taken[world] = true
+			await _shot("cardmaster-%d" % world)
+		var note := str(res[1]) + (" [GM-only world]" if gm_only else "")
+		_record(world, kind, str(s.label), bool(res[0]), note)
+		_close_all()
+		await create_timer(0.2).timeout
+
+
+## What each kind must leave behind within a couple of seconds.
+func _evidence(kind: int) -> Array:
+	var dlg: Control = _main.get_node("UI/ElementDlg")
+	var elem_open := func(): return dlg.visible
+	match kind:
+		1:
+			var ok: bool = await _wait(func(): return _seen.has(5401) \
+				and _main._gui.is_open("cardMasterDialog"), 3.0)
+			return [ok, "5401 + cardMasterDialog"]
+		2:
+			var ok: bool = await _wait(func(): return _seen.has(15001) \
+				and _main._gui.is_open("mailboxDialog"), 3.0)
+			return [ok, "15001 + mailboxDialog (%d letters)" % _main._mails.size()]
+		10:
+			var ok: bool = await _wait(elem_open, 2.0)
+			return [ok, "graveyard pane '%s'" % _title()]
+		14:
+			var ok: bool = await _wait(func(): return _main._gui.is_open("fusionLabDialog"), 2.0)
+			return [ok, "fusionLabDialog"]
+		12:
+			var ok: bool = await _wait(func(): return _main._gui.is_open("fireworkDialog") \
+				or dlg.visible, 2.0)
+			return [ok, "fireworkDialog" if _main._gui.is_open("fireworkDialog") else "firework pane"]
+		11:
+			var ok: bool = await _wait(func(): return _seen.has(27511) and dlg.visible, 3.0)
+			return [ok, "27511 demon ladder + pane"]
+		13:
+			var ok: bool = await _wait(func(): return _seen.has(17003), 3.0)
+			return [ok, "17003 calendar%s" % (" + 28602 list" if _seen.has(28602) else "")]
+		3, 6, 7:
+			var ok: bool = await _wait(elem_open, 2.0)
+			var rows: int = _main.get_node("UI/ElementDlg/VBox/Scroll/List").item_count
+			return [ok, "pane '%s', %d rows" % [_title(), rows]]
+		5, 9, 15:
+			var ok: bool = await _wait(elem_open, 2.0)
+			return [ok and _title() != "", "pane '%s'" % _title()]
+	return [false, "no check for kind %d" % kind]
+
+
+func _shot(name: String) -> void:
+	if _shot_dir == "" or DisplayServer.get_name() == "headless":
+		return
+	await create_timer(0.6).timeout
+	var img := root.get_texture().get_image()
+	if img != null:
+		img.save_png(_shot_dir.path_join(name + ".png"))
+		print("[audit] shot ", name)
+
+
+func _title() -> String:
+	return str(_main.get_node("UI/ElementDlg/VBox/Title").text)
+
+
+## Press the lobby's City menu button (the real entry, not a shortcut).
+func _open_city():
+	_close_all()
+	var lobby = _main._lobby_screen
+	if lobby == null:
+		return null
+	for b in lobby._menu_buttons:
+		if b.text == root.get_node("I18n").t("nav.city"):
+			b.pressed.emit()
+			break
+	await create_timer(0.3).timeout
+	return _main._gui.dialogs.get("cityDialog")
+
+
+## The panel button that fires `event` with this id/card (opens City first).
+func _city_button(event: String, id: int) -> Button:
+	var panel = await _open_city()
+	if panel == null:
+		return null
+	var city: Dictionary = _main._gui.gui.model.get_value("city")
+	var want := ""
+	if event == "nativeZaap":
+		for d in city.get("zaaps", []):
+			if int(d.card) == id and not bool(d.get("here", false)):
+				want = str(d.name)
 	else:
-		print("[smoke] ELEM kind=", kind, " id=", eid, " — no dialog!")
+		for g in city.get("groups", []):
+			for s in g.services:
+				if int(s.id) == id:
+					want = str(s.label)
+	if want == "":
+		return null
+	var found: Array = []
+	_collect_buttons(panel, want, found)
+	# Same label twice (two Card Masters of one catalogue) — the panel lists
+	# them in id order, and so do we.
+	return found[0] if not found.is_empty() else null
 
 
-## Page through any open ElementDlg (zone-trigger scenario / NPC pages)
-## until it closes — Next/OK via ActBtn, bounded so a stuck dialog can't hang.
-func _dismiss_pages(dlg: PanelContainer) -> void:
-	var guard := 0
-	while dlg.visible and guard < 16:
-		var hint: String = dlg.get_node("VBox/Hint").text
-		print("[smoke]   page '", hint.substr(0, 42).replace("\n", " "), "'")
-		_main._on_element_act()
-		await create_timer(0.3).timeout
-		guard += 1
+func _collect_buttons(node: Node, text: String, out: Array) -> void:
+	for c in node.get_children():
+		if c is Button and not c.disabled and c.text == text:
+			out.append(c)
+		_collect_buttons(c, text, out)
+
+
+func _close_all() -> void:
+	for n in _main._gui.dialogs.keys():
+		_main._gui.close(n)
+	_main.get_node("UI/ElementDlg").visible = false
+
+
+func _record(world: int, kind: int, label: String, ok: bool, detail: String) -> void:
+	_results.append([world, kind, label, ok, detail])
+	print("[audit] %s world=%d kind=%d %s — %s" % [
+		"OK  " if ok else "FAIL", world, kind, label, detail])
+
+
+func _report() -> void:
+	var fails := _results.filter(func(r): return not r[3])
+	print("[audit] %d checks, %d failed" % [_results.size(), fails.size()])
+	quit(0 if fails.is_empty() else 1)

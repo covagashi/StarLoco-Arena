@@ -57,7 +57,7 @@ back to the volumetric topology renderer.
 ```bash
 godot --path godot -s test/fight_smoke.gd      # graphical (screenshots)
 godot --headless --path godot -s test/fight_smoke.gd
-godot --path godot -s test/world_smoke.gd      # island + roster + chat + presets + emote + combattre
+godot --headless --path godot -s test/world_smoke.gd   # S05 audit: every hall service via the lobby City panel
 godot --path godot -s test/pvp_smoke.gd        # two-client challenge → real PvP fight
 godot --headless --path godot -s test/summon_smoke.gd  # mid-fight summon: breed-2 fighter + spell 51 → real cast → 8120 spawn
 godot --headless --path godot -s test/displace_smoke.gd # displacement: teleport 12 / push 67 / swap 135 → 8120 moves the sprites
@@ -78,40 +78,25 @@ and its morale/tiredness/xp/dead fields applied back onto the roster
 entries like retail `adY.dz`) → `26321` ack → `4600` back to overworld →
 repeat.
 
-`world_smoke` also exercises: vicinity/whisper/trade chat (local echo +
-`3214`/`3204` replies), the real mailbox (`15000`→`15001` list → `15006`
-take → `15007`, `15004` delete, `/mail` compose → `539`→`15003` echo),
-fighter create `6000` + loadout `6010`, team
-preset save `6021` (or `6020` status 25 on a name clash) + assign `6013` +
-delete `6023`, an emote round-trip `4701`→`4700`, the ranked queue
-`23103`→`23104`→cancel `23101`→`23102`, **element AoI** (`200` spawn on
-entry + walking to a Card Master's chunk → `201` → `5401` catalogue →
-`5450` buy → `5403`), wallet `4001` + inventory `5200`, and the social
-flow (`/friend` `3156`, `/ignore` `3158`, removes `3160`/`3162`, ghost
-`3204`, `/friends` `/ignored` list echoes), and the element dialogs:
-mailbox + graveyard + fusion altar panes on island 25, then a Zaap hop
-(`4512` card 255) to world 37 — demon totem `27510`→`27511`, another hop
-(card 254) to the demon islet for the challenge bubble (`26330` ready),
-a third hop (card 256) to the tournament islet for `17002`/`28601` →
-`17003`/`28602` + a real registration `4607`→`28608` (persisted in
-`tournament_registrations`) + the "Find opponent" `28611`→`28612`
-ready-up, and a fourth (card 208) to world 26's
-firework launcher → `22095` → `22094` echo. It also creates a guild via
-`/guild <name>` (`509`→`504` + `558` feed), and at the demon totem the
-"Offer cards" basket sends `5470`→`5403` — verified in SQLite
-(`guilds.demon_id`, `guild_demon_reputations`). The rankings window is
-paged tab-by-tab: `27500`→`27501` (real 1v1 rows + my rank), `27508`→
-`27509`, `27504`→`27505`, `27502`→`27503` (real guild rows), `27506`→
-`27507`, `27514`→`27515`, and `27512`→`27513` demons 1-12 then 13-24 via
-"More". The run ends with a GM `/world` tour of the NPC/demon elements:
-world 37 Demon I (kind 9, paged monologue) + a DemonChallenge bubble
-(kind 7), world 35 `/tp` cell tour over the kind-8 ZoneTriggers
-(scenario 100's 11-page new-coach monologue + criterion `221`, the
-Class Masters and Demon III teasers — queued so overlapping zones play
-in order) followed by Demon III itself (kind 6 — first contact reports
-criterion `210` via `22003`, then pages the intro), and world 85's Baan
-(kind 15, record-1500 tree) whose défi reply launches `26330` with the
-challenge's own mode → `8000` fight → surrender → `8300` → `26321`.
+`world_smoke` is the S05 service audit (rewritten 2026-10-17; the old hall
+walk died with the deprecated hall). It logs in, presses the lobby's
+**City** menu button and, island by island, presses every service button
+the City panel lists, checking the evidence each one leaves: Card Master
+`201`→`5401` + `cardMasterDialog`, mailbox `15000`→`15001` +
+`mailboxDialog`, graveyard / challenge / demon / breed-master / NPC panes,
+fusion and firework dialogs, demon totem `27510`→`27511`, tournament totem
+`17002`→`17003` (+ `28601`→`28602`). It travels with the panel's Zaap
+buttons (`4512` → `4600` + `4516`) over worlds 25, 23, 37, 24, 26, 27, 28,
+then uses GM `/world` for 35, 79, 80 and 85, which no Zaap card reaches.
+One `[audit]` line per service; exit 0 only if all pass (110 checks).
+`-- --worlds=25,37` runs part of the tour; `--shot-dir=D` (under
+`xvfb-run`) saves the lobby, each City panel and a Card Master.
+
+What the old hall smoke also drove — chat, fighter creation and loadout,
+presets, the ranked queues, social and guild commands, mail compose and
+take, tournament registration and bracket (`28649`), the rankings tabs,
+the NPC défi fight (`26330` → `8000`) — is **not** re-covered by it; see
+`sprints/S05-lobby-services.md`.
 
 `pvp_smoke` runs the two-coach trade + fight loop: a second socket logs
 in as `test2`, the main client trades with it first (`5101` invite → bot

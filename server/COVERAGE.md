@@ -298,7 +298,7 @@ pieces: the other sub-boards (evolution/team/etc., 27504–27552).
 | 23006 | `azl_0` EvolutionFightStarting | S2C | ✓ | A (empty) | — | ✓ **live** |
 | 23008 | `KL` EvolutionSearchError | S2C | ✓ | A (`[i8 code]`) | — | ✓ |
 | 23009 | `aow_2` SphereBuy (Kanodo) | C2S | ✓ | A (`[i64 fighterId][i32 sphereId][i32 cardTemplateId]`) | — | ✓ **live** |
-| 26330 | `alv_1` TeamTest / challenge launch | C2S | ✓ | A (`[i32 id][i16]`; b=99 bubble/breedmaster, b=teamId Tester, b=challenge.`Qu()` NPC-dialog défi — all three dispatch) | ✓ | ✓ (godot world_smoke: Baan group 48 défi → 8000) |
+| 26330 | `alv_1` TeamTest / challenge launch | C2S | ✓ | A (`[i32 id][i16]`; b=99 bubble/breedmaster, b=teamId Tester, b=challenge.`Qu()` NPC-dialog défi — all three dispatch) | ✓ | ✓ (go e2e `challenge_fight_test.go`; the godot world_smoke défi run was retired in S05) |
 
 **There are THREE parallel copies of this handshake**, one per team-panel tab,
 consumed by three near-identical client frames: `vu_1` (classic/Elite), `wp_0`
@@ -366,7 +366,7 @@ result dialog.
 | 26332 | SpectateTeardown | S2C | defined, unused | — | — | — (teardown goes through 8300+26321) |
 | 26333 | ReconnectFightQuestion | S2C | ✓ | A (empty) | — | ✓ (godot pvp_smoke mid-fight drop) |
 | 26334 | ReconnectFightAnswer | C2S | ✓ | A (u8 accept) | — | ✓ |
-| 28649 | TournamentTreeReq | C2S | ✓ | A (i64 tid, i32 page, str32 name) | — | ✓ (godot world_smoke) |
+| 28649 | TournamentTreeReq | C2S | ✓ | A (i64 tid, i32 page, str32 name) | — | ✓ (go e2e `TestTournamentTreeEmpty`; the godot world_smoke run was retired in S05) |
 | 28650 | TournamentTree | S2C | ✓ | A (i32 page, i32 n, slot/name pairs, i32 unread) | — | ✓ |
 
 ---
