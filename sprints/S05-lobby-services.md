@@ -71,9 +71,8 @@ Leído, no probado todavía. La prueba de punta a punta es la tarea 1.
       vez y **congelaba el cliente 66 s** al reabrirlo con un catálogo grande.
       Arreglado en la capa GUI (ver Resultado).
 - [x] Mundos 35, 79, 80 y 85: investigado en el cliente (veredictos en
-      "Mundos sin Zaap", abajo). 35 es la isla del tutorial → S10. Para 79, 80
-      y 85 no hay ruta retail conocida: siguen solo con `/world`, y se
-      pregunta al dueño si van al panel.
+      "Mundos sin Zaap", abajo). 35 es la isla del tutorial → S10.
+      **79, 80 y 85 descartados por el dueño** (lobby y ligas, no mundos).
 - [x] Cartas especiales: la carta 214 "Pacte" abre la creación de clan, como
       en el retail. Los tipos 22 y 23 son partes del emblema de clan y no hay
       ninguna carta de esos tipos en los datos: descartados. El resto, abajo.
@@ -173,10 +172,10 @@ lectura del código, con las citas en el devlog.
 - **85, Gostof**: isla de ayuda (Baan y los Gostof explican élite,
   evolución, 2v2 y torneos). Ruta retail desconocida.
 
-**Pregunta al dueño** (pendiente): ¿se añaden 79, 80 y 85 a los destinos del
-panel "Ciudad", o se quedan solo para GM? No son arenas: 79 repite los retos
-del 37, 80 es una tienda (con el catálogo roto, S08) y 85 son diálogos de
-ayuda, que encajan en S10.
+**Decisión del dueño (2026-10-17): 79, 80 y 85 descartados.** "No hace falta
+abrir mundos: quitamos los mapas para tener un lobby y ligas PvE/PvP." El
+juego no va de islas: lo que el retail tenía en una isla se trae al lobby,
+no se abre el mundo.
 
 ### Cartas especiales
 
