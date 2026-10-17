@@ -11,7 +11,13 @@ extends SceneTree
 ##       [--ambient=1] [--falloff=1.5] [--lights="x,y,r,i;..."] \
 ##       [--hud] [--overlays] [--debug=0..4] [--world=color|1bit] \
 ##       [--actors=color|onebit|team|line|duo] [--fighters] \
-##       [--marks=none|cell|aura|ring]
+##       [--marks=none|cell|aura|ring] [--batch=DIR [--maps=1,2,…]]
+##
+## --batch=DIR renders every fight map of the art set (--world picks it) to
+## DIR/<id>.png with the same knobs, and writes DIR/index.txt: one line per
+## map, "ok", "skip" (no .fmd: an overworld map, not an arena) or why it failed
+## (no art, no arena cells, missing textures, fell back to the retail art,
+## save error, a blank frame). Exits 1 if any arena failed.
 ##
 ## --actors picks the AnmSprite 1-bit style (onebit = 1 bit + the actor's own
 ## mask colours; team = that plus a team-colour outline). --fighters places
@@ -119,10 +125,116 @@ func _run() -> void:
 	layer.add_child(rect)
 	root.add_child(layer)
 
+	if opt.batch != "":
+		root.remove_child(scene)
+		scene.free()
+		quit(await _batch(opt))
+		return
 	if not await _save(opt.out):
 		quit(1)
 		return
 	quit(0)
+
+
+## Every map of the art set under the same filter, each in a fresh
+## fight_view: reusing one scene let a huge world (map 0, 327k sprites)
+## black out every map after it. Returns the exit code: 0 when every arena
+## rendered with all its textures and something on screen.
+func _batch(opt: Dictionary) -> int:
+	var src := "mapgfx_1bit" if opt.world == "1bit" else "mapgfx"
+	var ids: Array[int] = []
+	for f in DirAccess.get_files_at(AssetPaths.dir(src)):
+		if f.ends_with(".json") and f.get_basename().is_valid_int():
+			ids.append(int(f.get_basename()))
+	ids.sort()
+	if not opt.maps.is_empty():
+		ids = ids.filter(func(i): return i in opt.maps)
+	if ids.is_empty():
+		printerr("[render] no maps in %s (convert them first?)" % src)
+		return 1
+	DirAccess.make_dir_recursive_absolute(opt.batch)
+	var lines := PackedStringArray()
+	var failed := 0
+	var skipped := 0
+	var t0 := Time.get_ticks_msec()
+	# fight_view picks the art set itself in _ready (ArtStyle reads the env)
+	OS.set_environment("ARENA_ART_STYLE", "onebit" if opt.world == "1bit" else "retail")
+	var scene: Node2D = null
+	for id in ids:
+		if scene != null:
+			root.remove_child(scene)
+			scene.free()
+		scene = load("res://src/fight/fight_view.tscn").instantiate()
+		scene.get_node("UI/TopBar/MapId").text = str(id)   # _ready loads it
+		root.add_child(scene)
+		root.move_child(scene, 0)   # under the filter layer
+		AnmSpriteScript.onebit_style = ACTOR_STYLES[opt.actors]
+		RenderingServer.set_default_clear_color(Color.BLACK)
+		scene.get_node("UI").visible = opt.hud
+		scene.overlays_visible = opt.overlays
+		scene.queue_redraw()
+		await process_frame
+		scene.cam.reset_smoothing()   # no pan from the origin into the shot
+		await create_timer(0.3).timeout
+		if scene._fmd.is_empty():
+			# the server's rule (gamedata.LoadFightMaps): a world is an arena
+			# only if its fight jar holds a non-empty .fmd — 47 of the 114
+			# worlds in 2.70; the rest are overworld topologies sharing ids
+			skipped += 1
+			lines.append("%d skip not an arena (no .fmd)" % id)
+			continue
+		var why := _batch_check(scene, src, id)
+		var out: String = opt.batch.path_join("%d.png" % id)
+		if why.is_empty() and not await _save(out):
+			why = "save failed"
+		if why.is_empty():
+			var lit := _lit_fraction(Image.load_from_file(out))
+			if lit < 0.02:
+				why = "blank render (%.1f%% lit) — art outside the arena view?" % (lit * 100.0)
+		if why.is_empty():
+			lines.append("%d ok" % id)
+		else:
+			failed += 1
+			lines.append("%d FAIL %s" % [id, why])
+			printerr("[render] map %d: %s" % [id, why])
+	lines.append("# %d maps, %d arenas, %d failed, %.1f s" % [ids.size(),
+		ids.size() - skipped, failed, (Time.get_ticks_msec() - t0) / 1000.0])
+	var idx := FileAccess.open(opt.batch.path_join("index.txt"), FileAccess.WRITE)
+	if idx != null:
+		idx.store_string("\n".join(lines) + "\n")
+	print("[render] batch: %d maps, %d not arenas, %d failed -> %s" % [
+		ids.size(), skipped, failed, opt.batch.path_join("index.txt")])
+	return 0 if failed == 0 else 1
+
+
+## Share of pixels that are not the black void, sampled on a coarse grid.
+static func _lit_fraction(img: Image) -> float:
+	if img == null:
+		return 0.0
+	var n := 0
+	var lit := 0
+	for y in range(0, img.get_height(), 8):
+		for x in range(0, img.get_width(), 8):
+			n += 1
+			if img.get_pixel(x, y).get_luminance() > 0.05:
+				lit += 1
+	return float(lit) / maxf(n, 1)
+
+
+## Why a loaded map is not a good render ("" = fine).
+func _batch_check(scene: Node2D, src: String, id: int) -> String:
+	if not scene._gfx_active:
+		return "no map art"
+	if scene._gfx.source_dir != src:
+		return "fell back to %s" % scene._gfx.source_dir
+	if scene._cells.is_empty():
+		return "no arena cells (topology)"
+	var meta: Dictionary = AssetPaths.read_json("%s/%d.json" % [src, id], {})
+	var want: int = meta.get("tex", {}).size()
+	var got: int = scene._gfx._tex.size()
+	if got < want:
+		return "missing %d of %d textures" % [want - got, want]
+	return ""
 
 
 ## Team-mark designs auditioned for the 1-bit style (sprints/S04):
@@ -240,7 +352,8 @@ func _parse(args: PackedStringArray) -> Dictionary:
 		"overlays": false, "pixel": 2.0, "black": 0.0, "white": 1.0,
 		"gamma": 1.0, "levels": 0.0, "edge": 0.0, "edge-threshold": 0.25,
 		"ambient": 1.0, "falloff": 1.5, "lights": [], "debug": 0.0, "world": "color", "actors": "color",
-		"fighters": false, "marks": "none", "detail": 1.0, "detail-radius": 3.0}
+		"fighters": false, "marks": "none", "detail": 1.0, "detail-radius": 3.0,
+		"batch": "", "maps": []}
 	for a in args:
 		if not a.begins_with("--"):
 			printerr("[render] unexpected argument: %s" % a)
@@ -251,8 +364,11 @@ func _parse(args: PackedStringArray) -> Dictionary:
 		match k:
 			"map":
 				o.map = int(v)
-			"out", "raw":
+			"out", "raw", "batch":
 				o[k] = v
+			"maps":
+				for m in v.split(",", false):
+					o.maps.append(int(m))
 			"fighters":
 				o.fighters = true
 			"marks":

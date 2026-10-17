@@ -58,7 +58,10 @@ render bajo `xvfb-run`, `run_tests.sh` portable) se hace antes, en
 - [x] `godot/tools/render_fightmap.gd`: carga el mapa de pelea `<id>`, lo pinta
       con `map_gfx.gd`, aplica el filtro y guarda un PNG. Los parámetros del
       shader van por línea de comandos, para iterar sin tocar código.
-- [ ] Modo lote: los 114 mapas, con un índice de los que fallan y por qué.
+- [x] Modo lote (2026-10-17): `render_fightmap.gd --batch=DIR [--maps=…]`
+      pinta cada mapa en una `fight_view` nueva y escribe `DIR/index.txt`
+      (ok / skip / el motivo del fallo: sin arte, sin celdas, texturas que
+      faltan, caída al arte retail, fotograma en negro). Ver "Lote" abajo.
 - [x] Hoja de contacto (varios mapas o variantes de parámetros en una imagen)
       para comparar de un vistazo.
 
@@ -169,8 +172,11 @@ adjuntar ficheros en la app.
 
 ## Criterio de cierre
 
-- Los 114 mapas de pelea se renderizan con el filtro sin errores (el modo lote
-  sale con código 0).
+- Las **47 arenas** se renderizan con el filtro sin errores (el modo lote
+  sale con código 0). Eran "114 mapas" al planificar, pero solo 47 de los 114
+  `fight/*.jar` traen `.fmd` (en `data-dist` y en el cliente retail); los
+  otros 67 son mapas del mundo abierto con el mismo número, y el servidor
+  tampoco los carga como arena (`gamedata.LoadFightMaps`).
 - El filtro se puede activar y desactivar en el combate, con la GUI y las ayudas
   tácticas legibles.
 - `./run_tests.sh --headless` en verde en Linux.
@@ -196,8 +202,7 @@ estilos y con `./run_tests.sh` completo.
 - [x] Casilla en el panel de Opciones para cambiar de estilo: sección
       **Combate** (estilo original / 1 bit, y la vida de las cartas de S17),
       2026-10-17. Captura: `ui_review_preview` → `/tmp/ui-review-optionsDialog-end-*.png`.
-- [ ] Modo lote del render (los 114 mapas con índice de fallos) — el
-      criterio de cierre lo pide.
+- [x] Modo lote del render — hecho el 2026-10-17 (ver "Lote" abajo).
 - [x] `test/fight_ui_preview.tscn` también con el estilo 1 bit: el carril
       visual de `run_tests.sh` lo pasa en las dos resoluciones si el mapa 10
       está convertido (2026-10-17).
@@ -209,3 +214,28 @@ estilos y con `./run_tests.sh` completo.
       cargar cada acción (con caché). Medir en un combate largo; si da tirones,
       pasarla a un shader o a offline (la línea no usa tintes, se podría hornear).
 - [ ] Visto bueno final del dueño en sus mapas de referencia.
+
+## Lote (2026-10-17)
+
+```
+xvfb-run -a godot --path godot --resolution 1280x720 -s tools/render_fightmap.gd -- \
+    --world=1bit --pixel=1 --batch=/tmp/s17/batch
+# [render] batch: 114 maps, 67 not arenas, 0 failed   (exit 0, 323 s)
+```
+
+- 47 arenas renderizadas, 0 fallos; 67 "skip" (sin `.fmd`). Lo mismo con
+  `--world=color` (exit 0, 258 s). Índice y galería
+  (reducida, así que la trama no se ve fina) en el Samba:
+  `capturas/s04/15-lote-index.txt`, `15-lote-47-arenas-reducido.png`.
+- **Cuidado al reutilizar la escena:** la primera versión recargaba la misma
+  `fight_view` y, tras el mapa 0 (el mundo grande, 327.000 sprites), todos los
+  siguientes salían negros; además la cámara con suavizado aún no había
+  llegado al mapa nuevo. Por eso el lote crea una escena por mapa y salta la
+  cámara (`reset_smoothing`). El control de "fotograma en negro" (< 2 % de
+  píxeles con luz) lo detectó; antes, el índice decía "ok" de mapas negros.
+- **Mapas 38 y 42 salen descentrados**: la cámara centra el rectángulo de la
+  topología, no el del arte. Es el mismo `fight_view._load()` que usa el
+  juego al entrar, así que en combate debería verse igual (no comprobado en
+  un combate real en esas dos arenas); sin arreglar.
+- El mapa 2 de la galería de la prueba 6 no es una arena (no tiene `.fmd`):
+  vale como prueba de color, no como mapa de referencia.
