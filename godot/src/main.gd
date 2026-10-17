@@ -4065,17 +4065,25 @@ func _on_card_unhover(_a: Array, _w: GWidget) -> void:
 	_gui.gui.model.set_value("coachManagement", null, "selectedCard")
 
 
-## useSpecialCard — a zaap-type (20) card teleports (4512), as in retail;
-## the lobby then follows the coach to the new world. The 21-23 special
-## actions (rename, firework…) are UI events we don't support yet.
+## useSpecialCard (retail aBC). Card 214 "Pacte" (type 21) opens clan
+## creation, as in retail. A zaap-type (20) card teleports (4512) — retail
+## does NOT: it only travels from zaapDialog, which needs a walkable Zaap;
+## without the hall, the inventory is the other place a player has the card.
+## Types 28 (title, 22093) and 30 (Dofus, 22097) are not wired yet.
 func _on_use_special_card(_a: Array, w: GWidget) -> void:
 	var card = w.item_value if w != null else null
 	if not (card is Dictionary):
 		card = _gui.gui.model.values.get(
 			"coachManagement", {}).get("selectedCard")
-	if card is Dictionary \
-			and int(card.get("cardType", card.get("type", 0))) == 20:
-		_zaap_travel(int(card.get("id", -1)))
+	if not (card is Dictionary):
+		return
+	var cid := int(card.get("id", -1))
+	match int(card.get("cardType", card.get("type", 0))):
+		20:
+			_zaap_travel(cid)
+		21:
+			if cid == 214:
+				_gui.open("guildCreationDialog")
 
 
 func _step_set(args: Array, delta: int) -> void:
@@ -4139,7 +4147,11 @@ func _city_label(kind: int, e: Dictionary) -> String:
 		base = Elements.kind_name(kind)
 	var f := str(e.get("desc", "")).split(";")
 	match kind:
-		1:   # "mode;cardListId[;title]"
+		1:   # "mode;cardListId[;nameId]" (client ayF: content.29 name)
+			if f.size() > 2:
+				var cm := NpcDialogs.npc_name(int(f[2]))
+				if cm != "":
+					return cm
 			if f.size() > 1:
 				return "%s %s" % [base, f[1]]
 		3, 5, 6, 7, 9, 15:   # first field is the speaker's name id

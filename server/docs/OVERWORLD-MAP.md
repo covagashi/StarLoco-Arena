@@ -142,7 +142,7 @@ Extracted from `contents/maps/env/<world>.jar`. `Name` is `content.29.<field0>`.
 | **35** | **Recruitment / tutorial island** | 6_7 | `144;152;153;167;169;168;273;29;30;31` | Démon III (recruit + 3 challenges) |
 | 35 | breed masters | 3_6…6_9 | `170..181;…;154;…` | Pépitox, Guitel, Ed eraser, Dzee, Gus, Pataclop, Grüny, Stalad, Lithian, Ewon, Cicatrine, Rutger |
 | 35 | tutorial hint NPCs | 3_7…9_10 | `100..109;0;…` | Adamaï-style tutorial lines (content 100–109) |
-| 80 | Zaap/teleporter hub | -1_-1…-2_0 | `1;<n>;<dest>` (7×) | content id 1 = Zaap; dests 309–315 |
+| 80 | Démone II's den (card exchangers) | -1_-1…-2_0 | `1;<cardListId>;<nameId>` (7×) | Card Masters (env type 1), not Zaaps: field 0 = 1 is the Démone II variant (`demonIIDialog`), field 2 a content.29 name — 309 "Démone II", 310–315 the six "Secondes" (client `ayF.gi`). Corrected 2026-10-17 (S05) |
 | 85 | Gostof (ghost) island | 0_0…1_0 | `295..299;…;gost*` | Baan, Gostof Iop/Enutrof/Sramette/Sacrieur |
 
 (49 NPCs total across worlds 23, 35, 37, 79, 80, 85.)
