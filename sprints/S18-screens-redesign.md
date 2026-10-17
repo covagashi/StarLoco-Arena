@@ -31,15 +31,32 @@ Se rehacen con `UI_REVIEW_ALL=1` en `test/ui_review_preview.tscn` (paneles)
 y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 `xvfb-run`.
 
+## Decisiones
+
+| Fecha | Decisión | Quién |
+|---|---|---|
+| 2026-10-17 | Tres direcciones a comparar: A, la familia del HUD de combate de S17; B, el 1 bit de S04; C, una propia ("mesa de cartas": tapete verde y paneles de papel) | dueño ("sí, me parece bien") |
+| 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
+
 ## Por decidir con el dueño
 
-- **Dirección visual.** Opciones a enseñar en hoja: la familia del HUD de
-  combate de S17 (el último estilo aprobado), el 1 bit de S04, u otra con
-  referencias del dueño.
-- ¿Entra el HUD de combate (S17, cerrado con su visto bueno)?
+- **Dirección visual**: A, B o C (o una mezcla). Hojas en el Samba,
+  `codigo/capturas/s18/opciones-{login,ranking,cardmaster}.png`.
 - Orden. Propuesta: primero el sistema (marco, botones, listas, tipografía)
-  sobre una pantalla de cada tipo (login, un panel con tabla, un servicio),
-  y luego el resto en tandas.
+  sobre las tres pantallas de las hojas (login, un panel con tabla, un
+  servicio), y luego el resto en tandas.
+
+## Hojas de opciones
+
+Bocetos con Pillow, no la implementación: `godot/tools/mock_screens.py OUT`
+(desde `godot/`; usa las capturas de combate que deja `./run_tests.sh` en
+`/tmp`). Las mismas tres pantallas en las tres direcciones, con arte real
+(ilustraciones del set Jalatranki) y datos de ejemplo en la clasificación.
+
+## Registro de toques artísticos
+
+| Fecha | Nota del dueño | Cambio | Fichero |
+|---|---|---|---|
 
 ## Tareas candidatas
 
