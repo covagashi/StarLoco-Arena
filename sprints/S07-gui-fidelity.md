@@ -45,6 +45,19 @@ nativo con otro nombre, así que lo primero es confirmarlo.
       variantes en/fr (`godot/DESIGN.md`).
 - [ ] El nivel de coach siempre sale 0 (`DESIGN.md`, "Current data limits").
 - [ ] `fight_view.gd`: `_mount_fight_hud` es código muerto.
+- [ ] **Card Master** (visto en S05, 2026-10-17): el `cardMasterDialog` retail
+      sale como una ventana beige a pantalla completa con las categorías del
+      tomo a la derecha. Ya era así antes de S05; hasta S05 además salía sin
+      cartas (bug del modelo, arreglado). Captura en el Samba:
+      `codigo/capturas/s05/cardmaster-25.png`.
+- [ ] Card Masters de **modo 1** (variante "démone II": Totem Arena 101 y los
+      del mundo 80): el cliente abre siempre `cardMasterDialog`; el retail
+      tiene `demonIIDialog` para ese modo.
+- [ ] `useSpecialCard` para cartas de título (tipo 28 → 22093) y Dofus
+      (tipo 30 → 22097): sin conectar (visto en S05).
+- [ ] Nombres de gamedata en inglés mezclados con la UI en español (NPCs,
+      cartas Zaap, demonios del panel "Ciudad" de S05): los JSON se exportan
+      en un solo idioma.
 
 ## Criterio de cierre
 

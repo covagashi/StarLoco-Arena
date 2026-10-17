@@ -23,6 +23,14 @@ retail leídos y documentación que no se contradiga.
       ¿Datos locales o regresión?
 - [ ] Nombres con acentos: el cliente retail los estropea; las cadenas de
       gamedata se leen como UTF-8 y no como cp1252.
+- [ ] **Catálogos de Card Master de 845 cartas** (visto en S05): los
+      catálogos 17, 19, 21 y 24 (Totem Arena 101, mundo 80) no son un set
+      conocido y `cardMasterStock` cae a "todas las cartas con precio". Son de
+      modo 1 ("démone II"): averiguar qué vendían en el retail. En el cliente
+      Godot ese catálogo cuesta ~15 s la primera vez (845 ilustraciones).
+
+- [ ] 509 (crear clan) no exige la carta 214 "Pacte", que en el retail es lo
+      que abre la creación (visto en S05).
 
 ## Datos retail sin leer (`DATA-COVERAGE.md`)
 
@@ -44,6 +52,9 @@ estadísticas de evolución y puntos de torneo en 2052/4096.
 
 - [ ] Recuentos de opcodes distintos en `COVERAGE.md`, `OPCODE-INVENTORY.md` y
       `STATUS.md` (y 28612/28614: "sin implementar" en uno, "emitido" en otro).
+- [ ] `OPCODE-INVENTORY.md`: 4523 no es un comando de consola, es
+      `Context.skipTutorial()` del escenario 1; 22093 no es "cross-game", es
+      usar una carta de título (tipo 28). Visto en S05 leyendo el cliente.
 - [ ] Entradas viejas en `BUGS.md` (la capa meta y las heridas, crit/fumble base).
 - [ ] "Known gaps" de `OPCODE-INVENTORY.md`: el 2v2 y el 4521 ya están hechos.
 - [ ] X-vs-X (ítem 33): `STATUS.md` lo da como pendiente y el ROADMAP retirado

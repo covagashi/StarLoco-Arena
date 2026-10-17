@@ -31,3 +31,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-16 | [Estado de los assets y estilo 1 bit para los mapas de pelea + hoja de ruta S03–S16](./2026-10-16-estilo-1bit.md) |
 | 2026-10-16 | [S03 (base Linux) y S04 (combate en 1 bit), S17 abierto](./2026-10-16-s03-s04.md) |
 | 2026-10-17 | [S17: HUD de combate estilo Krosmaster (cartas, medallión, banner)](./2026-10-17-s17-hud.md) |
+| 2026-10-17 | [S05: el panel "Ciudad" (servicios del hall + Zaap) y tres bugs de la capa GUI](./2026-10-17-s05-ciudad.md) |
