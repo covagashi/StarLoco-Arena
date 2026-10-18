@@ -87,6 +87,7 @@ func _run() -> void:
 		await get_tree().process_frame
 	await _card_master(model, vp)
 	await _mailbox(model, vp)
+	await _fusion(model, vp)
 	var bug := preload("res://src/ui/bug_report.gd").new("")
 	add_child(bug)
 	bug.popup_centered()
@@ -210,4 +211,60 @@ func _mailbox(model: GuiModel, vp: Vector2) -> void:
 	_check(mb.find_child("Found", true, false) != null, "mailbox: recipient checked")
 	await _shot("mailbox-compose")
 	mb.queue_free()
+	await get_tree().process_frame
+
+
+## The native fusion altar (S18) on sample data: the seven boost cards on
+## the strip, Ruby Fragments chosen, two Weerdtrot cards on the altar.
+func _fusion(model: GuiModel, vp: Vector2) -> void:
+	var boost := {869: ["Potaras", 50, 30, 46100], 942: ["Sapphire Fragments", 0, 5, 190],
+		943: ["Ruby Fragments", 5, 0, 190], 944: ["Sapphire Burst", 0, 15, 3810],
+		945: ["Ruby Burst", 15, 0, 3810], 946: ["Raw Sapphire", 0, 30, 18900],
+		947: ["Raw Ruby", 30, 0, 18900]}
+	var targets: Array = []
+	for cid in [942, 943, 944, 945, 946, 947, 869]:
+		targets.append({"id": cid, "name": boost[cid][0], "fusPower": boost[cid][1],
+			"fusQuality": boost[cid][2], "value": boost[cid][3], "owned": 0})
+	var fuel: Array = []
+	var names := {128: "Weerdtrot Boots", 131: "Weerdtrot Hat", 137: "Weerdtrot Jacket",
+		130: "Weerdtrot Cloak", 134: "Weerdtrot Skirt", 136: "Weerdtrot Pants"}
+	for cid in [131, 137, 128, 130, 134, 136]:
+		fuel.append({"id": cid, "name": names[cid], "value": 40, "owned": 3,
+			"staged": 1 if cid in [131, 128] else 0, "reqLevel": 0,
+			"fusPower": 0, "fusQuality": 0})
+	var trade := {"lab": {"power": 15, "quality": 5, "slots": 3}, "slotCount": 3,
+		"targets": targets, "targetId": 943, "fuel": fuel,
+		"inputs": [{"id": 131, "name": names[131], "count": 1},
+			{"id": 128, "name": names[128], "count": 1}], "inputCount": 2,
+		"power": {"have": 15, "need": 5}, "quality": {"have": 5, "need": 0},
+		"chance": 5, "givenValue": 80, "reason": "", "canFusion": true,
+		"status": "", "statusOk": false}
+	model.set_value("fusionTrade", trade)
+	var fp := preload("res://src/ui/fusion_panel.gd").new()
+	fp.model = model
+	add_child(fp)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(fp.frame.get_global_rect().end.x <= vp.x + 1
+		and fp.frame.get_global_rect().end.y <= vp.y + 1,
+		"panel outside viewport: fusionLabDialog")
+	_check(fp.find_child("Target943", true, false) != null, "fusion: target strip")
+	_check(fp.find_child("Fuse", true, false) != null
+		and not fp.find_child("Fuse", true, false).disabled, "fusion: Fuse enabled")
+	_check(fp.find_child("Staged131", true, false) != null, "fusion: staged row")
+	await _shot("fusion")
+	trade = trade.duplicate(true)
+	trade["inputs"] = []
+	trade["inputCount"] = 0
+	trade["reason"] = "fus.need_two"
+	trade["canFusion"] = false
+	trade["status"] = "Fusión conseguida: Ruby Fragments."
+	trade["statusOk"] = true
+	model.set_value("fusionTrade", trade)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(fp.find_child("Fuse", true, false).disabled, "fusion: Fuse disabled with no cards")
+	_check(fp.find_child("Status", true, false) != null, "fusion: result shown")
+	await _shot("fusion-result")
+	fp.queue_free()
 	await get_tree().process_frame

@@ -264,6 +264,7 @@ func _ready() -> void:
 		_gui.native_factories[panel_name] = _make_native_lobby_panel
 	_gui.native_factories["cardMasterDialog"] = _make_card_master_panel
 	_gui.native_factories["mailboxDialog"] = _make_mailbox_panel
+	_gui.native_factories["fusionLabDialog"] = _make_fusion_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -1171,6 +1172,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_fill_equip()
 			if _gui.is_open("cardMasterDialog"):
 				_push_cardmaster_model()
+			if _gui.is_open("fusionLabDialog"):
+				_push_fusion_model()
 		OP_SHOP_CATALOG:
 			var d := Codec.decode(opcode, payload)
 			_open_shop(d)
@@ -1199,19 +1202,27 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_push_cardmaster_model()
 		OP_FUSION_RESULT:
 			var d := Codec.decode(opcode, payload)
+			# One sentence for the chat and the native panel. The server
+			# names the missed card AND the leftover on a failed roll; say
+			# both, the leftover is what the player gets back.
+			var got := int(d.get("obtained", 0))
+			var missed := int(d.get("not_obtained", 0))
+			var back := int(d.get("recovered", 0))
+			var text := ""
 			if int(d.get("result", 0)) != 0:
-				_log_line("[color=red]%s[/color]" % I18n.t("fusion.refused"))
-			elif int(d.get("obtained", 0)) > 0:
-				_log_line("[color=green]%s[/color]" % I18n.t("fusion.got",
-					{"name": Cards.name_of(int(d.obtained))}))
-			elif int(d.get("not_obtained", 0)) > 0:
-				_log_line("[color=red]%s[/color]" % I18n.t("fusion.missed",
-					{"name": Cards.name_of(int(d.not_obtained))}))
-			elif int(d.get("recovered", 0)) > 0:
-				_log_line(I18n.t("fusion.leftovers",
-					{"name": Cards.name_of(int(d.recovered))}))
+				text = I18n.t("fusion.refused")
+			elif got > 0:
+				text = I18n.t("fusion.got", {"name": Cards.name_of(got)})
+			elif missed > 0:
+				text = I18n.t("fusion.missed", {"name": Cards.name_of(missed)})
+				if back > 0:
+					text += " " + I18n.t("fusion.leftovers", {"name": Cards.name_of(back)})
+			elif back > 0:
+				text = I18n.t("fusion.leftovers", {"name": Cards.name_of(back)})
 			else:
-				_log_line("[color=red]%s[/color]" % I18n.t("fusion.failed"))
+				text = I18n.t("fusion.failed")
+			_log_line(("[color=green]%s[/color]" if got > 0 else "[color=red]%s[/color]") % text)
+			_fusion_status = {"text": text, "ok": got > 0}
 			# the tray is consumed either way — reset the lab
 			_fusion_inputs = []
 			_fusion_failed = int(d.get("obtained", 0)) <= 0 \
@@ -3767,7 +3778,8 @@ func _on_gui_dialog_opened(name: String) -> void:
 		"optionsDialog":
 			_push_options_model()
 		"fusionLabDialog":
-			_push_cardbook_model()   # the include's inventory tab needs it
+			if not _gui.native_factories.has("fusionLabDialog"):
+				_push_cardbook_model()   # the XML include's inventory tab needs it
 			_push_fusion_model()
 		"mailboxDialog":
 			if _mails.is_empty() and not _mail_loading:
@@ -5310,6 +5322,13 @@ func _make_mailbox_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_fusion_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/fusion_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 ## Native controls reuse existing handlers with the same item-event context.
 func _on_native_lobby_action(event: String, args: Array, item: Variant, index: int) -> void:
 	match event:
@@ -5398,6 +5417,30 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 				nm["message"] = str(args[2])
 			_mail_status = {}
 			_on_mail_send([], null)
+			return
+		"nativeFusTarget":
+			_fusion_target = int(args[0])
+			_fusion_failed = false
+			_fusion_status = {}
+			_push_fusion_model()
+			return
+		"nativeFusStage":
+			_fusion_status = {}
+			_fusion_stage_native(int(args[0]))
+			return
+		"nativeFusUnstage":
+			_fusion_inputs.erase(int(args[0]))   # one copy
+			_fusion_failed = false
+			_push_fusion_model()
+			return
+		"nativeFusClear":
+			_fusion_inputs = []
+			_fusion_failed = false
+			_fusion_status = {}
+			_push_fusion_model()
+			return
+		"nativeFusRequest":
+			_on_fusion_request([], null)
 			return
 	var context := GWidget.new()
 	context.item_value = item
@@ -5981,15 +6024,17 @@ func _fill_graveyard() -> void:
 ## kardsPower = Σ inputs.reqLevel − target.fusPower (client recipe math).
 
 var _fusion_lab := {}          # altar record {power, quality, slots}
-var _fusion_inputs: Array = [] # card ids fed in
+var _fusion_inputs: Array = [] # card ids fed in (a card twice = two copies)
 var _fusion_target := -1       # boost card id being made
 var _fusion_failed := false
+var _fusion_status := {}       # last 5491 for the native panel: {text, ok}
 
 
 func _open_fusion_lab(e: Dictionary) -> void:
 	_fusion_inputs = []
 	_fusion_target = -1
 	_fusion_failed = false
+	_fusion_status = {}
 	# the altar element's desc arg is its type-1100 lab id
 	var lab := Cards.lab(int(str(e.get("desc", "0"))))
 	_fusion_lab = lab if not lab.is_empty() else Cards.lab_default()
@@ -6009,16 +6054,102 @@ func _push_fusion_model() -> void:
 		if _fusion_target > 0 else 0
 	for cid in _fusion_inputs:
 		kp += int(Cards.meta(int(cid)).get("reqLevel", 0))
+	# --- native panel (S18): the whole recipe, the server's own rules ---------
+	# power   = Σ inputs' level + altar power + Σ inputs' boost power ≥ target's
+	# quality = altar quality + Σ inputs' boost quality ≥ target's, and it is
+	#           the success die (roll < quality out of 100)
+	# value   = the target may be worth at most 3× what is given
+	var lab_power := int(_fusion_lab.get("power", 0))
+	var lab_quality := int(_fusion_lab.get("quality", 0))
+	var have_power := lab_power
+	var have_quality := lab_quality
+	var given_value := 0
+	var counts := {}
+	for cid in _fusion_inputs:
+		var m := Cards.meta(int(cid))
+		have_power += int(m.get("reqLevel", 0)) + int(m.get("fusPower", 0))
+		have_quality += int(m.get("fusQuality", 0))
+		given_value += int(m.get("value", 0))
+		counts[int(cid)] = int(counts.get(int(cid), 0)) + 1
+	var tm := Cards.meta(_fusion_target) if _fusion_target > 0 else {}
+	var need_power := int(tm.get("fusPower", 0))
+	var need_quality := int(tm.get("fusQuality", 0))
+	var reason := ""
+	if _fusion_target <= 0:
+		reason = "fus.pick_target"
+	elif _fusion_inputs.size() < 2:
+		reason = "fus.need_two"
+	elif have_power < need_power:
+		reason = "fus.short_power"
+	elif have_quality < need_quality:
+		reason = "fus.short_quality"
+	elif int(tm.get("value", 0)) > given_value * 3:
+		reason = "fus.too_valuable"
+	var targets: Array = []
+	for tid in Cards.all_ids():
+		var m := Cards.meta(int(tid))
+		if int(m.get("fusPower", 0)) > 0 or int(m.get("fusQuality", 0)) > 0:
+			targets.append({"id": int(tid), "name": Cards.name_of(int(tid)),
+				"value": int(m.get("value", 0)), "fusPower": int(m.get("fusPower", 0)),
+				"fusQuality": int(m.get("fusQuality", 0)),
+				"owned": int(State.inventory.get(int(tid), 0))})
+	targets.sort_custom(func(a, b): return a.value < b.value \
+		or (a.value == b.value and a.id < b.id))
+	# What can go on the altar: tradable cards you own (the server refuses
+	# bound and undestructible ones), the most valuable first.
+	var fuel: Array = []
+	for cid in State.inventory:
+		var n := int(State.inventory[cid])
+		var m := Cards.meta(int(cid))
+		if n <= 0 or not bool(m.get("tradable", false)):
+			continue
+		fuel.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"value": int(m.get("value", 0)), "owned": n,
+			"staged": int(counts.get(int(cid), 0)),
+			"reqLevel": int(m.get("reqLevel", 0)),
+			"fusPower": int(m.get("fusPower", 0)),
+			"fusQuality": int(m.get("fusQuality", 0))})
+	fuel.sort_custom(func(a, b): return a.value > b.value \
+		or (a.value == b.value and a.id < b.id))
+	var inputs: Array = []
+	for cid in counts:
+		inputs.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"count": int(counts[cid])})
 	model.set_value("fusionTrade", {
 		"localCardExchange": tray,
 		"fusionCard": target,
 		"resultCard": target,
 		"fusionFailed": _fusion_failed,
-		"labPower": int(_fusion_lab.get("power", 0)),
+		"labPower": lab_power,
 		"kardsPower": maxi(0, kp),
 		"slotCount": slots,
-		"canFusion": _fusion_inputs.size() >= 2 and _fusion_target > 0,
-		"help": ""})
+		"canFusion": reason == "",
+		"help": "",
+		"lab": {"power": lab_power, "quality": lab_quality, "slots": slots},
+		"targets": targets, "targetId": _fusion_target,
+		"fuel": fuel, "inputs": inputs, "inputCount": _fusion_inputs.size(),
+		"power": {"have": have_power, "need": need_power},
+		"quality": {"have": have_quality, "need": need_quality},
+		"chance": clampi(have_quality, 0, 100),
+		"givenValue": given_value,
+		"reason": reason,
+		"status": str(_fusion_status.get("text", "")),
+		"statusOk": bool(_fusion_status.get("ok", false))})
+
+
+## Native "give a card": one more copy of `cid` on the altar, while you own
+## more and the altar has room. The same card twice is two copies (the
+## server tallies duplicates when it consumes them).
+func _fusion_stage_native(cid: int) -> void:
+	var slots := maxi(1, int(_fusion_lab.get("slots", 3)) - 1)
+	var staged := _fusion_inputs.count(cid)
+	if cid <= 0 or staged >= int(State.inventory.get(cid, 0)) \
+			or _fusion_inputs.size() >= slots \
+			or not bool(Cards.meta(cid).get("tradable", false)):
+		return
+	_fusion_inputs.append(cid)
+	_fusion_failed = false
+	_push_fusion_model()
 
 
 ## Double-click a tray row → hand the card back to the inventory.

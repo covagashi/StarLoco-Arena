@@ -48,6 +48,8 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-17 | **Muñeco en línea aprobado** (hoja `muneco-1bit.png`): "sí" | dueño |
 | 2026-10-17 | **Card Master nativo aprobado**: "sí, me parece perfecto" | dueño |
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
+| 2026-10-18 | Altar de fusión nativo: las siete cartas de fuerza (las únicas que el altar puede crear) van como **fichas de texto en filas por lo que empujan** (Poder: rubíes; Calidad: zafiros; Ambos: Potaras), no como miniaturas: en trama 1 bit las siete se ven iguales y lo que las distingue es el número | agente |
+| 2026-10-18 | El panel enseña la receta del servidor tal cual (poder, calidad, probabilidad, el límite de valor ×3) y **desactiva "Fusionar" hasta que se cumple**, con la regla que falta en una línea. Sin regla de "mismo set": nunca la tuvo el servidor | agente |
 
 ## Por decidir con el dueño
 
@@ -121,6 +123,39 @@ después del cambio (no tiene prueba).
 
 Hoja: `codigo/capturas/s18/tanda2-buzon.png`.
 
+## Tanda 2: el altar de fusión (2026-10-18)
+
+`src/ui/fusion_panel.gd` sustituye a `fusionLabDialog` (XML). A la izquierda,
+tus cartas que se pueden fundir, en rejilla; a la derecha, qué quieres crear
+(fichas +5 / +15 / +30 por filas: poder, calidad, ambos), la carta elegida
+con su receta (dos medidores: poder y calidad, "tienes de necesitas", y la
+probabilidad de éxito, que es la calidad), lo puesto en el altar como fichas
+con ✕, y "Fusionar". Los números del altar (poder, calidad, huecos) van
+junto a "Cerrar", como el monedero del Card Master. Las piezas de cartas
+compartidas (ficha con arte, arte enmarcado, medidor, fichas) salen del Card
+Master a `src/ui/card_panel.gd`, base de los dos.
+
+El modelo `fusionTrade` gana campos nativos (`lab`, `targets`, `fuel`,
+`inputs`, `power`, `quality`, `chance`, `reason`, `status`); el cable sigue
+en `main.gd` (5490 petición, 5491 resultado). La misma carta puede ponerse
+varias veces (el servidor cuenta copias). Con el panel nativo ya no se carga
+el catálogo entero al abrir el altar (era para el `include` del XML).
+
+Encontrado: `fusion.got`, `fusion.missed`, `fusion.leftovers`,
+`fusion.failed` y `fusion.refused` no existían en i18n (como `shop.done` en
+el Card Master): el chat enseñaba las claves. El resultado ahora es una
+frase, en el chat y en el panel, y en un fallo nombra la carta que no salió
+y la que recuperas.
+
+Verificado: `test/fusion_smoke.gd` en vivo, 5/5 (elige el altar de mejor
+calidad que cubra Fragmentos de rubí, abre el panel nativo sin panel de
+depuración, elige el objetivo, pone dos cartas, quita una y la vuelve a
+poner, lee la receta, pulsa Fusionar y comprueba el 5491 y el inventario
+según el resultado: en la tirada fallida, la primera carta vuelve y la otra
+se consume).
+
+Hoja: `codigo/capturas/s18/tanda2-altar.png`.
+
 ## Registro de toques artísticos
 
 | Fecha | Nota del dueño | Cambio | Fichero |
@@ -132,16 +167,18 @@ Hoja: `codigo/capturas/s18/tanda2-buzon.png`.
 
 ## Siguiente paso (para la próxima sesión)
 
-Card Master aprobado; buzón hecho, a la espera del visto bueno
-(`tanda2-buzon.png`). Sigue la tanda 2 con el **altar de fusión**
-(`fusionLabDialog`), después el cementerio, las
-conversaciones (`ElementDlg`) y los tótems, con el mismo patrón: un panel
-sobre `lobby_panel.gd`, registrado en `_gui.native_factories` con el nombre
-del diálogo retail, y eventos `native*` hacia los handlers de `main.gd`.
-`ShopDlg` y `BarterDlg` de `main.tscn` quedan de reserva y se retiran con
-los demás paneles de depuración.
+Card Master aprobado; buzón y altar de fusión hechos, a la espera del visto
+bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Sigue la tanda 2 con el
+**cementerio** (hoy un panel de depuración `ElementDlg`, kind 10: luchadores
+muertos y cartas de resurrección), después las conversaciones (`ElementDlg`,
+kinds 3/5/6/7/9/15), los tótems y los fuegos artificiales, con el mismo
+patrón: un panel sobre `lobby_panel.gd` (o `card_panel.gd` si enseña
+cartas), registrado en `_gui.native_factories` con el nombre del diálogo
+retail, y eventos `native*` hacia los handlers de `main.gd`. `ShopDlg` y
+`BarterDlg` de `main.tscn` quedan de reserva y se retiran con los demás
+paneles de depuración.
 
-Pendiente del dueño: el visto bueno del buzón.
+Pendiente del dueño: el visto bueno del buzón y del altar.
 
 ## Tareas candidatas
 
@@ -158,8 +195,9 @@ Pendiente del dueño: el visto bueno del buzón.
 - [ ] Contenido de los paneles: hoy son tablas genéricas. Rehacerlos uno a
       uno (inventario con cartas, clasificación como el boceto…).
 - [ ] Servicios: sustituir los diálogos XML y `ElementDlg` por paneles
-      nativos (lista de S05). Card Master y buzón hechos (2026-10-17); faltan
-      altar, fuegos artificiales, cementerio, retos, demonios, tótems.
+      nativos (lista de S05). Card Master y buzón hechos (2026-10-17), altar
+      (2026-10-18); faltan fuegos artificiales, cementerio, retos, demonios,
+      tótems.
 - [ ] Retirar de `main.tscn` los paneles de depuración que queden sin uso.
 - [ ] `godot/PRODUCT.md` y `DESIGN.md` al día (hoy dicen que el dueño fija el
       estilo de login y creación, y eso ya no vale).
