@@ -951,5 +951,12 @@
   "ask.trade": "Propuesta de intercambio",
   "duo.invite_ask": "{name} te invita a formar el dúo «{team}».",
   "challenge.ask": "{name} te desafía a un combate.",
-  "guild.invite_ask": "{name} te invita a unirte al clan «{guild}»."
+  "guild.invite_ask": "{name} te invita a unirte al clan «{guild}».",
+  "tn.mate": "Compañero:",
+  "tn.no_mates": "Necesitas un amigo conectado para formar un dúo. Añádelo en Social.",
+  "tp.title": "Elige tu equipo",
+  "tp.titulars": "Titulares",
+  "tp.preset": "{name} · {n} luchadores",
+  "tp.hint": "El desafío está aceptado. ¿Con qué equipo luchas?",
+  "tp.hint_evo": "El desafío está aceptado. En evolución luchan tus titulares."
 }

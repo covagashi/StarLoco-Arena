@@ -264,6 +264,7 @@ func _ready() -> void:
 	_gui.native_factories["fightReportDialog"] = _make_report_panel
 	_gui.native_factories["exchangeDialog"] = _make_exchange_panel
 	_gui.native_factories["askDialog"] = _make_ask_panel
+	_gui.native_factories["teamPickDialog"] = _make_team_pick_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -569,9 +570,6 @@ func _ready() -> void:
 		func(): $UI/SaveTeamDlg.visible = false)
 	$UI/Chat.trade.connect(_invite_exchange)
 	$UI/Chat.watch.connect(_watch_coach)
-	$UI/TeamPickDlg/VBox/Btns/GoBtn.pressed.connect(_on_team_confirmed)
-	$UI/TeamPickDlg/VBox/Btns/CancelBtn.pressed.connect(
-		func(): $UI/TeamPickDlg.visible = false)
 	var breed_sel: OptionButton = $UI/CreateDlg/VBox/Breed
 	for id in range(1, 13):
 		breed_sel.add_item(State.BREED_NAMES[id], id)
@@ -1094,7 +1092,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			payload.get_i64()
 			_challenge_handle = -1
 			_ask_withdraw("challenge")
-			$UI/TeamPickDlg.visible = false
+			_gui.close("teamPickDialog")
 			_log_line("[i]%s[/i]" % I18n.t("challenge.cancelled"))
 		OP_TEAM_PRESET_SAVED:
 			# 6020 [u8 status] — only sent on failure (25 = name taken)
@@ -2420,22 +2418,37 @@ func _answer_challenge(accept: bool) -> void:
 		_challenge_handle = -1
 
 
-## After 26302 both coaches confirm a team with 26303 [i64 self][i16 team].
+## After 26302 both coaches confirm a team with 26303 [i64 self][i16 team]
+## (S18: the native teamPickDialog, src/ui/team_pick_panel.gd). -1 = the
+## titular line-up, which the server accepts on every team-carrying request.
 func _open_team_pick() -> void:
-	$UI/TeamPickDlg.visible = true
+	var presets: Array = [{"id": -1, "name": I18n.t("tp.titulars"), "n": -1}]
+	for p in State.presets:
+		if int(p.type) == -4:
+			continue  # synthetic bench row
+		presets.append({"id": int(p.id), "name": str(p.name), "n": p.fighters.size()})
+	_gui.gui.model.set_value("teamPick", {"presets": presets,
+		"evo": _challenge_evo != 0})
+	_gui.open("teamPickDialog")
 
 
-func _on_team_confirmed() -> void:
-	$UI/TeamPickDlg.visible = false
-	var pick: OptionButton = $UI/TeamPickDlg/VBox/Pick
-	var team_id := -1
-	if pick.selected > 0:
-		team_id = pick.get_item_id(pick.selected)
+func _confirm_team(team_id: int) -> void:
+	_gui.close("teamPickDialog")
 	var w := WireWriter.new()
 	w.put_i64(State.my_coach_id)
 	w.put_i16(team_id)
 	Session.send(OP_TEAM_CONFIRM, w.raw(), 2)
 	_log_line(I18n.t("team.confirmed", {"id": team_id}))
+
+
+## Closing the team picker backs out of the challenge (26307).
+func _cancel_team_pick() -> void:
+	_gui.close("teamPickDialog")
+	if _challenge_handle >= 0:
+		var w := WireWriter.new()
+		w.put_i64(_challenge_handle)
+		Session.send(OP_CHALLENGE_DECLINE, w.raw(), 2)
+		_challenge_handle = -1
 
 
 ## --- Team presets ----------------------------------------------------------
@@ -3338,6 +3351,7 @@ func _on_tm_add_team_xvsx(_args: Array, _w: GWidget) -> void:
 	wr.put_i64(mate_id)
 	Session.send(6024, wr.raw(), 2)
 	_gui.close("team2vs2NameDialog")
+	_log_line(I18n.t("duo.sent"))
 
 
 ## selectTeam{Icon,Background} set the asV index; the *ColorIndex events set
@@ -3852,6 +3866,7 @@ func _push_social_model() -> void:
 	var fl: Array = []
 	for fr in State.friends:
 		fl.append({"name": str(fr.get("name", "")),
+			"id": int(fr.get("id", -1)),
 			"online": bool(fr.get("online", false)),
 			"notify": int(fr.get("notify", 0)),
 			"connected": bool(fr.get("online", false))})
@@ -5425,6 +5440,13 @@ func _make_fusion_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_team_pick_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/team_pick_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 func _make_ask_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/ask_panel.gd").new()
 	panel.model = _gui.gui.model
@@ -5563,6 +5585,12 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeTournSearch":
 			_tourn_search(int(args[0]))
+			return
+		"nativeTeamPick":
+			_confirm_team(int(args[0]))
+			return
+		"nativeTeamPickCancel":
+			_cancel_team_pick()
 			return
 		"nativeAsk":
 			_ask_answer(bool(args[0]))
@@ -5704,7 +5732,10 @@ func _on_lobby_action(action: String) -> void:
 		"fight": _on_fight_pressed()
 		"quick": _on_quick_search()
 		"evo": _on_evo_search()
-		"duo": _open_duo_dlg()
+		"duo":
+			# S18: the native 2v2 team panel, with the online friends to pick
+			_push_social_model()
+			_gui.open("team2vs2NameDialog")
 		"team": _gui.toggle("teamManagementDialog")
 
 

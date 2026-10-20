@@ -951,5 +951,12 @@
   "ask.trade": "Proposition d'échange",
   "duo.invite_ask": "{name} t'invite dans le duo « {team} ».",
   "challenge.ask": "{name} te défie en combat.",
-  "guild.invite_ask": "{name} t'invite à rejoindre le clan « {guild} »."
+  "guild.invite_ask": "{name} t'invite à rejoindre le clan « {guild} ».",
+  "tn.mate": "Partenaire :",
+  "tn.no_mates": "Il te faut un ami connecté pour former un duo. Ajoute-le dans Social.",
+  "tp.title": "Choisis ton équipe",
+  "tp.titulars": "Titulaires",
+  "tp.preset": "{name} · {n} combattants",
+  "tp.hint": "Le défi est accepté. Avec quelle équipe combats-tu ?",
+  "tp.hint_evo": "Le défi est accepté. En évolution, tes titulaires combattent."
 }

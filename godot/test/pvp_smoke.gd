@@ -159,9 +159,14 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 			print("[smoke] 26300 invitation handle=%d outgoing=%d name=%s"
 				% [handle, outgoing, who])
 		26302:
-			print("[smoke] 26302 accepted — confirm team via the dialog path")
-			await create_timer(0.4).timeout
-			_main._on_team_confirmed()   # sends 26303 with the dlg selection
+			print("[smoke] 26302 accepted — pick a team in the native team picker")
+			await create_timer(0.5).timeout
+			var tp = _main._gui.dialogs.get("teamPickDialog")
+			var pick: Button = tp.find_child("Team-1", true, false) if tp != null else null
+			print("[smoke] TEAMPICK %s (%d team buttons)" % ["OK" if pick != null else "FAIL",
+				_main._gui.gui.model.get_value("teamPick").get("presets", []).size() if tp != null else 0])
+			if pick != null:
+				pick.pressed.emit()   # the titular line-up → 26303
 		8000:
 			print("[smoke] MAIN 8000 — challenge fight created")
 			_fight_seen = true
@@ -311,9 +316,21 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 				# row the server would have pushed
 				State.friends.append(
 					{"name": "test2", "id": _bot_coach, "online": true})
-				_main._open_duo_dlg()
-				_main.get_node("UI/DuoDlg/VBox/Name").text = "Duplico"
-				_main._on_duo_create()
+				# the lobby's "2v2 dúo" → the native team panel (S18)
+				_main._on_lobby_action("duo")
+				await create_timer(0.5).timeout
+				var dp = _main._gui.dialogs.get("team2vs2NameDialog")
+				var mate: OptionButton = dp.find_child("Mate", true, false) if dp != null else null
+				var names: Array = []
+				if mate != null:
+					for i in mate.item_count:
+						names.append(mate.get_item_text(i))
+				print("[smoke] DUO %s — partner choices %s" % ["OK" if "test2" in names else "FAIL", names])
+				if dp != null:
+					for le in dp.find_children("*", "LineEdit", true, false):
+						le.text = "Duplico"
+						le.text_changed.emit("Duplico")
+					dp.find_child("Create", true, false).pressed.emit()
 		6025:
 			var d := Codec.decode(op, p)
 			print("[smoke] bot got duo invite team='%s' from %s — join"

@@ -594,18 +594,31 @@ func _team_name() -> void:
 	label(body, I18n.t("tn.subtitle"), 22)
 	var name_field := field(body, "team_name", I18n.t("tn.name_ph"))
 	name_field.max_length = 20
-	var teammate: LineEdit
+	# 2v2: the partner is an online friend (the server invites by coach id)
+	var mates: Array = []
 	if panel_name == "team2vs2NameDialog":
-		teammate = field(body, "teammate", I18n.t("tn.mate_ph"))
+		for fr in data("friends.list", []):
+			if int(fr.get("id", -1)) > 0 and bool(fr.get("online", false)):
+				mates.append(fr)
+		if mates.is_empty():
+			label(body, I18n.t("tn.no_mates")).name = "NoMates"
+		else:
+			var bar := row(body)
+			label(bar, I18n.t("tn.mate"))
+			choices(bar, mates.map(func(f): return str(f.name)), clampi(int(draft.get("mate", 0)), 0, mates.size() - 1),
+				func(i): draft["mate"] = i).name = "Mate"
 	var error := label(body, "")
-	button(body, I18n.t("tn.create"), func():
+	var create := button(body, I18n.t("tn.create"), func():
 		if name_field.text.strip_edges().is_empty():
 			error.text = I18n.t("tn.err_name")
 			return
 		model.set_value("teamManagement", name_field.text.strip_edges(), "teamName")
-		if teammate != null:
-			model.set_value("teamManagement", teammate.text.strip_edges(), "teammateName")
-		send("addNewTeamXvsX" if panel_name == "team2vs2NameDialog" else ("addNewTournamentTeam" if panel_name == "newTeamTournamentDialog" else "addNewTeam")))
+		if panel_name == "team2vs2NameDialog":
+			var m: Dictionary = mates[clampi(int(draft.get("mate", 0)), 0, mates.size() - 1)]
+			model.set_value("teamManagement", {"id": int(m.id), "name": str(m.name)}, "teammateName")
+		send("addNewTeamXvsX" if panel_name == "team2vs2NameDialog" else ("addNewTournamentTeam" if panel_name == "newTeamTournamentDialog" else "addNewTeam")),
+		panel_name != "team2vs2NameDialog" or not mates.is_empty())
+	create.name = "Create"
 
 
 func _equipment() -> void:

@@ -951,5 +951,12 @@
   "ask.trade": "Trade proposal",
   "duo.invite_ask": "{name} invites you to the duo “{team}”.",
   "challenge.ask": "{name} challenges you to a fight.",
-  "guild.invite_ask": "{name} invites you to join the clan “{guild}”."
+  "guild.invite_ask": "{name} invites you to join the clan “{guild}”.",
+  "tn.mate": "Partner:",
+  "tn.no_mates": "You need an online friend to form a duo. Add one in Social.",
+  "tp.title": "Choose your team",
+  "tp.titulars": "Starters",
+  "tp.preset": "{name} · {n} fighters",
+  "tp.hint": "The challenge is on. Which team do you fight with?",
+  "tp.hint_evo": "The challenge is on. In evolution your starters fight."
 }
