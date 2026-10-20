@@ -33,3 +33,5 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-17 | [S17: HUD de combate estilo Krosmaster (cartas, medallión, banner)](./2026-10-17-s17-hud.md) |
 | 2026-10-17 | [S05: el panel "Ciudad" (servicios del hall + Zaap) y tres bugs de la capa GUI](./2026-10-17-s05-ciudad.md) |
 | 2026-10-17 | [S18 tanda 2: Card Master y buzón nativos, arte y muñeco en 1 bit](./2026-10-17-s18-tanda2.md) |
+| 2026-10-18 | [S18 tanda 2: el altar de fusión nativo](./2026-10-18-s18-altar.md) |
+| 2026-10-20 | [Puesta a punto del entorno en la ROG Ally (Go, Godot, baterías)](./2026-10-20-ally-setup.md) |
