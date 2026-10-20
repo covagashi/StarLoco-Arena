@@ -6,6 +6,9 @@ extends RefCounted
 ## Names are the client's own content.23.<id> strings.
 
 const PATH := "gamedata/cards.json"
+# State.locale mirrors I18n.lang; the autoload itself does not resolve when a
+# -s test script compiles this file first (fight_smoke: "name_of" missing).
+const State := preload("res://src/state.gd")
 
 static var _by_id := {}       # card id int -> Dictionary
 static var _loaded := false
@@ -106,7 +109,7 @@ static func card_set_name(id: int) -> String:
 				for k in data[lang]:
 					by_id[int(k)] = str(data[lang][k])
 				_sets[lang] = by_id
-	var n: Variant = _sets.get(I18n.lang, {}).get(id)
+	var n: Variant = _sets.get(State.locale, {}).get(id)
 	if n == null:
 		n = _sets.get("en", {}).get(id)
 	return str(n) if n != null else ""

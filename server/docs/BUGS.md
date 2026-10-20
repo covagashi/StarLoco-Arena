@@ -13,6 +13,27 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-178 · Back from a fight, the lobby never came back and the report never showed
+
+- **Symptom:** after any fight that ended normally (the fight view acks the
+  8300 with 26321), the client returned to the lobby scene with three
+  `Invalid access to property or key 'gui' on a base object of type 'Nil'`
+  errors, and the post-fight report never opened. Found by the new
+  `godot/test/report_smoke.gd`.
+- **Root cause:** `main.gd` `_ready` replayed the messages queued during the
+  scene change (`Session.client.drain()`) as its FIRST step, before
+  creating its GUI layer. The queued 4516 (world entry) ran
+  `_show_lobby_screen`, which reads `_gui.gui` — still null — and aborted,
+  taking `_show_fight_result` (the next line) with it. The 6006 roster push
+  failed the same way. Lines further down `_ready` then hid the chat the
+  replay had just shown.
+- **Fix:** the drain moved to the END of `_ready`, after every panel factory
+  and widget hook exists. Client-only; no wire change.
+- **Verified:** `client-ui` — `report_smoke.gd` "normal path": the old lobby
+  is unhooked, the fight view acks, the server re-enters the coach and a
+  fresh main scene shows the lobby and the native report, with no script
+  error (three before the fix).
+
 ### B-177 · A graveyard resurrection accepted equipment cards and spent them
 
 - **Symptom:** none with the retail client, which never sends it; a modified

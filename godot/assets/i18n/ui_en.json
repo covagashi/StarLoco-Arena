@@ -913,5 +913,19 @@
   "fw.remove": "Remove",
   "fw.hint": "They play on the lobby sky.",
   "fw.launch": "Launch",
-  "dm.ladder_empty": "No active clan serves this demon. A clan counts from {n} members."
+  "dm.ladder_empty": "No active clan serves this demon. A clan counts from {n} members.",
+  "rp.winner": "Winner",
+  "rp.loser": "Loser",
+  "rp.fine": "Fine",
+  "rp.col_coach": "Coach",
+  "rp.col_side": "Result",
+  "rp.col_strength": "Strength",
+  "rp.fighters": "Your fighters",
+  "rp.no_fighters": "This fight leaves no fighter report.",
+  "rp.col_xp": "XP",
+  "rp.col_morale": "Morale",
+  "rp.col_tired": "Tiredness",
+  "rp.col_state": "State",
+  "rp.dead": "Dead",
+  "rp.wounded": "Wounded"
 }

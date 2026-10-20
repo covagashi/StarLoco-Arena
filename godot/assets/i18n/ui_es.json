@@ -913,5 +913,19 @@
   "fw.remove": "Quitar",
   "fw.hint": "Se verán en el cielo del lobby.",
   "fw.launch": "Lanzar",
-  "dm.ladder_empty": "Ningún clan activo sirve a este demonio. Un clan cuenta desde {n} miembros."
+  "dm.ladder_empty": "Ningún clan activo sirve a este demonio. Un clan cuenta desde {n} miembros.",
+  "rp.winner": "Ganador",
+  "rp.loser": "Perdedor",
+  "rp.fine": "Bien",
+  "rp.col_coach": "Coach",
+  "rp.col_side": "Resultado",
+  "rp.col_strength": "Fuerza",
+  "rp.fighters": "Tus luchadores",
+  "rp.no_fighters": "Este combate no deja informe de luchadores.",
+  "rp.col_xp": "XP",
+  "rp.col_morale": "Moral",
+  "rp.col_tired": "Cansancio",
+  "rp.col_state": "Estado",
+  "rp.dead": "Muerto",
+  "rp.wounded": "Herido"
 }

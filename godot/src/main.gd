@@ -217,7 +217,6 @@ const OP_EX_END := 5114                  # S2C [u8 reason][i64 ex]
 const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
 const ELEM_EXCHANGE := 100               # pseudo kind: ElementDlg in trade mode
 const ELEM_SCENARIO := -2                # pseudo kind: tutorial monologue (zone trigger)
-const ELEM_RESULT := -3                  # pseudo kind: post-fight debrief (8300)
 const ELEM_COACH := -4                   # pseudo kind: coach statistics (2401)
 const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 card]
 
@@ -254,10 +253,6 @@ func _ready() -> void:
 	Session.connected.connect(_on_connected)
 	Session.disconnected.connect(_on_disconnected)
 	Session.message.connect(_on_message)
-	# Re-entering after a fight: replay anything that arrived mid-scene-change.
-	for m in Session.client.drain():
-		_on_message(m.op, m.raw)
-	Session.client.scene_active = true
 	# retail XULOR2 layer — logonDialog replaces the wire-test login row
 	_gui = GuiLayer.new()
 	for panel_name in preload("res://src/ui/lobby_panels.gd").TITLES:
@@ -268,6 +263,7 @@ func _ready() -> void:
 	_gui.native_factories["npcTalkDialog"] = _make_talk_panel
 	_gui.native_factories["demonAffiliationDialog"] = _make_demon_panel
 	_gui.native_factories["fireworkDialog"] = _make_firework_panel
+	_gui.native_factories["fightReportDialog"] = _make_report_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -629,6 +625,13 @@ func _ready() -> void:
 		func(_i, _s): _on_fusion_inputs())
 	$UI/ElementDlg/VBox/Scroll2/List2.item_selected.connect(
 		func(_i): _on_fusion_inputs())
+	# Re-entering after a fight: replay anything that arrived mid-scene-change
+	# — LAST, once the GUI layer and the scene's own setup exist. Draining it
+	# first ran the 4516 lobby entry with no _gui (B-178): the lobby re-entry
+	# aborted, and with it the post-fight report.
+	for m in Session.client.drain():
+		_on_message(m.op, m.raw)
+	Session.client.scene_active = true
 
 
 func _exit_tree() -> void:
@@ -5492,6 +5495,13 @@ func _make_fusion_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_report_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/report_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 func _make_firework_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/firework_panel.gd").new()
 	panel.model = _gui.gui.model
@@ -6133,10 +6143,11 @@ func _fighter_result_name(fid: int) -> String:
 
 
 ## Post-fight debrief — the client's fightResultDialog + fightResultEvolution-
-## Dialog folded into one read-only panel: winner/loser coaches with their new
-## ladder strength, cards won, then each of our fighters' OW report (banked
-## XP, morale/tiredness drift, wounds). fight_view decoded the 8300 before
-## acking; we pop the panel once the island view is back.
+## Dialog folded into one native panel (S18, src/ui/report_panel.gd): the
+## outcome, winner/loser coaches with their new ladder strength, each of our
+## fighters' OW report (banked XP, morale/tiredness drift, wounds) and the
+## cards won. fight_view decoded the 8300 before acking; we push the
+## `fightReport` model once the lobby is back.
 func _show_fight_result() -> void:
 	var r: Dictionary = State.fight_result
 	State.fight_result = {}
@@ -6145,37 +6156,29 @@ func _show_fight_result() -> void:
 	var me := int(State.my_coach_id)
 	var in_win: bool = r.get("win_str", {}).has(me)
 	var in_lose: bool = r.get("lose_str", {}).has(me)
-	var title := I18n.t("debrief.over")
+	var outcome := "over"
 	if int(r.get("flee", 0)) != 0:
-		title = I18n.t("debrief.abandoned")
+		outcome = "abandoned"
 	elif in_win:
-		title = I18n.t("fight.result.victory")
+		outcome = "victory"
 	elif in_lose:
-		title = I18n.t("fight.result.defeat")
-	var hints := []
-	if in_win:
-		hints.append(I18n.t("debrief.strength", {"n": int(r.win_str[me])}))
-	elif in_lose:
-		hints.append(I18n.t("debrief.strength", {"n": int(r.lose_str[me])}))
+		outcome = "defeat"
+	var summary := []
 	if int(r.get("standing", 0)) != 0:
-		hints.append(I18n.t("debrief.standing", {"n": "%+d" % int(r.standing)}))
+		summary.append(I18n.t("debrief.standing", {"n": "%+d" % int(r.standing)}))
 	if int(r.get("killed", 0)) > 0 or int(r.get("injured", 0)) > 0:
-		hints.append(I18n.t("debrief.casualties", {"killed": int(r.killed),
+		summary.append(I18n.t("debrief.casualties", {"killed": int(r.killed),
 			"injured": int(r.injured)}))
-	_element_text(title, "   ".join(hints))
-	_style_fight_debrief()
-	_elem_kind = ELEM_RESULT
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	for c in r.get("winners", []):
-		var cid := int(c.id)
-		var str_new: Variant = r.get("win_str", {}).get(cid)
-		list.add_item("★ %s%s" % [_coach_result_name(cid),
-			"  " + I18n.t("debrief.strength", {"n": int(str_new)}) if str_new != null else ""])
-	for c in r.get("losers", []):
-		var cid := int(c.id)
-		var str_new: Variant = r.get("lose_str", {}).get(cid)
-		list.add_item("   %s%s" % [_coach_result_name(cid),
-			"  " + I18n.t("debrief.strength", {"n": int(str_new)}) if str_new != null else ""])
+	var coaches: Array = []
+	for side in [["winners", "win_str", true], ["losers", "lose_str", false]]:
+		for c in r.get(side[0], []):
+			var cid := int(c.id)
+			var str_new: Variant = r.get(side[1], {}).get(cid)
+			coaches.append({"name": _coach_result_name(cid),
+				"side": I18n.t("rp.winner") if side[2] else I18n.t("rp.loser"),
+				"strength": str(int(str_new)) if str_new != null else "—",
+				"me": cid == me})
+	var fighters: Array = []
 	for rep in r.get("reports", []):
 		# Retail applies the OW report to the roster fighter (adY.dz) — keep
 		# the lobby panel's morale/tiredness/xp current without a 6006 re-push.
@@ -6185,64 +6188,25 @@ func _show_fight_result() -> void:
 				f.tiredness = int(rep.get("tiredness", f.get("tiredness", 0)))
 				f.xp = int(f.get("xp", 0)) + int(rep.get("xp_final", 0))
 				if rep.get("dead", false):
-					f.state = 2   # dead — the graveyard list picks it up
-		var parts := [_fighter_result_name(int(rep.fighter))]
-		if int(rep.get("xp_final", 0)) != 0:
-			var xp := "%+d XP" % int(rep.xp_final)
-			if int(rep.get("morale_bonus", 0)) != 0:
-				xp += " " + I18n.t("debrief.morale_bonus", {"n": "%+d" % int(rep.morale_bonus)})
-			parts.append(xp)
-		if int(rep.get("morale_delta", 0)) != 0:
-			parts.append(I18n.t("debrief.morale", {"delta": "%+d" % int(rep.morale_delta),
-				"n": int(rep.get("morale", 0))}))
-		if int(rep.get("tiredness_delta", 0)) != 0:
-			parts.append(I18n.t("debrief.tired", {"delta": "%+d" % int(rep.tiredness_delta),
-				"n": int(rep.get("tiredness", 0))}))
-		if rep.get("dead", false):
-			parts.append(I18n.t("debrief.dead"))
-		elif int(rep.get("wound", 0)) != 0:
-			parts.append(I18n.t("debrief.wounded"))
-		list.add_item(", ".join(parts))
-	var won_cards: Array = r.get("won_cards", [])
-	if not won_cards.is_empty():
-		list.add_item("— %s —" % I18n.t("fight.result.won"))
-		var counts := {}
-		for cid in won_cards:
-			counts[cid] = int(counts.get(cid, 0)) + 1
-		for cid in counts:
-			list.add_item("%s ×%d" % [Cards.name_of(int(cid)), int(counts[cid])])
-
-
-func _style_fight_debrief() -> void:
-	var panel: PanelContainer = $UI/ElementDlg
-	panel.offset_left = -320
-	panel.offset_right = 320
-	panel.offset_top = -240
-	panel.offset_bottom = 240
-	var theme := Theme.new()
-	var font := FontFile.new()
-	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/TAHOMA.TTF"))
-	theme.default_font = font
-	theme.default_font_size = 16
-	var surface := StyleBoxFlat.new()
-	surface.bg_color = Color("292c20")
-	surface.border_color = Color("ad965a")
-	surface.set_border_width_all(2)
-	surface.set_corner_radius_all(8)
-	surface.set_content_margin_all(18)
-	theme.set_stylebox("panel", "PanelContainer", surface)
-	for type in ["Label", "ItemList", "Button"]:
-		theme.set_color("font_color", type, Color("f1e5c1"))
-	var focus := StyleBoxFlat.new()
-	focus.bg_color = Color.TRANSPARENT
-	focus.border_color = Color("f6d583")
-	focus.set_border_width_all(2)
-	theme.set_stylebox("focus", "Button", focus)
-	panel.theme = theme
-	$UI/ElementDlg/VBox/Title.add_theme_font_size_override("font_size", 23)
-	$UI/ElementDlg/VBox/Hint.add_theme_font_size_override("font_size", 14)
-	$UI/ElementDlg/VBox/Btns/CloseBtn.text = I18n.t("fight.result.continue")
-	$UI/ElementDlg/VBox/Btns/CloseBtn.grab_focus.call_deferred()
+					f.state = 2   # dead — the Team panel's Fallen section
+		var xp := "%+d" % int(rep.get("xp_final", 0))
+		if int(rep.get("morale_bonus", 0)) != 0:
+			xp += " " + I18n.t("debrief.morale_bonus", {"n": "%+d" % int(rep.morale_bonus)})
+		fighters.append({"name": _fighter_result_name(int(rep.fighter)), "xp": xp,
+			"morale": "%d (%+d)" % [int(rep.get("morale", 0)), int(rep.get("morale_delta", 0))],
+			"tired": "%d (%+d)" % [int(rep.get("tiredness", 0)), int(rep.get("tiredness_delta", 0))],
+			"state": I18n.t("rp.dead") if rep.get("dead", false)
+				else (I18n.t("rp.wounded") if int(rep.get("wound", 0)) != 0 else I18n.t("rp.fine"))})
+	var counts := {}
+	for cid in r.get("won_cards", []):
+		counts[cid] = int(counts.get(cid, 0)) + 1
+	var cards: Array = []
+	for cid in counts:
+		cards.append({"name": Cards.name_of(int(cid)), "qty": int(counts[cid])})
+	_gui.gui.model.set_value("fightReport", {"outcome": outcome,
+		"summary": summary, "coaches": coaches, "fighters": fighters,
+		"cards": cards})
+	_gui.open("fightReportDialog")
 
 
 ## The retail graveyard element: the fallen fighters are a section of the

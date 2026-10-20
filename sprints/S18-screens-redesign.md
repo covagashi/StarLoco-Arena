@@ -58,6 +58,7 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-20 | Los desafíos de demonio con escena de entrada (113, 117) la **reproducen la primera vez** y ofrecen el desafío después, como el retail (`pn_0` + su Lua); antes se saltaba | agente |
 | 2026-10-20 | **Fuera los tótems y el lanzador como sitios**: el tótem de torneos pasa al **Calendario** (inscribirse, ver el cuadro, buscar rival) y el de demonios a **Social → Clan** (el líder hace la ofrenda; la clasificación de demonios ya estaba en Clasificación). "Servicios" ya no los lista | dueño ("1.- ok 2.- ok") |
 | 2026-10-20 | **Fuegos artificiales en el cielo del lobby**: un 22094 estalla sobre el fondo, detrás de las ventanas, en el color de la carta (en 1 bit el contenido conserva su color); cohete, estallido o fuente según la carta. Lanzador nativo con hasta 8 y la espera de cada uno | dueño ("si crees que está bien hazlo en el lobby") |
+| 2026-10-20 | **Informe de combate nativo** en el lobby (`fightReportDialog`): resultado en grande, coaches con su fuerza nueva, una fila por luchador (XP, moral, cansancio, estado) y las cartas ganadas en una línea. El aviso corto de la vista de combate (S17) no se toca | agente |
 | 2026-10-20 | **Menús aprobados** (Equipo con "Caídos", lobby con "Servicios"): "los menús me gustan". Las capturas no hacen falta: el dueño lo mira en la pantalla de la Ally | dueño |
 
 ## Por decidir con el dueño
@@ -178,9 +179,9 @@ Hoja: `codigo/capturas/s18/tanda2-altar.png`.
 
 Card Master aprobado; buzón y altar de fusión hechos, a la espera del visto
 bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Los servicios de la tanda 2
-están hechos. Lo que queda de `ElementDlg` son las pantallas fuera de
-"Servicios" (intercambio entre jugadores, estadísticas de otro coach,
-resultado de combate), con el mismo
+y el informe de combate están hechos. Lo que queda de `ElementDlg` es el
+intercambio entre jugadores y restos sin llamante vivo (fusión, buzón y
+estadísticas de depuración), con el mismo
 patrón: un panel sobre `lobby_panel.gd` (o `card_panel.gd` si enseña
 cartas), registrado en `_gui.native_factories` con el nombre del diálogo
 retail, y eventos `native*` hacia los handlers de `main.gd`. `ShopDlg` y

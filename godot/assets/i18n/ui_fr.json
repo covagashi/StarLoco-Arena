@@ -913,5 +913,19 @@
   "fw.remove": "Retirer",
   "fw.hint": "Ils se verront dans le ciel du lobby.",
   "fw.launch": "Lancer",
-  "dm.ladder_empty": "Aucun clan actif ne sert ce démon. Un clan compte à partir de {n} membres."
+  "dm.ladder_empty": "Aucun clan actif ne sert ce démon. Un clan compte à partir de {n} membres.",
+  "rp.winner": "Vainqueur",
+  "rp.loser": "Vaincu",
+  "rp.fine": "En forme",
+  "rp.col_coach": "Coach",
+  "rp.col_side": "Résultat",
+  "rp.col_strength": "Force",
+  "rp.fighters": "Tes combattants",
+  "rp.no_fighters": "Ce combat ne laisse pas de rapport de combattants.",
+  "rp.col_xp": "XP",
+  "rp.col_morale": "Moral",
+  "rp.col_tired": "Fatigue",
+  "rp.col_state": "État",
+  "rp.dead": "Mort",
+  "rp.wounded": "Blessé"
 }
