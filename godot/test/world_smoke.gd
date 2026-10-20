@@ -32,9 +32,13 @@ var _shot_dir := ""
 var _shot_taken := false
 var _shot_all := false         # --shot-all: one capture per service kind
 var _kind_shot := {}
+var _as := "test"              # --as=NAME: log in as another account/coach
 
 
 func _init() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--as="):
+			_as = a.trim_prefix("--as=")
 	await process_frame
 	_sess = root.get_node("Session")
 	_main = load("res://src/main.tscn").instantiate()
@@ -65,7 +69,7 @@ func _send_login() -> void:
 	v.put_bytes("72909".to_ascii_buffer())
 	_sess.send(7, v.raw(), 0)
 	var a := WireWriter.new()
-	var l := CP1252.encode("test")
+	var l := CP1252.encode(_as)
 	var p := CP1252.encode("test123")
 	a.put_u8(l.size())
 	a.put_bytes(l)
@@ -79,8 +83,8 @@ func _on_msg(op: int, _raw: PackedByteArray) -> void:
 	match op:
 		2048:   # coach list -> pick "test"
 			var w := WireWriter.new()
-			w.put_u8(4)
-			w.put_bytes("test".to_ascii_buffer())
+			w.put_u8(_as.length())
+			w.put_bytes(_as.to_ascii_buffer())
 			w.put_u8(1)
 			w.put_u8(1)
 			w.put_u8(0)

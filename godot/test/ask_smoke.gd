@@ -121,6 +121,10 @@ func _bot_send(op: int, raw: PackedByteArray) -> void:
 	_bot.send_message(op, raw, 3 if op == 5101 else 2)
 
 
+func _bot_name() -> String:
+	return "test2"
+
+
 func _bot_login() -> void:
 	var v := WireWriter.new()
 	v.put_u8(0x02)
@@ -129,7 +133,7 @@ func _bot_login() -> void:
 	v.put_bytes("72909".to_ascii_buffer())
 	_bot.send_message(7, v.raw(), 0)
 	var a := WireWriter.new()
-	var l := CP1252.encode("test2")
+	var l := CP1252.encode(_bot_name())
 	var p := CP1252.encode("test123")
 	a.put_u8(l.size())
 	a.put_bytes(l)
@@ -137,7 +141,7 @@ func _bot_login() -> void:
 	a.put_bytes(p)
 	_bot.send_message(1025, a.raw(), 1)
 	await _wait(func(): return _bot_seen.has(2048), 5.0)
-	var n := CP1252.encode("test2")
+	var n := CP1252.encode(_bot_name())
 	var w := WireWriter.new()
 	w.put_u8(n.size())
 	w.put_bytes(n)

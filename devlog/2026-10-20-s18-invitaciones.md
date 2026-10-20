@@ -47,3 +47,17 @@ Cerrar rechaza; una invitación a dúo "Pareja" rechazada llega al bot como
   la vez con equipos válidos.
 Los dos usan la misma cola que los cuatro probados; solo cambia el texto y
 la función que responde, que no se ha tocado.
+
+## Corrección (mismo día): los dos "sin probar", probados
+
+El dueño pidió probarlos. `test/ask2_smoke.gd` (`-- --as=test2`: el cliente
+principal entra como `test2`, sin clan; el bot es `test`, líder del clan 2;
+`world_smoke.gd` admite ahora `--as=`) 5/5:
+
+- **Combate encontrado**: los dos piden búsqueda rápida (2301), el aviso
+  dice "¿Combatir contra test?", Aceptar manda 23114, el bot acepta su lado
+  y el servidor registra "both accepted match -> starting fight"; llega el
+  8000 y test2 se rinde.
+- **Clan**: el bot invita (501), "test te invita a unirte al clan
+  «Hermandad1029»", Aceptar y test2 entra (log "guild joined"); el bot lo
+  expulsa después (log "guild member left … kicked=true"), como estaba.
