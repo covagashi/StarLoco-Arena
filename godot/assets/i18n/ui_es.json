@@ -927,5 +927,21 @@
   "rp.col_tired": "Cansancio",
   "rp.col_state": "Estado",
   "rp.dead": "Muerto",
-  "rp.wounded": "Herido"
+  "rp.wounded": "Herido",
+  "ex.title": "Intercambio con {name}",
+  "ex.yours": "Tus cartas",
+  "ex.offer": "Ofrecer",
+  "ex.full": "Ya ofreces 5 cartas distintas, el máximo.",
+  "ex.you_give": "Tú ofreces",
+  "ex.they_give": "{name} ofrece",
+  "ex.is_ready": "Listo",
+  "ex.not_ready": "Aún no",
+  "ex.remove": "Quitar",
+  "ex.value": "Valor: {n}",
+  "ex.hint": "Si alguien cambia su oferta, los dos tenéis que volver a confirmar.",
+  "ex.waiting": "Esperando a que {name} acepte el intercambio…",
+  "ex.cancel": "Cancelar",
+  "ex.ready": "Listo",
+  "ex.ready_done": "Esperando…",
+  "trade.you_ready": "Estás listo"
 }

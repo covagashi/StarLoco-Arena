@@ -106,17 +106,32 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 			print("[smoke] main 5104 result=%d ex=%d other=%d" % [
 				int(d.result), int(d.ex_id), int(d.other_id)])
 			if int(d.result) == 3:
-				# trade accepted — the pane opened; stage our first
-				# tradable card via the real List2 row path, then ready.
-				await create_timer(0.4).timeout
-				var list2: ItemList = _main.get_node(
-					"UI/ElementDlg/VBox/Scroll2/List2")
-				if list2.item_count > 0:
-					_main._exchange_add(0)
-					print("[smoke] main staged %s"
-						% Cards.name_of(int(list2.get_item_metadata(0))))
-				await create_timer(0.4).timeout
-				_main._on_element_act()   # "Ready" → 5109
+				# trade accepted — the native exchange window (S18) opened;
+				# pick our first tradable card, Ofrecer, then Listo.
+				await create_timer(0.5).timeout
+				var panel = _main._gui.dialogs.get("exchangeDialog")
+				var ex: Dictionary = _main._gui.gui.model.get_value("exchangeNative")
+				var owned: Array = ex.get("owned", []) if ex != null else []
+				if panel == null or owned.is_empty():
+					print("[smoke] WARN no native exchange window / nothing to offer")
+					return
+				panel.draft["add"] = int(owned[0].id)
+				panel.schedule_refresh()
+				await create_timer(0.3).timeout
+				panel.find_child("Add", true, false).pressed.emit()
+				print("[smoke] main staged %s" % owned[0].name)
+				# the bot answers our stage with its own card + ready; any
+				# stage un-readies both, so we ready only after its card lands
+				await create_timer(1.5).timeout
+				var theirs: Array = _main._gui.gui.model.get_value("exchangeNative").get("theirs", [])
+				var mine_rows: Array = _main._gui.gui.model.get_value("exchangeNative").get("mine", [])
+				print("[smoke] main sees the bot offer %s" % [theirs.map(func(c): return c.name)])
+				print("[smoke] TRADE %s — mine %s, theirs %s" % ["OK" if mine_rows.size() == 1
+					and str(mine_rows[0].name) == str(owned[0].name) and theirs.size() == 1
+					and str(theirs[0].name) == "Cape Hella" else "FAIL",
+					mine_rows.map(func(c): return c.name), theirs.map(func(c): return c.name)])
+				await _capture("exchange")
+				panel.find_child("Ready", true, false).pressed.emit()
 				print("[smoke] main ready sent")
 		5110:
 			var d := Codec.decode(op, WireReader.new(raw))
@@ -165,6 +180,38 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 				% [d.name, d.stats.size()])
 		8300:
 			print("[smoke] MAIN 8300 — fight over")
+			_check_report()
+
+
+## --shot-dir=D (needs a real renderer: xvfb-run) saves a PNG there.
+func _capture(name: String) -> void:
+	var dir := ""
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--shot-dir="):
+			dir = a.trim_prefix("--shot-dir=")
+	if dir == "" or DisplayServer.get_name() == "headless":
+		return
+	await create_timer(0.4).timeout
+	var img := root.get_texture().get_image()
+	if img != null:
+		img.save_png(dir.path_join(name + ".png"))
+		print("[smoke] shot ", name)
+
+
+## S18: a PvP fight is the one that carries fighter reports (challenges and
+## practice do not) — the lobby's native report must list them.
+var _report_rows := -1
+
+func _check_report() -> void:
+	await create_timer(0.8).timeout
+	var r: Variant = _main._gui.gui.model.get_value("fightReport")
+	if _main._gui.is_open("fightReportDialog") and r is Dictionary:
+		_report_rows = r.get("fighters", []).size()
+		_capture("fight-report-pvp")
+		print("[smoke] native report: '%s', %d fighter row(s): %s" % [r.get("outcome", ""),
+			_report_rows, r.get("fighters", []).map(func(f): return "%s %s xp, %s" % [f.name, f.xp, f.state])])
+	else:
+		print("[smoke] WARN no native fight report")
 
 
 ## Once the fight view is the current scene, press Ready when placement
@@ -310,18 +357,19 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(op, p)
 			print("[smoke] bot 5110 side=%d card=%d qty=%d" % [
 				int(d.side), int(d.card), int(d.qty)])
-			# after seeing main's first stage, bot stages card 7 too
+			# after seeing main's first stage, bot stages card 1 (Cape Hella:
+			# test2 starts with 4; card 7 ran out after a few runs)
 			if int(d.side) == 0:
 				var w := WireWriter.new()
 				w.put_i64(_bot_ex)
-				w.put_i32(7)
+				w.put_i32(1)
 				w.put_u16(1)
 				_bot.send_message(5105, w.raw(), 3)
 				await create_timer(0.3).timeout
 				var w2 := WireWriter.new()
 				w2.put_i64(_bot_ex)
 				_bot.send_message(5109, w2.raw(), 3)
-				print("[smoke] bot staged 7 + ready")
+				print("[smoke] bot staged 1 + ready")
 		26300:
 			var handle := int(p.get_i64())
 			var outgoing := p.get_u8()
@@ -470,7 +518,7 @@ func _finish(code: int, msg: String) -> void:
 	if _done:
 		return
 	_done = true
-	print("[smoke] %s (fight_seen=%s trade=%s spec=%s back=%s reconn=%s)" % [
+	print("[smoke] %s (fight_seen=%s trade=%s spec=%s back=%s reconn=%s report_rows=%d)" % [
 		msg, _fight_seen, _trade_seen, _spec_fight_seen,
-		_spec_world_back, _reconnect_seen])
+		_spec_world_back, _reconnect_seen, _report_rows])
 	quit(code)

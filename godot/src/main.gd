@@ -264,6 +264,7 @@ func _ready() -> void:
 	_gui.native_factories["demonAffiliationDialog"] = _make_demon_panel
 	_gui.native_factories["fireworkDialog"] = _make_firework_panel
 	_gui.native_factories["fightReportDialog"] = _make_report_panel
+	_gui.native_factories["exchangeDialog"] = _make_exchange_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -1563,33 +1564,34 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				3:
 					_ex["accepted"] = true
 					_log_line("[color=green]%s[/color]" % I18n.t("trade.accepted"))
-					if _gui.open("exchangeDialog") == null:
-						_open_exchange()
+					_ex_status = ""
 					_push_exchange_model()
+					_gui.open("exchangeDialog")
 		OP_EX_ADDED:
 			var d := Codec.decode(opcode, payload)
 			var side := int(d.side)
 			_ex.staged[side][int(d.card)] = int(d.qty)
+			_ex["ready"] = {0: false, 1: false}   # the server un-readies both
 			_refresh_exchange()
 			_push_exchange_model()
 		OP_EX_REMOVED:
 			var d := Codec.decode(opcode, payload)
 			_ex.staged[int(d.side)].erase(int(d.card))
+			_ex["ready"] = {0: false, 1: false}
 			_refresh_exchange()
 			_push_exchange_model()
 		OP_EX_USER_READY:
 			var d := Codec.decode(opcode, payload)
 			_ex.ready[int(d.side)] = true
-			var who: String = I18n.t("trade.you") \
-				if int(d.side) == _ex.get("my_side", -1) \
-				else _ex.get("other_name", "?")
-			_log_line(I18n.t("trade.ready", {"name": who}))
+			_log_line(I18n.t("trade.you_ready") if int(d.side) == _ex.get("my_side", -1)
+				else I18n.t("trade.ready", {"name": _ex.get("other_name", "?")}))
 			_refresh_exchange()
 			_push_exchange_model()
 		OP_EX_ERROR:
 			var d := Codec.decode(opcode, payload)
-			_log_line("[color=red]%s[/color]" % I18n.t(
-				"trade.err_unique" if int(d.code) == 1 else "trade.err_linked"))
+			_ex_status = I18n.t("trade.err_unique" if int(d.code) == 1 else "trade.err_linked")
+			_log_line("[color=red]%s[/color]" % _ex_status)
+			_push_exchange_model()
 		OP_EX_END:
 			var d := Codec.decode(opcode, payload)
 			_log_line(("[color=green]%s[/color]" % I18n.t("trade.done"))
@@ -5495,6 +5497,13 @@ func _make_fusion_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_exchange_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/exchange_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 func _make_report_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/report_panel.gd").new()
 	panel.model = _gui.gui.model
@@ -5595,6 +5604,24 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeFwLaunch":
 			_on_fw_launch([], null)
+			return
+		"nativeExAdd":
+			_ex_add_one(int(args[0]))
+			return
+		"nativeExRemove":
+			if not _ex.is_empty():
+				var wr := WireWriter.new()
+				wr.put_i64(int(_ex.id))
+				wr.put_i32(int(args[0]))
+				wr.put_u16(1)
+				Session.send(OP_EX_REMOVE, wr.raw(), 3)
+			return
+		"nativeExReady":
+			if not _ex.is_empty() and not bool(_ex.get("ready", {}).get(int(_ex.get("my_side", 0)), false)):
+				_on_ex_ready([], null)
+			return
+		"nativeExCancel":
+			_on_ex_close([], null)
 			return
 		"nativeTournTree":
 			_tourn_tree(int(args[0]))
@@ -6833,6 +6860,56 @@ func _push_exchange_model() -> void:
 		"remoteUserReady": bool(_ex.get("ready", {}).get(other, false)),
 		"readyButtonEnabled": bool(_ex.get("accepted", false))
 			and not bool(_ex.get("ready", {}).get(mine, false))})
+	# --- native panel (S18, src/ui/exchange_panel.gd) ------------------------
+	var staged_mine: Dictionary = _ex.get("staged", {}).get(mine, {})
+	var owned: Array = []
+	for cid in State.inventory:
+		if not bool(Cards.meta(int(cid)).get("tradable", false)):
+			continue
+		var left := int(State.inventory[cid]) - int(staged_mine.get(cid, 0))
+		if left > 0:
+			owned.append({"id": int(cid), "name": Cards.name_of(int(cid)), "qty": left,
+				"value": Cards.value_of(int(cid))})
+	owned.sort_custom(func(a, b): return a.name < b.name)
+	model.set_value("exchangeNative", {
+		"other": str(_ex.get("other_name", "?")),
+		"accepted": bool(_ex.get("accepted", false)),
+		"owned": owned, "mine": _ex_rows(mine), "theirs": _ex_rows(other),
+		"myValue": _ex_staged_value(mine), "theirValue": _ex_staged_value(other),
+		"myReady": bool(_ex.get("ready", {}).get(mine, false)),
+		"theirReady": bool(_ex.get("ready", {}).get(other, false)),
+		"full": staged_mine.size() >= EX_MAX_STAGED, "status": _ex_status})
+
+
+## One side's staged cards as table rows.
+func _ex_rows(side: int) -> Array:
+	var out: Array = []
+	var st: Dictionary = _ex.get("staged", {}).get(side, {})
+	for cid in st:
+		out.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"qty": int(st[cid]), "value": Cards.value_of(int(cid)) * int(st[cid])})
+	return out
+
+
+const EX_MAX_STAGED := 5     # server maxStagedPerSide, the client's 5 slots
+var _ex_status := ""         # last refusal (5113), shown in the panel
+
+
+## One more of card `cid` on my side: 5105 carries the TOTAL quantity (the
+## server replaces the staged entry).
+func _ex_add_one(cid: int) -> void:
+	if _ex.is_empty() or not _ex.get("accepted", false):
+		return
+	var mine := int(_ex.get("my_side", 0))
+	var cur := int(_ex.get("staged", {}).get(mine, {}).get(cid, 0))
+	if cur + 1 > int(State.inventory.get(cid, 0)):
+		return
+	_ex_status = ""
+	var wr := WireWriter.new()
+	wr.put_i64(int(_ex.id))
+	wr.put_i32(cid)
+	wr.put_u16(cur + 1)
+	Session.send(OP_EX_ADD, wr.raw(), 3)
 
 
 ## setReadyForExchange → 5109 ready toggle.

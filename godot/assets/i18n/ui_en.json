@@ -927,5 +927,21 @@
   "rp.col_tired": "Tiredness",
   "rp.col_state": "State",
   "rp.dead": "Dead",
-  "rp.wounded": "Wounded"
+  "rp.wounded": "Wounded",
+  "ex.title": "Trade with {name}",
+  "ex.yours": "Your cards",
+  "ex.offer": "Offer",
+  "ex.full": "You already offer 5 different cards, the most allowed.",
+  "ex.you_give": "You give",
+  "ex.they_give": "{name} gives",
+  "ex.is_ready": "Ready",
+  "ex.not_ready": "Not yet",
+  "ex.remove": "Remove",
+  "ex.value": "Value: {n}",
+  "ex.hint": "If either offer changes, both of you confirm again.",
+  "ex.waiting": "Waiting for {name} to accept the trade…",
+  "ex.cancel": "Cancel",
+  "ex.ready": "Ready",
+  "ex.ready_done": "Waiting…",
+  "trade.you_ready": "You are ready"
 }
