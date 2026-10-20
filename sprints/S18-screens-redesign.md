@@ -53,6 +53,9 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-20 | **El cementerio deja de ser un sitio**: nada de ir a él ni de Zaaps, solo el lobby "como los juegos actuales". Los luchadores muertos pasan a una **sección "Caídos" del panel de Equipo** (pestaña Evolución), y la palabra "cementerio" sale de la interfaz | dueño ("vale, como creas conveniente", sobre la propuesta del agente) |
 | 2026-10-20 | La entrada "Ciudad" del lobby pasa a llamarse **"Servicios"** (es/en/fr), para que no suene a un lugar del mapa | agente (propuesta aceptada en el mismo mensaje) |
 | 2026-10-20 | En "Caídos", **Muerto** (estado 2: aún ocupa plaza de titular; se puede sacar del equipo) y **Retirado** (estado 3: fuera del equipo; resucitado vuelve al banquillo). Solo se ofrecen las cartas de resurrección consumibles (tipo 24): el equipo con "% de resucitar" es un efecto de combate, no una carta para gastar aquí | agente |
+| 2026-10-20 | **Conversaciones en una ventana nativa más pequeña** (`npcTalkDialog`, 860×500): quién habla en el título, su texto, los desafíos como lista de botones y la acción principal (Siguiente / Aceptar) en el estilo primario 1 bit. Una sola ventana para los seis tipos que hablan y para los monólogos del tutorial | agente |
+| 2026-10-20 | **Los textos de los NPC siguen el idioma de la interfaz**: el retail trae es/en/fr y el generador ya los saca todos; antes salían siempre en inglés | agente |
+| 2026-10-20 | Los desafíos de demonio con escena de entrada (113, 117) la **reproducen la primera vez** y ofrecen el desafío después, como el retail (`pn_0` + su Lua); antes se saltaba | agente |
 | 2026-10-20 | **Menús aprobados** (Equipo con "Caídos", lobby con "Servicios"): "los menús me gustan". Las capturas no hacen falta: el dueño lo mira en la pantalla de la Ally | dueño |
 
 ## Por decidir con el dueño
@@ -172,9 +175,9 @@ Hoja: `codigo/capturas/s18/tanda2-altar.png`.
 ## Siguiente paso (para la próxima sesión)
 
 Card Master aprobado; buzón y altar de fusión hechos, a la espera del visto
-bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Sigue la tanda 2 con las
-conversaciones (`ElementDlg`, kinds 3/5/6/7/9/15), los tótems y los fuegos
-artificiales, con el mismo
+bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Sigue la tanda 2 con los
+tótems (kinds 11 y 13, hoy `ElementDlg`) y los fuegos artificiales
+(`fireworkDialog` XML), con el mismo
 patrón: un panel sobre `lobby_panel.gd` (o `card_panel.gd` si enseña
 cartas), registrado en `_gui.native_factories` con el nombre del diálogo
 retail, y eventos `native*` hacia los handlers de `main.gd`. `ShopDlg` y
@@ -193,6 +196,19 @@ gastada y sin 6006; banquillo lleno: botón desactivado y, forzado, rechazo
 sin gastar la carta). El resultado sale en el pie del panel; sin scroll a
 1280×720. Visto bueno del dueño el mismo día ("los menús me gustan").
 
+**Hecho el 2026-10-20: las conversaciones** (`src/ui/talk_panel.gd`). Los
+seis tipos que hablan (desafío 3, maestro de raza 5, Demonio III 6, desafío
+de demonio 7, Demonio I 9, NPC 15) y los monólogos del tutorial salen en
+una ventana nativa, en el idioma de la interfaz. Verificado en vivo:
+`test/talk_smoke.gd` 8/8 (Demonio I pasa sus tres páginas y cierra; el
+desafío de SuperBidi lista su desafío por nombre; un desafío de demonio
+reproduce su entrada la primera vez, ofrece Aceptar / Rechazar, a la
+segunda va directo y Aceptar lanza el combate: 26330 → 8000) y
+`world_smoke.gd` 56/56 con las nueve conversaciones del lobby en la ventana
+nativa. Maestros de raza (5), Demonio III de tipo 6 y NPCs (15) no están en
+el lobby (sus islas se descartaron): su código pasa a la ventana, pero no
+hay elemento en "Servicios" con el que probarlo en vivo.
+
 ## Tareas candidatas
 
 - [x] Hoja de 3 direcciones sobre las mismas tres pantallas (2026-10-17).
@@ -209,8 +225,9 @@ sin gastar la carta). El resultado sale en el pie del panel; sin scroll a
       uno (inventario con cartas, clasificación como el boceto…).
 - [ ] Servicios: sustituir los diálogos XML y `ElementDlg` por paneles
       nativos (lista de S05). Card Master y buzón hechos (2026-10-17), altar
-      (2026-10-18), los caídos en Equipo en vez del cementerio (2026-10-20);
-      faltan fuegos artificiales, retos, demonios, tótems.
+      (2026-10-18), los caídos en Equipo en vez del cementerio (2026-10-20),
+      las conversaciones: retos, demonios, NPCs (2026-10-20); faltan fuegos
+      artificiales y tótems.
 - [ ] Retirar de `main.tscn` los paneles de depuración que queden sin uso.
 - [ ] `godot/PRODUCT.md` y `DESIGN.md` al día (hoy dicen que el dueño fija el
       estilo de login y creación, y eso ya no vale).

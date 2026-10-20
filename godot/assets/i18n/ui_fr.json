@@ -846,5 +846,9 @@
   "team.revive_ok": "{name} est de retour ({where}).",
   "team.revive_fail": "Le jet a échoué : {card} est dépensée et {name} reste mort.",
   "team.revive_refused": "Le serveur a refusé de ressusciter {name}.",
-  "team.retire": "Retirer de l'équipe"
+  "team.retire": "Retirer de l'équipe",
+  "talk.title": "Conversation",
+  "talk.tutorial": "Tutoriel",
+  "talk.page": "Page {n} sur {of}",
+  "talk.challenges": "Défis"
 }

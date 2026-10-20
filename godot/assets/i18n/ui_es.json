@@ -846,5 +846,9 @@
   "team.revive_ok": "{name} ha vuelto ({where}).",
   "team.revive_fail": "La tirada falló: {card} se ha gastado y {name} sigue muerto.",
   "team.revive_refused": "El servidor no aceptó la resurrección de {name}.",
-  "team.retire": "Sacar del equipo"
+  "team.retire": "Sacar del equipo",
+  "talk.title": "Conversación",
+  "talk.tutorial": "Tutorial",
+  "talk.page": "Página {n} de {of}",
+  "talk.challenges": "Desafíos"
 }

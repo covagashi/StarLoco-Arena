@@ -11,6 +11,9 @@ extends RefCounted
 ##   "ach"   — criterion sent on start (22003 {id,1,1})
 ##   "pages" — content.29 text ids, shown one per Next click
 ##   "zaap"  — follow-up page shown the next time the Zaap dialog opens
+##
+## 113 and 117 are not zone triggers: they are the intros the demon-challenge
+## elements (kind 7) play before offering their challenge.
 const SCRIPTS := {
 	100: {"ach": 219, "pages": [256, 257, 258, 259, 182, 183, 184, 185,
 		186, 187, 188]},
@@ -23,6 +26,10 @@ const SCRIPTS := {
 	107: {"pages": [213, 214, 215, 216, 217, 218]},
 	108: {"pages": [219], "zaap": 220},
 	109: {"pages": [221, 222, 223]},
+	# Demon-challenge intros (pn_0 desc field 1, played once before the
+	# offer; the script ends in runInteractiveElementSpecialAction).
+	113: {"pages": [231, 232, 233, 234]},
+	117: {"pages": [277, 278, 279]},
 }
 
 

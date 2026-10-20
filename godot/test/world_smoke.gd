@@ -160,13 +160,14 @@ func _evidence(kind: int) -> Array:
 		13:
 			var ok: bool = await _wait(func(): return _seen.has(17003), 3.0)
 			return [ok, "17003 calendar%s" % (" + 28602 list" if _seen.has(28602) else "")]
-		3, 6, 7:
-			var ok: bool = await _wait(elem_open, 2.0)
-			var rows: int = _main.get_node("UI/ElementDlg/VBox/Scroll/List").item_count
-			return [ok, "pane '%s', %d rows" % [_title(), rows]]
-		5, 9, 15:
-			var ok: bool = await _wait(elem_open, 2.0)
-			return [ok and _title() != "", "pane '%s'" % _title()]
+		3, 5, 6, 7, 9, 15:
+			# S18: the native conversation window, never the debug pane
+			var ok: bool = await _wait(func(): return _main._gui.is_open("npcTalkDialog"), 2.0)
+			var talk: Variant = _main._gui.gui.model.get_value("talk")
+			var t: Dictionary = talk if talk is Dictionary else {}
+			return [ok and not dlg.visible and str(t.get("name", "")) != ""
+				and not t.get("choices", []).is_empty(),
+				"conversation '%s', %d choices" % [t.get("name", ""), t.get("choices", []).size()]]
 	return [false, "no check for kind %d" % kind]
 
 

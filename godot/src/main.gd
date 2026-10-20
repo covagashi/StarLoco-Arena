@@ -265,6 +265,7 @@ func _ready() -> void:
 	_gui.native_factories["cardMasterDialog"] = _make_card_master_panel
 	_gui.native_factories["mailboxDialog"] = _make_mailbox_panel
 	_gui.native_factories["fusionLabDialog"] = _make_fusion_panel
+	_gui.native_factories["npcTalkDialog"] = _make_talk_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -5416,6 +5417,13 @@ func _make_fusion_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_talk_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/talk_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 ## Native controls reuse existing handlers with the same item-event context.
 func _on_native_lobby_action(event: String, args: Array, item: Variant, index: int) -> void:
 	match event:
@@ -5438,6 +5446,9 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeUseElement":
 			_use_element(int(args[0]))
+			return
+		"nativeTalk":
+			_talk_choice(int(args[0]))
 			return
 		"nativeRevive":
 			_revive_fighter(int(args[0]), int(args[1]))
@@ -5611,15 +5622,11 @@ func _use_element(id: int) -> void:
 			_open_demon3(e)
 		9:   # Demon I (aac_2) — paged monologue gated on achievement 277
 			_open_demon1(e)
-		5:   # Breed Master — recruit text; the "test" button runs 26330 too.
+		5:   # Breed Master — recruit text; "Aceptar" runs 26330 too.
 			# zs_1 also reports criterion 221 ("talked to a breedmaster") on
 			# every dialog open — a counter stat, value=1 each time.
-			_open_challenge_bubble(e)
-			w = WireWriter.new()
-			w.put_i16(221)
-			w.put_u8(1)
-			w.put_i16(1)
-			State.net.send_message(OP_STAT_UPD, w.raw(), 2)
+			_open_breed_master(e)
+			_report_criterion(221)
 		11:  # Demon totem — ladder page requested with 27510, shown on 27511
 			_open_demon_totem(e)
 		13:  # Tournament totem — calendar (17002) + list (28601)
@@ -5632,6 +5639,96 @@ func _use_element(id: int) -> void:
 			_element_text(label, "…")
 
 
+## --- Conversations (S18: native npcTalkDialog, src/ui/talk_panel.gd) ---------
+## Every talking element (challenge 3, breed master 5, Demon III 6, demon
+## challenge 7, Demon I 9, NPC 15) and the tutorial monologues reduce to one
+## shape: who speaks, what they say, and a row of choices. _talk_show pushes
+## that as the `talk` model; the panel answers "nativeTalk" [index] and the
+## choice's Callable runs here, so the wire stays in main.gd.
+
+var _talk_actions: Array = []   # Callables, index-aligned with talk.choices
+var _talk_seen := {}            # element id -> true once its intro scenario ran
+
+
+## choices: [{label, kind, do}] — kind "reply" / "challenge" go in the list,
+## "primary" / "secondary" in the action row.
+func _talk_show(speaker: String, text: String, choices: Array, page := 0, pages := 0) -> void:
+	_talk_actions = []
+	var rows: Array = []
+	for c in choices:
+		_talk_actions.append(c.do)
+		rows.append({"label": str(c.label), "kind": str(c.kind)})
+	_gui.gui.model.set_value("talk", {"name": speaker, "text": _talk_bbcode(text),
+		"choices": rows, "page": page, "pages": pages})
+	if not _gui.is_open("npcTalkDialog"):
+		_gui.open("npcTalkDialog")
+
+
+func _talk_choice(i: int) -> void:
+	if i >= 0 and i < _talk_actions.size():
+		(_talk_actions[i] as Callable).call()
+
+
+func _talk_close() -> void:
+	_gui.close("npcTalkDialog")
+	_npc = {}
+
+
+## Retail texts carry literal "\n" and a few HTML tags; RichTextLabel speaks
+## BBCode.
+static func _talk_bbcode(text: String) -> String:
+	var t := text.replace("\\n", "\n").replace("[", "[lb]")
+	for tag in ["b", "i", "u"]:
+		t = t.replace("<%s>" % tag, "[%s]" % tag).replace("</%s>" % tag, "[/%s]" % tag)
+	var strip := RegEx.create_from_string("<[^>]*>")
+	return strip.sub(t, "", true).strip_edges()
+
+
+func _close_choice(key := "btn.close") -> Dictionary:
+	return {"label": I18n.t(key), "kind": "secondary", "do": _talk_close}
+
+
+## A challenge offer: 26330 [i32 challengeId][i16 mode] — 99 for every picker
+## accept (cj_0's bM is hardcoded 99 for env 3/6/7), the record's Qu() for an
+## NPC reply action.
+func _challenge_choice(chal: int, mode := 99, label := "") -> Dictionary:
+	return {"label": label if label != "" else NpcDialogs.challenge_name(chal),
+		"kind": "challenge" if label == "" else "primary",
+		"do": func(): _launch_challenge(chal, mode)}
+
+
+func _launch_challenge(chal: int, mode: int) -> void:
+	if chal <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i32(chal)
+	w.put_u16(mode)
+	Session.send(OP_TEAM_TEST, w.raw(), 2)
+	_log_line(I18n.t("challenge.accepted_id", {"id": chal}))
+	_talk_close()
+
+
+## Paged monologue: "Siguiente" until the last page, then `done`.
+func _talk_pages(speaker: String, pages: Array, done: Callable) -> void:
+	_npc = {"speaker": speaker, "pages": pages, "page": 0, "done": done}
+	_talk_page()
+
+
+func _talk_page() -> void:
+	var pages: Array = _npc.get("pages", [])
+	var page := int(_npc.get("page", 0))
+	if page >= pages.size():
+		(_npc.get("done", _talk_close) as Callable).call()
+		return
+	var last := page == pages.size() - 1
+	_talk_show(str(_npc.get("speaker", "")), NpcDialogs.npc_name(int(pages[page])), [
+		{"label": I18n.t("btn.ok" if last else "btn.next"), "kind": "primary",
+			"do": func():
+				_npc["page"] = int(_npc.get("page", 0)) + 1
+				_talk_page()},
+		_close_choice()], page + 1, pages.size())
+
+
 ## NPC talker (kind 15): desc = "nameId;criterionId;defaultGroup;altGroup;
 ## style" (client ni_0). The whole tree is client-side — opening sends nothing;
 ## reply actions are the only wire traffic (26330 challenge / 22003 criterion).
@@ -5642,51 +5739,33 @@ func _open_npc(e: Dictionary) -> void:
 	var crit := int(fields[1]) if fields.size() > 1 else -1
 	var def_group := int(fields[2]) if fields.size() > 2 else -1
 	var alt_group := int(fields[3]) if fields.size() > 3 else def_group
-	_npc = {
-		"name": NpcDialogs.npc_name(name_id),
-		"replies": [],
-	}
+	_npc = {"name": NpcDialogs.npc_name(name_id), "replies": []}
 	var group := def_group
 	if crit != -1 and int(State.criteria.get(crit, 0)) > 0:
 		group = alt_group
 	_npc_node(group)
 
 
-## Show one dialog node: speech (content.59) + reply rows (content.60 labels).
+## One dialog node: speech (content.59) + reply rows (content.60 labels).
 func _npc_node(group_id: int) -> void:
 	var g := NpcDialogs.group(group_id)
 	if g.is_empty():
-		$UI/ElementDlg.visible = false
+		_talk_close()
 		return
 	var replies: Array = g.get("replies", [])
 	_npc["replies"] = replies
-	_element_text(str(_npc.get("name", "NPC")), str(g.get("text", "")))
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+	var choices: Array = []
 	for i in replies.size():
-		list.add_item(str(replies[i].get("label", "…")))
-		list.set_item_metadata(i, i)
-	if not list.item_selected.is_connected(_on_npc_reply):
-		list.item_selected.connect(_on_npc_reply)
-	_elem_close_btn()
+		choices.append({"label": str(replies[i].get("label", "…")), "kind": "reply",
+			"do": _npc_reply.bind(i)})
+	if choices.is_empty():
+		choices.append(_close_choice())
+	_talk_show(str(_npc.get("name", "")), str(g.get("text", "")), choices)
 
 
 ## Reply click = client ao_2 case 17001: run the action, then navigate to the
-## reply's `next` group (0 = close the dialog). For kinds 3/6 the list rows
-## are the défi picker — a click accepts the challenge (cj_0 → 26330 {id, 99}).
-func _on_npc_reply(i: int) -> void:
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	if _elem_kind == 3 or _elem_kind == 6:
-		var chal := int(list.get_item_metadata(i))
-		if chal > 0:
-			var w := WireWriter.new()
-			w.put_i32(chal)
-			w.put_u16(99)
-			Session.send(OP_TEAM_TEST, w.raw(), 2)
-			_log_line(I18n.t("challenge.accepted_id", {"id": chal}))
-		$UI/ElementDlg.visible = false
-		return
-	if _elem_kind != 15:
-		return
+## reply's `next` group (0 = close the dialog).
+func _npc_reply(i: int) -> void:
 	var replies: Array = _npc.get("replies", [])
 	if i < 0 or i >= replies.size():
 		return
@@ -5700,152 +5779,112 @@ func _on_npc_reply(i: int) -> void:
 			Session.send(OP_TEAM_TEST, w.raw(), 2)
 		2: # Donne un exploit — 22003 {i16 criterionId, u8 1, i16 1}
 			var crit := int(r.get("params", [0])[0])
-			var w := WireWriter.new()
-			w.put_i16(crit)
-			w.put_u8(1)
-			w.put_i16(1)
-			State.net.send_message(OP_STAT_UPD, w.raw(), 2)
-			State.criteria[crit] = 1   # local shadow for same-session gates
+			_report_criterion(crit)
 	var next := int(r.get("next", 0))
 	if next != 0:
 		_npc_node(next)
 	else:
-		$UI/ElementDlg.visible = false
+		_talk_close()
 
 
-## Fill the ElementDlg list with one row per challenge (content.30 names);
-## clicking a row sends 26330 [i32 challengeId][i16 99] — the wire shape every
-## picker accept produces (cj_0's bM is hardcoded 99 for env 3/6/7 elements).
-func _npc_fill_challenges(chals: Array) -> void:
-	_npc["chals"] = chals
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	list.clear()
-	for c in chals:
-		list.add_item(NpcDialogs.challenge_name(int(c)))
-		list.set_item_metadata(list.item_count - 1, int(c))
-	if not list.item_selected.is_connected(_on_npc_reply):
-		list.item_selected.connect(_on_npc_reply)
+## 22003 {i16 criterionId, u8 1, i16 1}, plus the local shadow same-session
+## gates read.
+func _report_criterion(crit: int) -> void:
+	var w := WireWriter.new()
+	w.put_i16(crit)
+	w.put_u8(1)
+	w.put_i16(1)
+	State.net.send_message(OP_STAT_UPD, w.raw(), 2)
+	State.criteria[crit] = 1
 
 
-## uk_0 Challenge (kind 3): desc "nameId;speechId;challengeId;…" — accept shows
-## the challenge picker (cj_0); each row launches 26330 {id, 99}.
+## uk_0 Challenge (kind 3): desc "nameId;speechId;challengeId;…" — one choice
+## per challenge (cj_0's picker), each launching 26330 {id, 99}.
 func _open_challenge_picker(e: Dictionary) -> void:
 	var fields := _desc_fields(str(e.get("desc", "")))
-	_npc = {}
-	_element_text(
-		NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else "Challenge",
-		NpcDialogs.npc_name(fields[1]) if fields.size() > 1 else "")
-	_npc_fill_challenges(fields.slice(2))
-	_elem_close_btn()
+	var choices: Array = []
+	for c in fields.slice(2):
+		choices.append(_challenge_choice(int(c)))
+	choices.append(_close_choice())
+	_talk_show(NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else "",
+		NpcDialogs.npc_name(fields[1]) if fields.size() > 1 else "", choices)
 
 
-## Show AltBtn as a plain "Close" — _on_element_alt's fallthrough hides the
-## dialog for every kind that has no specific alt action.
-func _elem_close_btn() -> void:
-	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = I18n.t("btn.close")
-	alt.visible = true
-
-
-## pn_0 DemonChallenge (kind 7): desc "nameId;taskId;challengeId;acceptText;
-## refuseText". taskId != 0 drives a client-side scenario we don't run — we go
-## straight to the challenge offer. taskId == 0 gates the accept bubble on
-## achievement 278 ("all four minute-demon challenges"): refuse text otherwise.
+## pn_0 DemonChallenge (kind 7): desc "nameId;scenarioId;challengeId;
+## acceptText[;refuseText]". scenarioId != 0 plays that intro monologue the
+## first time (retail Lua scenario, then runInteractiveElementSpecialAction)
+## and offers the challenge after it, and directly from then on. With
+## scenarioId == 0 the offer is gated on achievement 278 ("all four
+## minute-demon challenges"); otherwise the refuse text and "OK".
 func _open_demon_challenge(e: Dictionary) -> void:
 	var fields := _desc_fields(str(e.get("desc", "")))
+	var speaker := NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else ""
+	var task := int(fields[1]) if fields.size() > 1 else 0
+	var intro: Dictionary = Scenarios.script(task) if task != 0 else {}
+	var id := _elem_id
+	if not intro.is_empty() and not _talk_seen.has(id):
+		_talk_seen[id] = true
+		_talk_pages(speaker, intro.get("pages", []), func(): _demon_offer(fields, speaker))
+	else:
+		_demon_offer(fields, speaker)
+
+
+func _demon_offer(fields: Array, speaker: String) -> void:
 	var task := int(fields[1]) if fields.size() > 1 else 0
 	var chal := int(fields[2]) if fields.size() > 2 else -1
 	var accept_txt := int(fields[3]) if fields.size() > 3 else -1
 	var refuse_txt := int(fields[4]) if fields.size() > 4 else -1
-	_npc = {}
-	_element_text(NpcDialogs.npc_name(fields[0]),
-		NpcDialogs.npc_name(
-			accept_txt if task != 0 or _ach_done(278) else refuse_txt))
-	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = I18n.t("btn.refuse")
-	alt.visible = true
 	if task != 0 or _ach_done(278):
-		var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-		act.text = I18n.t("btn.accept")
-		act.visible = true
-		act.disabled = chal < 0
-		_npc["chal"] = chal
+		_talk_show(speaker, NpcDialogs.npc_name(accept_txt), [
+			_challenge_choice(chal, 99, I18n.t("btn.accept")),
+			_close_choice("btn.refuse")])
+	else:
+		_talk_show(speaker, NpcDialogs.npc_name(refuse_txt), [_close_choice("btn.ok")])
 
 
 ## aac_2 Demon I (kind 9): desc "nameId;t0;t1;t2;alt0;alt1" — a paged
 ## monologue. Achievement 277 (all minute-demon challenges) picks the alt
-## two-page set; the "Next" button advances, last page closes.
+## two-page set.
 func _open_demon1(e: Dictionary) -> void:
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var pages := fields.slice(4) if _ach_done(277) else fields.slice(1, 4)
-	_npc = {"pages": pages, "page": 0, "chals": []}
-	_npc_page_show(NpcDialogs.npc_name(fields[0]))
+	_talk_pages(NpcDialogs.npc_name(fields[0]), pages, _talk_close)
 
 
 ## acn_0 Demon III (kind 6): desc "nameId;t0..t5;challengeId×3". First contact
 ## (achievement 275 pending) reports criterion 210 then pages t0→t2; the tail
 ## picks t3 (needs 3 recruits, ach 276), t5 (evo challenges done, ach 284) or
-## t4 + the challenge picker.
+## t4 + the challenges.
 func _open_demon3(e: Dictionary) -> void:
 	var fields := _desc_fields(str(e.get("desc", "")))
+	var speaker := NpcDialogs.npc_name(fields[0])
 	var texts := fields.slice(1, 7)
-	var chals := fields.slice(7)
-	_npc = {"chals": chals}
 	if not _ach_done(275):
-		var w := WireWriter.new()
-		w.put_i16(210)
-		w.put_u8(1)
-		w.put_i16(1)
-		State.net.send_message(OP_STAT_UPD, w.raw(), 2)
-		State.criteria[210] = 1   # local shadow — achievement 275's gate reads it
-		_npc["pages"] = texts.slice(0, 3)
-		_npc["page"] = 0
-		_npc["chals"] = []
-		_npc_page_show(NpcDialogs.npc_name(fields[0]))
+		_report_criterion(210)   # achievement 275's gate reads it
+		_talk_pages(speaker, texts.slice(0, 3), _talk_close)
 	elif not _ach_done(276):
-		_element_text(NpcDialogs.npc_name(fields[0]),
-			NpcDialogs.npc_name(texts[3]))
+		_talk_show(speaker, NpcDialogs.npc_name(texts[3]), [_close_choice()])
 	elif _ach_done(284):
-		_element_text(NpcDialogs.npc_name(fields[0]),
-			NpcDialogs.npc_name(texts[5]))
+		_talk_show(speaker, NpcDialogs.npc_name(texts[5]), [_close_choice()])
 	else:
-		_element_text(NpcDialogs.npc_name(fields[0]),
-			NpcDialogs.npc_name(texts[4]))
-		_npc_fill_challenges(chals)
-	_elem_close_btn()
+		var choices: Array = []
+		for c in fields.slice(7):
+			choices.append(_challenge_choice(int(c)))
+		choices.append(_close_choice())
+		_talk_show(speaker, NpcDialogs.npc_name(texts[4]), choices)
 
 
-## Show one monologue page; ActBtn = Next / OK.
-func _npc_page_show(title: String) -> void:
-	var pages: Array = _npc.get("pages", [])
-	var page := int(_npc.get("page", 0))
-	var last := page >= pages.size() - 1
-	_element_text(title, NpcDialogs.npc_name(int(pages[page]))
-		if pages.size() > page else "")
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = I18n.t("btn.ok") if last else I18n.t("btn.next")
-	act.visible = true
-	act.disabled = false
-	_elem_close_btn()
-
-
-## ActBtn on kinds 6/9 advances the monologue; at the last page it either
-## closes (no challenges) or reveals the défi picker.
-func _npc_page_next() -> void:
-	_npc["page"] = int(_npc.get("page", 0)) + 1
-	var pages: Array = _npc.get("pages", [])
-	if int(_npc.page) < pages.size():
-		_npc_page_show($UI/ElementDlg/VBox/Title.text)
-		return
-	var chals: Array = _npc.get("chals", [])
-	if chals.is_empty():
-		$UI/ElementDlg.visible = false
-		# Queued zone-trigger scenarios run one monologue at a time.
-		if _elem_kind == ELEM_SCENARIO and not _scenario_queue.is_empty():
-			_run_scenario(_scenario_queue.pop_front())
-	else:
-		_npc_fill_challenges(chals)
-		$UI/ElementDlg/VBox/Btns/ActBtn.visible = false
+## zs_1 Breed Master (kind 5): desc "nameId;textId;textId;breed;challengeId".
+## Accept → 26330 {challengeId, 99}.
+func _open_breed_master(e: Dictionary) -> void:
+	var fields := _desc_fields(str(e.get("desc", "")))
+	var chal := int(fields[4]) if fields.size() > 4 else -1
+	var choices: Array = []
+	if chal > 0:
+		choices.append(_challenge_choice(chal, 99, I18n.t("btn.accept")))
+	choices.append(_close_choice("btn.refuse"))
+	_talk_show(NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else "",
+		NpcDialogs.npc_name(fields[1]) if fields.size() > 1 else "", choices)
 
 
 ## Achievement check against the coach's live criteria + tome (aau_1.a).
@@ -5874,30 +5913,27 @@ func _check_zone_trigger(cell: Vector2i) -> void:
 		_elem_id = id
 		# Overlapping zones queue their scenarios like the retail Lua VM's
 		# event loop — one monologue at a time.
-		if _elem_kind == ELEM_SCENARIO and $UI/ElementDlg.visible:
+		if _elem_kind == ELEM_SCENARIO and _gui.is_open("npcTalkDialog"):
 			_scenario_queue.append(script)
 		else:
 			_run_scenario(script)
 
 
-## Play a scenario as a paged floating monologue (the retail BubbleText
-## content is intact; the actor walk-in / widget-particle choreography is
-## not reproduced). `ach` criteria go out as 22003 like Context.updateAch.
+## Play a scenario as a paged monologue (the retail BubbleText content is
+## intact; the actor walk-in / widget-particle choreography is not
+## reproduced). `ach` criteria go out as 22003 like Context.updateAch.
 func _run_scenario(id: int) -> void:
 	var s := Scenarios.script(id)
 	if s.is_empty():
 		return
 	var ach := int(s.get("ach", 0))
 	if ach > 0:
-		var w := WireWriter.new()
-		w.put_i16(ach)
-		w.put_u8(1)
-		w.put_i16(1)
-		State.net.send_message(OP_STAT_UPD, w.raw(), 2)
-		State.criteria[ach] = 1   # local shadow for same-session gates
-	_npc = {"pages": s.get("pages", []), "page": 0, "chals": []}
+		_report_criterion(ach)
 	_elem_kind = ELEM_SCENARIO
-	_npc_page_show("Tutorial")
+	_talk_pages(I18n.t("talk.tutorial"), s.get("pages", []), func():
+		_talk_close()
+		if not _scenario_queue.is_empty():
+			_run_scenario(_scenario_queue.pop_front()))
 	DebugLog.add("tutorial scenario %d fired" % id)
 
 
@@ -6709,30 +6745,6 @@ func _on_fusion_inputs() -> void:
 	$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.pick_target")
 
 
-## Challenge bubble (env 3/7 desc idx2 = challengeId; breed master idx4):
-## Accept → 26330 [i32 challengeId][i16 99] (arch 2 — challengeAcceptBreed).
-var _bubble_challenge := -1
-
-func _open_challenge_bubble(e: Dictionary) -> void:
-	var fields := _desc_fields(str(e.get("desc", "")))
-	# Demon challenge & plain challenge carry it at index 2; the Breed Master
-	# layout is name;txt;txt;breed;challenge → index 4.
-	_bubble_challenge = int(fields[4]) if _elem_kind == 5 \
-		and fields.size() > 4 else (int(fields[2]) if fields.size() > 2 else -1)
-	var title := Elements.kind_name(_elem_kind)
-	if _elem_kind == 5:
-		title = "Breed Master — test fight"
-	_element_text(title, "Challenge #%d — accept?"
-		% _bubble_challenge)
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = I18n.t("btn.accept")
-	act.visible = true
-	act.disabled = _bubble_challenge < 0
-	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = I18n.t("btn.refuse")
-	alt.visible = true
-
-
 ## Demon totem → 27510 [i16 demon][i16 flag][i32 startRank]; desc = demon id.
 ## The dialog fills in when 27511 lands (handled in _on_message).
 func _open_demon_totem(e: Dictionary) -> void:
@@ -7309,18 +7321,6 @@ func _on_element_act() -> void:
 			$UI/ElementDlg.visible = false
 			DebugLog.add("fusion sent: %d cards → %s" % [inputs.size(),
 				Cards.name_of(int(list2.get_item_metadata(sel2[0])))])
-		5, 7:  # breedmaster/demon challenge accepted → 26330 {id, 99}
-			var chal := int(_npc.get("chal", _bubble_challenge))
-			if chal < 0:
-				return
-			var w := WireWriter.new()
-			w.put_i32(chal)
-			w.put_u16(99)
-			Session.send(OP_TEAM_TEST, w.raw(), 2)
-			$UI/ElementDlg.visible = false
-			_log_line(I18n.t("challenge.accepted_id", {"id": chal}))
-		6, 9, ELEM_SCENARIO:  # monologue — Next advances, last closes/pickers
-			_npc_page_next()
 		13:  # tournament register → 4607 [tid][coach][preset=-1][card=0]
 			var sel := list.get_selected_items()
 			if sel.is_empty():
@@ -7452,9 +7452,6 @@ func _on_element_alt() -> void:
 		act.disabled = false
 		return
 	$UI/ElementDlg.visible = false
-	# Closing a queued-up scenario monologue starts the next one.
-	if _elem_kind == ELEM_SCENARIO and not _scenario_queue.is_empty():
-		_run_scenario(_scenario_queue.pop_front())
 
 
 ## --- Card Master shop --------------------------------------------------------

@@ -15,8 +15,13 @@ extends RefCounted
 ## Clicking a reply runs `act` (1 = 26330 challenge launch
 ## [challengeId][challengeModes[id]], 2 = 22003 criterion) then navigates to
 ## `next` — 0 closes the dialog.
+##
+## Text follows the UI language (State.locale): `locales.<lang>` carries the
+## same text tables for es/fr, and a key missing there falls back to English.
+## Behaviour (next/act/params, modes, achievements) is language-free.
 
 const PATH := "gamedata/npcdialogs.json"
+const State := preload("res://src/state.gd")
 
 static var _names := {}       # nameId int -> String (content.29: names + texts)
 static var _chal_names := {}  # challenge id int -> String (content.30)
@@ -29,6 +34,7 @@ static var _crit_names := {}  # criterion id int -> String (content.48)
 static var _summons := {}     # summon template id int -> {hp, ap, mp, look}
 static var _summon_names := {} # summon id int -> String (content.10)
 static var _event_names := {}  # event card id int -> String (content.8)
+static var _loc := {}         # lang -> {table -> {id int -> text / group}}
 static var _loaded := false
 
 
@@ -72,25 +78,41 @@ static func _ensure() -> void:
 		_summon_names[int(sid)] = data.summonNames[sid]
 	for eid in _dict(data.get("eventNames")):
 		_event_names[int(eid)] = data.eventNames[eid]
+	for l in _dict(data.get("locales")):
+		var tables := {}
+		for t in _dict(data.locales[l]):
+			var m := {}
+			for k in _dict(data.locales[l][t]):
+				m[int(k)] = data.locales[l][t][k]
+			tables[t] = m
+		_loc[l] = tables
+
+
+## The UI language's entry for `id` in `table`, else the English one.
+static func _tr(table: String, id: int, english: Dictionary, fallback: Variant) -> Variant:
+	var t: Dictionary = _dict(_dict(_loc.get(State.locale)).get(table))
+	if t.has(id):
+		return t[id]
+	return english.get(id, fallback)
 
 
 ## content.29 text — used for NPC names AND the demon/Challenge speech bodies.
 static func npc_name(id: int) -> String:
 	_ensure()
-	return str(_names.get(id, ""))
+	return str(_tr("names", id, _names, ""))
 
 
 ## content.30 challenge display name (the défi picker rows).
 static func challenge_name(id: int) -> String:
 	_ensure()
-	return str(_chal_names.get(id, "Challenge %d" % id))
+	return str(_tr("challengeNames", id, _chal_names, "Challenge %d" % id))
 
 
 ## The dialog node: {"text", "replies":[{label, next, act?, params?}]}.
 static func group(id: int) -> Dictionary:
 	_ensure()
-	var g: Variant = _groups.get(id)
-	return g if g != null else {}
+	var g: Variant = _tr("groups", id, _groups, null)
+	return g if g is Dictionary else {}
 
 
 ## The i16 second field of a 26330 NPC-dialog challenge launch —
@@ -112,14 +134,14 @@ static func summon(id: int) -> Dictionary:
 ## Summon display name (content.10 — aJt.getName). Empty for unknown ids.
 static func summon_name(id: int) -> String:
 	_ensure()
-	return str(_summon_names.get(id, ""))
+	return str(_tr("summonNames", id, _summon_names, ""))
 
 
 ## Per-round event-card title (content.8 — tO). The 8100 tail carries the
 ## drawn id; 0 means no card this round. Empty for unknown ids.
 static func event_name(id: int) -> String:
 	_ensure()
-	return str(_event_names.get(id, ""))
+	return str(_tr("eventNames", id, _event_names, ""))
 
 
 ## Client `aau_1.a` / `sj_1.c`: an achievement is complete when EVERY stat
@@ -147,17 +169,17 @@ static func achievement_done(id: int, criteria: Dictionary,
 ## the ako condition row label.
 static func achievement_name(id: int) -> String:
 	_ensure()
-	return str(_ach_names.get(id, "Achievement %d" % id))
+	return str(_tr("achievementNames", id, _ach_names, "Achievement %d" % id))
 
 
 static func achievement_desc(id: int) -> String:
 	_ensure()
-	return str(_ach_descs.get(id, ""))
+	return str(_tr("achievementDescs", id, _ach_descs, ""))
 
 
 static func criterion_name(id: int) -> String:
 	_ensure()
-	return str(_crit_names.get(id, "criterion %d" % id))
+	return str(_tr("criterionNames", id, _crit_names, "criterion %d" % id))
 
 
 ## The achievementsList filter (qy_2): drop hidden rows, drop a row whose

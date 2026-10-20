@@ -26,7 +26,7 @@ extract `DofusArena-v2.70.zip`'s `game/` folder there). Python 3, stdlib only.
 | `anm_flip.py <anims_root> [set…]` | One-time migration: flip exported frames vertically + adjust `meta.oy` (the emitter used gw_2's Y-up vertex math verbatim — GL flips at display, our PNGs do not, so every pre-fix export was upside-down) |
 | `anm_mask_patch.py <jar> <anims_root> [set…]` | Backfill `f*_m.png` channel-coverage masks into already-exported sets (geometry-only replay — no texture sampling) |
 | `spell_names.py` | Merge FR spell names into `spells.json` (`nfr` slug → `AnimSort-<name>` casts) |
-| `npc_dialogs.py` | Merge i18n 29/59/60/10/37/48/49 into `npcdialogs.json` |
+| `npc_dialogs.py` | Merge i18n 29/59/60/10/37/48/49 into `npcdialogs.json` (English tables plus `locales.es` / `locales.fr`) |
 | `card_names.py` | Merge card names into `cards.json` |
 | `map_gfx.py` | Painted-map sprites/atlases → `godot/assets/mapgfx/` |
 | `gui_extract.py <gui.jar> <i18n.jar> <out_dir>` | Retail GUI layer → `xml/` (theme + 180 dialog/component/template definitions), `images/` (TGA→PNG skin + icon art), `fonts/` (TTFs + .fnt/.tab metrics), `i18n_<lang>.json`. The XML files are the declarative spec for the `src/gui/` interpreter — tag vocabulary per `client/decompiled/core/ye_2.java`, theme-parser semantics per `core/DS.java` |

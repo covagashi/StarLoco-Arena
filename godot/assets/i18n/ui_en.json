@@ -846,5 +846,9 @@
   "team.revive_ok": "{name} is back ({where}).",
   "team.revive_fail": "The roll failed: {card} was spent and {name} is still dead.",
   "team.revive_refused": "The server refused to resurrect {name}.",
-  "team.retire": "Take out of the team"
+  "team.retire": "Take out of the team",
+  "talk.title": "Conversation",
+  "talk.tutorial": "Tutorial",
+  "talk.page": "Page {n} of {of}",
+  "talk.challenges": "Challenges"
 }

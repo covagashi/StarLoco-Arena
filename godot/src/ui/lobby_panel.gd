@@ -10,6 +10,7 @@ signal requested(event: String, args: Array, item: Variant, index: int)
 
 const REF := Vector2(1120, 620)
 var panel_name := ""
+var frame_size := REF   # a smaller window (a conversation) sets its own
 var model: GuiModel
 var body: VBoxContainer
 var pinned_actions: HBoxContainer
@@ -76,10 +77,10 @@ func _layout() -> void:
 	# have no parent rect and the shade came out 0x0.
 	_shade.position = -position
 	_shade.size = vp
-	var factor := minf(1.0, minf((vp.x - 32) / REF.x, (vp.y - 32) / REF.y))
-	frame.size = REF
+	var factor := minf(1.0, minf((vp.x - 32) / frame_size.x, (vp.y - 32) / frame_size.y))
+	frame.size = frame_size
 	frame.scale = Vector2(factor, factor)
-	frame.position = (vp - REF * factor) / 2
+	frame.position = (vp - frame_size * factor) / 2
 
 
 func _model_changed(_name: String, _field: String, _value: Variant) -> void:

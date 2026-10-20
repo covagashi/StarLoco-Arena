@@ -38,3 +38,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-20 | [S18: los caídos en el panel de Equipo (adiós al cementerio) y "Ciudad" → "Servicios"](./2026-10-20-s18-caidos.md) |
 | 2026-10-20 | [S18: tirada fallida, banquillo lleno y sin scroll en "Caídos", probados](./2026-10-20-s18-caidos-bordes.md) |
 | 2026-10-20 | [B-177: el servidor ya no gasta equipo como carta de resurrección](./2026-10-20-b177-resurreccion-equipo.md) |
+| 2026-10-20 | [S18: las conversaciones en una ventana nativa y en español](./2026-10-20-s18-conversaciones.md) |

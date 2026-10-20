@@ -9,6 +9,10 @@ text content.59.<groupId> plus reply rows (content.60 labels) ordered by
 `order`; clicking runs `act` (1 = 26330 challenge launch [id][challengeModes[id]],
 2 = 22003 criterion) then navigates to `next` (0 = close).
 
+The top-level tables are English. `locales` carries the same text tables for
+es and fr (the retail jar ships all of them); the client reads the one that
+matches its UI language and falls back to English per key.
+
 Usage:
   go run ./server/cmd/dumpnpcdialogs server/data-dist /tmp/npcd_raw.json
   python3 tools/asset-import/npc_dialogs.py /tmp/npcd_raw.json \
@@ -26,14 +30,8 @@ def table(texts: str, tbl: int) -> dict[int, str]:
             for m in re.finditer(r"^content\.%d\.(\d+)=(.*)$" % tbl, texts, re.M)}
 
 
-def main() -> None:
-    raw_path, i18n_jar, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
-    raw = json.load(open(raw_path))
-
-    with zipfile.ZipFile(i18n_jar) as z:
-        texts = z.read("i18n/texts_en.properties").decode("utf-8", "replace")
-    names, speech, labels = table(texts, 29), table(texts, 59), table(texts, 60)
-
+def build_groups(raw: dict, texts: str) -> dict:
+    speech, labels = table(texts, 59), table(texts, 60)
     groups = {}
     for gid, g in raw["groups"].items():
         replies = []
@@ -44,8 +42,37 @@ def main() -> None:
                 row["params"] = r.get("params") or []
             replies.append(row)
         groups[gid] = {"text": speech.get(int(gid), ""), "replies": replies}
+    return groups
+
+
+def localized(raw: dict, texts: str) -> dict:
+    """The text tables of one language; behaviour fields stay English-only."""
+    return {
+        "names": {str(k): v for k, v in table(texts, 29).items()},
+        "challengeNames": {str(k): v for k, v in table(texts, 30).items()},
+        "groups": build_groups(raw, texts),
+        "achievementNames": {str(k): v for k, v in table(texts, 37).items()},
+        "achievementDescs": {str(k): v for k, v in table(texts, 49).items()},
+        "criterionNames": {str(k): v for k, v in table(texts, 48).items()},
+        "summonNames": {str(k): v for k, v in table(texts, 10).items()},
+        "eventNames": {str(k): v for k, v in table(texts, 8).items()},
+    }
+
+
+def main() -> None:
+    raw_path, i18n_jar, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    raw = json.load(open(raw_path))
+
+    with zipfile.ZipFile(i18n_jar) as z:
+        jar = {lang: z.read("i18n/texts_%s.properties" % lang).decode("utf-8", "replace")
+               for lang in ("en", "es", "fr")}
+    texts = jar["en"]
+    names = table(texts, 29)
+    groups = build_groups(raw, texts)
 
     out = {
+        # per-language text tables (same shapes as the English ones below)
+        "locales": {lang: localized(raw, jar[lang]) for lang in ("es", "fr")},
         # content.29 doubles as the NPC/demon dialog TEXT table (names AND
         # speech bodies both index it); content.30 holds challenge names for
         # the défi picker lists on env 3/6 elements.
