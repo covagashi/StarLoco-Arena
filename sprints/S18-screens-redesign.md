@@ -53,6 +53,7 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-20 | **El cementerio deja de ser un sitio**: nada de ir a él ni de Zaaps, solo el lobby "como los juegos actuales". Los luchadores muertos pasan a una **sección "Caídos" del panel de Equipo** (pestaña Evolución), y la palabra "cementerio" sale de la interfaz | dueño ("vale, como creas conveniente", sobre la propuesta del agente) |
 | 2026-10-20 | La entrada "Ciudad" del lobby pasa a llamarse **"Servicios"** (es/en/fr), para que no suene a un lugar del mapa | agente (propuesta aceptada en el mismo mensaje) |
 | 2026-10-20 | En "Caídos", **Muerto** (estado 2: aún ocupa plaza de titular; se puede sacar del equipo) y **Retirado** (estado 3: fuera del equipo; resucitado vuelve al banquillo). Solo se ofrecen las cartas de resurrección consumibles (tipo 24): el equipo con "% de resucitar" es un efecto de combate, no una carta para gastar aquí | agente |
+| 2026-10-20 | **Menús aprobados** (Equipo con "Caídos", lobby con "Servicios"): "los menús me gustan". Las capturas no hacen falta: el dueño lo mira en la pantalla de la Ally | dueño |
 
 ## Por decidir con el dueño
 
@@ -187,8 +188,7 @@ cementerio). El elemento kind 10 abre Equipo en Evolución; "Servicios" ya no
 lo lista. Verificado en vivo con `test/revive_smoke.gd` 4/4 (sin cementerio
 en Servicios; los dos caídos en su tabla y ninguno entre los vivos; un
 muerto resucita a titular y un retirado al banquillo, con el 6006 y la carta
-gastada). Capturas en `~/codigo/capturas/s18/revive-*.png` (en la Ally).
-Pendiente del dueño: el visto bueno de esas capturas.
+gastada). Visto bueno del dueño el mismo día ("los menús me gustan").
 
 ## Tareas candidatas
 
