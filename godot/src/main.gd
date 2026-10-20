@@ -215,9 +215,7 @@ const OP_EX_REMOVED := 5112              # S2C same shape as 5110
 const OP_EX_ERROR := 5113                # S2C [u8 code][i64 ex]
 const OP_EX_END := 5114                  # S2C [u8 reason][i64 ex]
 const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
-const ELEM_EXCHANGE := 100               # pseudo kind: ElementDlg in trade mode
 const ELEM_SCENARIO := -2                # pseudo kind: tutorial monologue (zone trigger)
-const ELEM_COACH := -4                   # pseudo kind: coach statistics (2401)
 const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 card]
 
 @onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
@@ -556,7 +554,6 @@ func _ready() -> void:
 	$UI/GuildAskDlg.confirmed.connect(_answer_guild_invite.bind(true))
 	$UI/GuildAskDlg.canceled.connect(_answer_guild_invite.bind(false))
 	$UI/VBox/AuthRow/GearBtn.pressed.connect(_open_equip)
-	$UI/VBox/AuthRow/CoachBtn.pressed.connect(_open_coach_stats)
 	$UI/EquipDlg/VBox/Btns/WearBtn.pressed.connect(_on_equip_wear)
 	$UI/EquipDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/EquipDlg.hide())
@@ -610,22 +607,6 @@ func _ready() -> void:
 	$UI/LoadoutDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/LoadoutDlg.visible = false)
 	$UI/LoadoutDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_loadout)
-	$UI/ShopDlg/VBox/Btns/CloseBtn.pressed.connect(
-		func(): $UI/ShopDlg.visible = false)
-	$UI/ShopDlg/VBox/Btns/BuyBtn.pressed.connect(_on_shop_buy)
-	$UI/ShopDlg/VBox/Btns/TradeBtn.pressed.connect(_open_barter)
-	$UI/ShopDlg/VBox/Scroll/Cards.item_selected.connect(_on_shop_pick)
-	$UI/BarterDlg/VBox/Btns/CancelBtn.pressed.connect(
-		func(): $UI/BarterDlg.visible = false)
-	$UI/BarterDlg/VBox/Btns/TradeBtn.pressed.connect(_on_barter_trade)
-	$UI/ElementDlg/VBox/Btns/CloseBtn.pressed.connect(
-		func(): $UI/ElementDlg.visible = false)
-	$UI/ElementDlg/VBox/Btns/ActBtn.pressed.connect(_on_element_act)
-	$UI/ElementDlg/VBox/Btns/AltBtn.pressed.connect(_on_element_alt)
-	$UI/ElementDlg/VBox/Scroll/List.multi_selected.connect(
-		func(_i, _s): _on_fusion_inputs())
-	$UI/ElementDlg/VBox/Scroll2/List2.item_selected.connect(
-		func(_i): _on_fusion_inputs())
 	# Re-entering after a fight: replay anything that arrived mid-scene-change
 	# — LAST, once the GUI layer and the scene's own setup exist. Draining it
 	# first ran the 4516 lobby entry with no _gui (B-178): the lobby re-entry
@@ -1164,7 +1145,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			for c in d.get("currencies", []):
 				State.wallet[int(c.type)] = int(c.amount)
-			_refresh_wallet_label()
 			if _gui.is_open("cardMasterDialog"):
 				_push_cardmaster_model()
 		OP_INVENTORY:
@@ -1218,7 +1198,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			else:
 				for c in d.get("currencies", []):
 					State.wallet[int(c.type)] = int(c.amount)
-				_refresh_wallet_label()
 				var msg := I18n.t(["shop.done", "shop.tokens"][res] if res <= 1
 					else "shop.refused", {"code": res})
 				_log_line("[color=%s]%s[/color]" % ["green" if res == 0 else "red", msg])
@@ -1419,8 +1398,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var sm := Codec.decode(opcode, payload)
 			for s in sm.get("stats", []):
 				State.coach_stats[int(s.id)] = s.value
-			if _elem_kind == ELEM_COACH and $UI/ElementDlg.visible:
-				_fill_coach_stats()
 			# refresh localCoach's statistics* fields for any open stats screen
 			if _gui.is_open("coachStatisticsDialog"):
 				_push_local_coach()
@@ -1476,8 +1453,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_mails = d.mails
 			_mail_loading = false
-			if $UI/ElementDlg.visible and _elem_kind == 2:
-				_fill_mails()
 			_log_line(I18n.t("mail.count", {"n": _mails.size()}))
 			if _gui.is_open("mailboxDialog"):
 				_push_mail_model()
@@ -1525,8 +1500,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for i in range(_mails.size() - 1, -1, -1):
 				if int(_mails[i].get("id", -1)) == int(d.mail_id):
 					_mails[i]["cards"] = []
-			if $UI/ElementDlg.visible and _elem_kind == 2:
-				_fill_mails()
 			if _gui.is_open("mailboxDialog"):
 				if not d.cards.is_empty():
 					_mail_status = {"ok": true, "text": I18n.t("mail.collected",
@@ -1559,8 +1532,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				2:
 					_log_line("[color=red]%s[/color]" % I18n.t("trade.refused"))
 					_ex = {}
-					if _elem_kind == ELEM_EXCHANGE:
-						$UI/ElementDlg.visible = false
+					_gui.close("exchangeDialog")
 				3:
 					_ex["accepted"] = true
 					_log_line("[color=green]%s[/color]" % I18n.t("trade.accepted"))
@@ -1572,20 +1544,17 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var side := int(d.side)
 			_ex.staged[side][int(d.card)] = int(d.qty)
 			_ex["ready"] = {0: false, 1: false}   # the server un-readies both
-			_refresh_exchange()
 			_push_exchange_model()
 		OP_EX_REMOVED:
 			var d := Codec.decode(opcode, payload)
 			_ex.staged[int(d.side)].erase(int(d.card))
 			_ex["ready"] = {0: false, 1: false}
-			_refresh_exchange()
 			_push_exchange_model()
 		OP_EX_USER_READY:
 			var d := Codec.decode(opcode, payload)
 			_ex.ready[int(d.side)] = true
 			_log_line(I18n.t("trade.you_ready") if int(d.side) == _ex.get("my_side", -1)
 				else I18n.t("trade.ready", {"name": _ex.get("other_name", "?")}))
-			_refresh_exchange()
 			_push_exchange_model()
 		OP_EX_ERROR:
 			var d := Codec.decode(opcode, payload)
@@ -1598,8 +1567,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				if int(d.reason) == 0 else "[i]%s[/i]" % I18n.t("trade.cancelled"))
 			_ex = {}
 			_gui.close("exchangeDialog")
-			if _elem_kind == ELEM_EXCHANGE:
-				$UI/ElementDlg.visible = false
 		OP_FIREWORK_SHOW:
 			# S18: no world to play it in — it bursts on the lobby sky, for
 			# everyone the server sends it to (the launcher too).
@@ -2667,26 +2634,6 @@ const COACH_STAT_LABELS := {1: "stats.time_played", 2: "stats.time_fights",
 	3: "stats.fights", 4: "stats.wins", 5: "stats.losses",
 	7: "stats.win_streak", 8: "stats.loss_streak"}
 const COACH_STAT_ORDER := [3, 4, 5, 7, 8, 1, 2]  # fights first, times last
-
-func _open_coach_stats() -> void:
-	_element_text(I18n.t("stats.title", {"name": State.my_coach_name}),
-		I18n.t("stats.lifetime"))
-	_elem_kind = ELEM_COACH
-	_fill_coach_stats()
-
-
-func _fill_coach_stats() -> void:
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	list.clear()
-	for id in COACH_STAT_ORDER:
-		var v := int(State.coach_stats.get(id, 0))
-		var text := _fmt_secs(v) if id in [1, 2] else str(v)
-		list.add_item("%s: %s" % [I18n.t(COACH_STAT_LABELS[id]), text])
-	var fights := int(State.coach_stats.get(3, 0))
-	if fights > 0:
-		$UI/ElementDlg/VBox/Hint.text = I18n.t("stats.winrate",
-			{"pct": int(State.coach_stats.get(4, 0)) * 100 / fights})
-
 
 ## Stats arrive in seconds; players read them as minutes (h + m past 1h).
 static func _fmt_secs(secs: int) -> String:
@@ -5362,7 +5309,7 @@ func _toast(text: String) -> void:
 ## Click on a world marker → INTERACTIVE_ELEMENT_ACTION 201 [i64 id][i16 ordinal]
 ## (arch 3). The server only answers for kinds with server-side follow-up
 ## (Card Master pushes the 5401 catalogue); the rest open client-local dialogs.
-var _elem_id := -1            # element the ElementDlg is showing
+var _elem_id := -1            # element last used (201)
 var _elem_kind := -1          # env type of that element
 var _demon_id := -1           # demon of the totem being offered to
 var _awaiting_offer := false  # a 5470 basket is in flight → next 5403 is its ack
@@ -5818,8 +5765,8 @@ func _use_element(id: int) -> void:
 			_open_firework(e)
 		15:  # NPC talker — client-side dialog tree (record 1500)
 			_open_npc(e)
-		_:   # Demons (6/9) — local text bubble
-			_element_text(label, "…")
+		_:   # anything else has no screen of its own
+			DebugLog.add("element %d (kind %d): nothing to open" % [id, kind])
 
 
 ## --- Conversations (S18: native npcTalkDialog, src/ui/talk_panel.gd) ---------
@@ -6118,29 +6065,6 @@ func _run_scenario(id: int) -> void:
 		if not _scenario_queue.is_empty():
 			_run_scenario(_scenario_queue.pop_front()))
 	DebugLog.add("tutorial scenario %d fired" % id)
-
-
-## Generic element dialog: title + hint + a list + two optional action
-## buttons. _elem_kind decides what ActBtn/AltBtn do.
-func _element_text(title: String, hint: String) -> void:
-	var panel: PanelContainer = $UI/ElementDlg
-	panel.theme = null
-	panel.offset_left = -200
-	panel.offset_right = 200
-	panel.offset_top = -210
-	panel.offset_bottom = 210
-	$UI/ElementDlg/VBox/Title.add_theme_font_size_override("font_size", 16)
-	$UI/ElementDlg/VBox/Hint.add_theme_font_size_override("font_size", 12)
-	$UI/ElementDlg/VBox/Btns/CloseBtn.text = I18n.t("panel.close")
-	$UI/ElementDlg/VBox/Title.text = title
-	$UI/ElementDlg/VBox/Hint.text = hint
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	list.clear()
-	list.select_mode = ItemList.SELECT_SINGLE
-	$UI/ElementDlg/VBox/Scroll2.visible = false
-	$UI/ElementDlg/VBox/Btns/ActBtn.visible = false
-	$UI/ElementDlg/VBox/Btns/AltBtn.visible = false
-	$UI/ElementDlg.visible = true
 
 
 ## desc is the element's ";" descriptor — decode the numeric fields.
@@ -6958,90 +6882,6 @@ func _ex_stage(cid: int, _w: GWidget) -> void:
 	Session.send(OP_EX_ADD, wr.raw(), 3)
 
 
-func _open_fusion() -> void:
-	_element_text("Fusion altar", "")
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	list.select_mode = ItemList.SELECT_MULTI
-	for cid in State.inventory:
-		var m := Cards.meta(int(cid))
-		if not m.get("tradable", false):
-			continue
-		list.add_item("%s  ×%d" % [
-			Cards.name_of(int(cid)), int(State.inventory[cid])])
-		list.set_item_metadata(list.item_count - 1, int(cid))
-	$UI/ElementDlg/VBox/Scroll2.visible = true
-	$UI/ElementDlg/VBox/Btns/ActBtn.visible = true
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = I18n.t("fusion.fuse")
-	act.disabled = true
-	_on_fusion_inputs()
-
-
-## Recompute the fusion target list + button state from the input selection.
-func _on_fusion_inputs() -> void:
-	if _elem_kind != 14:
-		return
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
-	var inputs := []
-	var set_id := -1
-	var mixed := false
-	for idx in list.get_selected_items():
-		var cid := int(list.get_item_metadata(idx))
-		inputs.append(cid)
-		var s := int(Cards.meta(cid).get("set", 0))
-		if set_id == -1:
-			set_id = s
-		elif s != set_id:
-			mixed = true
-	list2.clear()
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.disabled = true
-	if inputs.size() < 2:
-		$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.pick_inputs")
-		return
-	if mixed or set_id <= 0:
-		$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.same_set")
-		return
-	# Every template of the set is a legal target (need not be owned).
-	for cid in Cards.all_ids():
-		if int(Cards.meta(cid).get("set", 0)) == set_id:
-			list2.add_item("%s  (value %d)" % [
-				Cards.name_of(cid), Cards.value_of(cid)])
-			list2.set_item_metadata(list2.item_count - 1, cid)
-	$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.pick_target")
-
-
-## Mailbox pane — filled when MAIL_LIST (15001) lands: sender + title per
-## row, body preview in the hint, "Take cards" armed by attachments and
-## "Delete" always available.
-func _fill_mails() -> void:
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	list.clear()
-	for i in _mails.size():
-		var m: Dictionary = _mails[i]
-		var title: String = m.get("title", "")
-		var label := "%s: %s" % [m.get("sender", "?"),
-			title if title != "" else "(no subject)"]
-		if not m.get("cards", []).is_empty():
-			label += "  [%d card(s)]" % m.cards.size()
-		if not m.get("read", true):
-			label = "* " + label
-		list.add_item(label)
-		list.set_item_metadata(i, i)
-	$UI/ElementDlg/VBox/Hint.text = I18n.t("mail.select", {"n": _mails.size()})
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = I18n.t("mail.take")
-	act.visible = true
-	act.disabled = true
-	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = I18n.t("btn.delete")
-	alt.visible = true
-	alt.disabled = true
-	if not list.item_selected.is_connected(_on_mail_sel):
-		list.item_selected.connect(_on_mail_sel)
-
-
 ## --- Kanodo (sphere board) --------------------------------------------------
 ## Roster → Kanodo opens the board of the selected EVOLUTION fighter (type 2 —
 ## classic fighters carry no sphere tail on the wire). Buying is optimistic
@@ -7160,18 +7000,6 @@ func _on_sphere_buy() -> void:
 	_refresh_kanodo()
 
 
-func _on_mail_sel(i: int) -> void:
-	# Stale selections from other element dialogs would index into the
-	# (usually empty) _mails — guard on the open pane being the mailbox.
-	if _elem_kind != 2 or i >= _mails.size():
-		return
-	var m: Dictionary = _mails[i]
-	var body: String = m.get("body", "")
-	$UI/ElementDlg/VBox/Hint.text = body if body != "" else "(empty letter)"
-	$UI/ElementDlg/VBox/Btns/ActBtn.disabled = m.get("cards", []).is_empty()
-	$UI/ElementDlg/VBox/Btns/AltBtn.disabled = false
-
-
 ## --- Player exchange (5101-5116) --------------------------------------------
 ## /trade <name> invites; 5102 asks the target; 5104 accepted opens the pane.
 ## List (top) = the trade table ("You:/Name:" rows — click own row to unstage,
@@ -7202,85 +7030,6 @@ func _answer_exchange(accept: bool) -> void:
 	Session.send(OP_EX_ANSWER, w.raw(), 3)
 	if not accept:
 		_ex = {}
-
-
-func _open_exchange() -> void:
-	_elem_kind = ELEM_EXCHANGE
-	_element_text("Exchange — %s" % _ex.get("other_name", "?"),
-		"Click your cards below to stage them.")
-	_elem_kind = ELEM_EXCHANGE   # _element_text does not reset the kind
-	var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
-	list2.clear()
-	list2.select_mode = ItemList.SELECT_SINGLE
-	for cid in State.inventory:
-		if not Cards.meta(int(cid)).get("tradable", false):
-			continue
-		list2.add_item("%s  ×%d" % [
-			Cards.name_of(int(cid)), int(State.inventory[cid])])
-		list2.set_item_metadata(list2.item_count - 1, int(cid))
-	$UI/ElementDlg/VBox/Scroll2.visible = true
-	if not list2.item_selected.is_connected(_exchange_add):
-		list2.item_selected.connect(_exchange_add)
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	if not list.item_selected.is_connected(_exchange_unstage_row):
-		list.item_selected.connect(_exchange_unstage_row)
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = I18n.t("trade.ready_btn")
-	act.visible = true
-	act.disabled = false
-	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = I18n.t("trade.cancel")
-	alt.visible = true
-	alt.disabled = false
-	_refresh_exchange()
-
-
-func _exchange_add(i: int) -> void:
-	if _elem_kind != ELEM_EXCHANGE or _ex.is_empty() \
-			or not _ex.get("accepted", false):
-		return
-	var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
-	var w := WireWriter.new()
-	w.put_i64(int(_ex.id))
-	w.put_i32(int(list2.get_item_metadata(i)))
-	w.put_u16(1)
-	Session.send(OP_EX_ADD, w.raw(), 3)
-
-
-func _exchange_unstage_row(i: int) -> void:
-	if _elem_kind != ELEM_EXCHANGE or _ex.is_empty():
-		return
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	var meta: Variant = list.get_item_metadata(i)
-	if typeof(meta) != TYPE_DICTIONARY \
-			or int(meta.get("side", -1)) != int(_ex.my_side):
-		return   # only own staged rows come off the table
-	var w := WireWriter.new()
-	w.put_i64(int(_ex.id))
-	w.put_i32(int(meta.card))
-	w.put_u16(1)
-	Session.send(OP_EX_REMOVE, w.raw(), 3)
-
-
-func _refresh_exchange() -> void:
-	if _elem_kind != ELEM_EXCHANGE or not $UI/ElementDlg.visible:
-		return
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	list.clear()
-	for side in [int(_ex.get("my_side", 0)),
-			1 - int(_ex.get("my_side", 0))]:
-		var who: String = "You" if side == int(_ex.my_side) \
-			else _ex.get("other_name", "?")
-		for card in _ex.staged[side]:
-			list.add_item("%s: %s ×%d" % [
-				who, Cards.name_of(int(card)), int(_ex.staged[side][card])])
-			list.set_item_metadata(list.item_count - 1,
-				{"side": side, "card": int(card)})
-	var me_r: bool = _ex.ready.get(int(_ex.my_side), false)
-	var them_r: bool = _ex.ready.get(1 - int(_ex.my_side), false)
-	$UI/ElementDlg/VBox/Hint.text = I18n.t("trade.ready_state", {
-		"me": "✓" if me_r else "·", "name": _ex.get("other_name", "?"),
-		"them": "✓" if them_r else "·"})
 
 
 ## --- mapDialog / miniMapDialog ------------------------------------------------
@@ -7511,86 +7260,6 @@ func _launch_firework_at(cid: int, pos: Vector3i, delay_s: float) -> void:
 			CONNECT_ONE_SHOT)
 
 
-## ElementDlg primary button — dispatched on the element kind being shown.
-func _on_element_act() -> void:
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	match _elem_kind:
-		14:  # fusion — inputs + the List2 target LAST (server reads it so)
-			var inputs := []
-			for idx in list.get_selected_items():
-				inputs.append(int(list.get_item_metadata(idx)))
-			var list2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
-			var sel2 := list2.get_selected_items()
-			if inputs.size() < 2 or sel2.is_empty():
-				return
-			var w := WireWriter.new()
-			w.put_i32(inputs.size() + 1)
-			for cid in inputs:
-				w.put_i32(cid)
-			w.put_i32(int(list2.get_item_metadata(sel2[0])))
-			Session.send(OP_FUSION_REQ, w.raw(), 3)
-			$UI/ElementDlg.visible = false
-			DebugLog.add("fusion sent: %d cards → %s" % [inputs.size(),
-				Cards.name_of(int(list2.get_item_metadata(sel2[0])))])
-		ELEM_EXCHANGE:  # "Ready" toggle → 5109
-			var w := WireWriter.new()
-			w.put_i64(int(_ex.id))
-			Session.send(OP_EX_READY, w.raw(), 3)
-		2:   # mailbox "Take cards" → 15006 [i64 id][u8 pad]
-			var sel := list.get_selected_items()
-			if sel.is_empty():
-				return
-			var m: Dictionary = _mails[int(list.get_item_metadata(sel[0]))]
-			if m.get("cards", []).is_empty():
-				return
-			var w := WireWriter.new()
-			w.put_i64(int(m.id))
-			w.put_u8(0)
-			Session.send(OP_MAIL_TAKE, w.raw(), 3)
-			DebugLog.add("collecting %d card(s) from mail %d…" % [
-				m.cards.size(), int(m.id)])
-		12:  # firework
-			var sel := list.get_selected_items()
-			if sel.is_empty():
-				return
-			var e: Dictionary = _element_info(_elem_id)
-			var pos: Vector3i = e.get("pos", Vector3i.ZERO)
-			var w := WireWriter.new()
-			w.put_i32(int(list.get_item_metadata(sel[0])))
-			w.put_i32(pos.x)
-			w.put_i32(pos.y)
-			w.put_i64(_elem_id)
-			Session.send(OP_FIREWORK, w.raw(), 3)
-			$UI/ElementDlg.visible = false
-
-
-func _on_element_alt() -> void:
-	if _elem_kind == ELEM_EXCHANGE:
-		# "Cancel trade" → 5111; the server broadcasts 5114 reason 1.
-		var w := WireWriter.new()
-		w.put_i64(int(_ex.id))
-		Session.send(OP_EX_CANCEL, w.raw(), 3)
-		return
-	if _elem_kind == 2:
-		# "Delete" → 15004 [u8 n]{i64 ids} — the client drops the row at
-		# once; the server answers nothing.
-		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-		var sel := list.get_selected_items()
-		if sel.is_empty():
-			return
-		var idx := int(list.get_item_metadata(sel[0]))
-		var m: Dictionary = _mails[idx]
-		var w := WireWriter.new()
-		w.put_u8(1)
-		w.put_i64(int(m.id))
-		Session.send(OP_MAIL_DELETE, w.raw(), 3)
-		_mails.remove_at(idx)
-		_fill_mails()
-		_log_line(I18n.t("mail.deleted", {"id": int(m.id)}))
-		return
-	$UI/ElementDlg.visible = false
-
-
 ## --- Card Master shop --------------------------------------------------------
 ## 5401 catalogue → list of cards w/ names+prices. Buy sends 5450
 ## [i32 shopId][i16 n]{i32 cardId}; Exchange opens the barter pane (5400).
@@ -7601,39 +7270,9 @@ func _open_shop(d: Dictionary) -> void:
 	_cm_status = {}
 	# the native panel shows the first card's detail straight away
 	_cm_selected = int(_shop_cards[0].id) if not _shop_cards.is_empty() else -1
-	# the card master (native since S18) is the primary UI; the debug pane
-	# stays hidden unless it fails to open
-	if _gui.open("cardMasterDialog") != null:
-		_push_cardmaster_model()
-		return
-	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
-	list.clear()
-	for c in _shop_cards:
-		var cid := int(c.id)
-		var price := Cards.price_text(cid)
-		var line := "%s  ×%d" % [Cards.name_of(cid), int(c.qty)]
-		line += "  (%s)" % price if price != "" else "  (barter only)"
-		list.add_item(line)
-		list.set_item_metadata(list.item_count - 1, cid)
-	$UI/ShopDlg/VBox/Title.text = I18n.t("shop.title")
-	$UI/ShopDlg/VBox/Hint.text = I18n.t("shop.hint")
-	$UI/ShopDlg/VBox/Btns/BuyBtn.text = I18n.t("shop.buy")
-	$UI/ShopDlg/VBox/Btns/TradeBtn.visible = true
-	_refresh_wallet_label()
-	$UI/ShopDlg.visible = true
-	_on_shop_pick(-1)
-
-
-func _on_shop_pick(_idx: int) -> void:
-	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
-	var sel := list.get_selected_items()
-	var has := not sel.is_empty()
-	$UI/ShopDlg/VBox/Btns/BuyBtn.disabled = not has
-	$UI/ShopDlg/VBox/Btns/TradeBtn.disabled = not has
-	if has:
-		var cid := int(list.get_item_metadata(sel[0]))
-		$UI/ShopDlg/VBox/Btns/BuyBtn.disabled = \
-			not _priced(cid) or not _affordable(cid)
+	# the native Card Master (S18) is the only shop UI
+	_gui.open("cardMasterDialog")
+	_push_cardmaster_model()
 
 
 func _priced(cid: int) -> bool:
@@ -7650,86 +7289,3 @@ func _affordable(cid: int) -> bool:
 			return false
 	return true
 
-
-func _on_shop_buy() -> void:
-	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
-	var sel := list.get_selected_items()
-	if sel.is_empty():
-		return
-	var cid := int(list.get_item_metadata(sel[0]))
-	var w := WireWriter.new()
-	w.put_i32(_shop_id)
-	w.put_u16(1)
-	w.put_i32(cid)
-	Session.send(OP_SHOP_BUY, w.raw(), 3)
-	DebugLog.add("buy 5450 sent: %s" % Cards.name_of(cid))
-
-
-## Barter: offer owned tradable cards whose summed value ≥ wanted card's.
-func _open_barter() -> void:
-	var list: ItemList = $UI/ShopDlg/VBox/Scroll/Cards
-	var sel := list.get_selected_items()
-	if sel.is_empty():
-		return
-	_barter_wanted = int(list.get_item_metadata(sel[0]))
-	var wanted_value := Cards.value_of(_barter_wanted)
-	$UI/BarterDlg/VBox/Wanted.text = I18n.t("barter.wanted",
-		{"name": Cards.name_of(_barter_wanted), "v": wanted_value})
-	var box: VBoxContainer = $UI/BarterDlg/VBox/Scroll/Mine
-	for c in box.get_children():
-		c.queue_free()
-	for cid in State.inventory:
-		var meta := Cards.meta(int(cid))
-		if not meta.get("tradable", false):
-			continue
-		for i in mini(int(State.inventory[cid]), 9):
-			var cb := CheckBox.new()
-			cb.text = I18n.t("barter.card_value",
-				{"name": Cards.name_of(int(cid)),
-				"v": Cards.value_of(int(cid))})
-			cb.set_meta("id", int(cid))
-			cb.toggled.connect(func(_on): _update_barter_sum())
-			box.add_child(cb)
-	$UI/BarterDlg.visible = true
-	_update_barter_sum()
-
-
-func _update_barter_sum() -> void:
-	var total := 0
-	for cb in $UI/BarterDlg/VBox/Scroll/Mine.get_children():
-		if cb.button_pressed:
-			total += Cards.value_of(int(cb.get_meta("id")))
-	$UI/BarterDlg/VBox/Sum.text = I18n.t("barter.sum",
-		{"a": total, "b": Cards.value_of(_barter_wanted)})
-	$UI/BarterDlg/VBox/Btns/TradeBtn.disabled = \
-		total < Cards.value_of(_barter_wanted) or total <= 0
-
-
-## 5400 [i32 shopId][i16 nWanted]{i32 cardId}[i16 nGiven]{i32 cardId, u16 qty}
-func _on_barter_trade() -> void:
-	var given := {}
-	for cb in $UI/BarterDlg/VBox/Scroll/Mine.get_children():
-		if cb.button_pressed:
-			var cid := int(cb.get_meta("id"))
-			given[cid] = int(given.get(cid, 0)) + 1
-	var w := WireWriter.new()
-	w.put_i32(_shop_id)
-	w.put_u16(1)
-	w.put_i32(_barter_wanted)
-	w.put_u16(given.size())
-	for cid in given:
-		w.put_i32(cid)
-		w.put_u16(given[cid])
-	Session.send(OP_SHOP_BARTER, w.raw(), 3)
-	$UI/BarterDlg.visible = false
-	DebugLog.add("barter 5400 sent: %d cards for %s" % [
-		given.values().reduce(func(a, b): return a + b, 0),
-		Cards.name_of(_barter_wanted)])
-
-
-func _refresh_wallet_label() -> void:
-	var parts := []
-	for t in State.wallet:
-		parts.append("%d t%d" % [int(State.wallet[t]), int(t)])
-	var node: Label = $UI/ShopDlg/VBox/Wallet
-	node.text = I18n.t("wallet.label", {"list": ", ".join(parts) if parts else "—"})

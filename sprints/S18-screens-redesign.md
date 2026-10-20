@@ -180,9 +180,13 @@ Hoja: `codigo/capturas/s18/tanda2-altar.png`.
 
 Card Master aprobado; buzón y altar de fusión hechos, a la espera del visto
 bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Los servicios de la tanda 2
-, el informe de combate y el intercambio entre jugadores están hechos. Lo
-que queda de `ElementDlg` son restos sin llamante vivo (fusión, buzón,
-intercambio y estadísticas de depuración), con el mismo
+, el informe de combate y el intercambio entre jugadores están hechos, y
+`ElementDlg`, `ShopDlg` y `BarterDlg` ya no existen (2026-10-20). Lo que
+el jugador aún ve sin estilo 1 bit son los avisos de invitación
+(`ChallengeDlg`, `MatchAskDlg`, `GuildAskDlg`, `DuoAskDlg`,
+`ExchangeAskDlg`: diálogos de Godot). Después, los paneles de depuración de
+`main.tscn` sin llamante vivo (`$UI/VBox`, `GuildDlg`, `KanodoDlg`,
+`LadderDlg`…), con el mismo
 patrón: un panel sobre `lobby_panel.gd` (o `card_panel.gd` si enseña
 cartas), registrado en `_gui.native_factories` con el nombre del diálogo
 retail, y eventos `native*` hacia los handlers de `main.gd`. `ShopDlg` y
@@ -241,6 +245,7 @@ dos fuegos lanzados llegan como dos 22094 y estallan en el cielo del lobby.
       las conversaciones: retos, demonios, NPCs (2026-10-20), tótems al
       Calendario y al Clan, fuegos artificiales en el lobby (2026-10-20).
 - [ ] Retirar de `main.tscn` los paneles de depuración que queden sin uso.
+      Hecho para `ElementDlg`, `ShopDlg` y `BarterDlg` (2026-10-20).
 - [ ] `godot/PRODUCT.md` y `DESIGN.md` al día (hoy dicen que el dueño fija el
       estilo de login y creación, y eso ya no vale).
 

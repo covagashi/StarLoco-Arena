@@ -40,7 +40,7 @@ func _audit() -> void:
 	var panel = _main._gui.dialogs.get("fightReportDialog")
 	var r: Variant = _main._gui.gui.model.get_value("fightReport")
 	var rep: Dictionary = r if r is Dictionary else {}
-	var ok: bool = over and panel != null and not _main.get_node("UI/ElementDlg").visible \
+	var ok: bool = over and panel != null and not _debug_pane_shown() \
 		and str(panel.title.text) != "" and panel.find_child("Continue", true, false) != null
 	_record(8300, "report", ok, "8151 → 8300: '%s', %d coach(es), %d fighter row(s), summary %s" % [
 		panel.title.text if panel != null else "—", rep.get("coaches", []).size(),
@@ -93,13 +93,22 @@ func _evolution_rows() -> void:
 
 
 func _normal_path() -> void:
+	# The first fight's re-entry already loaded a fresh main as the current
+	# scene. Drive this one from it and unhook the harness's own main, so a
+	# single lobby handles the 8000 — as in the game, where change_scene frees
+	# the previous one.
+	var lobby = current_scene if current_scene != null and "_gui" in current_scene else _main
+	if lobby != _main and _sess.message.is_connected(_main._on_message):
+		_sess.message.disconnect(_main._on_message)
 	_seen.clear()
-	_main._launch_challenge(CHALLENGE, 99)
+	lobby._launch_challenge(CHALLENGE, 99)
 	if not await _wait(func(): return _seen.has(8000), 6.0):
 		_record(8300, "fight 2", false, "no 8000")
 		return
-	# from here the old lobby is gone, as in the game (change_scene frees it)
-	_sess.message.disconnect(_main._on_message)
+	# from here no lobby is listening: the fight view owns the socket
+	for m in [_main, lobby]:
+		if is_instance_valid(m) and _sess.message.is_connected(m._on_message):
+			_sess.message.disconnect(m._on_message)
 	await create_timer(5.0).timeout
 	_sess.send(8151, PackedByteArray(), 3)
 	await _wait(func(): return _seen.has(8300), 8.0)

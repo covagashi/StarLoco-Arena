@@ -35,7 +35,7 @@ func _audit() -> void:
 		and _main._gui.is_open("mailboxDialog"), 3.0)
 	var panel = _main._gui.dialogs.get("mailboxDialog")
 	_record(2, "opens", ok and is_instance_of(panel, MailboxPanel)
-		and not _main.get_node("UI/ElementDlg").visible,
+		and not _debug_pane_shown(),
 		"native panel, no debug pane" if is_instance_of(panel, MailboxPanel) \
 			else "not native: %s" % panel)
 	if not is_instance_of(panel, MailboxPanel):

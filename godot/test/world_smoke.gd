@@ -136,8 +136,6 @@ func _audit() -> void:
 
 ## What each kind must leave behind within a couple of seconds.
 func _evidence(kind: int) -> Array:
-	var dlg: Control = _main.get_node("UI/ElementDlg")
-	var elem_open := func(): return dlg.visible
 	match kind:
 		1:
 			var ok: bool = await _wait(func(): return _seen.has(5401) \
@@ -151,15 +149,14 @@ func _evidence(kind: int) -> Array:
 			var ok: bool = await _wait(func(): return _main._gui.is_open("fusionLabDialog"), 2.0)
 			return [ok, "fusionLabDialog"]
 		12:
-			var ok: bool = await _wait(func(): return _main._gui.is_open("fireworkDialog") \
-				or dlg.visible, 2.0)
-			return [ok, "fireworkDialog" if _main._gui.is_open("fireworkDialog") else "firework pane"]
+			var ok: bool = await _wait(func(): return _main._gui.is_open("fireworkDialog"), 2.0)
+			return [ok, "fireworkDialog"]
 		3, 5, 6, 7, 9, 15:
 			# S18: the native conversation window, never the debug pane
 			var ok: bool = await _wait(func(): return _main._gui.is_open("npcTalkDialog"), 2.0)
 			var talk: Variant = _main._gui.gui.model.get_value("talk")
 			var t: Dictionary = talk if talk is Dictionary else {}
-			return [ok and not dlg.visible and str(t.get("name", "")) != ""
+			return [ok and not _debug_pane_shown() and str(t.get("name", "")) != ""
 				and not t.get("choices", []).is_empty(),
 				"conversation '%s', %d choices" % [t.get("name", ""), t.get("choices", []).size()]]
 	return [false, "no check for kind %d" % kind]
@@ -173,10 +170,6 @@ func _shot(name: String) -> void:
 	if img != null:
 		img.save_png(_shot_dir.path_join(name + ".png"))
 		print("[audit] shot ", name)
-
-
-func _title() -> String:
-	return str(_main.get_node("UI/ElementDlg/VBox/Title").text)
 
 
 ## Press the lobby's City menu button (the real entry, not a shortcut).
@@ -221,7 +214,13 @@ func _collect_buttons(node: Node, text: String, out: Array) -> void:
 func _close_all() -> void:
 	for n in _main._gui.dialogs.keys():
 		_main._gui.close(n)
-	_main.get_node("UI/ElementDlg").visible = false
+
+
+## The debug pane is gone from main.tscn (S18); a smoke still asserts it
+## never comes back.
+func _debug_pane_shown() -> bool:
+	var dlg = _main.get_node_or_null("UI/ElementDlg")
+	return dlg != null and dlg.visible
 
 
 func _record(kind: int, label: String, ok: bool, detail: String) -> void:

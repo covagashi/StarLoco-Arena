@@ -51,7 +51,7 @@ func _audit() -> void:
 	var ok: bool = await _wait(func(): return _main._gui.is_open("fusionLabDialog"), 3.0)
 	var panel = _main._gui.dialogs.get("fusionLabDialog")
 	_record(14, "opens", ok and is_instance_of(panel, FusionPanel)
-		and not _main.get_node("UI/ElementDlg").visible,
+		and not _debug_pane_shown(),
 		("native panel, altar power %d quality %d slots %d" % [int(best.power),
 			int(best.quality), int(best.slots) - 1]) if is_instance_of(panel, FusionPanel) \
 			else "not native: %s" % panel)

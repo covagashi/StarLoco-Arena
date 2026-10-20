@@ -42,3 +42,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-20 | [S18: tótems al Calendario y al Clan, fuegos artificiales en el lobby](./2026-10-20-s18-totems-fuegos.md) |
 | 2026-10-20 | [S18: informe de combate nativo y la vuelta del combate (B-178)](./2026-10-20-s18-informe-combate.md) |
 | 2026-10-20 | [S18: intercambio entre jugadores nativo, PvP probado de punta a punta](./2026-10-20-s18-intercambio.md) |
+| 2026-10-20 | [S18: fuera el panel de depuración ElementDlg (y ShopDlg, BarterDlg)](./2026-10-20-s18-fuera-elementdlg.md) |

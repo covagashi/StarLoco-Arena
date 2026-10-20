@@ -42,7 +42,7 @@ func _talk_open(id: int):
 	await _wait(func(): return _main._gui.is_open("npcTalkDialog"), 3.0)
 	await create_timer(0.3).timeout
 	var panel = _main._gui.dialogs.get("npcTalkDialog")
-	if not is_instance_of(panel, TalkPanel) or _main.get_node("UI/ElementDlg").visible:
+	if not is_instance_of(panel, TalkPanel) or _debug_pane_shown():
 		return null
 	return panel
 
