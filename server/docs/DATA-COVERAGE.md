@@ -395,6 +395,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 
 | Date | Change |
 |---|---|
+| 2026-10-20 | `cmd/dumpcards` also exports each firework card's `fwType` (field 7, `tl()`: 0 burst, 1 rocket, 2 fountain) and `fwColour` (field 8, `tk()`, RGB 0..255) so the Godot lobby can draw a 22094 on its sky. No decoder or wire change. |
 | 2026-10-20 | B-177: `gamedata.CardTypeEvolution` (24, client `aMK.dYy`) names the card type the graveyard may spend; the coach-card `Type` field (already decoded) now gates 22099. No decoder or wire change. |
 | 2026-10-06 | B-171: Godot combat HUD and result panel moved to the lobby's native visual family. No client data decoder, record coverage, or wire format changed. |
 | 2026-08-19 | `cmd/dumpcards` now also exports each card's `resurrect` percent (action 13) so the Godot client's graveyard dialog can pick a resurrection card from inventory without hardcoding ids; `tools/asset-import/card_names.py` passes the field through into `godot/assets/gamedata/cards.json`. |

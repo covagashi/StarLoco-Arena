@@ -310,14 +310,57 @@ func _calendar() -> void:
 		b.custom_minimum_size = Vector2(85, 48)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var details := column(split)
+	# the picked day, re-read from the fresh model (registration, search and
+	# bracket state change under it)
+	for cell in data("calendar.calendar", []):
+		if not selected.is_empty() and str(cell.get("day", "")) == str(selected.get("day", "")):
+			selected = cell
 	label(details, I18n.t("cal.day", {"d": str(selected.get("day", "—"))}), 22)
 	var events: Array = selected.get("events", [])
 	if events.is_empty():
 		label(details, I18n.t("cal.empty"))
+	var status: Dictionary = data("calendar.status", {})
+	var bracket: Dictionary = data("calendar.bracket", {})
 	for event in events:
-		label(details, str(event.get("title", "")), 20)
-		label(details, str(event.get("description", "")))
-		button(details, I18n.t("cal.register"), func(): confirm_action(I18n.t("cal.register_confirm"), func(): send("registerTournament", [event], event)))
+		_tournament_event(details, event, status, bracket)
+
+
+## One tournament on the day's detail: the tournament totem's actions (S18).
+func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, bracket: Dictionary) -> void:
+	var tid := int(event.get("id", -1))
+	label(parent, str(event.get("title", "")), 20)
+	label(parent, str(event.get("description", "")))
+	var registered := bool(event.get("registered", false))
+	var state := I18n.t("cal.registered") if registered else (
+		I18n.t("cal.reg_open") if bool(event.get("regOpen", true)) else I18n.t("cal.reg_closed"))
+	if bool(event.get("searching", false)):
+		state = I18n.t("cal.searching")
+	parent.add_child(OneBit.caption(state))
+	var bar := row(parent)
+	if not registered:
+		button(bar, I18n.t("cal.register"), func(): confirm_action(I18n.t("cal.register_confirm"), func(): send("registerTournament", [event], event)),
+			bool(event.get("regOpen", true))).name = "Register%d" % tid
+	else:
+		button(bar, I18n.t("cal.bracket"), func(): send("nativeTournTree", [tid])).name = "Bracket%d" % tid
+		var searching := bool(event.get("searching", false))
+		if searching or bool(event.get("searchOpen", false)):
+			button(bar, I18n.t("cal.search_cancel") if searching else I18n.t("cal.search"),
+				func(): send("nativeTournSearch", [tid])).name = "Search%d" % tid
+		else:
+			label(bar, I18n.t("cal.search_closed"))
+	if int(status.get("tid", -2)) == tid:
+		var line := label(parent, str(status.get("text", "")))
+		line.name = "TournStatus%d" % tid
+		if not bool(status.get("ok", true)):
+			line.add_theme_color_override("font_color", OneBit.MUTED)
+	if int(bracket.get("tid", -2)) == tid:
+		var rows: Array = bracket.get("rows", [])
+		if rows.is_empty():
+			label(parent, I18n.t("cal.bracket_empty")).name = "BracketEmpty%d" % tid
+		else:
+			var t := table(parent, [I18n.t("cal.col_seat"), I18n.t("cal.col_coach")], ["slot", "name"], rows)
+			t.name = "BracketTable%d" % tid
+			t.custom_minimum_size.y = 34 + 30 * mini(rows.size(), 4)
 
 
 func _achievements() -> void:
@@ -345,6 +388,8 @@ func _social() -> void:
 		items.append(item)
 	if tab == 2:
 		label(body, str(data("guild.name", I18n.t("social.no_clan"))), 22)
+		if not str(data("guild.name", "")).is_empty():
+			_clan_demon()
 	table(body, [I18n.t("social.col_name")] if tab == 1 else [I18n.t("social.col_name"), I18n.t("social.col_status")], ["name"] if tab == 1 else ["name", "status"], items, func(_item): schedule_refresh())
 	var toolbar := row(body)
 	var edit := field(toolbar, "social_name", I18n.t("social.name_ph"))
@@ -364,6 +409,20 @@ func _social() -> void:
 			button(toolbar, I18n.t("social.view_member"), func(): send("getMemberStats", [], selected), not selected.is_empty())
 			button(toolbar, I18n.t("social.ranks"), func(): send("nativeOpen", ["guildManagementDialog"]), bool(data("guild.canManage", false)))
 		button(toolbar, I18n.t("social.leave"), func(): confirm_action(I18n.t("social.leave_confirm"), func(): send("quitGuild")), not str(data("guild.name", "")).is_empty())
+
+
+## The clan's demon (S18: the demon totem's job). The leader opens the
+## offering panel; the first accepted offering affiliates the clan.
+func _clan_demon() -> void:
+	body.add_child(OneBit.caption(I18n.t("clan.demon")))
+	var bar := row(body)
+	var demon := int(data("guild.demon", 0))
+	label(bar, I18n.t("clan.demon_is", {"demon": str(data("guild.demonName", ""))})
+		if demon > 0 else I18n.t("clan.demon_none")).name = "ClanDemon"
+	if bool(data("guild.canOffer", false)):
+		button(bar, I18n.t("clan.demon_offer"), func(): send("nativeDemonOpen")).name = "DemonOffer"
+	else:
+		label(bar, I18n.t("clan.demon_leader"))
 
 
 ## The services the walkable hall used to reach, from every island at once

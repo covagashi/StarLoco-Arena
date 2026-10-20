@@ -266,6 +266,8 @@ func _ready() -> void:
 	_gui.native_factories["mailboxDialog"] = _make_mailbox_panel
 	_gui.native_factories["fusionLabDialog"] = _make_fusion_panel
 	_gui.native_factories["npcTalkDialog"] = _make_talk_panel
+	_gui.native_factories["demonAffiliationDialog"] = _make_demon_panel
+	_gui.native_factories["fireworkDialog"] = _make_firework_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -1038,17 +1040,16 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			Session.send(OP_RECONNECT_A, w.raw(), 2)
 			_log_line(I18n.t("fight.resuming"))
 		OP_TOURN_TREE:
-			# 28650 bracket — render slot→name into the pane's second list.
+			# 28650 bracket — slot→name rows for the Calendar's tournament
+			# (the reply carries no id: it answers the last 28649).
 			var d := Codec.decode(opcode, payload)
-			if $UI/ElementDlg.visible and _elem_kind == 13:
-				var l2: ItemList = $UI/ElementDlg/VBox/Scroll2/List2
-				$UI/ElementDlg/VBox/Scroll2.visible = true
-				l2.clear()
-				var slots: Array = d.get("slots", {}).keys()
-				slots.sort()
-				for s in slots:
-					l2.add_item("slot %d — %s" % [
-						int(s), str(d.slots[s])])
+			var slots: Array = d.get("slots", {}).keys()
+			slots.sort()
+			var rows: Array = []
+			for sl in slots:
+				rows.append({"slot": int(sl) + 1, "name": str(d.slots[sl])})
+			_tourn_bracket = {"tid": _tourn_tree_tid, "rows": rows}
+			_refresh_calendar()
 		OP_DUO_INVITATION:
 			# 6025 [str8 team][str8 inviterName][i64 inviter][i64 invited]
 			var team := payload.get_str("u8")
@@ -1188,8 +1189,28 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_awaiting_offer = false
 				if res == 0:
 					_log_line("[color=green]%s[/color]" % I18n.t("demon.accepted"))
+					# the first offering affiliates the clan; the server pushes no
+					# guild record for it
+					if int(State.guild.get("demon_id", 0)) == 0:
+						State.guild["demon_id"] = _demon_id
+					# the server consumes the cards but pushes no inventory (the
+					# retail client drops them from its own view, handlers_demon)
+					for cid in _demon_offered:
+						var left := int(State.inventory.get(cid, 0)) - int(_demon_offered[cid])
+						if left > 0:
+							State.inventory[cid] = left
+						else:
+							State.inventory.erase(cid)
+					_demon_staged = {}
+					_demon_request_ladder()
 				else:
 					_log_line("[color=red]%s[/color]" % I18n.t("demon.failed"))
+				_demon_status = {"ok": res == 0,
+					"text": I18n.t("demon.accepted" if res == 0 else "demon.failed")}
+				if _gui.is_open("demonAffiliationDialog"):
+					_push_demon_model()
+				if _gui.is_open("socialDialog") or _gui.is_open("guildDialog"):
+					_push_social_model()
 			else:
 				for c in d.get("currencies", []):
 					State.wallet[int(c.type)] = int(c.amount)
@@ -1234,40 +1255,20 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_push_fusion_model()
 		OP_DEMON_LADDER_RES:
 			var d := Codec.decode(opcode, payload)
-			if $UI/ElementDlg.visible and _elem_kind == 11:
-				var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-				list.clear()
-				for r0 in d.get("rows", []):
-					list.add_item("%s  — %d pts" % [
-						str(r0.get("name", "?")), int(r0.get("quarterly", 0))])
-				$UI/ElementDlg/VBox/Hint.text = \
-					"demon %d — %d clan(s), your affiliation: %d" % [
-						int(d.get("demon", -1)), d.get("rows", []).size(),
-						int(d.get("affiliation", 0))]
-			else:
-				DebugLog.add("demon ladder: %d row(s)" % d.get("rows", []).size())
+			# the clans serving one demon, for the offering panel (S18)
+			_demon_ladder = {"demon": int(d.get("demon", -1)), "rows": d.get("rows", [])}
+			if _gui.is_open("demonAffiliationDialog"):
+				_push_demon_model()
 		OP_TOURN_CALENDAR, OP_TOURN_LIST_RES:
 			var d := Codec.decode(opcode, payload)
 			var rows: Array = d.get("events", d.get("tournaments", []))
 			if opcode == OP_TOURN_CALENDAR:
 				_calendar_events = rows
-				if _gui.is_open("calendarDialog"):
-					_push_calendar_model()
-			if $UI/ElementDlg.visible and _elem_kind == 13:
-				var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
+			else:
 				for r0 in rows:
-					var tid := int(r0.get("id", r0.get("tid", -1)))
-					var label := str(r0.get("name", "?"))
-					if r0.get("reg_open", 1) == 0:
-						label += "  " + I18n.t("tourn.closed")
-					list.add_item(label)
-					list.set_item_metadata(list.item_count - 1, tid)
-				$UI/ElementDlg/VBox/Hint.text = I18n.t("ladder.tournaments",
-					{"n": $UI/ElementDlg/VBox/Scroll/List.item_count})
-				var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-				act.text = I18n.t("btn.register")
-				act.visible = true
-				act.disabled = true
+					_tourn_rows[int(r0.get("id", -1))] = r0
+			if _gui.is_open("calendarDialog"):
+				_push_calendar_model()
 			else:
 				_log_line(I18n.t("tourn.count", {"n": rows.size()}))
 		OP_TOURN_REG_RES:
@@ -1279,11 +1280,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if int(d.code) == 0:
 				_registered_tids[tid] = true
 			_log_line(I18n.t("tourn.msg", {"tid": tid, "msg": msg}))
-			if $UI/ElementDlg.visible and _elem_kind == 13:
-				$UI/ElementDlg/VBox/Hint.text = msg
+			_tourn_status = {"tid": tid, "text": msg, "ok": int(d.code) == 0}
+			_refresh_calendar()
 		OP_TOURN_SEARCH_PERIOD:
 			var d := Codec.decode(opcode, payload)
 			_search_open[int(d.tournament_id)] = int(d.open) != 0
+			_refresh_calendar()
 			_log_line(I18n.t("tourn.search_state", {"tid": int(d.tournament_id),
 				"state": I18n.t("tourn.open" if int(d.open) != 0
 					else "tourn.closed")}))
@@ -1296,16 +1298,24 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_tourn_search_tid = int(d.tournament_id)
 			else:
 				_tourn_search_tid = -1
+			_tourn_status = {"tid": int(d.tournament_id), "ok": int(d.accepted) != 0,
+				"text": I18n.t("tourn.search_wait") if int(d.accepted) != 0
+					else I18n.t("tourn.search_refused")}
+			_refresh_calendar()
 		OP_TOURN_CANCEL_RES:
 			# 28610 [i8 accepted] — the search we cancelled is dead
+			_tourn_status = {"tid": _tourn_search_tid, "ok": true, "text": I18n.t("tourn.cancelled")}
 			_tourn_search_tid = -1
 			_log_line(I18n.t("tourn.cancelled"))
+			_refresh_calendar()
 		OP_TOURN_SEARCH_ERR:
 			var d := Codec.decode(opcode, payload)
+			_tourn_status = {"tid": _tourn_search_pending, "ok": false, "text": I18n.t("tourn.err")}
 			_tourn_search_tid = -1
 			DebugLog.add("tournament search error %d/%d" % [
 				int(d.code), int(d.sub_code)])
 			_log_line("[color=red]%s[/color]" % I18n.t("tourn.err"))
+			_refresh_calendar()
 		OP_TOURN_SEARCH_END:
 			var d := Codec.decode(opcode, payload)
 			_tourn_search_tid = -1
@@ -1586,10 +1596,16 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if _elem_kind == ELEM_EXCHANGE:
 				$UI/ElementDlg.visible = false
 		OP_FIREWORK_SHOW:
+			# S18: no world to play it in — it bursts on the lobby sky, for
+			# everyone the server sends it to (the launcher too).
 			var d := Codec.decode(opcode, payload)
-			DebugLog.add("firework! %s at (%d,%d)" % [
-				Cards.name_of(int(d.get("card", 0))),
-				int(d.get("x", 0)), int(d.get("y", 0))])
+			_fw_shown += 1
+			if is_instance_valid(_lobby_screen):
+				var m := Cards.meta(int(d.get("card", 0)))
+				var rgb: Array = m.get("fwColour", [255, 255, 255])
+				var c := Color8(int(rgb[0]), int(rgb[1]), int(rgb[2])) if rgb.size() >= 3 else Color.WHITE
+				_lobby_screen.firework(int(m.get("fwType", 0)), c)
+			DebugLog.add("firework! %s" % Cards.name_of(int(d.get("card", 0))))
 		OP_FRIEND_LIST:
 			var d := Codec.decode(opcode, payload)
 			State.friends = d.get("friends", [])
@@ -3858,6 +3874,10 @@ func _on_gui_dialog_opened(name: String) -> void:
 		"calendarDialog":
 			if _calendar_events.is_empty():
 				Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
+			# 28601: registration state + the search-period pushes (28630)
+			Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
+			_tourn_status = {}
+			_tourn_bracket = {}
 			_push_calendar_model()
 		"achievementDialog":
 			_ach_sel = {"type": -1, "sub": -1}
@@ -3910,12 +3930,18 @@ func _push_social_model() -> void:
 			"rankIconUrl": "", "guildInfos": ""}
 		it.merge(m, true)   # coach_id/rank_level ride for stats & kick
 		gm.append(it)
+	var demon := int(State.guild.get("demon_id", 0))
 	model.set_value("guild", {
 		"name": str(State.guild.get("guild", "")),
 		"members": gm,
 		"canManage": _has_right(GUILD_RIGHT_LEADER)
 			if not State.guild.is_empty() else false,
-		"guildInfos": ""})
+		"guildInfos": "",
+		# S18: the demon totem's job, in the clan tab
+		"demon": demon,
+		"demonName": _demon_name(demon) if demon > 0 else "",
+		"canOffer": not State.guild.is_empty() \
+			and int(State.guild.get("rank_level", 0)) == 1})
 	model.set_value("guildMaster",
 		_has_right(GUILD_RIGHT_LEADER) if not State.guild.is_empty() else false)
 	# guildInviter gates the invite-send panel — the INVITE right
@@ -4007,7 +4033,7 @@ func _push_ladder_model() -> void:
 	lm["listDemon"] = _ladder_items(d.get("rows", []),
 		["demonName", "guildName", "quarterlyReputationPoints"],
 		func(r): return {
-			"demonName": "Demon %d" % int(r.get("demon", 0)),
+			"demonName": _demon_name(int(r.get("demon", 0))),
 			"guildName": str(r.get("guild", "")),
 			"quarterlyReputationPoints": int(r.get("rep", 0))})
 	_gui.gui.model.set_value("ladderManager", lm)
@@ -4235,9 +4261,10 @@ const LOBBY_WORLDS := [23, 24, 25, 26, 27, 28, 37]
 
 ## Env kinds whose instances all behave the same: one button for the kind.
 ## Zaaps (4) and zone triggers (8, walk-on) get none; the graveyard (10) is
-## the Team panel's fallen section (S18).
+## the Team panel's fallen section, the tournament totem (13) the Calendar and
+## the demon totem (11) the clan tab + the Ranking's demon tab (S18).
 const _CITY_ONE_PER_KIND := [2, 12]
-const _CITY_HIDDEN := [4, 8, 10]
+const _CITY_HIDDEN := [4, 8, 10, 11, 13]
 ## Display order of the kinds in the City panel: shops and mail first.
 const _CITY_ORDER := [1, 2, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
 
@@ -4508,11 +4535,18 @@ func _push_calendar_model() -> void:
 				int(e.get("runs_until", 0)) / 1000)
 			if int(ed.year) == year and int(ed.month) == month \
 					and int(ed.day) == day_i:
+				var tid := int(e.get("tid", -1))
+				var row: Dictionary = _tourn_rows.get(tid, {})
 				evs.append({"title": str(e.get("name", "")),
 					"typeIcon": "",
 					"description": str(e.get("desc", "")),
 					"registrationButton": true,
-					"style": "", "id": int(e.get("tid", -1))})
+					"style": "", "id": tid,
+					# native Calendar (S18): what the tournament totem did
+					"registered": _registered_tids.has(tid),
+					"regOpen": int(row.get("reg_open", 1)) != 0,
+					"searchOpen": bool(_search_open.get(tid, false)),
+					"searching": _tourn_search_tid == tid})
 		cells.append({"day": str(day_i), "events": evs,
 			"hasMoreEventsToShow": evs.size() > 3, "style": ""})
 	model.set_value("calendar", {
@@ -4522,7 +4556,8 @@ func _push_calendar_model() -> void:
 		"eventFilter": {"showAllEvent": true,
 			"tournamentEventFilter": true,
 			"maintenanceEventFilter": true,
-			"broadcastEventFilter": true}})
+			"broadcastEventFilter": true},
+		"bracket": _tourn_bracket, "status": _tourn_status})
 	model.set_value("itemOver", {})
 	model.set_value("itemSelected", {})
 
@@ -4566,6 +4601,47 @@ func _on_calendar_register(args: Array, w: GWidget) -> void:
 	wr.put_i16(-1)
 	wr.put_i32(0)
 	Session.send(OP_TOURN_REGISTER, wr.raw(), 2)
+
+
+## --- Tournaments in the Calendar (S18: the tournament totem's job) -----------
+## Register (4607, above), the bracket (28649 → 28650) and the opponent search
+## (28611, cancelled with 28609) — the retail totem's actions, on the
+## Calendar's event detail. Results land in calendar.status for that event.
+var _tourn_rows := {}            # tid -> 28602 row (reg_open, status…)
+var _tourn_bracket := {}         # {tid, rows:[{slot, name}]}
+var _tourn_status := {}          # {tid, text, ok}
+var _tourn_tree_tid := -1        # the tournament the last 28649 asked about
+var _tourn_search_pending := -1  # the tournament the last 28611 was for
+
+
+func _refresh_calendar() -> void:
+	if _gui.is_open("calendarDialog"):
+		_push_calendar_model()
+
+
+## 28649 [i64 tid][i32 page][str32 name] — only an entrant gets the seats.
+func _tourn_tree(tid: int) -> void:
+	_tourn_tree_tid = tid
+	var w := WireWriter.new()
+	w.put_i64(tid)
+	w.put_i32(0)
+	w.put_str(State.my_coach_name, "i32")
+	Session.send(OP_TOURN_TREE_REQ, w.raw(), 2)
+
+
+## Opponent search → 28611 [i64 tid][i64 coach][i16 preset], arch 2 (retail
+## sends pseudo-preset 99 from the Tournois tab's Combattre); the same button
+## cancels a live one with 28609.
+func _tourn_search(tid: int) -> void:
+	var w := WireWriter.new()
+	w.put_i64(tid)
+	w.put_i64(State.my_coach_id)
+	w.put_i16(99)
+	_tourn_search_pending = tid
+	if _tourn_search_tid == tid:
+		Session.send(OP_TOURN_CANCEL, w.raw(), 2)
+	else:
+		Session.send(28611, w.raw(), 2)
 
 
 ## --- achievementDialog --------------------------------------------------------
@@ -5283,7 +5359,6 @@ func _toast(text: String) -> void:
 ## (Card Master pushes the 5401 catalogue); the rest open client-local dialogs.
 var _elem_id := -1            # element the ElementDlg is showing
 var _elem_kind := -1          # env type of that element
-var _elem_offer := false      # kind-11 dialog switched to card-offer mode
 var _demon_id := -1           # demon of the totem being offered to
 var _awaiting_offer := false  # a 5470 basket is in flight → next 5403 is its ack
 var _search_open := {}        # tournament id -> opponent-search period open
@@ -5417,6 +5492,20 @@ func _make_fusion_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_firework_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/firework_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
+func _make_demon_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/demon_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 func _make_talk_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/talk_panel.gd").new()
 	panel.model = _gui.gui.model
@@ -5446,6 +5535,62 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeUseElement":
 			_use_element(int(args[0]))
+			return
+		"nativeDemonOpen":
+			_open_demon_native()
+			return
+		"nativeDemonPick":
+			if int(State.guild.get("demon_id", 0)) == 0:
+				_demon_id = int(args[0])
+				_demon_status = {}
+				_push_demon_model()
+				_demon_request_ladder()
+			return
+		"nativeDemonAdd":
+			_demon_status = {}
+			_demon_stage(int(args[0]))
+			return
+		"nativeDemonRemove":
+			var cid := int(args[0])
+			if int(_demon_staged.get(cid, 0)) <= 1:
+				_demon_staged.erase(cid)
+			else:
+				_demon_staged[cid] = int(_demon_staged[cid]) - 1
+			_push_demon_model()
+			return
+		"nativeDemonOffer":
+			_on_demon_affiliate([], null)
+			return
+		"nativeFwAdd":
+			var cid := int(args[0])
+			for sl in _fw_slots:
+				if int(sl.cid) == 0:
+					sl["cid"] = cid
+					sl["delay"] = 0
+					break
+			_push_firework_model()
+			return
+		"nativeFwRemove":
+			var i := int(args[0])
+			if i >= 0 and i < _fw_slots.size():
+				_fw_slots.remove_at(i)
+				_fw_slots.append({"cid": 0, "delay": 0})
+			_push_firework_model()
+			return
+		"nativeFwDelay":
+			var i := int(args[0])
+			if i >= 0 and i < _fw_slots.size():
+				_fw_slots[i]["delay"] = maxi(0, int(args[1]))
+			_push_firework_model()
+			return
+		"nativeFwLaunch":
+			_on_fw_launch([], null)
+			return
+		"nativeTournTree":
+			_tourn_tree(int(args[0]))
+			return
+		"nativeTournSearch":
+			_tourn_search(int(args[0]))
 			return
 		"nativeTalk":
 			_talk_choice(int(args[0]))
@@ -5598,7 +5743,6 @@ func _use_element(id: int) -> void:
 	var label := Elements.kind_name(kind)
 	_elem_id = id
 	_elem_kind = kind
-	_elem_offer = false
 	match kind:
 		1:   # Card Master — server pushes the 5401 catalogue
 			_log_line(I18n.t("shop.opening", {"label": label}))
@@ -5627,10 +5771,12 @@ func _use_element(id: int) -> void:
 			# every dialog open — a counter stat, value=1 each time.
 			_open_breed_master(e)
 			_report_criterion(221)
-		11:  # Demon totem — ladder page requested with 27510, shown on 27511
-			_open_demon_totem(e)
-		13:  # Tournament totem — calendar (17002) + list (28601)
-			_open_tournament_totem()
+		11:  # Demon totem
+			# S18: no totem to visit — the demon ladder is the Ranking's
+			# Demonios tab, and the offering lives in the clan panel.
+			_gui.open("ladderInformationDialog")
+		13:  # Tournament totem — its tournaments live in the Calendar (S18)
+			_gui.open("calendarDialog")
 		12:  # Firework launcher — pick a card → 22095 → 22094 echo
 			_open_firework(e)
 		15:  # NPC talker — client-side dialog tree (record 1500)
@@ -5951,7 +6097,6 @@ func _element_text(title: String, hint: String) -> void:
 	$UI/ElementDlg/VBox/Btns/CloseBtn.text = I18n.t("panel.close")
 	$UI/ElementDlg/VBox/Title.text = title
 	$UI/ElementDlg/VBox/Hint.text = hint
-	_elem_offer = false
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 	list.clear()
 	list.select_mode = ItemList.SELECT_SINGLE
@@ -6529,12 +6674,10 @@ func _on_cm_buy(_a: Array, _w: GWidget) -> void:
 ## LEADER can affiliate and only while the guild serves no demon yet.
 
 var _demon_staged := {}     # cid -> staged count
-
-
-func _open_demon_offer_dialog() -> bool:
-	_demon_staged = {}
-	_push_demon_model()
-	return _gui.open("demonAffiliationDialog") != null
+var _demon_status := {}     # {text, ok} — the last offering, for the panel
+var _fw_shown := 0          # 22094s drawn on the lobby sky (for the smoke)
+var _demon_ladder := {}     # last 27511: {demon, rows}
+var _demon_offered := {}    # cid -> count in the 5470 awaiting its 5403
 
 
 func _push_demon_model() -> void:
@@ -6553,6 +6696,88 @@ func _push_demon_model() -> void:
 		"canBuyCards": not _demon_staged.is_empty()})
 	_gui.gui.model.set_value("exchange.cardTrade", _demon_id,
 		"exchangeId")
+	# --- native panel (S18, src/ui/demon_panel.gd) ---------------------------
+	var owned: Array = []
+	for cid in State.inventory:
+		var m := Cards.meta(int(cid))
+		if not bool(m.get("tradable", false)) or int(State.inventory[cid]) <= 0:
+			continue
+		owned.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"qty": int(State.inventory[cid]) - int(_demon_staged.get(cid, 0)),
+			"value": int(m.get("value", 0))})
+	owned.sort_custom(func(a, b): return a.value > b.value or (a.value == b.value and a.id < b.id))
+	var basket: Array = []
+	for cid in _demon_staged:
+		basket.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"qty": int(_demon_staged[cid]), "value": Cards.value_of(int(cid))})
+	var ladder: Array = []
+	if int(_demon_ladder.get("demon", -1)) == _demon_id:
+		for r0 in _demon_ladder.get("rows", []):
+			ladder.append({"name": str(r0.get("name", "?")),
+				"points": int(r0.get("quarterly", 0))})
+	var demons: Array = []
+	for did in _lobby_demons():
+		demons.append({"id": did, "name": _demon_name(did)})
+	_gui.gui.model.set_value("demonNative", {
+		"demon": _demon_id, "demonName": _demon_name(_demon_id),
+		"canChoose": int(State.guild.get("demon_id", 0)) == 0,
+		"demons": demons, "owned": owned, "basket": basket, "total": sum,
+		"ladder": ladder, "status": _demon_status,
+		"pending": _awaiting_offer})
+
+
+## The demons a clan can serve: the lobby's demon totems (kind 11, desc =
+## demon id).
+func _lobby_demons() -> Array:
+	var out: Array = []
+	for w in LOBBY_WORLDS:
+		for id in Elements.for_world(w):
+			var e: Dictionary = Elements.for_world(w)[id]
+			if int(e.type) != 11:
+				continue
+			var did := int(_desc_fields(str(e.get("desc", "")))[0])
+			if did > 0 and not did in out:
+				out.append(did)
+	out.sort()
+	return out
+
+
+## Retail names demons by Roman numeral (afg_1.kn): demon 16 is "XVI".
+func _demon_name(id: int) -> String:
+	if id < 1 or id > 3999:
+		return I18n.t("demon.name", {"n": str(id)})
+	var vals := [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+	var syms := ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+	var n := id
+	var out := ""
+	for i in vals.size():
+		while n >= vals[i]:
+			out += syms[i]
+			n -= vals[i]
+	return I18n.t("demon.name", {"n": out})
+
+
+## 27510 [i16 demon][i16 flag][i32 startRank] → 27511: the clans serving it.
+func _demon_request_ladder() -> void:
+	if _demon_id <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_i16(_demon_id)
+	w.put_i16(0)
+	w.put_i32(0)
+	Session.send(OP_DEMON_LADDER, w.raw(), 2)
+
+
+## Opened from the clan tab: the clan's demon, or the first one to choose.
+func _open_demon_native() -> void:
+	var cur := int(State.guild.get("demon_id", 0))
+	var demons := _lobby_demons()
+	_demon_id = cur if cur > 0 else (int(demons[0]) if not demons.is_empty() else -1)
+	_demon_staged = {}
+	_demon_status = {}
+	_push_demon_model()
+	_demon_request_ladder()
+	_gui.open("demonAffiliationDialog")
 
 
 func _demon_stage(cid: int) -> void:
@@ -6593,9 +6818,10 @@ func _on_demon_affiliate(_a: Array, _w: GWidget) -> void:
 			wr.put_i32(int(cid))
 			wr.put_i16(1)
 	_awaiting_offer = true
+	_demon_offered = _demon_staged.duplicate()
+	_demon_status = {"ok": true, "text": I18n.t("demon.sent")}
 	Session.send(OP_DEMON_OFFER, wr.raw(), 3)
-	_gui.close("demonAffiliationDialog")
-	$UI/ElementDlg.visible = false
+	_push_demon_model()
 	DebugLog.add("demon %d offering sent: %d card(s)" % [_demon_id, total])
 
 
@@ -6743,65 +6969,6 @@ func _on_fusion_inputs() -> void:
 				Cards.name_of(cid), Cards.value_of(cid)])
 			list2.set_item_metadata(list2.item_count - 1, cid)
 	$UI/ElementDlg/VBox/Hint.text = I18n.t("fusion.pick_target")
-
-
-## Demon totem → 27510 [i16 demon][i16 flag][i32 startRank]; desc = demon id.
-## The dialog fills in when 27511 lands (handled in _on_message).
-func _open_demon_totem(e: Dictionary) -> void:
-	var fields := _desc_fields(str(e.get("desc", "")))
-	var demon := int(fields[0]) if fields.size() > 0 else -1
-	_demon_id = demon
-	var hint := "Requesting ladder…"
-	if int(State.guild.get("demon_id", 0)) != 0:
-		hint += " — guild already serves demon %d" % \
-			int(State.guild.get("demon_id"))
-	_element_text("Demon totem %d" % demon, hint)
-	# Retail gates the affiliate control on rank 1 AND demon_id == 0
-	# (pq_1.java:56 guildCanAffiliate) — mirror it on the Alt button.
-	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = I18n.t("trade.offer_cards")
-	alt.visible = int(State.guild.get("rank_level", 0)) == 1 \
-		and int(State.guild.get("demon_id", 0)) == 0
-	var w := WireWriter.new()
-	w.put_i16(demon)
-	w.put_i16(0)
-	w.put_i32(0)
-	Session.send(OP_DEMON_LADDER, w.raw(), 2)
-
-
-## Tournament totem → 17002 (calendar) + 28601 (list), both empty, arch 3/2.
-func _open_tournament_totem() -> void:
-	_element_text("Tournament totem", "Requesting tournaments…")
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	if not list.item_selected.is_connected(_on_tournament_sel):
-		list.item_selected.connect(_on_tournament_sel)
-	Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
-	Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
-
-
-func _on_tournament_sel(i: int) -> void:
-	# The List's item_selected is shared across element dialogs — ignore
-	# selections that aren't this totem's rows (stale callback, empty list).
-	if _elem_kind != 13:
-		return
-	$UI/ElementDlg/VBox/Btns/ActBtn.disabled = false
-	# "Find opponent" (retail "Combattre") only makes sense for a
-	# tournament we're in AND whose search window is open (28630).
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	var tid := int(list.get_item_metadata(i))
-	var alt: Button = $UI/ElementDlg/VBox/Btns/AltBtn
-	alt.text = I18n.t("tourn.cancel_search") if _tourn_search_tid == tid \
-			else I18n.t("tourn.find")
-	alt.visible = _registered_tids.has(tid) \
-		and (_search_open.get(tid, false) or _tourn_search_tid == tid)
-	# Entrants get the bracket straight away (retail opens the tree with the
-	# tournament): 28649 → 28650 fills the second list with slot→name rows.
-	if _registered_tids.has(tid):
-		var w := WireWriter.new()
-		w.put_i64(tid)
-		w.put_i32(0)
-		w.put_str(State.my_coach_name, "i32")
-		Session.send(OP_TOURN_TREE_REQ, w.raw(), 2)
 
 
 ## Mailbox pane — filled when MAIL_LIST (15001) lands: sender + title per
@@ -7179,9 +7346,7 @@ func _fw_reset() -> void:
 
 
 func _open_firework(_e: Dictionary) -> void:
-	if not _open_firework_retail():
-		_open_firework_debug()
-		return
+	_open_firework_retail()
 
 
 func _open_firework_retail() -> bool:
@@ -7195,6 +7360,26 @@ func _push_firework_model() -> void:
 	if _fw_slots.is_empty():
 		_fw_reset()
 	var model := _gui.gui.model
+	# --- native launcher (S18, src/ui/firework_panel.gd) ---------------------
+	var used := {}
+	var slots_n: Array = []
+	for i in _fw_slots.size():
+		var cid := int(_fw_slots[i].get("cid", 0))
+		if cid > 0:
+			used[cid] = int(used.get(cid, 0)) + 1
+			slots_n.append({"i": i, "id": cid, "name": Cards.name_of(cid),
+				"delay": int(_fw_slots[i].get("delay", 0))})
+	var owned: Array = []
+	for cid in State.inventory:
+		var meta := Cards.meta(int(cid))
+		if int(meta.get("type", 0)) != 25:
+			continue
+		owned.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+			"qty": int(State.inventory[cid]) - int(used.get(cid, 0)),
+			"kind": int(meta.get("fwType", 0))})
+	owned.sort_custom(func(a, b): return a.id < b.id)
+	model.set_value("fireworkNative", {"owned": owned, "slots": slots_n,
+		"max": _fw_slots.size()})
 	var sets: Array = []
 	for sd in _all_card_sets():
 		for c in sd.get("collection", []):
@@ -7285,21 +7470,6 @@ func _launch_firework_at(cid: int, pos: Vector3i, delay_s: float) -> void:
 			CONNECT_ONE_SHOT)
 
 
-func _open_firework_debug() -> void:
-	_element_text("Fireworks", "Pick a card to launch:")
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	for cid in State.inventory:
-		list.add_item("%s  ×%d" % [
-			Cards.name_of(int(cid)), int(State.inventory[cid])])
-		list.set_item_metadata(list.item_count - 1, int(cid))
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	act.text = I18n.t("fight.launch")
-	act.visible = true
-	act.disabled = true
-	list.item_selected.connect(
-		func(_i): act.disabled = false, CONNECT_ONE_SHOT)
-
-
 ## ElementDlg primary button — dispatched on the element kind being shown.
 func _on_element_act() -> void:
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
@@ -7321,37 +7491,6 @@ func _on_element_act() -> void:
 			$UI/ElementDlg.visible = false
 			DebugLog.add("fusion sent: %d cards → %s" % [inputs.size(),
 				Cards.name_of(int(list2.get_item_metadata(sel2[0])))])
-		13:  # tournament register → 4607 [tid][coach][preset=-1][card=0]
-			var sel := list.get_selected_items()
-			if sel.is_empty():
-				return
-			var w := WireWriter.new()
-			w.put_i64(int(list.get_item_metadata(sel[0])))
-			w.put_i64(State.my_coach_id)
-			w.put_i16(-1)
-			w.put_i32(0)
-			Session.send(OP_TOURN_REGISTER, w.raw(), 3)
-			DebugLog.add("tournament register sent (tid %d)"
-				% int(list.get_item_metadata(sel[0])))
-		11:  # demon offering — only meaningful in offer mode
-			if not _elem_offer:
-				return
-			var offers := []
-			for idx in list.get_selected_items():
-				offers.append(int(list.get_item_metadata(idx)))
-			if offers.is_empty() or _demon_id < 0:
-				return
-			var w := WireWriter.new()
-			w.put_i16(_demon_id)
-			w.put_i16(offers.size())
-			for cid in offers:
-				w.put_i32(cid)
-				w.put_i16(1)
-			_awaiting_offer = true
-			Session.send(OP_DEMON_OFFER, w.raw(), 3)
-			$UI/ElementDlg.visible = false
-			DebugLog.add("demon %d offering sent: %d card(s)" % [
-				_demon_id, offers.size()])
 		ELEM_EXCHANGE:  # "Ready" toggle → 5109
 			var w := WireWriter.new()
 			w.put_i64(int(_ex.id))
@@ -7407,49 +7546,6 @@ func _on_element_alt() -> void:
 		_mails.remove_at(idx)
 		_fill_mails()
 		_log_line(I18n.t("mail.deleted", {"id": int(m.id)}))
-		return
-	if _elem_kind == 13:
-		# Opponent search → 28611 [i64 tid][i64 coach][i16 preset], arch 2.
-		# Retail sends pseudo-preset 99 from the Tournois tab's Combattre.
-		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-		var sel := list.get_selected_items()
-		if sel.is_empty():
-			return
-		var w := WireWriter.new()
-		var tid := int(list.get_item_metadata(sel[0]))
-		w.put_i64(tid)
-		w.put_i64(State.my_coach_id)
-		w.put_i16(99)
-		if _tourn_search_tid == tid:
-			# The same button cancels a live search (retail toggles it).
-			Session.send(OP_TOURN_CANCEL, w.raw(), 2)
-			DebugLog.add("tournament search cancel sent (tid %d)" % tid)
-		else:
-			Session.send(28611, w.raw(), 2)
-			DebugLog.add("tournament search sent (tid %d)" % tid)
-		return
-	if _elem_kind == 11 and not _elem_offer:
-		# "Offer cards" — the retail demonAffiliationDialog barter; debug
-		# multi-pick stays as the fallback when the GUI layer is off.
-		if _open_demon_offer_dialog():
-			return
-		_elem_offer = true
-		var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-		list.clear()
-		list.select_mode = ItemList.SELECT_MULTI
-		for cid in State.inventory:
-			if not Cards.meta(int(cid)).get("tradable", false):
-				continue
-			list.add_item("%s  ×%d" % [
-				Cards.name_of(int(cid)), int(State.inventory[cid])])
-			list.set_item_metadata(list.item_count - 1, int(cid))
-		$UI/ElementDlg/VBox/Title.text = I18n.t("demon.offering", {"id": _demon_id})
-		$UI/ElementDlg/VBox/Hint.text = \
-			"Pick cards to give (reputation = their value):"
-		var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-		act.text = I18n.t("demon.offer")
-		act.visible = true
-		act.disabled = false
 		return
 	$UI/ElementDlg.visible = false
 

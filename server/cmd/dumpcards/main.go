@@ -1,5 +1,6 @@
 // dumpcards dumps every coach-card template into a JSON table for the Godot
-// client's shop/inventory UI: {"<id>": {"type","set","value","price":{t:amt}}}.
+// client's shop/inventory UI: {"<id>": {"type","set","value","price":{t:amt}}},
+// plus the resurrection, fusion and firework fields the client uses.
 // Card display names come from i18n content.23 (merged by card_names.py).
 //
 // Usage: go run ./cmd/dumpcards <data-dir> <cards.json> [fusionlabs.json]
@@ -30,6 +31,10 @@ type rec struct {
 	ReqLevel  int32           `json:"reqLevel,omitempty"`
 	FusPower  int16           `json:"fusPower,omitempty"` // fusion lab target/input power
 	FusQual   uint8           `json:"fusQuality,omitempty"`
+	// Firework cards (type 25): the particle kind (tl()) and its RGB colour
+	// (tk(), 0..255 per channel) — the Godot lobby draws the show from them.
+	FwType   uint8     `json:"fwType,omitempty"`
+	FwColour []float32 `json:"fwColour,omitempty"`
 }
 
 func main() {
@@ -53,6 +58,8 @@ func main() {
 			ReqLevel:  c.RequiredLevel,
 			FusPower:  c.FusionPower,
 			FusQual:   c.FusionQuality,
+			FwType:    c.FireworkType,
+			FwColour:  c.FireworkColour,
 		}
 	}
 	b, _ := json.Marshal(res)

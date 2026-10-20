@@ -51,6 +51,8 @@ var _hint: Label
 var _menu_buttons: Array = []
 var _actions: Array[Button] = []
 var _social_btn: Button
+var _sky: Control
+var _rng := RandomNumberGenerator.new()
 
 
 func _init() -> void:
@@ -65,6 +67,12 @@ func _init() -> void:
 	_box.theme = OneBit.theme()
 	var bd := OneBit.backdrop(REF)
 	_box.add_child(bd)
+	# the sky the fireworks play in: over the backdrop, behind the windows
+	_sky = Control.new()
+	_sky.size = REF
+	_sky.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sky.clip_contents = true
+	_box.add_child(_sky)
 	for r in [COACH_RECT, CHAT_FRAME, MENU_RECT]:
 		var w := Panel.new()
 		w.position = r.position
@@ -134,6 +142,20 @@ func _init() -> void:
 	resized.connect(_relayout)
 	I18n.locale_changed.connect(func(_l): _retranslate())
 	_retranslate()
+
+
+## A firework on the lobby sky (22094; S18). kind/colour come from the card
+## (cards.json fwType / fwColour): see firework_fx.gd.
+func firework(kind: int, colour: Color) -> Node2D:
+	var fx := preload("res://src/ui/firework_fx.gd").new()
+	fx.kind = kind
+	fx.colour = colour
+	var x := _rng.randf_range(80.0, REF.x - 80.0)
+	fx.burst_at = Vector2(x, _rng.randf_range(60.0, 220.0))
+	fx.ground = Vector2(x + _rng.randf_range(-60.0, 60.0), REF.y - 40.0)
+	fx.name = "Firework"
+	_sky.add_child(fx)
+	return fx
 
 
 func _ready() -> void:

@@ -39,3 +39,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-20 | [S18: tirada fallida, banquillo lleno y sin scroll en "Caídos", probados](./2026-10-20-s18-caidos-bordes.md) |
 | 2026-10-20 | [B-177: el servidor ya no gasta equipo como carta de resurrección](./2026-10-20-b177-resurreccion-equipo.md) |
 | 2026-10-20 | [S18: las conversaciones en una ventana nativa y en español](./2026-10-20-s18-conversaciones.md) |
+| 2026-10-20 | [S18: tótems al Calendario y al Clan, fuegos artificiales en el lobby](./2026-10-20-s18-totems-fuegos.md) |

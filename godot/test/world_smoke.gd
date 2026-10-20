@@ -154,12 +154,6 @@ func _evidence(kind: int) -> Array:
 			var ok: bool = await _wait(func(): return _main._gui.is_open("fireworkDialog") \
 				or dlg.visible, 2.0)
 			return [ok, "fireworkDialog" if _main._gui.is_open("fireworkDialog") else "firework pane"]
-		11:
-			var ok: bool = await _wait(func(): return _seen.has(27511) and dlg.visible, 3.0)
-			return [ok, "27511 demon ladder + pane"]
-		13:
-			var ok: bool = await _wait(func(): return _seen.has(17003), 3.0)
-			return [ok, "17003 calendar%s" % (" + 28602 list" if _seen.has(28602) else "")]
 		3, 5, 6, 7, 9, 15:
 			# S18: the native conversation window, never the debug pane
 			var ok: bool = await _wait(func(): return _main._gui.is_open("npcTalkDialog"), 2.0)

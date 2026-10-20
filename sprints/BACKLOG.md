@@ -69,6 +69,17 @@ qué el visual no puede correr en CI).
       1 %) en vez de una Resurrection (33 200, 100 %): lotería barata. Arreglo propuesto:
       exigir también tipo 24 en el servidor, con test. Visto el 2026-10-20.
 
+- [ ] **Nombres de cartas solo en inglés.** `tools/asset-import/card_names.py` lee
+      `content.23` de `texts_en` aunque el `i18n.jar` trae es/fr ("Weerdtrot Jacket" en
+      una interfaz en español). Mismo arreglo que los textos de NPC (`locales`), visto el
+      2026-10-20.
+- [ ] **La tabla de miembros del clan sale vacía** en Social → Clan con el coach `test`
+      (líder de un clan de un miembro). Visto el 2026-10-20 en `capturas/s18/clan-demon.png`;
+      sin investigar si falta pedir la lista (512) o si es el filtro de `part`.
+- [ ] Inscripción a torneos: el cliente solo sabe que estás inscrito si lo hiciste en esta
+      sesión (ningún mensaje lo dice al entrar). Volver a pulsar "Inscribirme" es inocuo:
+      el servidor la guarda una vez.
+
 ## 2. Pendientes GUI (fidelidad retail)
 
 - [ ] Diálogos que sigan viéndose beige plano → auditar qué refs del theme no resuelven
