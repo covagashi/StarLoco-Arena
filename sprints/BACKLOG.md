@@ -61,7 +61,7 @@ qué el visual no puede correr en CI).
       `ui_*.json` (visto el 2026-10-20 en `capturas/s18/lobby.png`; ya faltaban
       antes de S18). Traducirlas o sacar esas líneas del chat, que son de depuración.
 
-- [ ] **Servidor: 22099 acepta equipo como carta de resurrección.** El cementerio retail
+- [x] **Servidor: 22099 acepta equipo como carta de resurrección** (B-177, hecho el 2026-10-20). El cementerio retail
       solo ofrece cartas de los sets de tipo 24 "Evolution" (`aij_0` → `evolutionSets`,
       `aMK.dYy`), y al soltar una carta en un muerto exige el efecto de resurrección
       (`aks_2` 23056 → `xj.DF()` → `nz_1.aaF()`). `handleFighterUseItemOn` solo comprueba

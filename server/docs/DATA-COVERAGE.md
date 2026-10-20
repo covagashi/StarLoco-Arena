@@ -395,6 +395,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 
 | Date | Change |
 |---|---|
+| 2026-10-20 | B-177: `gamedata.CardTypeEvolution` (24, client `aMK.dYy`) names the card type the graveyard may spend; the coach-card `Type` field (already decoded) now gates 22099. No decoder or wire change. |
 | 2026-10-06 | B-171: Godot combat HUD and result panel moved to the lobby's native visual family. No client data decoder, record coverage, or wire format changed. |
 | 2026-08-19 | `cmd/dumpcards` now also exports each card's `resurrect` percent (action 13) so the Godot client's graveyard dialog can pick a resurrection card from inventory without hardcoding ids; `tools/asset-import/card_names.py` passes the field through into `godot/assets/gamedata/cards.json`. |
 | 2026-08-19 | Established that record type **1500** (NPC dialog replies) is **client-only** and needs no server decode: the client loads it with its own content loader (`xs_0`, "contentLoader.dialogReply") and runs the whole tree locally — `ao_2` opens `npcTalkDialog` on frame registration, and its 17001/17002 are non-encodable internal events (`wm_0` → `sb_0` → `aed_2.encode()` returns null). A reply's only wire effects are 26330 and 22003, both already implemented. Marked n/a rather than missing. |

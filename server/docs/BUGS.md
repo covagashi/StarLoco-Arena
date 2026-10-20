@@ -13,6 +13,29 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-177 · A graveyard resurrection accepted equipment cards and spent them
+
+- **Symptom:** none with the retail client, which never sends it; a modified
+  client (or our own Godot client calling 22099 directly) could drop a
+  Weerdtrot Jacket (value 57, 1 %) on a dead fighter and the server spent it
+  on the roll. A cheap lottery in place of a Resurrection (value 33 200,
+  100 %): about a hundred jackets cost a sixth of one card.
+- **Root cause:** `handleFighterUseItemOn` (`handlers_evolution.go`) only
+  required the resurrection effect (AI action 13). Equipment also carries it
+  (35/51/53/137: the chance to come back *during* a fight). The retail client
+  gates twice: the graveyard only lists the "evolutionSets", sets whose cards
+  are type 24 (`aij_0`, `aMK.dYy` "Evolution"), and the drop checks the effect
+  (`aks_2` event 23056 → `xj.DF()` → `nz_1.aaF()`,
+  "noConsumableEffectOnDeadFighter"). The server had the second gate only.
+- **Fix:** the handler also requires `Type == gamedata.CardTypeEvolution`
+  (24). Anything else is refused and not consumed, like a card without the
+  effect. The no-catalogue dev fallback is unchanged.
+- **Verified:** `unit` — `TestResurrectEquipmentCardRefused` (failed before
+  the fix: the five cards were spent) and, on the shipped `data-dist`,
+  `TestResurrectionConsumablesAreEvolutionTypeShipped` (305/316/317/318 are
+  type 24; 35/51/53/137 are not). Live — `godot/test/revive_edge_smoke.gd`:
+  the jacket is refused and stays in the inventory.
+
 ### B-176 · Map iteration order decided which state a limited remove stripped
 
 - **Symptom:** none reportable by a player, and that is why it survived — the

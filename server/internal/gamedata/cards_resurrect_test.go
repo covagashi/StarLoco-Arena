@@ -114,3 +114,40 @@ func TestCoachCardFullDecodeReal(t *testing.T) {
 	t.Logf("%d cards: bound=%d undestructible=%d requiredLevel>0=%d obtainable=%d ranked=%d usable=%d",
 		cards.Len(), bound, undestructible, withLevel, obtainable, ranked, usable)
 }
+
+// TestResurrectionConsumablesAreEvolutionTypeShipped pins, on the shipped
+// data-dist, the split the graveyard handler relies on: the four resurrection
+// cards are Evolution consumables (type 24, the only type the retail graveyard
+// offers), while the four equipment cards that also carry the effect (their
+// chance to come back during a fight) are not. If a data update ever moved one
+// across, the handler's CardTypeEvolution gate would silently change meaning.
+func TestResurrectionConsumablesAreEvolutionTypeShipped(t *testing.T) {
+	root := filepath.Join("..", "..", "data-dist")
+	if _, err := os.Stat(filepath.Join(root, "data.bdat")); err != nil {
+		t.Skipf("shipped data unavailable: %v", err)
+	}
+	st, err := Open(root)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	cards, err := st.LoadCards()
+	if err != nil {
+		t.Fatalf("LoadCards: %v", err)
+	}
+	for id, evolution := range map[int32]bool{
+		305: true, 316: true, 317: true, 318: true, // Resurrection ×4
+		35: false, 51: false, 53: false, 137: false, // apron, helmet, banner, Weerdtrot Jacket
+	} {
+		c := cards.Get(id)
+		if c == nil {
+			t.Errorf("card %d missing", id)
+			continue
+		}
+		if c.ResurrectPercent <= 0 {
+			t.Errorf("card %d has no resurrection effect", id)
+		}
+		if got := c.Type == CardTypeEvolution; got != evolution {
+			t.Errorf("card %d type = %d, Evolution(24) = %v, want %v", id, c.Type, got, evolution)
+		}
+	}
+}

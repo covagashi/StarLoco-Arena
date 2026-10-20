@@ -36,8 +36,9 @@ func TestRollResurrect(t *testing.T) {
 }
 
 // resurrectHarness builds a session backed by a real store plus a small card
-// catalogue: 900 = certain (100%), 901 = not a resurrection card (0%),
-// 902 = 1% gamble.
+// catalogue of Evolution (type 24) consumables: 900 = certain (100%),
+// 901 = not a resurrection card (0%), 902 = 1% gamble; and 903, an equipment
+// card (type 10) whose 1% "come back during a fight" effect must not work here.
 func resurrectHarness(t *testing.T) (*Session, *domain.Coach, *store.Store) {
 	t.Helper()
 	st, err := store.Open(filepath.Join(t.TempDir(), "res.db"))
@@ -50,11 +51,12 @@ func resurrectHarness(t *testing.T) (*Session, *domain.Coach, *store.Store) {
 	coach, _ := st.Coaches.Create(acc.ID, "Necro", 0, 0, 0)
 
 	cards := gamedata.NewCards(
-		&gamedata.CoachCard{ID: 900, ResurrectPercent: 100},
-		&gamedata.CoachCard{ID: 901, ResurrectPercent: 0},
-		&gamedata.CoachCard{ID: 902, ResurrectPercent: 1},
+		&gamedata.CoachCard{ID: 900, Type: gamedata.CardTypeEvolution, ResurrectPercent: 100},
+		&gamedata.CoachCard{ID: 901, Type: gamedata.CardTypeEvolution, ResurrectPercent: 0},
+		&gamedata.CoachCard{ID: 902, Type: gamedata.CardTypeEvolution, ResurrectPercent: 1},
+		&gamedata.CoachCard{ID: 903, Type: 10, ResurrectPercent: 1},
 	)
-	for _, id := range []int32{900, 901, 902} {
+	for _, id := range []int32{900, 901, 902, 903} {
 		if err := st.DB().Create(&domain.CoachCard{
 			CoachID: coach.ID, TemplateID: id, Quantity: 5, Pos: 0,
 		}).Error; err != nil {
@@ -172,5 +174,26 @@ func TestResurrectFailedRollConsumesButKeepsDead(t *testing.T) {
 	}
 	if q := cardQtyOf(t, st, coach.ID, 902); q != 4 {
 		t.Errorf("card 902 qty = %d, want 4 (consumed despite the failed roll)", q)
+	}
+}
+
+// TestResurrectEquipmentCardRefused: the retail graveyard only offers cards of
+// the Evolution sets (type 24: aij_0 evolutionSets, aMK.dYy). An equipment card
+// also carries the resurrection effect (its chance to come back during a
+// fight), and accepting it here let a modified client gamble cheap equipment
+// (Weerdtrot Jacket: value 57, 1%) instead of a Resurrection (33200, 100%).
+// It must be refused and NOT consumed, even when the roll would have passed.
+func TestResurrectEquipmentCardRefused(t *testing.T) {
+	s, coach, st := resurrectHarness(t)
+	dead := makeDeadFighter(t, st, coach.ID, domain.FighterStateDead)
+	for i := 0; i < 5; i++ {
+		SeedResurrectRand(int64(i))
+		useItemOn(t, s, dead, 903)
+	}
+	if got := fighterStateOf(t, st, dead); got != domain.FighterStateDead {
+		t.Errorf("state = %d, want %d (still dead)", got, domain.FighterStateDead)
+	}
+	if q := cardQtyOf(t, st, coach.ID, 903); q != 5 {
+		t.Errorf("card 903 qty = %d, want 5 (an equipment card is never spent here)", q)
 	}
 }

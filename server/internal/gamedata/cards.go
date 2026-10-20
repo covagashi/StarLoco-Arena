@@ -2,6 +2,12 @@ package gamedata
 
 import ()
 
+// CardTypeEvolution is the client's aMK.dYy (24, "Evolution"): the consumable
+// cards of the evolution mode. The retail graveyard only offers the sets whose
+// cards are of this type (aij_0 "evolutionSets"), so it is the only type a
+// resurrection may spend.
+const CardTypeEvolution int32 = 24
+
 // CoachCard is a decoded coach-card template (record type 100, class aPp).
 // We decode the fields the server needs (id, set, value, and the token price
 // map); the rest of the record is skipped.

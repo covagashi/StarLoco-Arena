@@ -1,19 +1,22 @@
 extends "res://test/revive_smoke.gd"
 
-## S18: the two resurrection outcomes revive_smoke.gd cannot reach, live.
+## S18: the resurrection outcomes revive_smoke.gd cannot reach, live.
 ##
 ##   godot --path godot -s test/revive_edge_smoke.gd [-- --shot-dir=D]
 ##
-## 1. A failed roll. Every resurrection card is 100 %, but the server takes
-##    any card whose effect resurrects (an equipment card's "% to come back
-##    during a fight" too) and spends it. The Weerdtrot Jacket (137) gives
-##    1 %, so the smoke sends 22099 with it through main's own revive call
-##    (the panel never offers it) and expects: the card spent, no 6006, the
-##    fighter still dead, "the roll failed" in the footer. 1 run in 100 rolls
-##    the 1 %: reseed and run again.
+## 1. An equipment card. The Weerdtrot Jacket (137) carries the resurrection
+##    effect (1 %, its chance to come back during a fight) but is not an
+##    Evolution consumable (type 24), the only kind the retail graveyard
+##    offers. The panel never offers it; sent anyway through main's own revive
+##    call, the server must refuse it WITHOUT spending it (until 2026-10-20 it
+##    spent it on a 1 % roll), and the footer says the server refused.
 ## 2. A full bench (7): a retired fighter's Resurrect button is disabled with
 ##    the reason; forced anyway, the server refuses without spending the card
 ##    and the footer says so.
+##
+## A failed roll can't be reached live: every Evolution resurrection card is
+## 100 % (and set bonuses only add). The server side is pinned by
+## TestResurrectFailedRollConsumesButKeepsDead.
 ##
 ## With the server stopped, seed server/arena.db (ids are the `test` coach's;
 ## 4-10 are classic fighters, which the server counts on the bench like any
@@ -31,14 +34,14 @@ func _audit() -> void:
 	if panel == null:
 		_record(10, "team", false, "Team panel did not open")
 		return
-	await _failed_roll(panel)
+	await _equipment_refused(panel)
 	await _bench_full(panel)
 
 
-func _failed_roll(panel) -> void:
+func _equipment_refused(panel) -> void:
 	var item: Dictionary = await _select_fallen(panel, 2)
 	if item.is_empty():
-		_record(10, "failed roll", false, "no dead fighter (seed the db)")
+		_record(10, "equipment refused", false, "no dead fighter (seed the db)")
 		return
 	var offered: Array = _main._gui.gui.model.get_value("evolutionTeam").get("reviveCards", [])
 	_record(10, "offered", offered.all(func(c): return int(c.id) != LUCKLESS),
@@ -46,7 +49,7 @@ func _failed_roll(panel) -> void:
 	var fid := int(item.id)
 	var qty := int(State.inventory.get(LUCKLESS, 0))
 	if qty <= 0:
-		_record(10, "failed roll", false, "no Weerdtrot Jacket owned (seed the db)")
+		_record(10, "equipment refused", false, "no Weerdtrot Jacket owned (seed the db)")
 		return
 	_seen.clear()
 	_main._revive_fighter(fid, LUCKLESS)
@@ -54,19 +57,16 @@ func _failed_roll(panel) -> void:
 	await create_timer(0.4).timeout
 	var f = _main._fighter_by_id(fid)
 	var st := int(f.get("state", -1)) if f != null else -1
-	if st != 2:
-		_record(10, "failed roll", false, "the 1 %% roll succeeded (state %d): reseed and run again" % st)
-		return
 	var status: Dictionary = _main._gui.gui.model.get_value("evolutionTeam").get("reviveStatus", {})
-	var want: String = root.get_node("I18n").t("team.revive_fail",
-		{"card": _card_name(LUCKLESS), "name": item.get("name", "?")})
+	var want: String = root.get_node("I18n").t("team.revive_refused", {"name": item.get("name", "?")})
 	var footer: Label = panel.find_child("ReviveStatus", true, false)
-	_record(10, "failed roll", not bool(status.get("ok", true)) and str(status.get("text", "")) == want
-		and not _seen.has(6006) and int(State.inventory.get(LUCKLESS, 0)) == qty - 1
+	_record(10, "equipment refused", st == 2 and not bool(status.get("ok", true))
+		and str(status.get("text", "")) == want and not _seen.has(6006)
+		and int(State.inventory.get(LUCKLESS, 0)) == qty
 		and footer != null and footer.text == want and _fits(panel),
-		"state stays 2, card %d → %d, no 6006, footer '%s'" % [qty,
+		"state stays 2, card %d → %d (not spent), footer '%s'" % [qty,
 			int(State.inventory.get(LUCKLESS, 0)), footer.text if footer != null else "—"])
-	await _shot("revive-failed")
+	await _shot("revive-equipment-refused")
 
 
 func _bench_full(panel) -> void:

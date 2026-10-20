@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
+	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
 
@@ -154,17 +155,22 @@ func handleFighterUseItemOn(s *Session, f *protocol.C2SFrame) error {
 		// them the wound layer is a one-way ratchet.
 		return s.useConsumableOnFighter(fighter, cardID)
 	}
-	// The card must actually carry a resurrection effect (action 13) — the SAME
-	// gate the client applies (only a resurrection effect may act on a
-	// dead/interred fighter), so a card without one does nothing and is NOT
-	// consumed. Its decoded param[0] is the success %. With no card catalogue
-	// (dev without data files) fall back to a certain resurrection so the feature
-	// still works.
+	// The card must be what the retail graveyard lets you pick AND drop:
+	//   - an Evolution consumable (type 24): the graveyard only lists the
+	//     "evolutionSets" (aij_0, aMK.dYy). Equipment also carries the
+	//     resurrection effect — its chance to come back during a fight — and
+	//     accepting it let a modified client gamble a 57-value Weerdtrot Jacket
+	//     (1%) instead of a 33200-value Resurrection (100%);
+	//   - with a resurrection effect (action 13): the drop checks xj.DF() →
+	//     nz_1.aaF() (aks_2 event 23056, "noConsumableEffectOnDeadFighter").
+	// Anything else does nothing and is NOT consumed. param[0] of the effect is
+	// the success %. With no card catalogue (dev without data files) fall back
+	// to a certain resurrection so the feature still works.
 	pct := int32(100)
 	if s.deps.Cards != nil {
 		card := s.deps.Cards.Get(cardID)
-		if card == nil || card.ResurrectPercent <= 0 {
-			s.log.Debug("use item: card carries no resurrection effect",
+		if card == nil || card.Type != gamedata.CardTypeEvolution || card.ResurrectPercent <= 0 {
+			s.log.Debug("use item: not a resurrection consumable",
 				"coach", s.Coach.Name, "card", cardID)
 			return nil
 		}
