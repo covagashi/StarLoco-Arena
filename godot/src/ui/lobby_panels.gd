@@ -154,7 +154,6 @@ func _team() -> void:
 	else:
 		label(detail, str(selected.get("name", "")), 23)
 		label(detail, "%s · %s" % [selected.get("breed_name", ""), selected.get("placement", "")])
-		_revive_status_line(detail)
 		button(detail, I18n.t("team.equip_spells"), func(): send("editFighter", [selected], selected))
 		if classic:
 			button(detail, I18n.t("team.remove_member") if selected.get("teamMember", false) else I18n.t("team.add_member"), func(): send("addRemoveFighterFromEditableTeamPreset", [], selected), int(draft.get("preset_id", -1)) > 0)
@@ -169,6 +168,7 @@ func _team() -> void:
 	hint.autowrap_mode = TextServer.AUTOWRAP_OFF
 	hint.clip_text = true
 	hint.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_revive_status_line(hint)
 	button(footer, I18n.t("team.practice"), func(): send("launchTeamTest"))
 	button(footer, I18n.t("team.find_fight"), func(): send("launchEvolutionFight" if tab == 0 else "setClassicReadyForFight"), tab in [0, 1, 2])
 	if tab in [3, 4]:
@@ -220,24 +220,23 @@ func _fallen_detail(detail: Node) -> void:
 			send("nativeRevive", [fid, int(c.id)]), not bench_full)
 		revive.name = "Revive"
 		if bench_full:
-			label(detail, I18n.t("team.revive_bench_full"))
-	_revive_status_line(detail)
+			label(detail, I18n.t("team.revive_bench_full")).name = "BenchFull"
 	if state == 2:
 		button(detail, I18n.t("team.retire"), func(): send("changeFighterStatus", [], selected)).name = "Retire"
 	button(detail, I18n.t("team.delete_fighter"), func(): confirm_action(I18n.t("team.delete_fighter_confirm", {"name": selected.get("name", "")}), func(): send("deleteFighter", [selected], selected)))
 
 
-## The last resurrection's outcome, under the fighter it was about: it
-## follows the fighter from the Fallen table to the living one.
-func _revive_status_line(detail: Node) -> void:
+## The last resurrection's outcome takes the footer's hint line while its
+## fighter is selected (it follows the fighter from the Fallen table to the
+## living one). In the footer, not the detail column, so nothing scrolls.
+func _revive_status_line(hint: Label) -> void:
 	var status: Dictionary = data("evolutionTeam.reviveStatus", {})
 	if status.is_empty() or int(status.get("fid", -1)) != int(selected.get("id", -2)):
 		return
-	var line := label(detail, str(status.get("text", "")))
-	line.name = "ReviveStatus"
-	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.text = str(status.get("text", ""))
+	hint.name = "ReviveStatus"
 	if not bool(status.get("ok", true)):
-		line.add_theme_color_override("font_color", OneBit.MUTED)
+		hint.add_theme_color_override("font_color", OneBit.MUTED)
 
 
 func _statistics() -> void:

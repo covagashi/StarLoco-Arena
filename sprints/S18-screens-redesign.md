@@ -188,7 +188,10 @@ cementerio). El elemento kind 10 abre Equipo en Evolución; "Servicios" ya no
 lo lista. Verificado en vivo con `test/revive_smoke.gd` 4/4 (sin cementerio
 en Servicios; los dos caídos en su tabla y ninguno entre los vivos; un
 muerto resucita a titular y un retirado al banquillo, con el 6006 y la carta
-gastada). Visto bueno del dueño el mismo día ("los menús me gustan").
+gastada), y `test/revive_edge_smoke.gd` 4/4 (tirada fallida con la carta
+gastada y sin 6006; banquillo lleno: botón desactivado y, forzado, rechazo
+sin gastar la carta). El resultado sale en el pie del panel; sin scroll a
+1280×720. Visto bueno del dueño el mismo día ("los menús me gustan").
 
 ## Tareas candidatas
 

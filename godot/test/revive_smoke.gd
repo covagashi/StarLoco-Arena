@@ -65,6 +65,8 @@ func _revive(panel, st: int) -> void:
 	panel.selected = item
 	panel.schedule_refresh()
 	await create_timer(0.3).timeout
+	_record(10, "fits %d" % st, _fits(panel), "detail of a %s fighter, no scroll" % (
+		"dead" if st == 2 else "retired"))
 	await _shot("revive-detail-%d" % st)
 	var b: Button = panel.find_child("Revive", true, false)
 	if b == null or b.disabled:
@@ -86,8 +88,8 @@ func _revive(panel, st: int) -> void:
 	var want := 0 if st == 2 else 1
 	_record(10, "revive %d" % st, done and now == want and _seen.has(6006)
 		and bool(status.get("ok", false)) and int(State.inventory.get(REVIVE_CARD, 0)) <= qty - 1
-		and panel.find_child("ReviveStatus", true, false) != null,
-		"%s: state %d → %d, card %d → %d, '%s'" % [item.get("name", "?"), st, now,
+		and panel.find_child("ReviveStatus", true, false) != null and _fits(panel),
+		"%s: state %d → %d, card %d → %d, '%s' in the footer, no scroll" % [item.get("name", "?"), st, now,
 			qty, int(State.inventory.get(REVIVE_CARD, 0)), status.get("text", "")])
 	await _shot("revive-done-%d" % st)
 
@@ -121,3 +123,23 @@ func _tree_items(tree: Tree) -> Array:
 		if m is Dictionary:
 			out.append(m)
 	return out
+
+
+## The panel's body fits its window: the scroll bar has nothing to scroll.
+func _fits(panel) -> bool:
+	var found: Array = panel.find_children("*", "ScrollContainer", true, false)
+	if found.is_empty():
+		return false
+	var bar: VScrollBar = found[0].get_v_scroll_bar()
+	return bar.max_value - bar.page <= 1.0
+
+
+## Select a fallen fighter in state `st` on the panel; {} when none.
+func _select_fallen(panel, st: int) -> Dictionary:
+	for it in _tree_items(panel.find_child("Fallen", true, false)):
+		if int(it.get("state", 0)) == st:
+			panel.selected = it
+			panel.schedule_refresh()
+			await create_timer(0.3).timeout
+			return it
+	return {}
