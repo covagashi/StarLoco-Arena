@@ -263,6 +263,7 @@ func _ready() -> void:
 	_gui.native_factories["fireworkDialog"] = _make_firework_panel
 	_gui.native_factories["fightReportDialog"] = _make_report_panel
 	_gui.native_factories["exchangeDialog"] = _make_exchange_panel
+	_gui.native_factories["askDialog"] = _make_ask_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -524,8 +525,6 @@ func _ready() -> void:
 	$UI/VBox/AuthRow/FightBtn.pressed.connect(_on_fight_pressed)
 	$UI/VBox/AuthRow/SearchBtn.pressed.connect(_on_quick_search)
 	$UI/VBox/AuthRow/EvoBtn.pressed.connect(_on_evo_search)
-	$UI/MatchAskDlg.confirmed.connect(_answer_match.bind(true))
-	$UI/MatchAskDlg.canceled.connect(_answer_match.bind(false))
 	$UI/VBox/AuthRow/DuoBtn.pressed.connect(_open_duo_dlg)
 	$UI/VBox/AuthRow/RanksBtn.pressed.connect(_open_ladder)
 	$UI/LadderDlg/VBox/Tabs.item_selected.connect(_on_ladder_tab)
@@ -551,8 +550,6 @@ func _ready() -> void:
 	$UI/GuildDlg/VBox/Btns/DisbandBtn.pressed.connect(_on_guild_disband)
 	$UI/GuildDlg/VBox/Btns/CloseBtn.pressed.connect(
 		func(): $UI/GuildDlg.hide())
-	$UI/GuildAskDlg.confirmed.connect(_answer_guild_invite.bind(true))
-	$UI/GuildAskDlg.canceled.connect(_answer_guild_invite.bind(false))
 	$UI/VBox/AuthRow/GearBtn.pressed.connect(_open_equip)
 	$UI/EquipDlg/VBox/Btns/WearBtn.pressed.connect(_on_equip_wear)
 	$UI/EquipDlg/VBox/Btns/CancelBtn.pressed.connect(
@@ -562,8 +559,6 @@ func _ready() -> void:
 	$UI/DuoDlg/VBox/Btns/CreateBtn.pressed.connect(_on_duo_create)
 	$UI/DuoDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/DuoDlg.visible = false)
-	$UI/DuoAskDlg.confirmed.connect(_answer_duo.bind(true))
-	$UI/DuoAskDlg.canceled.connect(_answer_duo.bind(false))
 	$UI/VBox/AuthRow/CancelSearchBtn.pressed.connect(_on_cancel_search)
 	$UI/VBox/TeamRow/AssignBtn.pressed.connect(func(): _on_assign(true))
 	$UI/VBox/TeamRow/UnassignBtn.pressed.connect(func(): _on_assign(false))
@@ -572,11 +567,6 @@ func _ready() -> void:
 	$UI/SaveTeamDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_team)
 	$UI/SaveTeamDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/SaveTeamDlg.visible = false)
-	$UI/ChallengeAskDlg.confirmed.connect(_send_challenge)
-	$UI/ChallengeDlg.confirmed.connect(_answer_challenge.bind(true))
-	$UI/ChallengeDlg.canceled.connect(_answer_challenge.bind(false))
-	$UI/ExchangeAskDlg.confirmed.connect(_answer_exchange.bind(true))
-	$UI/ExchangeAskDlg.canceled.connect(_answer_exchange.bind(false))
 	$UI/Chat.trade.connect(_invite_exchange)
 	$UI/Chat.watch.connect(_watch_coach)
 	$UI/TeamPickDlg/VBox/Btns/GoBtn.pressed.connect(_on_team_confirmed)
@@ -985,9 +975,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# 23110 — paired pending match; retail asks before the accept.
 			var d := Codec.decode(opcode, payload)
 			_match = d
-			$UI/MatchAskDlg.dialog_text = \
-				I18n.t("search.match_ask", {"name": str(d.get("opp_name", "?"))})
-			$UI/MatchAskDlg.popup_centered()
+			_ask("match", I18n.t("ask.match"),
+				I18n.t("search.match_ask", {"name": str(d.get("opp_name", "?"))}), _answer_match)
 		OP_MATCH_CONFIRM:
 			# 23116 [i32 n] — 0 rows means our match fell through
 			if payload.get_i32() == 0:
@@ -1042,9 +1031,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_duo_pending = {"team": team,
 				"inviter": int(payload.get_i64()),
 				"invited": int(payload.get_i64())}
-			$UI/DuoAskDlg.dialog_text = I18n.t("duo.invite_ask",
-				{"name": who, "team": team})
-			$UI/DuoAskDlg.popup_centered()
+			_ask("duo", I18n.t("ask.duo"), I18n.t("duo.invite_ask",
+				{"name": who, "team": team}), _answer_duo)
 		OP_DUO_REFUSED:
 			_log_line("[color=red]%s[/color]" % I18n.t("duo.refused"))
 		OP_DUO_ACCEPTED:
@@ -1094,9 +1082,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if outgoing:
 				_log_line(I18n.t("challenge.sent", {"name": cname}))
 			else:
-				$UI/ChallengeDlg.dialog_text = I18n.t("challenge.ask",
-					{"name": cname})
-				$UI/ChallengeDlg.popup_centered()
+				_ask("challenge", I18n.t("ask.challenge"), I18n.t("challenge.ask",
+					{"name": cname}), _answer_challenge)
 		OP_CHALLENGE_ACCEPTED:
 			# 26302 [i64 handle][u8 evo] — both sides now pick a team (26303)
 			payload.get_i64()
@@ -1106,7 +1093,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_CHALLENGE_CANCELLED:
 			payload.get_i64()
 			_challenge_handle = -1
-			$UI/ChallengeDlg.hide()
+			_ask_withdraw("challenge")
 			$UI/TeamPickDlg.visible = false
 			_log_line("[i]%s[/i]" % I18n.t("challenge.cancelled"))
 		OP_TEAM_PRESET_SAVED:
@@ -1358,9 +1345,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_guild_invite = {"type": int(d.type), "inviter": d.inviter,
 				"guild": d.guild}
-			$UI/GuildAskDlg.dialog_text = I18n.t("guild.invite_ask",
-				{"name": d.inviter, "guild": d.guild})
-			$UI/GuildAskDlg.popup_centered()
+			_ask("guild", I18n.t("ask.guild"), I18n.t("guild.invite_ask",
+				{"name": d.inviter, "guild": d.guild}), _answer_guild_invite)
 		OP_GUILD_MEMBER_REPORT:
 			var d := Codec.decode(opcode, payload)
 			var lines := ["%s — %d stat(s):" % [d.name, d.stats.size()]]
@@ -1515,9 +1501,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_ex = {"id": int(d.ex_id), "my_side": 1,
 				"other_name": d.inviter, "accepted": false,
 				"staged": {0: {}, 1: {}}, "ready": {0: false, 1: false}}
-			$UI/ExchangeAskDlg.dialog_text = I18n.t("trade.ask",
-				{"name": d.inviter})
-			$UI/ExchangeAskDlg.popup_centered()
+			_ask("trade", I18n.t("ask.trade"), I18n.t("trade.ask",
+				{"name": d.inviter}), _answer_exchange)
 		OP_EX_CONFIRM:
 			var d := Codec.decode(opcode, payload)
 			match int(d.result):
@@ -2312,7 +2297,7 @@ func _answer_guild_invite(accepted: bool) -> void:
 ## --- 2v2 duo (6024-6029) ------------------------------------------------------
 ## "2v2…" opens the invite dialog (team name + friend pick, retail's
 ## team2vs2NameDialog): 6024 [str8 team][i64 me][i64 mate]. The invited side
-## gets 6025 → DuoAskDlg → 6026. On 6028 both clients own a -6 duo preset
+## gets 6025 → the native ask prompt → 6026. On 6028 both clients own a -6 duo preset
 ## (pushed via 6030) whose coaches[0] is the ally — Combattre then sends it
 ## as the claimed partner in 23103's first i64.
 func _open_duo_dlg() -> void:
@@ -4751,12 +4736,8 @@ func _find_combo(w: GWidget) -> GWidget:
 func _on_destroy_coach(_a: Array, _w: GWidget) -> void:
 	if not State.fight_data.is_empty():
 		return  # retail: cantDestroyCoachDuringFight
-	var d := ConfirmationDialog.new()
-	d.dialog_text = I18n.t("coach.destroy_confirm")
-	d.confirmed.connect(func():
-		Session.send(OP_DESTROY_COACH, PackedByteArray(), 2))
-	add_child(d)
-	d.popup_centered()
+	# the Options panel already asked (confirm_action, coach.destroy_confirm)
+	Session.send(OP_DESTROY_COACH, PackedByteArray(), 2)
 
 
 ## Event args are either the textEditor widget (editor) or a row's
@@ -5444,6 +5425,13 @@ func _make_fusion_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_ask_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/ask_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 func _make_exchange_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/exchange_panel.gd").new()
 	panel.model = _gui.gui.model
@@ -5575,6 +5563,9 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeTournSearch":
 			_tourn_search(int(args[0]))
+			return
+		"nativeAsk":
+			_ask_answer(bool(args[0]))
 			return
 		"nativeTalk":
 			_talk_choice(int(args[0]))
@@ -5767,6 +5758,45 @@ func _use_element(id: int) -> void:
 			_open_npc(e)
 		_:   # anything else has no screen of its own
 			DebugLog.add("element %d (kind %d): nothing to open" % [id, kind])
+
+
+## --- Invitations (S18: native askDialog, src/ui/ask_panel.gd) ---------------
+## Incoming challenge / match / clan / duo / trade prompts. One at a time;
+## the rest wait in _asks. Each answers through its own Callable(bool).
+var _asks: Array = []   # [{kind, title, text, answer}]
+
+
+func _ask(kind: String, title: String, text: String, answer: Callable) -> void:
+	_asks.append({"kind": kind, "title": title, "text": text, "answer": answer})
+	if _asks.size() == 1:
+		_ask_show()
+
+
+func _ask_show() -> void:
+	if _asks.is_empty():
+		_gui.close("askDialog")
+		return
+	_gui.gui.model.set_value("ask", {"title": _asks[0].title, "text": _asks[0].text})
+	if not _gui.is_open("askDialog"):
+		_gui.open("askDialog")
+
+
+func _ask_answer(accepted: bool) -> void:
+	if _asks.is_empty():
+		return
+	var a: Dictionary = _asks.pop_front()
+	_gui.close("askDialog")
+	(a.answer as Callable).call(accepted)
+	_ask_show()
+
+
+## The other side withdrew (e.g. 26304): drop its prompt unanswered.
+func _ask_withdraw(kind: String) -> void:
+	var was_first: bool = not _asks.is_empty() and _asks[0].kind == kind
+	_asks = _asks.filter(func(a): return a.kind != kind)
+	if was_first:
+		_gui.close("askDialog")
+		_ask_show()
 
 
 ## --- Conversations (S18: native npcTalkDialog, src/ui/talk_panel.gd) ---------

@@ -308,24 +308,6 @@ text = "Wear"
 [node name="CancelBtn" type="Button" parent="UI/EquipDlg/VBox/Btns"]
 text = "Cancel"
 
-[node name="ChallengeAskDlg" type="ConfirmationDialog" parent="UI"]
-title = "Challenge"
-ok_button_text = "Challenge"
-cancel_button_text = "Cancel"
-size = Vector2i(300, 120)
-
-[node name="ChallengeDlg" type="ConfirmationDialog" parent="UI"]
-title = "Incoming challenge"
-ok_button_text = "Accept"
-cancel_button_text = "Decline"
-size = Vector2i(320, 120)
-
-[node name="ExchangeAskDlg" type="ConfirmationDialog" parent="UI"]
-title = "Incoming trade"
-ok_button_text = "Accept"
-cancel_button_text = "Decline"
-size = Vector2i(320, 120)
-
 [node name="TeamPickDlg" type="PanelContainer" parent="UI"]
 visible = false
 anchors_preset = 8
@@ -475,12 +457,6 @@ text = "Invite"
 [node name="CancelBtn" type="Button" parent="UI/DuoDlg/VBox/Btns"]
 text = "Cancel"
 
-[node name="DuoAskDlg" type="ConfirmationDialog" parent="UI"]
-title = "2v2 invitation"
-ok_button_text = "Join"
-cancel_button_text = "Decline"
-size = Vector2i(340, 120)
-
 [node name="LadderDlg" type="PanelContainer" parent="UI"]
 visible = false
 anchors_preset = 8
@@ -618,18 +594,6 @@ text = "Disband"
 
 [node name="CloseBtn" type="Button" parent="UI/GuildDlg/VBox/Btns"]
 text = "Close"
-
-[node name="GuildAskDlg" type="ConfirmationDialog" parent="UI"]
-title = "Clan invitation"
-ok_button_text = "Join"
-cancel_button_text = "Decline"
-size = Vector2i(340, 120)
-
-[node name="MatchAskDlg" type="ConfirmationDialog" parent="UI"]
-title = "Opponent found"
-ok_button_text = "Fight"
-cancel_button_text = "Decline"
-size = Vector2i(340, 120)
 
 [node name="BenchBtn" type="Button" parent="UI/VBox/RosterBox/RosterBtns"]
 text = "Bench"

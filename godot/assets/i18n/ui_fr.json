@@ -943,5 +943,13 @@
   "ex.cancel": "Annuler",
   "ex.ready": "Prêt",
   "ex.ready_done": "En attente…",
-  "trade.you_ready": "Tu es prêt"
+  "trade.you_ready": "Tu es prêt",
+  "ask.match": "Combat trouvé",
+  "ask.duo": "Invitation en duo",
+  "ask.challenge": "On te défie",
+  "ask.guild": "Invitation dans un clan",
+  "ask.trade": "Proposition d'échange",
+  "duo.invite_ask": "{name} t'invite dans le duo « {team} ».",
+  "challenge.ask": "{name} te défie en combat.",
+  "guild.invite_ask": "{name} t'invite à rejoindre le clan « {guild} »."
 }
