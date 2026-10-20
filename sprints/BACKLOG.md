@@ -56,6 +56,10 @@ qué el visual no puede correr en CI).
       `creation_screen.gd:241` (4 en total, no rompen nada). Son los que
       quedan visibles en el log ahora que los ~60 de `will not work on export`
       desaparecieron con B-173.
+- [ ] Claves de i18n sin traducir en el chat del lobby al entrar: `net.in_world`,
+      `lobby.roster`, `lobby.presets`, `inv.stacks` no están en ninguna tabla
+      `ui_*.json` (visto el 2026-10-20 en `capturas/s18/lobby.png`; ya faltaban
+      antes de S18). Traducirlas o sacar esas líneas del chat, que son de depuración.
 
 ## 2. Pendientes GUI (fidelidad retail)
 

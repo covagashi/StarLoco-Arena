@@ -130,6 +130,9 @@ func _team() -> void:
 	for fighter in fighters:
 		if not fighter is Dictionary:
 			continue
+		# the fallen get their own section below (S18: no graveyard place)
+		if tab == 0 and int(fighter.get("state", 0)) in [2, 3]:
+			continue
 		var item: Dictionary = fighter.duplicate()
 		item["breed_name"] = BREEDS[clampi(int(item.get("breedId", 1)) - 1, 0, 11)]
 		item["placement"] = (I18n.t("team.in_team") if item.get("teamMember", false) else I18n.t("team.reserve")) if classic else (I18n.t("team.bench") if int(item.get("state", 0)) in [1, 5] else I18n.t("team.starter"))
@@ -138,15 +141,20 @@ func _team() -> void:
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var roster := column(split)
 	label(roster, I18n.t("team.count", {"n": rows.size()}), 20)
-	table(roster, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_pos")], ["name", "breed_name", "placement"], rows, func(_item): schedule_refresh())
+	var living := table(roster, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_pos")], ["name", "breed_name", "placement"], rows, func(_item): schedule_refresh())
+	if tab == 0 and _fallen_section(roster):
+		living.custom_minimum_size.y = 76   # the fallen table sits below it
 	var detail := column(split, false)
 	detail.custom_minimum_size.x = 260
 	if selected.is_empty():
 		label(detail, I18n.t("team.select_hint"))
 		label(detail, I18n.t("team.empty_hint"))
+	elif not classic and int(selected.get("state", 0)) in [2, 3]:
+		_fallen_detail(detail)
 	else:
 		label(detail, str(selected.get("name", "")), 23)
 		label(detail, "%s · %s" % [selected.get("breed_name", ""), selected.get("placement", "")])
+		_revive_status_line(detail)
 		button(detail, I18n.t("team.equip_spells"), func(): send("editFighter", [selected], selected))
 		if classic:
 			button(detail, I18n.t("team.remove_member") if selected.get("teamMember", false) else I18n.t("team.add_member"), func(): send("addRemoveFighterFromEditableTeamPreset", [], selected), int(draft.get("preset_id", -1)) > 0)
@@ -166,6 +174,70 @@ func _team() -> void:
 	if tab in [3, 4]:
 		label(body, I18n.t("team.not_available",
 			{"mode": I18n.t("team.mode_tourn") if tab == 3 else I18n.t("team.mode_legends")}))
+
+
+## The fallen fighters (dead: still holding a titular slot; retired: out of
+## the team), listed under the living ones. Pick one to resurrect it.
+func _fallen_section(parent: Node) -> bool:
+	var fallen: Array = data("evolutionTeam.fallen", [])
+	if fallen.is_empty():
+		return false
+	var rows: Array = []
+	for fighter in fallen:
+		var item: Dictionary = fighter.duplicate()
+		item["breed_name"] = BREEDS[clampi(int(item.get("breedId", 1)) - 1, 0, 11)]
+		item["placement"] = I18n.t("team.state_dead" if int(item.get("state", 0)) == 2 else "team.state_retired")
+		rows.append(item)
+	label(parent, I18n.t("team.fallen", {"n": rows.size()}), 20)
+	var fallen_table := table(parent, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_pos")], ["name", "breed_name", "placement"], rows, func(_item): schedule_refresh())
+	fallen_table.name = "Fallen"
+	# header + up to two rows; the living table takes the rest
+	fallen_table.custom_minimum_size.y = 34 + 38 * mini(rows.size(), 2)
+	fallen_table.size_flags_vertical = Control.SIZE_FILL
+	return true
+
+
+func _fallen_detail(detail: Node) -> void:
+	var state := int(selected.get("state", 0))
+	label(detail, str(selected.get("name", "")), 23)
+	label(detail, "%s · %s" % [selected.get("breed_name", ""), I18n.t("team.state_dead" if state == 2 else "team.state_retired")])
+	var hint := label(detail, I18n.t("team.dead_hint" if state == 2 else "team.retired_hint"))
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var cards: Array = data("evolutionTeam.reviveCards", [])
+	if cards.is_empty():
+		label(detail, I18n.t("team.no_revive"))
+	else:
+		var pick := clampi(int(draft.get("revive_card", 0)), 0, cards.size() - 1)
+		if cards.size() > 1:
+			var names: Array = []
+			for c in cards:
+				names.append(I18n.t("team.revive_card", {"name": c.name, "qty": c.qty, "pct": c.pct}))
+			choices(detail, names, pick, func(i): draft["revive_card"] = i; schedule_refresh())
+		var bench_full: bool = state == 3 and bool(data("evolutionTeam.benchFull", false))
+		var fid := int(selected.get("id", -1))
+		var revive := button(detail, I18n.t("team.revive", {"pct": cards[pick].pct, "qty": cards[pick].qty}), func():
+			var c: Dictionary = cards[clampi(int(draft.get("revive_card", 0)), 0, cards.size() - 1)]
+			send("nativeRevive", [fid, int(c.id)]), not bench_full)
+		revive.name = "Revive"
+		if bench_full:
+			label(detail, I18n.t("team.revive_bench_full"))
+	_revive_status_line(detail)
+	if state == 2:
+		button(detail, I18n.t("team.retire"), func(): send("changeFighterStatus", [], selected)).name = "Retire"
+	button(detail, I18n.t("team.delete_fighter"), func(): confirm_action(I18n.t("team.delete_fighter_confirm", {"name": selected.get("name", "")}), func(): send("deleteFighter", [selected], selected)))
+
+
+## The last resurrection's outcome, under the fighter it was about: it
+## follows the fighter from the Fallen table to the living one.
+func _revive_status_line(detail: Node) -> void:
+	var status: Dictionary = data("evolutionTeam.reviveStatus", {})
+	if status.is_empty() or int(status.get("fid", -1)) != int(selected.get("id", -2)):
+		return
+	var line := label(detail, str(status.get("text", "")))
+	line.name = "ReviveStatus"
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if not bool(status.get("ok", true)):
+		line.add_theme_color_override("font_color", OneBit.MUTED)
 
 
 func _statistics() -> void:

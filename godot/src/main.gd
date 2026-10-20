@@ -908,9 +908,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				roster_list.set_item_metadata(roster_list.item_count - 1, int(f.id))
 			_log_line(I18n.t("lobby.roster", {"list": ", ".join(names)})
 				if not names.is_empty() else I18n.t("lobby.roster_empty"))
+			_settle_revive()
 			_push_team_model()
-			if _elem_kind == 10 and $UI/ElementDlg.visible:
-				_fill_graveyard()
 		OP_TEAM_PRESETS:
 			var d := Codec.decode(opcode, payload)
 			State.presets = d.get("presets", [])
@@ -1174,6 +1173,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_push_cardmaster_model()
 			if _gui.is_open("fusionLabDialog"):
 				_push_fusion_model()
+			if _gui.is_open("teamManagementDialog"):
+				_push_team_model()
 		OP_SHOP_CATALOG:
 			var d := Codec.decode(opcode, payload)
 			_open_shop(d)
@@ -2948,11 +2949,96 @@ func _push_team_model() -> void:
 		{"fighters": _tm_classic_pool() if _tm_tab() in [1, 2, 3]
 			else _tm_evo_playing()}, "editableTeamPreset")
 	_gui.gui.model.set_value("evolutionTeam",
-		{"fightersOnBench": bench})
+		{"fightersOnBench": bench, "fallen": _fallen_fighters(),
+		"reviveCards": _revive_cards(), "reviveStatus": _revive_status,
+		"benchFull": bench.size() >= BENCH_CAPACITY})
 	_gui.gui.model.set_value("tomeManager",
 		_all_card_sets(), "evolutionSets")
 	_gui.gui.model.set_value("onlyTabEnabledId", -1)
 	_push_team_classic_model()
+
+
+## --- Fallen fighters (S18: the old graveyard, now part of the Team panel) ---
+## Dead (2, still holding a team slot) and retired (3, out of the team)
+## fighters, and the owned resurrection cards. 22099 [i64 fighter][i32 card]
+## spends the card either way; on success the server moves the fighter
+## (2 → titular, 3 → bench) and pushes 6006, on a failed roll it pushes only
+## the inventory. The client gets no explicit verdict, so _revive_pending
+## settles it from whichever push arrives.
+const BENCH_CAPACITY := 7          # domain.BenchCapacity
+const _REVIVE_CARD_TYPE := 24      # consumable resurrection cards
+var _revive_status := {}           # {text, ok, fid} shown in the Team panel
+var _revive_pending := {}          # {fid, name, card, cid, qty, seq} while awaiting
+var _revive_seq := 0
+
+
+func _fallen_fighters() -> Array:
+	var out: Array = []
+	for fr in State.roster:
+		var st := int(fr.get("state", 0))
+		if int(fr.get("type", 2)) == 2 and (st == 2 or st == 3):
+			out.append(_evo_fighter_item(fr))
+	return out
+
+
+## Only real consumables: equipment cards also carry a resurrect % (a chance
+## to come back during a fight) and must not be offered here.
+func _revive_cards() -> Array:
+	var out: Array = []
+	for cid in State.inventory:
+		var m := Cards.meta(int(cid))
+		if int(m.get("type", 0)) == _REVIVE_CARD_TYPE \
+				and int(m.get("resurrect", 0)) > 0 and int(State.inventory[cid]) > 0:
+			out.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+				"qty": int(State.inventory[cid]),
+				"pct": int(m.get("resurrect", 0))})
+	out.sort_custom(func(a, b): return a.pct > b.pct or (a.pct == b.pct and a.id < b.id))
+	return out
+
+
+func _revive_fighter(fid: int, cid: int) -> void:
+	var f: Variant = _fighter_by_id(fid)
+	if f == null or not int(f.get("state", 0)) in [2, 3] \
+			or int(State.inventory.get(cid, 0)) <= 0:
+		return
+	_revive_pending = {"fid": fid, "name": str(f.get("name", "?")),
+		"card": Cards.name_of(cid), "cid": cid,
+		"qty": int(State.inventory.get(cid, 0))}
+	_revive_status = {"text": I18n.t("team.revive_sent",
+		{"card": _revive_pending.card, "name": _revive_pending.name}), "ok": true,
+		"fid": fid}
+	var w := WireWriter.new()
+	w.put_i64(fid)
+	w.put_i32(cid)
+	Session.send(OP_USE_ITEM, w.raw(), 3)
+	_push_team_model()
+	_revive_seq += 1
+	_revive_pending["seq"] = _revive_seq
+	var token := _revive_pending
+	get_tree().create_timer(2.0).timeout.connect(func():
+		if int(_revive_pending.get("seq", -1)) != int(token.seq):
+			return
+		_revive_pending = {}
+		# no 6006: either the roll failed (card gone) or the server refused
+		var spent := int(State.inventory.get(int(token.cid), 0)) < int(token.qty)
+		_revive_status = {"text": I18n.t("team.revive_fail" if spent
+			else "team.revive_refused", {"card": token.card, "name": token.name}),
+			"ok": false, "fid": int(token.fid)}
+		_push_team_model())
+
+
+## 6006 after a 22099: the fighter is alive again if it left states 2/3.
+func _settle_revive() -> void:
+	if _revive_pending.is_empty():
+		return
+	var f: Variant = _fighter_by_id(int(_revive_pending.fid))
+	if f == null or int(f.get("state", 0)) in [2, 3]:
+		return
+	_revive_status = {"text": I18n.t("team.revive_ok", {"name": _revive_pending.name,
+		"where": I18n.t("team.starter" if int(f.get("state", 0)) == 0 else "team.bench")}),
+		"ok": true, "fid": int(_revive_pending.fid)}
+	_log_line("[color=green]%s[/color]" % _revive_status.text)
+	_revive_pending = {}
 
 
 ## Active teamManagement tab — persisted like retail's
@@ -4147,11 +4233,12 @@ func _on_zaap_change_instance(_args: Array, _w: GWidget) -> void:
 const LOBBY_WORLDS := [23, 24, 25, 26, 27, 28, 37]
 
 ## Env kinds whose instances all behave the same: one button for the kind.
-## Zaaps (4) and zone triggers (8, walk-on) get none.
-const _CITY_ONE_PER_KIND := [2, 10, 12]
-const _CITY_HIDDEN := [4, 8]
+## Zaaps (4) and zone triggers (8, walk-on) get none; the graveyard (10) is
+## the Team panel's fallen section (S18).
+const _CITY_ONE_PER_KIND := [2, 12]
+const _CITY_HIDDEN := [4, 8, 10]
 ## Display order of the kinds in the City panel: shops and mail first.
-const _CITY_ORDER := [1, 2, 10, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
+const _CITY_ORDER := [1, 2, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
 
 
 ## Env record of an element from the coach's world or any lobby island.
@@ -5352,6 +5439,9 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 		"nativeUseElement":
 			_use_element(int(args[0]))
 			return
+		"nativeRevive":
+			_revive_fighter(int(args[0]), int(args[1]))
+			return
 		"nativeCmSelect":
 			_cm_selected = int(args[0])
 			_cm_given = {}
@@ -5509,8 +5599,8 @@ func _use_element(id: int) -> void:
 			_mail_loading = true
 			Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
 			_gui.open("mailboxDialog")
-		10:  # Graveyard — dead/interred fighters + resurrection cards
-			_open_graveyard()
+		10:  # Graveyard — its fighters live in the Team panel now (S18)
+			_open_fallen()
 		14:  # Fusion altar — retail lab: fuel tray + boost target → 5490
 			_open_fusion_lab(e)
 		3:   # Challenge (uk_0) — name;textId;challengeIds… → picker → cj_0 26330
@@ -5974,46 +6064,14 @@ func _style_fight_debrief() -> void:
 	$UI/ElementDlg/VBox/Btns/CloseBtn.grab_focus.call_deferred()
 
 
-## Graveyard: dead (2) / interred (3) fighters from the roster, plus the owned
-## resurrection cards (type with a resurrect% action). Pick a fighter, Act =
-## 22099 [i64 fighterId][i32 cardId] spending the first owned revive card.
-func _open_graveyard() -> void:
-	# Retail sends 6031 on graveyard AND team-panel open — the server
-	# re-pushes the roster (6006) + presets (6030) so the list is fresh.
+## The retail graveyard element: the fallen fighters are a section of the
+## Team panel's evolution tab, not a place (owner, S18). Retail sends 6031 on
+## team-panel open — the server re-pushes the roster (6006) + presets (6030).
+func _open_fallen() -> void:
 	Session.send(6031, PackedByteArray(), 2)
-	_element_text("Graveyard", "Dead fighters:")
-	_fill_graveyard()
-
-
-func _fill_graveyard() -> void:
-	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
-	list.clear()
-	var dead := 0
-	for f in State.roster:
-		var st := int(f.get("state", 0))
-		if st == 2 or st == 3:
-			dead += 1
-			list.add_item("%s  (breed %d, %s)" % [
-				f.get("name", "?"), int(f.get("breed", 0)),
-				"interred" if st == 3 else "dead"])
-			list.set_item_metadata(list.item_count - 1, int(f.get("id", -1)))
-	if dead == 0:
-		$UI/ElementDlg/VBox/Hint.text = I18n.t("card.no_dead")
-		return
-	var revive := -1
-	for cid in State.inventory:
-		if int(Cards.meta(int(cid)).get("resurrect", 0)) > 0:
-			revive = int(cid)
-			break
-	var act: Button = $UI/ElementDlg/VBox/Btns/ActBtn
-	if revive < 0:
-		$UI/ElementDlg/VBox/Hint.text += "  (no resurrection card owned)"
-	else:
-		act.text = I18n.t("card.resurrect_btn", {"name": Cards.name_of(revive)})
-		act.disabled = true
-		act.visible = true
-		list.item_selected.connect(
-			func(_i): act.disabled = false, CONNECT_ONE_SHOT)
+	_gui.gui.model.set_value("gamePreferences", 0, "lastSelectedGameModeId")
+	_push_team_model()
+	_gui.open("teamManagementDialog")
 
 
 ## Fusion altar: multi-select inventory cards as inputs (≥2 of one set), pick
@@ -7234,23 +7292,6 @@ func _open_firework_debug() -> void:
 func _on_element_act() -> void:
 	var list: ItemList = $UI/ElementDlg/VBox/Scroll/List
 	match _elem_kind:
-		10:  # graveyard resurrect
-			var sel := list.get_selected_items()
-			if sel.is_empty():
-				return
-			var revive := -1
-			for cid in State.inventory:
-				if int(Cards.meta(int(cid)).get("resurrect", 0)) > 0:
-					revive = int(cid)
-					break
-			if revive < 0:
-				return
-			var w := WireWriter.new()
-			w.put_i64(int(list.get_item_metadata(sel[0])))
-			w.put_i32(revive)
-			Session.send(OP_USE_ITEM, w.raw(), 3)
-			$UI/ElementDlg.visible = false
-			_log_line(I18n.t("card.resurrect", {"name": Cards.name_of(revive)}))
 		14:  # fusion — inputs + the List2 target LAST (server reads it so)
 			var inputs := []
 			for idx in list.get_selected_items():

@@ -50,6 +50,9 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 | 2026-10-17 | **El HUD de combate de S17 no se rehace**: acaba de tener el visto bueno. Si gana B, se revisa entonces si hay que acercarlo | agente (el dueño lo dejó a su criterio) |
 | 2026-10-18 | Altar de fusión nativo: las siete cartas de fuerza (las únicas que el altar puede crear) van como **fichas de texto en filas por lo que empujan** (Poder: rubíes; Calidad: zafiros; Ambos: Potaras), no como miniaturas: en trama 1 bit las siete se ven iguales y lo que las distingue es el número | agente |
 | 2026-10-18 | El panel enseña la receta del servidor tal cual (poder, calidad, probabilidad, el límite de valor ×3) y **desactiva "Fusionar" hasta que se cumple**, con la regla que falta en una línea. Sin regla de "mismo set": nunca la tuvo el servidor | agente |
+| 2026-10-20 | **El cementerio deja de ser un sitio**: nada de ir a él ni de Zaaps, solo el lobby "como los juegos actuales". Los luchadores muertos pasan a una **sección "Caídos" del panel de Equipo** (pestaña Evolución), y la palabra "cementerio" sale de la interfaz | dueño ("vale, como creas conveniente", sobre la propuesta del agente) |
+| 2026-10-20 | La entrada "Ciudad" del lobby pasa a llamarse **"Servicios"** (es/en/fr), para que no suene a un lugar del mapa | agente (propuesta aceptada en el mismo mensaje) |
+| 2026-10-20 | En "Caídos", **Muerto** (estado 2: aún ocupa plaza de titular; se puede sacar del equipo) y **Retirado** (estado 3: fuera del equipo; resucitado vuelve al banquillo). Solo se ofrecen las cartas de resurrección consumibles (tipo 24): el equipo con "% de resucitar" es un efecto de combate, no una carta para gastar aquí | agente |
 
 ## Por decidir con el dueño
 
@@ -168,10 +171,9 @@ Hoja: `codigo/capturas/s18/tanda2-altar.png`.
 ## Siguiente paso (para la próxima sesión)
 
 Card Master aprobado; buzón y altar de fusión hechos, a la espera del visto
-bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Sigue la tanda 2 con el
-**cementerio** (hoy un panel de depuración `ElementDlg`, kind 10: luchadores
-muertos y cartas de resurrección), después las conversaciones (`ElementDlg`,
-kinds 3/5/6/7/9/15), los tótems y los fuegos artificiales, con el mismo
+bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Sigue la tanda 2 con las
+conversaciones (`ElementDlg`, kinds 3/5/6/7/9/15), los tótems y los fuegos
+artificiales, con el mismo
 patrón: un panel sobre `lobby_panel.gd` (o `card_panel.gd` si enseña
 cartas), registrado en `_gui.native_factories` con el nombre del diálogo
 retail, y eventos `native*` hacia los handlers de `main.gd`. `ShopDlg` y
@@ -179,6 +181,14 @@ retail, y eventos `native*` hacia los handlers de `main.gd`. `ShopDlg` y
 paneles de depuración.
 
 Pendiente del dueño: el visto bueno del buzón y del altar.
+
+**Hecho el 2026-10-20: los caídos en el panel de Equipo** (el antiguo
+cementerio). El elemento kind 10 abre Equipo en Evolución; "Servicios" ya no
+lo lista. Verificado en vivo con `test/revive_smoke.gd` 4/4 (sin cementerio
+en Servicios; los dos caídos en su tabla y ninguno entre los vivos; un
+muerto resucita a titular y un retirado al banquillo, con el 6006 y la carta
+gastada). Capturas en `~/codigo/capturas/s18/revive-*.png` (en la Ally).
+Pendiente del dueño: el visto bueno de esas capturas.
 
 ## Tareas candidatas
 
@@ -196,8 +206,8 @@ Pendiente del dueño: el visto bueno del buzón y del altar.
       uno (inventario con cartas, clasificación como el boceto…).
 - [ ] Servicios: sustituir los diálogos XML y `ElementDlg` por paneles
       nativos (lista de S05). Card Master y buzón hechos (2026-10-17), altar
-      (2026-10-18); faltan fuegos artificiales, cementerio, retos, demonios,
-      tótems.
+      (2026-10-18), los caídos en Equipo en vez del cementerio (2026-10-20);
+      faltan fuegos artificiales, retos, demonios, tótems.
 - [ ] Retirar de `main.tscn` los paneles de depuración que queden sin uso.
 - [ ] `godot/PRODUCT.md` y `DESIGN.md` al día (hoy dicen que el dueño fija el
       estilo de login y creación, y eso ya no vale).

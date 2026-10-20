@@ -35,3 +35,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-17 | [S18 tanda 2: Card Master y buzón nativos, arte y muñeco en 1 bit](./2026-10-17-s18-tanda2.md) |
 | 2026-10-18 | [S18 tanda 2: el altar de fusión nativo](./2026-10-18-s18-altar.md) |
 | 2026-10-20 | [Puesta a punto del entorno en la ROG Ally (Go, Godot, baterías)](./2026-10-20-ally-setup.md) |
+| 2026-10-20 | [S18: los caídos en el panel de Equipo (adiós al cementerio) y "Ciudad" → "Servicios"](./2026-10-20-s18-caidos.md) |

@@ -147,9 +147,6 @@ func _evidence(kind: int) -> Array:
 			var ok: bool = await _wait(func(): return _seen.has(15001) \
 				and _main._gui.is_open("mailboxDialog"), 3.0)
 			return [ok, "15001 + mailboxDialog (%d letters)" % _main._mails.size()]
-		10:
-			var ok: bool = await _wait(elem_open, 2.0)
-			return [ok, "graveyard pane '%s'" % _title()]
 		14:
 			var ok: bool = await _wait(func(): return _main._gui.is_open("fusionLabDialog"), 2.0)
 			return [ok, "fusionLabDialog"]
