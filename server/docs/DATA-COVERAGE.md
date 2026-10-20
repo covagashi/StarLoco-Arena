@@ -395,6 +395,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 
 | Date | Change |
 |---|---|
+| 2026-10-20 | B-179: 5200's first section now carries the worn coach cards `{i16 slot, i32 templateId}` (client `air_2` / `rb_2`); it was always sent empty. No decoder or record change. |
 | 2026-10-20 | `cmd/dumpcards` also exports each firework card's `fwType` (field 7, `tl()`: 0 burst, 1 rocket, 2 fountain) and `fwColour` (field 8, `tk()`, RGB 0..255) so the Godot lobby can draw a 22094 on its sky. No decoder or wire change. |
 | 2026-10-20 | B-177: `gamedata.CardTypeEvolution` (24, client `aMK.dYy`) names the card type the graveyard may spend; the coach-card `Type` field (already decoded) now gates 22099. No decoder or wire change. |
 | 2026-10-06 | B-171: Godot combat HUD and result panel moved to the lobby's native visual family. No client data decoder, record coverage, or wire format changed. |

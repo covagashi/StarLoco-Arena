@@ -265,6 +265,8 @@ func _ready() -> void:
 	_gui.native_factories["exchangeDialog"] = _make_exchange_panel
 	_gui.native_factories["askDialog"] = _make_ask_panel
 	_gui.native_factories["teamPickDialog"] = _make_team_pick_panel
+	_gui.native_factories["kanodoDialog"] = _make_kanodo_panel
+	_gui.native_factories["coachEquipDialog"] = _make_equip_panel
 	add_child(_gui)
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
@@ -552,11 +554,6 @@ func _ready() -> void:
 	$UI/GuildDlg/VBox/Btns/CloseBtn.pressed.connect(
 		func(): $UI/GuildDlg.hide())
 	$UI/VBox/AuthRow/GearBtn.pressed.connect(_open_equip)
-	$UI/EquipDlg/VBox/Btns/WearBtn.pressed.connect(_on_equip_wear)
-	$UI/EquipDlg/VBox/Btns/CancelBtn.pressed.connect(
-		func(): $UI/EquipDlg.hide())
-	$UI/EquipDlg/VBox/Slots.item_selected.connect(_on_equip_slot_sel)
-	$UI/EquipDlg/VBox/Cards.item_selected.connect(_on_equip_card_sel)
 	$UI/DuoDlg/VBox/Btns/CreateBtn.pressed.connect(_on_duo_create)
 	$UI/DuoDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/DuoDlg.visible = false)
@@ -586,12 +583,7 @@ func _ready() -> void:
 			$UI/VBox/RosterBox/RosterBtns/KanodoBtn.disabled = false
 			$UI/VBox/RosterBox/RosterBtns/BenchBtn.disabled = false)
 	$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.pressed.connect(_open_loadout)
-	$UI/VBox/RosterBox/RosterBtns/KanodoBtn.pressed.connect(_open_kanodo)
 	$UI/VBox/RosterBox/RosterBtns/BenchBtn.pressed.connect(_on_bench_fighter)
-	$UI/KanodoDlg/VBox/Btns/CloseBtn.pressed.connect(
-		func(): $UI/KanodoDlg.visible = false)
-	$UI/KanodoDlg/VBox/Btns/BuyBtn.pressed.connect(_on_sphere_buy)
-	$UI/KanodoDlg/VBox/Scroll/Board.sphere_clicked.connect(_on_sphere_pick)
 	$UI/LoadoutDlg/VBox/Btns/CancelBtn.pressed.connect(
 		func(): $UI/LoadoutDlg.visible = false)
 	$UI/LoadoutDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_loadout)
@@ -1137,9 +1129,15 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.inventory = {}
 			for c in d.get("cards", []):
 				State.inventory[int(c.card_id)] = int(c.qty)
+			# what the coach wears (section 1, full on every push — B-179)
+			_equip_slots = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			for e in d.get("equipped", []):
+				if int(e.slot) >= 0 and int(e.slot) < 14:
+					_equip_slots[int(e.slot)] = int(e.card_id)
+			_equip_draft = _equip_slots.duplicate()
+			if _gui.is_open("coachEquipDialog"):
+				_push_equip_model()
 			_log_line(I18n.t("inv.stacks", {"n": State.inventory.size()}))
-			if $UI/EquipDlg.visible:
-				_fill_equip()
 			if _gui.is_open("cardMasterDialog"):
 				_push_cardmaster_model()
 			if _gui.is_open("fusionLabDialog"):
@@ -2651,66 +2649,61 @@ const COACH_SLOT_NAMES := {0: "slot.hat", 1: "slot.tattoo", 2: "slot.hair",
 	6: "slot.pants", 7: "slot.staff", 8: "slot.cape", 9: "slot.pet",
 	10: "slot.boots", 11: "slot.shirt"}
 
-var _equip_slots: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+var _equip_slots: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # worn (5200)
+var _equip_draft: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # being edited
 
 
+## The native coach equipment (S18, src/ui/coach_equip_panel.gd), from the
+## Inventory panel. 5203 asks for a fresh 5200, whose first section says what
+## the coach wears (B-179).
 func _open_equip() -> void:
-	$UI/EquipDlg.visible = true
-	_fill_equip()
-	# 5203 asks for a fresh 5200 push (the uid list is client-local and
-	# unresolvable server-side — an empty count is a pure refresh request).
+	_equip_draft = _equip_slots.duplicate()
+	_push_equip_model()
+	_gui.open("coachEquipDialog")
 	var w := WireWriter.new()
 	w.put_u16(0)
 	State.net.send_message(5203, w.raw(), 3)
 
 
-func _fill_equip() -> void:
-	var slots: ItemList = $UI/EquipDlg/VBox/Slots
-	var cards: ItemList = $UI/EquipDlg/VBox/Cards
-	slots.clear()
+func _push_equip_model() -> void:
+	var slots: Array = []
 	for i in 14:
-		var label: String = I18n.t(COACH_SLOT_NAMES[i]) \
-			if COACH_SLOT_NAMES.has(i) else "slot %d" % i
-		var cid := int(_equip_slots[i])
-		slots.add_item("%d %s — %s" % [i, label,
-			Cards.name_of(cid) if cid != 0 else "(empty)"])
-		slots.set_item_disabled(i, not COACH_SLOT_NAMES.has(i))
-	cards.clear()
-	var owned := []
+		if not COACH_SLOT_NAMES.has(i):
+			continue
+		var cid := int(_equip_draft[i])
+		slots.append({"slot": i, "label": I18n.t(COACH_SLOT_NAMES[i]),
+			"card": cid, "name": Cards.name_of(cid) if cid != 0 else ""})
+	# what can be worn: unequipped stacks plus what is worn now, minus the
+	# draft's own picks
+	var have := {}
 	for cid in State.inventory:
+		have[int(cid)] = int(State.inventory[cid])
+	for cid in _equip_slots:
+		if int(cid) != 0:
+			have[int(cid)] = int(have.get(int(cid), 0)) + 1
+	for cid in _equip_draft:
+		if int(cid) != 0:
+			have[int(cid)] = int(have.get(int(cid), 0)) - 1
+	var owned: Array = []
+	for cid in have:
 		var t := int(Cards.meta(int(cid)).get("type", -1))
-		if COACH_SLOT_FOR_TYPE.has(t) and int(cid) not in _equip_slots:
-			owned.append(int(cid))
-	owned.sort()
-	for cid in owned:
-		var idx := cards.add_item("%s  (x%d)" % [
-			Cards.name_of(cid), int(State.inventory[cid])])
-		cards.set_item_metadata(idx, cid)
+		if COACH_SLOT_FOR_TYPE.has(t) and int(have[cid]) > 0:
+			owned.append({"id": int(cid), "name": Cards.name_of(int(cid)),
+				"qty": int(have[cid]), "slot": int(COACH_SLOT_FOR_TYPE[t]),
+				"slotName": I18n.t(COACH_SLOT_NAMES[int(COACH_SLOT_FOR_TYPE[t])])})
+	owned.sort_custom(func(a, b): return a.slot < b.slot or (a.slot == b.slot and a.name < b.name))
+	_gui.gui.model.set_value("coachEquip", {"slots": slots, "owned": owned,
+		"dirty": _equip_draft != _equip_slots})
 
 
-func _on_equip_card_sel(idx: int) -> void:
-	var cards: ItemList = $UI/EquipDlg/VBox/Cards
-	var cid := int(cards.get_item_metadata(idx))
-	var slot: int = COACH_SLOT_FOR_TYPE.get(
-		int(Cards.meta(cid).get("type", -1)), -1)
-	if slot >= 0:
-		_equip_slots[slot] = cid
-		_fill_equip()
-
-
-func _on_equip_slot_sel(idx: int) -> void:
-	if _equip_slots[idx] != 0:
-		_equip_slots[idx] = 0
-		_fill_equip()
-
-
+## 5201 [14 × i32 card] — the whole layout; the server answers with a 5200.
 func _on_equip_wear() -> void:
 	var w := WireWriter.new()
 	for i in 14:
-		w.put_i32(int(_equip_slots[i]))
+		w.put_i32(int(_equip_draft[i]))
 	Session.send(OP_EQUIP_REQ, w.raw(), 3)
 	DebugLog.add("equipment layout sent — %d card(s) worn" %
-		(14 - _equip_slots.count(0)))
+		(14 - _equip_draft.count(0)))
 
 
 ## 2048 COACH_CREATE_REQ → retail coachCreationDialog (sex/skin/hair/name +
@@ -3484,25 +3477,13 @@ func _on_evo_become_legend(args: Array, w: GWidget) -> void:
 	Session.send(OP_FIGHTER_SET_STATE, wr.raw(), 2)
 
 
-## evolution:openCloseSphereBoard(fighter) — the Kanodo grid. The retail
-## sphereBoard widget isn't implemented yet; open the existing board panel.
+## evolution:openCloseSphereBoard(fighter) — the Kanodo grid (native panel).
 func _on_evo_sphere_board(args: Array, w: GWidget) -> void:
 	var row: Variant = args[0] if args.size() > 0 \
 		and args[0] is Dictionary else _row_item(w)
 	if not (row is Dictionary):
 		return
-	var f: Variant = _fighter_by_id(
-		int(row.get("id", row.get("fighterId", 0))))
-	if f == null or int(f.get("type", 1)) != 2:
-		_log_line("[i]%s[/i]" % I18n.t("kanodo.evo_only"))
-		return
-	_kanodo_fid = int(f.id)
-	_kanodo_pick = {}
-	$UI/KanodoDlg/VBox/Title.text = I18n.t("kanodo.title", {"name": f.get("name", "?")})
-	$UI/KanodoDlg/VBox/Hint.text = I18n.t("kanodo.hint")
-	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = true
-	_refresh_kanodo()
-	$UI/KanodoDlg.visible = true
+	_open_kanodo(int(row.get("id", row.get("fighterId", 0))))
 
 
 ## evolution:selectConsumableSet(setList,setDescription) — pick a tome set →
@@ -5440,6 +5421,20 @@ func _make_fusion_panel(_panel_name: String) -> Control:
 	return panel
 
 
+func _make_equip_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/coach_equip_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
+func _make_kanodo_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/kanodo_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
 func _make_team_pick_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/team_pick_panel.gd").new()
 	panel.model = _gui.gui.model
@@ -5585,6 +5580,38 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeTournSearch":
 			_tourn_search(int(args[0]))
+			return
+		"nativeEquipOpen":
+			_open_equip()
+			return
+		"nativeEquipPut":
+			var cid := int(args[0])
+			var slot: int = COACH_SLOT_FOR_TYPE.get(int(Cards.meta(cid).get("type", -1)), -1)
+			if slot >= 0:
+				_equip_draft[slot] = cid
+			_push_equip_model()
+			return
+		"nativeEquipTake":
+			var slot := int(args[0])
+			if slot >= 0 and slot < 14:
+				_equip_draft[slot] = 0
+			_push_equip_model()
+			return
+		"nativeEquipReset":
+			_equip_draft = _equip_slots.duplicate()
+			_push_equip_model()
+			return
+		"nativeEquipWear":
+			_on_equip_wear()
+			return
+		"nativeKanodo":
+			_open_kanodo(int(args[0]))
+			return
+		"nativeKanodoPick":
+			_on_sphere_pick(args[0], bool(args[1]))
+			return
+		"nativeKanodoBuy":
+			_on_sphere_buy()
 			return
 		"nativeTeamPick":
 			_confirm_team(int(args[0]))
@@ -6949,30 +6976,22 @@ func _ex_stage(cid: int, _w: GWidget) -> void:
 ## like retail: 23009 is fire-and-forget; the server validates reachability,
 ## XP and barrier cards and persists silently. We mirror the same rules for
 ## what can be clicked (lit frontier = server's Reachable flood).
-const KIND_LABEL := {
-	"spell": "new spell", "bonus": "bonus", "malus": "malus (a sacrifice)",
-	"summon": "summon mastery", "barrier": "barrier — needs a card",
-	"teleport": "portal", "item": "equipment set", "deadend": "dead end",
-	"empty": "path",
-}
+var _kanodo_lines: Array = []   # the picked sphere's details (panel text)
+var _kanodo_can_buy := false
+var _kanodo_status := ""
 
-func _open_kanodo() -> void:
-	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
-	var sel := roster_list.get_selected_items()
-	if sel.is_empty():
-		return
-	var f: Variant = _fighter_by_id(
-		roster_list.get_item_metadata(sel[0]))
+func _open_kanodo(fid: int) -> void:
+	var f: Variant = _fighter_by_id(fid)
 	if f == null or int(f.get("type", 1)) != 2:
 		_log_line("[i]%s[/i]" % I18n.t("kanodo.evo_only"))
 		return
 	_kanodo_fid = int(f.id)
 	_kanodo_pick = {}
-	$UI/KanodoDlg/VBox/Title.text = I18n.t("kanodo.title", {"name": f.get("name", "?")})
-	$UI/KanodoDlg/VBox/Hint.text = I18n.t("kanodo.hint")
-	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = true
+	_kanodo_lines = []
+	_kanodo_can_buy = false
+	_kanodo_status = ""
 	_refresh_kanodo()
-	$UI/KanodoDlg.visible = true
+	_gui.open("kanodoDialog")
 
 
 func _fighter_by_id(fid: int) -> Variant:
@@ -6982,10 +7001,11 @@ func _fighter_by_id(fid: int) -> Variant:
 	return null
 
 
+## The `kanodo` model the native panel (src/ui/kanodo_panel.gd) draws.
 func _refresh_kanodo() -> void:
 	var f: Variant = _fighter_by_id(_kanodo_fid)
 	if f == null:
-		$UI/KanodoDlg.visible = false
+		_gui.close("kanodoDialog")
 		return
 	var board := int(f.get("board", 0))
 	if board == 0:
@@ -6995,17 +7015,20 @@ func _refresh_kanodo() -> void:
 	if cursor == Vector2i.ZERO:
 		var root: Array = Kanodo.boards.get(board, {}).get("root", [0, 0])
 		cursor = Vector2i(int(root[0]), int(root[1]))
-	$UI/KanodoDlg/VBox/XP.text = I18n.t("kanodo.xp",
-		{"cur": int(f.get("xp", 0)), "total": int(f.get("total_xp", 0))})
-	$UI/KanodoDlg/VBox/Scroll/Board.set_state(board,
-		f.get("spheres", []), cursor)
+	_gui.gui.model.set_value("kanodo", {"fid": _kanodo_fid,
+		"name": str(f.get("name", "?")), "xp": int(f.get("xp", 0)),
+		"total": int(f.get("total_xp", 0)), "board": board,
+		"owned": f.get("spheres", []), "cursor": [cursor.x, cursor.y],
+		"lines": _kanodo_lines, "canBuy": _kanodo_can_buy,
+		"status": _kanodo_status})
 
 
-func _on_sphere_pick(n: Dictionary) -> void:
+func _on_sphere_pick(n: Dictionary, reachable: bool) -> void:
 	_kanodo_pick = n
+	_kanodo_status = ""
 	var kind := String(n.get("kind", "empty"))
 	var lines := [I18n.t("kanodo.node", {"id": int(n.id), "x": int(n.x),
-		"y": int(n.y), "kind": KIND_LABEL.get(kind, kind)})]
+		"y": int(n.y), "kind": I18n.t("kanodo.kind." + kind)})]
 	if int(n.get("spell", 0)) != 0:
 		lines.append("→ %s" % Spells.name_of(int(n.spell)))
 	if int(n.get("pool", 0)) != 0:
@@ -7019,10 +7042,11 @@ func _on_sphere_pick(n: Dictionary) -> void:
 	if n.get("fx", []).size() > 0:
 		lines.append(I18n.t("kanodo.fx", {"fx": str(n.fx)}))
 	lines.append(I18n.t("kanodo.cost", {"xp": int(n.get("xp", 0))}))
-	$UI/KanodoDlg/VBox/Hint.text = "\n".join(lines)
-	var board := $UI/KanodoDlg/VBox/Scroll/Board
-	$UI/KanodoDlg/VBox/Btns/BuyBtn.disabled = \
-		not board._lit.has(int(n.id)) or not Kanodo.has_payload(n)
+	if not reachable:
+		lines.append(I18n.t("kanodo.unreachable"))
+	_kanodo_lines = lines
+	_kanodo_can_buy = reachable
+	_refresh_kanodo()
 
 
 func _on_sphere_buy() -> void:
@@ -7036,14 +7060,15 @@ func _on_sphere_buy() -> void:
 				card = int(c)
 				break
 		if card == 0:
-			$UI/KanodoDlg/VBox/Hint.text += \
-				"\n[color=red]no accepted card in inventory[/color]"
+			_kanodo_status = I18n.t("kanodo.no_card")
+			_refresh_kanodo()
 			return
 	var cost := int(_kanodo_pick.get("xp", 0))
 	if f.spheres.has(int(_kanodo_pick.id)):
 		cost /= 10   # re-purchase discount (afb_1 case 16926)
 	if int(f.get("xp", 0)) < cost:
-		$UI/KanodoDlg/VBox/Hint.text += "\n[color=red]not enough xp[/color]"
+		_kanodo_status = I18n.t("kanodo.no_xp")
+		_refresh_kanodo()
 		return
 	var w := WireWriter.new()
 	w.put_i64(_kanodo_fid)
@@ -7056,8 +7081,11 @@ func _on_sphere_buy() -> void:
 	if not f.spheres.has(int(_kanodo_pick.id)):
 		f.spheres.append(int(_kanodo_pick.id))
 	f.xp = int(f.xp) - cost
-	_log_line(I18n.t("kanodo.bought",
-		{"id": int(_kanodo_pick.id), "cost": cost}))
+	_kanodo_status = I18n.t("kanodo.bought", {"id": int(_kanodo_pick.id), "cost": cost})
+	_log_line(_kanodo_status)
+	_kanodo_pick = {}
+	_kanodo_lines = []
+	_kanodo_can_buy = false
 	_refresh_kanodo()
 
 

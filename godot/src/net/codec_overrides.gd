@@ -434,13 +434,24 @@ static func _wallet(r: WireReader) -> Dictionary:
 	return out
 
 
-## Opcode 5200 — [u16][u16][u16 n]{i32 cardId, u16 qty}[u16]
-## (handlers_inventory.go:43). Leading/trailing u16s captured verbatim.
+## Opcode 5200 — the retail air_2 sections (server handlers_inventory.go):
+##   [u16 n]{i16 slot, i32 cardId}  equipped: the coach's 14 slots (B-179)
+##   [u16 n]{i16 position}          removed
+##   [u16 n]{i32 cardId, u16 qty}   unequipped inventory
+##   [u16 n]{i32 cardId}            removed card ids
 static func _inventory(r: WireReader) -> Dictionary:
-	var out := {"head0": r.get_u16(), "head1": r.get_u16(), "cards": []}
+	var out := {"equipped": [], "removed": [], "cards": [], "gone": []}
 	for i in r.get_u16():
-		out.cards.append({"card_id": r.get_i32(), "qty": r.get_u16()})
-	out.tail = r.get_u16() if r.remaining() >= 2 else 0
+		var slot: int = r.get_i16()
+		out.equipped.append({"slot": slot, "card_id": r.get_i32()})
+	for i in r.get_u16():
+		out.removed.append(r.get_i16())
+	for i in r.get_u16():
+		var cid: int = r.get_i32()
+		out.cards.append({"card_id": cid, "qty": r.get_u16()})
+	if r.remaining() >= 2:
+		for i in r.get_u16():
+			out.gone.append(r.get_i32())
 	return out
 
 

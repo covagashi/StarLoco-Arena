@@ -39,11 +39,30 @@ func (s *Session) grantStarterCards(coach *domain.Coach) {
 }
 
 // pushInventory sends the coach's full inventory as a CoachInventoryUpdate
-// (5200): section 3 (updated inventory) lists each unequipped card as
+// (5200): section 1 lists what the coach WEARS as {i16 slot, i32 cardId} and
+// section 3 (updated inventory) each unequipped card as
 // {i32 referenceCardId, i16 quantity}.
+//
+// Section 1 is the retail client's equipped list: rb_2 puts each card into the
+// coach's 14-slot equipment container (sj_1.yD()) at the 0-based slot 5201 also
+// uses (Pos-1 here). Sending it empty meant a client never learned what its
+// coach wore after logging in, and its next 5201 — which carries all 14 slots —
+// stripped everything (B-179). Re-sending a card already in its slot is a no-op
+// for the client. Section 2 stays empty: rb_2 removes those positions from the
+// inventory container too, not only from the equipment one.
 func (s *Session) pushInventory(coach *domain.Coach) error {
 	w := protocol.NewWriter()
-	w.U16(0) // section 1: added-equip (none)
+	worn := make([]domain.CoachCard, 0, 14)
+	for _, c := range coach.Inventory {
+		if c.Pos > 0 && c.Pos <= 14 {
+			worn = append(worn, c)
+		}
+	}
+	w.U16(uint16(len(worn))) // section 1: equipped {i16 slot, wy_2 card}
+	for _, c := range worn {
+		w.U16(uint16(c.Pos - 1))
+		w.I32(c.TemplateID)
+	}
 	w.U16(0) // section 2: removed shorts (none)
 
 	// section 3: updated inventory (unequipped cards)

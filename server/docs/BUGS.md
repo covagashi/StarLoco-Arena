@@ -13,6 +13,27 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-179 · After logging in, the client never knew what the coach wore
+
+- **Symptom:** the coach-equipment screen of a freshly logged-in client showed
+  every slot empty, and pressing Wear there — 5201 carries all 14 slots —
+  unequipped everything the coach had on. Set bonuses that read the worn
+  cards (resurrection, XP, morale, wounds…) silently dropped with it.
+- **Root cause:** `pushInventory` (`handlers_inventory.go`) wrote 5200's
+  first section — the retail client's EQUIPPED list — as always empty.
+  `air_2` reads it as `{i16 slot, wy_2 card}` and `rb_2` places each card in
+  the coach's 14-slot equipment container `sj_1.yD()`, at the same 0-based
+  slot index `aEl` (5201) sends; no other message carries the worn layout.
+- **Fix:** section 1 lists every worn card as `{slot = Pos-1, templateId}`.
+  Section 2 ("removed") stays empty on purpose: `rb_2` clears those positions
+  from the inventory container as well. The Godot decoder now reads all four
+  sections (it assumed the first two empty) and the client rebuilds its slots
+  from every push.
+- **Verified:** `unit` — `TestInventoryPushListsEquippedCards` (failed before:
+  0 entries). Live — `godot/test/screens_smoke.gd`: at login the client holds
+  the Sgrim Hat in slot 0, the native panel swaps it for a Weerdtrot Hat and
+  back (5201 → 5200 each time).
+
 ### B-178 · Back from a fight, the lobby never came back and the report never showed
 
 - **Symptom:** after any fight that ended normally (the fight view acks the

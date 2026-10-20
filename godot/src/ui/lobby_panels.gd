@@ -160,6 +160,7 @@ func _team() -> void:
 		else:
 			button(detail, I18n.t("team.toggle_status"), func(): send("changeFighterStatus", [], selected), int(selected.get("state", 0)) != 3)
 		if not classic:
+			button(detail, I18n.t("team.spheres"), func(): send("nativeKanodo", [int(selected.get("id", -1))])).name = "Spheres"
 			button(detail, I18n.t("team.make_legend"), func(): confirm_action(I18n.t("team.make_legend_confirm"), func(): send("becomeALegend", [selected], selected)))
 		button(detail, I18n.t("team.delete_fighter"), func(): confirm_action(I18n.t("team.delete_fighter_confirm", {"name": selected.get("name", "")}), func(): send("deleteFighter", [selected], selected)))
 	pinned_actions.show()
@@ -262,6 +263,7 @@ func _inventory() -> void:
 	button(toolbar, I18n.t("inv.search"), schedule_refresh)
 	search.text_submitted.connect(func(_text): schedule_refresh())
 	button(toolbar, I18n.t("inv.clear"), func(): draft["search"] = ""; schedule_refresh())
+	button(toolbar, I18n.t("inv.coach_equip"), func(): send("nativeEquipOpen")).name = "CoachEquip"
 	items = items.filter(func(item): return str(item.get("name", "")).to_lower().contains(str(draft.get("search", "")).to_lower()))
 	table(body, [I18n.t("inv.col_set"), I18n.t("inv.col_owned"), I18n.t("inv.col_total")] if tab == 3 else [I18n.t("inv.col_card"), I18n.t("inv.col_qty"), I18n.t("inv.col_value")], ["name", "completion", "size"] if tab == 3 else ["name", "quantity", "value"], items, func(_item): schedule_refresh())
 	if not selected.is_empty():
