@@ -198,15 +198,14 @@ Ordered by value. Item 1 is the biggest unlock; item 2 is the cheapest concrete 
    draws on non-practice wins. Payout rides the existing 8300 won-cards blob.
    Residual interpretation risk is documented in `drops.go`: n2-as-level and
    eliteDropBonus-as-count are the two arg choices data can't fully arbitrate.
-2. **The CLIENT mangles accented names it receives** (B-068 residual). Proven with two
-   controlled experiments: every server-provided name gains exactly one UTF-8→cp1252
-   hop, and no input can undo it — pre-compensating makes it worse. Our encoding is
-   correct and must NOT be changed to chase this. The open work is to locate the
-   offending call in the decompiled client. Cosmetic; message bodies are unaffected.
-3. **`gamedata` string fields are still read as UTF-8.** The `.bdat` text the client
-   ships is almost certainly cp1252 too. Every field we currently read is ASCII
-   (`"FIGHTER_CONDITION"`, `"FIGHTER_CARD_USE"`), so nothing is broken today — but the
-   moment a name or description field is decoded it will need `protocol.DecodeText`.
+2. ~~**The CLIENT mangles accented names it receives**~~ (B-068 residual) — **located
+   (S08)**: `aez_0.setName` re-decodes the name with the platform charset. A retail
+   client defect; the server's cp1252 is right and the Godot client reads it straight
+   (`cp1252_names_test.gd`).
+3. ~~**`gamedata` string fields are still read as UTF-8.**~~ — **correct as it is
+   (S08)**: the client reads record strings as `[i32 len]` + `new String(bytes,
+   "UTF-8")` (`IL`, `ng_2`, `vy_0`, `Yq`), which is what `gamedata.cur.str()` does.
+   Only the WIRE is cp1252.
 4. **Enforce the remaining `np_1` rules.** Turn duration, sudden death and the
    bonus-cell multiplier are wired (B-072); fight-start effects (12) and victory
    conditions (14) are wired (B-074). Still inert: budget (incl. type 1000 "no limit"),

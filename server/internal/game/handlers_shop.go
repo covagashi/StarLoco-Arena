@@ -231,7 +231,20 @@ func cardMasterStock(cards *gamedata.Cards, cardListID int32) []int32 {
 			return ids
 		}
 	}
-	return cards.Priced()
+	// No card set behind the list id: the mode-1 ("démone II") masters of worlds
+	// 37 and 80 name lists 17-24, which are no set in the client data - their
+	// retail stock lived on Ankama's server. The fallback is what this server
+	// can actually sell: cards with a positive price. It used to be every card
+	// with a price MAP, zeros included - 845 cards, most of them refused at
+	// purchase, and ~15 s for the Godot panel to load their art (S08).
+	priced := cards.Priced()
+	out := priced[:0:0]
+	for _, id := range priced {
+		if cardIsPurchasable(cards.Get(id)) {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 // buildShopCatalog builds ShopCatalog(5401): [i8 mode][i32 shopId] then per

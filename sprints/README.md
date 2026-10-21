@@ -102,7 +102,8 @@ afectado trabaja con la opción marcada como *por defecto*.
 | ¿El 1 bit es el estilo **por defecto** o un modo opcional? | S04, S07 | opcional, conmutable |
 | Servicios del hall (Card Master, Zaap…): ¿entradas en el lobby o revivir el hall caminable? | S05 | entradas en el lobby |
 | Replays: ¿grabar/reproducir como el retail, o solo espectador en vivo? | S11 | solo lo que ya hay + guardar replays |
-| ¿Seguir con MySQL y Postgres, o solo SQLite (+ Postgres de producción)? | S08 | sin cambios |
+| ¿Seguir con MySQL y Postgres, o solo SQLite (+ Postgres de producción)? | S08 | sin cambios (desde S08 todo el suite pasa en los tres) |
+| ¿Crear clan exige la carta 214 "Pacte", como el retail? Entonces hay que repartirla (p. ej. al nivel 5 de coach, su `RequiredLevel`) | S08 | no se exige: los datos no dan forma de conseguirla |
 | X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo (aplicado en S08; se reabre si el dueño dice) |
 | Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas |
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |

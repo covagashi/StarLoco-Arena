@@ -30,19 +30,36 @@ retail leídos y documentación que no se contradiga.
       visualmente.
 - [ ] Casillas especiales: confirmar en vivo que una se dispara.
 - [ ] B-111: de dónde salen los rosters de 10 objetos.
-- [ ] `pvp_smoke` se para en el intercambio (S03): el coach `test` no tiene cartas
-      intercambiables en la lista del cliente, aunque tiene 13 en `coach_cards`.
-      ¿Datos locales o regresión?
-- [ ] Nombres con acentos: el cliente retail los estropea; las cadenas de
-      gamedata se leen como UTF-8 y no como cp1252.
-- [ ] **Catálogos de Card Master de 845 cartas** (visto en S05): los
-      catálogos 17, 19, 21 y 24 (Totem Arena 101, mundo 80) no son un set
-      conocido y `cardMasterStock` cae a "todas las cartas con precio". Son de
-      modo 1 ("démone II"): averiguar qué vendían en el retail. En el cliente
-      Godot ese catálogo cuesta ~15 s la primera vez (845 ilustraciones).
-
-- [ ] 509 (crear clan) no exige la carta 214 "Pacte", que en el retail es lo
-      que abre la creación (visto en S05).
+- [x] `pvp_smoke` se paraba en el intercambio: lo cerró S18 (`5688fe2f`). No
+      eran las cartas, era que el smoke esperaba el panel de depuración y se
+      abría el diálogo XML retail; ahora usa el panel nativo y llega al final.
+- [x] Nombres con acentos, las dos mitades:
+      - el cliente retail: **encontrada la línea** que se buscaba desde B-068,
+        `aez_0.setName` (línea 139) hace `new String(name.getBytes("UTF-8"))`
+        con el charset de la plataforma: el salto de más. Defecto del cliente
+        retail, que ya es legado. Godot lee bien esos mismos bytes:
+        `test/unit/cp1252_names_test.gd` ("Loové", "Défi", "Maître d'élevage",
+        "5€" desde los frames exactos del servidor; lane headless 249 checks).
+      - las cadenas de gamedata: **ya estaban bien**. El cliente lee las de los
+        registros como `[i32 len]` + `new String(bytes, "UTF-8")` (`IL`,
+        `ng_2`, `vy_0`, `Yq`), que es lo que hace `gamedata.cur.str()`. Solo
+        el cable es cp1252. Corregido `STATUS.md`, que decía lo contrario.
+- [x] **Catálogos de 845 cartas**: los Card Masters de modo 1 ("démone II":
+      `ku_2.X()` abre `demonIIDialog`) de los mundos 37 y 80 nombran las
+      listas 17–24, que no son ningún set de los datos del cliente; lo que
+      vendían vivía en el servidor de Ankama y no hay forma de saberlo.
+      Arreglado lo que sí era un error: el fallback era "toda carta con mapa
+      de precio", ceros incluidos (845, casi todas rechazadas al comprar); ahora
+      son las que se pueden comprar (precio positivo): **143**. El mundo 80 ya
+      no se ve (decisión del dueño, S05); el 37 sí, en el panel Ciudad.
+      Prueba: `TestCardMasterStockIsItsCardSet` con una carta de precio cero.
+- [x] 509 sin la carta 214 "Pacte": **descartado**. En el retail la carta es
+      lo único que abre `guildCreationDialog` (`aBC` caso 214 → 16431), pero
+      en los datos no hay forma de conseguirla: no se vende (precio 0), no
+      sale en el robo (`ObtainableInDraw` falso) y ningún desafío la da.
+      Exigirla dejaría a todos sin clan. Godot ya crea el clan desde su botón
+      nativo (Social → Crear clan). Queda como decisión del dueño en el
+      README (repartirla, p. ej. a nivel 5 de coach, que es su `RequiredLevel`).
 
 ## Heredado de S07 (2026-10-21, acordado con el dueño)
 

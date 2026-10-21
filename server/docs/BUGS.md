@@ -4440,6 +4440,13 @@ cannot change. What I did **not** do is locate the exact client code performing 
 extra hop — the evidence is behavioural, not a decompiled line — so the open item is
 "find the mangling call in the client", not "fix the encoding".
 
+**Update (S08): found.** `aez_0.setName` (line 139), the client's coach object:
+`this.m_name = new String(string.getBytes("UTF-8"))` - re-encodes the decoded
+name as UTF-8 and decodes it again with the platform charset (cp1252 on
+Windows), which is exactly the one extra hop measured above. Nothing to do on the
+server, and the Godot client does not have the defect: `cp1252_names_test.gd`
+decodes these same frames to "Loové" / "Défi".
+
 ### B-067 · 325 usable coach cards did nothing, because the decoder threw their effects away
 The card decoder walked the `akw_0` effect array (field 15) only to sniff out the
 resurrection percentage and **discarded every other effect**. So of the 907 coach
