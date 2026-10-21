@@ -1,23 +1,34 @@
 # S07 — Fidelidad GUI retail
 
-**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟡 siguiente (esbozo revisado el 2026-10-21)
 
 ## Objetivo
 
 Cerrar las secciones §1–2 de `BACKLOG.md` y cubrir los diálogos retail que hoy
 no tienen equivalente nativo.
 
+## Revisión al cerrar S06 (2026-10-21)
+
+S18 sustituyó todos los diálogos retail que el jugador veía fuera del combate
+por paneles nativos, y el dueño decidió que los diálogos XML del retail son
+legado. Eso deja sin objeto la parte de "fidelidad" del esbozo: el theme sin
+destino, los estados del atlas, `teamManagementDialog` y las fuentes DDS
+(abajo, tachadas). Lo que queda es **cubrir con paneles nativos lo que el
+retail tenía y aquí falta** (la lista de diálogos sin referencia sigue sin
+ninguna en `src/`, comprobado), el color de los mapas y los restos de
+"También". Se detalla al abrirlo.
+
 ## Del backlog
 
-- [ ] Pasada de fidelidad del lobby frente al retail: `lobby_bg.png`, el grupo de
-      acciones y los iconos de la derecha.
-- [ ] Diálogos que se ven beige plano: script headless que liste las referencias
-      del theme sin destino y mapearlas a `appSkin`/atlases.
-- [ ] Estados hover/pressed/disabled: que cambien la región del atlas.
-- [ ] `teamManagementDialog` (roster y presets): revisión visual.
+- ~~Pasada de fidelidad del lobby frente al retail: `lobby_bg.png`, el grupo de
+      acciones y los iconos de la derecha.~~ (lobby nuevo en S18)
+- ~~Diálogos que se ven beige plano: script headless que liste las referencias
+      del theme sin destino y mapearlas a `appSkin`/atlases.~~ (sin objeto tras S18)
+- ~~Estados hover/pressed/disabled: que cambien la región del atlas.~~ (sin objeto tras S18)
+- ~~`teamManagementDialog` (roster y presets): revisión visual.~~ (panel nativo de S18)
 - [ ] Los 4 warnings de anchors (`login_screen.gd`, `creation_screen.gd`).
-- [ ] Fuentes: hoy TTF en lugar de las DDS bitmap del retail. Decidir si vale la
-      pena el pixel-perfect.
+- ~~Fuentes: hoy TTF en lugar de las DDS bitmap del retail. Decidir si vale la
+      pena el pixel-perfect.~~ (sin objeto tras S18)
 
 ## Diálogos retail sin referencia en `src/`
 

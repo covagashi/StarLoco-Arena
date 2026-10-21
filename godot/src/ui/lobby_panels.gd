@@ -528,20 +528,31 @@ func _options() -> void:
 	var current := str(data("gamePreferences.screenResolution", "1280x720"))
 	choices(bar, sizes, maxi(0, sizes.find(current)), func(i): model.set_value("gamePreferences", sizes[i], "screenResolution"))
 	button(bar, I18n.t("opt.apply_res"), func(): send("applyResolution"))
+	# music and effects (src/audio/audio.gd), under the retail
+	# optionsDialog keys — its "sounds" pair is ambianceSounds*
 	label(body, I18n.t("opt.sound"), 22)
-	var mute := CheckButton.new()
-	mute.text = I18n.t("opt.mute")
-	mute.button_pressed = bool(data("gamePreferences.musicMute", false))
-	mute.toggled.connect(func(value): model.set_value("gamePreferences", value, "musicMute"); send("setMusicMute"))
-	body.add_child(mute)
-	var volume := HSlider.new()
-	volume.min_value = 0
-	volume.max_value = 1
-	volume.step = 0.05
-	volume.value = float(data("gamePreferences.musicVolume", 0.5))
-	volume.custom_minimum_size.y = 38
-	volume.value_changed.connect(func(value): model.set_value("gamePreferences", value, "musicVolume"); send("setMusicVolume"))
-	body.add_child(volume)
+	for entry in [["opt.music", "musicMute", "setMusicMute", "musicVolume", "setMusicVolume"],
+			["opt.effects", "ambianceSoundsMute", "setSoundsMute", "ambianceSoundsVolume", "setSoundsVolume"]]:
+		var line := row(body)
+		var name_label := label(line, I18n.t(entry[0]))
+		name_label.size_flags_horizontal = Control.SIZE_FILL
+		name_label.custom_minimum_size.x = 110
+		var volume := HSlider.new()
+		volume.name = entry[3]
+		volume.min_value = 0
+		volume.max_value = 1
+		volume.step = 0.05
+		volume.value = float(data("gamePreferences." + entry[3], 0.5))
+		volume.custom_minimum_size = Vector2(220, 38)
+		volume.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		volume.value_changed.connect(func(value): model.set_value("gamePreferences", value, entry[3]); send(entry[4]))
+		line.add_child(volume)
+		var mute := CheckButton.new()
+		mute.name = entry[1]
+		mute.text = I18n.t("opt.mute")
+		mute.button_pressed = bool(data("gamePreferences." + entry[1], false))
+		mute.toggled.connect(func(value): model.set_value("gamePreferences", value, entry[1]); send(entry[2]))
+		line.add_child(mute)
 	# client-only fight look (sprints/S04, S17) — user://settings.cfg, read
 	# when the next fight opens
 	label(body, I18n.t("opt.fight"), 22)

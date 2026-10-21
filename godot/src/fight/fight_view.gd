@@ -86,6 +86,7 @@ var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 
 
 func _ready() -> void:
+	Audio.play_music("fight")
 	_onebit = ArtStyle.onebit()
 	_skin_fight_ui()
 	$UI/TopBar/LoadBtn.pressed.connect(_load)

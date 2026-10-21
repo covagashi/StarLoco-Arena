@@ -2,7 +2,7 @@
 
 Lo pendiente, sin plazos. Cada sección tiene ya un sprint que la recoge (tabla del
 [`README.md`](./README.md)): §1–2 → S07, §4 → S12–S14, §5 (mapas) → S05/S07,
-§6 (MCP retail) → fuera de la 1.0, §8 → S03/S16, §9 → S04. Lo que se hace en cada tanda va en su sprint
+§6 (MCP retail) → fuera de la 1.0, §8 → S03/S16, §9 → S04, §10 → S04/S07. Lo que se hace en cada tanda va en su sprint
 (`SNN-*.md`, índice en [`README.md`](./README.md)); esto es lo que queda por coger.
 
 Estado al **2026-10-16**. El trabajo FX/`.xps` quedó cerrado (abajo, §6 — referencia).
@@ -227,3 +227,12 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
   - **Arte propio en 1 bit** para no depender de Ankama: sería un rebrand, otro proyecto.
   - ASCILINE (https://github.com/YusufB5/ASCILINE) mirado y descartado: es un motor de
     vídeo a ASCII, no de juego.
+
+## 10. Opciones y sonido (lo que dejó [`S06`](./S06-options-audio.md))
+
+- [ ] **Rejilla** en combate (`gridActivated` del retail): una opción que dibuje el
+      contorno de las casillas. Encaja con el filtro 1 bit de S04.
+- [ ] **Partículas** (`activateParticles`): apagar `XpsFx` en equipos lentos.
+- [ ] **Sonidos de ambiente por mapa** (`nk_0.aL` → `IV.aE(mapId).aVa()`: un id de
+      sonido y su ganancia por mapa, en el bus de efectos): sin leer de dónde salen
+      esos datos ni si las arenas de combate los traen.

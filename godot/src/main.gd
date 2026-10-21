@@ -235,6 +235,9 @@ var _gui: GuiLayer            # retail XULOR2 dialog layer
 const NativeLobbyPanel := preload("res://src/ui/lobby_panel.gd")
 var _lobby_screen
 var _lobby_ready := false
+## The saved screen/sound preferences go in once per run: main.tscn is
+## reloaded after every fight, and re-applying the window mode would flicker.
+static var _prefs_applied := false
 var _login_screen             # baked-art login (PippopLogin via preload)
 var _create_screen            # baked-art coach creation (PippopCoachCreation)
 var _pending_login := ""      # login queued while connecting
@@ -262,6 +265,14 @@ func _ready() -> void:
 	_gui.native_factories["kanodoDialog"] = _make_kanodo_panel
 	_gui.native_factories["coachEquipDialog"] = _make_equip_panel
 	add_child(_gui)
+	if not _prefs_applied:
+		_prefs_applied = true
+		_apply_audio_prefs()
+		_apply_vsync_pref()
+		if _gui.gui.model.get_value("gamePreferences", "fullScreen") == true:
+			_apply_fullscreen_pref()
+		else:
+			_on_apply_resolution([], null)   # no-op until one was picked
 	_gui.on("logon", _on_retail_logon)
 	_gui.on("validateLoginForm", _on_retail_logon)
 	_gui.on("createCoach", _on_coach_create)
@@ -491,20 +502,14 @@ func _ready() -> void:
 	_gui.on("selectAchievementType", _on_ach_select_type)
 	_gui.on("selectAchievementSubtype", _on_ach_select_subtype)
 	_gui.on("selectAchievement", func(_a, _w): pass)
-	# dofusarena:* — options dialog; the widget binds already wrote
-	# gamePreferences, handlers just apply side-effects
-	_gui.on("setInverseMouseControl", func(_a, _w): pass)
-	_gui.on("setShowFighterMoveRange", func(_a, _w): pass)
-	_gui.on("setSaveReplay", func(_a, _w): pass)
-	_gui.on("setMaskWorld", func(_a, _w): pass)
-	_gui.on("setGridActivated", func(_a, _w): pass)
+	# dofusarena:* — the native Options panel (lobby_panels._options) writes
+	# gamePreferences, these apply the side effects, and the GUI layer saves
+	# them after every handler (user://gui_settings.cfg [prefs])
 	_gui.on("setMusicMute", func(_a, _w): _apply_audio_prefs())
 	_gui.on("setMusicVolume", func(_a, _w): _apply_audio_prefs())
 	_gui.on("setSoundsMute", func(_a, _w): _apply_audio_prefs())
 	_gui.on("setSoundsVolume", func(_a, _w): _apply_audio_prefs())
-	_gui.on("activateParticles", func(_a, _w): pass)
 	_gui.on("activateVSync", func(_a, _w): _apply_vsync_pref())
-	_gui.on("activateShaders", func(_a, _w): pass)
 	_gui.on("setFullScreen", func(_a, _w): _apply_fullscreen_pref())
 	_gui.on("applyResolution", _on_apply_resolution)
 	_gui.on("destroyCoach", _on_destroy_coach)
@@ -574,6 +579,7 @@ func _on_disconnected() -> void:
 
 
 func _show_login_screen() -> void:
+	Audio.play_music("")   # the retail starts its music on entering the world
 	_login_screen = preload("res://src/ui/login_screen.gd").new()
 	$UI.add_child(_login_screen)   # CanvasLayer — camera must not shift it
 	_login_screen.submit.connect(_on_login_submit)
@@ -3900,14 +3906,11 @@ func _on_ach_select_subtype(_a: Array, w: GWidget) -> void:
 
 ## --- optionsDialog ------------------------------------------------------------
 
+## The native panel lists its own resolutions (lobby_panels
+## _supported_resolutions); this only seeds the current one.
 func _push_options_model() -> void:
 	var model := _gui.gui.model
 	var gp: Dictionary = model.values.get("gamePreferences", {})
-	var res_list: Array = []
-	for r in ["800x600", "1024x768", "1280x832", "1280x1024", "1440x900",
-			"1600x1200", "1920x1080", "1920x1200"]:
-		res_list.append({"text": r, "value": r})
-	gp["screenResolutions"] = res_list
 	if str(gp.get("screenResolution", "")) == "":
 		var ws := get_window().size
 		gp["screenResolution"] = "%dx%d" % [ws.x, ws.y]
@@ -3915,12 +3918,7 @@ func _push_options_model() -> void:
 
 
 func _apply_audio_prefs() -> void:
-	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
-	var mv := 0.0 if bool(gp.get("musicMute", false)) \
-		else float(gp.get("musicVolume", 0.5))
-	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music")
-		if AudioServer.get_bus_index("Music") >= 0 else 0,
-		linear_to_db(maxf(mv, 0.0001)))
+	Audio.apply_prefs(_gui.gui.model.values.get("gamePreferences", {}))
 
 
 func _apply_vsync_pref() -> void:
@@ -4500,6 +4498,7 @@ func _push_local_coach() -> void:
 ## menuBarDialog binds (equipedEmotes + name today; more land as screens port).
 func _mount_lobby_menubar(d: Dictionary) -> void:
 	State.my_coach_name = str(d.get("name", State.my_coach_name))
+	Audio.play_music("island")
 	$UI/Chat.visible = true
 	_push_local_coach()
 	_gui.gui.model.set_value("showToolsInMenuBar", 0)

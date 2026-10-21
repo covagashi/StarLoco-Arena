@@ -33,6 +33,7 @@ extract `DofusArena-v2.70.zip`'s `game/` folder there). Python 3, stdlib only.
 | `spell_sounds.py <spells.json> <data.jar> <sounds.jar> <out.json> <snd_dir> [anm_out.json] [spell_fx.json]` | Extract `Sound.playSound` ids + `invoke()` delays per spell script → `spell_sfx.json`; 6th arg → `anm_scripts.json`; 7th arg → `spell_fx.json` (`Particle.addParticleSystem` ids with `invoke()` timing, anchor `caster`/`target` from `startX`/`destX` locals); copies every referenced ogg |
 | `xps_dump.py <sfx.jar> <xps_json_dir> <fx_png_dir> [xps_index.json]` | Decode `.xps` particle systems (alo_2 layout). Emits per-id JSON when the recursive parse succeeds (WIP — most files still fail EOF), always emits the header index (`textureId`, `durationMs`, blend modes), and exports `particles/<id>.tga` → PNG. Cross-check field names against wakfu-src `EmitterDefinition` / `ParticleModelAttributesRW`. |
 | `anm_scr_patch.py <animations.jar> <anims_root> [set…]` | Backfill `meta.scr` into already-exported `meta.json`s — replays each action's frame walk to collect `pb_1` runScript parts without re-rendering frames |
+| `musics.py <musics.jar> <out_dir>` | The three music tracks (`loading`, `island`, `fight`) → `godot/assets/musics/*.ogg`, read raw by `src/audio/audio.gd` |
 | `test_anm.py` | Parse sweep + render checks (skips if jar absent) |
 
 ## Export layout

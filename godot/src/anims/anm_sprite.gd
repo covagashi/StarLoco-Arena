@@ -282,6 +282,7 @@ func _sfx_player() -> AudioStreamPlayer:
 	if _sfx_pool.is_empty():
 		for i in 8:
 			var p := AudioStreamPlayer.new()
+			p.bus = "SFX"   # the effects volume (src/audio/audio.gd)
 			add_child(p)
 			_sfx_pool.append(p)
 	var p: AudioStreamPlayer = _sfx_pool[_sfx_next]

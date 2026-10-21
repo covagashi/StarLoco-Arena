@@ -14,6 +14,10 @@ extends "res://test/world_smoke.gd"
 ## The `test` coach starts with no tradable cards (islands only): with the
 ## server stopped, add some to server/arena.db, e.g. Weerdtrot 128-137:
 ##   insert into coach_cards(coach_id,template_id,quantity,pos) values(1,128,3,0)
+## If the coach already has a row for that card, raise its quantity instead
+## (update coach_cards set quantity=3 where coach_id=1 and template_id=128):
+## the server never makes two rows of one card, consumes from the first and
+## the client shows one of them, so fusion_smoke's counts would not add up.
 
 # load()ed at run time, not preload()ed: the panel names the I18n autoload,
 # which a -s script cannot resolve while it compiles (see native_panels.gd).

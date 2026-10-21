@@ -13,6 +13,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 I18n="*res://src/i18n/i18n.gd"
 Session="*res://src/session.gd"
+Audio="*res://src/audio/audio.gd"
 
 [display]
 
