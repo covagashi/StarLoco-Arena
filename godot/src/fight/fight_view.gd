@@ -847,7 +847,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var rdir := payload.get_u8()
 			_actor_dir[rfid] = rdir
 			_reface(rfid, rdir)
-			_hud_push()
 		OP_FIGHTER_TACKLED:
 			# [i32 uid][i32 -1][i64 tackled][i64 tackler] — a failed evasion
 			# roll: no 4524 follows, the mover never leaves its cell and the
@@ -1561,6 +1560,10 @@ func _add_event_card(ev: int, evname: String) -> void:
 	lab.text = evname if not evname.is_empty() else "Event %d" % ev
 	lab.add_theme_font_size_override("font_size", 11)
 	card.add_child(lab)
+	# the retail card shows its effects on hover (fightEventCards, S07)
+	card.tooltip_text = NpcDialogs.event_desc(ev)
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.name = "Event%d" % ev
 	strip.add_child(card)
 	for i in strip.get_child_count():
 		var c := strip.get_child(i) as PanelContainer
@@ -1675,7 +1678,6 @@ func _on_turn_begin(fid: int) -> void:
 	info.text = I18n.t("fight.hint_move") if ours else ""
 	_refresh_timeline()
 	_layout_fight_ui.call_deferred()   # the spell row changed width
-	_hud_push()
 	_wire_fight_focus.call_deferred()
 	turn_began.emit(fid, ours)
 
@@ -1935,7 +1937,6 @@ func _refresh_spell_locks() -> void:
 func _refresh_apmp() -> void:
 	_refresh_spell_locks()   # AP debit may have priced spells out
 	_refresh_timeline()      # the medallion shows the live AP/MP
-	_hud_push()
 
 
 ## --- cast-range overlay -----------------------------------------------------
@@ -2242,6 +2243,10 @@ func confirm_placement() -> void:
 		return
 	_placement = false
 	_end_turn.disabled = true
+	# the retail's progressDialog "waitingForOpponents" (jR): until 8028
+	# the other side may still be placing
+	_end_turn.text = I18n.t("fight.waiting")
+	_set_phase("fight.waiting")
 	if State.net != null:
 		State.net.send_message(OP_READY_OBSERVATION, PackedByteArray(), 3)
 
@@ -2852,55 +2857,10 @@ func _send_fighter_dir(fid: int, nxt: int) -> void:
 	State.net.send_message(OP_DIR_CHANGE_REQ, w.raw(), 3)
 
 
-## --- retail fight HUD ------------------------------------------------------
-## XULOR2 fighterControlsDialog mounted bottom-centre, driven by the same
-## State.fighters data the debug TopBar uses. Events come back through
-## _on_gui_event and call the same senders as the wire-test buttons.
-var _gui: GuiLib = null
-var _hud: GWidget = null
-var _hud_tl: GWidget = null
-var _hud_mb: GWidget = null
-var _hud_menu: GWidget = null
+## --- fight result ----------------------------------------------------------
 var _result_modal: Control = null
 var _focus_before_result: Control = null
-var _hud_layer: CanvasLayer = null
 var _ack_pending := false
-
-
-func _mount_fight_hud() -> void:
-	_gui = GuiLib.new(I18n.lang)
-	_gui.event_sink = _on_gui_event
-	_hud_layer = CanvasLayer.new()
-	_hud_layer.layer = 5
-	add_child(_hud_layer)
-	_hud = _gui.open_dialog("fighterControlsDialog")
-	_hud_tl = _gui.open_dialog("timelineDialog")
-	_hud_mb = _gui.open_dialog("fightMenuBarDialog")
-	if _hud != null:
-		_hud_layer.add_child(_hud)
-	if _hud_tl != null:
-		_hud_layer.add_child(_hud_tl)
-		_position_timeline()
-	if _hud_mb != null:
-		_hud_layer.add_child(_hud_mb)
-		_position_menubar()
-		_gui.model.set_value("replayMode", false)
-		_gui.model.set_value("countdown", "")
-		_gui.model.set_value("tools", [])
-		_gui.model.set_value("fight.timeline.currentTableTurn", 1)
-	_position_hud()
-	get_viewport().size_changed.connect(_position_hud)
-	get_viewport().size_changed.connect(_position_timeline)
-	get_viewport().size_changed.connect(_position_menubar)
-
-
-func _position_menubar() -> void:
-	if _hud_mb == null:
-		return
-	var vs := get_viewport().get_visible_rect().size
-	_hud_mb.size = Vector2(vs.x, 500)
-	_hud_mb.position = Vector2(0, vs.y - 500)
-	GuiLayouts.apply(_hud_mb)
 
 
 ## the retail 26321 ack — deferred while the result dialog is up
@@ -2995,165 +2955,6 @@ func _close_fight_result() -> void:
 		_focus_before_result.grab_focus.call_deferred()
 	_focus_before_result = null
 	_end_fight_ack()
-
-
-func _card_items(ids: Array) -> Array:
-	var out: Array = []
-	for cid in ids:
-		out.append({"value": int(cid), "id": int(cid),
-			"illustrationUrl": str(int(cid)), "quantity": 1,
-			"name": CardsDB.name_of(int(cid))})
-	return out
-
-
-func _toggle_fight_menu() -> void:
-	if _gui == null or _hud_layer == null:
-		return
-	if _hud_menu != null and is_instance_valid(_hud_menu):
-		_hud_menu.queue_free()
-		_hud_menu = null
-		return
-	_hud_menu = _gui.open_dialog("fightMenuDialog")
-	if _hud_menu == null:
-		return
-	_hud_layer.add_child(_hud_menu)
-	var vs := get_viewport().get_visible_rect().size
-	_hud_menu.position = (vs - _hud_menu.size) / 2.0
-
-
-func _position_timeline() -> void:
-	if _hud_tl == null:
-		return
-	var vs := get_viewport().get_visible_rect().size
-	_hud_tl.size = Vector2(700, 105)
-	_hud_tl.position = Vector2((vs.x - 700.0) / 2.0, 0.0)
-	GuiLayouts.apply(_hud_tl)
-
-
-func _position_hud() -> void:
-	if _hud == null:
-		return
-	var vs := get_viewport().get_visible_rect().size
-	_hud.size = Vector2(530, 150)
-	_hud.position = Vector2((vs.x - 530.0) / 2.0, vs.y - 150.0)
-	GuiLayouts.apply(_hud)
-
-
-## State.fighters[fid] -> the shape fighterControlsDialog.xml binds.
-func _fighter_gui_model(f: Dictionary) -> Dictionary:
-	var fid := int(f.get("id", _current_fid))
-	var ours: bool = int(f.get("coach", -1)) == State.my_coach_id \
-		and not f.get("summon", false)
-	var spells: Array = []
-	for sid in f.get("spells", []):
-		var sd := int(sid)
-		spells.append({
-			"id": sd,
-			"iconUrl": str(sd),
-			"smallDescription": Spells.name_of(sd),
-			"usable": ours and not _spell_locked(sd) and _spell_affordable(sd),
-			"cooldownInFight": 0,
-		})
-	return {
-		"healthPoints": int(f.get("hp", 0)),
-		"actionPoints": _ap_left,
-		"movePoints": _mp_left,
-		"actorDescriptorLibrary": _anim_set(f),
-		"actorAnimation": "AnimStatique",
-		"actorDirection": int(_actor_dir.get(fid, 5)),
-		"actorMaterial": _fighter_tints(f),
-		"spells": spells,
-		"coachSpells": [],
-		"usableFighterCards": [],
-		"closeCombatUsable": ours and _is_my_turn(),
-		"closeCombatSmallDescription": "",
-	}
-
-
-## Push the acting fighter into the HUD model — called on turn begin and
-## whenever AP/MP/HP/dir move under us.
-func _hud_push() -> void:
-	if _gui == null:
-		return
-	var f: Dictionary = State.fighters.get(_current_fid, {})
-	if f.is_empty():
-		return
-	_gui.model.set_value("fight.timeline.currentFighter",
-		_fighter_gui_model(f))
-	_gui.model.set_value("fight.endTurnState",
-		_is_my_turn() and not State.spectating)
-	_gui.model.set_value("fight.timeline.display", true)
-	_gui.model.set_value("fight.timeline.fighters", _timeline_items())
-	_gui.model.set_value("fight.status",
-		"action" if _is_my_turn() else "")
-	_gui.model.set_value("countdown",
-		str(int(_turn_left)) if _turn_left > 0 else "")
-
-
-## timelineDialog's per-fighter item shape (initiative order = the 8000
-## timeline array). Icon resolves to breeds/fightTimeline/<id>.png —
-## players are breed*10, summons/looks the raw look id.
-func _timeline_items() -> Array:
-	var items: Array = []
-	for fid in State.fight_data.get("timeline", []):
-		var f: Dictionary = State.fighters.get(fid, {})
-		if f.is_empty():
-			continue
-		var look := int(f.get("look", 0))
-		var breed := int(f.get("breed", 0))
-		var icon := str(breed * 10) if breed > 0 else str(-look if look < 0 else look)
-		items.append({
-			"teamId": int(f.get("team", 0)),
-			"name": str(f.get("name", "")),
-			"timelineIconUrl": icon,
-			"timelineButtonStyle": "",
-			"hasBuff": not f.get("buffs", []).is_empty() \
-				if f.has("buffs") else false,
-			"isSummoned": bool(f.get("summon", false)),
-			"runningEffects": [],
-			"nextTableTurn": 0,
-			"hideInTimeline": _dead.get(int(fid), false),
-			"fid": int(fid),
-		})
-	return items
-
-
-func _on_gui_event(ns: String, method: String, args: Array, _w) -> void:
-	match method:
-		"fighterEndsTurn":
-			request_end_turn()
-		"fighterSelectCloseCombat":
-			_on_spell_button(-2)
-		"fighterSelectSpell":
-			var sp = args[1] if args.size() > 1 else null
-			if sp is Dictionary:
-				_on_spell_button(int(sp.get("id", -1)))
-		"fighterSelectFighterCard":
-			var cd = args[1] if args.size() > 1 else null
-			if cd is Dictionary:
-				_on_card_button(int(cd.get("id", -1)))
-		"fighterSetNorthWestDirection":
-			_send_fighter_dir(_face_target(), 7)
-		"fighterSetNorthEastDirection":
-			_send_fighter_dir(_face_target(), 1)
-		"fighterSetSouthWestDirection":
-			_send_fighter_dir(_face_target(), 5)
-		"fighterSetSouthEastDirection":
-			_send_fighter_dir(_face_target(), 3)
-		"openCloseFighterInformations":
-			var it = args[0] if args.size() > 0 else null
-			if it is Dictionary and it.has("fid"):
-				_on_timeline_chip(int(it["fid"]))
-		"giveUpFight":
-			# 18000 C2S empty — the server settles it as a forfeit
-			if State.net != null:
-				State.net.send_message(18000, PackedByteArray(), 3)
-		"openCloseFightMenuDialog":
-			_toggle_fight_menu()
-		"closeFightResultDialog", "quit":
-			_close_fight_result()
-		"disconnect":
-			get_tree().change_scene_to_file("res://src/main.tscn")
 
 
 ## World pixel -> grid cell: nearest ground-cell center within a cell diag.

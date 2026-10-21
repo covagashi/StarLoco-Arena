@@ -261,6 +261,7 @@ func _ready() -> void:
 	_gui.native_factories["fightReportDialog"] = _make_report_panel
 	_gui.native_factories["exchangeDialog"] = _make_exchange_panel
 	_gui.native_factories["askDialog"] = _make_ask_panel
+	_gui.native_factories["coachLevelUpDialog"] = _make_level_up_panel
 	_gui.native_factories["teamPickDialog"] = _make_team_pick_panel
 	_gui.native_factories["kanodoDialog"] = _make_kanodo_panel
 	_gui.native_factories["coachEquipDialog"] = _make_equip_panel
@@ -765,26 +766,15 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# Lobby roster (et_2 blobs) — fills the selectable fighter list.
 			var d := Codec.decode(opcode, payload)
 			State.roster = d.get("fighters", [])
-			var names := []
-			for f in State.roster:
-				# state: 0 titular, 1 bench, 2 dead, 3 graveyard, 4/5 legendary
-				var st := int(f.get("state", 0))
-				var tag: String = {1: " [bench]", 2: " [dead]",
-					3: " [graveyard]", 4: " [legendary]",
-					5: " [legendary bench]"}.get(st, "")
-				var label := "%s (%s)%s" % [f.get("name", "?"),
-					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0))), tag]
-				names.append(label)
-			_log_line(I18n.t("lobby.roster", {"list": ", ".join(names)})
-				if not names.is_empty() else I18n.t("lobby.roster_empty"))
+			# the Team panel lists them; the chat only says when there are none
+			# (S07: it used to print the whole roster on every push)
+			if State.roster.is_empty():
+				_log_line(I18n.t("lobby.roster_empty"))
 			_settle_revive()
 			_push_team_model()
 		OP_TEAM_PRESETS:
 			var d := Codec.decode(opcode, payload)
 			State.presets = d.get("presets", [])
-			var real := State.presets.filter(func(p): return int(p.type) != -4)
-			_log_line(I18n.t("lobby.presets", {"n": real.size(),
-				"shown": State.presets.size()}))
 		OP_FIGHTER_CREATE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
@@ -1033,7 +1023,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_equip_draft = _equip_slots.duplicate()
 			if _gui.is_open("coachEquipDialog"):
 				_push_equip_model()
-			_log_line(I18n.t("inv.stacks", {"n": State.inventory.size()}))
 			if _gui.is_open("cardMasterDialog"):
 				_push_cardmaster_model()
 			if _gui.is_open("fusionLabDialog"):
@@ -1131,8 +1120,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_tourn_rows[int(r0.get("id", -1))] = r0
 			if _gui.is_open("calendarDialog"):
 				_push_calendar_model()
-			else:
-				_log_line(I18n.t("tourn.count", {"n": rows.size()}))
 		OP_TOURN_REG_RES:
 			var d := Codec.decode(opcode, payload)
 			var tid := int(d.tournament_id)
@@ -1327,7 +1314,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_mails = d.mails
 			_mail_loading = false
-			_log_line(I18n.t("mail.count", {"n": _mails.size()}))
 			if _gui.is_open("mailboxDialog"):
 				_push_mail_model()
 		OP_MAIL_NAME_RES:
@@ -4469,13 +4455,14 @@ func _local_coach_model() -> Dictionary:
 		"actorMaterial": Palettes.coach_tints(
 			int(look.get("skin", 0)), int(look.get("hair", 0))),
 		"standing": State.coach_standing,
-		"standingForProgressBar": State.coach_standing,
-		"standingNeededForNextLevel": 0,
+		"standingForProgressBar": _standing_bar(),
+		"standingNeededForNextLevel": State.standing_for_level(
+			State.coach_level(State.coach_standing) + 1),
 		"strenght": 0,
 		"strengthForProgressBar": 0,
 		"strengthNeededForNextLevel": 0,
 		"tournamentToken": State.coach_tournament_points,
-		"level": 0,
+		"level": State.coach_level(State.coach_standing),
 		"rankIconUrl": "", "guildRankIconUrl": "",
 		"statisticsTotalPlayTime": int(cs.get(1, 0)),
 		"statisticsTotalFightsTime": int(cs.get(2, 0)),
@@ -4493,6 +4480,17 @@ func _local_coach_model() -> Dictionary:
 
 func _push_local_coach() -> void:
 	_gui.gui.model.set_value("localCoach", _local_coach_model())
+
+
+## The retail's standingForProgressBar (sj_1): the share of the current
+## level still to go, 100 → 0 — its bar fills from the right.
+func _standing_bar() -> int:
+	var lvl := State.coach_level(State.coach_standing)
+	var lo := State.standing_for_level(lvl)
+	var hi := State.standing_for_level(lvl + 1)
+	if hi <= lo:
+		return 0
+	return 100 - roundi(float(State.coach_standing - lo) / float(hi - lo) * 100.0)
 
 
 ## menuBarDialog binds (equipedEmotes + name today; more land as screens port).
@@ -4684,6 +4682,13 @@ func _make_kanodo_panel(_panel_name: String) -> Control:
 
 func _make_team_pick_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/team_pick_panel.gd").new()
+	panel.model = _gui.gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
+func _make_level_up_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/level_up_panel.gd").new()
 	panel.model = _gui.gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
@@ -5446,6 +5451,13 @@ func _show_fight_result() -> void:
 	State.fight_result = {}
 	if r.is_empty():
 		return
+	# 8300 carries the standing won; the absolute value only comes with the
+	# login 2052, so keep it here. Crossing a level pops the retail
+	# coachLevelUpDialog once the report is closed (WE.java).
+	var level_before := State.coach_level(State.coach_standing)
+	State.coach_standing += int(r.get("standing", 0))
+	var level_now := State.coach_level(State.coach_standing)
+	_push_local_coach()
 	var me := int(State.my_coach_id)
 	var in_win: bool = r.get("win_str", {}).has(me)
 	var in_lose: bool = r.get("lose_str", {}).has(me)
@@ -5499,7 +5511,10 @@ func _show_fight_result() -> void:
 	_gui.gui.model.set_value("fightReport", {"outcome": outcome,
 		"summary": summary, "coaches": coaches, "fighters": fighters,
 		"cards": cards})
-	_gui.open("fightReportDialog")
+	var report := _gui.open("fightReportDialog")
+	if level_now > level_before and report != null:
+		_gui.gui.model.set_value("levelUp", {"level": level_now})
+		report.closed.connect(func(): _gui.open("coachLevelUpDialog"), CONNECT_ONE_SHOT)
 
 
 ## The retail graveyard element: the fallen fighters are a section of the

@@ -56,6 +56,8 @@ def localized(raw: dict, texts: str) -> dict:
         "criterionNames": {str(k): v for k, v in table(texts, 48).items()},
         "summonNames": {str(k): v for k, v in table(texts, 10).items()},
         "eventNames": {str(k): v for k, v in table(texts, 8).items()},
+        "eventDescs": {str(k): v for k, v in table(texts, 27).items()},
+        "eventLore": {str(k): v for k, v in table(texts, 9).items()},
     }
 
 
@@ -97,6 +99,13 @@ def main() -> None:
         # per-round event-card names index content.8 (tO title) — the 8100
         # tail carries the drawn eventId for display only.
         "eventNames": {str(k): v for k, v in table(texts, 8).items()},
+        # and their effects + duration, content.27 (the retail card's
+        # description on hover, fightEventCards). Only 15 of the 51 carry
+        # one: for the rest the retail writes the effect list out of the
+        # event's effects (tO.getDescription -> asf_0); until we do, the
+        # card's flavour text, content.9, stands in.
+        "eventDescs": {str(k): v for k, v in table(texts, 27).items()},
+        "eventLore": {str(k): v for k, v in table(texts, 9).items()},
     }
     json.dump(out, open(out_path, "w"), ensure_ascii=False)
     print("wrote", out_path, "groups:", len(groups), "names:", len(names),

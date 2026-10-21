@@ -28,7 +28,7 @@ makes the (white) menu icon atlas.
 
 ## Current data limits
 
-The existing localCoach producer supplies level 0 and an empty equipped-emote list; no coach-level State field exists yet. Tools are read from localCoach.tools or the retail top-level tools model. Registered item handlers receive a GWidget item context. Known emotes use the existing retail 4701 layout and incoming animation names display as bubbles. This checkout has no persisted emote-unequip handler or native retail tool executor; unavailable actions show an explicit message.
+The localCoach producer derives the coach level from State.coach_standing (2052 at login plus each 8300's standing won) with the retail formula (State.coach_level, S07) and supplies an empty equipped-emote list. Tools are read from localCoach.tools or the retail top-level tools model. Registered item handlers receive a GWidget item context. Known emotes use the existing retail 4701 layout and incoming animation names display as bubbles. This checkout has no persisted emote-unequip handler or native retail tool executor; unavailable actions show an explicit message.
 
 ## Validation
 

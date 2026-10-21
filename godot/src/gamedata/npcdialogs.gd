@@ -34,6 +34,8 @@ static var _crit_names := {}  # criterion id int -> String (content.48)
 static var _summons := {}     # summon template id int -> {hp, ap, mp, look}
 static var _summon_names := {} # summon id int -> String (content.10)
 static var _event_names := {}  # event card id int -> String (content.8)
+static var _event_descs := {}  # event card id int -> effects + duration (content.27)
+static var _event_lore := {}   # event card id int -> flavour text (content.9)
 static var _loc := {}         # lang -> {table -> {id int -> text / group}}
 static var _loaded := false
 
@@ -78,6 +80,10 @@ static func _ensure() -> void:
 		_summon_names[int(sid)] = data.summonNames[sid]
 	for eid in _dict(data.get("eventNames")):
 		_event_names[int(eid)] = data.eventNames[eid]
+	for eid in _dict(data.get("eventDescs")):
+		_event_descs[int(eid)] = data.eventDescs[eid]
+	for eid in _dict(data.get("eventLore")):
+		_event_lore[int(eid)] = data.eventLore[eid]
 	for l in _dict(data.get("locales")):
 		var tables := {}
 		for t in _dict(data.locales[l]):
@@ -142,6 +148,16 @@ static func summon_name(id: int) -> String:
 static func event_name(id: int) -> String:
 	_ensure()
 	return str(_tr("eventNames", id, _event_names, ""))
+
+
+## The event card's hover text: what it does and for how long ("Efectos: …
+## / Duración: 1 turno", content.27) where the retail ships it — 15 of 51.
+## The retail builds the rest from the event's effects (asf_0); until then
+## the card's flavour text (content.9). "" for a table exported before S07.
+static func event_desc(id: int) -> String:
+	_ensure()
+	var d := str(_tr("eventDescs", id, _event_descs, ""))
+	return d if d != "" else str(_tr("eventLore", id, _event_lore, ""))
 
 
 ## Client `aau_1.a` / `sj_1.c`: an achievement is complete when EVERY stat

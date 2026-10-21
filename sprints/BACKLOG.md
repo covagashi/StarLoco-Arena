@@ -89,6 +89,9 @@ qué el visual no puede correr en CI).
 
 ## 2. Pendientes GUI (fidelidad retail)
 
+> Sin objeto desde S18: los diálogos XML del retail ya no se ven (ver
+> [`S07`](./S07-gui-fidelity.md), "Descartado"). Se deja como referencia.
+
 - [ ] Diálogos que sigan viéndose beige plano → auditar qué refs del theme no resuelven
       (script headless que liste `border`/`bg`/`font`/`color`/`texture` sin target) y
       mapear a `appSkin`/atlases.

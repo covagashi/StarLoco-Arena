@@ -22,6 +22,8 @@ var finished := false
 var _done_ok := false
 var fight_scene: Node2D = null
 var _combat_seen := false
+var _waiting_seen := false   # S07: Ready → "Esperando a los rivales…"
+var _event_desc_ok := false  # S07: the event card's effects on hover
 var _card_landed := false
 var _timeline_checked := false
 var _faced := false
@@ -127,6 +129,12 @@ func _show_fight() -> void:
 		await create_timer(1.0).timeout
 		wait += 1.0
 	await create_timer(3.0).timeout
+	if not _waiting_seen:
+		_finish(1, "FAIL Ready did not say it waits for the opponents")
+		return
+	if not _event_desc_ok:
+		_finish(1, "FAIL the event card has no description on hover")
+		return
 	_done_ok = true
 	_finish(0, "fight rendered")
 
@@ -156,7 +164,11 @@ func _on_placement() -> void:
 			break
 	create_timer(0.6).timeout.connect(func():
 		if fight_scene != null and not finished:
-			fight_scene.confirm_placement())
+			fight_scene.confirm_placement()
+			# S07: Ready turns into "waiting for opponents" until the 8028
+			var b: Button = fight_scene._end_turn
+			_waiting_seen = b.disabled and b.text == root.get_node("I18n").t("fight.waiting")
+			print("[smoke] ready -> button '%s' disabled=%s" % [b.text, b.disabled]))
 
 
 ## turn_began policy for the harness: one short move request, then pass.
@@ -280,6 +292,10 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		if nc > 0:
 			last_txt = (strip.get_child(nc - 1).get_child(0) as Label).text
 		print("[smoke] EVENT CARDS n=%d last='%s'" % [nc, last_txt])
+		# S07: hovering the card tells what the event does
+		var tip: String = strip.get_child(nc - 1).tooltip_text if nc > 0 else ""
+		_event_desc_ok = tip != "" and tip == NpcDialogs.event_desc(14)
+		print("[smoke] EVENT CARD tooltip '%s'" % tip.replace("\n", " / "))
 		if nc == 0 or last_txt != NpcDialogs.event_name(14):
 			push_error("event card strip: expected '%s', got n=%d '%s'" % [
 				NpcDialogs.event_name(14), nc, last_txt])

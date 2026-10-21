@@ -31,8 +31,20 @@ static var my_coach_name := "me"
 ## Our coach paper-doll appearance from 2052 CoachInfo — {skin, hair, sex}
 ## (apH/agl_0 indices on channels 1/2, body file 700<sex>).
 static var my_coach_look := {}
-static var coach_standing := 0           # 2052 i32 standing
+static var coach_standing := 0           # 2052 i32 standing, + each 8300's
 static var coach_tournament_points := 0  # 2052 i32
+
+
+## Coach level from standing — the retail's aet_0.nJ (the server's
+## StandingToLevel): max(1, min(floor(sqrt(standing / 10)), 50)). The Java
+## divides as integers first; for whole squares that floors the same.
+static func coach_level(standing: int) -> int:
+	return clampi(int(sqrt(maxi(standing, 0) / 10.0)), 1, 50)
+
+
+## Standing a coach needs to reach `level` (nr_0.ct): level 1 is free.
+static func standing_for_level(level: int) -> int:
+	return 0 if level <= 1 else level * level * 10
 
 ## Fighter roster from the lobby burst (6006 FighterInformationList):
 ## [{id, name, breed, sex, type, spells, cards, ...}] — et_2 blobs decoded.

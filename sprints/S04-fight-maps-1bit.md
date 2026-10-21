@@ -105,6 +105,15 @@ herramienta): `pixel_size`, `black_point`/`white_point`, `gamma`, `detail` y
 - [x] `test/fight_ui_preview.tscn` también con el filtro encendido (ver
       "Estado al pausar").
 
+### 4b. Color de los mapas en el estilo original (de S07, 2026-10-21)
+
+- [ ] El retail tiñe cada elemento del mapa (tinte por elemento en `gfx/*.jar`,
+      70 % de los elementos de arena) y le suma luz horneada (`light/*.jar`);
+      `map_gfx` lo ignora y las arenas salen más planas y claras. Falta
+      confirmar la mezcla (¿texel × 2·tinte × luz?) contra una captura del
+      retail y exportar el color por sprite. Formato en
+      [`client/analysis/MAP-LIGHT.md`](../client/analysis/MAP-LIGHT.md).
+
 ### 5. Pasadas artísticas
 
 - [ ] Mapas de referencia elegidos por el dueño del proyecto.

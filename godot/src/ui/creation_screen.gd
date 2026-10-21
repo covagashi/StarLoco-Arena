@@ -253,9 +253,9 @@ func _round(r: Rect2, text: String, cb: Callable, hint_key: String) -> Button:
 func _relayout() -> void:
 	if _box == null:
 		return
+	# full-rect anchors already size the screen to the viewport; setting
+	# size here too only made Godot warn (the old S07 anchor warnings)
 	var vp := get_viewport_rect().size
-	position = Vector2.ZERO
-	size = vp
 	var s := minf(vp.x / REF.x, vp.y / REF.y)
 	_box.scale = Vector2(s, s)
 	_box.position = (vp - REF * s) / 2.0

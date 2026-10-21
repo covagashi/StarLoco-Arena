@@ -53,6 +53,8 @@ func _audit() -> void:
 	await create_timer(1.0).timeout
 	await _evolution_rows()
 	await create_timer(0.5).timeout
+	await _level_up()
+	await create_timer(0.5).timeout
 	await _normal_path()
 	i18n.set_locale(_lang_before)
 
@@ -90,6 +92,56 @@ func _evolution_rows() -> void:
 	if panel != null:
 		panel.find_child("Continue", true, false).pressed.emit()
 		await create_timer(0.3).timeout
+
+
+## S07: a fight whose standing crosses a level. The lobby shows the level
+## from the standing (it was a hard-coded 0) and, once the report is closed,
+## the native level-up notice pops with the new level. Client-side only:
+## the standing is put back afterwards.
+func _level_up() -> void:
+	var standing_before := int(State.coach_standing)
+	var lvl := int(State.coach_level(standing_before))
+	var shown_before: String = _main._lobby_screen._level.text
+	# just short of the next level, then a fight that wins 25
+	State.coach_standing = State.standing_for_level(lvl + 1) - 10
+	State.fight_result = {"winners": [{"id": int(State.my_coach_id)}], "losers": [{"id": 999}],
+		"win_str": {}, "lose_str": {}, "standing": 25, "won_cards": [], "reports": []}
+	_main._show_fight_result()
+	await create_timer(0.6).timeout
+	var lobby_level: String = _main._lobby_screen._level.text
+	var report = _main._gui.dialogs.get("fightReportDialog")
+	var early: bool = _main._gui.is_open("coachLevelUpDialog")
+	if report != null:
+		report.find_child("Continue", true, false).pressed.emit()
+	await _wait(func(): return _main._gui.is_open("coachLevelUpDialog"), 2.0)
+	await create_timer(0.6).timeout
+	var p = _main._gui.dialogs.get("coachLevelUpDialog")
+	var shown: String = p.find_child("Level", true, false).text if p != null else "—"
+	_record(8300, "level up", not early and p != null and shown == str(lvl + 1)
+		and lobby_level == I18n_t("lobby.level", {"n": lvl + 1}),
+		"lobby '%s' → '%s'; after the report, the notice says %s (want %d)" % [
+			shown_before, lobby_level, shown, lvl + 1])
+	await _shot("level-up")
+	if p != null:
+		p.find_child("Continue", true, false).pressed.emit()
+		await create_timer(0.3).timeout
+	# a fight that crosses nothing: no notice
+	State.fight_result = {"winners": [], "losers": [], "win_str": {}, "lose_str": {},
+		"standing": 1, "won_cards": [], "reports": []}
+	_main._show_fight_result()
+	await create_timer(0.4).timeout
+	report = _main._gui.dialogs.get("fightReportDialog")
+	if report != null:
+		report.find_child("Continue", true, false).pressed.emit()
+	await create_timer(0.6).timeout
+	_record(8300, "no level up", not _main._gui.is_open("coachLevelUpDialog"),
+		"+1 standing inside a level: no notice")
+	State.coach_standing = standing_before
+	_main._push_local_coach()
+
+
+func I18n_t(key: String, args := {}) -> String:
+	return root.get_node("I18n").t(key, args)
 
 
 func _normal_path() -> void:

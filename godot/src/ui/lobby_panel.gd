@@ -29,6 +29,9 @@ func _ready() -> void:
 	# 1-bit (S18): a dither shade instead of a translucent one, and a
 	# black window with a hard white shadow.
 	_shade = OneBit.shade()
+	# sized by hand in _layout (see there), so no full-rect anchors: they
+	# would make every size assignment warn
+	_shade.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	add_child(_shade)
 	frame = PanelContainer.new()
 	frame.theme = _theme()
