@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestPostFightDoesNotClobberConcurrentXP covers the ROOT CAUSE behind the free
@@ -16,7 +16,7 @@ import (
 // fight ran was silently reverted at fight end. That is how a mid-fight sphere
 // purchase got its XP refunded while the fighter_spheres rows survived.
 func TestPostFightDoesNotClobberConcurrentXP(t *testing.T) {
-	st, err := store.Open(t.TempDir() + "/stale.db")
+	st, err := storetest.Open(t, t.TempDir()+"/stale.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestBuildFightTeamRefusesIllegalRoster proves the CHOKE POINT applies the rules,
@@ -16,7 +16,7 @@ import (
 // mutation removing the whole validation survived. Calling buildFightTeamFor
 // directly is deterministic and actually exercises the gate.
 func TestBuildFightTeamRefusesIllegalRoster(t *testing.T) {
-	st, err := store.Open(t.TempDir() + "/roster.db")
+	st, err := storetest.Open(t, t.TempDir()+"/roster.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestBuildFightTeamRefusesIllegalRoster(t *testing.T) {
 // team cost cap the client checks (and, on two paths, only WARNS about while
 // still submitting - so even honest clients relied on the server here).
 func TestBuildFightTeamRefusesOverBudget(t *testing.T) {
-	st, err := store.Open(t.TempDir() + "/budget.db")
+	st, err := storetest.Open(t, t.TempDir()+"/budget.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

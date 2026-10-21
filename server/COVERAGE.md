@@ -456,7 +456,7 @@ missing feature manifests to the client as a *hang*. Prioritized:
   before that it was a free mid-fight teleport to any coordinate.
 
 **E2E gaps** (impl + audited, no end-to-end test yet):
-- FighterInformationList (6006), TeamPresetList (6030) round-trips.
+- (none of the two listed here before: 6006/6030 round-trip is `TestTeamPresetRoundTrip`, S08)
 - Covered since: whisper (3155/3204), friends add/remove (3129/33/56/60),
   fighter create/delete (6001/6000/6003), team save/delete (6021/6023),
   ignore add/remove (3131/35/58/62), inventory request+equip (5203/5201/5200),

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestFighterStateToggleRespectsCapacity drives handleFighterSetState's guard,
@@ -16,7 +16,7 @@ import (
 // only from a `max` argument one caller passed - nothing stopped the stored
 // line-up itself from growing.
 func TestFighterStateToggleRespectsCapacity(t *testing.T) {
-	st, err := store.Open(t.TempDir() + "/states.db")
+	st, err := storetest.Open(t, t.TempDir()+"/states.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestFighterStateToggleRespectsCapacity(t *testing.T) {
 // having no capacity concept - which is exactly how the bench, titular and
 // legendary caps went missing while the graveyard was enforced.
 func TestStateIsFullCoversEveryCappedState(t *testing.T) {
-	st, err := store.Open(t.TempDir() + "/states2.db")
+	st, err := storetest.Open(t, t.TempDir()+"/states2.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestRollResurrect covers the roll itself: deterministic boundaries and a
@@ -41,7 +42,7 @@ func TestRollResurrect(t *testing.T) {
 // card (type 10) whose 1% "come back during a fight" effect must not work here.
 func resurrectHarness(t *testing.T) (*Session, *domain.Coach, *store.Store) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "res.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "res.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

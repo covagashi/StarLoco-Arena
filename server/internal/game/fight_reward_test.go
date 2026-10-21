@@ -4,13 +4,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestFightWinAwardsTokens: when a fight ends, the winning coach is credited the
 // token faucet reward, persisted to the store.
 func TestFightWinAwardsTokens(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "reward.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "reward.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

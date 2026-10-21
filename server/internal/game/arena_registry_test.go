@@ -7,37 +7,41 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
 
-// loadArenaRegistry builds the registry from the real map data, restoring it after
-// the test so the package-wide fallback is not left mutated.
-func loadArenaRegistry(t *testing.T) int {
+// loadArenaRegistry builds a registry from the real map data on a fresh Deps,
+// which also keeps it from leaking into any other test.
+func loadArenaRegistry(t *testing.T) *Deps {
 	t.Helper()
+	// a local data/ copy if there is one, else the committed data-dist
 	maps, err := gamedata.LoadFightMaps(filepath.Join("..", "..", "data"))
+	if err != nil {
+		maps, err = gamedata.LoadFightMaps(filepath.Join("..", "..", "data-dist"))
+	}
 	if err != nil {
 		t.Skipf("map data not available: %v", err)
 	}
-	prevCache, prevIDs := arenaCache, arenaIDs
-	t.Cleanup(func() {
-		arenaMu.Lock()
-		arenaCache, arenaIDs = prevCache, prevIDs
-		arenaMu.Unlock()
-	})
-	(&Deps{FightMaps: maps}).initArenas()
-	return loadedArenaCount()
+	d := &Deps{FightMaps: maps}
+	d.initArenas()
+	return d
+}
+
+// arenaIDsOf snapshots the registry's sorted ids.
+func arenaIDsOf(d *Deps) []uint16 {
+	d.arenas.mu.RLock()
+	defer d.arenas.mu.RUnlock()
+	return append([]uint16{}, d.arenas.ids...)
 }
 
 // TestArenaRegistryLoadsEveryMap: every shipped arena becomes a usable game arena
 // with start cells on real floor at the altitude the client expects.
 func TestArenaRegistryLoadsEveryMap(t *testing.T) {
-	n := loadArenaRegistry(t)
-	if n != 47 {
+	d := loadArenaRegistry(t)
+	if n := d.loadedArenaCount(); n != 47 {
 		t.Errorf("registry holds %d arenas, want 47", n)
 	}
-	arenaMu.RLock()
-	ids := append([]uint16{}, arenaIDs...)
-	arenaMu.RUnlock()
+	ids := arenaIDsOf(d)
 
 	for _, id := range ids {
-		a := arenaByID(id)
+		a := d.arenaByID(id)
 		if a == nil {
 			t.Fatalf("arena %d missing", id)
 		}
@@ -63,13 +67,11 @@ func TestArenaRegistryLoadsEveryMap(t *testing.T) {
 // TestArenaGridIsWellFormedForEveryMap: the streamed fight grid must classify each
 // cell as floor / scenery / void, and every special cell must sit on real floor.
 func TestArenaGridIsWellFormedForEveryMap(t *testing.T) {
-	loadArenaRegistry(t)
-	arenaMu.RLock()
-	ids := append([]uint16{}, arenaIDs...)
-	arenaMu.RUnlock()
+	d := loadArenaRegistry(t)
+	ids := arenaIDsOf(d)
 
 	for _, id := range ids {
-		a := arenaByID(id)
+		a := d.arenaByID(id)
 		floor := 0
 		for y := a.minY; y < a.minY+a.height; y++ {
 			for x := a.minX; x < a.minX+a.width; x++ {
@@ -110,10 +112,8 @@ func TestArenaGridIsWellFormedForEveryMap(t *testing.T) {
 // not a package-wide default. Two fights on different arenas must not interfere,
 // and sudden death must collapse toward each one's own centre.
 func TestFightsUseTheirOwnArena(t *testing.T) {
-	loadArenaRegistry(t)
-	arenaMu.RLock()
-	ids := append([]uint16{}, arenaIDs...)
-	arenaMu.RUnlock()
+	d := loadArenaRegistry(t)
+	ids := arenaIDsOf(d)
 	if len(ids) < 2 {
 		t.Skip("need at least two arenas")
 	}
@@ -121,7 +121,7 @@ func TestFightsUseTheirOwnArena(t *testing.T) {
 	// Pick two arenas with different centres so the difference is observable.
 	var a1, a2 *arena
 	for _, id := range ids {
-		a := arenaByID(id)
+		a := d.arenaByID(id)
 		if a1 == nil {
 			a1 = a
 			continue
@@ -163,13 +163,11 @@ func TestFightsUseTheirOwnArena(t *testing.T) {
 // TestSuddenDeathWorksOnEveryArena: the collapse must terminate and leave a core on
 // every shipped map, not just world 5 — the schedule is derived per arena.
 func TestSuddenDeathWorksOnEveryArena(t *testing.T) {
-	loadArenaRegistry(t)
-	arenaMu.RLock()
-	ids := append([]uint16{}, arenaIDs...)
-	arenaMu.RUnlock()
+	d := loadArenaRegistry(t)
+	ids := arenaIDsOf(d)
 
 	for _, id := range ids {
-		a := arenaByID(id)
+		a := d.arenaByID(id)
 		sched := suddenDeathSchedule(a, mapDestructionNy, mapDestructionNz)
 		if len(sched) == 0 {
 			t.Errorf("arena %d has an empty collapse schedule", id)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 	"gorm.io/gorm"
 )
 
@@ -15,7 +15,7 @@ import (
 // queries, so an in-memory-only fixture cannot exercise it.
 func socialCapSession(t *testing.T, name string) (*Session, *Deps) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "social.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "social.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

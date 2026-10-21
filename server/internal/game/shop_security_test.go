@@ -7,7 +7,7 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestUnpricedCardsAreNotPurchasable is the SECURITY regression for free card
@@ -77,7 +77,7 @@ func TestStockedIsNotTheSameAsPurchasable(t *testing.T) {
 // A priced card from the same set is bought normally, so a refusal cannot be
 // an unrelated failure of the harness.
 func TestShopBuyRefusesUnpricedCardOnTheWire(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "shop.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "shop.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

@@ -356,104 +356,19 @@ func requestedPort(addr string) int {
 // Missing or unreadable data is survivable: the server starts, and only real
 // fights are unavailable.
 func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps, gamedata.Location) {
-	var (
-		cards         *gamedata.Cards
-		spells        *gamedata.Spells
-		fighterCards  *gamedata.FighterCards
-		summonings    *gamedata.Summonings
-		staticEffects *gamedata.StaticEffects
-		challengeDefs *gamedata.Challenges
-		events        *gamedata.Events
-		achievements  *gamedata.Achievements
-		cardSets      *gamedata.CardSets
-		fusionLabs    *gamedata.FusionLabs
-		mapBonuses    *gamedata.MapBonuses
-		drawTable     *gamedata.DrawTable
-		tournDefs     *gamedata.Tournaments
-		sphereBoards  *gamedata.SphereBoards
-		equipPools    *gamedata.EquipmentPools
-		conditions    *gamedata.Conditions
-	)
-
 	// The client keeps the record store and the arenas in two different
 	// directories, so locate them independently rather than demanding a
 	// hand-merged folder.
 	loc := gamedata.Discover(cfg.DataDir)
-
-	// Fight arenas come from the client's own map files rather than the bdat
-	// store, so they load independently: a server without them still runs,
-	// falling back to the built-in world 5.
-	var fightMaps *gamedata.FightMaps
-	if loc.MapsRoot != "" {
-		fm, err := gamedata.LoadFightMaps(loc.MapsRoot)
-		if err != nil {
-			log.Debug("fight maps not loaded; falling back to the built-in arena",
-				"dir", loc.MapsRoot, "err", err)
-		} else {
-			fightMaps = fm
-			log.Debug("fight maps loaded", "arenas", fm.Len(),
-				"skipped", fm.Skipped(), "unreachableSpecials", fm.UnreachableSpecials())
-		}
-	}
-
-	if gdStore, err := gamedata.Open(loc.BdatDir); err != nil {
-		log.Debug("game data not loaded", "dir", loc.BdatDir, "err", err)
-	} else {
-		if cards, err = gdStore.LoadCards(); err != nil {
-			log.Warn("card load failed", "err", err)
-		}
-		if spells, err = gdStore.LoadSpells(); err != nil {
-			log.Warn("spell load failed", "err", err)
-		}
-		if fighterCards, err = gdStore.LoadFighterCards(); err != nil {
-			log.Warn("fighter-card load failed", "err", err)
-		}
-		if summonings, err = gdStore.LoadSummonings(); err != nil {
-			log.Warn("summoning load failed", "err", err)
-		}
-		if staticEffects, err = gdStore.LoadStaticEffects(); err != nil {
-			log.Warn("static-effect load failed", "err", err)
-		}
-		if challengeDefs, err = gdStore.LoadChallenges(); err != nil {
-			log.Warn("challenge load failed", "err", err)
-		}
-		if events, err = gdStore.LoadEvents(); err != nil {
-			log.Warn("event-card load failed", "err", err)
-		}
-		if cardSets, err = gdStore.LoadCardSets(); err != nil {
-			log.Warn("card-set load failed", "err", err)
-		}
-		if achievements, err = gdStore.LoadAchievements(); err != nil {
-			log.Warn("achievement load failed", "err", err)
-		}
-		if conditions, err = gdStore.LoadConditions(); err != nil {
-			log.Warn("fighter-condition load failed", "err", err)
-		}
-		if fusionLabs, err = gdStore.LoadFusionLabs(); err != nil {
-			log.Warn("fusion-lab load failed", "err", err)
-		}
-		if mapBonuses, err = gdStore.LoadMapBonuses(); err != nil {
-			log.Warn("map-bonus load failed", "err", err)
-		}
-		// The drop table derives only from the card set, so it can build
-		// straight from what LoadCards just produced.
-		drawTable = gamedata.NewDrawTable(cards, nil)
-		if tournDefs, err = gdStore.LoadTournaments(); err != nil {
-			log.Warn("tournament-definition load failed", "err", err)
-		}
-		if sphereBoards, err = gdStore.LoadSphereBoards(); err != nil {
-			log.Warn("sphere-board load failed", "err", err)
-		}
-		if equipPools, err = gdStore.LoadEquipmentPools(); err != nil {
-			log.Warn("equipment-pool load failed", "err", err)
-		}
-		log.Debug("game data loaded", "cards", cardsLen(cards), "spells", spellsLen(spells),
-			"fighterCards", fighterCardsLen(fighterCards), "summonings", summoningsLen(summonings),
-			"staticEffects", staticEffectsLen(staticEffects), "challenges", challengeDefs.Len(),
-			"eventCards", events.Len(), "cardSets", cardSets.Len(), "achievements", achievements.Len(),
-			"conditions", conditions.Len(), "fusionLabs", fusionLabs.Len(), "tournamentDefs", tournDefs.Len(),
-			"sphereBoards", sphereBoards.BoardCount(), "spheres", sphereBoards.Len(),
-			"equipmentPools", equipPools.Len())
+	data := gamedata.LoadBundle(loc, log)
+	if data.Cards != nil {
+		log.Debug("game data loaded", "cards", cardsLen(data.Cards), "spells", spellsLen(data.Spells),
+			"fighterCards", fighterCardsLen(data.FighterCards), "summonings", summoningsLen(data.Summonings),
+			"staticEffects", staticEffectsLen(data.StaticEffects), "challenges", data.Challenges.Len(),
+			"eventCards", data.Events.Len(), "cardSets", data.CardSets.Len(), "achievements", data.Achievements.Len(),
+			"conditions", data.Conditions.Len(), "fusionLabs", data.FusionLabs.Len(), "tournamentDefs", data.Tournaments.Len(),
+			"sphereBoards", data.SphereBoards.BoardCount(), "spheres", data.SphereBoards.Len(),
+			"equipmentPools", data.EquipmentPools.Len())
 	}
 
 	// Fair pairing: coaches are matched within a strength band that widens the
@@ -475,52 +390,21 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 		tm = game.NewTournamentManager()
 	}
 
-	// Teach the fighter repo where a card may be equipped, so every fighter it
-	// hands out already matches what the client's 5-slot inventory will accept.
-	// The store cannot import game data itself, so the mapping is injected: a
-	// card's record type IS its slot type (vi_1 — weapon 1 … dofus 5, at
-	// positions 0-4).
-	if st != nil && fighterCards != nil {
-		st.Fighters.EquipSlotOf = func(templateID int32) (int16, bool) {
-			c := fighterCards.Get(templateID)
-			if c == nil || c.Type < 1 || c.Type > 5 {
-				return 0, false
-			}
-			return int16(c.Type) - 1, true
-		}
+	deps := &game.Deps{
+		Store:       st,
+		World:       game.NewRegistry(cfg.World.AoIRadius),
+		Rules:       rulesFromConfig(cfg),
+		Limits:      limitsFromConfig(cfg),
+		Exchanges:   game.NewExchangeManager(),
+		Matchmaker:  mm,
+		Challenges:  game.NewChallengeManager(),
+		Fights:      game.NewFightManager(),
+		Sessions:    game.NewSessionRegistry(),
+		Tournaments: tm,
+		Log:         log,
 	}
-
-	return &game.Deps{
-		Store:          st,
-		World:          game.NewRegistry(cfg.World.AoIRadius),
-		Rules:          rulesFromConfig(cfg),
-		Limits:         limitsFromConfig(cfg),
-		Cards:          cards,
-		Exchanges:      game.NewExchangeManager(),
-		Spells:         spells,
-		FighterCards:   fighterCards,
-		Summonings:     summonings,
-		ChallengeDefs:  challengeDefs,
-		FightMaps:      fightMaps,
-		Events:         events,
-		Achievements:   achievements,
-		MapsRoot:       loc.MapsRoot,
-		CardSets:       cardSets,
-		FusionLabs:     fusionLabs,
-		MapBonuses:     mapBonuses,
-		DrawTable:      drawTable,
-		TournamentDefs: tournDefs,
-		SphereBoards:   sphereBoards,
-		EquipmentPools: equipPools,
-		Conditions:     conditions,
-		StaticEffects:  staticEffects,
-		Matchmaker:     mm,
-		Challenges:     game.NewChallengeManager(),
-		Fights:         game.NewFightManager(),
-		Sessions:       game.NewSessionRegistry(),
-		Tournaments:    tm,
-		Log:            log,
-	}, loc
+	deps.UseGameData(data)
+	return deps, loc
 }
 
 // webBaseURL is what the game socket announces for opcode-60000 queries:

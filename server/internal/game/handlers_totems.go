@@ -309,7 +309,7 @@ func (d *Deps) startTournamentMatch(tid int64, a, b *Session, preset uint16) err
 	_ = a.Send(frame)
 	_ = b.Send(frame)
 
-	arena := pickArena()
+	arena := d.pickArena()
 	// SECURITY: each coach fields ITS OWN roster.
 	//
 	// The `preset` off the wire used to be applied to BOTH sides. resolveTeamRoster

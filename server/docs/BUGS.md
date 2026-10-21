@@ -13,6 +13,36 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-182 · Two process-wide registries let one server rewrite another's rules
+
+- **Symptom:** with real-data e2e tests added (S08), unrelated e2e tests failed
+  at random: a mailed card "collected 0", placement found no legal cell, a cast
+  dealt no damage. Each passed alone.
+- **Root cause:** two things every `NewServer` wrote were package globals: the
+  mail store's unique-card predicate (`store.SetUniqueCardPredicate`) and the
+  arena registry (`arenaCache`/`arenaIDs`). The last server to boot won, so a
+  server on data-dist made card 202 unique and moved every other server's
+  fights off the practice arena their tests assume. Harmless with one server
+  per process (production), wrong anyway.
+- **Fix:** the predicate is `MailRepo.IsUnique` and the registry is
+  `Deps.arenas`, both set by `NewServer` on that server's own objects.
+- **Verified:** `e2e` — the whole package, SQLite and twice on Postgres, with
+  the real-data tests running in parallel with the rest. The arena tests also
+  stopped skipping: they read `data-dist` when there is no local `data/`.
+
+### B-181 · The clan ladder failed on Postgres, the production database
+
+- **Symptom:** none seen yet - the store suite had only ever run on SQLite.
+  On Postgres, `GuildRepo.Ladder` errors: *column "lc.name" must appear in the
+  GROUP BY clause* (SQLSTATE 42803), so the clan board would be empty.
+- **Root cause:** `GROUP BY g.id` with the leader's name selected. SQLite
+  allows a bare column; Postgres only for the grouped table's own columns.
+- **Fix:** group by every selected column (`g.id, g.name, lc.name`).
+- **Verified:** `unit` — `TestGuildLadderRanksByMemberStrength` on Postgres
+  (new `storetest.Open` / `ARENA_STORE_TEST_DRIVER`), which failed before. The
+  whole store-backed suite (store, game, web, e2e) now passes on Postgres 16
+  and on MariaDB 10.11; MySQL had never been run at all.
+
 ### B-180 · Friends, ignore and clan invites from the Social panel never reached the server
 
 - **Symptom:** in Social, "Añadir" / "Eliminar seleccionado" on the friends

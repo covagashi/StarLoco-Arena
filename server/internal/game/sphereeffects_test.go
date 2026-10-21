@@ -6,7 +6,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // sphereEffectBoards builds a board whose nodes carry the payloads under test:
@@ -197,7 +197,7 @@ func TestEvolutionTailCarriesSphereSpellsAndPools(t *testing.T) {
 // gap is the one that matters - deriving sphere spells perfectly and then handing
 // the fight the untouched fighter looks fine everywhere except in play.
 func TestFightTeamGivesFightersTheirSphereSpellsAndStats(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "sphfight.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "sphfight.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

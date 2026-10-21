@@ -7,6 +7,7 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // cardRuleFixture builds a session with a real store and a small card table.
@@ -15,7 +16,7 @@ import (
 // equippable at all). Card 300 is unique. Card 400 is undestructible.
 func cardRuleFixture(t *testing.T) (*Session, *store.Store) {
 	t.Helper()
-	st, err := store.Open(t.TempDir() + "/cardrules.db")
+	st, err := storetest.Open(t, t.TempDir()+"/cardrules.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

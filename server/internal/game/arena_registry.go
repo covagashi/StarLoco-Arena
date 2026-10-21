@@ -15,11 +15,16 @@ import (
 // empty and everything falls back to the hand-decoded world 5, which is why
 // practiceArena still exists.
 
-var (
-	arenaMu    sync.RWMutex
-	arenaCache = map[uint16]*arena{}
-	arenaIDs   []uint16 // sorted, for deterministic random selection
-)
+// arenaRegistry is the arenas one server plays on. It lives on Deps rather than
+// in package globals: with globals, the first server in a process to load the
+// map files switched every other server in that process off the fallback, which
+// is exactly what parallel e2e servers with and without game data did (S08).
+// The zero value is the empty registry (fallback only).
+type arenaRegistry struct {
+	mu    sync.RWMutex
+	cache map[uint16]*arena
+	ids   []uint16 // sorted, for deterministic random selection
+}
 
 // initArenas converts every decoded fight map into an arena. Safe to call once at
 // start-up; a nil or empty set leaves the fallback in place.
@@ -27,27 +32,31 @@ func (d *Deps) initArenas() {
 	if d == nil || d.FightMaps == nil || d.FightMaps.Len() == 0 {
 		return
 	}
-	arenaMu.Lock()
-	defer arenaMu.Unlock()
-	arenaCache = make(map[uint16]*arena, d.FightMaps.Len())
-	arenaIDs = arenaIDs[:0]
+	r := &d.arenas
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.cache = make(map[uint16]*arena, d.FightMaps.Len())
+	r.ids = r.ids[:0]
 	for _, id := range d.FightMaps.IDs() {
 		m := d.FightMaps.Get(id)
 		if m == nil {
 			continue
 		}
 		a := newArenaFromMap(m)
-		arenaCache[a.worldID] = a
-		arenaIDs = append(arenaIDs, a.worldID)
+		r.cache[a.worldID] = a
+		r.ids = append(r.ids, a.worldID)
 	}
-	sort.Slice(arenaIDs, func(i, j int) bool { return arenaIDs[i] < arenaIDs[j] })
+	sort.Slice(r.ids, func(i, j int) bool { return r.ids[i] < r.ids[j] })
 }
 
 // arenaByID returns the arena for a world id, or the fallback when unknown.
-func arenaByID(id uint16) *arena {
-	arenaMu.RLock()
-	defer arenaMu.RUnlock()
-	if a := arenaCache[id]; a != nil {
+func (d *Deps) arenaByID(id uint16) *arena {
+	if d == nil {
+		return &practiceArena
+	}
+	d.arenas.mu.RLock()
+	defer d.arenas.mu.RUnlock()
+	if a := d.arenas.cache[id]; a != nil {
 		return a
 	}
 	return &practiceArena
@@ -55,7 +64,7 @@ func arenaByID(id uint16) *arena {
 
 // pickArena chooses an arena for a new fight. With map data loaded this rotates
 // over every shipped arena, so fights are not all played on world 5.
-func pickArena() *arena { return pickArenaSeating(1) }
+func (d *Deps) pickArena() *arena { return d.pickArenaSeating(1) }
 
 // pickArenaSeating chooses an arena that can seat at least n coaches PER SIDE.
 //
@@ -65,16 +74,20 @@ func pickArena() *arena { return pickArenaSeating(1) }
 // 25 arenas can seat two a side. If none qualifies the choice is widened rather
 // than failed - a fight on a pedestal-less map still plays correctly, the
 // coaches simply have no avatar (buildActorAppearForFight skips them).
-func pickArenaSeating(n int) *arena {
-	arenaMu.RLock()
-	defer arenaMu.RUnlock()
-	if len(arenaIDs) == 0 {
+func (d *Deps) pickArenaSeating(n int) *arena {
+	if d == nil {
+		return &practiceArena
+	}
+	r := &d.arenas
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if len(r.ids) == 0 {
 		return &practiceArena
 	}
 	if n > 1 {
-		eligible := make([]*arena, 0, len(arenaIDs))
-		for _, id := range arenaIDs {
-			if a := arenaCache[id]; a != nil && a.coachCapacity() >= n {
+		eligible := make([]*arena, 0, len(r.ids))
+		for _, id := range r.ids {
+			if a := r.cache[id]; a != nil && a.coachCapacity() >= n {
 				eligible = append(eligible, a)
 			}
 		}
@@ -82,12 +95,15 @@ func pickArenaSeating(n int) *arena {
 			return eligible[rand.Intn(len(eligible))]
 		}
 	}
-	return arenaCache[arenaIDs[rand.Intn(len(arenaIDs))]]
+	return r.cache[r.ids[rand.Intn(len(r.ids))]]
 }
 
 // loadedArenaCount reports how many arenas the registry holds (0 = fallback only).
-func loadedArenaCount() int {
-	arenaMu.RLock()
-	defer arenaMu.RUnlock()
-	return len(arenaIDs)
+func (d *Deps) loadedArenaCount() int {
+	if d == nil {
+		return 0
+	}
+	d.arenas.mu.RLock()
+	defer d.arenas.mu.RUnlock()
+	return len(d.arenas.ids)
 }

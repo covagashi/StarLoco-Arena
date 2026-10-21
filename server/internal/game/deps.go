@@ -14,8 +14,10 @@ type Deps struct {
 	Rules Rules
 	// Limits bounds connections and login attempts. Zero value = no limits, so
 	// tests and existing embedders are unaffected until they opt in.
-	Limits   Limits
-	Store    *store.Store
+	Limits Limits
+	Store  *store.Store
+	// arenas is built from FightMaps by NewServer (initArenas).
+	arenas   arenaRegistry
 	World    *Registry
 	Cards    *gamedata.Cards    // nil if data files absent
 	CardSets *gamedata.CardSets // card-set (panoplie) bonuses; nil if data files absent
@@ -120,4 +122,46 @@ func RegisterAll(r *Router, d *Deps) {
 	registerTotemHandlers(r, d)
 	registerTeamUpHandlers(r, d)
 	registerClientConfigHandlers(r, d)
+}
+
+// UseGameData copies a loaded bundle into the container. cmd/server and the e2e
+// harness both go through it, so a table wired here is wired in both.
+func (d *Deps) UseGameData(b *gamedata.Bundle) {
+	if b == nil {
+		return
+	}
+	d.Cards = b.Cards
+	d.Spells = b.Spells
+	d.FighterCards = b.FighterCards
+	d.Summonings = b.Summonings
+	d.ChallengeDefs = b.Challenges
+	d.FightMaps = b.FightMaps
+	d.Events = b.Events
+	d.Achievements = b.Achievements
+	d.MapsRoot = b.Loc.MapsRoot
+	d.CardSets = b.CardSets
+	d.FusionLabs = b.FusionLabs
+	d.MapBonuses = b.MapBonuses
+	d.DrawTable = b.DrawTable
+	d.TournamentDefs = b.Tournaments
+	d.SphereBoards = b.SphereBoards
+	d.EquipmentPools = b.EquipmentPools
+	d.Conditions = b.Conditions
+	d.StaticEffects = b.StaticEffects
+
+	// Teach the fighter repo where a card may be equipped, so every fighter it
+	// hands out already matches what the client's 5-slot inventory will accept.
+	// The store cannot import game data itself, so the mapping is injected: a
+	// card's record type IS its slot type (vi_1 — weapon 1 … dofus 5, at
+	// positions 0-4).
+	if d.Store != nil && b.FighterCards != nil {
+		fc := b.FighterCards
+		d.Store.Fighters.EquipSlotOf = func(templateID int32) (int16, bool) {
+			c := fc.Get(templateID)
+			if c == nil || c.Type < 1 || c.Type > 5 {
+				return 0, false
+			}
+			return int16(c.Type) - 1, true
+		}
+	}
 }

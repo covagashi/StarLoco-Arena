@@ -6,7 +6,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestStoredIllegalSpellsAreDroppedAtFightBuild covers the RETROACTIVE half of
@@ -18,7 +18,7 @@ import (
 // because castSpellByFighter trusts Fighter.Spells. The door was closed and the
 // room never cleaned.
 func TestStoredIllegalSpellsAreDroppedAtFightBuild(t *testing.T) {
-	st, err := store.Open(t.TempDir() + "/legacy.db")
+	st, err := storetest.Open(t, t.TempDir()+"/legacy.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestStoredIllegalSpellsAreDroppedAtFightBuild(t *testing.T) {
 // buildFightTeamFor, because a helper-only test lets a mutation delete the call
 // and pass - the mistake this codebase has made repeatedly.
 func TestBuildFightTeamDropsStoredIllegalSpells(t *testing.T) {
-	st, err := store.Open(t.TempDir() + "/legacy2.db")
+	st, err := storetest.Open(t, t.TempDir()+"/legacy2.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

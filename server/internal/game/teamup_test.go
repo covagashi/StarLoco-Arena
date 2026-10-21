@@ -6,7 +6,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // The 2v2 handshake is the only way a fight can ever have two coaches on a side,
@@ -307,7 +307,7 @@ func TestTeamUpAnswerRevalidatesOnAccept(t *testing.T) {
 // no preset is invisible in the panel, and a preset with an empty coach list
 // launches as a solo fight. Both must hold, for BOTH members.
 func TestDuoPresetsCarryTheAlly(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "duo.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "duo.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
@@ -389,7 +389,7 @@ func TestDuoPresetsCarryTheAlly(t *testing.T) {
 // controle aucun combattant", which is exactly what it did while that i64
 // carried the fighter's BUDGET.
 func TestDuoPresetSatisfiesAfH(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "afh.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "afh.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

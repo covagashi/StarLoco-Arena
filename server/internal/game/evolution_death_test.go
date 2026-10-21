@@ -7,6 +7,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // evoDeathHarness builds a real store with a coach and two persisted titular
@@ -14,7 +15,7 @@ import (
 // in because without it the post-fight roll is skipped entirely.
 func evoDeathHarness(t *testing.T) (*Deps, uint, *domain.Fighter, *domain.Fighter, *store.Store) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "evodeath.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "evodeath.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

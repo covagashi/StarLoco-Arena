@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // The prize a tournament advertises lives in the CLIENT's own data - a type-1000
@@ -22,7 +22,7 @@ import (
 // the coach that will win it.
 func tournamentPrizeDeps(t *testing.T, defID uint16) (*Deps, uint, int64) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "tournprize.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "tournprize.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

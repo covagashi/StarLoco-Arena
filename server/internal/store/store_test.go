@@ -7,8 +7,14 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/domain"
 )
 
+// newTestStore opens an empty store for one test: SQLite in a temp dir by
+// default, or the server's other dialects when ARENA_STORE_TEST_DRIVER and
+// ARENA_STORE_TEST_DSN name one (see dialect_test.go).
 func newTestStore(t *testing.T) *Store {
 	t.Helper()
+	if s := openDialectTestStore(t); s != nil {
+		return s
+	}
 	path := filepath.Join(t.TempDir(), "test.db")
 	s, err := Open(path)
 	if err != nil {

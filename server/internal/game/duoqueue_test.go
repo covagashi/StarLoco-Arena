@@ -6,7 +6,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // A duo must never be paired against a lone coach: that side would field two
@@ -59,7 +59,7 @@ func TestDuoAndSoloQueuesDoNotMix(t *testing.T) {
 // duo as modeClassicReady left it green. This one inspects the tag on the
 // searcher the handler enqueued.
 func TestDuoLaunchQueuesUnderTheDuoMode(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "duoq.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "duoq.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

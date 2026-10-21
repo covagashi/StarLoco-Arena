@@ -19,8 +19,7 @@ func TestMailDoesNotStackUniqueCards(t *testing.T) {
 	st := newTestStore(t)
 
 	const uniqueTmpl, ordinaryTmpl = int32(300), int32(100)
-	SetUniqueCardPredicate(func(id int32) bool { return id == uniqueTmpl })
-	t.Cleanup(func() { SetUniqueCardPredicate(nil) })
+	st.Mail.IsUnique = func(id int32) bool { return id == uniqueTmpl }
 
 	// A real coach row is required: coach_cards has a FOREIGN KEY on it.
 	acc, err := st.Accounts.CreateAccount("mailuniq", "pw", false)

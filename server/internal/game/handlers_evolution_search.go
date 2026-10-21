@@ -109,7 +109,7 @@ func handleEvolutionSearchCancel(s *Session, _ *protocol.C2SFrame) error {
 // challenge, and it FEEDS PROGRESSION — XP, morale, fatigue, wounds and the
 // per-fighter death roll all apply, which is the entire point of the mode.
 func (d *Deps) startEvolutionFight(pm *pendingMatch) error {
-	a := pickArena()
+	a := d.pickArena()
 	teamA, err := d.buildFightTeam(a, pm.a, 0)
 	if err != nil {
 		return err

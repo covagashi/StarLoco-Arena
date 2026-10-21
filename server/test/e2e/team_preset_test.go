@@ -137,3 +137,104 @@ func teamPresetSaveBlob(name string) []byte {
 		U8(0). // no coach list (the 2v2 tail; decodeTeamPreset requires the count)
 		Bytes()
 }
+
+// TestTeamPresetRoundTrip saves a preset that names a real fighter, reopens the
+// team panel (6031) and reads the preset back out of the 6030 field by field:
+// the bench team first, then ours with its name, mode, fighter and owner. The
+// other tests only check that a 6030 arrives (S08).
+func TestTeamPresetRoundTrip(t *testing.T) {
+	t.Parallel()
+	st, addr := testServerWithStore(t)
+	c, coachID := dialLogin(t, addr, "rtp", "RoundTrip")
+	reachWorld(t, c)
+	c.DrainReceived(150 * time.Millisecond)
+
+	blob := buildFighterBlob("Ida", 5)
+	req := testclient.NewW().U8(0).U16(0).U16(uint16(len(blob))).Raw(blob).Bytes()
+	_ = c.Send(3, testclient.OpFighterCreate, req)
+	if _, _, err := c.WaitFor(testclient.OpFighterCreateResult, testclient.DefaultTimeout); err != nil {
+		t.Fatalf("no create result: %v", err)
+	}
+	fighters, _ := st.Fighters.ListByCoach(uint(coachID))
+	if len(fighters) != 1 {
+		t.Fatalf("setup: %d fighters, want 1", len(fighters))
+	}
+	fid := int64(fighters[0].ID)
+	c.DrainReceived(200 * time.Millisecond)
+
+	save := testclient.NewW().
+		U16(uint16(0xFFFF)).U16(0).U16(1).Str8("Vuelta").
+		U8(1).I64(fid).I64(coachID).
+		U8(0).Bytes()
+	_ = c.Send(2, opTeamPresetSave, save)
+	if _, _, err := c.WaitFor(opTeamPresetList, testclient.DefaultTimeout); err != nil {
+		t.Fatalf("preset not saved: %v", err)
+	}
+	c.DrainReceived(150 * time.Millisecond)
+
+	_ = c.Send(3, testclient.OpTeamPresetListReq, nil)
+	var list, roster *testclient.Frame
+	deadline := time.Now().Add(testclient.DefaultTimeout)
+	for time.Now().Before(deadline) && (list == nil || roster == nil) {
+		f, err := c.Recv(time.Until(deadline))
+		if err != nil {
+			break
+		}
+		switch f.Opcode {
+		case opTeamPresetList:
+			list = f
+		case testclient.OpFighterList:
+			roster = f
+		}
+	}
+	if list == nil || roster == nil {
+		t.Fatalf("6031 answered list=%v roster=%v, want both", list != nil, roster != nil)
+	}
+	if n := fighterListCount(roster.Payload); n != 1 {
+		t.Errorf("6006 roster = %d fighters, want 1", n)
+	}
+
+	r := testclient.NewR(list.Payload)
+	if n := r.U8(); n != 2 {
+		t.Fatalf("6030 count = %d, want 2 (bench + ours)", n)
+	}
+	// bench: [i16 -4][i16 0][i16 0][name ""][u8 0][u8 0]
+	if typ := int16(r.U16()); typ != -4 {
+		t.Errorf("first preset type = %d, want -4 (bench)", typ)
+	}
+	r.U16()
+	r.U16()
+	_ = r.Str8()
+	if fc, cc := r.U8(), r.U8(); fc != 0 || cc != 0 {
+		t.Errorf("bench lists %d fighters / %d coaches, want none", fc, cc)
+	}
+
+	if typ := int16(r.U16()); typ != -1 {
+		t.Errorf("preset type = %d, want -1", typ)
+	}
+	teams, _ := st.Teams.ListByCoach(uint(coachID))
+	if len(teams) != 1 {
+		t.Fatalf("store has %d presets, want 1", len(teams))
+	}
+	if id := r.U16(); uint(id) != teams[0].ID {
+		t.Errorf("preset id = %d, want the stored %d", id, teams[0].ID)
+	}
+	if gm := r.U16(); gm != 1 {
+		t.Errorf("gameMode = %d, want 1", gm)
+	}
+	if name := r.Str8(); name != "Vuelta" {
+		t.Errorf("name = %q, want Vuelta", name)
+	}
+	if fc := r.U8(); fc != 1 {
+		t.Fatalf("preset lists %d fighters, want 1", fc)
+	}
+	if got := r.I64(); got != fid {
+		t.Errorf("fighter id = %d, want %d", got, fid)
+	}
+	if owner := r.I64(); owner != coachID {
+		t.Errorf("owner = %d, want the coach %d", owner, coachID)
+	}
+	if cc := r.U8(); cc != 0 {
+		t.Errorf("solo preset carries %d coaches, want 0", cc)
+	}
+}

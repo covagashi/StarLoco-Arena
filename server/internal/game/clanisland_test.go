@@ -10,6 +10,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestClanIslandDestResolvesTheGuildsOwnIsland: card 859 is the one Zaap card
@@ -17,7 +18,7 @@ import (
 // DIFFERENT worlds and each arrives at that world's own Zaap instance. A fixed
 // fallback would satisfy "it teleports somewhere" and be wrong.
 func TestClanIslandDestResolvesTheGuildsOwnIsland(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "island.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "island.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestClanIslandDestResolvesTheGuildsOwnIsland(t *testing.T) {
 // TestClanIslandDestRefusesAClanlessCoach: card 859 must do nothing for a coach
 // in no clan rather than dropping it on some default island.
 func TestClanIslandDestRefusesAClanlessCoach(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "island2.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "island2.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
@@ -164,7 +165,7 @@ func TestClanIslandTableMatchesTheDocumentedZaaps(t *testing.T) {
 // Granted when the clan holds an island and revoked when it does not, so the Zaap
 // dialog never lists a destination that silently does nothing.
 func TestClanIslandCardTracksIslandOwnership(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "card.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "card.db"))
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -260,7 +261,7 @@ func activateClan(t *testing.T, st *store.Store, guildID uint, tag string) {
 // rule: founding a clan alone and dumping cards into a demon must not put the
 // island Zaap in your hand, however much reputation it buys.
 func TestInactiveClanGetsNoIslandCard(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "solo.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "solo.db"))
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}

@@ -6,14 +6,14 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestZaapClanIslandRefusalToasts25000: the clan-island Zaap (card 859) used by a
 // coach whose clan holds no island must answer 25000 (`az`) with the client's
 // noIsland code — a refusal it cannot predict, so it must not fail silently.
 func TestZaapClanIslandRefusalToasts25000(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "zaap.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "zaap.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

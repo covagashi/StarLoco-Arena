@@ -4,14 +4,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // challengeRewardDeps builds a Deps with a real store and the real challenge +
 // card tables, plus the persisted coach that will win.
 func challengeRewardDeps(t *testing.T) (*Deps, uint) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "chalreward.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "chalreward.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestAddToTomeInscribesOwnedCard exercises the 5204 (ajm_2) "inscribe in
@@ -14,7 +14,7 @@ import (
 // the client expects no reply, and only owned cards may be inscribed. The tome
 // is grow-only, so a second inscription must be idempotent.
 func TestAddToTomeInscribesOwnedCard(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "tome.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "tome.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

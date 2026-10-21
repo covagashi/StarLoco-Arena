@@ -341,7 +341,9 @@ func (r *GuildRepo) Ladder(limit int) ([]GuildLadderEntry, error) {
 		Joins("LEFT JOIN coaches lc ON lc.id = g.leader_coach_id").
 		Joins("LEFT JOIN guild_members m ON m.guild_id = g.id").
 		Joins("LEFT JOIN coaches mc ON mc.id = m.coach_id").
-		Group("g.id").
+		// Every non-aggregated column is grouped: SQLite accepts a bare
+		// "GROUP BY g.id", Postgres refuses lc.name under it (S08).
+		Group("g.id, g.name, lc.name").
 		Order("score DESC, g.name ASC")
 	if limit > 0 {
 		q = q.Limit(limit)

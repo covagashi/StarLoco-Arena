@@ -39,7 +39,7 @@ func (d *Deps) startFight(pm *pendingMatch) error {
 			}
 		}
 	}
-	a := pickArenaSeating(seats)
+	a := d.pickArenaSeating(seats)
 	teamA, err := d.buildFightTeam(a, pm.a, 0)
 	if err != nil {
 		return refuseFightError(err, pm.a.session, pm.b.session)

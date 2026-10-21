@@ -6,7 +6,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 func TestSphereCostGivesTheTenthDiscountOnAnOwnedNode(t *testing.T) {
@@ -49,7 +49,7 @@ func TestSphereAcceptsCardOnlyForItsOwnBarrierCards(t *testing.T) {
 // fighter that cannot afford the node must come back unchanged rather than
 // half-charged.
 func TestBuySphereChargesAndMovesTheCursor(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "spherebuy.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "spherebuy.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

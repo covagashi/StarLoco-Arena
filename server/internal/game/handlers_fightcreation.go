@@ -103,7 +103,7 @@ func handleTeamTest(s *Session, f *protocol.C2SFrame) error {
 	if s.deps.TeamUps != nil && s.deps.TeamUps.Partner(s.Coach.ID) != 0 {
 		seats = 2
 	}
-	fightArena := pickArenaSeating(seats)
+	fightArena := s.deps.pickArenaSeating(seats)
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {
 		return refuseFightError(err, s)
@@ -146,7 +146,7 @@ func (s *Session) startPvEChallenge(challengeID int32) error {
 	// to resolveTeamRoster's preset lookup would ask for preset id 0, which never
 	// exists, and silently hand the coach a single fighter against a whole demon
 	// team.)
-	fightArena := pickArena()
+	fightArena := s.deps.pickArena()
 	roster := s.deps.titularRoster(s.Coach.ID, len(fightArena.team0))
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {

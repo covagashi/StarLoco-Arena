@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestGuildTagsTablePushesEveryClannedCoach pins the 554 emission: the login
@@ -13,7 +13,7 @@ import (
 // every coach in `bd_1.Is()` - and each blob must carry the COACH id (the
 // field `Ke()` reads back), not the guild id.
 func TestGuildTagsTablePushesEveryClannedCoach(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "tags.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "tags.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

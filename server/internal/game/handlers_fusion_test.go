@@ -12,6 +12,7 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // fusionFixture builds a coach with a card set and a single lab (selected via
@@ -21,7 +22,7 @@ import (
 func fusionFixture(t *testing.T, lab *gamedata.FusionLab, cards ...*gamedata.CoachCard) (
 	*Session, *store.Store, func(ids ...int32) (uint8, int32, int32, int32), func(int32) int64) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "fusion.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "fusion.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

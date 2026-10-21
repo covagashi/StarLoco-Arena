@@ -7,14 +7,14 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // dropFixture wires a coach, a draw table and a map-bonus record into Deps and
 // hands back the pieces rollFightDrops needs.
 func dropFixture(t *testing.T, cards *gamedata.Cards, maps *gamedata.MapBonuses) (*Deps, *domain.Coach, *Session) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "drops.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "drops.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

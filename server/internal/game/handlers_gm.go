@@ -415,7 +415,7 @@ func (s *Session) gmEvoFight() error {
 	if s.deps.Fights.ByCoach(s.Coach.ID) != nil {
 		return s.gmFeedback("already in a fight")
 	}
-	fightArena := pickArena()
+	fightArena := s.deps.pickArena()
 	roster := s.deps.titularRoster(s.Coach.ID, len(fightArena.team0))
 	if len(roster) == 0 {
 		return s.gmFeedback("no titular fighters to field")

@@ -103,11 +103,32 @@ estadísticas de evolución y puntos de torneo en 2052/4096.
 
 ## Pruebas y bases de datos
 
-- [ ] El arnés e2e pasa gamedata `nil`: la capa de datos no tiene e2e.
-- [ ] e2e de ida y vuelta para 6006/6030.
-- [ ] Postgres (el de producción) en los tests del store, no solo SQLite.
-- [ ] Decisión del dueño: ¿seguir con MySQL? No hay constancia de que se haya
-      corrido nunca.
+- [x] El arnés e2e pasaba gamedata `nil`. La carga de datos salió de
+      `cmd/server` a `gamedata.LoadBundle` + `Deps.UseGameData`, y el arnés
+      tiene `testServerWithData`, que arranca con `data-dist` por el mismo
+      camino. Dos e2e nuevos (`realdata_test.go`): B-151 por socket con cartas
+      reales (set 147: la 70 sin precio se rechaza, la 72 se vende; quitar la
+      guarda lo hace fallar) y un combate en las arenas reales hasta el primer
+      turno.
+- [x] 6006/6030: ya había e2e que veían llegar los dos, ninguno leía el
+      contenido. `TestTeamPresetRoundTrip` guarda un equipo con un luchador y
+      lo lee del 6030 campo a campo (banquillo −4 primero, luego id, modo,
+      nombre, luchador y dueño), con el 6006 de un luchador.
+- [x] Postgres en los tests: `storetest.Open(t, path)` (y `newTestStore` en el
+      propio store) abre un esquema nuevo por test en el servidor que digan
+      `ARENA_STORE_TEST_DRIVER`/`ARENA_STORE_TEST_DSN`; sin ellas, SQLite como
+      siempre. Los 34 sitios de `game`, `web` y e2e pasan por ahí. Comando en
+      `AGENTS.md`. Resultado: **B-181**, el ladder de clanes fallaba en
+      Postgres (el de producción) por un `GROUP BY`. Arreglado; todo el suite
+      pasa en Postgres 16 (dos pasadas seguidas) y en SQLite.
+- [x] MySQL: corrido por primera vez, MariaDB 10.11, todo el suite en verde.
+      La decisión de seguir con él sigue siendo del dueño (por defecto, sin
+      cambios); ahora hay con qué probarlo.
+- [x] De paso, **B-182**: el predicado de cartas únicas del correo y el
+      registro de arenas eran globales del proceso; cada servidor que arrancaba
+      pisaba los de los demás (los e2e con datos reales rompían al azar los
+      demás). Ahora son de cada servidor. Los tests de arenas dejaron de
+      saltarse: leen `data-dist` si no hay `data/`.
 - [ ] `godot/test/displace_smoke.gd` se cuelga (timeout a 250 s) también en
       `0a99cc6f`: el intercambio (hechizo 135) depende de la geometría del mapa
       que toque y a veces nunca encuentra aliado. Visto en S17 (2026-10-17).

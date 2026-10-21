@@ -8,13 +8,14 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // fightCreationDeps builds a Deps backed by a temp store with the managers the
 // fight-creation handlers need.
 func fightCreationDeps(t *testing.T) (*Deps, *store.Store) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "fc.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "fc.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

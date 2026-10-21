@@ -107,7 +107,7 @@ func handleChallengeDecline(s *Session, _ *protocol.C2SFrame) error {
 func (d *Deps) startChallengeFight(c *challenge) error {
 	rosterA := d.resolveTeamRoster(c.challenger.Coach.ID, uint(c.teamChallenger))
 	rosterB := d.resolveTeamRoster(c.target.Coach.ID, uint(c.teamTarget))
-	fightArena := pickArena()
+	fightArena := d.pickArena()
 	teamA, err := d.buildFightTeamFor(c.challenger, 0, fightArena.startCells(0), rosterA)
 	if err != nil {
 		return refuseFightError(err, c.challenger, c.target)

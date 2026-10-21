@@ -7,13 +7,14 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // consumableHarness builds a session with a living, wounded, exhausted fighter
 // and a catalogue of the consumable card kinds the shipped data actually has.
 func consumableHarness(t *testing.T) (*Session, *domain.Fighter, *store.Store) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "cons.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "cons.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

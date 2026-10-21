@@ -11,6 +11,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/game"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 	"github.com/StarLoco/arena-2.70/internal/testclient"
 )
 
@@ -33,7 +34,7 @@ func testServerWithDeps(t *testing.T, customize func(*game.Deps)) (*store.Store,
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "e2e.db")
-	st, err := store.Open(dbPath)
+	st, err := storetest.Open(t, dbPath)
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

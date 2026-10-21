@@ -108,7 +108,23 @@ go run ./cmd/seedaccount --login test --password test123
   (`client/compiled/game/config.properties` → `proxyAddresses_1`), so it
   connects with no change.
 - End-to-end tests live in `server/test/e2e/` and drive a real server over a
-  real socket.
+  real socket. `realdata_test.go` boots it on the committed `data-dist/`; the
+  rest use no game data or a hand-built catalogue.
+- The suites run on SQLite unless told otherwise. To run every store-backed
+  test (store, game, web, e2e) on the production dialects, point two variables
+  at a throwaway server; each test gets its own schema/database, dropped after:
+
+  ```sh
+  podman run -d --rm --name arena-pg-test -e POSTGRES_PASSWORD=arena -e POSTGRES_USER=arena \
+    -e POSTGRES_DB=arena -p 127.0.0.1:55432:5432 postgres:16-alpine -c fsync=off -c max_connections=300
+  ARENA_STORE_TEST_DRIVER=postgres \
+  ARENA_STORE_TEST_DSN="host=127.0.0.1 port=55432 user=arena password=arena dbname=arena sslmode=disable" \
+    go test ./internal/... ./test/...
+  # MySQL/MariaDB: ARENA_STORE_TEST_DRIVER=mysql ARENA_STORE_TEST_DSN="root:arena@tcp(127.0.0.1:53306)/"
+  ```
+
+  Open stores in tests with `storetest.Open(t, path)`, not `store.Open`, or the
+  test silently stays on SQLite.
 
 ## Releases
 

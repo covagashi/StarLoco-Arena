@@ -2,7 +2,6 @@ package store
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -15,7 +14,16 @@ import (
 var ErrMailboxFull = errors.New("store: mailbox full")
 
 // MailRepo persists in-game mail.
-type MailRepo struct{ db *gorm.DB }
+type MailRepo struct {
+	db *gorm.DB
+	// IsUnique reports whether a template may exist only once per coach.
+	// Injected by the game layer (NewServer) so the store does not need the
+	// gamedata tables; nil means "no uniqueness data" and the rule is skipped.
+	// Set before serving and only read after. It used to be a process-wide
+	// global, so every e2e server booted in parallel overwrote the others'
+	// rule (S08).
+	IsUnique func(templateID int32) bool
+}
 
 // ListForCoach returns every mail still visible to a coach: those it received and
 // has not deleted, plus those it sent and has not deleted. Newest first.
@@ -131,31 +139,6 @@ func (r *MailRepo) MarkRead(coachID, mailID uint) error {
 // TakeAttachments hands every card attached to a mail to its RECEIVER: the cards
 // are granted to the coach's inventory and detached from the mail, atomically.
 // Returns the template ids actually collected (empty if there were none).
-// isUnique reports whether a template may exist only once per coach. Injected by
-// the game layer so the store does not need the gamedata tables; nil means "no
-// uniqueness data", in which case the rule is skipped.
-var (
-	isUniqueMu sync.RWMutex
-	isUnique   func(templateID int32) bool
-)
-
-// SetUniqueCardPredicate wires the uniqueness rule into the mail store.
-func SetUniqueCardPredicate(fn func(templateID int32) bool) {
-	isUniqueMu.Lock()
-	isUnique = fn
-	isUniqueMu.Unlock()
-}
-
-// cardIsUnique reads the injected predicate under its lock — parallel e2e
-// servers each call SetUniqueCardPredicate at boot while in-flight
-// TakeAttachments transactions are reading it.
-func cardIsUnique(templateID int32) bool {
-	isUniqueMu.RLock()
-	fn := isUnique
-	isUniqueMu.RUnlock()
-	return fn != nil && fn(templateID)
-}
-
 func (r *MailRepo) TakeAttachments(coachID, mailID uint) ([]int32, error) {
 	var collected []int32
 	err := r.db.Transaction(func(tx *gorm.DB) error {
@@ -184,7 +167,7 @@ func (r *MailRepo) TakeAttachments(coachID, mailID uint) ([]int32, error) {
 				// while already holding one pushes quantity past 1 on a template the
 				// game guarantees is singular; the retail client then refuses to
 				// render the extra copy, desyncing the inventory permanently.
-				if cardIsUnique(c.TemplateID) {
+				if r.IsUnique != nil && r.IsUnique(c.TemplateID) {
 					continue // leave it in the mail rather than duplicating it
 				}
 				if err := tx.Model(&domain.CoachCard{}).Where("id = ?", existing.ID).

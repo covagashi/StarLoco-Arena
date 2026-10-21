@@ -16,11 +16,12 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/config"
 	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 func newTestServer(t *testing.T, tweak func(*config.WebConfig)) (*Server, *store.Store) {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
 		t.Fatalf("store.Open: %v", err)
 	}

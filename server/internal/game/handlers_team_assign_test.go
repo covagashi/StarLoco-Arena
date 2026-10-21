@@ -6,7 +6,7 @@ import (
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
-	"github.com/StarLoco/arena-2.70/internal/store"
+	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
 // TestFighterAssignTeamPersists exercises the 6013 (qp_1) fighter-to-team
@@ -16,7 +16,7 @@ import (
 // must be rejected (IDOR). Regression guard for the "fighters revert to the pool
 // on reopen" bug (6013 was previously unhandled, so assignments were dropped).
 func TestFighterAssignTeamPersists(t *testing.T) {
-	st, err := store.Open(filepath.Join(t.TempDir(), "assign.db"))
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "assign.db"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
