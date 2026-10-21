@@ -108,6 +108,9 @@ static var locale := "en"
 
 ## Populate the fighter index from a decoded fight_creation dict.
 static func index_fighters(d: Dictionary) -> void:
+	# the server names its AI opponents in French (S08); load(), not preload:
+	# ai_names reaches back here through game_text
+	load("res://src/gamedata/ai_names.gd").localize(d)
 	fighters = {}
 	coach_ids = {}
 	for c in d.get("coaches", []):

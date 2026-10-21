@@ -79,6 +79,7 @@ func _send_coach(coach_name: String) -> void:
 	client.send_message(2049, w.raw(), 2)
 
 
+var _ai_names_ok := false     # S08: AI coach/fighters in the UI language
 var _challenged := false      # 4516 re-fires on post-fight world re-entry;
                               # the défi is consumed — relaunch would refuse
 
@@ -144,6 +145,9 @@ func _show_fight() -> void:
 	if not _versus_ok:
 		_finish(1, "FAIL no versus screen before placement")
 		return
+	if not _ai_names_ok:
+		_finish(1, "FAIL the AI opponents kept their French names")
+		return
 	_done_ok = true
 	_finish(0, "fight rendered")
 
@@ -182,6 +186,28 @@ func _on_placement() -> void:
 
 ## S07: the versus screen comes up on 8010 with both sides, hands over to
 ## placement on its own (no click) and is gone once placement opens.
+## S08: the server's French AI names come out in the UI language — the
+## demon from the retail table (content.29.262), its fighters as breed.N.
+func _check_ai_names(d: Dictionary) -> void:
+	var AiNames = load("res://src/gamedata/ai_names.gd")
+	var GameText = load("res://src/gamedata/game_text.gd")
+	var want_demon: String = GameText.content(29, 262, "Démon de la 58ème minute")
+	var demon := ""
+	for c in d.get("coaches", []):
+		if AiNames.is_ai_coach(int(c.id)):
+			demon = str(c.name)
+	var breeds_ok := true
+	var n := 0
+	for t in d.get("teams", []):
+		for f in t.get("fighters", []):
+			if AiNames.is_ai_coach(int(f.get("coach", 0))):
+				n += 1
+				breeds_ok = breeds_ok and str(f.name) == root.get_node("I18n").t("breed.%d" % int(f.breed))
+	_ai_names_ok = demon == want_demon and n > 0 and breeds_ok
+	print("[smoke] AI NAMES locale=%s demon='%s' want='%s' ai_fighters=%d breeds_ok=%s ok=%s"
+		% [State.locale, demon, want_demon, n, breeds_ok, _ai_names_ok])
+
+
 func _check_versus() -> void:
 	var t := 0.0
 	var v: Control = null
@@ -671,6 +697,7 @@ func _on_message(opcode: int, payload) -> void:
 				for f in t.get("fighters", []):
 					print("[smoke]   fighter '%s' breed=%d team=%d id=%d"
 						% [f.name, f.get("breed", -1), t.id, f.id])
+			_check_ai_names(decoded)
 			_show_fight()
 		4102:
 			print("[smoke] ACTOR_APPEAR: %s" % str(decoded.get("actors", [])))

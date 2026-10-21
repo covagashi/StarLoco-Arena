@@ -1054,5 +1054,9 @@
   "evo.err.unknown": "The evolution search could not start.",
   "search.practice": "Practice: setting up the fight…",
   "inv.value_n": "Value {n}",
-  "inv.pick_hint": "Pick a card to see it large."
+  "inv.pick_hint": "Pick a card to see it large.",
+  "ai.breed_master": "Breed master",
+  "ai.demon": "Demon",
+  "ai.challenge": "Challenge",
+  "ai.sparring": "Sparring"
 }

@@ -1054,5 +1054,9 @@
   "evo.err.unknown": "Impossible de lancer la recherche d'évolution.",
   "search.practice": "Entraînement : préparation du combat…",
   "inv.value_n": "Valeur {n}",
-  "inv.pick_hint": "Choisis une carte pour la voir en grand."
+  "inv.pick_hint": "Choisis une carte pour la voir en grand.",
+  "ai.breed_master": "Maître d'élevage",
+  "ai.demon": "Démon",
+  "ai.challenge": "Défi",
+  "ai.sparring": "Sparring"
 }

@@ -1054,5 +1054,9 @@
   "evo.err.unknown": "No se pudo empezar la búsqueda de evolución.",
   "search.practice": "Entrenamiento: preparando el combate…",
   "inv.value_n": "Valor {n}",
-  "inv.pick_hint": "Elige una carta para verla en grande."
+  "inv.pick_hint": "Elige una carta para verla en grande.",
+  "ai.breed_master": "Maestro de raza",
+  "ai.demon": "Demonio",
+  "ai.challenge": "Desafío",
+  "ai.sparring": "Entrenamiento"
 }

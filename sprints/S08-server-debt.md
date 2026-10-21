@@ -66,8 +66,17 @@ retail leídos y documentación que no se contradiga.
 - [ ] **Texto de 36 cartas de evento**: el retail lo genera a partir de los
       efectos de cada evento (`tO.getDescription` → `asf_0`); hoy enseñan su
       texto de ambiente. Generar la línea de efectos con los datos del evento.
-- [ ] **Nombres que manda el servidor en un solo idioma**: el jefe IA
-      ("Démon de la 58ème minute") y los luchadores IA llamados como su raza.
+- [x] **Nombres que manda el servidor en un solo idioma**: resuelto en Godot
+      sin tocar el cable (`src/gamedata/ai_names.gd`, llamado desde
+      `State.index_fighters`). Solo para los dos coaches IA del servidor
+      (`sparringCoachID`, `challengeCoachID`): los demonios salen de la tabla
+      del retail (`content.29.262–266` y `281`, los tres idiomas), el maestro
+      de raza, "Démon", "Défi" y "Sparring" de claves propias (`ai.*`), y un
+      luchador IA solo si su nombre es exactamente el de su raza en francés.
+      Pruebas: `test/unit/ai_names_test.gd` (lo de un jugador no se toca;
+      lane 257 checks) y `fight_smoke` en vivo, en español: "Demonio del
+      minuto 58" contra "Yopuka" y "Sacrógrito", y la versus con ese nombre.
+      `report_smoke` 7/7.
 - [ ] **`pvp_smoke` no pulsa Listo**: su vista de combate no recibe el 8020
       (el arnés deja dos lobbies vivos) y la colocación acaba por tiempo.
       Hueco de la prueba, no del juego.
