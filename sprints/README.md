@@ -108,7 +108,6 @@ afectado trabaja con la opción marcada como *por defecto*.
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |
 | ¿JS en el portal web? | S16 | sin JS |
 | ¿Seguir publicando `data-dist/` y `client/decompiled/`? | S16 | sin cambios |
-| ¿Restringir los colores al crear luchador a los naturales y desbloquear el resto con cartas de color (tipo 29), como el retail? | S07 | no: los 47 colores libres, como hoy |
 
 ## Convención
 

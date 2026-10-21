@@ -73,9 +73,17 @@ static func coach_tints(skin: int, hair: int) -> Dictionary:
 	return {1: s, 2: h}
 
 
-## Fighter paper-doll (ee_2): skin/hair/eye all draw from tn_0.
+## Fighter paper-doll (ee_2): skin/hair/eye all draw from tn_0. An index
+## outside the table leaves its channel untinted — the retail's tn_0.hT
+## answers null and the art keeps its own colours. New fighters are made
+## that way (NO_TINT): the colour picker is gone (S07, owner: teams are told
+## apart by their ring, not by colours).
+const NO_TINT := 255
+
+
 static func fighter_tints(skin: int, hair: int, eye: int) -> Dictionary:
-	var s := pick(NATURAL, skin) * 1.25
-	var h := pick(NATURAL, hair) * 1.25
-	var e := pick(NATURAL, eye) * 1.25
-	return {1: s, 2: h, 8: e}
+	var out := {}
+	for pair in [[1, skin], [2, hair], [8, eye]]:
+		if pair[1] >= 0 and pair[1] < NATURAL.size():
+			out[pair[0]] = NATURAL[pair[1]] * 1.25
+	return out

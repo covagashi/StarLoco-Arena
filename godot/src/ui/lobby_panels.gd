@@ -601,17 +601,6 @@ func _fighter_creation() -> void:
 	choices(bar, [I18n.t("fc.v_classic"), I18n.t("fc.v_evo")],
 		clampi(int(fighter.get("version", 1)) - 1, 0, 1),
 		func(i): send("setFighterVersion", [i + 1]))
-	for entry in [["fc.skin", "skin", "setFighterSkinColorIndex"], ["fc.hair", "hair", "setFighterHairColorIndex"], ["fc.eyes", "eye", "setFighterEyeColorIndex"]]:
-		var line := row(form)
-		label(line, I18n.t(entry[0]))
-		var options: Array = []
-		for i in Palettes.NATURAL.size(): options.append(I18n.t("fc.color", {"n": i + 1}))
-		var choice := choices(line, options, int(fighter.get(entry[1], 0)), func(i): send(entry[2], [i]))
-		for i in Palettes.NATURAL.size():
-			var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
-			var color: Vector3 = Palettes.NATURAL[i]
-			image.fill(Color(color.x, color.y, color.z))
-			choice.set_item_icon(i, ImageTexture.create_from_image(image))
 	var stage := Control.new()
 	stage.custom_minimum_size = Vector2(320, 330)
 	split.add_child(stage)

@@ -64,10 +64,14 @@ cliente Godot (si ya hay equivalente con otro nombre).
       aquí el botón o 4 s, y antes se mandaba el 8011 al instante. Prueba:
       `fight_smoke` (sale con los dos bandos y da paso sola a la colocación).
 - [x] ~~**Colores desbloqueados**: las cartas tipo 29 como colores extra al
-      crear luchador.~~ Descartado: el servidor no valida el color y el panel
-      ya ofrece los 47 de la paleta, así que no hay nada que desbloquear.
-      Hacerlo como el retail sería *quitar* colores; queda como decisión del
-      dueño (`README.md`).
+      crear luchador.~~ El dueño (2026-10-21): "lo ideal sería no tener los
+      colores"; los equipos se distinguen por su aro. Fuera el selector de
+      piel, pelo y ojos: los luchadores nuevos se crean con el índice 255,
+      que la paleta deja sin teñir (como `tn_0.hT` → `null` en el retail), y
+      salen con los colores de su raza. Los ya creados conservan el suyo. Las
+      23 cartas de color quedan en el backlog como posible premio de
+      temporada. Pruebas: `test/unit/palettes_test.gd` y
+      `test/colours_smoke.gd` (el servidor guarda y devuelve 255/255/255).
 - [x] **Nombres en el idioma de la interfaz**: hechizos y cartas (las Zaap
       incluidas) se buscan en las tablas del retail por idioma
       (`gamedata/game_text.gd`: `content.3` y `content.23` de

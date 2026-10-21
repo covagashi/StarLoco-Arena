@@ -1,6 +1,6 @@
 # S08 — Deuda de servidor
 
-**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (probablemente se parta en dos) · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (probablemente se parta en dos) · **Estado:** 🟡 siguiente (esbozo; se detalla al abrirlo)
 
 ## Objetivo
 
@@ -31,6 +31,17 @@ retail leídos y documentación que no se contradiga.
 
 - [ ] 509 (crear clan) no exige la carta 214 "Pacte", que en el retail es lo
       que abre la creación (visto en S05).
+
+## Heredado de S07 (2026-10-21, acordado con el dueño)
+
+- [ ] **Texto de 36 cartas de evento**: el retail lo genera a partir de los
+      efectos de cada evento (`tO.getDescription` → `asf_0`); hoy enseñan su
+      texto de ambiente. Generar la línea de efectos con los datos del evento.
+- [ ] **Nombres que manda el servidor en un solo idioma**: el jefe IA
+      ("Démon de la 58ème minute") y los luchadores IA llamados como su raza.
+- [ ] **`pvp_smoke` no pulsa Listo**: su vista de combate no recibe el 8020
+      (el arnés deja dos lobbies vivos) y la colocación acaba por tiempo.
+      Hueco de la prueba, no del juego.
 
 ## Datos retail sin leer (`DATA-COVERAGE.md`)
 

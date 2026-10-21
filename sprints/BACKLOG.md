@@ -239,3 +239,14 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 - [ ] **Sonidos de ambiente por mapa** (`nk_0.aL` → `IV.aE(mapId).aVa()`: un id de
       sonido y su ganancia por mapa, en el bus de efectos): sin leer de dónde salen
       esos datos ni si las arenas de combate los traen.
+
+## 11. Ideas para temporadas (del dueño, 2026-10-21)
+
+- [ ] El dueño piensa en temporadas en las que los jugadores vayan
+      desbloqueando cosas. Hoy no hay sistema de temporadas: solo los
+      periodos de torneo y la reputación trimestral de los demonios. Encaja
+      con S09 (torneos) o S14 (recompensas).
+- [ ] Candidatas a premio, por ser estéticas y no tocar el equilibrio: las
+      23 cartas de color del retail (tipo 29: 10 de pelo, el resto de piel y
+      ojos), que desbloqueaban un color para un hueco al crear luchador. El
+      selector de colores se quitó en S07; volvería solo como premio.

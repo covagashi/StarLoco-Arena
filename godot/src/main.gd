@@ -360,9 +360,6 @@ func _ready() -> void:
 	_gui.on("closeFighterCreationDialog",
 		func(_a, _w): _gui.close("fighterCreationDialog"))
 	_gui.on("setFighterBreedId", _on_fighter_set.bind("breedId"))
-	_gui.on("setFighterSkinColorIndex", _on_fighter_set.bind("skin"))
-	_gui.on("setFighterHairColorIndex", _on_fighter_set.bind("hair"))
-	_gui.on("setFighterEyeColorIndex", _on_fighter_set.bind("eye"))
 	_gui.on("setFighterVersion", _on_fighter_version)
 	_gui.on("setFighterSex", _on_fighter_set.bind("sex"))
 	_gui.on("hideMouseImage", func(_a, _w): pass)
@@ -2023,7 +2020,9 @@ func _on_new_fighter_dialog(_args: Array, _w, evo := false) -> void:
 	_create_fighter_evo = evo
 	_gui.gui.model.set_value("teamManagement", {
 		"breedId": 1, "sex": 0, "version": 2 if evo else 1,
-		"skin": 0, "hair": 0, "eye": 0, "name": "",
+		# no colour picker (S07): the breed's own colours
+		"skin": Palettes.NO_TINT, "hair": Palettes.NO_TINT, "eye": Palettes.NO_TINT,
+		"name": "",
 		"actorAnimation": "AnimStatique", "actorDirection": 3},
 		"editableFighter")
 	_refresh_editable_fighter()
