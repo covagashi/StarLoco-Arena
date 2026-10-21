@@ -43,7 +43,7 @@ func handleGMCommand(s *Session, line string) error {
 
 	switch verb {
 	case "HELP":
-		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0]")
+		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0] /TABLETURN n")
 	case "ANNOUNCE":
 		if len(args) == 0 {
 			return s.gmFeedback("usage: /ANNOUNCE <message>")
@@ -71,6 +71,8 @@ func handleGMCommand(s *Session, line string) error {
 		return s.gmMapDestruct(args)
 	case "ARENA":
 		return s.gmArenaPin(args)
+	case "TABLETURN":
+		return s.gmTableTurn(args)
 	case "STRENGTH":
 		if len(args) < 1 {
 			return s.gmFeedback("usage: /STRENGTH <n>")
@@ -510,4 +512,34 @@ func (s *Session) gmArenaPin(args []string) error {
 	}
 	s.gmArena = uint16(n)
 	return s.gmFeedback(fmt.Sprintf("arena pin = %d", n))
+}
+
+// gmTableTurn sets the caller's fight round counter, so a "reach round N"
+// victory condition (np_1 type 14, every "Défi du temps") can be met without
+// playing 20-30 rounds:
+//
+//	/TABLETURN 20   the next round is 21, which meets a "20 rounds" condition
+//
+// Same rationale as /SUDDENDEATH and /ENDFIGHT: the real path is out of reach by
+// hand (a test roster does not survive 20 rounds of a demon), and it is the only
+// way to see a fight end with the LOSER still standing (S08, B-074). Only the
+// server's counter moves; the next 8100 carries it to the client.
+func (s *Session) gmTableTurn(args []string) error {
+	f := s.deps.Fights.ByCoach(s.Coach.ID)
+	if f == nil {
+		return s.gmFeedback("not in a fight")
+	}
+	n, err := strconv.Atoi(firstArg(args))
+	if err != nil || n < 1 || n > 1000 {
+		return s.gmFeedback("usage: /TABLETURN <1-1000>")
+	}
+	f.Post(func(f *Fight) { f.tableTurn = int32(n) })
+	return s.gmFeedback(fmt.Sprintf("table turn set to %d", n))
+}
+
+func firstArg(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	return args[0]
 }

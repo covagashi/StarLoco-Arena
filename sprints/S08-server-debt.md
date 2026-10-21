@@ -26,8 +26,15 @@ retail leídos y documentación que no se contradiga.
       primera no se entrega ni cobra, la segunda sí. Quitar la guarda del
       handler la hace fallar (antes no fallaba nada). No es un e2e por socket
       porque el arnés e2e no carga gamedata (punto de abajo).
-- [ ] B-074: panel de fin de combate con el equipo perdedor vivo, sin verificar
-      visualmente.
+- [x] B-074, el informe con el equipo perdedor vivo: **verificado en vivo** en
+      el informe nativo. Ese estado solo sale de una condición de victoria
+      (rendirse mata a los luchadores de quien se rinde, `forfeitCoach`), y la
+      única de 20 rondas es el desafío 14, que el roster de `test` no aguanta
+      (cae en la ronda 9, también huyendo). Nuevo GM **`/TABLETURN n`**, que
+      adelanta el contador de rondas; `report_smoke` lanza el 14, manda
+      `/TABLETURN 20`, pasa turnos y el informe dice **victoria con los dos
+      enemigos vivos** (servidor: `victory condition met ... round=21
+      winner=0`). `report_smoke` 8/8.
 - [x] Casillas especiales: **confirmado en vivo** con `test/special_smoke.gd`.
       La arena 12 (fijada con `/ARENA`) tiene una Panacea (plantilla 1006) en
       (11,4), junto a cuatro salidas: el luchador se coloca en (10,4), pisa la

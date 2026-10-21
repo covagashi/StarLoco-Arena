@@ -365,10 +365,15 @@ second player, and the client HUD renders fully once *the client* starts the fig
   already varies) and that panel is live-verified for elimination wins. Confirming it
   needs a coach with fighters plus ~20 rounds of a "Défi du temps" in the GUI; worth
   folding into the next live session rather than doing standalone.
-- The e2e harness builds `game.Deps` with **nil** `Cards`, `Spells`, `FighterCards`,
-  `Summonings`, `CardSets`, `Events`, `FightMaps`. Most data-layer work is therefore
-  provably inert in e2e — check this before blaming a gameplay change for a red suite. A
-  *varying* failing test is machine load; a *consistent* one is a regression.
+  **Update (S08): visually verified** on the Godot client: `report_smoke` launches
+  challenge 14, jumps the round counter with the new GM `/TABLETURN 20`, and the
+  native report reads "victory" with both enemy fighters alive (server log:
+  `victory condition met ... round=21 winner=0`).
+- Most of the e2e harness builds `game.Deps` with **nil** `Cards`, `Spells`,
+  `FighterCards`, `Summonings`, `CardSets`, `Events`, `FightMaps`; only
+  `realdata_test.go` (`testServerWithData`, S08) boots on `data-dist`. Check which one
+  a red test uses before blaming a gameplay change. A *varying* failing test is
+  machine load; a *consistent* one is a regression.
 
 ## 8. Test account + dev tooling
 
@@ -396,7 +401,8 @@ second player, and the client HUD renders fully once *the client* starts the fig
     dump | wait`. **URL-encode `;`** or Go's query parser eats everything after it.
 - GM chat: opcode **3151** arch 3, payload `012A` + `[u8 len]` + utf8.
   `/HELP /WHERE /TP /WORLD /WHO /STRENGTH /FSTATE /ENDFIGHT /EVOFIGHT /SUDDENDEATH
-  /MAPDESTRUCT /ARENA`. `/ARENA <worldId|0>` pins the session's practice fights to
+  /MAPDESTRUCT /ARENA /TABLETURN`. `/TABLETURN n` sets the fight's round counter (to
+  meet a "last N rounds" victory condition); `/ARENA <worldId|0>` pins the session's practice fights to
   one arena; the displacement smokes use it (`--arena=N` overrides, S08).
 - Build/test from `server/`: `go build ./... && go vet ./... && go test ./...`,
   e2e `go test ./test/e2e/`.

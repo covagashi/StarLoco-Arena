@@ -17,6 +17,7 @@ extends "res://test/world_smoke.gd"
 ## its fighters bank tiredness and morale like any defeat.
 
 const CHALLENGE := 3   # the Hell's Tofus (SuperBidi)
+const VICTORY_CHALLENGE := 14   # "last 20 rounds" (np_1 type 14, B-074)
 
 var _lang_before := ""
 
@@ -56,7 +57,76 @@ func _audit() -> void:
 	await _level_up()
 	await create_timer(0.5).timeout
 	await _normal_path()
+	await create_timer(1.0).timeout
+	await _victory_condition()
 	i18n.set_locale(_lang_before)
+
+
+## S08 (B-074): a fight won by a VICTORY CONDITION ends with the loser still
+## standing — a state nothing else produces (a surrender kills the side that
+## gives up). Challenge 14 is won by lasting 20 rounds; /TABLETURN 20 (admin)
+## jumps the round counter, our turns end at once, and the next round meets
+## the condition. The report must say victory while the enemy is alive.
+func _victory_condition() -> void:
+	var lobby = current_scene
+	if lobby == null or not "_gui" in lobby:
+		_record(8300, "victory condition", false, "no lobby to launch from")
+		return
+	_seen.clear()
+	lobby._launch_challenge(VICTORY_CHALLENGE, 99)
+	if not await _wait(func(): return _seen.has(8000), 6.0):
+		_record(8300, "victory condition", false, "no 8000")
+		return
+	# the scene change frees this lobby; one still alive must not listen
+	if is_instance_valid(lobby) and _sess.message.is_connected(lobby._on_message):
+		_sess.message.disconnect(lobby._on_message)
+	await _wait(func():
+		return current_scene != null and current_scene.has_signal("turn_began"), 6.0)
+	var fight = current_scene
+	if fight == null or not fight.has_signal("turn_began"):
+		_record(8300, "victory condition", false, "no fight view")
+		return
+	var ref: WeakRef = weakref(fight)
+	fight.turn_began.connect(func(_fid, ours):
+		if ours:
+			create_timer(0.3).timeout.connect(func():
+				var f = ref.get_ref()
+				if f != null:
+					f.request_end_turn()))
+	fight.placement_began.connect(func():
+		create_timer(0.3).timeout.connect(func():
+			var f = ref.get_ref()
+			if f != null:
+				f.confirm_placement()))
+	if fight._placement:
+		fight.confirm_placement()
+	await _wait(func(): return _seen.has(8040), 20.0)   # combat started
+	var line := "/TABLETURN 20".to_ascii_buffer()
+	var w := WireWriter.new()
+	w.put_u16(line.size())
+	w.put_bytes(line)
+	_sess.send(3153, w.raw(), 3)
+	var over: bool = await _wait(func(): return _seen.has(8300), 60.0)
+	await create_timer(1.0).timeout
+	var enemy_alive := 0
+	if is_instance_valid(fight):
+		for fid in State.fighters:
+			if int(State.fighters[fid].get("coach", -1)) != State.my_coach_id \
+					and not fight._dead.get(fid, false):
+				enemy_alive += 1
+		fight._end_fight_ack()
+	var back: bool = await _wait(func():
+		var sc = current_scene
+		return sc != null and "_gui" in sc and sc._gui != null \
+			and sc._gui.is_open("fightReportDialog"), 10.0)
+	var rep: Dictionary = {}
+	if back:
+		var r: Variant = current_scene._gui.gui.model.get_value("fightReport")
+		rep = r if r is Dictionary else {}
+	_record(8300, "victory condition", over and back and rep.get("outcome", "") == "victory"
+		and enemy_alive > 0, "challenge %d: outcome '%s' with %d enemy fighter(s) alive" % [
+		VICTORY_CHALLENGE, rep.get("outcome", "—"), enemy_alive])
+	await _shot("fight-report-victory-condition")
 
 
 ## Challenge fights carry no fighter reports (only evolution ones do): feed
