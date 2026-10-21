@@ -1,6 +1,6 @@
 # S08 — Deuda de servidor
 
-**Planificado:** 2026-10-16 · **Abierto:** 2026-10-21 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (probablemente se parta en dos) · **Estado:** 🟡 abierto
+**Planificado:** 2026-10-16 · **Abierto:** 2026-10-21 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (partido en dos: la otra mitad es S19) · **Estado:** 🟢 cerrado el 2026-10-21
 
 ## Objetivo
 
@@ -83,9 +83,7 @@ retail leídos y documentación que no se contradiga.
 
 ## Heredado de S07 (2026-10-21, acordado con el dueño)
 
-- [ ] **Texto de 36 cartas de evento**: el retail lo genera a partir de los
-      efectos de cada evento (`tO.getDescription` → `asf_0`); hoy enseñan su
-      texto de ambiente. Generar la línea de efectos con los datos del evento.
+- → **S19**: el texto de las 36 cartas de evento.
 - [x] **Nombres que manda el servidor en un solo idioma**: resuelto en Godot
       sin tocar el cable (`src/gamedata/ai_names.gd`, llamado desde
       `State.index_fighters`). Solo para los dos coaches IA del servidor
@@ -112,21 +110,10 @@ retail leídos y documentación que no se contradiga.
       login, evo, colours 2/2, pvp, summon, carry y displace; lane headless
       257 checks y `go test ./...`.
 
-## Datos retail sin leer (`DATA-COVERAGE.md`)
+## Datos retail sin leer y opcodes pequeños → S19
 
-- [ ] Tipo 210 (trampas): política de re-disparo, máscaras y temporizador; los
-      disparadores 10002/10003/10006/10008 (la plantilla 1016 nunca se dispara).
-- [ ] Tipo 400: logro enlazado, recompensa y tope de XP.
-- [ ] Estadísticas: hay 98 contadores referenciados y el servidor mueve "un
-      puñado".
-- [ ] Bits de máscara de objetivo 55 y 58–61; código 66.
-
-## Opcodes pequeños pendientes
-
-4800 RunScript, 8250 (penalización por duración del turno), 4106
-(recolocación en lote), 2307/2309 (variante con apuesta) y apuestas sobre la
-victoria, 3212 (sin llamada). El faucet diario de fichas. Los sub-blobs de
-estadísticas de evolución y puntos de torneo en 2052/4096.
+Pasaron a [`S19-retail-data.md`](./S19-retail-data.md) al cerrar: son lectura
+del cliente, no deuda de bugs, y S08 ya era L.
 
 ## Documentación que se contradice
 
@@ -211,3 +198,32 @@ estadísticas de evolución y puntos de torneo en 2052/4096.
 
 Cada punto de arriba arreglado con prueba, o descartado por escrito, y un solo
 recuento de opcodes que coincida en las tres docs.
+
+## Resultado (2026-10-21)
+
+Cerrado con todos sus puntos hechos con prueba o descartados por escrito; los
+datos retail sin leer, los opcodes pequeños y el texto de las cartas de evento
+pasan a S19.
+
+Lo que más pesa:
+
+- **Bugs reales encontrados por el camino**: B-181 (ladder de clanes roto en
+  Postgres, la base de producción), B-182 (dos registros globales del proceso),
+  **B-183 (el cliente se congelaba en la 5.ª carta de ronda de cualquier
+  combate)** y B-184 (la versus no recibía su 8010).
+- **Pruebas que antes no existían**: el suite entero en Postgres y MariaDB
+  (`storetest.Open`), e2e con los datos reales, un solo recuento de opcodes
+  fijado por test, y smokes que ya no dependen de la arena al azar (`/ARENA`)
+  ni dejan restos (`smoke_sweep.gd`). Casilla especial y perdedor vivo vistos
+  en vivo (`special_smoke`, `report_smoke` con `/TABLETURN`).
+- **Decisiones del dueño**: crear clan no exige la carta 214; se sigue con los
+  tres dialectos.
+
+Comandos que lo demuestran (desde `server/` y `godot/`):
+
+```sh
+go vet ./... && go test ./...                       # SQLite
+ARENA_STORE_TEST_DRIVER=postgres ARENA_STORE_TEST_DSN=... go test ./internal/... ./test/...
+./run_tests.sh --headless                           # 12 suites, 257 checks
+xvfb-run -a godot --path . --accessibility disabled -s test/<smoke>.gd   # la batería
+```

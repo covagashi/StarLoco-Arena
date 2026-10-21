@@ -52,7 +52,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 |---|---|---|
 | **M1 — Jugable de punta a punta** | desde el cliente Godot se llega a todo lo que el retail ofrece fuera del combate, con sonido y opciones | S03, S05, S06 |
 | **M2 — Identidad visual** | combates en 1 bit, HUD propio y pantallas propias | S04, S17, S18, S07 |
-| **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S09, S10, S11 |
+| **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S19, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16 |
 
@@ -76,7 +76,8 @@ Linux y Windows).
 | [S18](./S18-screens-redesign.md) | M2 | L | 🟢 terminado (falta el visto bueno de las pantallas nuevas) | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
 | [S06](./S06-options-audio.md) | M1 | S | 🟢 cerrado | Opciones que no hacen nada, música y volúmenes |
 | [S07](./S07-gui-fidelity.md) | M2 | M | 🟢 cerrado | Lo que el retail tenía y aquí falta: nivel del coach, ficha del luchador, versus, colores |
-| [S08](./S08-server-debt.md) | M3 | L | 🟡 abierto | Deuda de servidor: bugs abiertos, datos sin leer, docs que se contradicen |
+| [S08](./S08-server-debt.md) | M3 | L | 🟢 cerrado | Deuda de servidor: bugs abiertos, docs que se contradicen, pruebas en los tres dialectos |
+| [S19](./S19-retail-data.md) | M3 | M | 🟡 siguiente | Datos retail sin leer, texto de las cartas de evento y opcodes pequeños (la otra mitad de S08) |
 | [S09](./S09-tournaments.md) | M3 | M | ⚪ esbozo | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
 | [S10](./S10-tutorial-onboarding.md) | M3 | M | ⚪ esbozo | Tutorial Kanojedo y onboarding del jugador nuevo |
 | [S11](./S11-replays-spectator.md) | M3 | M | ⚪ esbozo | Replays y modo espectador (alcance por decidir) |
