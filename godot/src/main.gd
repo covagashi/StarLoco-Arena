@@ -177,11 +177,10 @@ const OP_STATS_PUSH := 2401              # S2C uf_0 stat map — login push
 const OP_TUTORIAL_READY := 4517          # C2S empty arch 3 — aog_1 first-entry ack
 const OP_RESET_POS := 4514               # C2S empty arch 3 — /resetPosition
 const OP_DEMON_OFFER := 5470             # C2S [i16 demon][i16 n]{i32,i16 qty}
-const OP_FRIEND_REMOVE := 21050          # C2S [str8 name] (uk_1.removeFromFriendList)
-const OP_FRIEND_ADD := 21051             # C2S [str8 name]
-const OP_IGNORE_REMOVE := 21052          # C2S [str8 name]
-const OP_IGNORE_ADD := 21053             # C2S [str8 name]
-const OP_GUILD_INVITE_BY_NAME := 21054   # C2S [str8 name]
+const OP_FRIEND_REMOVE := 3133           # C2S [str8 name] (uk_1 event 21050 → aym_0)
+const OP_FRIEND_ADD := 3129              # C2S [str8 name] (event 21051 → QZ)
+const OP_IGNORE_REMOVE := 3135           # C2S [str8 name] (event 21052 → aer_0)
+const OP_IGNORE_ADD := 3131              # C2S [str8 name] (event 21053 → MP)
 const OP_FRIEND_LIST := 3144             # [u8 n]{u16 len, friend blob}
 const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
 const OP_FRIEND_ADDED := 3156            # [u8 name][u8 note][i64 id]…
@@ -218,13 +217,8 @@ const OP_EX_USER_READY := 5116           # S2C [i64 ex][u8 side]
 const ELEM_SCENARIO := -2                # pseudo kind: tutorial monologue (zone trigger)
 const OP_SPHERE_BUY := 23009             # C2S [i64 fighter][i32 sphere][i32 card]
 
-@onready var host_edit: LineEdit = $UI/VBox/ConnRow/Host
-@onready var port_edit: LineEdit = $UI/VBox/ConnRow/Port
-@onready var connect_btn: Button = $UI/VBox/ConnRow/ConnectBtn
-@onready var status_lbl: Label = $UI/VBox/ConnRow/Status
-@onready var login_edit: LineEdit = $UI/VBox/AuthRow/Login
-@onready var password_edit: LineEdit = $UI/VBox/AuthRow/Password
-@onready var login_btn: Button = $UI/VBox/AuthRow/LoginBtn
+var _login_name := ""       # the account last submitted (coach-creation default)
+var _login_pass := ""
 @onready var log := $UI/Chat
 
 var _my_pos := Vector3.ZERO   # last EnterInstance position
@@ -369,7 +363,7 @@ func _ready() -> void:
 	_gui.on("addToIgnoreList", _on_social_add.bind(OP_IGNORE_ADD))
 	_gui.on("removeFromFriendList", _on_social_remove.bind(OP_FRIEND_REMOVE))
 	_gui.on("removeFromIgnoreList", _on_social_remove.bind(OP_IGNORE_REMOVE))
-	_gui.on("inviteToGuild", _on_social_add.bind(OP_GUILD_INVITE_BY_NAME))
+	_gui.on("inviteToGuild", _on_guild_invite_by_name)
 	_gui.on("switchSocialTab", func(_a, _w): pass)
 	_gui.on("quitGuild", _on_gui_quit_guild)
 	_gui.on("destroyGuild", _on_gui_destroy_guild)
@@ -515,78 +509,14 @@ func _ready() -> void:
 	_gui.on("applyResolution", _on_apply_resolution)
 	_gui.on("destroyCoach", _on_destroy_coach)
 	_gui.dialog_opened.connect(_on_gui_dialog_opened)
-	$UI/VBox.visible = false
 	$UI/Chat.visible = false
 	if State.my_coach_id <= 0:
 		_show_login_screen()
 	else:
 		_lobby_ready = Session.is_online() and State.current_world >= 0
 		_mount_lobby_menubar({"name": State.my_coach_name})
-	connect_btn.pressed.connect(_on_connect_pressed)
-	login_btn.pressed.connect(_on_login_pressed)
-	$UI/VBox/AuthRow/PracticeBtn.pressed.connect(_on_practice_pressed)
-	$UI/VBox/AuthRow/FightBtn.pressed.connect(_on_fight_pressed)
-	$UI/VBox/AuthRow/SearchBtn.pressed.connect(_on_quick_search)
-	$UI/VBox/AuthRow/EvoBtn.pressed.connect(_on_evo_search)
-	$UI/VBox/AuthRow/DuoBtn.pressed.connect(_open_duo_dlg)
-	$UI/VBox/AuthRow/RanksBtn.pressed.connect(_open_ladder)
-	$UI/LadderDlg/VBox/Tabs.item_selected.connect(_on_ladder_tab)
-	$UI/LadderDlg/VBox/Scroll/List.item_selected.connect(_on_ladder_sel)
-	$UI/LadderDlg/VBox/Btns/MoreBtn.pressed.connect(_on_ladder_more)
-	$UI/LadderDlg/VBox/Btns/CloseBtn.pressed.connect(
-		func(): $UI/LadderDlg.hide())
-	var tabs: OptionButton = $UI/LadderDlg/VBox/Tabs
-	for t in LADDER_TABS:
-		tabs.add_item(t.label)
-	$UI/VBox/AuthRow/ClanBtn.pressed.connect(_open_guild)
-	$UI/GuildDlg/VBox/InviteRow/InviteBtn.pressed.connect(_on_guild_invite)
-	$UI/GuildDlg/VBox/Btns/StatsBtn.pressed.connect(_on_guild_stats)
-	$UI/GuildDlg/VBox/Btns/KickBtn.pressed.connect(_on_guild_kick)
-	$UI/GuildDlg/VBox/Btns/PromoteBtn.pressed.connect(
-		_on_guild_set_rank.bind(-1))
-	$UI/GuildDlg/VBox/Btns/DemoteBtn.pressed.connect(
-		_on_guild_set_rank.bind(1))
-	$UI/GuildDlg/VBox/Btns/RanksBtn.pressed.connect(_on_guild_ranks_mode)
-	$UI/GuildDlg/VBox/RankEdit/ApplyBtn.pressed.connect(
-		_on_guild_rank_apply)
-	$UI/GuildDlg/VBox/Btns/LeaveBtn.pressed.connect(_on_guild_leave)
-	$UI/GuildDlg/VBox/Btns/DisbandBtn.pressed.connect(_on_guild_disband)
-	$UI/GuildDlg/VBox/Btns/CloseBtn.pressed.connect(
-		func(): $UI/GuildDlg.hide())
-	$UI/VBox/AuthRow/GearBtn.pressed.connect(_open_equip)
-	$UI/DuoDlg/VBox/Btns/CreateBtn.pressed.connect(_on_duo_create)
-	$UI/DuoDlg/VBox/Btns/CancelBtn.pressed.connect(
-		func(): $UI/DuoDlg.visible = false)
-	$UI/VBox/AuthRow/CancelSearchBtn.pressed.connect(_on_cancel_search)
-	$UI/VBox/TeamRow/AssignBtn.pressed.connect(func(): _on_assign(true))
-	$UI/VBox/TeamRow/UnassignBtn.pressed.connect(func(): _on_assign(false))
-	$UI/VBox/TeamRow/SaveTeamBtn.pressed.connect(_open_save_team)
-	$UI/VBox/TeamRow/DelTeamBtn.pressed.connect(_on_del_team)
-	$UI/SaveTeamDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_team)
-	$UI/SaveTeamDlg/VBox/Btns/CancelBtn.pressed.connect(
-		func(): $UI/SaveTeamDlg.visible = false)
 	$UI/Chat.trade.connect(_invite_exchange)
 	$UI/Chat.watch.connect(_watch_coach)
-	var breed_sel: OptionButton = $UI/CreateDlg/VBox/Breed
-	for id in range(1, 13):
-		breed_sel.add_item(State.BREED_NAMES[id], id)
-	$UI/VBox/RosterBox/RosterBtns/NewBtn.pressed.connect(
-		func(): $UI/CreateDlg.visible = true)
-	$UI/CreateDlg/VBox/Btns/CancelBtn.pressed.connect(
-		func(): $UI/CreateDlg.visible = false)
-	$UI/CreateDlg/VBox/Btns/CreateBtn.pressed.connect(_on_create_fighter)
-	$UI/VBox/RosterBox/RosterBtns/DelBtn.pressed.connect(_on_delete_fighter)
-	$UI/VBox/RosterBox/Roster.item_selected.connect(
-		func(_i):
-			$UI/VBox/RosterBox/RosterBtns/DelBtn.disabled = false
-			$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.disabled = false
-			$UI/VBox/RosterBox/RosterBtns/KanodoBtn.disabled = false
-			$UI/VBox/RosterBox/RosterBtns/BenchBtn.disabled = false)
-	$UI/VBox/RosterBox/RosterBtns/LoadoutBtn.pressed.connect(_open_loadout)
-	$UI/VBox/RosterBox/RosterBtns/BenchBtn.pressed.connect(_on_bench_fighter)
-	$UI/LoadoutDlg/VBox/Btns/CancelBtn.pressed.connect(
-		func(): $UI/LoadoutDlg.visible = false)
-	$UI/LoadoutDlg/VBox/Btns/SaveBtn.pressed.connect(_on_save_loadout)
 	# Re-entering after a fight: replay anything that arrived mid-scene-change
 	# — LAST, once the GUI layer and the scene's own setup exist. Draining it
 	# first ran the 4516 lobby entry with no _gui (B-178): the lobby re-entry
@@ -602,22 +532,7 @@ func _exit_tree() -> void:
 		Session.client.scene_active = false
 
 
-func _on_connect_pressed() -> void:
-	if Session.is_online():
-		Session.client.disconnect_from()
-		return
-	_log_line(I18n.t("net.connecting", {"host": host_edit.text,
-		"port": port_edit.text}))
-	var err := Session.connect_to(host_edit.text, int(port_edit.text))
-	if err != OK:
-		_log_line("[color=red]%s[/color]" % I18n.t("net.failed",
-			{"err": error_string(err)}))
-
-
 func _on_connected() -> void:
-	status_lbl.text = I18n.t("net.status_connected")
-	login_btn.disabled = false
-	connect_btn.text = I18n.t("net.disconnect")
 	_log_line("[color=green]%s[/color]" % I18n.t("net.connected"))
 	if _pending_login != "":
 		_send_auth(_pending_login, _pending_pass)
@@ -630,8 +545,8 @@ func _on_retail_logon(args: Array, _widget: GWidget) -> void:
 	var password := str(_gui.gui.model.get_value("account.password"))
 	if login.strip_edges() == "":
 		return
-	login_edit.text = login
-	password_edit.text = password
+	_login_name = login
+	_login_pass = password
 	if Session.is_online():
 		_send_auth(login, password)
 	else:
@@ -652,9 +567,6 @@ func _on_disconnected() -> void:
 	if is_instance_valid(_lobby_screen):
 		_lobby_screen.set_actions_ready(false)
 		_lobby_screen.show_bubble(I18n.t("net.disconnected"))
-	status_lbl.text = I18n.t("net.status_offline")
-	login_btn.disabled = true
-	connect_btn.text = I18n.t("net.connect")
 	_log_line("[color=red]%s[/color]" % I18n.t("net.disconnected"))
 	if _login_screen != null and _pending_login != "":
 		_login_screen.set_error(I18n.t("login.connect_failed"))
@@ -684,8 +596,8 @@ func _on_login_submit(login: String, password: String, proxy: String) -> void:
 	_gui.gui.model.values["account.password"] = password
 	var pm: Dictionary = _gui.gui.model.values.get("proxy", {})
 	pm["selected"] = proxy
-	login_edit.text = login
-	password_edit.text = password
+	_login_name = login
+	_login_pass = password
 	if Session.is_online():
 		_send_auth(login, password)
 	else:
@@ -698,10 +610,6 @@ func _on_login_submit(login: String, password: String, proxy: String) -> void:
 		_log_line(I18n.t("net.connecting", {"host": hp[0],
 			"port": hp[1] if hp.size() > 1 else "5555"}))
 	_gui._save_settings()
-
-
-func _on_login_pressed() -> void:
-	_send_auth(login_edit.text, password_edit.text)
 
 
 func _send_auth(login_txt: String, pass_txt: String) -> void:
@@ -795,15 +703,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_INSTANCE_READY:
 			_lobby_ready = true
 			_log_line("[color=green]%s[/color]" % I18n.t("net.in_world"))
-			$UI/VBox/AuthRow/PracticeBtn.disabled = false
-			$UI/VBox/AuthRow/FightBtn.disabled = false
-			$UI/VBox/AuthRow/DuoBtn.disabled = false
-			$UI/VBox/AuthRow/RanksBtn.disabled = false
-			$UI/VBox/AuthRow/ClanBtn.disabled = false
-			$UI/VBox/AuthRow/GearBtn.disabled = false
-			$UI/VBox/AuthRow/CoachBtn.disabled = false
-			$UI/VBox/AuthRow/SearchBtn.disabled = false
-			$UI/VBox/AuthRow/EvoBtn.disabled = false
 			_show_lobby_screen()
 			# Post-fight re-entry: the debrief was decoded on 8300 — pop the
 			# result panel now that the island is up.
@@ -860,8 +759,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# Lobby roster (et_2 blobs) — fills the selectable fighter list.
 			var d := Codec.decode(opcode, payload)
 			State.roster = d.get("fighters", [])
-			var roster_list: ItemList = $UI/VBox/RosterBox/Roster
-			roster_list.clear()
 			var names := []
 			for f in State.roster:
 				# state: 0 titular, 1 bench, 2 dead, 3 graveyard, 4/5 legendary
@@ -872,8 +769,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				var label := "%s (%s)%s" % [f.get("name", "?"),
 					State.BREED_NAMES.get(int(f.get("breed", 0)), "breed %d" % int(f.get("breed", 0))), tag]
 				names.append(label)
-				roster_list.add_item(label)
-				roster_list.set_item_metadata(roster_list.item_count - 1, int(f.id))
 			_log_line(I18n.t("lobby.roster", {"list": ", ".join(names)})
 				if not names.is_empty() else I18n.t("lobby.roster_empty"))
 			_settle_revive()
@@ -884,13 +779,11 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var real := State.presets.filter(func(p): return int(p.type) != -4)
 			_log_line(I18n.t("lobby.presets", {"n": real.size(),
 				"shown": State.presets.size()}))
-			_refresh_presets()
 		OP_FIGHTER_CREATE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
 				_log_line("[color=green]%s[/color]" % I18n.t("fighter.created",
 					{"name": d.fighter.get("name", "?")}))
-				$UI/CreateDlg.visible = false
 			else:
 				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
 					{"code": int(d.result)}))
@@ -915,7 +808,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 						f.spells = spells
 				_log_line("[color=green]%s[/color]" % I18n.t(
 					"fighter.loadout_saved", {"n": spells.size()}))
-				$UI/LoadoutDlg.visible = false
 			else:
 				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
 					{"code": res}))
@@ -925,41 +817,41 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if payload.get_u8() == 1:
 				_searching = true
 				_search_kind = 1
-				$UI/VBox/AuthRow/CancelSearchBtn.visible = true
+				_set_searching(true)
 				_log_line(I18n.t("search.searching"))
 		OP_SEARCH_CANCEL_RESULT:
 			# 23102 [u8] — reply that closes the searching state
 			payload.get_u8()
 			_searching = false
 			_search_kind = 0
-			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_set_searching(false)
 			_log_line(I18n.t("search.cancelled"))
 		OP_FIGHT_STARTING:
 			# 23106 — paired, fight incoming (8000 follows)
 			_searching = false
 			_search_kind = 0
-			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_set_searching(false)
 			_log_line("[color=green]%s[/color]" % I18n.t("search.found"))
 		OP_SEARCH_ERROR:
 			var code := payload.get_u8()
 			if code >= 3:
 				_searching = false
 				_search_kind = 0
-				$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+				_set_searching(false)
 			DebugLog.add("classic search error %d" % code)
 			_log_line("[color=red]%s[/color]" % _search_error_text(code))
 		OP_QUICK_SEARCH_ACK:
 			# 2304 empty — the random-fight search is live
 			_searching = true
 			_search_kind = 2
-			$UI/VBox/AuthRow/CancelSearchBtn.visible = true
+			_set_searching(true)
 			_log_line(I18n.t("search.searching"))
 		OP_QUICK_CANCEL_RES:
 			# 2306 [u8 result] — quick-search cancelled (or was idempotent)
 			payload.get_u8()
 			_searching = false
 			_search_kind = 0
-			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_set_searching(false)
 			_log_line(I18n.t("search.cancelled"))
 		OP_MATCH_FOUND:
 			# 23110 — paired pending match; retail asks before the accept.
@@ -977,24 +869,24 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if payload.get_u8() == 1:
 				_searching = true
 				_search_kind = 3
-				$UI/VBox/AuthRow/CancelSearchBtn.visible = true
+				_set_searching(true)
 				_log_line(I18n.t("search.searching_evo"))
 		OP_EVO_CANCEL_RES:
 			payload.get_i8()
 			_searching = false
 			_search_kind = 0
-			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_set_searching(false)
 			_log_line(I18n.t("search.cancelled"))
 		OP_EVO_STARTING:
 			_searching = false
 			_search_kind = 0
-			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_set_searching(false)
 			_log_line("[color=green]%s[/color]" % I18n.t("search.found_evo"))
 		OP_EVO_ERROR:
 			var code := payload.get_i8()
 			_searching = false
 			_search_kind = 0
-			$UI/VBox/AuthRow/CancelSearchBtn.visible = false
+			_set_searching(false)
 			DebugLog.add("evolution search error %d" % code)
 			_log_line("[color=red]%s[/color]" % _search_error_text(code, true))
 		OP_RECONNECT_Q:
@@ -1047,7 +939,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				OP_LADDER_COACH, OP_LADDER_DEMON, OP_LADDER_PRO:
 			var ld := Codec.decode(opcode, payload)
 			_ladder_data[opcode] = ld
-			_fill_ladder(ld, opcode)
 			if _gui.is_open("ladderInformationDialog"):
 				_push_ladder_model()
 		OP_END_FIGHT:
@@ -1098,7 +989,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				var tid := int(payload.get_i16())
 				State.presets = State.presets.filter(
 					func(p): return int(p.id) != tid)
-				_refresh_presets()
 		OP_ELEMENT_SPAWN:
 			# 200 — world interactives entering the AoI: zaaps, card masters…
 			var d := Codec.decode(opcode, payload)
@@ -1373,7 +1263,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var sd := Codec.decode(opcode, payload)
 			for r0 in sd.get("rows", []):
 				State.criteria[int(r0.get("crit", 0))] = int(r0.get("val", 0))
-			_fill_ladder(sd, opcode)
 		OP_STATS_REPORT, OP_STATS_PUSH:
 			# 2400/2401 — rs_2 stat map: the coach's lifetime numbers; the
 			# "Coach" pane reads State.coach_stats.
@@ -1389,7 +1278,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.guild["guild"] = d.name
 			State.guild["demon_id"] = int(d.demon_id)
 			State.guild["ranks"] = d.ranks
-			_fill_guild()
 			if _gui.is_open("guildManagementDialog"):
 				_push_guild_mgmt_model()
 		552:  # GuildMembership — my own rank/demon row (part 2)
@@ -1411,7 +1299,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				names.append("%s%s" % [m.get("name", "?"),
 					"*" if m.get("online", false) else ""])
 			DebugLog.add("guild roster: %s" % ", ".join(names))
-			_fill_guild()
 			if _gui.is_open("guildDialog") or _gui.is_open("socialDialog"):
 				_push_social_model()
 		554:  # GuildTags — clan tags for nearby coaches. Fed the world name
@@ -1425,7 +1312,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			else:
 				_log_line("[i]%s[/i]" % I18n.t("guild.member_left",
 					{"id": int(d.coach_id)}))
-			_fill_guild()
 		560:  # GuildMemberFeed — "X joined / X was thrown out"
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i]%s[/i]" % I18n.t(
@@ -1792,28 +1678,6 @@ func _answer_match(yes: bool) -> void:
 	_match = {}
 
 
-## Roster bench/titular toggle — 23000 [i64 fid][u8 legendary]. The server
-## flips the state itself (titular↔bench, dead→graveyard, leg↔leg-bench) and
-## pushes a fresh 6006; the flag mirrors what retail sends for legendaries.
-func _on_bench_fighter() -> void:
-	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
-	var sel := roster_list.get_selected_items()
-	if sel.is_empty():
-		return
-	var fid := int(roster_list.get_item_metadata(sel[0]))
-	var f: Variant = _fighter_by_id(fid)
-	if f == null:
-		return
-	var st := int(f.get("state", 0))
-	if st == 3:   # graveyard — only a resurrection item brings it back
-		return
-	var w := WireWriter.new()
-	w.put_i64(fid)
-	w.put_u8(1 if st >= 4 else 0)
-	Session.send(OP_FIGHTER_SET_STATE, w.raw(), 2)
-	DebugLog.add("state toggle sent for %s" % str(f.get("name", "?")))
-
-
 ## --- Spectate (2260/2261/26331) ------------------------------------------------
 ## /watch <name> queries whether that coach is in a live fight (2260); a 1
 ## reply auto-joins (26331) — the server replays the resync (4516 + 8000 with
@@ -1830,33 +1694,9 @@ func _watch_coach(cname: String) -> void:
 	Session.send(OP_SPECTATE_QUERY, w.raw(), 2)
 
 
-## --- Ranking window (27500-27515) ---------------------------------------------
-## "Ranks" opens the seven-tab board (retail ladderInformationDialog). Each
-## tab is a windowed request (start offset, server page 20 / demons 12); the
-## reply fills the list and "More" pulls the next window.
-func _open_ladder() -> void:
-	$UI/LadderDlg.show()
-	_ladder_start = 0
-	_ladder_request()
-
-
-func _on_ladder_tab(idx: int) -> void:
-	_ladder_tab = idx
-	_ladder_start = 0
-	_ladder_request()
-
-
-func _on_ladder_more() -> void:
-	_ladder_request()
-
-
 ## Send the current tab's request at _ladder_start (arch 2).
 func _ladder_request() -> void:
 	var w := WireWriter.new()
-	if _ladder_start == 0:
-		# fresh window (open / tab switch) — drop the previous tab's rows;
-		# "More" requests append instead.
-		$UI/LadderDlg/VBox/Scroll/List.clear()
 	match int(LADDER_TABS[_ladder_tab].op):
 		OP_LADDER_GUILD_REQ:
 			w.put_i16(1)                     # board id — must be 1
@@ -1882,152 +1722,6 @@ func _ladder_request() -> void:
 	Session.send(int(LADDER_TABS[_ladder_tab].op), w.raw(), 2)
 
 
-func _fill_ladder(d: Dictionary, opcode: int) -> void:
-	# window advance: the reply's `end` is the next start (demons: start+n)
-	match opcode:
-		OP_LADDER_DEMON:
-			_ladder_start = int(d.get("start", 0)) \
-				+ d.get("rows", []).size()
-		OP_LADDER_GUILD:
-			_ladder_start = int(d.get("start", 0)) \
-				+ d.get("rows", []).size()
-		_:
-			_ladder_start = int(d.get("end", _ladder_start))
-	if not $UI/LadderDlg.visible:
-		return
-	var list: ItemList = $UI/LadderDlg/VBox/Scroll/List
-	var hint: Label = $UI/LadderDlg/VBox/Hint
-	var more: Button = $UI/LadderDlg/VBox/Btns/MoreBtn
-	match opcode:
-		OP_STAT_DATA:
-			_fill_achievements(list, hint, more)
-		OP_LADDER_1V1:
-			for r0 in d.get("rows", []):
-				var g := str(r0.get("guild", ""))
-				list.add_item("%s%s — rating %d · %dW/%dL · streak %d" % [
-					str(r0.get("name", "?")),
-					" [%s]" % g if g != "" else "",
-					int(r0.get("rating", 0)), int(r0.get("wins", 0)),
-					int(r0.get("losses", 0)), int(r0.get("streak", 0))])
-			hint.text = I18n.t("ladder.ranked", {"n": int(d.get("total", 0)),
-				"rank": str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
-					else I18n.t("ladder.unranked")})
-			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
-		OP_LADDER_GUILD:
-			for r0 in d.get("rows", []):
-				list.add_item("%s (leader %s) — %d pts" % [
-					str(r0.get("guild", "?")), str(r0.get("leader", "?")),
-					int(r0.get("score", 0))])
-			hint.text = I18n.t("ladder.clans", {"n": d.get("rows", []).size()})
-			more.disabled = d.get("rows", []).size() < 20
-		OP_LADDER_2V2:
-			for r0 in d.get("rows", []):
-				list.add_item("%s — %s [%s] rating %d · %dW/%dL" % [
-					str(r0.get("team", "?")), str(r0.get("coaches", "?")),
-					str(r0.get("guild", "")), int(r0.get("rating", 0)),
-					int(r0.get("wins", 0)), int(r0.get("losses", 0))])
-			hint.text = I18n.t("ladder.teams", {"n": int(d.get("total", 0))})
-			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
-		OP_LADDER_TOURN:
-			_ladder_tourn = {"m": int(d.get("month", 0)),
-				"t": int(d.get("trimester", 0)),
-				"y": int(d.get("year", 0))}
-			var wins: Array = d.get("windows", [])
-			var labels := [I18n.t("ladder.month"), I18n.t("ladder.trimester"),
-				I18n.t("ladder.year")]
-			var pts: Array = d.get("my_points", [0, 0, 0])
-			for i in wins.size():
-				list.add_item("— %s —" % labels[i])
-				for r0 in wins[i].get("rows", []):
-					list.add_item("%s — %d pts" % [
-						str(r0.get("name", "?")),
-						int(r0.get("points", 0))])
-			hint.text = I18n.t("ladder.points", {"m": int(pts[0]),
-				"t": int(pts[1]), "y": int(pts[2])})
-			more.disabled = true
-		OP_LADDER_COACH:
-			for r0 in d.get("rows", []):
-				list.add_item("%s — %d rep · %dW/%dL · demon %d" % [
-					str(r0.get("coach", "?")), int(r0.get("rep", 0)),
-					int(r0.get("wins", 0)), int(r0.get("losses", 0)),
-					int(r0.get("demon", 0))])
-			hint.text = I18n.t("ladder.coaches", {"n": int(d.get("total", 0))})
-			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
-		OP_LADDER_DEMON:
-			for r0 in d.get("rows", []):
-				list.add_item("Demon %d — %s · %d rep" % [
-					int(r0.get("demon", 0)),
-					str(r0.get("guild", "")) if str(r0.get("guild", "")) \
-						!= "" else "unaffiliated",
-					int(r0.get("rep", 0))])
-			hint.text = I18n.t("ladder.demons", {"n": 24})
-			more.disabled = d.get("rows", []).size() < 12
-		OP_LADDER_PRO:
-			for r0 in d.get("rows", []):
-				list.add_item("%s [%s] — rating %d" % [
-					str(r0.get("name", "?")), str(r0.get("guild", "")),
-					int(r0.get("rating", 0))])
-			hint.text = I18n.t("ladder.league", {"n": int(d.get("league", 0)),
-				"rank": str(d.get("my_rank")) if int(d.get("my_rank", 0)) > 0
-					else I18n.t("ladder.unranked")})
-			more.disabled = int(d.get("end", 0)) >= int(d.get("total", 0))
-
-
-## Achievements tab — the retail achievementsDialog: named rows sorted
-## done-first (qy_2), each showing ✓ or its averaged progress %, then a tail
-## of named raw criteria. Selecting a row puts its description and
-## per-condition progress in the hint line.
-func _fill_achievements(list: ItemList, hint: Label, more: Button) -> void:
-	var rows := NpcDialogs.achievement_rows(State.criteria, State.inventory)
-	var earned := 0
-	for r0 in rows:
-		var aid := int(r0.id)
-		var pts := int(NpcDialogs.achievement_info(aid).get("pts", 0))
-		if r0.done:
-			earned += pts
-			list.add_item("✓ %s — %d pts" % [
-				NpcDialogs.achievement_name(aid), pts])
-		else:
-			list.add_item("%s — %d%%" % [NpcDialogs.achievement_name(aid),
-				NpcDialogs.achievement_progress(
-					aid, State.criteria, State.inventory)])
-		list.set_item_metadata(list.item_count - 1, {"ach": aid})
-	var cids := State.criteria.keys()
-	cids.sort()
-	for cid in cids:
-		list.add_item("%s = %d" % [
-			NpcDialogs.criterion_name(int(cid)), int(State.criteria[cid])])
-		list.set_item_metadata(list.item_count - 1, {"crit": int(cid)})
-	hint.text = I18n.t("ach.summary", {"n": rows.size(), "pts": earned,
-		"crit": State.criteria.size()})
-	more.disabled = true
-
-
-func _on_ladder_sel(idx: int) -> void:
-	var list: ItemList = $UI/LadderDlg/VBox/Scroll/List
-	var m: Variant = list.get_item_metadata(idx)
-	if typeof(m) != TYPE_DICTIONARY or not m.has("ach"):
-		return
-	var aid := int(m.ach)
-	var info := NpcDialogs.achievement_info(aid)
-	var conds := []
-	for c in info.get("conds", []):
-		if c.kind == "stat":
-			conds.append("%s %d/%d" % [
-				NpcDialogs.criterion_name(int(c.id)),
-				mini(int(State.criteria.get(int(c.id), 0)), int(c.thr)),
-				int(c.thr)])
-		else:
-			conds.append("%s %s" % [Cards.name_of(int(c.id)),
-				"✓" if int(State.inventory.get(int(c.id), 0)) > 0 else "—"])
-	var desc := NpcDialogs.achievement_desc(aid)
-	$UI/LadderDlg/VBox/Hint.text = I18n.t("ach.detail", {
-		"name": NpcDialogs.achievement_name(aid),
-		"pts": int(info.get("pts", 0)),
-		"desc": "\n" + desc if desc != "" else "",
-		"conds": "\n" + " · ".join(conds) if not conds.is_empty() else ""})
-
-
 ## --- Clan panel (501-557, 2600/2601) ------------------------------------------
 ## "Clan" opens the guild dialog: members view (invite/stats/kick/rank ops)
 ## and a ranks editor (add/modify/delete, right-gated like retail — the
@@ -2040,20 +1734,6 @@ const GUILD_RIGHT_REMOVE := 4
 const GUILD_RIGHT_PROMOTE := 8
 const GUILD_RIGHT_DEMOTE := 16
 
-func _open_guild() -> void:
-	$UI/GuildDlg.show()
-	_guild_ranks_mode = false
-	_guild_mode_ui()
-	_fill_guild()
-	if not State.guild.is_empty():
-		var w := WireWriter.new()
-		w.put_i64(State.my_coach_id)
-		Session.send(OP_GUILD_GET, w.raw(), 2)
-		w = WireWriter.new()
-		w.put_i64(int(State.guild.get("guild_id", 0)))
-		Session.send(OP_GUILD_MEMBERS, w.raw(), 2)
-
-
 ## My rights mask (from the 552 membership row).
 func _my_rights() -> int:
 	return int(State.guild.get("rights", 0))
@@ -2062,217 +1742,6 @@ func _my_rights() -> int:
 func _has_right(bit: int) -> bool:
 	var r := _my_rights()
 	return r & GUILD_RIGHT_LEADER != 0 or r & bit != 0
-
-
-## Selected member row in members mode (the list stores the member dict
-## itself as item metadata).
-func _guild_sel_member() -> Variant:
-	if _guild_ranks_mode:
-		return null
-	var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
-	var sel := list.get_selected_items()
-	if sel.is_empty():
-		return null
-	return list.get_item_metadata(sel[0])
-
-
-func _fill_guild() -> void:
-	if not $UI/GuildDlg.visible:
-		return
-	var title: Label = $UI/GuildDlg/VBox/Title
-	var hint: Label = $UI/GuildDlg/VBox/Hint
-	var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
-	list.clear()
-	if State.guild.is_empty():
-		title.text = I18n.t("guild.title")
-		hint.text = I18n.t("guild.none")
-		return
-	title.text = I18n.t("guild.title_name", {"name": str(State.guild.get("guild", "?"))})
-	hint.text = I18n.t("guild.you", {
-		"rank": str(State.guild.get("rank_name", "?")),
-		"demon": int(State.guild.get("demon_id", 0)),
-		"n": State.guild.get("members", []).size()})
-	if _guild_ranks_mode:
-		for rk in State.guild.get("ranks", []):
-			list.add_item("rank %d — %s (rights %d)" % [
-				int(rk.get("level", 0)), str(rk.get("name", "?")),
-				int(rk.get("rights", 0))])
-	else:
-		for m in State.guild.get("members", []):
-			if int(m.get("part", -1)) != 0:
-				continue
-			list.add_item("%s — %s%s" % [
-				str(m.get("name", "?")), str(m.get("rank_name", "?")),
-				" · online" if m.get("online", false) else ""])
-			list.set_item_metadata(list.item_count - 1, m)
-
-
-## Swap member/rank button enablement for the current mode + rights.
-func _guild_mode_ui() -> void:
-	var edit: HBoxContainer = $UI/GuildDlg/VBox/RankEdit
-	var invite: HBoxContainer = $UI/GuildDlg/VBox/InviteRow
-	var btns := $UI/GuildDlg/VBox/Btns
-	edit.visible = _guild_ranks_mode
-	invite.visible = not _guild_ranks_mode
-	btns.get_node("StatsBtn").visible = not _guild_ranks_mode
-	btns.get_node("PromoteBtn").visible = not _guild_ranks_mode
-	btns.get_node("DemoteBtn").visible = not _guild_ranks_mode
-	var kick: Button = btns.get_node("KickBtn")
-	kick.text = I18n.t("btn.delete") if _guild_ranks_mode else I18n.t("btn.kick")
-	var ranks: Button = btns.get_node("RanksBtn")
-	ranks.text = I18n.t("btn.members") if _guild_ranks_mode else I18n.t("btn.ranks")
-	# right-gating mirrors retail's hidden entries (server rechecks anyway)
-	var in_guild := not State.guild.is_empty()
-	$UI/GuildDlg/VBox/InviteRow/InviteBtn.disabled = \
-		not in_guild or not _has_right(GUILD_RIGHT_INVITE)
-	btns.get_node("LeaveBtn").disabled = not in_guild
-	btns.get_node("DisbandBtn").disabled = \
-		not _has_right(GUILD_RIGHT_LEADER)
-
-
-func _on_guild_invite() -> void:
-	var edit: LineEdit = $UI/GuildDlg/VBox/InviteRow/Name
-	var cname := edit.text.strip_edges()
-	if cname.is_empty():
-		return
-	var tid: int = _coach_id_by_name(cname)
-	if tid < 0:
-		_log_line("[color=red]%s[/color]" % I18n.t("watch.not_found", {"name": cname}))
-		return
-	var w := WireWriter.new()
-	w.put_u8(0)                                  # guild type (clan)
-	w.put_u8(1)                                  # mode 1 = by coach id
-	w.put_i64(tid)
-	w.put_i64(int(State.guild.get("guild_id", 0)))
-	Session.send(OP_GUILD_INVITE, w.raw(), 8)
-	edit.clear()
-
-
-func _on_guild_stats() -> void:
-	var m: Variant = _guild_sel_member()
-	if m == null:
-		return
-	var w := WireWriter.new()
-	w.put_i64(int(m.get("coach_id", 0)))
-	Session.send(OP_GUILD_MEMBER_STATS, w.raw(), 2)
-
-
-func _on_guild_kick() -> void:
-	if _guild_ranks_mode:
-		# delete the selected rank
-		var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
-		var sel := list.get_selected_items()
-		var ranks: Array = State.guild.get("ranks", [])
-		if sel.is_empty() or sel[0] >= ranks.size():
-			return
-		var w := WireWriter.new()
-		w.put_i64(int(State.guild.get("guild_id", 0)))
-		w.put_i16(int(ranks[sel[0]].get("level", 0)))
-		Session.send(OP_GUILD_RANK_DEL, w.raw(), 2)
-		return
-	var m: Variant = _guild_sel_member()
-	if m == null:
-		return
-	var w := WireWriter.new()
-	w.put_i64(int(State.guild.get("guild_id", 0)))
-	w.put_i64(int(m.get("coach_id", 0)))
-	Session.send(OP_GUILD_LEAVE, w.raw(), 8)
-
-
-## delta -1 = promote (smaller level number), +1 = demote. Picks the
-## nearest EXISTING rank in that direction — levels are sparse (leader 1,
-## members join at 10, customs land in between).
-func _on_guild_set_rank(delta: int) -> void:
-	var m: Variant = _guild_sel_member()
-	if m == null:
-		return
-	var cur: int = int(m.get("rank_level", 0))
-	var want := -1
-	for rk in State.guild.get("ranks", []):
-		var lvl: int = int(rk.get("level", 0))
-		if delta < 0 and lvl < cur and (want < 0 or lvl > want):
-			want = lvl    # promote → highest level below current
-		elif delta > 0 and lvl > cur and (want < 0 or lvl < want):
-			want = lvl    # demote → lowest level above current
-	if want < 0:
-		_log_line("[i]%s[/i]" % I18n.t("guild.no_rank", {"dir":
-			"up" if delta < 0 else "down"}))
-		return
-	var w := WireWriter.new()
-	w.put_i64(int(State.guild.get("guild_id", 0)))
-	w.put_i64(int(m.get("coach_id", 0)))
-	w.put_i16(want)
-	Session.send(OP_GUILD_SET_RANK, w.raw(), 8)
-
-
-func _on_guild_leave() -> void:
-	if State.guild.is_empty():
-		return
-	var w := WireWriter.new()
-	w.put_i64(int(State.guild.get("guild_id", 0)))
-	w.put_i64(State.my_coach_id)               # self = leave
-	Session.send(OP_GUILD_LEAVE, w.raw(), 8)
-
-
-func _on_guild_disband() -> void:
-	var w := WireWriter.new()
-	w.put_i64(int(State.guild.get("guild_id", 0)))
-	Session.send(OP_GUILD_DESTROY, w.raw(), 2)
-
-
-func _on_guild_ranks_mode() -> void:
-	_guild_ranks_mode = not _guild_ranks_mode
-	_guild_mode_ui()
-	_fill_guild()
-	if _guild_ranks_mode:
-		# seed the editor with the selected rank if any
-		var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
-		var sel := list.get_selected_items()
-		var ranks: Array = State.guild.get("ranks", [])
-		if not sel.is_empty() and sel[0] < ranks.size():
-			_fill_rank_edit(ranks[sel[0]])
-
-
-func _fill_rank_edit(rk: Dictionary) -> void:
-	var edit := $UI/GuildDlg/VBox/RankEdit
-	edit.get_node("Name").text = str(rk.get("name", ""))
-	var r := int(rk.get("rights", 0))
-	edit.get_node("RInvite").button_pressed = r & GUILD_RIGHT_INVITE != 0
-	edit.get_node("RKick").button_pressed = r & GUILD_RIGHT_REMOVE != 0
-	edit.get_node("RPromote").button_pressed = r & GUILD_RIGHT_PROMOTE != 0
-	edit.get_node("RDemote").button_pressed = r & GUILD_RIGHT_DEMOTE != 0
-
-
-## Apply = modify the selected rank (555) or add a new one (553).
-func _on_guild_rank_apply() -> void:
-	var edit := $UI/GuildDlg/VBox/RankEdit
-	var name := str(edit.get_node("Name").text).strip_edges()
-	if name.is_empty():
-		return
-	var rights := 0
-	if edit.get_node("RInvite").button_pressed: rights |= GUILD_RIGHT_INVITE
-	if edit.get_node("RKick").button_pressed: rights |= GUILD_RIGHT_REMOVE
-	if edit.get_node("RPromote").button_pressed: rights |= GUILD_RIGHT_PROMOTE
-	if edit.get_node("RDemote").button_pressed: rights |= GUILD_RIGHT_DEMOTE
-	var w := WireWriter.new()
-	w.put_i64(int(State.guild.get("guild_id", 0)))
-	w.put_i32(rights)
-	var list: ItemList = $UI/GuildDlg/VBox/Scroll/List
-	var sel := list.get_selected_items()
-	var ranks: Array = State.guild.get("ranks", [])
-	var nb: PackedByteArray = name.to_utf8_buffer()
-	if not sel.is_empty() and sel[0] < ranks.size():
-		# modify: [i32 rights][u16 lvl][u16 lvl][str8 name]
-		var lvl: int = int(ranks[sel[0]].get("level", 0))
-		w.put_i16(lvl)
-		w.put_i16(lvl)
-		w.put_u8(nb.size())
-		w.put_bytes(nb)
-		Session.send(OP_GUILD_RANK_MOD, w.raw(), 2)
-	else:
-		w.put_u8(nb.size())
-		w.put_bytes(nb)
-		Session.send(OP_GUILD_RANK_ADD, w.raw(), 2)
 
 
 ## Answer the pending 502 clan invitation (503, arch 8).
@@ -2288,45 +1757,6 @@ func _answer_guild_invite(accepted: bool) -> void:
 		w.put_bytes(nb)
 	Session.send(OP_GUILD_INV_ANSWER, w.raw(), 8)
 	_guild_invite = {}
-
-
-## --- 2v2 duo (6024-6029) ------------------------------------------------------
-## "2v2…" opens the invite dialog (team name + friend pick, retail's
-## team2vs2NameDialog): 6024 [str8 team][i64 me][i64 mate]. The invited side
-## gets 6025 → the native ask prompt → 6026. On 6028 both clients own a -6 duo preset
-## (pushed via 6030) whose coaches[0] is the ally — Combattre then sends it
-## as the claimed partner in 23103's first i64.
-func _open_duo_dlg() -> void:
-	var opt: OptionButton = $UI/DuoDlg/VBox/Friend
-	opt.clear()
-	for fr in State.friends:
-		var fid := int(fr.get("id", -1))
-		if fid <= 0:
-			continue   # offline/friendless rows carry id -1
-		opt.add_item(fr.get("name", "?"))
-		opt.set_item_metadata(opt.item_count - 1, fid)
-	if opt.item_count == 0:
-		_log_line("[i]%s[/i]" % I18n.t("duo.no_friends"))
-		_gui.open("socialDialog")
-		return
-	opt.select(0)
-	$UI/DuoDlg.visible = true
-
-
-func _on_duo_create() -> void:
-	var opt: OptionButton = $UI/DuoDlg/VBox/Friend
-	if opt.selected < 0:
-		return
-	var tname: String = $UI/DuoDlg/VBox/Name.text.strip_edges()
-	if tname.is_empty():
-		tname = "duo"
-	var w := WireWriter.new()
-	w.put_str(tname, "u8")
-	w.put_i64(State.my_coach_id)
-	w.put_i64(int(opt.get_item_metadata(opt.selected)))
-	Session.send(OP_DUO_REQUEST, w.raw(), 2)
-	$UI/DuoDlg.visible = false
-	_log_line(I18n.t("duo.sent"))
 
 
 func _answer_duo(accept: bool) -> void:
@@ -2364,31 +1794,7 @@ func _on_cancel_search() -> void:
 ## Preset id of the TeamRow selection, or -1 (server falls back to the
 ## titular roster — tolerated on every team-carrying request).
 func _selected_preset_id() -> int:
-	var sel: int = $UI/VBox/TeamRow/Preset.selected
-	if sel <= 0:
-		return -1
-	return $UI/VBox/TeamRow/Preset.get_item_id(sel)
-
-
-func _refresh_presets() -> void:
-	for opt_path in ["UI/VBox/TeamRow/Preset", "UI/TeamPickDlg/VBox/Pick"]:
-		var opt: OptionButton = get_node(opt_path)
-		# keep the user's selection across server re-pushes (6030 lands after
-		# every roster/team mutation)
-		var keep := -1
-		if opt.selected > 0:
-			keep = opt.get_item_id(opt.selected)
-		opt.clear()
-		opt.add_item("(titular roster)", -1)
-		for p in State.presets:
-			if int(p.type) == -4:
-				continue  # synthetic bench row
-			opt.add_item("%s (%d fighters)" % [p.name, p.fighters.size()],
-				int(p.id))
-		for i in opt.item_count:
-			if opt.get_item_id(i) == keep:
-				opt.select(i)
-				break
+	return _tm_preset_sel   # the Team panel's pick (selectTeamPreset)
 
 
 ## --- Direct challenge (training fight between two coaches) --------------
@@ -2449,178 +1855,9 @@ func _cancel_team_pick() -> void:
 		_challenge_handle = -1
 
 
-## --- Team presets ----------------------------------------------------------
-## 6013 [i64 fid][i16 srcTeam][i16 dstTeam][i64 am] — drag-drop wire form.
-func _on_assign(add: bool) -> void:
-	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
-	var sel := roster_list.get_selected_items()
-	var team_id := _selected_preset_id()
-	if sel.is_empty() or team_id <= 0:
-		_log_line("[i]%s[/i]" % I18n.t("team.pick"))
-		return
-	var fid: int = roster_list.get_item_metadata(sel[0])
-	var w := WireWriter.new()
-	w.put_i64(fid)
-	w.put_i16(-1 if add else team_id)   # src: pool (-1) when adding
-	w.put_i16(team_id if add else -1)   # dst: pool (-1) when removing
-	w.put_i64(State.my_coach_id)
-	Session.send(OP_FIGHTER_ASSIGN, w.raw(), 2)
-	DebugLog.add("assign %s sent (fid %d %s team %d)" % [
-		"6013", fid, "→" if add else "←", team_id])
-
-
-## 6023 [i64 teamId][i16 gm][i16 fa] — delete the selected preset.
-func _on_del_team() -> void:
-	var team_id := _selected_preset_id()
-	if team_id <= 0:
-		return
-	var w := WireWriter.new()
-	w.put_i64(team_id)
-	w.put_i16(0)
-	w.put_i16(0)
-	Session.send(OP_TEAM_PRESET_DELETE, w.raw(), 2)
-
-
-func _open_save_team() -> void:
-	var box: VBoxContainer = $UI/SaveTeamDlg/VBox/Scroll/Fighters
-	for c in box.get_children():
-		c.queue_free()
-	for f in State.roster:
-		var cb := CheckBox.new()
-		cb.text = "%s (%s)" % [f.get("name", "?"),
-			State.BREED_NAMES.get(int(f.get("breed", 0)), "?")]
-		cb.set_meta("id", int(f.get("id", 0)))
-		cb.button_pressed = true
-		box.add_child(cb)
-	$UI/SaveTeamDlg.visible = true
-
-
-## 6021 — sw_1 blob [i16 type=0][i16 teamId=0][i16 gameMode=1][str8 name]
-## [u8 n]{i64 fighter, i64 ownerCoach}[u8 0 coaches] + trailing u8 pad.
-func _on_save_team() -> void:
-	var tname: String = $UI/SaveTeamDlg/VBox/Name.text.strip_edges()
-	if tname.is_empty():
-		_log_line("[color=red]%s[/color]" % I18n.t("team.need_name"))
-		return
-	var w := WireWriter.new()
-	w.put_i16(0)
-	w.put_i16(0)
-	w.put_i16(1)
-	var nb := CP1252.encode(tname)
-	w.put_u8(nb.size())
-	w.put_bytes(nb)
-	var members := []
-	for cb in $UI/SaveTeamDlg/VBox/Scroll/Fighters.get_children():
-		if cb.button_pressed:
-			members.append(int(cb.get_meta("id")))
-	w.put_u8(members.size())
-	for fid in members:
-		w.put_i64(fid)
-		w.put_i64(State.my_coach_id)
-	w.put_u8(0)   # coach list — solo preset
-	w.put_u8(0)   # trailing pad byte
-	Session.send(OP_TEAM_PRESET_SAVE, w.raw(), 2)
-	$UI/SaveTeamDlg.visible = false
-	DebugLog.add("team preset '%s' sent (%d fighters)" % [tname, members.size()])
-
-
-## 6001 FighterCreate [u8 flag][i16 slot][u16 blobLen][et_2 blob] (arch 2).
-## The roster list refresh arrives as a fresh 6006 push — no local mutation.
-func _on_create_fighter() -> void:
-	var dlg := $UI/CreateDlg/VBox
-	var fname: String = dlg.get_node("Name").text.strip_edges()
-	if fname.is_empty():
-		_log_line("[color=red]%s[/color]" % I18n.t("fighter.need_name"))
-		return
-	var blob: PackedByteArray = Overrides.encode_fighter_blob(
-		dlg.get_node("Breed").get_selected_id(), fname,
-		1 if dlg.get_node("Sex").button_pressed else 0)
-	var w := WireWriter.new()
-	w.put_u8(0)                       # flag: 0 = UI create (1 = file restore)
-	# slot = target preset id (-1 → titular pool), per hu_2.java:16611
-	w.put_i16(_selected_preset_id())
-	w.put_u16(blob.size())
-	w.put_bytes(blob)
-	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
-	DebugLog.add("fighter create sent: %s" % fname)
-
-
-## 6003 FighterDelete [i64 fighterId][i16 slot] (arch 2).
-func _on_delete_fighter() -> void:
-	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
-	var sel := roster_list.get_selected_items()
-	if sel.is_empty():
-		return
-	var fid: int = roster_list.get_item_metadata(sel[0])
-	var w := WireWriter.new()
-	w.put_i64(fid)
-	w.put_u16(0)
-	Session.send(OP_FIGHTER_DELETE, w.raw(), 2)
-	DebugLog.add("fighter delete sent: %d" % fid)
-
-
 ## Loadout editor — lists the fighter's breed-legal spells (from the exported
 ## gamedata table), checks the current loadout, saves via 6011.
 var _loadout_fid := -1
-
-func _open_loadout() -> void:
-	var roster_list: ItemList = $UI/VBox/RosterBox/Roster
-	var sel := roster_list.get_selected_items()
-	if sel.is_empty():
-		return
-	_loadout_fid = roster_list.get_item_metadata(sel[0])
-	var f: Variant = null
-	for fr in State.roster:
-		if int(fr.get("id", -1)) == _loadout_fid:
-			f = fr
-	if f == null:
-		return
-	var dlg := $UI/LoadoutDlg/VBox
-	dlg.get_node("Title").text = I18n.t("loadout.title", {"name": f.get("name", "?")})
-	var box: VBoxContainer = dlg.get_node("Scroll/Spells")
-	for c in box.get_children():
-		c.queue_free()
-	var owned := {}
-	for s in f.get("spells", []):
-		owned[int(s)] = true
-	for s in Spells.for_breed(int(f.get("breed", 0))):
-		var cb := CheckBox.new()
-		cb.text = "%s — %d AP, %d-%d" % [s.name, s.ap, s.min, s.max]
-		cb.set_meta("id", int(s.id))
-		cb.button_pressed = owned.has(int(s.id))
-		box.add_child(cb)
-	$UI/LoadoutDlg.visible = true
-
-
-## 6011 [i64 fid][i16 teamId][u16 len]{i32 spells}[u16 len]{i16 slot,i32 card}
-func _on_save_loadout() -> void:
-	if _loadout_fid < 0:
-		return
-	var picked := []
-	for cb in $UI/LoadoutDlg/VBox/Scroll/Spells.get_children():
-		if cb.button_pressed:
-			picked.append(int(cb.get_meta("id")))
-	if picked.size() > 6:
-		_log_line("[color=red]%s[/color]" % I18n.t("fighter.max_spells"))
-		return
-	# keep the fighter's existing card slots untouched
-	var cards := []
-	for f in State.roster:
-		if int(f.get("id", -1)) == _loadout_fid:
-			cards = f.get("cards", [])
-	var w := WireWriter.new()
-	w.put_i64(_loadout_fid)
-	w.put_u16(0)                        # teamId — unused server-side
-	w.put_u16(picked.size() * 4)
-	for s in picked:
-		w.put_i32(s)
-	w.put_u16(cards.size() * 6)
-	for c in cards:
-		w.put_u16(int(c.slot))
-		w.put_i32(int(c.id))
-	Session.send(OP_FIGHTER_LOADOUT, w.raw(), 2)
-	DebugLog.add("loadout sent — %d spells" % picked.size())
-
 
 ## --- Coach statistics (2401 / 2400) ------------------------------------------
 ## The 2401 login push carries the coach's lifetime counters as an rs_2 stat
@@ -2630,13 +1867,6 @@ const COACH_STAT_LABELS := {1: "stats.time_played", 2: "stats.time_fights",
 	3: "stats.fights", 4: "stats.wins", 5: "stats.losses",
 	7: "stats.win_streak", 8: "stats.loss_streak"}
 const COACH_STAT_ORDER := [3, 4, 5, 7, 8, 1, 2]  # fights first, times last
-
-## Stats arrive in seconds; players read them as minutes (h + m past 1h).
-static func _fmt_secs(secs: int) -> String:
-	var m := int(round(secs / 60.0))
-	var h := m / 60
-	return "%dh %02dm" % [h, m % 60] if h > 0 else "%d min" % m
-
 
 ## --- Coach equipment (5201) -------------------------------------------------
 ## 14 client slots; only the 12 wearable types map to one (server
@@ -2714,7 +1944,7 @@ func _open_coach_creation() -> void:
 		_login_screen = null
 	_gui.gui.model.set_value("localCoach", {
 		"sex": 0, "skin": 1, "hair": 1,
-		"name": login_edit.text.strip_edges().left(20),
+		"name": _login_name.strip_edges().left(20),
 		"actorDescriptorLibrary": "coach_7000",
 		"actorAnimation": "AnimStatique",
 		"actorDirection": 3,
@@ -3786,7 +3016,10 @@ func _on_gui_dialog_opened(name: String) -> void:
 		"cityDialog":
 			_push_city_model()
 		"socialDialog":
+			# the Clan tab lives here too: without this the member list stayed
+			# empty (only the old debug pane asked for 512)
 			_push_social_model()
+			_request_guild_refresh()
 		"guildDialog":
 			_push_social_model()
 			_request_guild_refresh()
@@ -4755,6 +3988,22 @@ func _on_social_add(args: Array, _w: GWidget, opcode: int) -> void:
 	Session.send(opcode, w.raw(), 2)
 
 
+## inviteToGuild(name) — retail's uk_1 event 21054 becomes a 501 by NAME
+## (qu_2 → uq_2): [u8 type 0][u8 mode 0][str8 name][i64 guildId], arch 8.
+## The UI event ids 21050-21054 are not wire opcodes (B-180).
+func _on_guild_invite_by_name(args: Array, _w: GWidget) -> void:
+	var name := _social_arg_text(args[0]) if not args.is_empty() else ""
+	var gid := int(State.guild.get("guild_id", 0))
+	if name.is_empty() or gid <= 0:
+		return
+	var w := WireWriter.new()
+	w.put_u8(0)
+	w.put_u8(0)
+	w.put_str(name, "u8")
+	w.put_i64(gid)
+	Session.send(OP_GUILD_INVITE, w.raw(), 8)
+
+
 func _on_social_remove(args: Array, w: GWidget, opcode: int) -> void:
 	_on_social_add(args, w, opcode)
 
@@ -5322,7 +4571,6 @@ var _tourn_search_tid := -1  # tournament whose opponent-search is live
 var _ladder_tab := 0          # current LADDER_TABS index
 var _ladder_start := 0        # window start of the next request
 var _ladder_tourn := {"m": 0, "t": 0, "y": 0}  # echoed tournament period
-var _guild_ranks_mode := false  # GuildDlg list shows ranks instead of members
 var _guild_invite := {}         # pending 502 {type, inviter, guild}
 
 
@@ -5753,8 +5001,15 @@ func _open_bug_report() -> void:
 	d.popup_centered()
 
 
+## The lobby's matchmaking state (S18; was the debug row's Cancel button).
+func _set_searching(on: bool) -> void:
+	if is_instance_valid(_lobby_screen):
+		_lobby_screen.set_searching(on)
+
+
 func _on_lobby_action(action: String) -> void:
 	match action:
+		"cancel_search": _on_cancel_search()
 		"practice": _on_practice_pressed()
 		"fight": _on_fight_pressed()
 		"quick": _on_quick_search()

@@ -56,7 +56,7 @@ qué el visual no puede correr en CI).
       `creation_screen.gd:241` (4 en total, no rompen nada). Son los que
       quedan visibles en el log ahora que los ~60 de `will not work on export`
       desaparecieron con B-173.
-- [ ] Claves de i18n sin traducir en el chat del lobby al entrar: `net.in_world`,
+- [x] (2026-10-21, cierre de S18: las 38 claves que faltaban, y una prueba en la lane headless que lo impide) Claves de i18n sin traducir en el chat del lobby al entrar: `net.in_world`,
       `lobby.roster`, `lobby.presets`, `inv.stacks` no están en ninguna tabla
       `ui_*.json` (visto el 2026-10-20 en `capturas/s18/lobby.png`; ya faltaban
       antes de S18). Traducirlas o sacar esas líneas del chat, que son de depuración.
@@ -73,12 +73,19 @@ qué el visual no puede correr en CI).
       `content.23` de `texts_en` aunque el `i18n.jar` trae es/fr ("Weerdtrot Jacket" en
       una interfaz en español). Mismo arreglo que los textos de NPC (`locales`), visto el
       2026-10-20.
-- [ ] **La tabla de miembros del clan sale vacía** en Social → Clan con el coach `test`
+- [x] (2026-10-21: Social no pedía la lista 512 al abrirse; ahora sí) **La tabla de miembros del clan sale vacía** en Social → Clan con el coach `test`
       (líder de un clan de un miembro). Visto el 2026-10-20 en `capturas/s18/clan-demon.png`;
       sin investigar si falta pedir la lista (512) o si es el filtro de `part`.
 - [ ] Inscripción a torneos: el cliente solo sabe que estás inscrito si lo hiciste en esta
       sesión (ningún mensaje lo dice al entrar). Volver a pulsar "Inscribirme" es inocuo:
       el servidor la guarda una vez.
+
+- [ ] **El color del muñeco** (por decidir con el dueño, viene de S18): con el muñeco en
+      línea 1 bit, el pelo y la piel elegidos en la creación solo se ven en las muestras.
+      Hoja `capturas/s18/muneco-1bit.png`.
+- [ ] Rehacer uno a uno los paneles que siguen siendo tablas (logros, estadísticas,
+      calendario…) si el dueño lo pide: en S18 se hicieron el inventario con cartas y la
+      clasificación del boceto, y el dueño aprobó el resto tal cual ("los menús me gustan").
 
 ## 2. Pendientes GUI (fidelidad retail)
 

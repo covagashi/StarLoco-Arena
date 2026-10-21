@@ -435,68 +435,120 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 
 
 ## ---- guild phase: invite → stats → rank CRUD → promote/demote → kick ----
-## Runs on the main client (guild leader); the bot auto-accepts the 502.
-func _sel_member(name: String) -> bool:
-	var list: ItemList = _main.get_node("UI/GuildDlg/VBox/Scroll/List")
-	for i in list.item_count:
-		if name in list.get_item_text(i):
-			list.select(i)
-			return true
+## Runs on the main client (guild leader) through the NATIVE clan screens
+## (S18): Social → Clan, the ranks panel and the member panel. The bot
+## auto-accepts the 502.
+func _btn(panel, text: String) -> Button:
+	for b in panel.find_children("*", "Button", true, false):
+		if b.text == text and not b.disabled:
+			return b
+	return null
+
+
+func _t(key: String) -> String:
+	return root.get_node("I18n").t(key)
+
+
+func _social_clan():
+	for n in _main._gui.dialogs.keys():
+		_main._gui.close(n)
+	_main._gui.open("socialDialog")
+	await create_timer(0.8).timeout   # opening asks for 510/512
+	var sp = _main._gui.dialogs.get("socialDialog")
+	sp.tab = 2
+	sp.schedule_refresh()
+	await create_timer(0.4).timeout
+	return sp
+
+
+## Select a row of `panel`'s tables whose name contains `name`.
+func _select_row(panel, name: String) -> bool:
+	for t in panel.find_children("*", "Tree", true, false):
+		for it in t.get_root().get_children():
+			var m: Variant = it.get_metadata(0)
+			if m is Dictionary and name in str(m.get("name", "")):
+				it.select(0)
+				t.item_selected.emit()
+				await create_timer(0.3).timeout
+				return true
 	return false
 
 
 func _guild_phase() -> void:
 	await create_timer(0.5).timeout
-	_main._open_guild()                    # 517 → fresh 510/552/512 pushes
-	await create_timer(0.8).timeout
-	_main.get_node("UI/GuildDlg/VBox/InviteRow/Name").text = "test2"
-	_main._on_guild_invite()
+	var sp = await _social_clan()
+	for le in sp.find_children("*", "LineEdit", true, false):
+		le.text = "test2"
+	_btn(sp, _t("social.invite")).pressed.emit()
 	print("[smoke] guild invite sent (501) — bot should answer 503")
 	await create_timer(1.2).timeout
-	if _sel_member("test2"):
-		_main._on_guild_stats()            # 2600 → 2601 report
+	sp = await _social_clan()
+	var in_list: bool = await _select_row(sp, "test2")
+	print("[smoke] GUILD_MEMBERS %s — test2 in the native clan table %s" % ["OK" if in_list else "FAIL",
+		_main._gui.gui.model.get_value("guild").get("members", []).map(func(m): return str(m.get("name", "?")))])
+	if in_list:
+		_btn(sp, _t("social.view_member")).pressed.emit()   # 2600 → 2601
 		print("[smoke] member-stats sent (2600)")
 		await create_timer(0.8).timeout
-	# ranks editor: add "Oficial" with the invite right
-	_main._on_guild_ranks_mode()
-	_main.get_node("UI/GuildDlg/VBox/RankEdit/Name").text = "Oficial"
-	_main.get_node("UI/GuildDlg/VBox/RankEdit/RInvite").button_pressed = true
-	_main._on_guild_rank_apply()
+	# ranks panel: add "Oficial" with the invite right, then rename it
+	sp = await _social_clan()
+	_btn(sp, _t("social.ranks")).pressed.emit()
+	await create_timer(0.6).timeout
+	var gm = _main._gui.dialogs.get("guildManagementDialog")
+	for le in gm.find_children("*", "LineEdit", true, false):
+		le.text = "Oficial"
+	var invite_box: CheckBox = gm.find_children("*", "CheckBox", true, false)[0]
+	invite_box.button_pressed = true
+	_btn(gm, _t("gm.add")).pressed.emit()
 	print("[smoke] rank-add sent (553)")
 	await create_timer(1.0).timeout
-	# modify that rank (555): rename + same rights
-	var list: ItemList = _main.get_node("UI/GuildDlg/VBox/Scroll/List")
-	for i in list.item_count:
-		if "Oficial" in list.get_item_text(i):
-			list.select(i)
-	_main.get_node("UI/GuildDlg/VBox/RankEdit/Name").text = "Oficial Mayor"
-	_main._on_guild_rank_apply()
-	print("[smoke] rank-modify sent (555)")
-	await create_timer(1.0).timeout
-	_main._on_guild_ranks_mode()           # back to members
-	if _sel_member("test2"):
-		_main._on_guild_set_rank(-1)       # promote 10 → 2
-		print("[smoke] promote sent (515)")
-		await create_timer(0.8).timeout
-	if _sel_member("test2"):
-		_main._on_guild_set_rank(1)        # demote 2 → 10
-		print("[smoke] demote sent (515)")
-		await create_timer(0.8).timeout
-	if _sel_member("test2"):
-		_main._on_guild_kick()             # 505 [gid][member]
-		print("[smoke] kick sent (505)")
-		await create_timer(0.8).timeout
-	# delete the custom rank (ranks mode Kick→557)
-	_main._on_guild_ranks_mode()
-	list = _main.get_node("UI/GuildDlg/VBox/Scroll/List")
-	for i in list.item_count:
-		if "Oficial" in list.get_item_text(i):
-			list.select(i)
-	_main._on_guild_kick()
-	print("[smoke] rank-delete sent (557)")
+	sp = await _social_clan()        # reopen: the ranks table from the new 510
+	_btn(sp, _t("social.ranks")).pressed.emit()
 	await create_timer(0.6).timeout
-	_main._on_guild_ranks_mode()
-	_main.get_node("UI/GuildDlg").hide()
+	gm = _main._gui.dialogs.get("guildManagementDialog")
+	if await _select_row(gm, "Oficial"):
+		await create_timer(0.5).timeout
+		for le in gm.find_children("*", "LineEdit", true, false):
+			le.text = "Oficial Mayor"
+		_btn(gm, _t("gm.save")).pressed.emit()
+		print("[smoke] rank-modify sent (555)")
+		await create_timer(1.0).timeout
+	# the member panel: promote, demote, kick
+	for step in [["gmb.promote", "promote sent (515)"], ["gmb.demote", "demote sent (515)"], ["gmb.kick", "kick sent (505)"]]:
+		sp = await _social_clan()
+		if not await _select_row(sp, "test2"):
+			break
+		_btn(sp, _t("social.view_member")).pressed.emit()
+		await create_timer(0.8).timeout
+		var mp = _main._gui.dialogs.get("guildCoachStatsDialog")
+		var b: Button = _btn(mp, _t(step[0])) if mp != null else null
+		if b == null:
+			print("[smoke] WARN no %s button" % step[0])
+			continue
+		b.pressed.emit()
+		if step[0] == "gmb.kick":
+			await create_timer(0.2).timeout
+			for c in mp.get_children():
+				if c is ConfirmationDialog:
+					c.confirmed.emit()
+		print("[smoke] " + step[1])
+		await create_timer(0.8).timeout
+	# delete the custom rank (557)
+	sp = await _social_clan()
+	_btn(sp, _t("social.ranks")).pressed.emit()
+	await create_timer(0.6).timeout
+	gm = _main._gui.dialogs.get("guildManagementDialog")
+	if await _select_row(gm, "Oficial"):
+		await create_timer(0.4).timeout
+		_btn(gm, _t("gm.delete")).pressed.emit()
+		await create_timer(0.2).timeout
+		for c in gm.get_children():
+			if c is ConfirmationDialog:
+				c.confirmed.emit()
+		print("[smoke] rank-delete sent (557)")
+	await create_timer(0.6).timeout
+	for n in _main._gui.dialogs.keys():
+		_main._gui.close(n)
 	# continue to the exchange phase
 	_main._invite_exchange_id(_bot_coach, "test2")
 

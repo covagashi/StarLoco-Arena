@@ -1,4 +1,4 @@
-extends "res://src/ui/lobby_panel.gd"
+extends "res://src/ui/card_panel.gd"   # lobby_panel + the card tile helpers
 
 const Direction8 := preload("res://src/util/direction8.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
@@ -145,7 +145,7 @@ func _team() -> void:
 	if tab == 0 and _fallen_section(roster):
 		living.custom_minimum_size.y = 76   # the fallen table sits below it
 	var detail := column(split, false)
-	detail.custom_minimum_size.x = 260
+	detail.custom_minimum_size.x = 320
 	if selected.is_empty():
 		label(detail, I18n.t("team.select_hint"))
 		label(detail, I18n.t("team.empty_hint"))
@@ -160,8 +160,13 @@ func _team() -> void:
 		else:
 			button(detail, I18n.t("team.toggle_status"), func(): send("changeFighterStatus", [], selected), int(selected.get("state", 0)) != 3)
 		if not classic:
-			button(detail, I18n.t("team.spheres"), func(): send("nativeKanodo", [int(selected.get("id", -1))])).name = "Spheres"
-			button(detail, I18n.t("team.make_legend"), func(): confirm_action(I18n.t("team.make_legend_confirm"), func(): send("becomeALegend", [selected], selected)))
+			# one row: the column must fit 720p without scrolling
+			var evo_row := row(detail)
+			var sph := button(evo_row, I18n.t("team.spheres"), func(): send("nativeKanodo", [int(selected.get("id", -1))]))
+			sph.name = "Spheres"
+			var leg := button(evo_row, I18n.t("team.make_legend"), func(): confirm_action(I18n.t("team.make_legend_confirm"), func(): send("becomeALegend", [selected], selected)))
+			for b in [sph, leg]:
+				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button(detail, I18n.t("team.delete_fighter"), func(): confirm_action(I18n.t("team.delete_fighter_confirm", {"name": selected.get("name", "")}), func(): send("deleteFighter", [selected], selected)))
 	pinned_actions.show()
 	var footer := pinned_actions
@@ -264,18 +269,53 @@ func _inventory() -> void:
 	search.text_submitted.connect(func(_text): schedule_refresh())
 	button(toolbar, I18n.t("inv.clear"), func(): draft["search"] = ""; schedule_refresh())
 	button(toolbar, I18n.t("inv.coach_equip"), func(): send("nativeEquipOpen")).name = "CoachEquip"
-	items = items.filter(func(item): return str(item.get("name", "")).to_lower().contains(str(draft.get("search", "")).to_lower()))
-	table(body, [I18n.t("inv.col_set"), I18n.t("inv.col_owned"), I18n.t("inv.col_total")] if tab == 3 else [I18n.t("inv.col_card"), I18n.t("inv.col_qty"), I18n.t("inv.col_value")], ["name", "completion", "size"] if tab == 3 else ["name", "quantity", "value"], items, func(_item): schedule_refresh())
-	if not selected.is_empty():
-		label(body, str(selected.get("name", "")), 20)
-		if tab == 3:
+	# an empty search keeps everything: Godot's "x".contains("") is false, so
+	# filtering on it hid the whole inventory (S18)
+	var needle := str(draft.get("search", "")).strip_edges().to_lower()
+	if needle != "":
+		items = items.filter(func(item): return str(item.get("name", "")).to_lower().contains(needle))
+	if tab == 3:
+		table(body, [I18n.t("inv.col_set"), I18n.t("inv.col_owned"), I18n.t("inv.col_total")], ["name", "completion", "size"], items, func(_item): schedule_refresh())
+		if not selected.is_empty():
+			label(body, str(selected.get("name", "")), 20)
 			table(body, [I18n.t("inv.col_card"), I18n.t("inv.col_qty")], ["name", "quantity"], selected.get("collection", []))
-		else:
-			label(body, I18n.t("inv.collection") + " " + str(selected.get("cardSetName", "—")))
+		return
+	# the cards themselves (S18): tiles with their art, the picked one large
+	var split := row(body)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var grid := GridContainer.new()
+	grid.name = "CardGrid"
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(grid)
+	if items.is_empty():
+		label(grid, I18n.t("common.empty"))
+	var pick := int(selected.get("id", -1))
+	for item in items:
+		var t := _tile(grid, item, int(item.get("id", -2)) == pick, "×%d" % int(item.get("quantity", 0)),
+			I18n.t("inv.value_n", {"n": int(item.get("value", 0))}))
+		t.name = "Card%d" % int(item.get("id", 0))
+		t.pressed.connect(func():
+			selected = item
+			schedule_refresh())
+	var detail := column(split, false)
+	detail.custom_minimum_size.x = 300
+	if selected.is_empty() or not items.any(func(i): return int(i.get("id", -2)) == pick):
+		label(detail, I18n.t("inv.pick_hint"))
+		return
+	detail.add_child(_framed_art(pick, Vector2(260, 200)))
+	label(detail, str(selected.get("name", "")), 20).name = "CardName"
+	label(detail, I18n.t("inv.collection", {"name": str(selected.get("cardSetName", "—"))}))
+	label(detail, "%s ×%d · %s" % [I18n.t("inv.col_qty"), int(selected.get("quantity", 0)),
+		I18n.t("inv.value_n", {"n": int(selected.get("value", 0))})])
 
 
 func _ladder() -> void:
-	choices(body, [I18n.t("ladder.tab_1v1"), I18n.t("ladder.tab_boss"), I18n.t("ladder.tab_2v2"), I18n.t("ladder.tab_clans"), I18n.t("ladder.tab_tourn"), I18n.t("ladder.tab_pro"), I18n.t("ladder.tab_demon")], tab, func(i): tab = i; selected = {}; send("nativeLadderTab", [i]); schedule_refresh())
+	# tabs as buttons, your row marked, "Mi puesto" first among the pager
+	# (the S18 sketch, tools/mock_screens.py ranking)
+	tabs(body, [I18n.t("ladder.tab_1v1"), I18n.t("ladder.tab_boss"), I18n.t("ladder.tab_2v2"), I18n.t("ladder.tab_clans"), I18n.t("ladder.tab_tourn"), I18n.t("ladder.tab_pro"), I18n.t("ladder.tab_demon")], func(i): send("nativeLadderTab", [i]))
 	var fields := [["position", "coachName", "totalVictories", "totalDefeats"], ["position", "creatorCoachName", "reputation", "totalVictories"], ["position", "teamName", "totalVictories", "totalDefeats"], ["position", "name", "bossName", "strength"], ["position", "name", "points"], ["position", "coachName", "guildName", "rating"], ["position", "demonName", "guildName", "quarterlyReputationPoints"]]
 	var headings := [
 		[I18n.t("ladder.col_rank"), I18n.t("ladder.col_player"), I18n.t("ladder.col_wins"), I18n.t("ladder.col_losses")],
@@ -285,10 +325,25 @@ func _ladder() -> void:
 		[I18n.t("ladder.col_rank"), I18n.t("ladder.col_name"), I18n.t("ladder.col_points")],
 		[I18n.t("ladder.col_rank"), I18n.t("ladder.col_player"), I18n.t("ladder.col_clan"), I18n.t("ladder.col_score")],
 		[I18n.t("ladder.col_rank"), I18n.t("ladder.col_demon"), I18n.t("ladder.col_clan"), I18n.t("ladder.col_rep")]]
-	table(body, headings[tab], fields[tab], data("ladderManager." + BOARDS[tab], []))
+	var board := table(body, headings[tab], fields[tab], data("ladderManager." + BOARDS[tab], []))
+	board.name = "Board"
+	var mine := [str(data("localCoach.name", "")), str(data("guild.name", ""))]
+	for it in board.get_root().get_children():
+		var m: Variant = it.get_metadata(0)
+		if not m is Dictionary:
+			continue
+		for f in fields[tab].slice(1):
+			var v := str(m.get(f, ""))
+			if v != "" and v in mine:
+				it.set_text(0, "▶ " + it.get_text(0))
+				it.select(0)   # inverted, like a picked row
+				break
 	var footer := row(body)
-	for entry in [["ladder.first", "firstPlayerLadderInformationDialog"], ["ladder.prev", "backwardTenLadderInformationDialog"], ["ladder.next", "forwardTenLadderInformationDialog"], ["ladder.me", "coachSearchLadderInformationDialog"], ["ladder.last", "lastPlayerLadderInformationDialog"]]:
-		button(footer, I18n.t(entry[0]), func(): send(entry[1]))
+	for entry in [["ladder.first", "firstPlayerLadderInformationDialog"], ["ladder.prev", "backwardTenLadderInformationDialog"], ["ladder.me", "coachSearchLadderInformationDialog"], ["ladder.next", "forwardTenLadderInformationDialog"], ["ladder.last", "lastPlayerLadderInformationDialog"]]:
+		var b := button(footer, I18n.t(entry[0]), func(): send(entry[1]))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if entry[0] == "ladder.me":
+			OneBit.primary(b, 18)
 
 
 func _calendar() -> void:

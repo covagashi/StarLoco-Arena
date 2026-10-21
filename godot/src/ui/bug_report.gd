@@ -21,6 +21,7 @@ extends AcceptDialog
 const State := preload("res://src/state.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const DebugLog := preload("res://src/util/debug_log.gd")
+const OneBit := preload("res://src/ui/onebit.gd")
 
 var base_url := ""
 var _types := ["bug.type.game", "bug.type.display", "bug.type.chat",
@@ -69,7 +70,9 @@ func _init(url: String) -> void:
 
 	_send_btn = Button.new()
 	_send_btn.text = I18n.t("bug.send")
+	_send_btn.name = "Send"
 	_send_btn.pressed.connect(_send)
+	OneBit.primary(_send_btn, 20)
 	vb.add_child(_send_btn)
 	confirmed.connect(func(): queue_free())
 	canceled.connect(func(): queue_free())
@@ -107,32 +110,25 @@ func _ready() -> void:
 		_status.text = I18n.t("bug.unavailable")
 
 
+## The 1-bit system's theme (S18): the lobby panels' black window with the
+## hard white shadow, their fields and buttons, the title in the title font.
 func _theme() -> Theme:
-	var result := Theme.new()
-	var font := FontFile.new()
-	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/TAHOMA.TTF"))
-	result.default_font = font
-	result.default_font_size = 16
-	result.set_stylebox("panel", "AcceptDialog", _surface(Color("292c20"), Color("ad965a"), 2))
-	for type in ["Label", "Button", "OptionButton", "LineEdit", "TextEdit", "PopupMenu"]:
-		result.set_color("font_color", type, Color("f1e5c1"))
-		result.set_color("font_disabled_color", type, Color("9b9c85"))
-	for type in ["Button", "OptionButton", "LineEdit", "TextEdit", "PopupMenu"]:
-		result.set_stylebox("normal", type, _surface(Color("20251d"), Color("656849")))
-		result.set_stylebox("hover", type, _surface(Color("545534"), Color("c3ad69")))
-		result.set_stylebox("pressed", type, _surface(Color("545534"), Color("c3ad69")))
-		result.set_stylebox("focus", type, _surface(Color.TRANSPARENT, Color("f6d583"), 2))
+	var result: Theme = OneBit.theme()
+	var win := OneBit.window()
+	# the embedded window's title bar sits ABOVE its content rect: the frame
+	# must grow up to cover it, or the title floats over the backdrop
+	win.expand_margin_top = 44
+	win.expand_margin_left = 8
+	win.expand_margin_right = 8
+	win.expand_margin_bottom = 8
+	result.set_constant("title_height", "Window", 40)
+	result.set_stylebox("panel", "AcceptDialog", OneBit.box(OneBit.PAPER, OneBit.PAPER, 0, 18))
+	result.set_stylebox("embedded_border", "Window", win)
+	result.set_stylebox("embedded_unfocused_border", "Window", win)
+	result.set_color("title_color", "Window", OneBit.INK)
+	result.set_font("title_font", "Window", OneBit.title_font())
+	result.set_font_size("title_font_size", "Window", 22)
 	return result
-
-
-func _surface(fill: Color, border: Color, width := 1) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(width)
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(8)
-	return style
 
 
 ## RFC-2046 multipart body in the client's own shape (the server matches the

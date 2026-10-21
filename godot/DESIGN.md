@@ -32,9 +32,16 @@ The existing localCoach producer supplies level 0 and an empty equipped-emote li
 
 ## Validation
 
-`test/native_lobby.gd` runs the real windowed login, nine dialog toggles, chat focus, debug toggle, model refresh, shell remount, practice fight transition and return. Credentials are command-line arguments. Screenshots are written to `/tmp/native-lobby.png` and `/tmp/native-lobby-social.png`.
+`test/native_lobby.gd` runs the real windowed login, nine dialog toggles, chat focus, model refresh, shell remount, practice fight transition and return (the debug strip no longer exists). Credentials are command-line arguments. Screenshots are written to `/tmp/native-lobby.png` and `/tmp/native-lobby-social.png`.
 
-`test/window_skin.gd` checks missing app-skin border/title resources and custom-theme precedence. Legacy XML resources remain available outside the native lobby routes.
+`test/window_skin.gd` checks missing app-skin border/title resources and custom-theme precedence.
+
+Live smokes against a local server cover every native window: `world_smoke`
+(Services), `talk_smoke`, `cardmaster_smoke`, `mailbox_smoke`, `fusion_smoke`,
+`revive_smoke` / `revive_edge_smoke`, `totems_smoke`, `report_smoke`,
+`pvp_smoke` (duo, clan, trade, team pick, PvP, report), `ask_smoke` /
+`ask2_smoke` (invitations), `screens_smoke` (Kanodo, coach equipment). Their
+headers say how to seed and restore `server/arena.db`.
 
 
 ## Native lobby panels
@@ -47,10 +54,36 @@ The dialog registry normalizes event names, prevents duplicate opens, supports n
 
 `test/native_panels.gd` exercises real mouse and Escape input on every route, duplicate opening, viewport bounds, a smaller window, tab switching, fighter preview, parent/child closing, menu-to-options navigation, and local populated fixtures. Fixture action spies prevent synthetic fighter IDs from reaching the server. Captures are written to `/tmp/panels-*.png`.
 
+## Native service windows (S18)
+
+Built on `lobby_panel.gd` (smaller ones set `frame_size`), each reading one
+model key that `main.gd` pushes and answering with `native*` events, so the
+wire stays in `main.gd`:
+
+| Window | Script | Opened from |
+|---|---|---|
+| Card Master | `card_master_panel.gd` | Services |
+| Mailbox | `mailbox_panel.gd` | Services |
+| Fusion altar | `fusion_panel.gd` | Services |
+| Conversation (`npcTalkDialog`, 860×500) | `talk_panel.gd` | Services (challenges, demons) |
+| Firework launcher | `firework_panel.gd` | Services; the show is `firework_fx.gd` on the lobby sky |
+| Demon offering | `demon_panel.gd` | Social → Clan (leader) |
+| Kanodo (sphere board) | `kanodo_panel.gd` | Team → Evolution → a fighter → Spheres |
+| Coach equipment | `coach_equip_panel.gd` | Inventory |
+| Player trade | `exchange_panel.gd` | a trade invitation |
+| Invitation prompt (`askDialog`, queued) | `ask_panel.gd` | challenge, match, clan, duo, trade invitations |
+| Team pick | `team_pick_panel.gd` | an accepted challenge |
+| Fight report | `report_panel.gd` | back in the lobby after a fight |
+
+The fallen fighters (the retail graveyard) are a section of Team → Evolution;
+tournaments (register, bracket, opponent search) are the Calendar's day
+detail; matchmaking shows "Buscando rival…" with Cancelar under the lobby
+actions. NPC texts follow the UI language (`npcdialogs.json` `locales`).
+
 ## Native combat HUD
 
 `fight_view.tscn` now presents a native olive and gold combat HUD: arena and turn controls above the map, initiative chips at the upper right, chat at the lower left, and a horizontally scrolling spell and card bar at the lower right. Below 960 px wide, anchored chat and actions stack to keep both reachable. Turn controls, spell buttons and chat have a keyboard focus path. The result panel uses the same palette and Copperplate heading, with a fixed Continue action, scrolling card rewards, trapped focus and return to the prior focus on close. The old XULOR2 controls no longer mount over the map. `test/fight_ui_preview.tscn` renders combat and result captures to `/tmp/fight-ui.png` and `/tmp/fight-result-ui.png` for visual checks at multiple window sizes.
 
 ## Full UI review
 
-`test/ui_review_preview.tscn` captures login, creation, lobby, representative panels and the bug form at 1280×720 and 800×600. It traverses all twenty native panel routes, checks frame bounds and initial focus, and checks that baked creation controls stay keyboard reachable. Login's submit overlay has a visible focus ring and explicit Tab path. The bug form uses the native olive/gold palette, scrolls in small windows and receives a screenshot captured before it covers the arena. Chat send and the post-fight debrief use the es/en/fr string tables. The fixed baked screen artwork still contains Spanish lettering; its localization requires separate art variants.
+`test/ui_review_preview.tscn` captures login, creation, lobby, representative panels and the bug form at 1280×720 and 800×600. It traverses all twenty native panel routes, checks frame bounds and initial focus, and checks that baked creation controls stay keyboard reachable. Login's submit overlay has a visible focus ring and explicit Tab path. The bug form uses the 1-bit theme (black window, hard white shadow, primary Send), scrolls in small windows and receives a screenshot captured before it covers the arena. Chat send and the post-fight debrief use the es/en/fr string tables. The fixed baked screen artwork still contains Spanish lettering; its localization requires separate art variants.

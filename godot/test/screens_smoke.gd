@@ -11,6 +11,8 @@ extends "res://test/world_smoke.gd"
 ## 2. Kanodo (Equipo → Evolución → a fighter → "Esferas"): the board opens on
 ##    the fighter's spheres; picking a lit sphere enables "Comprar", which
 ##    sends 23009 and moves the fighter's cursor onto it.
+## 3. Matchmaking: "Aleatorio" shows "Buscando rival…" with Cancelar, which
+##    cancels the search (2303 → 2306).
 ## Leaves the hat as it found it; the sphere purchase is undone in the db by
 ## the caller (see sprints/S18 for the snippet).
 
@@ -29,7 +31,48 @@ func _audit() -> void:
 	await create_timer(0.5).timeout
 	await _equipment()
 	await _kanodo()
+	await _search_cancel()
+	await _ranking()
 	i18n.set_locale(_lang_before)
+
+
+## The ranking as sketched: button tabs, your row marked, "Mi puesto".
+func _ranking() -> void:
+	var lp = await _menu("nav.ladder", "ladderInformationDialog")
+	await create_timer(1.0).timeout   # the 7 boards arrive
+	var board: Tree = lp.find_child("Board", true, false) if lp != null else null
+	var marked := ""
+	var rows := 0
+	if board != null:
+		for it in board.get_root().get_children():
+			rows += 1
+			if it.get_text(0).begins_with("▶"):
+				marked = it.get_text(1)
+	var tab_buttons: int = lp.find_children("*", "Button", true, false).filter(func(b): return b.toggle_mode).size() if lp != null else 0
+	_record(27500, "ranking", board != null and tab_buttons == 7 and marked == State.my_coach_name,
+		"%d tab buttons, %d rows, your row marked: '%s'" % [tab_buttons, rows, marked])
+	await _shot("ranking")
+
+
+## Matchmaking state on the lobby (S18): before, only the hidden debug row
+## could cancel a search.
+func _search_cancel() -> void:
+	_close_all()
+	var lobby = _main._lobby_screen
+	_seen.clear()
+	lobby.action_requested.emit("quick")
+	await _wait(func(): return _seen.has(2304), 3.0)
+	await create_timer(0.4).timeout
+	var btn: Button = lobby.find_child("CancelSearch", true, false)
+	var shown: bool = btn != null and btn.visible and lobby._subtitle.text == "Buscando rival…"
+	await _shot("lobby-searching")
+	_seen.clear()
+	if btn != null:
+		btn.pressed.emit()
+	await _wait(func(): return _seen.has(2306), 3.0)
+	await create_timer(0.4).timeout
+	_record(2303, "search", shown and _seen.has(2306) and not btn.visible,
+		"Aleatorio → 2304 → 'Buscando rival…' + Cancelar → 2303 → 2306, back to normal")
 
 
 func _menu(key: String, dialog: String):
@@ -46,6 +89,18 @@ func _equipment() -> void:
 	_record(5200, "worn at login", int(_main._equip_slots[0]) == HAT_A,
 		"5200 section 1 → slot 0 holds card %d (want %d)" % [int(_main._equip_slots[0]), HAT_A])
 	var inv = await _menu("nav.inventory", "cardBookDialog")
+	# the inventory shows the cards as art tiles (S18 "contenido de paneles")
+	var grid = inv.find_child("CardGrid", true, false) if inv != null else null
+	var tiles: Array = grid.get_children().filter(func(c): return c is Button) if grid != null else []
+	var picked_name := ""
+	if not tiles.is_empty():
+		tiles[0].pressed.emit()
+		await create_timer(0.4).timeout
+		var nm = inv.find_child("CardName", true, false)
+		picked_name = nm.text if nm != null else ""
+	_record(5200, "inventory", tiles.size() == State.inventory.size() and picked_name != "",
+		"%d card tiles (inventory has %d), picked '%s'" % [tiles.size(), State.inventory.size(), picked_name])
+	await _shot("inventory-cards")
 	var open_btn: Button = inv.find_child("CoachEquip", true, false) if inv != null else null
 	if open_btn == null:
 		_record(5200, "panel", false, "no Equipo del coach button in Inventario")

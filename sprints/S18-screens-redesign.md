@@ -1,6 +1,6 @@
 # S18 — Todas las pantallas, nuevas
 
-**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** L · **Estado:** 🟡 abierto · **Depende de:** S05 (servicios accesibles)
+**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** L · **Estado:** 🟢 terminado el 2026-10-21; falta el visto bueno del dueño a las pantallas nuevas · **Depende de:** S05 (servicios accesibles)
 
 > El número es el de creación; el orden lo da la tabla de
 > [`README.md`](./README.md).
@@ -67,7 +67,7 @@ y `test/world_smoke.gd -- --shot-dir=D --shot-all` (servicios), ambos bajo
 
 - Con el muñeco en línea, el color de pelo y piel que eliges en la creación
   ya no se ve en el muñeco (solo en las muestras). Hoja:
-  `codigo/capturas/s18/muneco-1bit.png`.
+  `codigo/capturas/s18/muneco-1bit.png`. **Pasa al BACKLOG** al cerrar S18.
 
 ## Hojas de opciones
 
@@ -179,50 +179,10 @@ Hoja: `codigo/capturas/s18/tanda2-altar.png`.
 
 ## Siguiente paso (para la próxima sesión)
 
-Card Master aprobado; buzón y altar de fusión hechos, a la espera del visto
-bueno (`tanda2-buzon.png`, `tanda2-altar.png`). Los servicios de la tanda 2
-, el informe de combate y el intercambio entre jugadores están hechos, y
-`ElementDlg`, `ShopDlg`, `BarterDlg` y los seis diálogos de invitación ya
-no existen (2026-10-20). Quedan en `main.tscn` paneles de depuración sin
-llamante vivo (`$UI/VBox`, `GuildDlg`, `KanodoDlg`, `LadderDlg`…), con el
-mismo
-patrón: un panel sobre `lobby_panel.gd` (o `card_panel.gd` si enseña
-cartas), registrado en `_gui.native_factories` con el nombre del diálogo
-retail, y eventos `native*` hacia los handlers de `main.gd`. `ShopDlg` y
-`BarterDlg` de `main.tscn` quedan de reserva y se retiran con los demás
-paneles de depuración.
-
-Pendiente del dueño: el visto bueno del buzón y del altar.
-
-**Hecho el 2026-10-20: los caídos en el panel de Equipo** (el antiguo
-cementerio). El elemento kind 10 abre Equipo en Evolución; "Servicios" ya no
-lo lista. Verificado en vivo con `test/revive_smoke.gd` 4/4 (sin cementerio
-en Servicios; los dos caídos en su tabla y ninguno entre los vivos; un
-muerto resucita a titular y un retirado al banquillo, con el 6006 y la carta
-gastada), y `test/revive_edge_smoke.gd` 4/4 (tirada fallida con la carta
-gastada y sin 6006; banquillo lleno: botón desactivado y, forzado, rechazo
-sin gastar la carta). El resultado sale en el pie del panel; sin scroll a
-1280×720. Visto bueno del dueño el mismo día ("los menús me gustan").
-
-**Hecho el 2026-10-20: las conversaciones** (`src/ui/talk_panel.gd`). Los
-seis tipos que hablan (desafío 3, maestro de raza 5, Demonio III 6, desafío
-de demonio 7, Demonio I 9, NPC 15) y los monólogos del tutorial salen en
-una ventana nativa, en el idioma de la interfaz. Verificado en vivo:
-`test/talk_smoke.gd` 8/8 (Demonio I pasa sus tres páginas y cierra; el
-desafío de SuperBidi lista su desafío por nombre; un desafío de demonio
-reproduce su entrada la primera vez, ofrece Aceptar / Rechazar, a la
-segunda va directo y Aceptar lanza el combate: 26330 → 8000) y
-`world_smoke.gd` 56/56 con las nueve conversaciones del lobby en la ventana
-nativa. Maestros de raza (5), Demonio III de tipo 6 y NPCs (15) no están en
-el lobby (sus islas se descartaron): su código pasa a la ventana, pero no
-hay elemento en "Servicios" con el que probarlo en vivo.
-
-**Hecho el 2026-10-20: tótems y fuegos artificiales.** Verificado en vivo con
-`test/totems_smoke.gd` 10/10: "Servicios" sin tótems; en el Calendario,
-inscripción (4607 → 28608), cuadro (28649 → 28650) y búsqueda de rival
-(28611 → 28612); en Clan, un clan sin demonio elige el IV, ofrece una carta
-(5470 → 5403) y pasa a servirlo, con la carta gastada en la base de datos;
-dos fuegos lanzados llegan como dos 22094 y estallan en el cielo del lobby.
+S18 está terminado (2026-10-21). Lo único pendiente es del dueño: el visto
+bueno de las pantallas nuevas (lista en "Criterio de cierre") y la decisión
+del color del muñeco, que pasa al BACKLOG. El siguiente sprint lo marca la
+tabla de [`README.md`](./README.md).
 
 ## Tareas candidatas
 
@@ -235,20 +195,40 @@ dos fuegos lanzados llegan como dos 22094 y estallan en el cielo del lobby.
       creación pasan a i18n (estaban en español dentro de la imagen).
 - [x] Lobby: ventanas nativas, Combate como acción principal, iconos en
       blanco, chat compacto.
-- [ ] Informe de bug (`bug_report.gd`, una `Window` con su propio tema).
-- [ ] Contenido de los paneles: hoy son tablas genéricas. Rehacerlos uno a
-      uno (inventario con cartas, clasificación como el boceto…).
+- [x] Informe de bug (`bug_report.gd`): tema 1 bit, marco sobre su barra
+      de título, Enviar en estilo primario (2026-10-21).
+- [x] Contenido de los paneles: el inventario con cartas (fichas con arte y
+      la carta en grande) y la clasificación del boceto (pestañas en botones,
+      tu fila marcada, "Mi posición" primario), 2026-10-21. El resto de tablas
+      las aprobó el dueño ("los menús me gustan"); rehacerlas una a una queda
+      en el BACKLOG por si lo pide.
 - [x] Servicios: sustituir los diálogos XML y `ElementDlg` por paneles
       nativos (lista de S05). Card Master y buzón hechos (2026-10-17), altar
       (2026-10-18), los caídos en Equipo en vez del cementerio (2026-10-20),
       las conversaciones: retos, demonios, NPCs (2026-10-20), tótems al
       Calendario y al Clan, fuegos artificiales en el lobby (2026-10-20).
-- [ ] Retirar de `main.tscn` los paneles de depuración que queden sin uso.
-      Hecho para `ElementDlg`, `ShopDlg` y `BarterDlg` (2026-10-20).
-- [ ] `godot/PRODUCT.md` y `DESIGN.md` al día (hoy dicen que el dueño fija el
-      estilo de login y creación, y eso ya no vale).
+- [x] Retirar de `main.tscn` los paneles de depuración: `ElementDlg`,
+      `ShopDlg`, `BarterDlg` y los avisos (2026-10-20); la tira de depuración
+      y sus nueve diálogos (2026-10-21). `main.tscn` queda con Main, UI, el
+      chat y los avisos; antes, lo que solo vivía ahí pasó a nativo: el dúo,
+      elegir equipo, Kanodo, el equipo del coach y cancelar una búsqueda.
+- [x] `godot/PRODUCT.md` y `DESIGN.md` al día (2026-10-21).
 
 ## Criterio de cierre
 
 Ninguna pantalla fuera del combate usa un diálogo retail XML ni el panel de
 depuración, y todas tienen el visto bueno del dueño en hoja.
+
+**Estado al cierre (2026-10-21).** La primera mitad se cumple: no queda en
+`main.tscn` ningún panel de depuración y todos los diálogos que abre el cliente
+tienen fábrica nativa (los dos XML que quedan en el código, `newMailDialog` y
+los botones del buzón retail, ya no tienen camino que los abra). La segunda: el
+dueño aprobó los menús el 2026-10-20 y mira las pantallas en la Ally; faltan
+por ver las hechas después — conversaciones, tótems en Calendario y Clan,
+fuegos, informe de combate, intercambio, avisos, dúo, elegir equipo, Kanodo,
+equipo del coach, inventario con cartas, clasificación, búsqueda en el lobby e
+informe de bug (capturas en `~/codigo/capturas/s18/`).
+
+Todo con smokes en vivo: `world`, `talk`, `cardmaster`, `mailbox`, `fusion`,
+`revive`, `revive_edge`, `totems`, `report`, `pvp`, `ask`, `ask2`,
+`screens`, `native_panels`, `native_lobby`, `login` y las dos lanes.

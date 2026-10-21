@@ -44,3 +44,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-20 | [S18: intercambio entre jugadores nativo, PvP probado de punta a punta](./2026-10-20-s18-intercambio.md) |
 | 2026-10-20 | [S18: fuera el panel de depuración ElementDlg (y ShopDlg, BarterDlg)](./2026-10-20-s18-fuera-elementdlg.md) |
 | 2026-10-20 | [S18: avisos de invitación nativos](./2026-10-20-s18-invitaciones.md) |
+| 2026-10-21 | [S18: los "sin probar", probados, y el sprint terminado](./2026-10-21-s18-cierre.md) |

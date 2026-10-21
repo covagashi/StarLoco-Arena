@@ -44,7 +44,7 @@ func _run() -> void:
 	var lobby = _main._lobby_screen
 	_check(lobby != null and lobby.get_parent() == _main.get_node("UI"), "native lobby in UI CanvasLayer")
 	_check(not _main._gui.is_open("menuBarDialog"), "retail menu bar replaced")
-	_check(not _main.get_node("UI/VBox").visible, "debug bars hidden")
+	_check(not _main.has_node("UI/VBox"), "debug bars gone (S18)")
 	var enter := InputEventKey.new()
 	enter.keycode = KEY_ENTER
 	enter.pressed = true

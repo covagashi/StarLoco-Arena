@@ -10,7 +10,9 @@ extends "res://test/world_smoke.gd"
 ## cancel; then the challenge one — "Rechazar" sends 26307 and the bot sees
 ## its challenge cancelled (26304). A third prompt (another trade) is closed
 ## with Cerrar, which refuses it (5103 with 0). Last, a duo invitation is
-## refused (6026 → the bot gets 6027). No Godot dialog on the way.
+## refused (6026 → the bot gets 6027). Then test2 is added to and removed
+## from the friends and ignored lists through Social (B-180). No Godot
+## dialog on the way.
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
 const BOT_COACH := 2   # test2's coach id in server/arena.db
@@ -96,7 +98,63 @@ func _audit() -> void:
 	var duo_refused: bool = await _wait(func(): return _bot_seen.has(6027), 3.0)
 	_record(0, "duo", t == "Invitación a dúo" and "Pareja" in q and duo_refused,
 		"'%s': '%s' → Rechazar → 6026 → the bot gets 6027" % [t, q])
+	await _social_lists()
 	i18n.set_locale(_lang_before)
+
+
+## B-180: the Social panel sent the retail UI event ids (21050-21054) as if
+## they were wire opcodes, so adding/removing friends and ignored coaches
+## never reached the server. Add test2 to each list and take it out again.
+func _social_lists() -> void:
+	for tabdef in [[0, 3156, 3160, "friends"], [1, 3158, 3162, "ignored"]]:
+		var tab: int = tabdef[0]
+		for n in _main._gui.dialogs.keys():
+			_main._gui.close(n)
+		_main._gui.open("socialDialog")
+		await create_timer(0.5).timeout
+		var sp = _main._gui.dialogs.get("socialDialog")
+		sp.tab = tab
+		sp.schedule_refresh()
+		await create_timer(0.3).timeout
+		for le in sp.find_children("*", "LineEdit", true, false):
+			le.text = "test2"
+		_seen.clear()
+		_btn(sp, "Añadir").pressed.emit()
+		var added: bool = await _wait(func(): return _seen.has(tabdef[1]), 3.0)
+		await create_timer(0.4).timeout
+		var listed := _listed(tabdef[3])
+		sp.schedule_refresh()
+		await create_timer(0.3).timeout
+		var picked := false
+		for t in sp.find_children("*", "Tree", true, false):
+			for it in t.get_root().get_children():
+				var m: Variant = it.get_metadata(0)
+				if m is Dictionary and str(m.get("name", "")) == "test2":
+					it.select(0)
+					t.item_selected.emit()
+					picked = true
+		await create_timer(0.3).timeout
+		_seen.clear()
+		var rm: Button = _btn(sp, "Eliminar seleccionado")
+		if rm != null:
+			rm.pressed.emit()
+		var removed: bool = await _wait(func(): return _seen.has(tabdef[2]), 3.0)
+		await create_timer(0.4).timeout
+		_record(0, tabdef[3], added and listed and picked and removed and not _listed(tabdef[3]),
+			"Añadir test2 → %d, listed; Eliminar seleccionado → %d, gone" % [tabdef[1], tabdef[2]])
+
+
+func _listed(which: String) -> bool:
+	if which == "friends":
+		return State.friends.any(func(f): return str(f.get("name", "")) == "test2")
+	return "test2" in State.ignored
+
+
+func _btn(panel, text: String) -> Button:
+	for b in panel.find_children("*", "Button", true, false):
+		if b.text == text and not b.disabled:
+			return b
+	return null
 
 
 func _ask() -> Dictionary:

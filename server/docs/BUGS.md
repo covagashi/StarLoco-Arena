@@ -13,6 +13,23 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-180 · Friends, ignore and clan invites from the Social panel never reached the server
+
+- **Symptom:** in Social, "Añadir" / "Eliminar seleccionado" on the friends
+  and ignored lists, and "Invitar al clan", did nothing: no reply, no error.
+- **Root cause:** `main.gd` sent the retail client's UI EVENT ids
+  (`uk_1` → `sb_0` 21050–21054) over the wire as if they were opcodes. In
+  retail those events are handled locally by `qu_2`, which sends the real
+  messages: 21050 → `aym_0` 3133, 21051 → `QZ` 3129, 21052 → `aer_0` 3135,
+  21053 → `MP` 3131 (all `[str8 name]`), and 21054 → `uq_2`, the 501 clan
+  invite by NAME (`[u8 type][u8 0][str8 name][i64 guildId]`). The server knows
+  none of 21050–21054, so it dropped them.
+- **Fix:** the four constants now hold the real opcodes, and "inviteToGuild"
+  sends the 501 by name. Client-only.
+- **Verified:** `client-ui` — `ask_smoke.gd`: test2 added to and removed
+  from both lists (3156/3160, 3158/3162); `pvp_smoke.gd`: the clan invite from
+  the native Social panel makes test2 join (server log "guild joined").
+
 ### B-179 · After logging in, the client never knew what the coach wore
 
 - **Symptom:** the coach-equipment screen of a freshly logged-in client showed

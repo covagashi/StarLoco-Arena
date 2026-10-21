@@ -51,6 +51,8 @@ var _hint: Label
 var _menu_buttons: Array = []
 var _actions: Array[Button] = []
 var _social_btn: Button
+var _cancel_search: Button
+var _searching := false
 var _sky: Control
 var _rng := RandomNumberGenerator.new()
 
@@ -112,6 +114,12 @@ func _init() -> void:
 			OneBit.primary(b, 28)
 		_actions.append(b)
 	_subtitle = _label(Rect2(400, 456, 824, 30), "", 16)
+	# matchmaking in progress (S18): the subtitle says so and Cancelar stops
+	# it — before, only the hidden debug row could cancel a search
+	_cancel_search = _button(Rect2(1080, 452, 144, 38), "",
+		func(): action_requested.emit("cancel_search"), 16)
+	_cancel_search.name = "CancelSearch"
+	_cancel_search.visible = false
 	# Coach rotation: << turns the paper-doll one step anticlockwise, >> the
 	# other way. Purely cosmetic — the direction is a qc_0 index like in
 	# retail's coach-creation screen.
@@ -175,6 +183,13 @@ func bind_model(model, chat: Control) -> void:
 	_relayout()
 
 
+## Matchmaking state: "Buscando rival…" + Cancelar while a search runs.
+func set_searching(on: bool) -> void:
+	_searching = on
+	_cancel_search.visible = on
+	_subtitle.text = _t("lobby.searching") if on else _t("lobby.subtitle")
+
+
 func set_actions_ready(ready: bool) -> void:
 	for b in _actions:
 		b.disabled = not ready
@@ -225,7 +240,8 @@ func _rotate(delta: int) -> void:
 
 func _retranslate() -> void:
 	_title.text = _t("lobby.title")
-	_subtitle.text = _t("lobby.subtitle")
+	_subtitle.text = _t("lobby.searching") if _searching else _t("lobby.subtitle")
+	_cancel_search.text = _t("lobby.cancel_search")
 	_hint.text = _t("lobby.chat_hint")
 	for i in range(_actions.size()):
 		_actions[i].text = _t(str(ACTIONS[i][0]))
