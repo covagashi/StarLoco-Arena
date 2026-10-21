@@ -37,9 +37,9 @@ and **35 web admin panel** have all landed. What is left in Tier 3 is almost ent
 maintainer's own deferrals. **30 (2v2) is now DONE too** — live-verified with four retail
 clients. **32 (tournament match layer)** is now DONE: brackets, per-fixture pairing,
 byes, persistence (schema 7) and prizes have all landed and the whole flow is
-live-verified (see below). What remains in Tier 3 is **33 (X-vs-X allies)**, which turned out
-to be unrelated to 2v2: its 26313 exists only as the client's `Test` Lua binding
-`XvsXInvitation`, with no UI anywhere. Ask before starting it.
+live-verified (see below). **33 (X-vs-X allies)** is closed as dead in this build: it
+turned out to be unrelated to 2v2, and its 26313 exists only as the client's `Test` Lua
+binding `XvsXInvitation`, with no UI anywhere (owner's default, S08). Tier 3 is empty.
 
 **Item 32 is now DONE, live-verified end to end** with two retail clients:
 `tournament match paired a=Chrono b=ExBot` → `fight started arena=74` →
@@ -58,8 +58,9 @@ Two lessons worth keeping: the suspect written down here previously (`agz_1` →
 totem) found in one step what re-reading the client had not. And when driving the client,
 **switch tabs once after opening the team panel** before trusting what the roster shows.
 
-**Opcode coverage, and what is actually left.** 345 rows: 109 C2S handled, 150 S2C emitted,
-6 inactive, 76 unimplemented. A large share of the remainder is **unreachable from the retail client**
+**Opcode coverage, and what is actually left.** The counts live in one place, the
+[summary of `OPCODE-INVENTORY.md`](./OPCODE-INVENTORY.md#summary-counts), which a test
+recounts. A large share of the remainder is **unreachable from the retail client**
 and is recorded as deliberate non-work, with the evidence, in
 [`docs/OPCODE-INVENTORY.md`](./OPCODE-INVENTORY.md) — C2S whose message class is never
 constructed, S2C with no live consumer, and the Ankama-internal avatar pipeline (X).
@@ -274,8 +275,8 @@ Ordered by value. Item 1 is the biggest unlock; item 2 is the cheapest concrete 
    description was wrong, and three separate client rules (`afL`, the preset type, and
    the fighter entry's second i64 being the OWNING COACH) each surfaced only after the
    previous one was fixed. Read the client's validation path *before* writing code.
-9. **Tournament live-match layer** (brackets, scheduling, prizes) — deferred by the
-   maintainer; blocks the other 25 stranded achievements.
+9. ~~**Tournament live-match layer**~~ — **DONE** (item 32, above). What is left of
+   tournaments (carry-over, periods, player tournaments, Legends) is sprint S09.
 10. ~~**Fusion success probability**~~ — **resolved** (B-169). The flat 60%
     was a stand-in; the real die is the altar's own `quality` field plus the
     inputs' `FusionQuality` — `roll(100) < quality` wins. Evidence: the fusion
@@ -594,4 +595,4 @@ Verified with `-race` (clean) and six consecutive runs (no failures) before land
 the previous flakiness episode (B-126..B-129) came from tests that passed once.
 
 The `-timeout 25m` in CI stays. It was a mitigation for a slow suite and is now enormous
-headroom; removing it would only buy a worse failure mode on a loaded runner.
+headroom; removing it would only buy a worse failure mode on a loaded runner.

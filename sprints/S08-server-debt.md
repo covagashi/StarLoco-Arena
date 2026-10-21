@@ -1,6 +1,6 @@
 # S08 — Deuda de servidor
 
-**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (probablemente se parta en dos) · **Estado:** 🟡 siguiente (esbozo; se detalla al abrirlo)
+**Planificado:** 2026-10-16 · **Abierto:** 2026-10-21 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (probablemente se parta en dos) · **Estado:** 🟡 abierto
 
 ## Objetivo
 
@@ -9,11 +9,23 @@ retail leídos y documentación que no se contradiga.
 
 ## Bugs y comportamientos abiertos
 
-- [ ] **Enraizado:** el servidor no deja moverse a un luchador enraizado, pero
-      en 2.70 parece que solo bloquea empujar/atraer. Comprobarlo contra el
-      cliente descompilado (`BUGS.md`; `handlers_fight_combat.go`).
-- [ ] Los iconos de buff no se restauran al reconectar a mitad de combate.
-- [ ] B-151: falta el e2e de la compra (5450) de una carta sin precio.
+- [x] **Enraizado:** descartado, el servidor ya hace lo que el cliente. La
+      acción 65 "Immobilisé" (`rc_0`) pone `avx_0.dex` y `gn_0.d` (línea 468)
+      lee los PM como 0: no puede andar. Lo que solo impide *ser movido* es
+      94 (empujar/atraer), 127 "S'enraciner" (transporte) y 128 (intercambio);
+      el aviso en vivo seguramente era 127, que en francés suena a "enraizar".
+      Anotado en `BUGS.md` (B-053 y la nota abierta de B-048).
+- [x] Los iconos de buff al reconectar: ya estaban hechos (`09a2056c`, el
+      8121 `rq_2` los adjunta sin ejecutarlos) y el espectador comparte el
+      camino. Faltaba probarlo por el camino real: `TestResyncReattachesLiveBuffs`
+      llama a `sendFightResync` y espera un 8121 por buff vivo, con la caducidad
+      absoluta, y ninguno del muerto (falla si se quita `resyncBuffs`). Quitados
+      los "LIMITATION" que quedaban en el código y en `BUGS.md`.
+- [x] B-151: `TestShopBuyRefusesUnpricedCardOnTheWire` manda el 5450 al
+      handler con una carta sin precio y otra con precio del mismo set: la
+      primera no se entrega ni cobra, la segunda sí. Quitar la guarda del
+      handler la hace fallar (antes no fallaba nada). No es un e2e por socket
+      porque el arnés e2e no carga gamedata (punto de abajo).
 - [ ] B-074: panel de fin de combate con el equipo perdedor vivo, sin verificar
       visualmente.
 - [ ] Casillas especiales: confirmar en vivo que una se dispara.
@@ -61,15 +73,33 @@ estadísticas de evolución y puntos de torneo en 2052/4096.
 
 ## Documentación que se contradice
 
-- [ ] Recuentos de opcodes distintos en `COVERAGE.md`, `OPCODE-INVENTORY.md` y
-      `STATUS.md` (y 28612/28614: "sin implementar" en uno, "emitido" en otro).
-- [ ] `OPCODE-INVENTORY.md`: 4523 no es un comando de consola, es
-      `Context.skipTutorial()` del escenario 1; 22093 no es "cross-game", es
-      usar una carta de título (tipo 28). Visto en S05 leyendo el cliente.
-- [ ] Entradas viejas en `BUGS.md` (la capa meta y las heridas, crit/fumble base).
-- [ ] "Known gaps" de `OPCODE-INVENTORY.md`: el 2v2 y el 4521 ya están hechos.
-- [ ] X-vs-X (ítem 33): `STATUS.md` lo da como pendiente y el ROADMAP retirado
-      como cerrado. Lo decide el dueño; por defecto, cerrado.
+- [x] Recuentos de opcodes: había **cuatro** distintos (dos dentro del propio
+      inventario). Ahora hay uno, el resumen de `OPCODE-INVENTORY.md`
+      (347 filas: 111 H, 152 E, 6 I, 4 X, 74 sin hacer), y
+      `TestOpcodeInventorySummaryMatchesTable` lo recuenta. `STATUS.md` y
+      `COVERAGE.md` enlazan en vez de repetir. De paso: el ping estaba mal
+      (107 iba como `both H+E` y 108 como sin hacer; la respuesta sale por 108).
+- [x] `COVERAGE.md` decía ser "la fuente única" y lista 179 de 347 opcodes;
+      ahora dice lo que es (auditoría y pruebas) y
+      `TestCoverageAgreesWithInventory` exige que sus filas digan lo mismo que
+      el inventario sobre si está hecho: 28612/28614 y la tanda 5101–5116
+      (marcada con `V`) estaban mal.
+- [x] 4523 es el binding Lua `Context.skipTutorial()` (`bv_0`, librería
+      `uc_2` "Context"), no un comando de consola. 22093 es usar una carta de
+      título (tipo 28 `aMK.dYC` "Titre": "Trainer", "No title"… 12 cartas), no
+      una transferencia a otro juego. Sigue sin hacerse, ahora con el motivo
+      bueno: nada en el cliente 2.70 enseña un título de coach. Corrige
+      también la frase de S07.
+- [x] `BUGS.md`: la capa meta (heridas, muerte y robo de cartas ya están),
+      las condiciones 902 (ya modeladas) y el crítico/pifia base (`uh_0.eA`
+      resultó ser el id del script del arma; la base ya es 0/0 en `breed.go`).
+      Anotadas con "Update (S08)", sin reescribir la historia.
+- [x] "Known gaps" del inventario: los cuatro puntos estaban cerrados;
+      ahora lo dice y manda a `sprints/`.
+- [x] X-vs-X (ítem 33): cerrado con el valor por defecto del dueño (muerto en
+      el retail: 26313 solo existe como binding Lua de la librería `Test`).
+      `STATUS.md` corregido, y también su punto 9 (torneos "aplazados", hechos
+      en el ítem 32).
 
 ## Pruebas y bases de datos
 

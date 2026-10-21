@@ -1001,8 +1001,12 @@ belongs to the coach.
 - **The coach META layer is only PARTLY built.** Slice 1 — XP, morale, fatigue and
   coach reputation — landed in B-065. Still missing: the wound roll, the death roll
   and the drop table, so ~30 of the 78 card-set effects remain inert.
+  **Update (S08):** all three landed since - `postfight_wounds.go` (wound and death
+  rolls, B-177 for resurrection) and `drops.go` (the draw table).
 - **Fighter conditions (type 902) are unmodelled** — wounds never accrue between fights.
   Fully decodable (0 unknown fields); needs the roller `bf_1.b` ported.
+  **Update (S08):** modelled - `conditions.go`, persisted per fighter and sent in
+  CREATE_FIGHT (B-083).
 - ~~**Most `np_1` rule types are decoded but not ENFORCED.**~~ — **resolved: they are a
   CATALOGUE, not rules.** Types 1–32 are rules, 900–930 are the typed OPERANDS
   (`ajr_2` names every one *"Paramètre de …"*), and `np_1.b()` concatenates a rule with
@@ -3559,6 +3563,9 @@ message at all - the two lists here are sphere nodes and persistent conditions.
 Restoring those on reconnect would need whatever per-effect message the client
 uses during normal play, which is a separate piece of RE.
 
+**Update (S08):** done - that message is 8121 (`rq_2`, attach without executing);
+see `buff_resync.go`.
+
 ---
 
 ### B-082 - Matchmaking paired anyone with anyone
@@ -4868,6 +4875,10 @@ it. `baseCritRate`/`baseFumbleRate` are deliberately left at 5/1: zeroing them s
 removes crits from every fight, and the fighter-card record has an unidentified i32
 (`uh_0.eA`) that is a plausible per-weapon crit rate. That field needs identifying first.
 
+**Update (S08): resolved.** `uh_0.eA` turned out to be the fighter card's Lua script
+id (`ScriptID`, `DATA-COVERAGE.md` 2026-10-01), not a crit rate, and the base is now
+0/0 as the client says (`breed.go`, with the sources that raise it).
+
 ### B-057 · Cra's close-combat element was water, not air
 `breedTable`'s per-breed close-combat element put **Cra** in water. The client's own
 breed table (enum `xq`, whose 9th ctor arg is an `fv_1` element) splits the 12 breeds
@@ -5375,6 +5386,12 @@ under its own power") and also blocks displacement, but live feedback says 2.70'
 should only prevent push/pull/teleport. The two disagree, so this was left alone
 pending a decompiled-client check rather than changed on a guess.
 
+**Update (S08): resolved, no change.** The check is B-053's table: action 65
+"Immobilisé" (`rc_0`) sets `avx_0.dex` and zeroes MP (`gn_0.d`, line 468), so a
+rooted fighter cannot walk, exactly as `validateFightMove` says. What only blocks
+being moved is 94 (push/pull), 127 "S'enraciner" (carry) and 128 (swap); the live
+report most likely meant 127, whose French name reads as "root".
+
 ### B-047 · Spell cast (8109) was unhandled; card use (8107) cast an arbitrary spell
 Reported from live play: *"I couldn't cast spell or card in fight."*
 
@@ -5755,7 +5772,8 @@ CREATE_FIGHT(8000)+FIGHTER_TURN_BEGIN(8104), and receives END_FIGHT(8300) when a
 player gives up.
 
 Same documented limitation as resume: active buff/debuff icons aren't restored in
-the snapshot (server keeps the buffs working). 26332 local-teardown isn't used —
+the snapshot (server keeps the buffs working). **Update (S08):** no longer true - the
+spectator path shares `sendFightResync`, which now re-attaches buffs through 8121. 26332 local-teardown isn't used —
 spectators end via the normal END_FIGHT + overworld return.
 
 ### B-038 · Mid-fight RESUME (reconnect back into an ongoing fight)
@@ -5786,6 +5804,8 @@ resume is **server-pushed**: on reconnect the server pushes the empty QUESTION
 - **LIMITATION** (documented): active buff/debuff icons are not restored (the
   CREATE_FIGHT effects/conditions slots are still sent empty) — the buffs keep
   working server-side, only their client icons are missing until they expire.
+  **Update (S08):** lifted by item 11 (`09a2056c`): `resyncBuffs` re-attaches every
+  live buff through 8121; `TestResyncReattachesLiveBuffs` drives `sendFightResync`.
 
 `e2e` (`test/e2e/reconnect_test.go`, the two-coach path the single GUI/practice
 client can't drive): **TestReconnectResumeFight** — A drops, reconnects, is pushed

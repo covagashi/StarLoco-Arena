@@ -1,8 +1,11 @@
 # v2.70 server — Feature & Opcode Coverage Matrix
 
-Single source of truth for what's **implemented**, **wire-audited** against the
-real client decoder/encoder, and **tested** (unit / E2E). Keep this updated with
-every change.
+What is **wire-audited** against the real client decoder/encoder and
+**tested** (unit / E2E), for the opcodes listed here. It is not the full list:
+whether an opcode is implemented at all, and the opcode counts, live in
+[`docs/OPCODE-INVENTORY.md`](./docs/OPCODE-INVENTORY.md#summary-counts), which a
+test keeps in step with the code. `TestCoverageAgreesWithInventory` checks that
+every row here says the same as the inventory about being implemented.
 
 Legend:
 - **Impl**: handler/serializer exists and is wired in.
@@ -232,19 +235,19 @@ pieces: the other sub-boards (evolution/team/etc., 27504–27552).
 
 | Opcode | Msg | Dir | Impl | Audit | Unit | E2E |
 |---|---|:---:|:---:|:---:|:---:|:---:|
-| 5101 | ExchangeInvite | C2S | V | A* | - | V |
-| 5102 | ExchangeInvitationRequest | S2C | V | A* | - | V |
-| 5103 | ExchangeAnswer | C2S | V | A* | - | V |
-| 5104 | ExchangeConfirmation | S2C | V | A* | - | V |
-| 5105 | ExchangeAddCard (ua_2) | C2S | V | A* | V | V |
-| 5107 | ExchangeRemoveCard (wd_0) | C2S | V | A* | V | V |
-| 5109 | ExchangeSetReady (ahJ) | C2S | V | A* | V | V |
-| 5110 | ExchangeCardAdded (asH) | S2C | V | A* | V | V |
-| 5111 | ExchangeCancel (any) | C2S | V | A* | V | V |
-| 5112 | ExchangeCardRemoved (aaz_1) | S2C | V | A* | V | V |
-| 5113 | ExchangeError (Or) | S2C | V | A* | V | - |
-| 5114 | ExchangeEnd (aqX) | S2C | V | A* | V | V |
-| 5116 | ExchangeUserReady (dl_0) | S2C | V | A* | V | V |
+| 5101 | ExchangeInvite | C2S | ✓ | A* | — | ✓ |
+| 5102 | ExchangeInvitationRequest | S2C | ✓ | A* | — | ✓ |
+| 5103 | ExchangeAnswer | C2S | ✓ | A* | — | ✓ |
+| 5104 | ExchangeConfirmation | S2C | ✓ | A* | — | ✓ |
+| 5105 | ExchangeAddCard (ua_2) | C2S | ✓ | A* | ✓ | ✓ |
+| 5107 | ExchangeRemoveCard (wd_0) | C2S | ✓ | A* | ✓ | ✓ |
+| 5109 | ExchangeSetReady (ahJ) | C2S | ✓ | A* | ✓ | ✓ |
+| 5110 | ExchangeCardAdded (asH) | S2C | ✓ | A* | ✓ | ✓ |
+| 5111 | ExchangeCancel (any) | C2S | ✓ | A* | ✓ | ✓ |
+| 5112 | ExchangeCardRemoved (aaz_1) | S2C | ✓ | A* | ✓ | ✓ |
+| 5113 | ExchangeError (Or) | S2C | ✓ | A* | ✓ | — |
+| 5114 | ExchangeEnd (aqX) | S2C | ✓ | A* | ✓ | ✓ |
+| 5116 | ExchangeUserReady (dl_0) | S2C | ✓ | A* | ✓ | ✓ |
 | — | transactional swap (dupe-safe) | — | ✓ | n/a | ✓✓✓✓ | ✓ |
 
 ## Fighters & teams
@@ -283,8 +286,8 @@ pieces: the other sub-boards (evolution/team/etc., 27504–27552).
 | 28609 | `bt_0` TournamentSearchCancel | C2S | ✓ | A (`[i64 tid][i64 coachId][i16 preset]`) | — | ✓ |
 | 28610 | `de_0` TournamentSearchCancelResult | S2C | ✓ | A (`[i8 accepted]`) | — | ✓ |
 | 28611 | `ly_1` TournamentSearchRequest | C2S | ✓ refuses | A (`[i64 tid][i64 coachId][i16 preset]`) | — | ✓ |
-| 28612 | `DR` TournamentSearchResult | S2C | — | A (`[i64 tid][i16 preset][i8 accepted]`) | — | — |
-| 28614 | `azj_0` TournamentFightStarting | S2C | — | A (`[i64 tid]`) | — | — |
+| 28612 | `DR` TournamentSearchResult | S2C | ✓ | A (`[i64 tid][i16 preset][i8 accepted]`) | — | — |
+| 28614 | `azj_0` TournamentFightStarting | S2C | ✓ | A (`[i64 tid]`) | — | — |
 | 28616 | `kw_1` TournamentSearchError | S2C | ✓ | A (`[i8 code][i8 subCode]`) | — | ✓ |
 | 23101 | `bm_1` ClassicSearchCancel | C2S | ✓ | A (`[i64 coachId][i16 teamId]`) | — | ✓ **live** |
 | 23102 | `ada_1` ClassicSearchCancelResult | S2C | ✓ | A (`[i8 accepted]`) | — | ✓ **live** |

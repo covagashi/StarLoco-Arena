@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
 
@@ -105,5 +106,37 @@ func TestTurnCounterMirrorsTheClient(t *testing.T) {
 	if a.turnsTaken != before+2 {
 		t.Errorf("turnsTaken = %d after two turns, want %d",
 			a.turnsTaken, before+2)
+	}
+}
+
+// TestResyncReattachesLiveBuffs drives the real resync path (resume and
+// spectate share it): a living fighter's buff comes back as one 8121 with its
+// absolute expiry, and a dead fighter's buff is not sent at all.
+func TestResyncReattachesLiveBuffs(t *testing.T) {
+	f, a, b := aiMeleeFight(t)
+	a.turnsTaken = 2
+	a.Buffs = append(a.Buffs, &activeBuff{actionID: 9, effectID: 77, turnsLeft: 3})
+	b.Buffs = append(b.Buffs, &activeBuff{actionID: 9, effectID: 78, turnsLeft: 3})
+	b.HP = 0
+
+	d := &Deps{Log: testLogger()}
+	s := &Session{log: testLogger(), deps: d, out: make(chan []byte, writeQueueSize),
+		quit: make(chan struct{}), Coach: &domain.Coach{ID: 999, Name: "viewer"}}
+	d.sendFightResync(s, f, true)
+	close(s.out)
+
+	var got []int64
+	for frame := range s.out {
+		if binary.BigEndian.Uint16(frame[2:4]) != protocol.OpRunScriptedEffect {
+			continue
+		}
+		_, fid, expiry := decodeAttachBuff(t, frame)
+		if fid == a.WireID && expiry != 5 {
+			t.Errorf("expiry = %d, want 5 (turnsTaken 2 + 3 left)", expiry)
+		}
+		got = append(got, fid)
+	}
+	if len(got) != 1 || got[0] != a.WireID {
+		t.Fatalf("8121 fighters = %v, want only the living one (%d)", got, a.WireID)
 	}
 }

@@ -1,9 +1,13 @@
 package game
 
 import (
+	"path/filepath"
 	"testing"
 
+	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
+	"github.com/StarLoco/arena-2.70/internal/protocol"
+	"github.com/StarLoco/arena-2.70/internal/store"
 )
 
 // TestUnpricedCardsAreNotPurchasable is the SECURITY regression for free card
@@ -65,5 +69,63 @@ func TestStockedIsNotTheSameAsPurchasable(t *testing.T) {
 	}
 	if cardIsPurchasable(free) {
 		t.Error("...but it must not be PURCHASABLE")
+	}
+}
+
+// TestShopBuyRefusesUnpricedCardOnTheWire drives opcode 5450 itself (B-151's
+// recorded gap): the guard has to hold in the handler, not only in the helper.
+// A priced card from the same set is bought normally, so a refusal cannot be
+// an unrelated failure of the harness.
+func TestShopBuyRefusesUnpricedCardOnTheWire(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "shop.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	acc, _ := st.Accounts.CreateAccount("shopA", "pw", false)
+	coach, _ := st.Coaches.Create(acc.ID, "Buyer", 0, 0, 0)
+	if err := st.Coaches.CreditCurrency(coach.ID, 1, 500); err != nil {
+		t.Fatalf("credit: %v", err)
+	}
+
+	cards := gamedata.NewCards(
+		&gamedata.CoachCard{ID: 16, CardSet: 5, Price: map[uint8]int32{1: 100}},
+		&gamedata.CoachCard{ID: 17, CardSet: 5, Price: map[uint8]int32{1: 0}},
+	)
+	d := &Deps{Store: st, Cards: cards, Log: testLogger()}
+	s := &Session{log: testLogger(), deps: d, out: make(chan []byte, writeQueueSize),
+		quit: make(chan struct{}), Coach: coach}
+
+	buy := func(cardID int32) {
+		t.Helper()
+		p := protocol.NewWriter().I32(5).U16(1).I32(cardID).Bytes()
+		if err := handleShopBuy(s, &protocol.C2SFrame{Payload: p}); err != nil {
+			t.Fatalf("handler: %v", err)
+		}
+	}
+	wallet := func() int32 {
+		t.Helper()
+		var w domain.CoachCurrency
+		if err := st.DB().Where("coach_id = ? AND currency_type = ?", coach.ID, 1).
+			First(&w).Error; err != nil {
+			t.Fatalf("wallet: %v", err)
+		}
+		return w.Amount
+	}
+
+	buy(17)
+	if n := cardCount(t, st, coach.ID, 17); n != 0 {
+		t.Errorf("unpriced card granted through 5450: %d copies", n)
+	}
+	if got := wallet(); got != 500 {
+		t.Errorf("wallet = %d after a refused buy, want 500", got)
+	}
+
+	buy(16)
+	if n := cardCount(t, st, coach.ID, 16); n != 1 {
+		t.Errorf("priced card: %d copies, want 1", n)
+	}
+	if got := wallet(); got != 400 {
+		t.Errorf("wallet = %d, want 400", got)
 	}
 }

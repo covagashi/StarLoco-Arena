@@ -76,7 +76,7 @@ Linux y Windows).
 | [S18](./S18-screens-redesign.md) | M2 | L | 🟢 terminado (falta el visto bueno de las pantallas nuevas) | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
 | [S06](./S06-options-audio.md) | M1 | S | 🟢 cerrado | Opciones que no hacen nada, música y volúmenes |
 | [S07](./S07-gui-fidelity.md) | M2 | M | 🟢 cerrado | Lo que el retail tenía y aquí falta: nivel del coach, ficha del luchador, versus, colores |
-| [S08](./S08-server-debt.md) | M3 | L | 🟡 siguiente | Deuda de servidor: bugs abiertos, datos sin leer, docs que se contradicen |
+| [S08](./S08-server-debt.md) | M3 | L | 🟡 abierto | Deuda de servidor: bugs abiertos, datos sin leer, docs que se contradicen |
 | [S09](./S09-tournaments.md) | M3 | M | ⚪ esbozo | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
 | [S10](./S10-tutorial-onboarding.md) | M3 | M | ⚪ esbozo | Tutorial Kanojedo y onboarding del jugador nuevo |
 | [S11](./S11-replays-spectator.md) | M3 | M | ⚪ esbozo | Replays y modo espectador (alcance por decidir) |
@@ -103,7 +103,7 @@ afectado trabaja con la opción marcada como *por defecto*.
 | Servicios del hall (Card Master, Zaap…): ¿entradas en el lobby o revivir el hall caminable? | S05 | entradas en el lobby |
 | Replays: ¿grabar/reproducir como el retail, o solo espectador en vivo? | S11 | solo lo que ya hay + guardar replays |
 | ¿Seguir con MySQL y Postgres, o solo SQLite (+ Postgres de producción)? | S08 | sin cambios |
-| X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo |
+| X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo (aplicado en S08; se reabre si el dueño dice) |
 | Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas |
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |
 | ¿JS en el portal web? | S16 | sin JS |

@@ -105,29 +105,27 @@ depend on tracing a registration path through startup code.
 | **E** | S2C **emitted** — the server builds & sends this frame |
 | **I** | **Inactive** — the server *defines* the opcode constant but never registers/sends it |
 | **-** | **Not implemented** — the client knows it; the server has no code for it |
+| **X** | **Never implement** — Ankama-internal pipelines (the avatar upload family) |
 
 ## Summary counts
 
+**The only opcode count in the docs.** `STATUS.md` and `COVERAGE.md` link
+here instead of repeating it, and `TestOpcodeInventorySummaryMatchesTable`
+(`internal/game/opcode_inventory_test.go`) recounts the master table and fails
+if this block drifts.
+
 | Bucket | Count |
 |---|---|
-| Client opcodes total (unique, from CSV) | ~330 |
-| **C2S handled (H)** | **107** |
-| **S2C emitted (E)** | **118** |
-| **S2C defined-but-inactive (I)** | **8** |
-| Client opcodes with **no server code (-)** | 172 (mostly unidentified subsystems) |
+| Rows in the master table | 347 |
+| **C2S handled (H)** | 111 |
+| **S2C emitted (E)** | 152 |
+| **Inactive (I)** | 6 |
+| **Never implement (X)** | 4 |
+| **Not implemented (-)** | 74 |
 
-Counts are rows of the master table below (340 rows). Opcode **107** is a single
-`both | H+E` row and counts once on each side. Re-derive after any change — the
-handled count must equal the number of `r.Register` calls in `internal/game`:
-
-```powershell
-$t = Get-Content docs\OPCODE-INVENTORY.md
-$both = ($t|sls '^\| \d+ \| both \| H\+E \|').Count
-"H={0} E={1} I={2} -={3}" -f (($t|sls '^\| \d+ \| C2S \| H \|').Count + $both),
-  (($t|sls '^\| \d+ \| S2C \| E \|').Count + $both),
-  ($t|sls '^\| \d+ \| \w+ \| I \|').Count, ($t|sls '^\| \d+ \| \w+ \| - \|').Count
-(sls -Path internal\game\*.go -Pattern 'r\.Register\(protocol\.').Count  # must equal H
-```
+A `both | H+E` row counts once on each side; there is none today. The handled
+count also equals the opcodes `RegisterAll` binds (the tests above check both
+directions row by row).
 
 ---
 
@@ -158,8 +156,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 103 | S2C | - | (`dm_0` / `qr_2`) | **Two classes both return 103**, both decode via a shared `n(ByteBuffer)`, and neither is constructed outside the factory - so which one 103 resolves to depends on factory registration order. Ambiguous by construction; do not send it without settling that first |
 | 105 | S2C | - | (`Ve`) | `[i8 level]` + an i32 when level==3. Same developer-console sink as 102 |
 | 106 | S2C | - | (`lo`) | `[i8][raw remainder]` - the tail is kept as an unparsed ByteBuffer, so the payload shape is defined by whatever reads it downstream. Connection stage (`fp_0`) |
-| 107 | both | H+E | Ping (asg_0) | `handlePing` → `handshake.EncodePingReply` |
-| 108 | S2C | - | (`abj_0`) | `[i8][i32][i64][i64]...`, min 29 bytes. Connection stage (`fp_0`). Note `pl_2` case 108 calls `nW.sL()` - so a frame in this family is also consumed by the ladder handler |
+| 107 | C2S | H | Ping (asg_0) | `handlePing`; the reply goes out as **108**, not 107 |
+| 108 | S2C | E | Ping reply (`abj_0`) | `handshake.EncodePingReply` (`PingReplyOpcode`, not a `protocol.Op` constant, so the emitted-frame test cannot see it).  `[i8][i32][i64][i64]...`, min 29 bytes. Connection stage (`fp_0`). Note `pl_2` case 108 calls `nW.sL()` - so a frame in this family is also consumed by the ladder handler |
 | 200 | S2C | E | InteractiveElementSpawn | generated table (`cmd/genelements`); Zaaps, Card Masters, Fusion altars, NPCs, totems |
 | 201 | C2S | H | InteractiveElementAction (bd_2) | `handleInteractiveElementAction` � **every** element click |
 | 202 | S2C | - | (`tt_2`) | `[i64][i16 len]...` via a shared `G(ByteBuffer)` reader. Connection stage (`fp_0`) |
@@ -291,7 +289,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 4520 | S2C | E | FighterDiesMessage (cd_2) | death event |
 | 4521 | C2S | H | FighterActorDirectionChangeRequestMessage (lr_2) | `handleFighterDirectionChange` — relays facing; reply 4522 |
 | 4522 | S2C | E | FighterChangeDirectionMessage (u_0) | `buildFighterDirectionChange` — cosmetic facing broadcast |
-| 4523 | C2S | - | (`anv_0`) | EMPTY. Console command **`/skipTutorial`** (`bv_0`). Not implemented: there is no tutorial to skip |
+| 4523 | C2S | - | (`anv_0`) | EMPTY. Built only by `bv_0`, the **`Context.skipTutorial()`** Lua binding (library `uc_2`, `super("Context")`) the tutorial scenario scripts call - not a console command. Not implemented: there is no tutorial to skip (S10) |
 | 4524 | S2C | E | FighterMoveMessage (yr_1) | in-fight move broadcast |
 | 4600 | S2C | E | EnterInstanceMessage (aec_2) | `handshake.EncodeEnterInstance` (world/arena stream) |
 | 4601 | S2C | E | SitStand (`afV`) | `[i16 n]{i64 sitting}[i16 n]{i64 standing}` -> `AnimAssis-Debut` / `AnimAssis-Fin`, nudging each actor's facing. **Server-driven only**: the client has no sit UI and forwards `/sit` to the server like any other slash-line (verified live). Paired with the actor blob's `dBg` byte, which covers a coach that was ALREADY seated when you arrived. Sent by `/sit` and `/stand`; walking stands you up (B-139) |
@@ -434,7 +432,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 22003 | C2S | H | StatisticUpdate (nq) | `handleStatisticUpdate` � the client self-reports criteria 210/218/221/229/39 here; echoed back via 2052 |
 | 22004 | C2S | - | (`axH`) | `[i64 coachId]` - **abuse-report support frame**: the `chat.reportIncorrectBehaviour` context action (`gy_1`/`qq_2`) sends AddIgnore(3131) + this. Deliberate non-work: moderation/report pipeline does not exist server-side |
 | 22092 | S2C | - | (`axA`) | `[i64 actorId][i16 flag]` -> `aez_0.cm()`: the flag rendered as `<text 56/57>` in the actor hover tooltip (`bu_2`, only when !=0). The same field already rides inside the coach spawn blob's own decode (`aez_0` line ~474). Deliberate non-work: no server-side source for the flag exists - pushing it would be inventing a status policy |
-| 22093 | C2S | - | (`Tx`) | `[i32]` - **cross-game card transfer** (`agn_0` case 16443). Deliberate non-work: there is no other Ankama game to transfer to |
+| 22093 | C2S | - | (`Tx`) | `[i32 cardId]` - **use a title card** (type 28 `aMK.dYC` "Titre": `aBC` sends UI event 16443, `agn_0` builds `Tx`). 12 shipped cards ("Trainer", "Sweet Breaker", "No title"…). Deliberate non-work: nothing in the 2.70 client ever displays a coach title, so its effect lived outside the client |
 | 22094 | S2C | E | FireworkShow (la_1) | echoed to launcher + `SessionsNear` |
 | 22095 | C2S | H | FireworkLaunch (axf_0) | `handleFireworkLaunch` |
 | 22097 | C2S | - | (`OB`) | `[i32]` - **cross-game card transfer** (`agn_0` case 16442): the client locally toasts `coachInventory.otherGameCardSent`. Deliberate non-work: account-link transfer to another Ankama game cannot exist here |
@@ -545,8 +543,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 
 ### Where to start (highest value first)
 
-Coverage today (counted from the table 2026-10-06): **347 rows - 110 C2S
-handled, 151 S2C emitted, 6 inactive, 4 never-implement, 76 unimplemented**. Of the remainder, **every row now carries its evidence** - unreachable constructors, inert consumers, Test-Lua-only console actions, client-local identifiers, Ankama-internal pipelines, missing game models - rather than a bare "unknown". The pass produced these real changes:
+Coverage today: see [Summary counts](#summary-counts). Of the unimplemented rows, **every row now carries its evidence** - unreachable constructors, inert consumers, Test-Lua-only console actions, client-local identifiers, Ankama-internal pipelines, missing game models - rather than a bare "unknown". The pass produced these real changes:
 
 1. ~~Chat errors (`om_0`, 3206/3210/3216)~~ - **all four already emitted** (3206
    malformed `/` cmd, 3210 non-admin `/`, 3214 self-whisper, 3216 social-list-full),
@@ -652,7 +649,7 @@ flag.
 | 4514 | `aII` | DONE | `/resetPosition` console command (player-facing unstick) - `handleResetPosition` teleports to the current world's primary Zaap (B-135). |
 | 4518 | `Ab` | reachable | `/ignoreEventsMessages` console command; client also despawns every other actor locally and sends the frame twice (its own bug). Deliberate non-work - we have no event-message stream to mute. |
 | 4519 | `aOx` | reachable | `/acceptEventsMessages` console command, counterpart to 4518 (also sent twice). Deliberate non-work, same reason. |
-| 4523 | `anv_0` | reachable | `/skipTutorial` console command. Deliberate non-work - there is no tutorial to skip. |
+| 4523 | `anv_0` | reachable | `Context.skipTutorial()` Lua binding of the tutorial scenarios. Deliberate non-work - there is no tutorial to skip. |
 | 4701 | `JY` | DONE | Emote play - `handleEmote` relays to the AoI as 4700 including the sender (the client never plays its own emote locally). |
 | 5204 | `ajm_2` | DONE | "Inscribe in grimoire" - `[i32 templateId]` (not a uid). `handleAddToTome` ownership-checks then `SyncTome`s it. |
 | 17004 | `fu_2` | reachable | Test-Lua-only (`acL` console action) - `[i64 1]`. Deliberate non-work, same class as 513/551. |
@@ -660,7 +657,7 @@ flag.
 | 17008 | `ald_2` | reachable | Test-Lua-only (`avb_0` console action) - hardcoded TEST events. Deliberate non-work. |
 | 17010 | `aFu` | reachable | Player-created calendar tournaments (card 807 gate, `oz_1` 20072). Real model gap - custom events have no type-1000 defId, and registration derefs it unguarded. Documented deliberate non-work, not a codec. |
 | 22004 | `axH` | reachable | Abuse-report support (`[i64 coachId]`, sent with AddIgnore by `chat.reportIncorrectBehaviour`). Deliberate non-work - no moderation pipeline. |
-| 22093 | `Tx` | reachable | Cross-game card transfer (`agn_0` 16443). Deliberate non-work - no other Ankama game exists. |
+| 22093 | `Tx` | reachable | Use a title card (type 28, `agn_0` 16443). Deliberate non-work - the 2.70 client never shows a coach title. |
 | 22097 | `OB` | reachable | Cross-game card transfer (`agn_0` 16442, `otherGameCardSent` toast). Deliberate non-work - same reason. |
 | 26313 | `aju_1` | dead | DEAD in retail - X-vs-X invite. Only builder is awj_0, the Lua binding XvsXInvitation in the Test library (adg_1, super("Test")). No UI. Superseded by the 60xx 2v2 family (ROADMAP item 33). |
 | 27525 | `zz_0` | reachable | LIVE - built in po_0, the production world-element action handler. |
@@ -761,7 +758,7 @@ obfuscated names differ only by case and a default PowerShell `Select-String` wi
 
 ## Focused views (for planning)
 
-### C2S handled — 73, by feature
+### C2S handled, by feature (partial)
 
 - **Connection/lifecycle (8):** 7, 107, 1025, 2049, 1, 4517, 22003, 27529
 - **Overworld (3):** 4501, **201** (every element click), **4512** (Zaap)
@@ -780,7 +777,7 @@ obfuscated names differ only by case and a default PowerShell `Select-String` wi
 - **In-fight (10):** 8011, 8021, 8023, 8031, 8105, 4503, 8107, 8111, 8151, 26321
 - **Resume/spectate/challenge (6):** 26334, 2260, 26331, 26301, 26305, 26307
 
-### S2C defined but inactive — 8 (all resolved: implemented or intentionally dark)
+### S2C defined but inactive (history: each one implemented or intentionally dark)
 
 After the correctness sweep, every one of these is a deliberate decision, not a
 loose end. Only opcode 8 became active; the rest are inactive for a documented,
@@ -800,10 +797,12 @@ silence).
 
 ### Known, identified gaps worth prioritising
 
-1. **2v2 / multi-coach fights** — team-building/placement/timeline for >1 fighter per side (the last item of the original fight audit).
-2. **4521 / 4522 direction-change** — small, self-contained; removes a live `unhandled opcode` during fights.
-3. **26313 / 26314 (+ 26310 / 26312) X-vs-X challenge** — finishes the direct-challenge feature deferred in B-040.
-4. **Inactive S2C set** above — small robustness fixes.
+The four items this list used to carry are closed: **2v2** is live (the 60xx
+team-up family, 27504/27505 ladder), **4521/4522** is handled, **X-vs-X**
+(26310-26314) is dead in the retail client (closed by the owner's default,
+S08) and the **inactive S2C** set is the six `I` rows, each with its reason.
+The open work lives in [`sprints/`](../../sprints/README.md) (S08 onwards),
+not here.
 
 ### Large unknowns — need a decomp pass before scoping
 

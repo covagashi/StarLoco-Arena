@@ -208,3 +208,128 @@ func emittedOpcodes(t *testing.T, values map[string]uint16) map[uint16]bool {
 	}
 	return out
 }
+
+// TestOpcodeInventorySummaryMatchesTable pins the one opcode count the docs
+// keep. Three documents used to carry three different hand counts (S08); now
+// STATUS.md and COVERAGE.md link to this block and this test recounts it.
+func TestOpcodeInventorySummaryMatchesTable(t *testing.T) {
+	raw, err := os.ReadFile(filepath.FromSlash(opcodeInventoryPath))
+	if err != nil {
+		t.Skipf("OPCODE-INVENTORY.md not readable (%v)", err)
+	}
+	doc := string(raw)
+	start := strings.Index(doc, "## Summary counts")
+	end := strings.Index(doc, "## Master table")
+	if start < 0 || end < start {
+		t.Fatal("Summary counts / Master table headings not found")
+	}
+	claimed := make(map[string]int)
+	cellRe := regexp.MustCompile(`^\|([^|]+)\|\s*\**(\d+)\**\s*\|$`)
+	for _, line := range strings.Split(doc[start:end], "\n") {
+		if m := cellRe.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
+			n, _ := strconv.Atoi(m[2])
+			claimed[strings.TrimSpace(strings.ReplaceAll(m[1], "*", ""))] = n
+		}
+	}
+
+	status := inventoryStatuses(t)
+	dirs := inventoryDirections(t)
+	var h, e, i, x, gap int
+	for op, st := range status {
+		switch {
+		case st == "H+E":
+			h++
+			e++
+		case st == "H":
+			h++
+		case st == "E":
+			e++
+		case st == "I":
+			i++
+		case st == "X":
+			x++
+		case st == "-":
+			gap++
+		default:
+			t.Errorf("opcode %d (%s): unknown status %q", op, dirs[op], st)
+		}
+	}
+	want := map[string]int{
+		"Rows in the master table": len(status),
+		"C2S handled (H)":          h,
+		"S2C emitted (E)":          e,
+		"Inactive (I)":             i,
+		"Never implement (X)":      x,
+		"Not implemented (-)":      gap,
+	}
+	for label, n := range want {
+		got, ok := claimed[label]
+		if !ok {
+			t.Errorf("summary has no %q row", label)
+			continue
+		}
+		if got != n {
+			t.Errorf("summary %q = %d, the table counts %d", label, got, n)
+		}
+	}
+	if h != len(registeredOpcodes(t)) {
+		t.Errorf("H rows = %d, RegisterAll binds %d", h, len(registeredOpcodes(t)))
+	}
+}
+
+// inventoryDirections maps opcode -> direction cell, for error messages.
+func inventoryDirections(t *testing.T) map[uint16]string {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.FromSlash(opcodeInventoryPath))
+	if err != nil {
+		t.Skipf("OPCODE-INVENTORY.md not readable (%v)", err)
+	}
+	out := make(map[uint16]string)
+	for _, line := range strings.Split(string(raw), "\n") {
+		if m := inventoryRowRe.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
+			if n, err := strconv.ParseUint(m[1], 10, 16); err == nil {
+				out[uint16(n)] = strings.TrimSpace(m[2])
+			}
+		}
+	}
+	return out
+}
+
+// TestCoverageAgreesWithInventory: COVERAGE.md is the audit/test matrix and
+// lists only some opcodes, but where it lists one, its Impl column must agree
+// with the inventory (28612/28614 were "—" there while emitted, S08).
+func TestCoverageAgreesWithInventory(t *testing.T) {
+	raw, err := os.ReadFile(filepath.FromSlash("../../COVERAGE.md"))
+	if err != nil {
+		t.Skipf("COVERAGE.md not readable (%v)", err)
+	}
+	status := inventoryStatuses(t)
+	rowRe := regexp.MustCompile(`^\|\s*(\d+)\s*\|[^|]*\|[^|]*\|([^|]*)\|`)
+	rows := 0
+	for _, line := range strings.Split(string(raw), "\n") {
+		m := rowRe.FindStringSubmatch(strings.TrimSpace(line))
+		if m == nil {
+			continue
+		}
+		n, err := strconv.ParseUint(m[1], 10, 16)
+		if err != nil {
+			continue
+		}
+		rows++
+		op := uint16(n)
+		impl := strings.HasPrefix(strings.TrimSpace(m[2]), "✓")
+		st, ok := status[op]
+		if !ok {
+			t.Errorf("COVERAGE.md lists %d, which has no inventory row", op)
+			continue
+		}
+		inInventory := strings.ContainsAny(st, "HE")
+		if impl != inInventory {
+			t.Errorf("opcode %d: COVERAGE Impl %q, inventory status %q", op,
+				strings.TrimSpace(m[2]), st)
+		}
+	}
+	if rows == 0 {
+		t.Fatal("parsed no opcode rows from COVERAGE.md")
+	}
+}

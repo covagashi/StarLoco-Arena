@@ -76,11 +76,8 @@ func handleReconnectFightAnswer(s *Session, frame *protocol.C2SFrame) error {
 // current cells, dead fighters are re-marked dead, and the phase cues fast-forward
 // the client's fight state machine to the live phase + turn. A spectator gets the
 // blob with the spectator flag set and an empty action deck (it cannot act). Must
-// run on the fight actor.
-//
-// LIMITATION: active buff/debuff icons are not restored (the CREATE_FIGHT
-// effects/conditions slots are still sent empty) — the server keeps the buffs and
-// they keep working; only their client-side icons are missing until they expire.
+// run on the fight actor. Live buffs come back through 8121 (resyncBuffs),
+// since CREATE_FIGHT has no slot for them.
 func (d *Deps) sendFightResync(sess *Session, f *Fight, spectator bool) {
 	if sess == nil || sess.Coach == nil {
 		return

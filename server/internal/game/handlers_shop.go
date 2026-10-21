@@ -313,6 +313,18 @@ func handleShopBuy(s *Session, f *protocol.C2SFrame) error {
 			// This Card Master does not stock that card (forged/stale request).
 			return s.sendShopResult(shopResultError)
 		}
+		// SECURITY: a unique card cannot be acquired twice. The client blocks this
+		// before it will even build the packet (ku_2.java:98-100), so any request
+		// that reaches here is forged. Beyond the economy, the retail client
+		// REFUSES to accept a second copy in the 5200 push (ky_2 returns 2), so
+		// granting one desyncs the player's inventory view from the database
+		// permanently. Unique cards also carry high Value, which feeds clan-island
+		// reputation and the fusion value ceiling.
+		if s.deps.cardIsUnique(cardID) && s.coachOwnsCard(cardID) {
+			s.log.Warn("purchase refused: unique card already owned",
+				"coach", s.Coach.ID, "card", cardID)
+			return s.sendShopResult(shopResultError)
+		}
 		// SECURITY: a card with no POSITIVE price is not purchasable.
 		//
 		// Cost was derived solely from the template's Price map, and BuyCards
@@ -326,18 +338,6 @@ func handleShopBuy(s *Session, f *protocol.C2SFrame) error {
 		//
 		// Anything genuinely meant to be free must be granted by a reward path,
 		// not by the shop.
-		// SECURITY: a unique card cannot be acquired twice. The client blocks this
-		// before it will even build the packet (ku_2.java:98-100), so any request
-		// that reaches here is forged. Beyond the economy, the retail client
-		// REFUSES to accept a second copy in the 5200 push (ky_2 returns 2), so
-		// granting one desyncs the player's inventory view from the database
-		// permanently. Unique cards also carry high Value, which feeds clan-island
-		// reputation and the fusion value ceiling.
-		if s.deps.cardIsUnique(cardID) && s.coachOwnsCard(cardID) {
-			s.log.Warn("purchase refused: unique card already owned",
-				"coach", s.Coach.ID, "card", cardID)
-			return s.sendShopResult(shopResultError)
-		}
 		if !cardIsPurchasable(card) {
 			s.log.Warn("rejected purchase of an unpriced card",
 				"coach", s.Coach.ID, "card", cardID, "shop", shopID)
