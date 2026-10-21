@@ -33,6 +33,7 @@ var TEAM_NAME := "zzdisp%d" % (Time.get_unix_time_from_system() as int % 100000)
 var FIGHTER_NAME := "zzdsp%d" % (Time.get_unix_time_from_system() as int % 100000)
 
 var client: ArenaClient
+var _sweep: RefCounted      # SmokeSweep, built once the client exists
 var finished := false
 var fight_scene: Node2D = null
 var _created := {}            # breed -> fighter id (6000 results)
@@ -43,6 +44,10 @@ var _placed := false
 var _tp_ok := false
 var _push_ok := false
 var _swap_ok := false
+## casts whose 1 s verification has not run yet: an *_ok flag goes up when the
+## spell is cast and down if the check fails, so the run must not end while
+## one is pending (S08: a failed swap passed this way)
+var _pending := 0
 # fid -> {state action id: true} — live state effects seen on 8120, cleared
 # on each 8100 table turn (round-card states are round-scoped). The round-1
 # card makes the arena intransposable+stabilised, so displacement casts must
@@ -52,6 +57,7 @@ var _states := {}
 
 func _init() -> void:
 	client = ArenaClient.new()
+	_sweep = load("res://test/smoke_sweep.gd").new(client, _create_fighters)
 	root.add_child(client)
 	client.connected.connect(_send_login)
 	client.message_received.connect(_on_message)
@@ -153,7 +159,7 @@ func _show_fight() -> void:
 		_finish(1, "combat never started")
 		return
 	var wait := 0.0
-	while not (_tp_ok and _push_ok and _swap_ok) and wait < 60.0:
+	while not (_tp_ok and _push_ok and _swap_ok and _pending == 0) and wait < 60.0:
 		await create_timer(1.0).timeout
 		wait += 1.0
 	print("[smoke] displacement results tp=%s push=%s swap=%s" % [
@@ -273,9 +279,11 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 				if not fight_scene._cells[cell].get("ground", false):
 					continue   # teleport must land on a walkable cell
 				_tp_ok = true   # asserted by the effect landing — see timer
+				_pending += 1
 				fight_scene.request_cast_at(TP_SPELL, cell)
 				var want := cell
 				create_timer(1.0).timeout.connect(func():
+					_pending -= 1
 					if fight_scene == null:
 						return
 					var now: Vector3i = fight_scene._actor_cells.get(
@@ -310,9 +318,11 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			var before: Vector3i = fight_scene._actor_cells.get(
 				ally, Vector3i.ZERO)
 			_push_ok = true
+			_pending += 1
 			fight_scene.request_cast_at(PUSH_SPELL,
 				Vector2i(before.x, before.y))
 			create_timer(1.0).timeout.connect(func():
+				_pending -= 1
 				if fight_scene == null:
 					return
 				var now: Vector3i = fight_scene._actor_cells.get(
@@ -362,9 +372,11 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 				fight_scene.request_end_turn()
 				return
 			_swap_ok = true
+			_pending += 1
 			fight_scene.request_cast_at(SWAP_SPELL, Vector2i(c0.x, c0.y))
 			var me0 := me
 			create_timer(1.0).timeout.connect(func():
+				_pending -= 1
 				if fight_scene == null:
 					return
 				var me_now: Vector3i = fight_scene._actor_cells.get(
@@ -424,9 +436,13 @@ func _ally_dists(me: Vector3i, fid: int) -> String:
 ## Best reachable cell that puts `fid` in Sacrifice range (Manhattan 1-3
 ## + LoS) of a living own ally, or (-1,-1) when nothing qualifies. MP
 ## bound so the 4503 isn't sent for a path the server would truncate.
+## When no such cell is in MP this turn, the cell as far along the shortest
+## path to one as the MP go, so the swapper closes in over several turns (S08:
+## on a spread-out arena it used to end its turn until the 250 s timeout).
 func _approach_cell(me: Vector3i, fid: int) -> Vector2i:
 	var best := Vector2i(-1, -1)
 	var best_len := 1 << 30
+	var far_path: Array = []
 	for c in fight_scene._cells.keys():
 		var cell := Vector2i(c)
 		if not fight_scene._cells[c].get("ground", false):
@@ -449,11 +465,18 @@ func _approach_cell(me: Vector3i, fid: int) -> Vector2i:
 				continue
 			var path: Array = fight_scene._find_path(
 				Vector2i(me.x, me.y), cell, fid)
-			if path.is_empty() or path.size() > fight_scene._mp_left:
+			if path.is_empty():
+				continue
+			if path.size() > fight_scene._mp_left:
+				if far_path.is_empty() or path.size() < far_path.size():
+					far_path = path
 				continue
 			if path.size() < best_len:
 				best_len = path.size()
 				best = cell
+	if best.x < 0 and not far_path.is_empty() and fight_scene._mp_left > 0:
+		var step: Vector3i = far_path[fight_scene._mp_left - 1]
+		best = Vector2i(step.x, step.y)
 	return best
 
 
@@ -497,6 +520,8 @@ const WATCH_STATES := [94, 128]
 
 func _on_message(opcode: int, payload) -> void:
 	var decoded := Codec.decode(opcode, WireReader.new(payload))
+	if _sweep.feed(opcode, decoded):
+		return
 	match opcode:
 		8100:
 			_states.clear()
@@ -519,7 +544,7 @@ func _on_message(opcode: int, payload) -> void:
 		4600:
 			State.current_world = int(decoded.get("world_id", -1))
 		4516:
-			_create_fighters()
+			_sweep.start()   # clears zz* leftovers, then _create_fighters() (S08)
 		6000:
 			if int(decoded.get("result", 1)) != 0:
 				_finish(1, "fighter create refused %s" % decoded.get("result"))
@@ -574,6 +599,9 @@ func _cleanup() -> void:
 	print("[smoke] cleanup: preset %d + %d fighters deleted" % [
 		_preset_id, _created.size()])
 	var code := 0 if (_tp_ok and _push_ok and _swap_ok) else 1
+	# the deletes must leave the socket before quit() closes it (S08: the
+	# last 6003 was lost and its fighter left behind)
+	await create_timer(0.5).timeout
 	_finish(code, "displace smoke complete")
 
 

@@ -30,6 +30,7 @@ var TEAM_NAME := "zzsummon%d" % (Time.get_unix_time_from_system() as int % 10000
 var FIGHTER_NAME := "zzsmn%d" % (Time.get_unix_time_from_system() as int % 100000)
 
 var client: ArenaClient
+var _sweep: RefCounted      # SmokeSweep, built once the client exists
 var finished := false
 var _done_ok := false
 var fight_scene: Node2D = null
@@ -45,6 +46,7 @@ var _combat_seen := false
 
 func _init() -> void:
 	client = ArenaClient.new()
+	_sweep = load("res://test/smoke_sweep.gd").new(client, _create_fighter)
 	root.add_child(client)
 	client.connected.connect(_send_login)
 	client.message_received.connect(_on_message)
@@ -247,6 +249,8 @@ func _check_summon_spawned() -> void:
 
 func _on_message(opcode: int, payload) -> void:
 	var decoded := Codec.decode(opcode, WireReader.new(payload))
+	if _sweep.feed(opcode, decoded):
+		return
 	match opcode:
 		1024:
 			if decoded.get("result") == 0:
@@ -262,7 +266,7 @@ func _on_message(opcode: int, payload) -> void:
 		4600:
 			State.current_world = int(decoded.get("world_id", -1))
 		4516:
-			_create_fighter()
+			_sweep.start()   # clears zz* leftovers, then _create_fighter() (S08)
 		6000:
 			if int(decoded.get("result", 1)) != 0:
 				_finish(1, "fighter create refused %s" % decoded.get("result"))
@@ -323,6 +327,9 @@ func _cleanup() -> void:
 	print("[smoke] cleanup: preset %d + fighter %d deleted" % [
 		_preset_id, _created_fid])
 	_done_ok = true
+	# the deletes must leave the socket before quit() closes it (S08: the
+	# last 6003 was lost and its fighter left behind)
+	await create_timer(0.5).timeout
 	_finish(0, "summon smoke complete")
 
 

@@ -155,12 +155,21 @@ estadísticas de evolución y puntos de torneo en 2052/4096.
       pisaba los de los demás (los e2e con datos reales rompían al azar los
       demás). Ahora son de cada servidor. Los tests de arenas dejaron de
       saltarse: leen `data-dist` si no hay `data/`.
-- [ ] `godot/test/displace_smoke.gd` se cuelga (timeout a 250 s) también en
-      `0a99cc6f`: el intercambio (hechizo 135) depende de la geometría del mapa
-      que toque y a veces nunca encuentra aliado. Visto en S17 (2026-10-17).
-- [ ] Los smokes que se cortan dejan luchadores `zz*` en la cuenta `test`; a
-      100 el servidor rechaza crear (código 20, "pool full"). Limpiarlos al
-      empezar, no solo al terminar.
+- [ ] `displace_smoke` (y `carry_smoke`, mismo fallo) se cuelgan según el
+      mapa. **A medias (2026-10-21):** arreglado un falso positivo
+      (`_swap_ok` subía al lanzar y la prueba se rendía antes de verificar:
+      pasó con dos intercambios fallidos; ahora espera a `_pending == 0`) y
+      el acercamiento (si la casilla útil queda más lejos que los PM, avanza
+      lo que den en vez de pasar turno siempre). **Siguen agotando los 300 s**
+      en la última pasada (displace llegó a SWAP OK; carry no llegó a cargar):
+      falta ver qué turno se queda sin cerrar (en el log del servidor los
+      turnos de mesa iban a 61 s, el reloj expirando).
+- [x] Los `zz*` que dejan los smokes cortados: `test/smoke_sweep.gd`, al
+      entrar al mundo pide 6031 y borra los presets y luchadores `zz*` antes
+      de crear nada (summon, carry y displace). Probado sembrando uno: barrió
+      ese y **26 presets reales** olvidados; displace barrió lo que dejó un
+      carry cortado. Además el `_cleanup` espera 0,5 s antes de salir: el
+      último 6003 se perdía y dejaba un luchador.
 
 ## Criterio de cierre
 

@@ -34,6 +34,7 @@ var TEAM_NAME := "zzcarr%d" % (Time.get_unix_time_from_system() as int % 100000)
 var FIGHTER_NAME := "zzcar%d" % (Time.get_unix_time_from_system() as int % 100000)
 
 var client: ArenaClient
+var _sweep: RefCounted      # SmokeSweep, built once the client exists
 var finished := false
 var fight_scene: Node2D = null
 var _created := {}             # breed -> roster fighter id (6000 results)
@@ -53,6 +54,7 @@ var _states := {}
 
 func _init() -> void:
 	client = ArenaClient.new()
+	_sweep = load("res://test/smoke_sweep.gd").new(client, _create_fighters)
 	root.add_child(client)
 	client.connected.connect(_send_login)
 	client.message_received.connect(_on_message)
@@ -312,9 +314,14 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 
 
 ## A walkable free cell adjacent to `cargo` the carrier can path to.
+## The free cell next to the cargo the carrier reaches first. When none is in
+## MP this turn, the cell as far along the shortest such path as the MP go,
+## so the carrier closes in over several turns: arenas are random and the
+## spawns can be 10 cells apart (S08: it used to end its turn forever).
 func _adjacent_free(cargo: Vector3i, fid: int) -> Vector2i:
 	var best := Vector2i(-1, -1)
 	var best_len := 1 << 30
+	var far_path: Array = []
 	for dxy in [Vector2i(1, 0), Vector2i(-1, 0),
 			Vector2i(0, 1), Vector2i(0, -1)]:
 		var cell := Vector2i(cargo.x + dxy.x, cargo.y + dxy.y)
@@ -327,11 +334,18 @@ func _adjacent_free(cargo: Vector3i, fid: int) -> Vector2i:
 		var me: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
 		var path: Array = fight_scene._find_path(
 			Vector2i(me.x, me.y), cell, fid)
-		if path.is_empty() or path.size() > fight_scene._mp_left:
+		if path.is_empty():
+			continue
+		if path.size() > fight_scene._mp_left:
+			if far_path.is_empty() or path.size() < far_path.size():
+				far_path = path
 			continue
 		if path.size() < best_len:
 			best_len = path.size()
 			best = cell
+	if best.x < 0 and not far_path.is_empty() and fight_scene._mp_left > 0:
+		var step: Vector3i = far_path[fight_scene._mp_left - 1]
+		best = Vector2i(step.x, step.y)
 	return best
 
 
@@ -380,6 +394,8 @@ const WATCH_STATES := [94, 127, 128]
 
 func _on_message(opcode: int, payload) -> void:
 	var decoded := Codec.decode(opcode, WireReader.new(payload))
+	if _sweep.feed(opcode, decoded):
+		return
 	match opcode:
 		8100:
 			_states.clear()
@@ -402,7 +418,7 @@ func _on_message(opcode: int, payload) -> void:
 		4600:
 			State.current_world = int(decoded.get("world_id", -1))
 		4516:
-			_create_fighters()
+			_sweep.start()   # clears zz* leftovers, then _create_fighters() (S08)
 		6000:
 			if int(decoded.get("result", 1)) != 0:
 				_finish(1, "fighter create refused %s" % decoded.get("result"))
@@ -457,6 +473,9 @@ func _cleanup() -> void:
 		client.send_message(6003, w2.raw(), 2)
 	print("[smoke] cleanup: preset %d + %d fighters deleted" % [
 		_preset_id, _created.size()])
+	# the deletes must leave the socket before quit() closes it (S08: the
+	# last 6003 was lost and its fighter left behind)
+	await create_timer(0.5).timeout
 	_finish(0 if _thrown else 1, "carry smoke complete")
 
 
