@@ -21,7 +21,8 @@ var _main
 var _bot: ArenaClient
 var _bot2: ArenaClient          # bot's relogin socket (reconnect test)
 var _drop_done := false         # mid-fight disconnect already triggered
-var _reconnect_seen := false    # bot2 got the resync after 26334
+var _reconnect_seen := false
+var _rounds := 0                # table turns the main fight view reached    # bot2 got the resync after 26334
 var _bot_coach := -1
 var _bot_in_world := false
 var _fight_seen := false
@@ -84,6 +85,8 @@ func _coach_create(c: ArenaClient, name_: String) -> void:
 
 ## ---- main client (drives the real main.tscn UI paths) ----
 func _on_main_msg(op: int, raw: PackedByteArray) -> void:
+	if op == 8100:
+		_rounds += 1   # every table turn the main client lived through
 	match op:
 		2048:
 			_coach_create(_sess.client, "test")
@@ -165,6 +168,10 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 			var pick: Button = tp.find_child("Team-1", true, false) if tp != null else null
 			print("[smoke] TEAMPICK %s (%d team buttons)" % ["OK" if pick != null else "FAIL",
 				_main._gui.gui.model.get_value("teamPick").get("presets", []).size() if tp != null else 0])
+			# S08: a 4th toast within 4 s used to freeze the client (toast loop)
+			for n in 6:
+				_main._toast("burst %d" % n)
+			print("[smoke] TOASTS burst of 6 ok")
 			if pick != null:
 				pick.pressed.emit()   # the titular line-up → 26303
 		8000:
@@ -233,12 +240,18 @@ func _drive_fight() -> void:
 		return
 	# weakref: the view dies on scene change — capturing it raw errors.
 	var ref: WeakRef = weakref(fv)
-	fv.placement_began.connect(func():
+	var press_ready := func():
 		create_timer(0.5).timeout.connect(func():
 			var s = ref.get_ref()
 			if s != null:
 				s.confirm_placement()
-				print("[smoke] main placement ready")))
+				print("[smoke] main placement ready"))
+	fv.placement_began.connect(press_ready)
+	# The view drains the queued 8020 in its _ready, before this loop finds
+	# it as current_scene, so the signal has usually fired already (S08: Ready
+	# was never pressed and placement ran out its clock).
+	if fv._placement:
+		press_ready.call()
 	fv.turn_began.connect(func(_fid, ours):
 		if ours:
 			create_timer(0.5).timeout.connect(func():
@@ -251,6 +264,11 @@ func _drive_fight() -> void:
 		print("[smoke] main surrenders")
 		_sess.client.send_message(8151, PackedByteArray(), 3)
 	await create_timer(6.0).timeout
+	# S08: the 5th round card froze the client (event strip loop)
+	print("[smoke] ROUNDS %d" % _rounds)
+	if _rounds < 6:
+		_finish(1, "FAIL the fight never got past round %d" % _rounds)
+		return
 	_finish(0, "pvp challenge loop complete")
 
 

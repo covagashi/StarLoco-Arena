@@ -77,9 +77,20 @@ retail leídos y documentación que no se contradiga.
       lane 257 checks) y `fight_smoke` en vivo, en español: "Demonio del
       minuto 58" contra "Yopuka" y "Sacrógrito", y la versus con ese nombre.
       `report_smoke` 7/7.
-- [ ] **`pvp_smoke` no pulsa Listo**: su vista de combate no recibe el 8020
-      (el arnés deja dos lobbies vivos) y la colocación acaba por tiempo.
-      Hueco de la prueba, no del juego.
+- [x] **`pvp_smoke` no pulsaba Listo**: no era solo la prueba. **B-184**: el
+      lobby se tragaba el 8010 que llega pegado al 8000 (el cambio de escena es
+      diferido), así que la versus no salía y nadie mandaba el 8011; ahora el
+      lobby guarda los mensajes desde el 8000. Al dejar que el combate
+      avanzara salió **B-183**: el cliente se **congelaba en la 5.ª carta de
+      ronda** (bucle con `queue_free` en la tira de cartas; el mismo en los
+      avisos del lobby). Arreglados los dos; `pvp_smoke` comprueba ahora que
+      el combate pasa de 6 rondas (hizo 18) y lanza 6 avisos seguidos.
+      Batería completa en vivo, en verde, con la semilla de cada cabecera:
+      fight, report 7/7, audio 7/7, world 31/31, talk 8/8, ask 8/8, ask2 5/5,
+      screens 9/9, mailbox 8/8, cardmaster 5/5, fusion 5/5, revive 6/6,
+      revive_edge 4/4, totems 10/10, native_panels, native_lobby (28 PASS),
+      login, evo, colours 2/2, pvp, summon, carry y displace; lane headless
+      257 checks y `go test ./...`.
 
 ## Datos retail sin leer (`DATA-COVERAGE.md`)
 

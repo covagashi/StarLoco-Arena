@@ -758,6 +758,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.index_fighters(State.fight_data)
 			_log_line("[color=green]%s[/color]" % I18n.t("fight.created",
 				{"n": State.fighters.size()}))
+			# Buffer from NOW, not from _exit_tree: the scene change is
+			# deferred, and the 4102/8010 the server sends right after the
+			# 8000 usually arrive in the same read. They used to reach this
+			# lobby, which drops them, so the fight view never showed the
+			# versus nor sent its 8011 (S08).
+			Session.client.scene_active = false
 			get_tree().change_scene_to_file("res://src/fight/fight_view.tscn")
 		OP_FIGHTER_LIST:
 			# Lobby roster (et_2 blobs) — fills the selectable fighter list.
@@ -4519,9 +4525,14 @@ func _toast(text: String) -> void:
 	lab.add_theme_font_size_override("font_size", 12)
 	card.add_child(lab)
 	box.add_child(card)
+	# remove_child first: queue_free alone keeps the node counted until the
+	# frame ends, so a 4th toast within 4 s spun this loop forever (S08)
 	while box.get_child_count() > 3:
-		box.get_child(0).queue_free()
-	var tw := create_tween()
+		var old := box.get_child(0)
+		box.remove_child(old)
+		old.queue_free()
+	# bound to the card, so a toast dropped early takes its fade with it
+	var tw := card.create_tween()
 	tw.tween_interval(3.5)
 	tw.tween_property(card, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(card.queue_free)

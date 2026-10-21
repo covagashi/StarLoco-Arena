@@ -13,6 +13,37 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-184 · The lobby swallowed the 8010 that follows the 8000, so the versus never sent its 8011
+
+- **Symptom:** in `pvp_smoke` Ready was never pressed and placement ran out
+  its clock; presentation waited too (one 8012 instead of two).
+- **Root cause:** `main.gd` only starts buffering for the next scene in its
+  `_exit_tree`, but `change_scene_to_file` is deferred. The server sends 4102
+  and 8010 right after the 8000, usually in the same TCP read, so they reached
+  the lobby, which ignores them; the fight view never saw the 8010, never
+  showed the versus and never sent the 8011 every coach owes.
+- **Fix:** `main.gd` sets `Session.client.scene_active = false` the moment the
+  8000 arrives, so everything after it is queued for the fight view's drain.
+  `pvp_smoke` also checks the view's `_placement` when it finds it, since the
+  queued 8020 fires before the harness can connect.
+- **Verified:** `client-ui` — `pvp_smoke`: "main placement ready", 18 rounds.
+
+### B-183 · The client froze for good on the 5th round card
+
+- **Symptom:** any fight that reached round 5 hung the Godot client: no more
+  input, no more messages; the server kept running turns on their clock.
+  Every smoke surrendered before round 5, so none noticed.
+- **Root cause:** `fight_view._add_event_card` trimmed the card strip with
+  `while strip.get_child_count() > EVENT_STRIP_MAX: strip.get_child(0).queue_free()`.
+  `queue_free` frees at the end of the frame, so the count never drops and the
+  loop never ends. `main.gd`'s toast stack had the same loop (a 4th toast
+  within 4 s).
+- **Fix:** `remove_child` before `queue_free` in both; the toast's fade tween
+  is bound to the toast, so dropping it early also drops its tween.
+- **Verified:** `client-ui` — reproduced twice (`pvp_smoke` stopped at the 5th
+  8100), then `pvp_smoke` ran 18 rounds, and fires 6 toasts in a row; whole
+  live battery green (see S08).
+
 ### B-182 · Two process-wide registries let one server rewrite another's rules
 
 - **Symptom:** with real-data e2e tests added (S08), unrelated e2e tests failed

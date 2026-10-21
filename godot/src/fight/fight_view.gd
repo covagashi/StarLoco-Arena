@@ -1570,8 +1570,13 @@ func _add_event_card(ev: int, evname: String) -> void:
 		if c != null:
 			c.modulate = Color(0.6, 0.6, 0.6, 1.0)   # older: dimmed, still opaque
 	card.modulate = Color(1.0, 0.95, 0.6, 1.0)
+	# remove_child first: queue_free alone leaves the node counted until the
+	# end of the frame, and this loop spun forever on the 5th round card,
+	# freezing the client in every fight that lasted that long (S08)
 	while strip.get_child_count() > EVENT_STRIP_MAX:
-		strip.get_child(0).queue_free()
+		var old := strip.get_child(0)
+		strip.remove_child(old)
+		old.queue_free()
 
 
 ## --- Buff strip ------------------------------------------------------
