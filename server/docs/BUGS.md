@@ -5448,6 +5448,10 @@ starts within MP range of a tile, so triggering one needs a multi-round setup. T
 mechanic is unit-proven but should be re-checked once the match-construction issue is
 resolved.
 
+**Update (S08): live-confirmed** on the Godot client: `godot/test/special_smoke.gd`
+pins arena 12 and starts a turn on its Panacea (1006): 6200 entering + the 8120 heal
+boost (+10) arrive for that fighter.
+
 **Open, deliberately not changed:** `validateFightMove` refuses to move a **rooted**
 fighter. v2.04b's `turns.go` does the same ("a ROOTED or PETRIFIED fighter cannot move
 under its own power") and also blocks displacement, but live feedback says 2.70's root

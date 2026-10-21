@@ -28,7 +28,12 @@ retail leídos y documentación que no se contradiga.
       porque el arnés e2e no carga gamedata (punto de abajo).
 - [ ] B-074: panel de fin de combate con el equipo perdedor vivo, sin verificar
       visualmente.
-- [ ] Casillas especiales: confirmar en vivo que una se dispara.
+- [x] Casillas especiales: **confirmado en vivo** con `test/special_smoke.gd`.
+      La arena 12 (fijada con `/ARENA`) tiene una Panacea (plantilla 1006) en
+      (11,4), junto a cuatro salidas: el luchador se coloca en (10,4), pisa la
+      casilla en su turno y, al empezar el siguiente encima, llegan el 6200
+      (entrando, 1006, nuestro luchador) y el 8120 de +10 a la curación.
+      Pisarla sin empezar el turno encima no hace nada, como dice el manual.
 - [ ] B-111: de dónde salen los rosters de 10 objetos.
 - [x] `pvp_smoke` se paraba en el intercambio: lo cerró S18 (`5688fe2f`). No
       eran las cartas, era que el smoke esperaba el panel de depuración y se
