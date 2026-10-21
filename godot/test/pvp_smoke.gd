@@ -128,7 +128,7 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 				print("[smoke] main sees the bot offer %s" % [theirs.map(func(c): return c.name)])
 				print("[smoke] TRADE %s — mine %s, theirs %s" % ["OK" if mine_rows.size() == 1
 					and str(mine_rows[0].name) == str(owned[0].name) and theirs.size() == 1
-					and str(theirs[0].name) == "Cape Hella" else "FAIL",
+					and str(theirs[0].name) == Cards.name_of(1) else "FAIL",   # Cape Hella, in the UI language
 					mine_rows.map(func(c): return c.name), theirs.map(func(c): return c.name)])
 				await _capture("exchange")
 				panel.find_child("Ready", true, false).pressed.emit()

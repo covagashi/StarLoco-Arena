@@ -24,6 +24,8 @@ var fight_scene: Node2D = null
 var _combat_seen := false
 var _waiting_seen := false   # S07: Ready → "Esperando a los rivales…"
 var _event_desc_ok := false  # S07: the event card's effects on hover
+var _fighter_info_ok := false  # S07: the timeline card opens the fighter sheet
+var _versus_ok := false        # S07: the versus screen before placement
 var _card_landed := false
 var _timeline_checked := false
 var _faced := false
@@ -107,6 +109,7 @@ func _show_fight() -> void:
 	fight_scene.turn_began.connect(_on_fight_turn)
 	fight_scene.placement_began.connect(_on_placement)
 	root.add_child(fight_scene)
+	_check_versus()
 	# Capture mid-combat: first turn means actors placed + phases done.
 	_combat_seen = false
 	var deadline := 0.0
@@ -134,6 +137,12 @@ func _show_fight() -> void:
 		return
 	if not _event_desc_ok:
 		_finish(1, "FAIL the event card has no description on hover")
+		return
+	if not _fighter_info_ok:
+		_finish(1, "FAIL the fighter sheet did not open / switch / close")
+		return
+	if not _versus_ok:
+		_finish(1, "FAIL no versus screen before placement")
 		return
 	_done_ok = true
 	_finish(0, "fight rendered")
@@ -171,12 +180,85 @@ func _on_placement() -> void:
 			print("[smoke] ready -> button '%s' disabled=%s" % [b.text, b.disabled]))
 
 
+## S07: the versus screen comes up on 8010 with both sides, hands over to
+## placement on its own (no click) and is gone once placement opens.
+func _check_versus() -> void:
+	var t := 0.0
+	var v: Control = null
+	while v == null and t < 6.0:
+		await create_timer(0.1).timeout
+		t += 0.1
+		v = fight_scene.get_node_or_null("UI/Versus") if fight_scene != null else null
+	if v == null:
+		print("[smoke] VERSUS never shown")
+		return
+	await process_frame
+	var left: Label = v.find_child("Left", true, false).find_child("Coach", true, false)
+	var right: Label = v.find_child("Right", true, false).find_child("Coach", true, false)
+	print("[smoke] VERSUS '%s' vs '%s'" % [left.text, right.text])
+	if DisplayServer.get_name() != "headless":
+		await create_timer(0.5).timeout
+		var img := root.get_texture().get_image()
+		if img != null:
+			img.save_png("/tmp/fight_versus.png")
+	# this harness logs in as `test` without the lobby, so no State name
+	var shown := left.text == "test" and right.text != "" and right.text != left.text
+	t = 0.0
+	while not fight_scene._placement and t < 8.0:
+		await create_timer(0.1).timeout
+		t += 0.1
+	await process_frame
+	_versus_ok = shown and fight_scene._placement \
+		and fight_scene.get_node_or_null("UI/Versus") == null
+	print("[smoke] VERSUS ok=%s (shown=%s placement=%s gone=%s, %.1f s more)" % [_versus_ok,
+		shown, fight_scene._placement, fight_scene.get_node_or_null("UI/Versus") == null, t])
+
+
+## S07: a click on a timeline card opens the fighter sheet with that
+## fighter's numbers; the rival's card switches it; a second click closes.
+func _check_fighter_info(ours_fid: int) -> void:
+	var hud = fight_scene._fight_hud
+	var rival := -1   # any other fighter: the sheet switches to it
+	for id in State.fighters:
+		if int(id) != ours_fid:
+			rival = int(id)
+	hud.card_pressed.emit(ours_fid)
+	await process_frame
+	var p = fight_scene.get_node_or_null("UI/FighterInfo")
+	var f: Dictionary = State.fighters.get(ours_fid, {})
+	var hp_node = p.find_child("HP", true, false) if p != null else null
+	var spells = p.find_child("Spells", true, false) if p != null else null
+	var ok: bool = p != null and p.title.text == str(f.get("name", "")) \
+		and hp_node != null and hp_node.text.contains("/") \
+		and spells != null and spells.text != ""
+	print("[smoke] FIGHTER INFO '%s' hp '%s' spells '%s'" % [
+		p.title.text if p else "—", hp_node.text if hp_node else "—",
+		spells.text if spells else "—"])
+	if DisplayServer.get_name() != "headless":
+		await create_timer(0.3).timeout
+		var img := root.get_texture().get_image()
+		if img != null:
+			img.save_png("/tmp/fight_fighter_info.png")
+	if rival >= 0:
+		hud.card_pressed.emit(rival)
+		await process_frame
+		p = fight_scene.get_node_or_null("UI/FighterInfo")
+		ok = ok and p != null and p.title.text == str(State.fighters[rival].get("name", ""))
+	hud.card_pressed.emit(rival if rival >= 0 else ours_fid)
+	await process_frame
+	await process_frame
+	ok = ok and fight_scene.get_node_or_null("UI/FighterInfo") == null
+	_fighter_info_ok = ok
+	print("[smoke] FIGHTER INFO toggle ok=%s" % ok)
+
+
 ## turn_began policy for the harness: one short move request, then pass.
 func _on_fight_turn(fid: int, ours: bool) -> void:
 	# Timeline check (runs on every 8104): one HUD card per 8000 timeline
 	# entry (S17 side columns) and exactly the acting fighter's card active.
 	if not _timeline_checked and fight_scene != null:
 		_timeline_checked = true
+		_check_fighter_info(fid)
 		var hud = fight_scene._fight_hud
 		fight_scene._push_fight_hud()   # the push is deferred; force it
 		var want: Array = State.fight_data.get("timeline", [])

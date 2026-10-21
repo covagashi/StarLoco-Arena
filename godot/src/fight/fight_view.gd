@@ -646,14 +646,14 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_move_actor(int(d.id), Vector3i(int(d.x), int(d.y), int(d.z)))
 		OP_START_PRESENTATION:
-			# retail auto-acks presentation; server needs every coach's 8011
-			# (arch 3, empty payload) before advancing to placement.
-			if State.net != null:
-				State.net.send_message(OP_READY_PLACEMENT, PackedByteArray(), 3)
+			# the versus screen (S07); its "¡A luchar!" — or a few seconds —
+			# sends the 8011 every coach owes before placement (arch 3, empty)
 			_set_phase("fight.phase.presentation")
+			_show_versus()
 		OP_START_PLACEMENT:
 			# Placement window: our team's start cells light up; clicking one
 			# sends 8021 for the selected fighter. Ready = 8023.
+			_close_versus()
 			_placement = true
 			_turn_left = TURN_CLOCK          # placementClock is the same 30s
 			_end_turn.text = I18n.t("fight.ready")
@@ -1706,6 +1706,11 @@ func _push_fight_hud() -> void:
 	_hud_dirty = false
 	if not is_inside_tree():
 		return
+	if _info_panel != null:
+		if _dead.get(_info_fid, false):
+			_close_fighter_info()
+		else:
+			_info_model.set_value("fighterInfo", fighter_info(_info_fid))
 	var n := _fight_hud.cards.size()
 	_fight_hud.set_model(fight_hud_model())
 	if _fight_hud.cards.size() != n:
@@ -1772,6 +1777,116 @@ func _on_timeline_chip(fid: int) -> void:
 	var spr: AnmSprite = _sprites.get(fid)
 	if spr != null:
 		cam.position = spr.position
+	_toggle_fighter_info(fid)
+
+
+## --- versus screen (S07) ---------------------------------------------------
+## The retail fightPresentation on 8010: both sides, then 8011.
+var _versus: Control = null
+
+
+func _show_versus() -> void:
+	_close_versus()
+	_versus = preload("res://src/fight/versus_panel.gd").new()
+	_versus.name = "Versus"
+	var left := maxi(_my_team(), 0) if not State.spectating else 0
+	var sides := {}
+	for t in State.fight_data.get("teams", []):
+		sides[int(t.id)] = _versus_side(t)
+	var right := -1
+	for id in sides:
+		if int(id) != left:
+			right = int(id)
+	_versus.set_sides(sides.get(left, {}), sides.get(right, {}))
+	_versus.ready_pressed.connect(func():
+		if State.net != null:
+			State.net.send_message(OP_READY_PLACEMENT, PackedByteArray(), 3))
+	$UI.add_child(_versus)
+
+
+func _close_versus() -> void:
+	if _versus != null:
+		_versus.queue_free()
+	_versus = null
+
+
+## A breed in the UI language ("" for a monster or an unknown id).
+func _breed_name(breed: int) -> String:
+	return I18n.t("breed.%d" % breed) if breed >= 1 and breed <= 12 else ""
+
+
+## One side of the versus screen: its coach(es) and fighters.
+func _versus_side(t: Dictionary) -> Dictionary:
+	var coaches: Array = []
+	var fighters: Array = []
+	for f in t.get("fighters", []):
+		var c: Dictionary = State.coach_ids.get(f.get("coach", -1), {})
+		var cname := str(c.get("name", ""))
+		if cname != "" and not cname in coaches:
+			coaches.append(cname)
+		var full: Dictionary = State.fighters.get(f.get("id", -1), f)
+		fighters.append({"name": str(full.get("name", "")),
+			"breed": _breed_name(int(full.get("breed", 0)))})
+	return {"coach": " · ".join(coaches) if not coaches.is_empty() else I18n.t("vs.ai"),
+		"fighters": fighters}
+
+
+## --- fighter sheet (S07) ---------------------------------------------------
+## The retail's fighterInformations: a click on a timeline card toggles it,
+## another card switches it, death closes it (avu_0, ee_2).
+var _info_panel: Control = null
+var _info_fid := -1
+var _info_model := GuiModel.new()
+
+
+func _toggle_fighter_info(fid: int) -> void:
+	if _info_panel != null and _info_fid == fid:
+		_close_fighter_info()
+		return
+	_info_fid = fid
+	_info_model.set_value("fighterInfo", fighter_info(fid))
+	if _info_panel == null:
+		_info_panel = preload("res://src/fight/fighter_info_panel.gd").new()
+		_info_panel.name = "FighterInfo"
+		_info_panel.model = _info_model
+		_info_panel.closed.connect(_close_fighter_info)
+		$UI.add_child(_info_panel)
+	# beside the column the card sits in (fight_hud: left_team on the left)
+	var left := int(State.fighters.get(fid, {}).get("team", -1)) \
+		== int(fight_hud_model().left_team)
+	_info_panel.side = "left" if left else "right"
+	_info_panel._layout()
+
+
+func _close_fighter_info() -> void:
+	if _info_panel != null:
+		_info_panel.queue_free()
+	_info_panel = null
+	_info_fid = -1
+
+
+## The sheet's model for `fid`, from the same state the cards read.
+func fighter_info(fid: int) -> Dictionary:
+	var f: Dictionary = State.fighters.get(fid, {})
+	var base := _base_stats(f)
+	var acting := fid == _current_fid
+	var buffs: Array = []
+	for b in _buffs.get(fid, []):
+		buffs.append(str(b.label) if b.inf else "%s (%d)" % [b.label, b.left])
+	var cards: Array = []
+	for c in f.get("cards", []):
+		cards.append(CardsDB.name_of(int(c.get("id", 0))))
+	var spells: Array = []
+	for sid in f.get("spells", []):
+		spells.append(Spells.name_of(int(sid)))
+	return {"fid": fid, "name": str(f.get("name", fid)),
+		"breed": _breed_name(int(f.get("breed", 0))),
+		"team": int(f.get("team", 0)), "ours": int(f.get("team", -1)) == _my_team(),
+		"hp": maxi(_hp_max(f) - int(_hp_lost.get(fid, 0)), 0), "hp_max": _hp_max(f),
+		"ap": _ap_left if acting else int(base[1]),
+		"mp": _mp_left if acting else int(base[2]),
+		"buffs": buffs, "cards": cards, "spells": spells,
+		"summon": bool(f.get("summon", false))}
 
 
 ## Pointer on a card: name the fighter on the map too.

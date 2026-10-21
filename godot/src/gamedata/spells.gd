@@ -1,4 +1,5 @@
 extends RefCounted
+const GameText := preload("res://src/gamedata/game_text.gd")
 
 ## Spell tables exported by tools/asset-import/spell_names.py into
 ## assets/gamedata/spells.json — {breed: [{id,name,ap,min,max,value}]}.
@@ -59,10 +60,12 @@ static func for_breed(breed: int) -> Array:
 	return _by_breed.get(breed, [])
 
 
+## In the UI language (GameText, content.3), else the English export.
 static func name_of(id: int) -> String:
 	_ensure()
 	var s: Variant = _by_id.get(id)
-	return str(s.get("name", "Spell %d" % id)) if s != null else "Spell %d" % id
+	var english := str(s.get("name", "Spell %d" % id)) if s != null else "Spell %d" % id
+	return GameText.content(GameText.SPELL, id, english)
 
 
 ## French display name (content.3 texts_fr) — the retail AnimSort-<name>

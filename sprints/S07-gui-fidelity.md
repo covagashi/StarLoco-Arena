@@ -1,6 +1,6 @@
 # S07 — Lo que el retail tenía y aquí falta
 
-**Planificado:** 2026-10-16 · **Detallado:** 2026-10-21 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟡 abierto
+**Planificado:** 2026-10-16 · **Detallado:** 2026-10-21 · **Hito:** M2 — Identidad visual · **Tamaño:** M · **Estado:** 🟢 cerrado el 2026-10-21
 
 ## Objetivo
 
@@ -44,8 +44,12 @@ cliente Godot (si ya hay equivalente con otro nombre).
       Pruebas: `test/unit/coach_level_test.gd` (bordes de nivel) y dos pasos
       nuevos en `report_smoke` (cruza un nivel → aviso con el 4 y el lobby en
       "Nivel 4"; +1 dentro del nivel → sin aviso).
-- [ ] **Ficha del luchador**: clic en la línea de tiempo → estadísticas,
-      equipo y hechizos del luchador.
+- [x] **Ficha del luchador**: clic en una carta de la línea de tiempo →
+      raza y bando, vida / PA / PM como están, estados, cartas y hechizos
+      (`fight/fighter_info_panel.gd`). No es modal: sin sombra, el mapa sigue
+      respondiendo y se pone junto a la columna de la carta pulsada. Otra
+      carta la cambia, la misma la cierra, y se cierra si el luchador muere,
+      como en el retail. Prueba: `fight_smoke` (abre, cambia, cierra).
 - [x] **Cartas de evento**: la descripción al pasar el ratón. El retail usa
       `content.27` (efectos y duración) donde existe, 15 de 51, y genera el
       resto desde los efectos del evento (`tO.getDescription` → `asf_0`);
@@ -54,11 +58,26 @@ cliente Godot (si ya hay equivalente con otro nombre).
       `fight_smoke` (la carta 14 lleva su texto).
 - [x] **"Esperando a los rivales…"** tras pulsar Listo en la colocación, en el
       botón y en la línea de fase. Prueba: `fight_smoke`.
-- [ ] **Pantalla versus** al empezar el combate (fase de presentación).
-- [ ] **Colores desbloqueados**: las cartas tipo 29 como colores extra al
-      crear luchador.
-- [ ] Nombres de gamedata en inglés con la UI en español (NPCs, cartas Zaap,
-      demonios): exportar los nombres en los tres idiomas.
+- [x] **Pantalla versus** al empezar el combate (fase de presentación,
+      `fight/versus_panel.gd`): cada jefe con sus luchadores, "¡A luchar!" y
+      una cuenta atrás. El retail espera al botón o a los 20 s del servidor;
+      aquí el botón o 4 s, y antes se mandaba el 8011 al instante. Prueba:
+      `fight_smoke` (sale con los dos bandos y da paso sola a la colocación).
+- [x] ~~**Colores desbloqueados**: las cartas tipo 29 como colores extra al
+      crear luchador.~~ Descartado: el servidor no valida el color y el panel
+      ya ofrece los 47 de la paleta, así que no hay nada que desbloquear.
+      Hacerlo como el retail sería *quitar* colores; queda como decisión del
+      dueño (`README.md`).
+- [x] **Nombres en el idioma de la interfaz**: hechizos y cartas (las Zaap
+      incluidas) se buscan en las tablas del retail por idioma
+      (`gamedata/game_text.gd`: `content.3` y `content.23` de
+      `assets/gui/i18n_<lang>.json`), con el inglés de respaldo. Las razas
+      pasan a `breed.1`–`breed.12` en los tres idiomas (había una lista en
+      español fija en los paneles y otra en inglés en `State`). Los NPC ya
+      venían traducidos; los demonios del panel Ciudad salen ahora como en el
+      resto ("Demonio XVI"). Prueba: `test/unit/game_text_test.gd` y la ficha
+      de `fight_smoke` ("Castigo, Demencia…"). Quedan en otro idioma los nombres
+      que manda el servidor (el jefe IA "Démon de la 58ème minute").
 - [x] `fight_view.gd`: fuera `_mount_fight_hud` y con él todo el HUD XML del
       retail que colgaba de él (`_gui` nunca se asignaba): `_hud_push`,
       `_on_gui_event`, los `_position_*`, `_timeline_items`… 208 líneas.
@@ -87,3 +106,34 @@ cliente Godot (si ya hay equivalente con otro nombre).
 
 Cada diálogo del triaje cubierto o descartado por escrito, cada tarea hecha
 con su prueba, y capturas de lo nuevo en el *Resultado*.
+
+## Resultado (2026-10-21)
+
+Cumplido. Cada diálogo del triaje está cubierto o descartado por escrito, y
+cada tarea tiene su prueba:
+
+- `./run_tests.sh --headless`: 9 suites, 236 checks, 0 fallos (nuevas
+  `coach_level_test.gd` y `game_text_test.gd`). La lane visual, sin avisos
+  de anchors (antes 54).
+- Batería completa en vivo bajo xvfb, cada smoke sembrado sobre una copia
+  fresca de la base: `fight` (versus, "Esperando a los rivales…", carta de
+  evento con su texto, ficha del luchador), `report` 7/7 (subida de nivel y
+  su contrario), `audio` 7/7, `world` 31/31, `talk` 8/8, `pvp`, `ask` 8/8,
+  `ask2` 5/5, `screens` 9/9, `mailbox` 8/8, `cardmaster` 5/5, `fusion` 5/5,
+  `revive` 6/6, `revive_edge` 4/4, `totems` 10/10, `native_panels`,
+  `native_lobby`, `login_smoke`, las dos lanes y `go test ./...`.
+- Capturas en `~/codigo/capturas/s07/`: `subida-nivel.png`, `versus.png`,
+  `ficha-luchador.png`.
+
+Encontrado por el camino y fuera del alcance:
+
+- `pvp_smoke` nunca pulsaba Listo en la colocación: su vista de combate no
+  recibe el 8020 (el arnés deja dos lobbies vivos) y la colocación acaba por
+  tiempo. No cambia el resultado del smoke; la prueba de "Esperando…" va en
+  `fight_smoke`.
+- Dos `ERROR: Lambda capture … was freed` en `report_smoke`, iguales en
+  `HEAD`: vienen del arnés, que libera un lobby a mano.
+- Lo que manda el servidor en un solo idioma (el jefe IA "Démon de la 58ème
+  minute", luchadores IA llamados como su raza en inglés/francés).
+- El retail genera la descripción de 36 cartas de evento desde sus efectos
+  (`asf_0`); aquí, de momento, su texto de ambiente.

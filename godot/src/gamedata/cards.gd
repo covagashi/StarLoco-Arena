@@ -1,4 +1,5 @@
 extends RefCounted
+const GameText := preload("res://src/gamedata/game_text.gd")
 
 ## Card template table exported by server/cmd/dumpcards + merged with retail
 ## names by tools/asset-import/card_names.py into assets/gamedata/cards.json —
@@ -30,9 +31,11 @@ static func meta(id: int) -> Dictionary:
 	return _by_id.get(id, {})
 
 
+## In the UI language (GameText, content.23), else the English export.
 static func name_of(id: int) -> String:
 	var c: Variant = _by_id.get(id)
-	return str(c.get("name", "Card %d" % id)) if c != null else "Card %d" % id
+	var english := str(c.get("name", "Card %d" % id)) if c != null else "Card %d" % id
+	return GameText.content(GameText.CARD, id, english)
 
 
 ## Token price as a displayable string ("1200 tok, 40 cred") — empty when the

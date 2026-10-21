@@ -28,7 +28,6 @@ var _preview_dir := Direction8.FRONT
 const FORMS := ["fighterCreationDialog", "teamNameDialog", "team2vs2NameDialog", "newTeamTournamentDialog", "optionsDialog"]
 const BOARDS := ["list1vs1", "listReputation", "list2vs2", "listGuild", "listTournamentInTheMonth", "listGlickoRating", "listDemon"]
 const EQ_FIELDS := ["weaponEquipment", "petEquipment", "cloakEquipment", "hatEquipment", "dofusEquipment"]
-const BREEDS := ["Feca", "Osamodas", "Anutrof", "Sram", "Xelor", "Zurcarák", "Aniripsa", "Yopuka", "Ocra", "Sadida", "Sacrógrito", "Pandawa"]
 const LOCALES := ["es", "en", "fr"]
 
 
@@ -134,7 +133,7 @@ func _team() -> void:
 		if tab == 0 and int(fighter.get("state", 0)) in [2, 3]:
 			continue
 		var item: Dictionary = fighter.duplicate()
-		item["breed_name"] = BREEDS[clampi(int(item.get("breedId", 1)) - 1, 0, 11)]
+		item["breed_name"] = I18n.t("breed.%d" % clampi(int(item.get("breedId", 1)), 1, 12))
 		item["placement"] = (I18n.t("team.in_team") if item.get("teamMember", false) else I18n.t("team.reserve")) if classic else (I18n.t("team.bench") if int(item.get("state", 0)) in [1, 5] else I18n.t("team.starter"))
 		rows.append(item)
 	var split := row(body)
@@ -191,7 +190,7 @@ func _fallen_section(parent: Node) -> bool:
 	var rows: Array = []
 	for fighter in fallen:
 		var item: Dictionary = fighter.duplicate()
-		item["breed_name"] = BREEDS[clampi(int(item.get("breedId", 1)) - 1, 0, 11)]
+		item["breed_name"] = I18n.t("breed.%d" % clampi(int(item.get("breedId", 1)), 1, 12))
 		item["placement"] = I18n.t("team.state_dead" if int(item.get("state", 0)) == 2 else "team.state_retired")
 		rows.append(item)
 	label(parent, I18n.t("team.fallen", {"n": rows.size()}), 20)
@@ -594,7 +593,8 @@ func _fighter_creation() -> void:
 	var name_field := field(form, "fighter_name", I18n.t("fc.name_ph"), str(fighter.get("name", "")))
 	name_field.max_length = 20
 	var bar := row(form)
-	choices(bar, BREEDS, int(fighter.get("breedId", 1)) - 1, func(i): send("setFighterBreedId", [i + 1]))
+	var breeds: Array = range(1, 13).map(func(b): return I18n.t("breed.%d" % b))
+	choices(bar, breeds, int(fighter.get("breedId", 1)) - 1, func(i): send("setFighterBreedId", [i + 1]))
 	choices(bar, [I18n.t("fc.sex_m"), I18n.t("fc.sex_f")], int(fighter.get("sex", 0)), func(i): send("setFighterSex", [i]))
 	# the original Wakfu/Dofus pick: version 2 recruits to the evolution
 	# roster, version 1 to a classic preset

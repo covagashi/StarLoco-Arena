@@ -110,7 +110,8 @@ func _equipment() -> void:
 	await create_timer(0.5).timeout
 	var p = _main._gui.dialogs.get("coachEquipDialog")
 	var slot0: Button = p.find_child("Slot0", true, false) if p != null else null
-	_record(5200, "panel", slot0 != null and slot0.text == "Sgrim Hat",
+	var hat_name: String = load("res://src/gamedata/cards.gd").name_of(HAT_A)
+	_record(5200, "panel", slot0 != null and slot0.text == hat_name,
 		"native panel, the hat slot shows '%s'" % (slot0.text if slot0 != null else "—"))
 	await _shot("coach-equip")
 	if slot0 == null:

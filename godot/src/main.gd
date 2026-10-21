@@ -3460,8 +3460,8 @@ func _city_label(kind: int, e: Dictionary) -> String:
 			var n := NpcDialogs.npc_name(int(f[0])) if f.size() > 0 else ""
 			if n != "":
 				return n
-		11:   # demon id
-			return "%s %s" % [base, f[0]]
+		11:   # demon id — named as everywhere else ("Demonio XVI")
+			return _demon_name(int(f[0]))
 		14:   # the altar's type-1100 lab: input slots and power
 			var lab := Cards.lab(int(f[0]))
 			if not lab.is_empty():

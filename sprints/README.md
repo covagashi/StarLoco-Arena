@@ -75,8 +75,8 @@ Linux y Windows).
 | [S05](./S05-lobby-services.md) | M1 | M | 🟡 a la espera del dueño (cierre) | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
 | [S18](./S18-screens-redesign.md) | M2 | L | 🟢 terminado (falta el visto bueno de las pantallas nuevas) | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
 | [S06](./S06-options-audio.md) | M1 | S | 🟢 cerrado | Opciones que no hacen nada, música y volúmenes |
-| [S07](./S07-gui-fidelity.md) | M2 | M | 🟡 abierto | Lo que el retail tenía y aquí falta: nivel del coach, ficha del luchador, versus, colores |
-| [S08](./S08-server-debt.md) | M3 | L | ⚪ esbozo | Deuda de servidor: bugs abiertos, datos sin leer, docs que se contradicen |
+| [S07](./S07-gui-fidelity.md) | M2 | M | 🟢 cerrado | Lo que el retail tenía y aquí falta: nivel del coach, ficha del luchador, versus, colores |
+| [S08](./S08-server-debt.md) | M3 | L | 🟡 siguiente | Deuda de servidor: bugs abiertos, datos sin leer, docs que se contradicen |
 | [S09](./S09-tournaments.md) | M3 | M | ⚪ esbozo | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
 | [S10](./S10-tutorial-onboarding.md) | M3 | M | ⚪ esbozo | Tutorial Kanojedo y onboarding del jugador nuevo |
 | [S11](./S11-replays-spectator.md) | M3 | M | ⚪ esbozo | Replays y modo espectador (alcance por decidir) |
@@ -108,6 +108,7 @@ afectado trabaja con la opción marcada como *por defecto*.
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |
 | ¿JS en el portal web? | S16 | sin JS |
 | ¿Seguir publicando `data-dist/` y `client/decompiled/`? | S16 | sin cambios |
+| ¿Restringir los colores al crear luchador a los naturales y desbloquear el resto con cartas de color (tipo 29), como el retail? | S07 | no: los 47 colores libres, como hoy |
 
 ## Convención
 

@@ -94,11 +94,6 @@ static var fight_result := {}
 ## anyway; this stops the client from even offering them).
 static var spectating := false
 
-## Breed id -> class name (Dofus 1.x order; Iop=8 / Sacrier=11 observed live).
-const BREED_NAMES := {1: "Feca", 2: "Osamoda", 3: "Enutrof", 4: "Sram",
-	5: "Xelor", 6: "Ecaflip", 7: "Eniripsa", 8: "Iop", 9: "Cra",
-	10: "Sadida", 11: "Sacrier", 12: "Pandawa"}
-
 ## Live ArenaClient — set by the Session autoload (app) or the test harness.
 ## Scenes read `net.message_received` and `net.drain()`.
 static var net: Node = null
