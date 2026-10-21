@@ -2174,6 +2174,10 @@ data-less dev server can no longer persist a loadout the client would refuse.
 Repairing or rebuilding the existing dev roster is still the maintainer's call -
 the read-path normalisation already hides those rows from the client.
 
+**Update (S08): closed.** No fighter in the dev database holds more than 5 objects
+any more, the Godot client never sent cards on create (`2cd1a949`), and the one
+writer that could is canonicalised. Nothing left to repair or to reproduce.
+
 ### B-113 - Nx was inverted, and round-card effects landed where the client cannot take them
 
 Both halves of the original B-111 report, both fixed and measured live.

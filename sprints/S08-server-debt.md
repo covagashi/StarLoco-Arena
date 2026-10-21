@@ -34,7 +34,15 @@ retail leídos y documentación que no se contradiga.
       casilla en su turno y, al empezar el siguiente encima, llegan el 6200
       (entrando, 1006, nuestro luchador) y el 8120 de +10 a la curación.
       Pisarla sin empezar el turno encima no hace nada, como dice el manual.
-- [ ] B-111: de dónde salen los rosters de 10 objetos.
+- [x] B-111, de dónde salían los rosters de 10 objetos: **cerrado sin
+      culpable, por escrito.** B-111/B-112 ya habían descartado 6011 (tope de
+      6 desde el primer commit) y la transposición, y dejado un único escritor,
+      `buildFighter` (crear luchador), que ahora canonicaliza igual que la
+      carga. El cliente Godot nunca mandó cartas al crear (`2cd1a949`: blob de
+      cartas vacío), así que vino del retail o de una herramienta de entonces.
+      Hoy **ningún luchador tiene más de 5 objetos** en la base de desarrollo
+      (`fighter_objects` agrupado por luchador) y las lecturas normalizan por
+      tipo de todos modos; no queda nada que reparar ni forma de reproducirlo.
 - [x] `pvp_smoke` se paraba en el intercambio: lo cerró S18 (`5688fe2f`). No
       eran las cartas, era que el smoke esperaba el panel de depuración y se
       abría el diálogo XML retail; ahora usa el panel nativo y llega al final.
