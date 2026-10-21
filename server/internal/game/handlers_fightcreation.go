@@ -104,6 +104,9 @@ func handleTeamTest(s *Session, f *protocol.C2SFrame) error {
 		seats = 2
 	}
 	fightArena := s.deps.pickArenaSeating(seats)
+	if s.gmArena != 0 {
+		fightArena = s.deps.arenaByID(s.gmArena) // /ARENA pin (admin)
+	}
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {
 		return refuseFightError(err, s)

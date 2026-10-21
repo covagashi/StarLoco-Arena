@@ -43,7 +43,7 @@ func handleGMCommand(s *Session, line string) error {
 
 	switch verb {
 	case "HELP":
-		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]]")
+		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0]")
 	case "ANNOUNCE":
 		if len(args) == 0 {
 			return s.gmFeedback("usage: /ANNOUNCE <message>")
@@ -69,6 +69,8 @@ func handleGMCommand(s *Session, line string) error {
 		return s.gmSuddenDeath()
 	case "MAPDESTRUCT":
 		return s.gmMapDestruct(args)
+	case "ARENA":
+		return s.gmArenaPin(args)
 	case "STRENGTH":
 		if len(args) < 1 {
 			return s.gmFeedback("usage: /STRENGTH <n>")
@@ -484,4 +486,28 @@ func playerCommandVerb(line string) string {
 		return v
 	}
 	return ""
+}
+
+// gmArenaPin pins this session's practice fights (26330 team test) to one arena:
+//
+//	/ARENA 81   every practice fight on world 81
+//	/ARENA 0    back to the random pick
+//	/ARENA      report the current pin
+//
+// Arenas are random by design, which made the live displacement smokes pass or
+// hang depending on the map they drew (S08). Only an arena that is loaded can be
+// pinned; ranked, challenge and tournament fights are unaffected.
+func (s *Session) gmArenaPin(args []string) error {
+	if len(args) == 0 {
+		return s.gmFeedback(fmt.Sprintf("arena pin = %d (0 = random)", s.gmArena))
+	}
+	n, err := strconv.Atoi(args[0])
+	if err != nil || n < 0 || n > 0xFFFF {
+		return s.gmFeedback("usage: /ARENA <worldId|0>")
+	}
+	if n != 0 && !s.deps.hasArena(uint16(n)) {
+		return s.gmFeedback(fmt.Sprintf("no arena %d loaded", n))
+	}
+	s.gmArena = uint16(n)
+	return s.gmFeedback(fmt.Sprintf("arena pin = %d", n))
 }

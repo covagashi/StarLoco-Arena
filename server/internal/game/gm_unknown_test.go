@@ -67,3 +67,34 @@ func drainFrames(t *testing.T, s *Session) [][]byte {
 		}
 	}
 }
+
+// TestArenaPin: /ARENA pins only a loaded arena, 0 clears it, and a pinned
+// session's practice fights would use it.
+func TestArenaPin(t *testing.T) {
+	d := tmDeps()
+	d.Log = testLogger()
+	d.arenas.cache = map[uint16]*arena{81: &practiceArena}
+	d.arenas.ids = []uint16{81}
+	s := tmSession(d, 1, "Admin")
+	s.Account = &domain.Account{ID: 1, Name: "Admin", IsAdmin: true}
+
+	_ = handleGMCommand(s, "/ARENA 999")
+	if s.gmArena != 0 {
+		t.Fatalf("pinned an arena that is not loaded: %d", s.gmArena)
+	}
+	_ = handleGMCommand(s, "/ARENA 81")
+	if s.gmArena != 81 {
+		t.Fatalf("pin = %d, want 81", s.gmArena)
+	}
+	_ = handleGMCommand(s, "/ARENA 0")
+	if s.gmArena != 0 {
+		t.Fatalf("pin = %d after /ARENA 0, want 0", s.gmArena)
+	}
+
+	player := tmSession(d, 2, "Player")
+	player.Account = &domain.Account{ID: 2, Name: "Player"}
+	_ = handleGMCommand(player, "/ARENA 81")
+	if player.gmArena != 0 {
+		t.Error("a non-admin pinned an arena")
+	}
+}

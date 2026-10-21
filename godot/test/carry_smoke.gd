@@ -235,6 +235,13 @@ func _on_placement() -> void:
 func _on_fight_turn(fid: int, ours: bool) -> void:
 	if finished or fight_scene == null or not ours:
 		return
+	# The round card's states (event 14 in round 1: intransposable,
+	# stabilised, anchored for everyone) are sent right AFTER the first
+	# FIGHTER_TURN_BEGIN (events.go applyTableTurnEffects), so deciding at once
+	# misses them, casts into the immunity and burns a 4-round cooldown (S08).
+	await create_timer(0.6).timeout
+	if finished or fight_scene == null:
+		return
 	var f: Dictionary = State.fighters.get(fid, {})
 	var breed := int(f.get("breed", -1))
 	if breed != CARRIER_BREED:
@@ -418,7 +425,7 @@ func _on_message(opcode: int, payload) -> void:
 		4600:
 			State.current_world = int(decoded.get("world_id", -1))
 		4516:
-			_sweep.start()   # clears zz* leftovers, then _create_fighters() (S08)
+			_sweep.start(36)   # arena 36 pinned; clears zz* leftovers, then _create_fighters() (S08)
 		6000:
 			if int(decoded.get("result", 1)) != 0:
 				_finish(1, "fighter create refused %s" % decoded.get("result"))

@@ -262,6 +262,13 @@ func _on_placement() -> void:
 func _on_fight_turn(fid: int, ours: bool) -> void:
 	if finished or fight_scene == null or not ours:
 		return
+	# The round card's states (event 14 in round 1: intransposable,
+	# stabilised, anchored for everyone) are sent right AFTER the first
+	# FIGHTER_TURN_BEGIN (events.go applyTableTurnEffects), so deciding at once
+	# misses them, casts into the immunity and burns a 4-round cooldown (S08).
+	await create_timer(0.6).timeout
+	if finished or fight_scene == null:
+		return
 	var f: Dictionary = State.fighters.get(fid, {})
 	var breed := int(f.get("breed", -1))
 	var me: Vector3i = fight_scene._actor_cells.get(fid, Vector3i.ZERO)
@@ -307,7 +314,15 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			# AI walks in to melee us, so an enemy target is just as good
 			var ally := _fighter_in_range(me, 1, 1, fid)
 			if ally < 0:
-				fight_scene.request_end_turn()
+				# nobody adjacent: close in on the nearest fighter (S08: it
+				# used to end its turn until the timeout on spread spawns)
+				var dest := _next_to_nearest(me, fid)
+				if dest.x >= 0 and fight_scene.request_move_to(dest):
+					create_timer(2.2).timeout.connect(func():
+						if fight_scene != null and not finished:
+							fight_scene.request_end_turn())
+				else:
+					fight_scene.request_end_turn()
 				return
 			# A stabilised victim cannot be pushed (server applyPushPull gate —
 			# the round-1 event card grants it arena-wide). Do not waste the
@@ -480,6 +495,30 @@ func _approach_cell(me: Vector3i, fid: int) -> Vector2i:
 	return best
 
 
+## A free floor cell next to the nearest living fighter, or as far along the
+## path to it as this turn's MP go; (-1,-1) when nothing is reachable.
+func _next_to_nearest(me: Vector3i, fid: int) -> Vector2i:
+	var best: Array = []
+	for id in fight_scene._actor_cells:
+		var iid := int(id)
+		if iid == fid or fight_scene._dead.get(iid, false):
+			continue
+		var p: Vector3i = fight_scene._actor_cells[id]
+		for dxy in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var cell := Vector2i(p.x + dxy.x, p.y + dxy.y)
+			if not fight_scene._cells.has(cell) or _occupied(cell, fid):
+				continue
+			if not fight_scene._cells[cell].get("ground", false):
+				continue
+			var path: Array = fight_scene._find_path(Vector2i(me.x, me.y), cell, fid)
+			if not path.is_empty() and (best.is_empty() or path.size() < best.size()):
+				best = path
+	if best.is_empty() or fight_scene._mp_left <= 0:
+		return Vector2i(-1, -1)
+	var step: Vector3i = best[mini(best.size(), fight_scene._mp_left) - 1]
+	return Vector2i(step.x, step.y)
+
+
 ## A living teammate's fighter at Manhattan range [rmin,rmax] from `me`.
 ## `los` additionally requires the fight view's own LoS gate to pass.
 func _ally_in_range(me: Vector3i, rmin: int, rmax: int, except_fid: int,
@@ -544,7 +583,7 @@ func _on_message(opcode: int, payload) -> void:
 		4600:
 			State.current_world = int(decoded.get("world_id", -1))
 		4516:
-			_sweep.start()   # clears zz* leftovers, then _create_fighters() (S08)
+			_sweep.start(36)   # arena 36 pinned; clears zz* leftovers, then _create_fighters() (S08)
 		6000:
 			if int(decoded.get("result", 1)) != 0:
 				_finish(1, "fighter create refused %s" % decoded.get("result"))

@@ -396,7 +396,8 @@ second player, and the client HUD renders fully once *the client* starts the fig
     dump | wait`. **URL-encode `;`** or Go's query parser eats everything after it.
 - GM chat: opcode **3151** arch 3, payload `012A` + `[u8 len]` + utf8.
   `/HELP /WHERE /TP /WORLD /WHO /STRENGTH /FSTATE /ENDFIGHT /EVOFIGHT /SUDDENDEATH
-  /MAPDESTRUCT`.
+  /MAPDESTRUCT /ARENA`. `/ARENA <worldId|0>` pins the session's practice fights to
+  one arena; the displacement smokes use it (`--arena=N` overrides, S08).
 - Build/test from `server/`: `go build ./... && go vet ./... && go test ./...`,
   e2e `go test ./test/e2e/`.
 

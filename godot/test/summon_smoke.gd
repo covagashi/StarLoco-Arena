@@ -266,7 +266,7 @@ func _on_message(opcode: int, payload) -> void:
 		4600:
 			State.current_world = int(decoded.get("world_id", -1))
 		4516:
-			_sweep.start()   # clears zz* leftovers, then _create_fighter() (S08)
+			_sweep.start(36)   # arena 36 pinned; clears zz* leftovers, then _create_fighter() (S08)
 		6000:
 			if int(decoded.get("result", 1)) != 0:
 				_finish(1, "fighter create refused %s" % decoded.get("result"))

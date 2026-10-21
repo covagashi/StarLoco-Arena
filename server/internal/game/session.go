@@ -26,6 +26,10 @@ type Session struct {
 	// tests that build a Session directly, so every use must nil-check.
 	guard    *connGuard
 	remoteIP string
+	// gmArena pins this session's practice fights to one arena (/ARENA, admin
+	// only); 0 = the usual random pick. It exists so the live smokes play on a
+	// known map instead of whichever of the 47 comes up (S08).
+	gmArena uint16
 	// opcodes throttles the handful of opcodes that are expensive to serve or
 	// push something at another player. See opcode_gate.go.
 	opcodes *opcodeGate

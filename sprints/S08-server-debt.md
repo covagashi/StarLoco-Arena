@@ -58,8 +58,8 @@ retail leídos y documentación que no se contradiga.
       en los datos no hay forma de conseguirla: no se vende (precio 0), no
       sale en el robo (`ObtainableInDraw` falso) y ningún desafío la da.
       Exigirla dejaría a todos sin clan. Godot ya crea el clan desde su botón
-      nativo (Social → Crear clan). Queda como decisión del dueño en el
-      README (repartirla, p. ej. a nivel 5 de coach, que es su `RequiredLevel`).
+      nativo (Social → Crear clan). **Decidido por el dueño (2026-10-21): no se
+      exige.**
 
 ## Heredado de S07 (2026-10-21, acordado con el dueño)
 
@@ -148,22 +148,27 @@ estadísticas de evolución y puntos de torneo en 2052/4096.
       Postgres (el de producción) por un `GROUP BY`. Arreglado; todo el suite
       pasa en Postgres 16 (dos pasadas seguidas) y en SQLite.
 - [x] MySQL: corrido por primera vez, MariaDB 10.11, todo el suite en verde.
-      La decisión de seguir con él sigue siendo del dueño (por defecto, sin
-      cambios); ahora hay con qué probarlo.
+      **Decidido por el dueño (2026-10-21): se sigue con los tres dialectos.**
 - [x] De paso, **B-182**: el predicado de cartas únicas del correo y el
       registro de arenas eran globales del proceso; cada servidor que arrancaba
       pisaba los de los demás (los e2e con datos reales rompían al azar los
       demás). Ahora son de cada servidor. Los tests de arenas dejaron de
       saltarse: leen `data-dist` si no hay `data/`.
-- [ ] `displace_smoke` (y `carry_smoke`, mismo fallo) se cuelgan según el
-      mapa. **A medias (2026-10-21):** arreglado un falso positivo
-      (`_swap_ok` subía al lanzar y la prueba se rendía antes de verificar:
-      pasó con dos intercambios fallidos; ahora espera a `_pending == 0`) y
-      el acercamiento (si la casilla útil queda más lejos que los PM, avanza
-      lo que den en vez de pasar turno siempre). **Siguen agotando los 300 s**
-      en la última pasada (displace llegó a SWAP OK; carry no llegó a cargar):
-      falta ver qué turno se queda sin cerrar (en el log del servidor los
-      turnos de mesa iban a 61 s, el reloj expirando).
+- [x] `displace_smoke` y `carry_smoke` se colgaban según el mapa. Eran tres
+      cosas: (1) decidían al empezar el turno, antes de que llegaran los
+      estados de la carta de la ronda (la 14 hace a todos intransposables en
+      la ronda 1; se lanzaba el intercambio, se rechazaba y gastaba su
+      enfriamiento de 4 rondas: el log del servidor dice `swap refused:
+      intransposable` y luego `cast refused: frequency`); ahora esperan 0,6 s;
+      (2) si el objetivo quedaba más lejos que los PM, pasaban turno para
+      siempre; ahora se acercan; (3) la arena es al azar entre 47 y algunas no
+      dejan colocar el trío (empujar contra el borde no mueve). Nuevo comando
+      GM **`/ARENA <mundo|0>`** que fija la arena de los combates de práctica de
+      esa sesión (`TestArenaPin`); los tres smokes con luchadores fijan la 36
+      (`--arena=N` la cambia). Además el falso positivo de `_swap_ok`: ahora
+      espera a `_pending == 0`. Evidencia: displace en las arenas 5, 36, 47 y
+      21, 2/2 cada una; después summon, carry y displace en la 36, 2/2 cada
+      uno.
 - [x] Los `zz*` que dejan los smokes cortados: `test/smoke_sweep.gd`, al
       entrar al mundo pide 6031 y borra los presets y luchadores `zz*` antes
       de crear nada (summon, carry y displace). Probado sembrando uno: barrió

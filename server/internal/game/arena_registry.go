@@ -107,3 +107,13 @@ func (d *Deps) loadedArenaCount() int {
 	defer d.arenas.mu.RUnlock()
 	return len(d.arenas.ids)
 }
+
+// hasArena reports whether a world id is a loaded arena (not the fallback).
+func (d *Deps) hasArena(id uint16) bool {
+	if d == nil {
+		return false
+	}
+	d.arenas.mu.RLock()
+	defer d.arenas.mu.RUnlock()
+	return d.arenas.cache[id] != nil
+}

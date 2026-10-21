@@ -22,8 +22,21 @@ func _init(client, done: Callable) -> void:
 	_done = done
 
 
-## 6031 answers with the roster (6006) then the presets (6030).
-func start() -> void:
+## 6031 answers with the roster (6006) then the presets (6030). `arena` > 0
+## first pins this session's practice fights to that map (/ARENA, the test
+## account is an admin): with the random pick, the same smoke passed or timed
+## out depending on the arena it drew (S08). An --arena=N user arg overrides it.
+func start(arena := 0) -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--arena="):
+			arena = int(a.substr(8))
+	if arena > 0:
+		var w := WireWriter.new()
+		var line := ("/ARENA %d" % arena).to_ascii_buffer()
+		w.put_u16(line.size())
+		w.put_bytes(line)
+		_client.send_message(3153, w.raw(), 3)
+		print("[smoke] practice arena pinned to %d" % arena)
 	_active = true
 	_client.send_message(6031, PackedByteArray(), 2)
 
