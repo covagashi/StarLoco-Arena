@@ -78,7 +78,7 @@ Linux y Windows).
 | [S07](./S07-gui-fidelity.md) | M2 | M | 🟢 cerrado | Lo que el retail tenía y aquí falta: nivel del coach, ficha del luchador, versus, colores |
 | [S08](./S08-server-debt.md) | M3 | L | 🟢 cerrado | Deuda de servidor: bugs abiertos, docs que se contradicen, pruebas en los tres dialectos |
 | [S19](./S19-retail-data.md) | M3 | M | 🟢 cerrado | Datos retail sin leer, texto de las cartas de evento y opcodes pequeños (la otra mitad de S08) |
-| [S09](./S09-tournaments.md) | M3 | M | 🟡 siguiente | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
+| [S09](./S09-tournaments.md) | M3 | L | 🟡 abierto | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
 | [S10](./S10-tutorial-onboarding.md) | M3 | M | ⚪ esbozo | Tutorial Kanojedo y onboarding del jugador nuevo |
 | [S11](./S11-replays-spectator.md) | M3 | M | ⚪ esbozo | Replays y modo espectador (alcance por decidir) |
 | [S12](./S12-async-pvp-server.md) | M4 | M | ⚪ esbozo | Async PvP fase 3: `ghost_teams` y opcodes |

@@ -78,7 +78,7 @@ qué el visual no puede correr en CI).
       sin investigar si falta pedir la lista (512) o si es el filtro de `part`.
 - [ ] Inscripción a torneos: el cliente solo sabe que estás inscrito si lo hiciste en esta
       sesión (ningún mensaje lo dice al entrar). Volver a pulsar "Inscribirme" es inocuo:
-      el servidor la guarda una vez.
+      el servidor la guarda una vez. → [S09](./S09-tournaments.md) (bloques B y E).
 
 - [ ] **El color del muñeco** (por decidir con el dueño, viene de S18): con el muñeco en
       línea 1 bit, el pelo y la piel elegidos en la creación solo se ven en las muestras.
@@ -245,7 +245,8 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 - [ ] El dueño piensa en temporadas en las que los jugadores vayan
       desbloqueando cosas. Hoy no hay sistema de temporadas: solo los
       periodos de torneo y la reputación trimestral de los demonios. Encaja
-      con S09 (torneos) o S14 (recompensas).
+      con S09 (torneos) o S14 (recompensas). S09 lo deja como decisión del
+      dueño, fuera de su alcance por defecto.
 - [ ] Candidatas a premio, por ser estéticas y no tocar el equilibrio: las
       23 cartas de color del retail (tipo 29: 10 de pelo, el resto de piel y
       ojos), que desbloqueaban un color para un hueco al crear luchador. El
