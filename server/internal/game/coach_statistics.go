@@ -96,6 +96,7 @@ func (d *Deps) recordFightStatistics(f *Fight, out fightOutcome) {
 		return
 	}
 	mode := fightStatMode(f)
+	f.closeStatTurn() // the turn that ended the fight
 	for _, t := range f.Teams {
 		won := t.ID == out.winnerTeam
 		for _, mem := range t.Members {
@@ -154,6 +155,9 @@ func (d *Deps) recordFightStatistics(f *Fight, out fightOutcome) {
 			}
 			if won && mode != 0 && fielded == 1 {
 				b.add(statWonSolo, 1)
+			}
+			if s := f.memberStats[c.ID]; s != nil && !f.Practice {
+				s.bank(&b, force) // a sparring bout is a sandbox, not a record
 			}
 			if b.moved && mem.Session != nil {
 				mem.Session.evaluateAchievements()

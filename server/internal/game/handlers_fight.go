@@ -638,6 +638,7 @@ func (f *Fight) endTurn(wireID int64) {
 
 	// A special cell's bonus lasts only the turn it was granted on.
 	f.revertSpecialCellBuffs(f.fighterByWireID(wireID))
+	f.closeStatTurn()
 
 	// Advance to the next LIVING fighter (wrapping into a new table turn).
 	newTable := false

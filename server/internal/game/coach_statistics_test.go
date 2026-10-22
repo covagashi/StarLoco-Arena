@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
+	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
 
@@ -174,5 +175,101 @@ func TestGiveUpBeforeAllyIn2v2(t *testing.T) {
 	}
 	if got := d.Store.Coaches.StatValue(a.ID, statWinStreak2v2); got != 1 {
 		t.Errorf("2v2 streak = %d, want 1", got)
+	}
+}
+
+// The in-fight half (fight_statistics.go), through the real effect paths, then
+// banked at the end of a ranked fight.
+func TestInFightStatistics(t *testing.T) {
+	d, a, b := statsDeps(t)
+	f := statsFight(a, b, &domain.Fighter{ID: 9401, BreedID: 1}, &domain.Fighter{ID: 9402, BreedID: 2})
+	f.deps = d
+	fa, fb := f.Teams[0].Fighters[0], f.Teams[1].Fighters[0]
+	fa.Pos, fb.Pos = Pos{X: 7, Y: 15}, Pos{X: 12, Y: 15}
+	fb.MaxAP, fb.AP = 6, 6
+
+	// Turn 1: 30 + 30 to the enemy and 20 to a's own fighter (not counted).
+	f.applyHPDelta(fa, fb, 1, 0, -30)
+	f.applyHPDelta(fa, fb, 1, 0, -30)
+	f.applyHPDelta(fa, fa, 1, 0, -20)
+	f.applyFighterMove(fa, []Pos{{X: 8, Y: 15}, {X: 9, Y: 15}})
+	f.closeStatTurn()
+	// Turn 2: 25 more, then the AP drain leaves b 4 AP short.
+	f.applyHPDelta(fa, fb, 1, 0, -25)
+	f.applyStatDrain(fa, gamedata.Effect{ActionID: 84, Params: []float32{4}}, fb.Pos, true, false)
+	f.closeStatTurn()
+
+	s := f.memberStats[a.ID]
+	if s == nil {
+		t.Fatal("no tally for the attacker")
+	}
+	if s.damage != 85 || s.bestTurnDamage != 60 || s.mpUsed != 2 || s.bestTurnMP != 2 || s.bestAPRemoved != 4 {
+		t.Errorf("tally = %+v, want damage 85, best turn 60, MP 2/2, AP removed 4", *s)
+	}
+	if f.memberStats[b.ID] != nil && f.memberStats[b.ID].damage != 0 {
+		t.Errorf("the victim was credited damage: %+v", *f.memberStats[b.ID])
+	}
+
+	// The killing blow, then the fight ends and the tally is banked.
+	win(d, f, 0) // sets b's HP to 0 without a blow; the kill below is a's
+	get := func(id int16) int32 { return d.Store.Coaches.StatValue(a.ID, id) }
+	for id, want := range map[int16]int32{
+		statFightDamage: 85, statTurnDamage: 60, statTurnMP: 2, statMPUsed: 2, statAPRemoved: 4,
+	} {
+		if got := get(id); got != want {
+			t.Errorf("stat %d = %d, want %d", id, got, want)
+		}
+	}
+}
+
+func TestKillsTrapsAndDeathCells(t *testing.T) {
+	d, a, b := statsDeps(t)
+	f := statsFight(a, b, &domain.Fighter{ID: 9501, BreedID: 1}, &domain.Fighter{ID: 9502, BreedID: 2})
+	f.deps = d
+	fa, fb := f.Teams[0].Fighters[0], f.Teams[1].Fighters[0]
+	f.applyHPDelta(fa, fb, 1, 0, -fb.HP) // a kill in this turn
+	f.closeStatTurn()
+	if s := f.memberStats[a.ID]; s.bestTurnKills != 1 {
+		t.Errorf("kills in a turn = %d, want 1", s.bestTurnKills)
+	}
+
+	// A trap a placed kills b: credited to a, the area's owner.
+	fb.HP = 100
+	f.firingArea = &effectArea{caster: fa, tmpl: walkOnTrap()}
+	f.applyHPDelta(fa, fb, 1, 0, -100)
+	f.firingArea = nil
+	if s := f.memberStats[a.ID]; s.trapKills != 1 {
+		t.Errorf("trap kills = %d, want 1", s.trapKills)
+	}
+	// A killer cell: counted on the victim's coach.
+	fb.HP = 100
+	f.noteDeathCell(fb)
+	if s := f.memberStats[b.ID]; s == nil || s.deathCells != 1 {
+		t.Errorf("death-cell deaths for the victim = %+v, want 1", s)
+	}
+	// Practice banks none of it.
+	f.Practice = true
+	win(d, f, 0)
+	if got := d.Store.Coaches.StatValue(a.ID, statTrapKills); got != 0 {
+		t.Errorf("a practice fight banked %d trap kills", got)
+	}
+}
+
+func TestBestResistanceIsElementPlusGeneral(t *testing.T) {
+	var s combatStats
+	s.resPct[1], s.resPct[2], s.resPctAll = 30, 45, 20
+	if got := s.bestResistance(); got != 65 {
+		t.Errorf("armour = %d, want 65 (45 + 20)", got)
+	}
+}
+
+// A shield tile (world 5, 7,9) counts as a bonus cell and as armour.
+func TestBonusCellAndArmourFromATile(t *testing.T) {
+	f, ff := specialFight(Pos{X: 7, Y: 9})
+	ff.CoachID = 77
+	f.applyTurnStartSpecialCell(ff)
+	s := f.memberStats[77]
+	if s == nil || s.bonusCells != 1 || s.bestArmour != 10 {
+		t.Errorf("tally = %+v, want 1 bonus cell and armour 10", s)
 	}
 }

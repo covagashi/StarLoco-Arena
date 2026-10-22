@@ -262,6 +262,7 @@ func (f *Fight) fireEffectArea(a *effectArea, applicant *FightFighter) {
 		a.maxExec-- // auras fire for their whole lifetime; only traps count down
 	}
 	f.inAreaTrigger = true
+	f.firingArea = a
 	for _, ef := range a.tmpl.Effects {
 		// An aura ticks everyone in its radius, so it must respect each inner
 		// effect's target conditions (e.g. an enemies-only debuff aura skips
@@ -272,6 +273,7 @@ func (f *Fight) fireEffectArea(a *effectArea, applicant *FightFighter) {
 		f.resolveEffect(a.caster, ef, applicant.Pos)
 	}
 	f.inAreaTrigger = false
+	f.firingArea = nil
 	if f.deps != nil && f.deps.Log != nil {
 		f.deps.Log.Debug("effect-area fired", "area", a.id, "template", a.templateID,
 			"applicant", applicant.WireID, "cell", applicant.Pos, "remaining", a.maxExec)

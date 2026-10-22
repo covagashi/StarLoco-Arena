@@ -553,6 +553,9 @@ func (f *Fight) applyHPDelta(caster, victim *FightFighter, runEffectID, genericI
 	eff, _ := buildRunningEffect(f.nextActionUID(), runEffectID, genericID,
 		caster.WireID, victim.WireID, victim.Pos, amount, 0, false)
 	f.broadcast(eff)
+	if delta < 0 {
+		f.noteHPLoss(caster, victim, amount)
+	}
 	if victim.HP <= 0 {
 		dies, _ := buildFighterDies(f.nextActionUID(), victim.WireID)
 		f.broadcast(dies)
@@ -578,6 +581,7 @@ func (f *Fight) dealTransferredDamage(caster, to *FightFighter, runEffectID, gen
 	eff, _ := buildRunningEffect(f.nextActionUID(), runEffectID, genericID,
 		casterID, to.WireID, to.Pos, amount, 0, false)
 	f.broadcast(eff)
+	f.noteHPLoss(caster, to, amount)
 	if to.HP <= 0 {
 		dies, _ := buildFighterDies(f.nextActionUID(), to.WireID)
 		f.broadcast(dies)
@@ -683,6 +687,7 @@ func (f *Fight) applyZoneResourceLoss(caster *FightFighter, ef gamedata.Effect, 
 		}
 		if ap {
 			victim.AP -= drained
+			f.noteAPRemoved(caster, victim)
 		} else {
 			victim.MP -= drained
 		}
@@ -853,6 +858,9 @@ func (f *Fight) applyStatDrain(caster *FightFighter, ef gamedata.Effect, target 
 		return
 	}
 	*cur -= drained
+	if ap {
+		f.noteAPRemoved(caster, victim)
+	}
 	if steal {
 		if ap {
 			caster.AP += drained
@@ -1155,6 +1163,7 @@ func (f *Fight) applyBuff(caster *FightFighter, ef gamedata.Effect, target Pos) 
 		// resist 86/87, damage rebound 89, heal power 78/79), and track the rolled
 		// value for exact revert.
 		victim.Stats.apply(ef.ActionID, val)
+		f.noteArmour(victim, victim.Stats.bestResistance())
 		f.trackBuff(victim, &activeBuff{actionID: ef.ActionID, effectID: ef.EffectID, delta: val, statBuff: true}, turns, infinite)
 	default:
 		// Other pure-stat buff (crit, dodge, …): render-only, but keep a

@@ -133,6 +133,7 @@ func (f *Fight) applyTurnStartSpecialCell(ff *FightFighter) (died bool) {
 		// automatically killed." No save, no resistance. applyHPDelta broadcasts
 		// the hit and FIGHTER_DIES.
 		f.applyHPDelta(ff, ff, protocol.RunEffectHPLoss, 0, -ff.HP)
+		f.noteDeathCell(ff)
 		f.deps.checkFightEnd(f)
 		return true
 
@@ -150,6 +151,7 @@ func (f *Fight) applyTurnStartSpecialCell(ff *FightFighter) (died bool) {
 		// client's HP bar cannot overshoot.
 		if ff.HP < ff.MaxHP {
 			f.applyHPDelta(ff, ff, gamedata.ActionHeal, 0, f.scaleBonusCellAt(specialHealingHeartHP, ff.Pos.X, ff.Pos.Y))
+			f.noteBonusCell(ff)
 		}
 		return false
 	}
@@ -191,6 +193,10 @@ func (f *Fight) applyTurnStartSpecialCell(ff *FightFighter) (died bool) {
 		boostAction, boostValue = runEffectAPBoost, b.ap
 	}
 	f.cellBuffs = append(f.cellBuffs, b)
+	f.noteBonusCell(ff)
+	if b.resPct != 0 {
+		f.noteArmour(ff, ff.Stats.bestResistance())
+	}
 	if boostAction != 0 {
 		eff, _ := buildRunningEffect(f.nextActionUID(), boostAction, 0,
 			ff.WireID, ff.WireID, ff.Pos, boostValue, 0, false)

@@ -154,6 +154,7 @@ func (f *Fight) applyFighterMove(ff *FightFighter, path []Pos) {
 	origin := ff.Pos
 	cost := int32(len(path)) * defaultMPPerCell
 	ff.MP -= cost
+	f.noteMPUsed(ff, cost)
 	ff.Pos = path[len(path)-1]
 	if ff.CarriedFighter != nil {
 		ff.CarriedFighter.Pos = ff.Pos // drag the carried fighter along
