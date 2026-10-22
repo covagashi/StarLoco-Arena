@@ -2,6 +2,8 @@ extends "res://src/ui/card_panel.gd"   # lobby_panel + the card tile helpers
 
 const Direction8 := preload("res://src/util/direction8.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
+const TournamentDefs := preload("res://src/gamedata/tournament_defs.gd")
+const State := preload("res://src/state.gd")
 ## Native presentations over the existing GuiModel and action handlers.
 ## No XML layout or protocol serialization lives in these panels.
 
@@ -37,8 +39,8 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 			_sync_preview()
 		return
 	var watched := {
-		"teamManagementDialog": ["teamManagement", "evolutionTeam"],
-		"evolutionDialog": ["teamManagement", "evolutionTeam"],
+		"teamManagementDialog": ["teamManagement", "evolutionTeam", "tournamentSearch"],
+		"evolutionDialog": ["teamManagement", "evolutionTeam", "tournamentSearch"],
 		"fighterEquipmentDialog": ["teamManagement"],
 		"coachStatisticsDialog": ["localCoach"], "cardBookDialog": ["localCoach", "tomeManager"],
 		"ladderInformationDialog": ["ladderManager"], "calendarDialog": ["calendar"],
@@ -120,6 +122,7 @@ func _team() -> void:
 	else:
 		label(toolbar, I18n.t("team.titulars") if tab == 0 else I18n.t("team.legends"), 20)
 	button(toolbar, I18n.t("team.create_fighter"), func(): send("createNewFighter" if classic else "createNewEvolutionFighter"))
+	var tourn := _tournament_picker() if tab in [3, 4] else -1
 	var fighters: Array = data("teamManagement.editableTeamPreset.fighters", [])
 	if tab == 0:
 		fighters = fighters + data("evolutionTeam.fightersOnBench", [])
@@ -175,10 +178,50 @@ func _team() -> void:
 	hint.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_revive_status_line(hint)
 	button(footer, I18n.t("team.practice"), func(): send("launchTeamTest"))
-	button(footer, I18n.t("team.find_fight"), func(): send("launchEvolutionFight" if tab == 0 else "setClassicReadyForFight"), tab in [0, 1, 2])
 	if tab in [3, 4]:
-		label(body, I18n.t("team.not_available",
-			{"mode": I18n.t("team.mode_tourn") if tab == 3 else I18n.t("team.mode_legends")}))
+		# S09: the search of the tournament picked above (28611 with the
+		# preset its kind sends); the lobby bar shows it and cancels it
+		var fb := button(footer, I18n.t("team.find_tourn"), func(): send("nativeTournSearch", [tourn]), tourn >= 0)
+		fb.name = "FindTournament"
+	else:
+		button(footer, I18n.t("team.find_fight"), func(): send("launchEvolutionFight" if tab == 0 else "setClassicReadyForFight"), true)
+
+
+## The Tournaments / Legends tabs' tournament: the editions we are entered in
+## that are searched from this tab, the open ones first. Returns the picked
+## tournament id while its search period is open, else -1. Retail selected it
+## by clicking the alert row (agz_1 → vk_1.ad); the native panel lists them.
+func _tournament_picker() -> int:
+	var rows: Array = []
+	for r in data("tournamentSearch.rows", []):
+		if int(r.get("tab", 3)) == tab or (tab == 3 and int(r.get("tab", 3)) == 0):
+			rows.append(r)
+	var bar := row(body)
+	var head := label(bar, I18n.t("team.tournament"), 20)
+	head.autowrap_mode = TextServer.AUTOWRAP_OFF
+	head.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if rows.is_empty():
+		label(bar, I18n.t("team.no_tournament")).name = "NoTournament"
+		return -1
+	rows.sort_custom(func(a, b): return bool(a.open) and not bool(b.open))
+	var names: Array = []
+	var picked := 0
+	for i in rows.size():
+		var r: Dictionary = rows[i]
+		names.append("%s · %s" % [r.name, I18n.t("team.search_open") if bool(r.open) else I18n.t("team.search_shut")])
+		if int(r.id) == int(draft.get("tournament", -1)):
+			picked = i
+	var pick := choices(bar, names, picked, func(i):
+		draft["tournament"] = int(rows[i].id)
+		schedule_refresh())
+	pick.name = "TournamentPick"
+	pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var r0: Dictionary = rows[picked]
+	draft["tournament"] = int(r0.id)
+	if int(r0.get("kind", 1)) != TournamentDefs.CLASSIC and tab == 3:
+		# evolution and graveyard tournaments field the titular line-up
+		label(body, I18n.t("team.tourn_titulars"))
+	return int(r0.id) if bool(r0.open) else -1
 
 
 ## The fallen fighters (dead: still holding a titular slot; retired: out of
@@ -350,6 +393,16 @@ func _calendar() -> void:
 	button(toolbar, I18n.t("cal.prev"), func(): selected = {}; send("showPreviousMonth"))
 	label(toolbar, str(data("calendar.currentMonth", I18n.t("panel.calendar"))), 22)
 	button(toolbar, I18n.t("cal.next"), func(): selected = {}; send("showNextMonth"))
+	# S09: a player tournament, for the "Création de Tournoi" card (807)
+	var cards := int(data("calendar.creationCards", 0))
+	var create := button(toolbar, I18n.t("cal.create", {"n": cards}), func():
+		draft["creating"] = not bool(draft.get("creating", false))
+		schedule_refresh(), cards > 0)
+	create.name = "CreateTournament"
+	create.tooltip_text = I18n.t("cal.create_hint")
+	if bool(draft.get("creating", false)):
+		_tournament_form()
+		return
 	var split := row(body)
 	var grid := GridContainer.new()
 	grid.columns = 7
@@ -381,11 +434,27 @@ func _calendar() -> void:
 		_tournament_event(details, event, status, bracket)
 
 
-## One tournament on the day's detail: the tournament totem's actions (S18).
+## One tournament on the day's detail: the tournament totem's actions (S18)
+## and what retail's calendarTournamentDetailsDialog told (S09).
 func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, bracket: Dictionary) -> void:
 	var tid := int(event.get("id", -1))
 	label(parent, str(event.get("title", "")), 20)
 	label(parent, str(event.get("description", "")))
+	var facts: Array = [I18n.t("cal.kind_%d" % clampi(int(event.get("kind", 1)), 1, 4))]
+	if int(event.get("rules", 0)) > 0:
+		facts.append(I18n.t("cal.rules", {"n": int(event.rules)}))
+	if str(event.get("organizer", "")) != "":
+		facts.append(I18n.t("cal.organizer", {"name": event.organizer}))
+	parent.add_child(OneBit.caption(" · ".join(facts)))
+	var periods: Array = event.get("periods", [])
+	if not periods.is_empty():
+		label(parent, I18n.t("cal.periods", {"list": ", ".join(periods)})).name = "Periods%d" % tid
+	if str(event.get("regUntil", "")) != "":
+		label(parent, I18n.t("cal.reg_until", {"at": event.regUntil}))
+	if str(event.get("entryName", "")) != "":
+		label(parent, I18n.t("cal.entry", {"card": event.entryName, "n": int(event.get("entryOwned", 0))})).name = "Entry%d" % tid
+	if str(event.get("rewardName", "")) != "":
+		label(parent, I18n.t("cal.reward", {"card": event.rewardName}))
 	var registered := bool(event.get("registered", false))
 	var state := I18n.t("cal.registered") if registered else (
 		I18n.t("cal.reg_open") if bool(event.get("regOpen", true)) else I18n.t("cal.reg_closed"))
@@ -394,8 +463,11 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 	parent.add_child(OneBit.caption(state))
 	var bar := row(parent)
 	if not registered:
-		button(bar, I18n.t("cal.register"), func(): confirm_action(I18n.t("cal.register_confirm"), func(): send("registerTournament", [event], event)),
-			bool(event.get("regOpen", true))).name = "Register%d" % tid
+		var ticketed := int(event.get("entryCard", 0)) != 0
+		var ask := I18n.t("cal.register_ticket", {"card": event.get("entryName", "")}) if ticketed \
+			else I18n.t("cal.register_confirm")
+		button(bar, I18n.t("cal.register"), func(): confirm_action(ask, func(): send("registerTournament", [event], event)),
+			bool(event.get("regOpen", true)) and (not ticketed or int(event.get("entryOwned", 0)) > 0)).name = "Register%d" % tid
 	else:
 		button(bar, I18n.t("cal.bracket"), func(): send("nativeTournTree", [tid])).name = "Bracket%d" % tid
 		var searching := bool(event.get("searching", false))
@@ -410,13 +482,91 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 		if not bool(status.get("ok", true)):
 			line.add_theme_color_override("font_color", OneBit.MUTED)
 	if int(bracket.get("tid", -2)) == tid:
-		var rows: Array = bracket.get("rows", [])
-		if rows.is_empty():
+		var slots: Dictionary = bracket.get("slots", {})
+		if slots.is_empty():
 			label(parent, I18n.t("cal.bracket_empty")).name = "BracketEmpty%d" % tid
 		else:
-			var t := table(parent, [I18n.t("cal.col_seat"), I18n.t("cal.col_coach")], ["slot", "name"], rows)
-			t.name = "BracketTable%d" % tid
-			t.custom_minimum_size.y = 34 + 30 * mini(rows.size(), 4)
+			_bracket(parent, slots).name = "Draw%d" % tid
+
+
+## The draw by rounds, as retail's tournamentTreeDialog (the heap slices of
+## ah_1): first round 16-31, quarters 8-15, semis 4-7, final 2-3, winner 1.
+## Only the rounds anyone has reached are drawn; our own name is marked.
+func _bracket(parent: Node, slots: Dictionary) -> Control:
+	var me := State.my_coach_name
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	parent.add_child(box)
+	var rounds := [["cal.round_first", 16, 31], ["cal.round_quarter", 8, 15],
+		["cal.round_semi", 4, 7], ["cal.round_final", 2, 3], ["cal.round_winner", 1, 1]]
+	for r in rounds:
+		var names: Array = []
+		for sl in range(int(r[1]), int(r[2]) + 1):
+			if slots.has(sl):
+				names.append(slots[sl])
+		if names.is_empty() and int(r[1]) != 16:
+			continue
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_child(col)
+		col.add_child(OneBit.caption(I18n.t(r[0])))
+		for n in names:
+			var l := label(col, ("▶ %s" % n) if n == me else str(n))
+			l.autowrap_mode = TextServer.AUTOWRAP_OFF
+			l.clip_text = true
+	return box
+
+
+## The player tournament form (S09, retail's tournamentCreationDialog): name,
+## description, the day of the calendar on show, an hour, how long each search
+## period lasts and on how many days in a row. Costs one "Création de Tournoi".
+func _tournament_form() -> void:
+	label(body, I18n.t("cal.create_title"), 22)
+	label(body, I18n.t("cal.create_hint"))
+	var form := column(body, false)
+	field(form, "t_name", I18n.t("cal.create_name")).max_length = 60
+	field(form, "t_desc", I18n.t("cal.create_desc")).max_length = 200
+	var year := int(data("calendar.year", 2026))
+	var month := int(data("calendar.month", 1))
+	var days: Array = []
+	for cell in data("calendar.calendar", []):
+		if str(cell.get("day", "")) != "":
+			days.append(str(cell.day))
+	var line := row(form)
+	label(line, I18n.t("cal.create_day"))
+	var day_pick := choices(line, days, days.find(str(draft.get("t_day", selected.get("day", "1")))), func(i): draft["t_day"] = days[i])
+	day_pick.name = "CreateDay"
+	if day_pick.selected < 0:
+		day_pick.select(0)
+		draft["t_day"] = days[0] if not days.is_empty() else "1"
+	var hours: Array = []
+	for h in 24:
+		hours.append("%02d:00" % h)
+	label(line, I18n.t("cal.create_hour"))
+	choices(line, hours, int(draft.get("t_hour", 20)), func(i): draft["t_hour"] = i)
+	var line2 := row(form)
+	var lengths := [30, 60, 120, 240]
+	label(line2, I18n.t("cal.create_length"))
+	choices(line2, lengths.map(func(m): return I18n.t("cal.minutes", {"n": m})),
+		lengths.find(int(draft.get("t_len", 60))), func(i): draft["t_len"] = lengths[i])
+	label(line2, I18n.t("cal.create_periods"))
+	choices(line2, ["1", "2", "3", "4"], int(draft.get("t_periods", 1)) - 1, func(i): draft["t_periods"] = i + 1)
+	var actions := row(form)
+	button(actions, I18n.t("cal.create_send"), func():
+		var name := str(draft.get("t_name", "")).strip_edges()
+		if name.is_empty():
+			return
+		confirm_action(I18n.t("cal.create_confirm"), func():
+			send("nativeTournCreate", [{"name": name,
+				"desc": str(draft.get("t_desc", "")).strip_edges(),
+				"year": year, "month": month, "day": int(draft.get("t_day", "1")),
+				"hour": int(draft.get("t_hour", 20)), "minutes": int(draft.get("t_len", 60)),
+				"periods": int(draft.get("t_periods", 1))}])
+			draft["creating"] = false
+			schedule_refresh())).name = "CreateSend"
+	button(actions, I18n.t("common.cancel"), func():
+		draft["creating"] = false
+		schedule_refresh())
 
 
 func _achievements() -> void:

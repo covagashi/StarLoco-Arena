@@ -147,8 +147,57 @@ func phasePairFromEvent(t *testing.T, b []byte) (int64, int64) {
 	if _, err := r.StringU8(); err != nil {
 		t.Fatalf("short: %v", err)
 	}
-	if n := mustU8(); n != 1 {
-		t.Fatalf("schedule pairs = %d, want 1", n)
+	if n := mustU8(); n < 1 {
+		t.Fatalf("schedule pairs = %d, want at least 1", n)
 	}
 	return mustI64(), mustI64()
+}
+
+// TestCalendarCarriesEveryPeriod: a scheduled edition sends one phase pair per
+// search period (S09; the native calendar places the tournament on those days)
+// and its registration window ends where the first period starts.
+func TestCalendarCarriesEveryPeriod(t *testing.T) {
+	start := time.Now().Add(24 * time.Hour).Truncate(time.Second)
+	tr := &domain.Tournament{
+		ID: 1, DefID: 1, Name: "Multi", Short: "M", Enabled: true,
+		SearchPeriodStart: start, SearchPeriodMinutes: 60,
+		SearchPeriods: 3, PeriodIntervalMinutes: 24 * 60,
+	}
+	w := protocol.NewWriter()
+	writeTournamentEvent(w, tr, time.Now())
+	b := w.Bytes()
+	// Skip to the phase list: everything phasePairFromEvent reads, minus the
+	// count it consumes, is fixed except the three strings.
+	r := protocol.NewReader(b)
+	_, _ = r.I32()
+	for i := 0; i < 3; i++ {
+		_, _ = r.I64()
+	}
+	_, _ = r.I64()
+	_, _ = r.I32()
+	_, _ = r.I64()
+	_, _ = r.I64()
+	_, _ = r.StringU8()
+	dl, _ := r.U16()
+	_, _ = r.String(int(dl))
+	_, _ = r.StringU8()
+	n, _ := r.U8()
+	if n != 3 {
+		t.Fatalf("phase pairs = %d, want 3", n)
+	}
+	for i := 0; i < 3; i++ {
+		s, _ := r.I64()
+		e, _ := r.I64()
+		want := start.Add(time.Duration(i) * 24 * time.Hour)
+		if s != want.UnixMilli() || e != want.Add(time.Hour).UnixMilli() {
+			t.Errorf("period %d = %d..%d, want %d..%d", i, s, e, want.UnixMilli(), want.Add(time.Hour).UnixMilli())
+		}
+	}
+	if rn, _ := r.U8(); rn != 1 {
+		t.Fatalf("registration pairs = %d, want 1", rn)
+	}
+	_, _ = r.I64()
+	if regEnd, _ := r.I64(); regEnd != start.UnixMilli() {
+		t.Errorf("registration ends %d, want the first period's start %d", regEnd, start.UnixMilli())
+	}
 }

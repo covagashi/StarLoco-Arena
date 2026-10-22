@@ -1,6 +1,6 @@
 # S10 — Tutorial y onboarding
 
-**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 siguiente (esbozo; se detalla al abrirlo)
 
 ## Objetivo
 

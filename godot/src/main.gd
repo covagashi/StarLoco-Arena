@@ -26,6 +26,7 @@ const Elements := preload("res://src/gamedata/elements.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
+const TournamentDefs := preload("res://src/gamedata/tournament_defs.gd")
 const Topology := preload("res://src/maps/topology.gd")
 const Scenarios := preload("res://src/gamedata/scenarios.gd")
 const BugReport := preload("res://src/ui/bug_report.gd")
@@ -132,6 +133,11 @@ const OP_TOURN_SEARCH_PERIOD := 28630    # [i64 tid][i8 open]
 const OP_TOURN_SEARCH_RES := 28612       # [i64 tid][i16 preset][i8 accepted]
 const OP_TOURN_SEARCH_ERR := 28616       # [i8 code][i8 sub]
 const OP_TOURN_SEARCH_END := 28648       # [i64 tid][i8 forfeit]
+const OP_TOURN_SEARCH_START := 28611     # C2S [i64 tid][i64 me][i16 preset] arch 2
+const OP_TOURN_OPENING := 28646          # [i64 tid][i64 durationMs] — period opens now
+const OP_TOURN_UNFINISHED := 28618       # [i64 tid] — carry your place over?
+const OP_TOURN_CARRY := 28617            # C2S [i64 tid] arch 2 — yes
+const OP_TOURN_CREATE := 17010           # C2S player tournament (aFu) arch 3
 const OP_DESTROY_COACH := 27529          # C2S empty (arch 2) — delete coach
 const OP_GUILD_CREATE := 509             # C2S [u8 type][str8 name] arch 3
 const OP_GUILD_RESULT := 504             # [i8 type][i32 code]
@@ -226,7 +232,7 @@ var _challenge_handle := -1   # pending 26300 handle (-1 = none)
 var _challenge_target := -1   # coach id we clicked "challenge" on
 var _challenge_evo := 0       # evolution flag echoed back on accept
 var _searching := false       # combattre queue state (23104 ack)
-var _search_kind := 0         # 1=classic 2=quick 3=evolution (for cancel)
+var _search_kind := 0         # 1=classic 2=quick 3=evolution 4=tournament (for cancel)
 var _match := {}              # pending 23110 MatchFound row
 var _shop_id := -1            # catalogue id echoed back on buy/barter
 var _shop_cards := []         # [{id, qty}] of the open catalogue
@@ -708,6 +714,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_lobby_ready = true
 			_log_line("[color=green]%s[/color]" % I18n.t("net.in_world"))
 			_show_lobby_screen()
+			# 28601 on arrival: our entries, the open search periods (28630)
+			# and an unfinished tournament's carry-over question (28618)
+			Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
 			# Post-fight re-entry: the debrief was decoded on 8300 — pop the
 			# result panel now that the island is up.
 			if not State.fight_result.is_empty():
@@ -898,12 +907,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# 28650 bracket — slot→name rows for the Calendar's tournament
 			# (the reply carries no id: it answers the last 28649).
 			var d := Codec.decode(opcode, payload)
-			var slots: Array = d.get("slots", {}).keys()
-			slots.sort()
-			var rows: Array = []
-			for sl in slots:
-				rows.append({"slot": int(sl) + 1, "name": str(d.slots[sl])})
-			_tourn_bracket = {"tid": _tourn_tree_tid, "rows": rows}
+			# heap slots: 1 winner, 2-3 final, 4-7 semis, 8-15 quarters,
+			# 16-31 first round (ah_1)
+			var slots := {}
+			for sl in d.get("slots", {}):
+				slots[int(sl)] = str(d.slots[sl])
+			_tourn_bracket = {"tid": _tourn_tree_tid, "slots": slots}
 			_refresh_calendar()
 		OP_DUO_INVITATION:
 			# 6025 [str8 team][str8 inviterName][i64 inviter][i64 invited]
@@ -1119,8 +1128,19 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if opcode == OP_TOURN_CALENDAR:
 				_calendar_events = rows
 			else:
+				# the list is the whole set of live editions: a finished one
+				# drops out, and the coach's own status says whether it is
+				# entered (-128 = not) — so a registration made in an earlier
+				# session shows too (BACKLOG §1)
+				_tourn_rows = {}
 				for r0 in rows:
-					_tourn_rows[int(r0.get("id", -1))] = r0
+					var rt := int(r0.get("id", -1))
+					_tourn_rows[rt] = r0
+					if int(r0.get("status", -128)) != -128:
+						_registered_tids[rt] = true
+					else:
+						_registered_tids.erase(rt)
+				_push_tourn_search_model()
 			if _gui.is_open("calendarDialog"):
 				_push_calendar_model()
 		OP_TOURN_REG_RES:
@@ -1138,6 +1158,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_search_open[int(d.tournament_id)] = int(d.open) != 0
 			_refresh_calendar()
+			_push_tourn_search_model()
 			_log_line(I18n.t("tourn.search_state", {"tid": int(d.tournament_id),
 				"state": I18n.t("tourn.open" if int(d.open) != 0
 					else "tourn.closed")}))
@@ -1148,6 +1169,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					else I18n.t("tourn.search_refused")}))
 			if int(d.accepted) != 0:
 				_tourn_search_tid = int(d.tournament_id)
+				# the lobby's "searching… cancel" bar, like the other lanes
+				_searching = true
+				_search_kind = 4
+				_set_searching(true)
 			else:
 				_tourn_search_tid = -1
 			_tourn_status = {"tid": int(d.tournament_id), "ok": int(d.accepted) != 0,
@@ -1155,29 +1180,41 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					else I18n.t("tourn.search_refused")}
 			_refresh_calendar()
 		OP_TOURN_CANCEL_RES:
-			# 28610 [i8 accepted] — the search we cancelled is dead
+			# 28610 [i8 accepted] — the search we cancelled is dead (also
+			# sent by the server when a search period closes on us)
 			_tourn_status = {"tid": _tourn_search_tid, "ok": true, "text": I18n.t("tourn.cancelled")}
 			_tourn_search_tid = -1
+			_end_tourn_search()
 			_log_line(I18n.t("tourn.cancelled"))
 			_refresh_calendar()
 		OP_TOURN_SEARCH_ERR:
 			var d := Codec.decode(opcode, payload)
 			_tourn_status = {"tid": _tourn_search_pending, "ok": false, "text": I18n.t("tourn.err")}
 			_tourn_search_tid = -1
+			_end_tourn_search()
 			DebugLog.add("tournament search error %d/%d" % [
 				int(d.code), int(d.sub_code)])
 			_log_line("[color=red]%s[/color]" % I18n.t("tourn.err"))
 			_refresh_calendar()
 		OP_TOURN_SEARCH_END:
+			# 28648 — the period closed on an unplayed fixture: forfeit=0
+			# means we won it by the other side's absence
 			var d := Codec.decode(opcode, payload)
 			_tourn_search_tid = -1
-			_log_line(I18n.t("tourn.ended", {"tid": int(d.tournament_id)})
-				+ (I18n.t("tourn.ended_forfeit") if int(d.forfeit) != 0 else ""))
+			_end_tourn_search()
+			_search_open.erase(int(d.tournament_id))
+			var msg := I18n.t("tourn.forfeit_lost" if int(d.forfeit) != 0
+				else "tourn.forfeit_won", {"name": _tourn_name(int(d.tournament_id))})
+			_toast(msg)
+			_log_line(msg)
+			_refresh_calendar()
+			_push_tourn_search_model()
 		28614:  # TournamentFightStarting [i64 tid] — bracket match launching
 			var d := Codec.decode(opcode, payload)
 			_tourn_search_tid = -1
+			_end_tourn_search()
 			_log_line("[color=green]%s[/color]" % I18n.t("tourn.starting",
-				{"tid": int(d.f0)}))
+				{"tid": int(d.tournament_id)}))
 		28620:  # TournamentFinale (Yq) — [u8 status]1=add/2=remove; on add:
 			# [i64 tid][i32 n][i64 coaches][i32 m][str32 names][str32 tname]
 			# (both arrays written reversed — the retail reader Yq.a fills
@@ -1186,8 +1223,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var tid := int(payload.get_i64())
 			if st == 1:
 				var cn := payload.get_i32()
+				var ids := []
 				for i in cn:
-					payload.get_i64()
+					ids.insert(0, int(payload.get_i64()))   # reversed too
 				var nn := payload.get_i32()
 				var names := []
 				for i in nn:
@@ -1195,9 +1233,22 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					# same indices Yq.a fills (names[0] VS names[1])
 					names.insert(0, payload.get_str("u32", "utf8"))
 				var tname := payload.get_str("u32", "utf8")
-				_toast(I18n.t("tourn.finale", {"name": tname,
+				var line := I18n.t("tourn.finale", {"name": tname,
 					"a": names[0] if names.size() > 0 else "?",
-					"b": names[1] if names.size() > 1 else "?"}))
+					"b": names[1] if names.size() > 1 else "?"})
+				_toast(line)
+				# retail's alert row asked "watch it?" (zN 28620): spectate the
+				# first finalist's fight (2260 → 26331), as /watch does
+				if not ids.is_empty() and not State.my_coach_id in ids:
+					var who := int(ids[0])
+					_ask("tournament", I18n.t("ask.tournament"),
+						I18n.t("tourn.finale_watch", {"line": line}),
+						func(yes: bool):
+							if yes:
+								_watch_target = who
+								var w := WireWriter.new()
+								w.put_i64(who)
+								Session.send(OP_SPECTATE_QUERY, w.raw(), 2))
 			else:
 				pass  # remove — the toast already aged out
 		28644:  # TournamentSearchUpcoming [i64 tid][i64 startUnixMs] — zN
@@ -1206,8 +1257,31 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var start_ms := int(payload.get_i64())
 			var mins := 1 + int((start_ms -
 				int(Time.get_unix_time_from_system() * 1000)) / 60000)
-			_log_line(I18n.t("tourn.opens_in", {"tid": tid2,
-				"min": max(mins, 0)}))
+			var line := I18n.t("tourn.opens_in", {"name": _tourn_name(tid2),
+				"min": max(mins, 0)})
+			_toast(line)
+			_log_line(line)
+		OP_TOURN_OPENING:
+			# 28646 [i64 tid][i64 durationMs] — a search period starts now
+			var tid3 := int(payload.get_i64())
+			var left := int(payload.get_i64())
+			_search_open[tid3] = true
+			var line := I18n.t("tourn.period_open", {"name": _tourn_name(tid3),
+				"min": maxi(1, int(left / 60000))})
+			_toast(line)
+			_log_line("[color=green]%s[/color]" % line)
+			_refresh_calendar()
+			_push_tourn_search_model()
+		OP_TOURN_UNFINISHED:
+			# 28618 [i64 tid] — the next edition of one we could not finish
+			var tid4 := int(payload.get_i64())
+			_ask("tournament", I18n.t("ask.tournament"),
+				I18n.t("tourn.carry_ask", {"name": _tourn_name(tid4)}),
+				func(yes: bool):
+					if yes:
+						var w := WireWriter.new()
+						w.put_i64(tid4)
+						Session.send(OP_TOURN_CARRY, w.raw(), 2))
 		OP_GUILD_RESULT:
 			var d := Codec.decode(opcode, payload)
 			match int(d.code):
@@ -1772,6 +1846,8 @@ func _on_cancel_search() -> void:
 	# Cancel the kind of search actually running: classic ready-up (23101),
 	# the random quick-search (2303, empty) or the evolution queue (23001).
 	match _search_kind:
+		4:
+			_tourn_search(_tourn_search_tid)
 		2:
 			Session.send(OP_QUICK_CANCEL, PackedByteArray(), 2)
 		3:
@@ -3026,6 +3102,8 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_push_local_coach()
 		"teamManagementDialog", "evolutionDialog":
 			_push_team_model()
+			# the Tournaments / Legends tabs list the editions we are in
+			Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
 		"fighterEquipmentDialog":
 			_push_fequip_model()
 		"ladderInformationDialog":
@@ -3034,8 +3112,8 @@ func _on_gui_dialog_opened(name: String) -> void:
 		"cardBookDialog":
 			_push_cardbook_model()
 		"calendarDialog":
-			if _calendar_events.is_empty():
-				Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
+			# always: editions finish and repeat while the client is up
+			Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
 			# 28601: registration state + the search-period pushes (28630)
 			Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
 			_tourn_status = {}
@@ -3694,22 +3772,13 @@ func _push_calendar_model() -> void:
 	for day_i in range(1, dim + 1):
 		var evs: Array = []
 		for e in _calendar_events:
-			var ed := Time.get_datetime_dict_from_unix_time(
-				int(e.get("runs_until", 0)) / 1000)
-			if int(ed.year) == year and int(ed.month) == month \
-					and int(ed.day) == day_i:
-				var tid := int(e.get("tid", -1))
-				var row: Dictionary = _tourn_rows.get(tid, {})
-				evs.append({"title": str(e.get("name", "")),
-					"typeIcon": "",
-					"description": str(e.get("desc", "")),
-					"registrationButton": true,
-					"style": "", "id": tid,
-					# native Calendar (S18): what the tournament totem did
-					"registered": _registered_tids.has(tid),
-					"regOpen": int(row.get("reg_open", 1)) != 0,
-					"searchOpen": bool(_search_open.get(tid, false)),
-					"searching": _tourn_search_tid == tid})
+			if not _tourn_on_day(e, year, month, day_i):
+				continue
+			var tid := int(e.get("tid", -1))
+			var row: Dictionary = _tourn_rows.get(tid, {})
+			if row.is_empty():
+				continue   # a finished edition: the list no longer carries it
+			evs.append(_tourn_event_model(e, row))
 		cells.append({"day": str(day_i), "events": evs,
 			"hasMoreEventsToShow": evs.size() > 3, "style": ""})
 	model.set_value("calendar", {
@@ -3720,9 +3789,72 @@ func _push_calendar_model() -> void:
 			"tournamentEventFilter": true,
 			"maintenanceEventFilter": true,
 			"broadcastEventFilter": true},
-		"bracket": _tourn_bracket, "status": _tourn_status})
+		"bracket": _tourn_bracket, "status": _tourn_status,
+		# the player tournament form needs the "Création de Tournoi" card
+		"creationCards": int(State.inventory.get(807, 0)),
+		"year": year, "month": month})
 	model.set_value("itemOver", {})
 	model.set_value("itemSelected", {})
+
+
+## A tournament sits on the days its search periods start (S09: one per
+## round); a calendar entry without periods falls back to its expiry day.
+func _tourn_on_day(e: Dictionary, year: int, month: int, day: int) -> bool:
+	var stamps: Array = []
+	for ph in e.get("phases", []):
+		stamps.append(int(ph[0]))
+	if stamps.is_empty():
+		stamps.append(int(e.get("runs_until", 0)))
+	for ms in stamps:
+		var d := Time.get_datetime_dict_from_unix_time(_local_s(int(ms) / 1000))
+		if int(d.year) == year and int(d.month) == month and int(d.day) == day:
+			return true
+	return false
+
+
+## Unix seconds shifted to local wall time, for get_datetime_dict_from_unix_time
+## (which reads its argument as UTC).
+func _local_s(unix_s: int) -> int:
+	return unix_s + int(Time.get_time_zone_from_system().bias) * 60
+
+
+func _local_hm(ms: int) -> String:
+	var d := Time.get_datetime_dict_from_unix_time(_local_s(ms / 1000))
+	return "%02d/%02d %02d:%02d" % [int(d.day), int(d.month), int(d.hour), int(d.minute)]
+
+
+## One tournament for the Calendar's day detail (S09): what retail's
+## calendarTournamentDetailsDialog showed — kind, schedule, entry, prize.
+func _tourn_event_model(e: Dictionary, row: Dictionary) -> Dictionary:
+	var tid := int(e.get("tid", -1))
+	var def := int(row.get("def_id", 1))
+	var periods: Array = []
+	for ph in e.get("phases", []):
+		var end_d := Time.get_datetime_dict_from_unix_time(_local_s(int(ph[1]) / 1000))
+		periods.append("%s–%02d:%02d" % [_local_hm(int(ph[0])), int(end_d.hour), int(end_d.minute)])
+	var reg: Array = e.get("registration", [])
+	var entry := TournamentDefs.entry_card(def)
+	var reward := TournamentDefs.reward_card(def)
+	return {"title": str(e.get("name", "")),
+		"typeIcon": "",
+		"description": str(e.get("desc", "")),
+		"registrationButton": true,
+		"style": "", "id": tid,
+		# native Calendar (S18): what the tournament totem did
+		"registered": _registered_tids.has(tid),
+		"regOpen": int(row.get("reg_open", 1)) != 0,
+		"searchOpen": bool(_search_open.get(tid, false)),
+		"searching": _tourn_search_tid == tid,
+		# details (S09)
+		"kind": TournamentDefs.kind(def),
+		"rules": TournamentDefs.rules(def),
+		"periods": periods,
+		"regUntil": _local_hm(int(reg[0][1])) if not reg.is_empty() else "",
+		"organizer": str(row.get("organizer", "")),
+		"entryCard": entry,
+		"entryName": Cards.name_of(entry) if entry != 0 else "",
+		"entryOwned": int(State.inventory.get(entry, 0)) if entry != 0 else 0,
+		"rewardName": Cards.name_of(reward) if reward != 0 else ""}
 
 
 func _on_calendar_month(_a: Array, _w: GWidget, delta: int) -> void:
@@ -3762,7 +3894,9 @@ func _on_calendar_register(args: Array, w: GWidget) -> void:
 	wr.put_i64(tid)
 	wr.put_i64(State.my_coach_id)
 	wr.put_i16(-1)
-	wr.put_i32(0)
+	# a ticketed definition costs one of its card (aug.registerTournament):
+	# the panel asked first, the server takes it
+	wr.put_i32(TournamentDefs.entry_card(_tourn_def(tid)))
 	Session.send(OP_TOURN_REGISTER, wr.raw(), 2)
 
 
@@ -3792,19 +3926,101 @@ func _tourn_tree(tid: int) -> void:
 	Session.send(OP_TOURN_TREE_REQ, w.raw(), 2)
 
 
-## Opponent search → 28611 [i64 tid][i64 coach][i16 preset], arch 2 (retail
-## sends pseudo-preset 99 from the Tournois tab's Combattre); the same button
-## cancels a live one with 28609.
+## Opponent search → 28611 [i64 tid][i64 coach][i16 preset], arch 2, with
+## the preset the definition's team kind sends (TournamentDefs: the picked
+## team for classic, 99 / 10000 / 9999 otherwise); the same call cancels a
+## live one with 28609.
 func _tourn_search(tid: int) -> void:
+	if tid < 0:
+		return
 	var w := WireWriter.new()
 	w.put_i64(tid)
 	w.put_i64(State.my_coach_id)
-	w.put_i16(99)
+	w.put_i16(TournamentDefs.search_preset(_tourn_def(tid), _selected_preset_id()))
 	_tourn_search_pending = tid
 	if _tourn_search_tid == tid:
 		Session.send(OP_TOURN_CANCEL, w.raw(), 2)
 	else:
-		Session.send(28611, w.raw(), 2)
+		Session.send(OP_TOURN_SEARCH_START, w.raw(), 2)
+
+
+## The lobby's search bar goes down with a tournament search (28610, 28614,
+## 28616, 28648).
+func _end_tourn_search() -> void:
+	if _search_kind == 4:
+		_searching = false
+		_search_kind = 0
+		_set_searching(false)
+	_push_tourn_search_model()
+
+
+func _tourn_def(tid: int) -> int:
+	return int(_tourn_rows.get(tid, {}).get("def_id", 1))
+
+
+## The tournament's name, from the 28602 list (the 28618 / 28646 ids are
+## always ones it carries), else its number.
+func _tourn_name(tid: int) -> String:
+	var row: Dictionary = _tourn_rows.get(tid, {})
+	return str(row.get("name", "#%d" % tid))
+
+
+## tournamentSearch model, for the Team panel's Tournaments and Legends tabs:
+## the editions this coach is entered in, which tab each is searched from,
+## and whether its search period is open now. Retail selected the tournament
+## by clicking its alert row (agz_1); here the tab lists them.
+func _push_tourn_search_model() -> void:
+	if _gui == null:
+		return
+	var rows: Array = []
+	for tid in _tourn_rows:
+		if not _registered_tids.has(tid):
+			continue
+		var def := _tourn_def(tid)
+		rows.append({"id": tid, "name": _tourn_name(tid),
+			"tab": TournamentDefs.team_tab(def),
+			"kind": TournamentDefs.kind(def),
+			"open": bool(_search_open.get(tid, false)),
+			"searching": _tourn_search_tid == tid})
+	_gui.gui.model.set_value("tournamentSearch", {"rows": rows,
+		"searching": _tourn_search_tid})
+
+
+## The player tournament form (17010 aFu, S09): one or more daily search
+## periods from the picked day and hour. The "Création de Tournoi" card is
+## spent by the server; without it the server answers 25000 code 66.
+func _tourn_create(f: Dictionary) -> void:
+	var start := int(Time.get_unix_time_from_datetime_dict({
+		"year": int(f.year), "month": int(f.month), "day": int(f.day),
+		"hour": int(f.hour), "minute": 0, "second": 0}))
+	# the form's time is local; unix_time_from_datetime_dict reads it as UTC
+	start -= int(Time.get_time_zone_from_system().bias) * 60
+	var length := int(f.minutes) * 60
+	var w := WireWriter.new()
+	w.put_i32(0)
+	w.put_i16(0)                  # no custom fight rules
+	var now_ms := int(Time.get_unix_time_from_system() * 1000)
+	w.put_i64(now_ms)             # registration start
+	w.put_i64(start * 1000)       # registration end
+	var periods := clampi(int(f.periods), 1, 4)
+	w.put_i64((start + (periods - 1) * 86400 + length) * 1000)  # event end
+	w.put_u8(periods * 2)
+	for i in periods:
+		var s0 := start + i * 86400
+		w.put_i64(s0 * 1000)
+		w.put_i64((s0 + length) * 1000)
+	w.put_str(str(f.name), "u8", "utf8")
+	w.put_str(str(f.desc), "u16", "utf8")
+	w.put_u8(1)                   # definition 1, classic 1v1 (the dialog's default)
+	w.put_i64(0)                  # no repetition period
+	w.put_i32(0)
+	w.put_u8(0)                   # no pro leagues
+	Session.send(OP_TOURN_CREATE, w.raw(), 3)
+	_tourn_status = {"tid": -1, "ok": true, "text": I18n.t("tourn.created")}
+	_log_line(I18n.t("tourn.created"))
+	# the new row arrives with the next list
+	Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
+	Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
 
 
 ## --- achievementDialog --------------------------------------------------------
@@ -4842,6 +5058,9 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeTournSearch":
 			_tourn_search(int(args[0]))
+			return
+		"nativeTournCreate":
+			_tourn_create(args[0])
 			return
 		"nativeEquipOpen":
 			_open_equip()

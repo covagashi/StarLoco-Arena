@@ -88,9 +88,9 @@ qué el visual no puede correr en CI).
       más de 10 coaches clasificados el retail fallaría al abrir el ranking. Godot no
       tiene el problema. Arreglo: páginas de 10 para el retail, y `total` = tamaño de
       página (como el 27507 desde S09).
-- [ ] Inscripción a torneos: el cliente solo sabe que estás inscrito si lo hiciste en esta
-      sesión (ningún mensaje lo dice al entrar). Volver a pulsar "Inscribirme" es inocuo:
-      el servidor la guarda una vez. → [S09](./S09-tournaments.md) (bloques B y E).
+- [x] (2026-10-22, [S09](./S09-tournaments.md) bloque E: Godot lee el estado del 28602 al
+      entrar) Inscripción a torneos: el cliente solo sabe que estás inscrito si lo hiciste en esta
+      sesión (ningún mensaje lo dice al entrar).
 
 - [ ] **El color del muñeco** (por decidir con el dueño, viene de S18): con el muñeco en
       línea 1 bit, el pelo y la piel elegidos en la creación solo se ven en las muestras.

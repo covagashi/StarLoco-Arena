@@ -111,11 +111,11 @@ func _calendar() -> void:
 	bracket_btn.pressed.emit()
 	await _wait(func(): return _seen.has(28650), 3.0)
 	await create_timer(0.4).timeout
-	var table = panel.find_child("BracketTable%d" % tid, true, false)
+	var drawn = panel.find_child("Draw%d" % tid, true, false)
 	var empty = panel.find_child("BracketEmpty%d" % tid, true, false)
-	var rows: Array = _main._gui.gui.model.get_value("calendar").get("bracket", {}).get("rows", [])
-	_record(13, "bracket", _seen.has(28650) and (table != null or empty != null),
-		"28649 → 28650: %d seat(s) %s" % [rows.size(), rows.map(func(r): return r.name)])
+	var slots: Dictionary = _main._gui.gui.model.get_value("calendar").get("bracket", {}).get("slots", {})
+	_record(13, "bracket", _seen.has(28650) and (drawn is HBoxContainer or empty != null),
+		"28649 → 28650: %d seat(s) %s" % [slots.size(), slots.values()])
 	await _shot("cal-bracket")
 	var search: Button = panel.find_child("Search%d" % tid, true, false)
 	if search == null:

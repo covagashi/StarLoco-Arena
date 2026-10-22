@@ -1,6 +1,6 @@
 # S09 — Torneos completos
 
-**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-22 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (era M; ver "Punto de partida") · **Estado:** 🟡 abierto (2026-10-22)
+**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-22 · **Hito:** M3 — Paridad de contenido · **Tamaño:** L (era M; ver "Punto de partida") · **Estado:** 🟢 cerrado (2026-10-22)
 
 ## Objetivo
 
@@ -153,8 +153,7 @@ Pruebas (2026-10-22):
       189 (5 a 1 000; 5 a 20 000 los de puntos), así que ya se pueden
       conseguir. Probado de punta a punta el 182: cinco inscripciones por el
       4607 real y llega el 22000.
-- [ ] Inscripción visible al entrar (BACKLOG §1): el 28602 ya lleva el estado
-      por coach; falta que Godot lo use (bloque E).
+- [x] Inscripción visible al entrar (BACKLOG §1): hecho en Godot (bloque E).
 
 Pruebas (2026-10-22): `go test ./internal/game -run 'TournamentPoints|Finished|ByeWinner|PlayedFixture|RegistrationCounts|CarryOver|TournamentLadder|TournamentAchievements'`
 y `./internal/handshake -run TournamentPoints`. Suite completa verde en
@@ -221,44 +220,78 @@ que no corrió SQLite). Las versiones son más viejas que las de AGENTS.md
 
 ## E. Cliente Godot
 
-- [ ] **Bug**: el 28614 lee `d.f0`, pero el campo decodificado es
-      `tournament_id` (`main.gd:1176`, `message_defs.gd:332`).
-- [ ] **Lista de alertas nativa** (el `zN`/`iz_1` del retail): 28620 (con
-      "¿mirar?"), 28630, 28644, 28646, 28648; deduplica por id de torneo, y
-      al pulsarla elige el torneo y abre el equipo en la pestaña que toca
-      (evolución, Torneos con solo los presets permitidos, Leyendas), como
-      `agz_1.java:44-72`.
-- [ ] **Buscar rival** desde las pestañas Torneos (28611 con el preset) y
-      Leyendas (9999), con un aviso nativo de "buscando… Cancelar" que se
-      cierra con 28610/28614/28648 (el `tournamentsSearchStatusDialog`).
-- [ ] **Calendario**: detalles del torneo (ilustración, horario, nivel,
-      reglas, premios, carta de entrada) y el filtro por tipo de evento
-      (difusión / torneo / mantenimiento), los dos solo de cliente como en el
-      retail (`aug.java:106-148`). La inscripción pide la carta de entrada
-      cuando la definición la exige (hoy manda preset -1 y no mira nada).
-- [ ] **Cuadro** con rondas (primera, cuartos, semis, final, ganador),
-      paginado y búsqueda por nombre (28649 página + nombre), marcando al
-      coach propio. Hoy es una tabla plana.
-- [ ] Inscripción visible al entrar, desde el 28602 (ver B).
-- [ ] Si se hace C: formulario nativo de torneo de jugador.
+- [x] **Bug del 28614** (2026-10-22): leía `d.f0`; ahora `tournament_id`.
+- [x] **Inscripción visible al entrar** (BACKLOG §1): el cliente pide el 28601
+      al llegar al lobby y al abrir el Equipo o el Calendario, y marca como
+      inscritos los torneos cuyo estado en el 28602 no es -128. Las ediciones
+      terminadas desaparecen porque la lista se rehace entera.
+- [x] **Avisos**: el 28646 (periodo abierto), el 28644 (abre en N min) y el
+      28648 (ganas o pierdes por incomparecencia) salen como aviso y en el
+      chat; el 28618 sale como pregunta nativa (`askDialog`) y el "sí" manda
+      el 28617; la final (28620) pregunta "¿quieres mirarla?" y el "sí" la
+      sigue como espectador, como el `/watch`. **Diferencia con el retail,
+      a propósito:** no hay lista de alertas aparte; elegir torneo, que en el
+      retail era pulsar su alerta (`agz_1`), se hace en el propio panel de
+      Equipo (abajo), que ya es donde se busca rival.
+- [x] **Buscar rival** desde Equipo → Torneos y → Leyendas: un desplegable
+      con los torneos en los que estás inscrito de ese tipo (los de
+      evolución y cementerio salen en Torneos, con un aviso de que se juegan
+      con los titulares), con la búsqueda abierta primero, y "Buscar rival
+      del torneo" manda el 28611 con el preset que toca
+      (`TournamentDefs.search_preset`: el equipo elegido, 99, 10000 o 9999).
+      La búsqueda usa la barra "buscando… Cancelar" del lobby, como las
+      demás (tipo 4); se cierra con 28610, 28614, 28616 o 28648, y su
+      cancelar manda el 28609.
+- [x] **Calendario**: cada torneo sale en los días de sus periodos (el
+      servidor manda ya todos en el 17003, y la inscripción acaba en el
+      primero; antes salía en el día de "caducidad", una semana después), y
+      el detalle dice tipo, reglas, organizador, periodos, hasta cuándo hay
+      inscripción, carta de entrada (con cuántas tienes) y premio. Con carta
+      de entrada, la confirmación dice cuál se gasta y el botón se apaga si
+      no la tienes; el 4607 la manda. **Descartado el filtro por tipo de
+      evento**: el servidor solo manda torneos (no hay difusiones ni
+      mantenimientos), así que no filtraría nada.
+- [x] **Cuadro por rondas**: primera, cuartos, semis, final y ganador, en
+      columnas, solo las rondas a las que ha llegado alguien, con tu nombre
+      marcado. **Descartados la paginación y la búsqueda por nombre**: el
+      cuadro tiene 16 plazas y la página 0 ya lo trae entero.
+- [x] **Crear torneo** (bloque C): botón en el Calendario con las cartas 807
+      que tienes, y formulario con nombre, descripción, día, hora, duración de
+      cada búsqueda (30 min a 4 h) y días seguidos (1 a 4). Manda el 17010 con
+      la definición 1, como el diálogo retail.
+- Las definiciones (tipo, carta de entrada, premio, reglas) van en una tabla
+  pequeña, `src/gamedata/tournament_defs.gd`, copiada del catálogo del
+  servidor: la exportación de assets no lleva el tipo 1000 y son 22 registros.
+
+Pruebas (2026-10-22): `godot -s test/tournaments_smoke.gd` contra un servidor
+real con una copia de `arena.db` sembrada (el script de siembra está en el
+devlog del bloque E): **10/10** — la pregunta de arrastre y el "sí", el
+torneo en su día con sus periodos, el cuadro por rondas, el desplegable de
+Torneos, buscar (28612, la barra del lobby) y cancelar (28610), un periodo
+que se abre durante la sesión (28646) y crear un torneo desde el formulario
+(listado con organizador "test"). Capturas revisadas: Calendario con detalles,
+pestaña Torneos, formulario y la pregunta de arrastre. `run_tests.sh
+--headless` 261/261. **No probado en vivo**: la pregunta de la final (28620)
+y la partida de torneo con dos clientes Godot (ver el criterio de cierre).
+`totems_smoke.gd` se adaptó al cuadro nuevo, pero no se ha vuelto a correr
+(necesita su propia siembra: clan sin demonio y cartas).
 
 ### Los 10 diálogos `tournament*` del retail
 
-El esbozo decía 8; son 10. Ninguno se ve en Godot (S18). Cada uno se cubre con
-un panel nativo o se descarta aquí:
+Ninguno se ve en Godot (S18). Cómo queda cada uno:
 
 | Diálogo retail | Destino |
 |---|---|
-| `tournamentListDialog` | descartar: no lo abre nadie en la 2.70 (no está en `oh_2`); su papel es la vista del día del calendario |
-| `tournamentDetailsDialog` | descartar: constante `oh_2.Sz` que nadie abre; lo sustituyó `calendarTournamentDetailsDialog` → detalles del calendario |
-| `tournamentTreeDialog` | cuadro nativo (E) |
-| `tournamentsSearchStatusDialog` | aviso "buscando… Cancelar" (E) |
-| `tournamentEvolutionDialog` | panel de equipo en modo torneo, pestaña Evolución (E) |
-| `tournamentGraveyardDialog` | sección de caídos del panel de equipo en modo torneo (E) |
-| `tournamentTeamManagementDialog` | pestaña Torneos del panel de equipo (E) |
-| `tournamentInformationDialog` | descartar: vista de depuración |
-| `tournamentCreationDialog` | formulario de torneo de jugador, solo si se hace C |
-| `tournamentAdminCreationDialog` | descartar en el cliente: lo cubre la consola web (A) |
+| `tournamentListDialog` | descartado: no lo abre nadie en la 2.70 (no está en `oh_2`); su papel es la vista del día del Calendario |
+| `tournamentDetailsDialog` | descartado: constante `oh_2.Sz` que nadie abre; lo sustituyó `calendarTournamentDetailsDialog` → detalle del Calendario (hecho) |
+| `tournamentTreeDialog` | hecho: cuadro por rondas en el Calendario |
+| `tournamentsSearchStatusDialog` | hecho: la barra "buscando… Cancelar" del lobby |
+| `tournamentEvolutionDialog` | hecho: Equipo → Torneos con un torneo de evolución (juega los titulares, preset 99) |
+| `tournamentGraveyardDialog` | hecho: igual, con preset 10000; los caídos se ven en la sección de caídos de la pestaña Evolución (S18) |
+| `tournamentTeamManagementDialog` | hecho: Equipo → Torneos, con el selector de equipo de siempre |
+| `tournamentInformationDialog` | descartado: vista de depuración |
+| `tournamentCreationDialog` | hecho: formulario "Crear torneo" del Calendario |
+| `tournamentAdminCreationDialog` | descartado en el cliente: lo cubre la consola web (A) |
 
 ## Decisiones
 
@@ -283,3 +316,54 @@ cuadro, detalles). Pruebas: e2e del ciclo completo con reloj falso (programado
 → periodo → partidas → forfeit → terminado → 28618 al siguiente login) en los
 tres dialectos, más una partida en vivo con dos clientes Godot. Los 10
 diálogos `tournament*`, cubiertos o descartados en la tabla de arriba.
+
+## Resultado
+
+Cerrado el 2026-10-22, en una sola tanda (bloques A a E), con las decisiones
+delegadas por el dueño.
+
+**El criterio se cumple:** un torneo programado se abre, se juega y se cierra
+sin tocar nada, y el cliente Godot lo muestra entero.
+
+- **Partida en vivo** (`godot -s test/tournament_fight_smoke.gd`, servidor
+  real sobre una copia de `arena.db` con la "Copa Final" sembrada: periodo
+  abierto, `test` y `test2` inscritos): Godot busca desde Equipo → Torneos
+  (28611 → 28612, barra del lobby), el segundo cliente busca en el mismo
+  torneo, el servidor los empareja (`tournament match paired`, 28614 a los
+  dos, la finale anunciada), se juega, `test` se rinde, `tournament bracket
+  advanced winner=2 slot=1`, y el planificador, 5 s después, `tournament
+  finished winner=2`. En la base: edición terminada con ganador 2; puntos 20
+  (`test2`) y 1 (`test`); estadísticas 183 = 20 / 1, 187, 188 y 190 = 1 para
+  `test2`. El segundo cliente es un cliente de red sin interfaz (el patrón de
+  `pvp_smoke`), no un segundo Godot: la máquina se comparte y la norma es
+  un solo Godot a la vez.
+- **Ciclo completo con reloj falso**, sin cliente: `go test ./internal/game`
+  (bloques A y B), verde en SQLite, y en Postgres 12 y MariaDB 10.3 (en
+  `oracle-1`).
+- **Godot**: `tournaments_smoke.gd` 10/10 y `run_tests.sh --headless` 261/261.
+
+**Lo que no se hizo, y por qué:**
+
+- **2411** (récord por preset): al BACKLOG §1 (bloque D).
+- **Reglas de las definiciones y reglas personalizadas** de los torneos de
+  jugador: no se aplican en combate. Ya era así antes de S09 y no lo pedía el
+  sprint. Queda escrito en el log de cada creación y aquí.
+- **Filtro de eventos, paginación del cuadro y búsqueda por nombre**:
+  descartados con su motivo en el bloque E.
+- **Sin probar en vivo**: la pregunta "¿mirar la final?" (28620), que necesita
+  a un tercer coach mirando una final ajena; la pestaña Leyendas con un torneo
+  legendario (definición 24; el servidor la prueba con las definiciones
+  reales en `TestTournamentTeamKind`, la pestaña de Godot es la misma que la
+  de Torneos con otro filtro); y `totems_smoke.gd` adaptado al cuadro nuevo,
+  que necesita su propia siembra.
+- **Nadie da las cartas 16, 807 ni 808** en los datos 2.70; `/GIVECARD` es la
+  fuente hasta que el dueño decida otra (premios de temporada, BACKLOG §11).
+- Los torneos sin horario (los tres de serie) siguen como antes, siempre
+  abiertos y sin final, y el calendario les inventa un periodo de una hora,
+  que el detalle de Godot enseña tal cual. Para jugar de verdad hay que darles
+  horario en la consola.
+
+**Revisión de los esbozos de detrás:** S10 (tutorial) pasa a siguiente sin
+cambios de alcance; nada de S09 lo toca. Las temporadas (BACKLOG §11) siguen
+fuera; si se hacen, el sitio natural es encima de las ediciones repetidas
+(`RepeatDays`, `PreviousID`) y de los puntos por periodo de la clasificación.

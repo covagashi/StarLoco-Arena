@@ -695,25 +695,20 @@ func writeTournamentEvent(w *protocol.Writer, t *domain.Tournament, now time.Tim
 	startedMs := now.Add(-time.Hour).UnixMilli()      // event has already started (extraDate / bOF)
 	expireMs := now.Add(tournamentWindow).UnixMilli() // event runs until (startDate slot / OV)
 
-	// The phase pair is the opponent-search window. When the tournament has a real
-	// schedule this is it; otherwise fall back to the window this used to invent
-	// unconditionally, so rows created before the schedule existed still render.
-	phaseStartMs := now.Add(time.Hour).UnixMilli()
-	phaseEndMs := now.Add(2 * time.Hour).UnixMilli()
+	// The phase pairs are the opponent-search windows. A scheduled edition
+	// sends every period (the native calendar places the tournament on those
+	// days and lists them) and closes registration at the first one;
+	// otherwise this falls back to the window that used to be invented
+	// unconditionally, so rows without a schedule still render.
+	phases := [][2]int64{{now.Add(time.Hour).UnixMilli(), now.Add(2 * time.Hour).UnixMilli()}}
+	regEndMs := expireMs
 	if t.Scheduled() {
-		// The period under way, else the next one, else the last.
-		i := t.OpenPeriodAt(now)
-		if i < 0 {
-			i = t.PeriodCount() - 1
-			for j := 0; j < t.PeriodCount(); j++ {
-				if start, _ := t.Period(j); start.After(now) {
-					i = j
-					break
-				}
-			}
+		phases = phases[:0]
+		for i := 0; i < t.PeriodCount(); i++ {
+			start, end := t.Period(i)
+			phases = append(phases, [2]int64{start.UnixMilli(), end.UnixMilli()})
 		}
-		start, end := t.Period(i)
-		phaseStartMs, phaseEndMs = start.UnixMilli(), end.UnixMilli()
+		regEndMs = t.SearchPeriodStart.UnixMilli()
 	}
 
 	w.I32(tournamentContentTypeID) // [i32 typeId] -> qr_0
@@ -733,8 +728,11 @@ func writeTournamentEvent(w *protocol.Writer, t *domain.Tournament, now time.Tim
 	w.StringU8(t.Name)
 	w.StringU16(t.Description)
 	w.StringU8(t.Short)
-	w.U8(1).I64(phaseStartMs).I64(phaseEndMs) // one schedule (phase) pair (display only)
-	w.U8(1).I64(startedMs).I64(expireMs)      // one registration-period pair (>=1 required)
+	w.U8(uint8(len(phases))) // schedule (phase) pairs
+	for _, p := range phases {
+		w.I64(p[0]).I64(p[1])
+	}
+	w.U8(1).I64(startedMs).I64(regEndMs) // one registration-period pair (>=1 required)
 }
 
 // buildTournamentList builds TOURNAMENT_LIST (28602 ng_2): the registerable

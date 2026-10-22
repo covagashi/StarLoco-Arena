@@ -1064,7 +1064,8 @@ static func _ladder_pro(r: WireReader) -> Dictionary:
 ## Opcode 17003 — TournamentCalendar (server writeTournamentEvent):
 ## [i16 n]{[i32 typeId=4][i64 eventId][i64 start][i64 end][i64 recur]
 ## [i32 label][i64 extra][i64 tid][u8 name][u16 desc][u8 short]
-## [u8 nPhases]{i64,i64}[u8 nReg]{i64,i64}}.
+## [u8 nPhases]{i64,i64}[u8 nReg]{i64,i64}} — kept as e.phases and
+## e.registration, [start_ms, end_ms] each.
 static func _tournament_calendar(r: WireReader) -> Dictionary:
 	var out := {"events": []}
 	for i in r.get_i16():
@@ -1078,12 +1079,14 @@ static func _tournament_calendar(r: WireReader) -> Dictionary:
 		e.name = r.get_str("u8")
 		e.desc = r.get_str("u16")
 		e.short = r.get_str("u8")
+		# the search periods (one per round on a scheduled edition, S09)
+		# and the registration window, as [start_ms, end_ms] pairs
+		e.phases = []
 		for j in r.get_u8():
-			r.get_i64()
-			r.get_i64()
+			e.phases.append([r.get_i64(), r.get_i64()])
+		e.registration = []
 		for j in r.get_u8():
-			r.get_i64()
-			r.get_i64()
+			e.registration.append([r.get_i64(), r.get_i64()])
 		out.events.append(e)
 	return out
 

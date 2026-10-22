@@ -51,3 +51,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-22 | [S09, bloque A: torneos con horario que empiezan y terminan](./2026-10-22-s09-bloque-a.md) |
 | 2026-10-22 | [S09, bloque B: arrastre, puntos, clasificación y logros](./2026-10-22-s09-bloque-b.md) |
 | 2026-10-22 | [S09, bloque C: torneos de jugador y cartas de entrada](./2026-10-22-s09-bloque-c.md) |
+| 2026-10-22 | [S09, bloque E y cierre: los torneos en Godot](./2026-10-22-s09-bloque-e.md) |
