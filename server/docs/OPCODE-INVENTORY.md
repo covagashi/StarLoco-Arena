@@ -117,11 +117,11 @@ if this block drifts.
 | Bucket | Count |
 |---|---|
 | Rows in the master table | 347 |
-| **C2S handled (H)** | 111 |
-| **S2C emitted (E)** | 153 |
-| **Inactive (I)** | 6 |
+| **C2S handled (H)** | 112 |
+| **S2C emitted (E)** | 154 |
+| **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
-| **Not implemented (-)** | 73 |
+| **Not implemented (-)** | 72 |
 
 A `both | H+E` row counts once on each side; there is none today. The handled
 count also equals the opcodes `RegisterAll` binds (the tests above check both
@@ -258,7 +258,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 3206 | S2C | E | MalformedCommand (`amd_1`) | EMPTY payload. Sent for a bare `/` and for an **unrecognised slash-command** - the latter replaced an invented English string (B-140). Renders translated: *"Ungultiger Befehl"* in the German client, verified live |
 | 3208 | S2C | - | MemberNotFoundMessage (ez_2) | error class, unused |
 | 3210 | S2C | E | NotEnoughPrivilegesMessage (`lx_0`) | EMPTY payload. Sent when a non-admin issues a `/` command; replaces an invented, untranslated English string |
-| 3212 | S2C | I | NotYetImplementedMessage (`adm_0`) | EMPTY payload; constant + the `sendChatError` helper exist, no call site yet. Shows *"error.chat.notYetImplemented"* |
+| 3212 | S2C | E | NotYetImplementedMessage (`adm_0`) | EMPTY payload. Shows *"error.chat.notYetImplemented"* ("Todavía no está operativo"). Sent (S19) as the answer to 22093, the one player action the server deliberately leaves unmodelled where the client shows nothing of its own |
 | 3214 | S2C | E | TargetIsYourselfMessage (as_0) | EMPTY payload - `om_0` ignores the body and shows *"error.chat.targetIsYourself"*. Sent when a coach whispers ITSELF; before this the whisper was relayed straight back and the player saw no explanation. Emitted via `sendChatError` |
 | 3216 | S2C | E | OperationNotPermited (`avs`) | EMPTY payload. The i18n string names the real trigger: *"Ta liste d'amis ou de personnes ignorees est peut-etre **pleine**"* - it is the **social-list-full** refusal, NOT a generic permission error. Sent when a friend/ignore add would exceed `maxSocialListEntries` (B-133) |
 
@@ -432,7 +432,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 22003 | C2S | H | StatisticUpdate (nq) | `handleStatisticUpdate` � the client self-reports criteria 210/218/221/229/39 here; echoed back via 2052 |
 | 22004 | C2S | - | (`axH`) | `[i64 coachId]` - **abuse-report support frame**: the `chat.reportIncorrectBehaviour` context action (`gy_1`/`qq_2`) sends AddIgnore(3131) + this. Deliberate non-work: moderation/report pipeline does not exist server-side |
 | 22092 | S2C | - | (`axA`) | `[i64 actorId][i16 flag]` -> `aez_0.cm()`: the flag rendered as `<text 56/57>` in the actor hover tooltip (`bu_2`, only when !=0). The same field already rides inside the coach spawn blob's own decode (`aez_0` line ~474). Deliberate non-work: no server-side source for the flag exists - pushing it would be inventing a status policy |
-| 22093 | C2S | - | (`Tx`) | `[i32 cardId]` - **use a title card** (type 28 `aMK.dYC` "Titre": `aBC` sends UI event 16443, `agn_0` builds `Tx`). 12 shipped cards ("Trainer", "Sweet Breaker", "No title"…). Deliberate non-work: nothing in the 2.70 client ever displays a coach title, so its effect lived outside the client |
+| 22093 | C2S | H | UseTitleCard (`Tx`) | `[i32 cardId]` - **use a title card** (type 28 `aMK.dYC` "Titre": `aBC` sends UI event 16443, `agn_0` builds `Tx`). 12 shipped cards ("Trainer", "Sweet Breaker", "No title"…). Nothing in the 2.70 client ever displays a coach title, so its effect lived outside the client; since S19 the server answers 3212 "Todavía no está operativo" instead of staying silent |
 | 22094 | S2C | E | FireworkShow (la_1) | echoed to launcher + `SessionsNear` |
 | 22095 | C2S | H | FireworkLaunch (axf_0) | `handleFireworkLaunch` |
 | 22097 | C2S | - | (`OB`) | `[i32]` - **cross-game card transfer** (`agn_0` case 16442): the client locally toasts `coachInventory.otherGameCardSent`. Deliberate non-work: account-link transfer to another Ankama game cannot exist here |
@@ -547,8 +547,8 @@ Coverage today: see [Summary counts](#summary-counts). Of the unimplemented rows
 
 1. ~~Chat errors (`om_0`, 3206/3210/3216)~~ - **all four already emitted** (3206
    malformed `/` cmd, 3210 non-admin `/`, 3214 self-whisper, 3216 social-list-full),
-   plus 3204 for unknown names. Only 3212 (`notYetImplemented`) still has no call
-   site, marked `I` deliberately.
+   plus 3204 for unknown names. 3212 (`notYetImplemented`) followed in S19 as the
+   answer to a title card (22093).
 2. ~~8122 buff detach (`of_1`)~~ - **checked, unusable**: the buff id IS the
    client-local `ahT()` counter (`bWC++`; the `aes_2` provider `bWD` has no caller
    anywhere), and 8121 carries no id field, so the wire cannot name a buff.
@@ -735,7 +735,7 @@ chunk of work: one handler class, one feature area.
 
 | Family | Consumer | Opcodes | Notes |
 |---|---|---|---|
-| Social / friends | `om_0` | ~~2070~~, ~~3206~~, ~~3210~~, 3212, ~~3214~~, ~~3216~~ | **CORRECTED** - this was listed as 13 opcodes. On reading the case bodies, **3128/3130/3132/3134/3136/3138/3142 are decode-and-discard**: each casts the message and `return false`, exactly the empty-body trap this document warns about, so sending them does nothing. 2070/3206/3210/3214/3216 all emit today (announce, malformed command, rights, self-whisper, list-full); only 3212 stays silent deliberately. |
+| Social / friends | `om_0` | ~~2070~~, ~~3206~~, ~~3210~~, ~~3212~~, ~~3214~~, ~~3216~~ | **CORRECTED** - this was listed as 13 opcodes. On reading the case bodies, **3128/3130/3132/3134/3136/3138/3142 are decode-and-discard**: each casts the message and `return false`, exactly the empty-body trap this document warns about, so sending them does nothing. 2070/3206/3210/3214/3216 all emit today (announce, malformed command, rights, self-whisper, list-full), and 3212 since S19 (the answer to a title card, 22093). |
 | Fight | `of_1` | 4900, 4901, ~~4902~~, ~~8122~~, ~~8250~~ | `of_1` is the in-fight handler (8120/8121 live here). **4902 DONE** (ouch bubble). **8122 resolved**: proven unusable - buff ids are the client-local `bWC++` counter, the wire cannot address an instance (deliberate non-work). 4900/4901 feed a client-side recorder queue nothing visible reads. **8250 DONE** (S19): the turn-duration penalty, its policy read off the client's own text and timer. |
 | Team presets / fighters | `dx_2` | ~~6014~~, 6032 | **6020, 6022, 6029 DONE** (B-131/B-130/B-132); **6014 DONE** - `sendFighterAssignedTeam` acks applied assigns/removes (echo + `aCG`, -1 sentinel on pure removes; the feared re-key branch is a no-op because we never re-id). **6032** stays a feature gap - no coach-condition source exists. **6020** `aic_0` - on status 0, REPLACES the preset in the list (remove + re-add a copy): an update-ack carrying the new preset. **6022** `agH` - on status 0, closes `fighterEquipmentDialog` and clears `teamManagement.selectedCard`: the ack that dismisses the loadout editor. **6029** `OJ` - shows *"error.teamManagement.coachDisconnected"*. **6032** `gd_0` - applies `kh()` to the local coach. Before implementing 6022, check whether the 6012 reply we already send after 6011 (`sendFighterInventoryResult`) is what dismisses the dialog - if it is, 6022 belongs to the team-management editor rather than the inventory path, and the two must not both fire. |
 | Challenge / duel | `ft_1` | ~~23112~~, 2307, 2309, 4309, 26312, 26314 | **23112 DONE** - `sendMatchCancelled` now emits it (was a 23116 the client cannot decode). 2307/2309 are the bet-carrying variant pair - we announce via 23110; the 2308 answer is already handled. 26312/26314 are the X-vs-X pair; 26313's C2S half is Test-Lua-only (item 33), so confirm reachability before building these. |

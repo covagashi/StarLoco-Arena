@@ -93,7 +93,13 @@ static func _coach_info(r: WireReader) -> Dictionary:
 	out.card_inv_blob = r.get_bytes(r.get_u16())
 	out.equip_blob = r.get_bytes(r.get_u16())
 	out.criteria_blob = r.get_bytes(r.get_u16())
+	# 0x8: [u8 n]{u8 ladderType, i16 strength} (aez_0.X); type 1 is the 1v1
+	# force the retail lobby shows (B-186).
 	out.ladder_count = r.get_u8()
+	out.ladders = {}
+	for _i in out.ladder_count:
+		var kind := r.get_u8()
+		out.ladders[kind] = r.get_i16()
 	out.admin_right = r.get_i32()
 	return out
 

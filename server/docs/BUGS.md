@@ -13,6 +13,21 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-186 · The retail lobby showed every coach unranked until its first fight
+
+- **Symptom:** the retail client's lobby level, rank and "Fuerza : N (+d)" line
+  read as unranked at every login, whatever the coach's ladder force; they only
+  came right after a fight ended (8300 carries the strengths).
+- **Root cause:** the client reads those from `aez_0.bi((byte)1)`, filled only by
+  the 2052 LocalCoach's 0x8 blob (`aez_0.X`: `[u8 n]{u8 ladderType, i16
+  strength}`), and the server always sent `n = 0`. The Godot client hid it: it
+  shows the evolution level (standing) and its decoder read only the count.
+- **Fix:** 2052 carries `{1, strength}` for a ranked coach (`handshake.Coach.
+  Strength`); the Godot decoder reads the entries into `ladders`.
+- **Verified:** `unit` — `TestCoachInformationsCarriesLadderStrength`;
+  `client-unit` — `coach_info_test.gd` (adminRight still lines up); `client-ui` —
+  `login_smoke` and `fight_smoke` with the ranked coach `test` (force 1000).
+
 ### B-185 · Bruma and Bruma mortal stayed on the board for the rest of the fight
 
 - **Symptom:** the Sram's Bruma (spell 153, template 2) and Bruma mortal

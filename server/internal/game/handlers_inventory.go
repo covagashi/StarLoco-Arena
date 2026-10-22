@@ -12,6 +12,18 @@ func registerInventoryHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpCoachInventoryUpdateRequest, handleInventoryRequest)
 	r.Register(protocol.OpCoachEquipmentUpdateRequest, handleEquipmentRequest)
 	r.Register(protocol.OpAddToTome, handleAddToTome)
+	r.Register(protocol.OpUseTitleCard, handleUseTitleCard)
+}
+
+// handleUseTitleCard answers 22093 (use a title card, type 28) with 3212
+// "Todavía no está operativo". Nothing in the 2.70 client ever shows a coach
+// title, so what a title did lived outside it; until it is modelled the
+// player is told so instead of the click doing nothing (S19).
+func handleUseTitleCard(s *Session, _ *protocol.C2SFrame) error {
+	if s.Coach == nil {
+		return nil
+	}
+	return s.sendChatError(protocol.OpChatErrNotImplemented)
 }
 
 // grantStarterCards gives a brand-new coach a handful of cards so the inventory

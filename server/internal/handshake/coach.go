@@ -85,7 +85,17 @@ type Coach struct {
 	// emitted in the 0x80 blob. It gates the card-based achievements and the
 	// client's "new card" highlighting. May be nil.
 	Tome []int32
+
+	// Strength is the 1v1 ladder force (0 = unranked), emitted in the 0x8
+	// blob as ladder type 1. The client reads its lobby level, rank and
+	// "Fuerza" line from there (aez_0.bi((byte)1) → aet_0.nH), and nowhere
+	// else until a fight ends, so an empty blob showed every coach unranked
+	// at login (B-186).
+	Strength int32
 }
+
+// ladderType1v1 is the 0x8 blob's key for the 1v1 ladder (aez_0.bi((byte)1)).
+const ladderType1v1 uint8 = 1
 
 // Criterion is one achievement-criterion key/value pair (the client's or_0 enum
 // id and its counter). Values are booleans-as-1 for completion flags.
@@ -281,8 +291,15 @@ func EncodeCoachInformations(c Coach) ([]byte, error) {
 	// invisible to it. buildCriteriaBlob owns the length prefix; see its comment.
 	w.Raw(buildCriteriaBlob(c.Criteria))
 
-	// 0x8: ladder-strength count (u8, not a length) = 0
-	w.U8(0)
+	// 0x8: ladder strengths, [u8 count]{u8 ladderType, i16 strength}
+	// (aez_0.X). Only the 1v1 ladder exists; an unranked coach sends none.
+	if c.Strength > 0 {
+		w.U8(1)
+		w.U8(ladderType1v1)
+		w.U16(uint16(int16(c.Strength)))
+	} else {
+		w.U8(0)
+	}
 
 	// 0x800: adminRight
 	w.I32(0) // dBi

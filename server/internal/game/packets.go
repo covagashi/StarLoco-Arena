@@ -23,6 +23,7 @@ func buildCoachInformation(c *domain.Coach, tome []int32, guild *handshake.Guild
 		SkinColor: c.Skin,
 		Sex:       c.Sex,
 		Standing:  c.Standing,
+		Strength:  c.Strength,
 		Criteria:  coachCriteria(c),
 		Tome:      tome,
 		Guild:     guild,

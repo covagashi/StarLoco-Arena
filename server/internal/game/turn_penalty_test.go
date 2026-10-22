@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
 
@@ -108,5 +109,22 @@ func TestIdleTurnsThroughTheClock(t *testing.T) {
 			t.Fatal("the idle coach's turns were never reduced")
 		}
 		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// 22093 (use a title card) is answered 3212 "Todavía no está operativo".
+func TestTitleCardIsAnsweredNotYetImplemented(t *testing.T) {
+	s := &Session{log: testLogger(), out: make(chan []byte, 4), quit: make(chan struct{}),
+		Coach: &domain.Coach{ID: 1}}
+	if err := handleUseTitleCard(s, &protocol.C2SFrame{Payload: []byte{0, 0, 0, 207}}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case fr := <-s.out:
+		if op := int(fr[2])<<8 | int(fr[3]); op != protocol.OpChatErrNotImplemented || len(fr) != 4 {
+			t.Errorf("answer = opcode %d, %d bytes; want an empty 3212", op, len(fr))
+		}
+	default:
+		t.Error("no answer to 22093")
 	}
 }

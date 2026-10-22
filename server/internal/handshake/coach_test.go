@@ -70,3 +70,26 @@ func TestCoachInformationsCarriesStanding(t *testing.T) {
 		t.Errorf("standing on the wire = %#x, want %#x", got, want)
 	}
 }
+
+// B-186: the 0x8 blob carries the 1v1 force as ladder type 1, the one place
+// the client's lobby reads it from (aez_0.X → bi((byte)1)). It sits right
+// before the trailing i32 adminRight.
+func TestCoachInformationsCarriesLadderStrength(t *testing.T) {
+	tail := func(c Coach) []byte {
+		frame, err := EncodeCoachInformations(c)
+		if err != nil {
+			t.Fatalf("encode: %v", err)
+		}
+		p := frame[4:]
+		return p[len(p)-4-4 : len(p)-4] // the 4 bytes before adminRight
+	}
+	ranked := tail(Coach{ID: 1, Name: "X", Strength: 1500})
+	if want := []byte{1, ladderType1v1, 0x05, 0xDC}; string(ranked) != string(want) {
+		t.Errorf("ranked 0x8 blob = %x, want %x", ranked, want)
+	}
+	frame, _ := EncodeCoachInformations(Coach{ID: 1, Name: "X"})
+	p := frame[4:]
+	if p[len(p)-5] != 0 {
+		t.Errorf("an unranked coach sent %d ladder entries, want 0", p[len(p)-5])
+	}
+}

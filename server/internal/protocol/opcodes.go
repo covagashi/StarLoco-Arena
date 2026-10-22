@@ -77,11 +77,12 @@ const (
 	OpPlayerStatisticsReport = 2400 // S2C: [u16 blobLen][stats field-map blob]
 
 	// Inventory / equipment
-	OpCoachInventoryUpdate        = 5200 // S2C: 4 sections (addEquip, removeShort, updInv, ints)
-	OpCoachEquipmentUpdateRequest = 5201 // C2S: 14×i32 slot references
-	OpCoachInventoryUpdateRequest = 5203 // C2S: [u16 count]+i64 uids — cards REMOVED from the inventory (client fh_0/sj_1.yG); the uids are client-local (eb_1 assigns uq_1.ahR()), so they cannot be resolved server-side
-	OpAddToTome                   = 5204 // C2S ajm_2: [i32 templateId] — the card context-menu "inscribe in grimoire"; the client marks isInTome locally, no reply expected
-	OpCoachEquipmentUpdate        = 5202 // S2C: broadcast equipment change
+	OpCoachInventoryUpdate        = 5200  // S2C: 4 sections (addEquip, removeShort, updInv, ints)
+	OpCoachEquipmentUpdateRequest = 5201  // C2S: 14×i32 slot references
+	OpCoachInventoryUpdateRequest = 5203  // C2S: [u16 count]+i64 uids — cards REMOVED from the inventory (client fh_0/sj_1.yG); the uids are client-local (eb_1 assigns uq_1.ahR()), so they cannot be resolved server-side
+	OpAddToTome                   = 5204  // C2S ajm_2: [i32 templateId] — the card context-menu "inscribe in grimoire"; the client marks isInTome locally, no reply expected
+	OpUseTitleCard                = 22093 // C2S Tx: [i32 cardId] — answered 3212, titles are not modelled
+	OpCoachEquipmentUpdate        = 5202  // S2C: broadcast equipment change
 
 	// Shop / economy (Card Master token purchase + wallet)
 	OpWalletUpdate  = 4001 // S2C: [i8 count]{i8 currencyType, i32 amount} full wallet sync

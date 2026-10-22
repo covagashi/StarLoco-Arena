@@ -142,10 +142,34 @@ antes de escribir código.
       (la secuencia y los dos 8250), `TestIdleTurnsThroughTheClock` (por el
       reloj real), `fight_smoke` en vivo (`[2, 2, 6, 1]`).
 
-Los demás, sin tocar todavía: 4800 RunScript, 4106 (recolocación en lote),
-2307/2309 (variante con apuesta) y apuestas sobre la victoria, 3212 (sin
-llamada). El faucet diario de fichas. Los sub-blobs de estadísticas de
-evolución y puntos de torneo en 2052/4096.
+- [x] **3212** (2026-10-22): ahora es la respuesta al 22093 (usar una carta
+      de título), la única acción del jugador que el servidor deja sin modelar
+      a propósito y en la que el cliente no enseña nada propio: "Todavía no
+      está operativo". El 22097 (enviar a otro juego) no, porque el cliente ya
+      dice localmente que se ha enviado. Prueba:
+      `TestTitleCardIsAnsweredNotYetImplemented`.
+- [x] **Sub-blobs del 2052** (2026-10-22): **B-186**, el blob 0x8
+      (`{u8 escalera, i16 fuerza}`, `aez_0.X`) iba siempre vacío, y es de
+      donde el lobby retail saca nivel, rango y "Fuerza": todo coach salía sin
+      clasificar hasta acabar un combate. Ahora lleva la fuerza 1v1; el
+      decodificador de Godot leía solo el contador y ya lee las entradas. El
+      0x100 son los puntos de torneo (S09) y la cartera, que ya llega por el
+      4001. Pruebas: `TestCoachInformationsCarriesLadderStrength`,
+      `coach_info_test.gd`, `login_smoke` y `fight_smoke` con el coach `test`
+      (fuerza 1000).
+- [x] Descartados, con la prueba:
+      - **2307/2309 y las apuestas**: el 2307 no lleva apuesta, es la variante
+        antigua de la confirmación de búsqueda (mismo texto que el 23110, que
+        es el que se usa). Las apuestas existieron, pero la 2.70 las quitó: en
+        `randomFightCreationDialog.xml` la casilla "Con apuesta aleatoria"
+        está comentada bajo `<!--plus de pari-->`.
+      - **4106** (recolocar varios actores del mundo): no hay mundo, el lobby
+        sustituye a los mapas (decisión del dueño, S05).
+      - **4800 RunScript**: dispara escenarios Lua del cliente; los usa el
+        tutorial → **S10**, que ya lo lista.
+      - **Faucet diario de fichas**: viene del ROADMAP heredado ("Daily login
+        / other faucets ⬜") y el cliente no tiene ni texto ni pantalla para
+        una recompensa diaria; sería un diseño nuevo, no paridad.
 
 ## Criterio de cierre
 
