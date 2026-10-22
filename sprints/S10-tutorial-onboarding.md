@@ -80,11 +80,27 @@ que el tutorial se trae al lobby.
 
 ## A. Servidor
 
-- [ ] Criterios 198/199/200 al ganar el 29/30/31.
-- [ ] XP de los desafíos con `QC` (29, 30, 31, 45): por luchador, con tope `QD`.
-- [ ] Orden: 30 exige el logro 280; 31 el 281 (rechazo como desafío desconocido).
-- [ ] Estadística 211 al crear luchador; 226 al ganar el 46.
-- [ ] Docs: 27551 bien descrito; 4517/4523/4800 descartados por escrito (sin isla).
+- [x] **Criterios 198/199/200** al ganar el 29/30/31 (y 226 al ganar el 46),
+      en el mismo mapa que los demonios de los minutos
+      (`challengeCriterion`).
+- [x] **XP de los desafíos** con `QC` (29, 30, 31, 45): por cada luchador del
+      coach en el combate, sin pasar de `QD` de XP total (1/1, 2/10, 3/15,
+      5/300), así que repetirlos no sirve para subir. Es su única XP: los
+      desafíos no pasan por el META de fin de combate. **Decisión**: se lee
+      `QD` como tope de XP total del luchador; en el retail no está claro si
+      era eso o un tope por desafío, y con esta lectura no se puede abusar.
+- [x] **Orden**: el 30 se rechaza sin el logro 280 y el 31 sin el 281 (26310,
+      "no se pudo crear el combate"), evaluando la definición del logro con
+      los criterios del coach.
+- [x] **Estadística 211**: +1 por luchador creado.
+- [x] **Docs**: 27551 era "saltarse el tutorial" (no un ack de
+      notificaciones); 4523 es "intro terminada" y 4800 el lanzador de
+      escenarios; los tres, descartados por escrito (sin isla). La cobertura
+      de estadísticas sube a 89 de 98.
+
+Pruebas (2026-10-22): `go test ./internal/game -run 'DemonIII|ChallengeXP|BaanTutorial'`
+(criterios, XP con su tope, el orden 29 → 30 → 31 por el 26330 real, el 226)
+y `./test/e2e -run Recruits` (tres luchadores por el 6001 real → 211 = 3).
 
 ## B. Cliente Godot
 

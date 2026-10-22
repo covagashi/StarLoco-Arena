@@ -329,3 +329,19 @@ func wornItems(inv []domain.CoachCard) int32 {
 	}
 	return n
 }
+
+// statRecruits is or_0 211, "recruited three warriors from the class masters"
+// (achievement 276, S10).
+const statRecruits int16 = 211
+
+// noteRecruit counts one fighter created.
+func (s *Session) noteRecruit() {
+	if s.deps.Store == nil || s.Coach == nil {
+		return
+	}
+	b := statBatch{d: s.deps, coach: s.Coach.ID}
+	b.add(statRecruits, 1)
+	if b.moved {
+		s.evaluateAchievements()
+	}
+}

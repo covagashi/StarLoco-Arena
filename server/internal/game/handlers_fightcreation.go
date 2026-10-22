@@ -143,6 +143,13 @@ func (s *Session) startPvEChallenge(challengeID int32) error {
 	if s.deps.Fights.ByCoach(s.Coach.ID) != nil {
 		return nil // already in a fight
 	}
+	// A chained challenge (the Demon III's 30 and 31) is refused until the
+	// achievement before it is complete; the client hides it until then.
+	if !s.deps.challengeUnlocked(s.Coach.ID, s.deps.ChallengeDefs.Get(challengeID)) {
+		s.log.Info("challenge fight refused: locked", "coach", s.Coach.Name,
+			"challenge", challengeID)
+		return s.sendFightCreationError(protocol.FightErrUnableToCreate)
+	}
 	// A challenge launch carries NO teamId — the payload is just the challenge id
 	// — so the server picks the roster. Use the coach's titular line-up, which is
 	// exactly the "team you play with" the evolution panel manages. (Falling back

@@ -95,6 +95,10 @@ func handleFighterCreate(s *Session, f *protocol.C2SFrame) error {
 	if err := s.deps.Store.Fighters.Create(fighter); err != nil {
 		return s.sendFighterCreateError()
 	}
+	// S10: statistic 211, "recruited three warriors from the class masters"
+	// (achievement 276). The server cannot tell which screen the fighter was
+	// made from, so every recruit counts.
+	s.noteRecruit()
 	s.log.Info("fighter created", "name", fighter.Name, "breed", fighter.BreedID,
 		"budget", fighter.Budget, "id", fighter.ID)
 

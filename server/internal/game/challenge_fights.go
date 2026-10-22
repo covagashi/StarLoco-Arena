@@ -85,6 +85,16 @@ var challengeCriterion = map[int32]uint16{
 	35: 215,
 	36: 216,
 	32: 217,
+	// The Demon III chain (S10): "défi N du démon III en mode évolution
+	// réussi". They are achievements 280 (198), 281 (199) and 284 (all
+	// three), which open the next challenge of the chain (QB) and fire the
+	// tutorial scenarios 105/106/107 on the client.
+	29: 198,
+	30: 199,
+	31: 200,
+	// 226 "asked Baan for the basics of combat" (achievement 446): the
+	// "Tutorial de Baan" challenge is those basics.
+	46: 226,
 }
 
 // criterionAllMinuteDemons is or_0 213, "the player finished all the minute-demon
@@ -527,4 +537,63 @@ func (d *Deps) buildChallengeTeam(side uint8, cells []Pos, challengeID int32, mi
 		team.Fighters = append(team.Fighters, ff)
 	}
 	return team
+}
+
+// challengeUnlocked reports whether the coach may play a challenge: one with a
+// linked achievement (QB, afz_0's "achievementLinkedCompleted" — 30 needs 280,
+// 31 needs 281) only once that achievement is complete. Evaluated from the
+// definition against the coach's criteria rather than from the announced
+// achievements, which are only recorded while the coach is online.
+func (d *Deps) challengeUnlocked(coachID uint, def *gamedata.Challenge) bool {
+	if def == nil || def.LinkedAchievement == 0 || d.Achievements == nil || d.Store == nil {
+		return true
+	}
+	a := d.Achievements.Get(def.LinkedAchievement)
+	if a == nil {
+		return true
+	}
+	c, err := d.Store.Coaches.Get(coachID)
+	if err != nil || c == nil {
+		return false
+	}
+	stat, hasCard := coachAchievementLookups(c, nil)
+	return a.Done(stat, hasCard)
+}
+
+// awardChallengeXP pays a challenge's tutorial XP (QC) to each of the coach's
+// fighters in the fight, up to the challenge's limit (QD) of total XP: 29/30/31
+// pay 1/2/3 up to 1/10/15, Barnaby's 45 pays 5 up to 300. Challenge fights skip
+// the post-fight META pass (fightFeedsProgression), so this is their only XP,
+// and the limit is what stops it being farmed.
+func (d *Deps) awardChallengeXP(f *Fight, t *FightTeam, mem *FightMember) {
+	if d.ChallengeDefs == nil || d.Store == nil {
+		return
+	}
+	def := d.ChallengeDefs.Get(f.ChallengeID)
+	if def == nil || def.XP <= 0 {
+		return
+	}
+	for _, ff := range ownFighters(t, mem) {
+		if ff == nil || ff.Fighter == nil || ff.Fighter.ID == 0 {
+			continue
+		}
+		fr := ff.Fighter
+		d.refreshAccumulatingFields(fr)
+		gain := def.XP
+		if def.XPLimit > 0 {
+			if room := def.XPLimit - fr.TotalXP; room < gain {
+				gain = room
+			}
+		}
+		if gain <= 0 {
+			continue
+		}
+		fr.XP += gain
+		fr.TotalXP += gain
+		if err := d.Store.Fighters.SaveProgress(fr); err != nil {
+			d.Log.Warn("challenge xp", "fighter", fr.ID, "err", err)
+			continue
+		}
+		d.Log.Info("challenge xp", "challenge", f.ChallengeID, "fighter", fr.Name, "xp", gain)
+	}
 }

@@ -883,6 +883,7 @@ func (d *Deps) checkFightEnd(f *Fight) {
 				// "Cartes gagnees". Awarding them without reporting them (as before)
 				// left that panel blank on the very fight that paid out.
 				wonCardsByCoach[mem.Coach.ID] = d.recordChallengeVictory(mem.Coach.ID, mem.Session, f.ChallengeID)
+				d.awardChallengeXP(f, t, mem)
 			}
 			// The retail drop draw (alb_1.cl) — one card per victorious real
 			// coach, bucketed at its evolution level, with the map's and the

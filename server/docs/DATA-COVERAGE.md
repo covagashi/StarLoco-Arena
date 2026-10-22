@@ -177,7 +177,8 @@ mis-described here before they were built, and re-reading the client is what fix
 4. ~~**101 card sets (138)**~~ — done (B-062); the bonuses are meta, not combat.
 5. ~~**800/801/802 achievements (350)**~~ — done (item 26). *Statistic coverage* is
    done too (S19): of the 98 counters the achievements reference, the client moves 7
-   and the server now moves 84 (80 in S19, the four tournament ones in S09) — see
+   and the server now moves 89 (80 in S19, four tournament ones in S09, five
+   tutorial ones in S10) — see
    "Statistics" below.
 
 **What is actually left is no longer a data-decoding problem.** The remaining holes are
@@ -205,7 +206,8 @@ That is where the semantics below come from.
 | server, in the fight | 56, 57/357/657, 58, 59/359/659, 60/360/660, 61, 62, 69, 70, 156, 161 | `fight_statistics.go` |
 | server, session | 34 worn items, 208 evolution consumables, 220 living evolution fighters deleted | `coach_statistics.go` |
 | server, tournaments (S09) | 183 points, 187/190 tournaments won (only with a fixture actually won, not by byes alone), 188 duels won (played fixtures, not forfeits), 189 entries | `tournament_results.go` |
-| not yet | 198–200, 211, 226 (tutorial → S10), 147/222 (the 2v2 and evolution ladders do not exist yet) | |
+| server, tutorial (S10) | 198–200 (Demon III challenges 29/30/31 won), 211 (+1 per fighter created), 226 (Baan's tutorial, challenge 46, won) | `challenge_fights.go`, `coach_statistics.go` |
+| not yet | 147/222 (the 2v2 and evolution ladders do not exist yet) | |
 
 The per-level variants (`+300`, `+600`) are picked by the coach's 1v1 force before the
 fight: up to 1756 (level 20), up to 2572 (level 40), above. Values are clamped to 32767
