@@ -167,3 +167,45 @@ func TestVictoryConditionLayout(t *testing.T) {
 		t.Error("a victory condition was read as carrying a trailing effect")
 	}
 }
+
+// TestChallengeEvolutionBlockReal pins the GE.QA-QD block the client keeps in
+// afz_0 (S19). Only the Demon III evolution chain (29-31) and Barnabé (45)
+// carry XP, which is what opens the client's evolution result dialogs
+// (ajo_1: QC() > 0); 30 and 31 are listed only once achievements 280 / 281 are
+// done ("achievementLinkedCompleted"). The time challenges 37-44 carry an
+// xpLimit but no xp.
+func TestChallengeEvolutionBlockReal(t *testing.T) {
+	st, err := Open(clientBdataDir)
+	if err != nil {
+		t.Skip("no data-dist")
+	}
+	chs, err := st.LoadChallenges()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[int32][3]int32{ // xp, xpLimit, linked achievement
+		29: {1, 1, 0}, 30: {2, 10, 280}, 31: {3, 15, 281}, 45: {5, 300, 0},
+	}
+	withXP := 0
+	for id, ch := range chs.byID {
+		if ch.XP > 0 {
+			withXP++
+		}
+		w, ok := want[id]
+		if !ok {
+			if ch.XP != 0 || ch.LinkedAchievement != 0 {
+				t.Errorf("challenge %d: xp=%d ach=%d, want 0/0", id, ch.XP, ch.LinkedAchievement)
+			}
+			continue
+		}
+		if ch.XP != w[0] || ch.XPLimit != w[1] || int32(ch.LinkedAchievement) != w[2] {
+			t.Errorf("challenge %d: xp=%d limit=%d ach=%d, want %v", id, ch.XP, ch.XPLimit, ch.LinkedAchievement, w)
+		}
+	}
+	if withXP != len(want) {
+		t.Errorf("%d challenges carry xp, want %d", withXP, len(want))
+	}
+	if c := chs.Get(41); c == nil || c.XPLimit != 860 || c.TimeChallenge != 1 || c.Field15 != 1 {
+		t.Errorf("time challenge 41 = %+v, want xpLimit 860, time 1, field15 1", c)
+	}
+}

@@ -31,6 +31,15 @@ tutorial; el cliente Godot tiene una versión reducida.
       4517. Hoy el 35 solo se alcanza con `/world`. Detalle en S05, "Mundos
       sin Zaap".
 - [ ] Ayuda in-game con las reglas (hay material en `docs/wiki/`).
+- [ ] **La cadena del Demonio III** (de S19, 2026-10-22): los desafíos 29, 30
+      y 31 son "en modo evolución" (criterios 198–200 de `or_0`) y llevan XP
+      (`GE.QC`/`QD`: 1/1, 2/10, 3/15). Falta: que el servidor marque 198–200
+      al ganarlos; que la lista solo enseñe el 30 tras el logro 280 y el 31
+      tras el 281 (`afz_0.achievementLinkedCompleted`); la XP de esos
+      combates (hoy un desafío no da progresión: `fightFeedsProgression`); y
+      el resultado propio que abre el retail (`fightResultEvolutionTutoDialog`
+      hasta el logro 284, `fightResultEvolutionChallengeDialog` después). El
+      45 (Bernabé, 5/300) usa el mismo resultado.
 
 ## Criterio de cierre
 

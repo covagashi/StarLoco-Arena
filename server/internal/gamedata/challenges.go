@@ -71,6 +71,16 @@ type Challenge struct {
 	// kind 5 with the challenge id so the client can find this record. See
 	// docs/OVERWORLD-MAP.md.
 	TimeChallenge int32
+	// The rest of the block the client keeps in its afz_0 (q_0 -> ahy_1.a):
+	// ShowsResult is GE.QA, LinkedAchievement GE.QB (afz_0's
+	// "achievementLinkedCompleted": the challenge dialog shows whether the
+	// coach has that achievement), XP and XPLimit GE.QC / GE.QD (the dialog's
+	// "xp" / "xpLimit"). Field15 is GE.QF, which the loader drops.
+	ShowsResult       bool
+	LinkedAchievement int16
+	XP                int32
+	XPLimit           int32
+	Field15           int32
 }
 
 // Challenges holds all challenge definitions by id.
@@ -153,15 +163,16 @@ func decodeChallengeCursor(c *cur) *Challenge {
 	// record that somehow ends early leaves TimeChallenge at its zero value —
 	// which is exactly "no time challenge" — rather than dropping the whole
 	// definition, so the core decode above stays authoritative.
-	c.u8()        // QA bool
-	c.i16()       // QB
-	c.i32()       // QC
-	c.i32()       // QD
-	qe := c.i32() // QE — GE.bbI
+	qa := c.u8() != 0 // QA
+	qb := c.i16()     // QB
+	qc := c.i32()     // QC
+	qd := c.i32()     // QD
+	qe := c.i32()     // QE — GE.bbI
 	if c.ok() {
+		ch.ShowsResult, ch.LinkedAchievement, ch.XP, ch.XPLimit = qa, qb, qc, qd
 		ch.TimeChallenge = qe
 	}
-	c.i32() // QF
+	ch.Field15 = c.i32() // QF
 
 	// The tail used to stop here because the np_1 element layout was unknown.
 	// It is decodable now (see parameters.go), so the record is read to its end.

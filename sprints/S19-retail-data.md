@@ -70,7 +70,16 @@ antes de escribir código.
       Pruebas: `go test ./internal/game -run 'Trap|Stay'` (dos nuevas) y
       `./internal/gamedata -run StaticEffects`; `fight_smoke` en vivo (la
       Bruma dibujada dura 2 rondas y se va en la 3.ª: `[2, 2, 1]`).
-- [ ] Tipo 400: logro enlazado, recompensa y tope de XP.
+- [x] **Tipo 400** (2026-10-22): leído entero. `QB` es el logro enlazado (la
+      lista de desafíos del retail solo enseña uno si está hecho:
+      `afz_0` "achievementLinkedCompleted" en `challengeDialog.xml`), `QC` y
+      `QD` la XP y su tope. **Solo los usa la cadena del Demonio III** (29, 30
+      con el logro 280, 31 con el 281) y Bernabé (45): con `QC > 0` el cliente
+      abre los diálogos de resultado de evolución/tutorial (`ajo_1`). Esos
+      logros se hacen con los criterios 198–200 ("desafío N del demonio III
+      en modo evolución superado"), que el servidor no marca; filtrar ahora
+      la lista dejaría el 30 y el 31 inalcanzables. Es el tutorial: pasa
+      entero a **S10**. `TestChallengeEvolutionBlockReal` fija los valores.
 - [ ] Estadísticas: hay 98 contadores referenciados y el servidor mueve "un
       puñado".
 - [ ] Bits de máscara de objetivo 55 y 58–61; código 66.
