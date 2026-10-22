@@ -557,7 +557,13 @@ func (f *Fight) beginTurn(ff *FightFighter) {
 	case ai:
 		f.armClock(aiTurnClock, func(f *Fight) { f.runAITurn(ff) })
 	default:
-		f.armClock(f.turnClockFor(), func(f *Fight) { f.forceEndTurn(ff.WireID) })
+		human := f.humanTurnClock(ff)
+		f.armClock(human, func(f *Fight) {
+			if f.turnActions == 0 && f.isCurrentTurn(ff.WireID) {
+				f.noteIdleTurn(ff, human)
+			}
+			f.forceEndTurn(ff.WireID)
+		})
 	}
 }
 
@@ -600,6 +606,7 @@ func handleFighterEndTurn(s *Session, frame *protocol.C2SFrame) error {
 		if ff == nil || ff.CoachID != cid || !f.isCurrentTurn(wireID) {
 			return
 		}
+		f.noteCombatAction(ff) // passing by hand is playing, not being away
 		f.endTurn(wireID)
 	})
 	return nil

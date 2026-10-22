@@ -101,6 +101,7 @@ func (f *Fight) logAction(ff *FightFighter, kind fightDecisionKind, detail strin
 		return
 	}
 	f.turnActions++
+	f.noteCombatAction(ff)
 	f.logDecision(ff, kind, detail)
 }
 

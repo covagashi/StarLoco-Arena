@@ -127,10 +127,25 @@ antes de escribir código.
 
 ## Opcodes pequeños
 
-4800 RunScript, 8250 (penalización por duración del turno), 4106
-(recolocación en lote), 2307/2309 (variante con apuesta) y apuestas sobre la
-victoria, 3212 (sin llamada). El faucet diario de fichas. Los sub-blobs de
-estadísticas de evolución y puntos de torneo en 2052/4096.
+- [x] **8250, penalización por inactividad** (2026-10-22). El inventario lo
+      daba por "decisión de política antitrampas", pero la política está en
+      el cliente: el texto `cheat.turnDuration.decreased` dice qué la provoca
+      ("ninguna acción de combate desde hace más de un minuto") y qué pasa
+      ("se reducirá la duración de tus turnos"), y `adu_0.f` divide el reloj
+      del turno entre `aez_0.eN`: la mitad el primer turno reducido, un sexto
+      los siguientes (las invocaciones, mitad sin avanzar). El servidor
+      (`turn_penalty.go`) suma el tiempo de turno propio que se agota sin
+      acción; al pasar de un minuto emite 8250 `[coach][0]` y acorta su reloj
+      igual que el cliente; con la primera acción (o pasar turno a mano)
+      emite `[coach][1]` y lo devuelve. Godot avisa al jugador con el texto
+      retail y acorta su contador. Pruebas: `TestIdleCoachGetsShorterTurns`
+      (la secuencia y los dos 8250), `TestIdleTurnsThroughTheClock` (por el
+      reloj real), `fight_smoke` en vivo (`[2, 2, 6, 1]`).
+
+Los demás, sin tocar todavía: 4800 RunScript, 4106 (recolocación en lote),
+2307/2309 (variante con apuesta) y apuestas sobre la victoria, 3212 (sin
+llamada). El faucet diario de fichas. Los sub-blobs de estadísticas de
+evolución y puntos de torneo en 2052/4096.
 
 ## Criterio de cierre
 

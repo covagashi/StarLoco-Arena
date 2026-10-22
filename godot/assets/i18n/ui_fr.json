@@ -756,6 +756,7 @@
   "fight.log_tackled": "{name} a été taclé.",
   "fight.log_tackled_unknown": "Combattant taclé.",
   "fight.log_dead": "{name} est mort.",
+  "fight.turn_reduced": "Vous n'avez fait aucune action de combat depuis plus d'une minute.\nQuand vous vous absentez, veuillez abandonner le combat, que votre adversaire puisse continuer à jouer normalement.\nEn attendant, la durée de vos tours va être diminuée.",
   "debrief.over": "Fin du combat",
   "debrief.abandoned": "Combat abandonné",
   "debrief.strength": "Force → {n}",

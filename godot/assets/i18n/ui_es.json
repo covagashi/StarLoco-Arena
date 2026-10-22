@@ -756,6 +756,7 @@
   "fight.log_tackled": "{name} ha sido placado.",
   "fight.log_tackled_unknown": "Luchador placado.",
   "fight.log_dead": "{name} ha muerto.",
+  "fight.turn_reduced": "No has realizado ninguna acción de combate desde hace más de un minuto.\nCuando te ausentes, por favor, abandona el combate para que tu oponente pueda seguir jugando normalmente.\nPor ahora, se reducirá la duración de tus turnos.",
   "debrief.over": "Fin del combate",
   "debrief.abandoned": "Combate abandonado",
   "debrief.strength": "Fuerza → {n}",

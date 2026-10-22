@@ -552,6 +552,7 @@ const OP_DIR_CHANGE_REQ := 4521  # C2S [i64 fid][u8 dir] — facing (free action
 const OP_DIR_CHANGE := 4522      # S2C header+[i64 fid][u8 dir]
 const OP_FIGHTER_TACKLED := 4506 # S2C header+[i64 tackled][i64 tackler]
 const OP_FIGHTER_OUCH := 4902    # S2C header+[i64 fid] — crit-hit "ouch !"
+const OP_TURN_DURATION := 8250   # S2C [i64 coachId][u8 normal] — idle penalty
 
 ## Breed base stats (server breed.go): [HP, AP, MP] — AP/MP refill each turn.
 const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
@@ -585,6 +586,7 @@ var _turns_taken := {}   # fighter id -> own-turn count (client alh_1.NC)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
 var _selected := -1      # our fighter selected for placement
 var _turn_left := -1.0   # countdown of the acting fighter's clock (−1 off)
+var _turn_mode := {}     # coach id -> aez_0.dBh: 1 normal, 2 reduced, 6 a sixth
 
 ## Emitted on 8104 — a harness (fight_smoke's scripted policy) or the human
 ## drives from here: request_move_to() then request_end_turn().
@@ -865,6 +867,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var tn := str(State.fighters.get(tackled, {}).get("name", ""))
 			_fight_log(I18n.t("fight.log_tackled", {"name": tn})
 				if not tn.is_empty() else I18n.t("fight.log_tackled_unknown"))
+		OP_TURN_DURATION:
+			_on_turn_duration(int(payload.get_i64()), payload.get_u8() == 1)
 		OP_FIGHTER_OUCH:
 			# [i32][i32][i64 fid] — retail pops "ouch !" over the fighter who
 			# just lost HP to a CRITICAL cast (B-138).
@@ -1360,6 +1364,26 @@ func _target_capped(pos: Vector2i, meta: Dictionary) -> bool:
 	return int(rec.get("tgt", {}).get(fid, 0)) >= int(meta.get("mptt", 0))
 
 
+## 8250 — the idle penalty (of_1): the coach's turns get shorter, and the
+## player is told why when it is them; normal = true puts them back.
+func _on_turn_duration(coach: int, normal: bool) -> void:
+	_turn_mode[coach] = 1 if normal else 2
+	if not normal and coach == State.my_coach_id:
+		_fight_log(I18n.t("fight.turn_reduced"))
+
+
+## aez_0.eN: what the coach's turn clock is divided by. The first reduced
+## turn of one of its own fighters gets half and moves the mode on to a sixth;
+## a summon's turn reads half without moving it (server turn_penalty.go).
+func _turn_divisor(coach: int, summon: bool) -> float:
+	var m := int(_turn_mode.get(coach, 1))
+	if m == 2:
+		if not summon:
+			_turn_mode[coach] = 6
+		return 2.0
+	return 6.0 if m == 6 else 1.0
+
+
 ## 8100 — auras and timed traps age one table turn (server tickEffectAreas).
 func _age_areas() -> void:
 	for a in _areas.duplicate():
@@ -1667,6 +1691,7 @@ func _on_turn_begin(fid: int) -> void:
 	# mv_1.byv — the 8000 carries turnClockMs; retail floors it at 31s.
 	_turn_left = maxf(31.0, float(State.fight_data.get("ca", 0)) / 1000.0)
 	var f: Dictionary = State.fighters.get(fid, {})
+	_turn_left /= _turn_divisor(int(f.get("coach", -1)), bool(f.get("summon", false)))
 	# Summons share their caster's coach id but are server-AI-driven
 	# (Father set, ai.go) — no bar, no End turn for them.
 	var ours: bool = int(f.get("coach", -1)) == State.my_coach_id \

@@ -360,6 +360,7 @@ result dialog.
 | 6200 | EffectAreaAction | S2C | ✓ | A | — | ✓ (Godot: entering a special cell floats its name — killer/trap/eagle-eye/shield/panacea/enthusiasm/motivation/healing-heart — over the fighter; tiles themselves render as lettered diamond markers from `_fmd.specials`) |
 | 4520 | FighterDies | S2C | ✓ | A | — | ✓ (forfeit) |
 | 8200 | ActionSequenceExecute | S2C | ✓ | A | — | ✓ |
+| 8250 | TurnDuration (idle penalty) | S2C | ✓ | A (i64 coach, u8 normal) | ✓ | — (unit: `TestIdleCoachGetsShorterTurns`, `TestIdleTurnsThroughTheClock`) |
 | 8300 | EndFight | S2C | ✓ | A (2.70 strength-map counts) | ✓ | ✓ **live** (Godot decodes + renders the debrief panel) |
 | 26321 | EndFightDone | C2S | ✓ | A | — | ✓ (godot pvp_smoke, spectator) |
 | 8151 | GiveUpFight | C2S | ✓ | A | — | ✓ |

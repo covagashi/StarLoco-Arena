@@ -756,6 +756,7 @@
   "fight.log_tackled": "{name} has been tackled.",
   "fight.log_tackled_unknown": "Fighter tackled.",
   "fight.log_dead": "{name} is dead.",
+  "fight.turn_reduced": "More than a minute has passed since you last performed any action.\nWhen you leave, please quit the fight so that your opponent can continue playing normally.\nIn the meantime, the duration of your turns will be reduced.",
   "debrief.over": "Fight over",
   "debrief.abandoned": "Fight abandoned",
   "debrief.strength": "Strength → {n}",

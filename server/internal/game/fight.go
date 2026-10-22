@@ -178,6 +178,11 @@ type FightMember struct {
 	// is kept alive (reconnect-ready) but the coach's fighters auto-pass their
 	// turns and a grace timer forfeits them if it does not return.
 	Absent bool
+	// idle is the coach's own turn time that ran out with no combat action,
+	// and turnMode its client turn mode (aez_0.dBh; 0 reads as normal). See
+	// turn_penalty.go.
+	idle     time.Duration
+	turnMode int
 }
 
 // FightTeam is one side of a fight.

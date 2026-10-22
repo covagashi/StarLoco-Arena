@@ -118,10 +118,10 @@ if this block drifts.
 |---|---|
 | Rows in the master table | 347 |
 | **C2S handled (H)** | 111 |
-| **S2C emitted (E)** | 152 |
+| **S2C emitted (E)** | 153 |
 | **Inactive (I)** | 6 |
 | **Never implement (X)** | 4 |
-| **Not implemented (-)** | 74 |
+| **Not implemented (-)** | 73 |
 
 A `both | H+E` row counts once on each side; there is none today. The handled
 count also equals the opcodes `RegisterAll` binds (the tests above check both
@@ -397,7 +397,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 8122 | S2C | - | DetachBuff (zq_1) | `[i64 buffId][i64 fighterId]` - the removal counterpart to 8121: `of_1` does `ee_2.PJ().dL(buffId)` and raises `"hasBuff"`. **Unusable, now proven**: `alf_1` keys buffs by `je()`→`aFL`, and `xb_2.aka()` assigns `aFL = bWD != null ? bWD.n() : ahT()` — the `aes_2` provider `bWD` is never installed anywhere in the client (`xb_2.a(aes_2)` has no caller), so every buff id is the client-local counter `bWC++`. 8121's `rq_2` carries no id field either, so the wire cannot address a buff instance. Same wall as item 14's 5203 uids — deliberate non-work |
 | 8151 | C2S | H | GiveUpFightRequestMessage (as_1) | `handleGiveUp` (forfeit) |
 | 8200 | S2C | E | FightActionSequenceExecute (ayj_0) | action flush barrier |
-| 8250 | S2C | - | (`wc_2`) | `[i64 coachId][i8 flag]`. `aez_0.nw(1)` when true, `nw(2)` when false; if the id is the local coach and the flag is false it shows **"cheat.turnDuration.decreased"**. This is a **turn-duration penalty** toggle. Not implemented: the wire is settled but nothing in the client says what earns the penalty - that is an anti-cheat policy decision, not a protocol gap |
+| 8250 | S2C | E | TurnDuration (`wc_2`) | `[i64 coachId][i8 normal]`. `aez_0.nw(1)` when true, `nw(2)` when false; if the id is the local coach and the flag is false it shows **"cheat.turnDuration.decreased"**. **Done (S19).** The policy was in the client after all: the text itself says what earns it ("no combat action for more than a minute") and what follows (shorter turns), and `adu_0.f` divides the turn timer by `aez_0.eN`: half for the first reduced turn, a sixth after. `turn_penalty.go` sends it once a coach's own idle turn time passes a minute, mirrors the same clock, and restores it (normal = 1) on the coach's next combat action |
 | 8300 | S2C | E | EndFightMessage (YP) | fight result screen |
 | 8400 | S2C | - | (`aBZ`) | EMPTY payload, `a(byte[])` is `return true`, and **no consumer anywhere** - only the `gz_1` factory references it. Inert, exactly like 27552 |
 
@@ -736,7 +736,7 @@ chunk of work: one handler class, one feature area.
 | Family | Consumer | Opcodes | Notes |
 |---|---|---|---|
 | Social / friends | `om_0` | ~~2070~~, ~~3206~~, ~~3210~~, 3212, ~~3214~~, ~~3216~~ | **CORRECTED** - this was listed as 13 opcodes. On reading the case bodies, **3128/3130/3132/3134/3136/3138/3142 are decode-and-discard**: each casts the message and `return false`, exactly the empty-body trap this document warns about, so sending them does nothing. 2070/3206/3210/3214/3216 all emit today (announce, malformed command, rights, self-whisper, list-full); only 3212 stays silent deliberately. |
-| Fight | `of_1` | 4900, 4901, ~~4902~~, ~~8122~~, 8250 | `of_1` is the in-fight handler (8120/8121 live here). **4902 DONE** (ouch bubble). **8122 resolved**: proven unusable - buff ids are the client-local `bWC++` counter, the wire cannot address an instance (deliberate non-work). 4900/4901 feed a client-side recorder queue nothing visible reads. 8250 is the turn-duration penalty toggle - needs an anti-cheat policy, not a codec. |
+| Fight | `of_1` | 4900, 4901, ~~4902~~, ~~8122~~, ~~8250~~ | `of_1` is the in-fight handler (8120/8121 live here). **4902 DONE** (ouch bubble). **8122 resolved**: proven unusable - buff ids are the client-local `bWC++` counter, the wire cannot address an instance (deliberate non-work). 4900/4901 feed a client-side recorder queue nothing visible reads. **8250 DONE** (S19): the turn-duration penalty, its policy read off the client's own text and timer. |
 | Team presets / fighters | `dx_2` | ~~6014~~, 6032 | **6020, 6022, 6029 DONE** (B-131/B-130/B-132); **6014 DONE** - `sendFighterAssignedTeam` acks applied assigns/removes (echo + `aCG`, -1 sentinel on pure removes; the feared re-key branch is a no-op because we never re-id). **6032** stays a feature gap - no coach-condition source exists. **6020** `aic_0` - on status 0, REPLACES the preset in the list (remove + re-add a copy): an update-ack carrying the new preset. **6022** `agH` - on status 0, closes `fighterEquipmentDialog` and clears `teamManagement.selectedCard`: the ack that dismisses the loadout editor. **6029** `OJ` - shows *"error.teamManagement.coachDisconnected"*. **6032** `gd_0` - applies `kh()` to the local coach. Before implementing 6022, check whether the 6012 reply we already send after 6011 (`sendFighterInventoryResult`) is what dismisses the dialog - if it is, 6022 belongs to the team-management editor rather than the inventory path, and the two must not both fire. |
 | Challenge / duel | `ft_1` | ~~23112~~, 2307, 2309, 4309, 26312, 26314 | **23112 DONE** - `sendMatchCancelled` now emits it (was a 23116 the client cannot decode). 2307/2309 are the bet-carrying variant pair - we announce via 23110; the 2308 answer is already handled. 26312/26314 are the X-vs-X pair; 26313's C2S half is Test-Lua-only (item 33), so confirm reachability before building these. |
 | Guild / clan | `lh_1` | ~~554~~ | **554 DONE** - clan-tag table pushed at login (`pushGuildTags`), broadcast on join/create (`broadcastGuildTag`), cleared via the now-broadcast 556s. 513 rename / 551 icon are Test-Lua-only. |

@@ -502,6 +502,23 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		if timed_left != [2, 2, 1]:
 			push_error("effect areas: the 3-turn Bruma should go on round 3, got %s"
 				% [timed_left])
+		# S19: 8250 — the idle penalty. Ours: told why, then the turn clock
+		# halves once and is a sixth after; normal = 1 restores it.
+		var me := int(State.my_coach_id)
+		var pen := WireWriter.new()
+		pen.put_i64(me)
+		pen.put_u8(0)
+		fight_scene._on_net_message(8250, pen.raw())
+		var divs := [fight_scene._turn_divisor(me, true), fight_scene._turn_divisor(me, false),
+			fight_scene._turn_divisor(me, false)]
+		var back := WireWriter.new()
+		back.put_i64(me)
+		back.put_u8(1)
+		fight_scene._on_net_message(8250, back.raw())
+		divs.append(fight_scene._turn_divisor(me, false))
+		print("[smoke] TURN PENALTY divisors=%s" % [divs])
+		if divs != [2.0, 2.0, 6.0, 1.0]:
+			push_error("8250: divisors %s, want [2, 2, 6, 1] (summon, first, after, restored)" % [divs])
 	# Cast-frequency locks — fabricate an 8110 for spell 32 (cd=5): the button
 	# must lock immediately and unlock only once _table_turn advances 5.
 	if not _cd_seen:

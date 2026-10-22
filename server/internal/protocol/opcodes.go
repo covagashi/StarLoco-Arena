@@ -199,6 +199,7 @@ const (
 	OpNewTableTurnBegin      = 8100 // S2C: [i32 uid][i32 -1][i8 turn][i32 eventId]
 	OpFighterTurnBegin       = 8104 // S2C: [i32 uid][i32 -1][i64 fighterId]
 	OpFighterTurnEnd         = 8106 // S2C: [i32 uid][i32 -1][i64 fighterId]
+	OpTurnDuration           = 8250 // S2C wc_2: [i64 coachId][u8 normal] — turn-duration penalty (turn_penalty.go)
 
 	// Combat actions
 	OpFighterMoveInFightReq = 4503 // C2S: [i64 fighterId] + path {i32 x,i32 y,i16 z}
