@@ -80,8 +80,35 @@ antes de escribir código.
       en modo evolución superado"), que el servidor no marca; filtrar ahora
       la lista dejaría el 30 y el 31 inalcanzables. Es el tutorial: pasa
       entero a **S10**. `TestChallengeEvolutionBlockReal` fija los valores.
-- [ ] Estadísticas: hay 98 contadores referenciados y el servidor mueve "un
-      puñado".
+- [x] **Estadísticas** (2026-10-22): de los 98 contadores que piden los
+      logros, el cliente mueve 7 y el servidor movía 5; ahora mueve **80**.
+      La semántica no se inventa: las clases de efecto del cliente aún llevan
+      las llamadas que los alimentaban (`ig_1` daño y muertes, `sq_2` PM,
+      `df_2` PA quitados, `va_1` muertes por trampa y por casilla asesina, la
+      armadura en `NC` y familia; `l` suma, `m` guarda el máximo), y
+      `content.48` describe cada criterio al jugador (p. ej. 35 = "puesto
+      2500 − N"). Tres tandas:
+      - Al acabar el combate (`coach_statistics.go`): rachas por modo, fuerza
+        máxima, reputación, hueco de nivel al ganar, ganar con un solo
+        luchador, rendiciones (y en 2v2 antes que el compañero), el luchador
+        más caro de cada raza en una victoria por tramo de nivel, la XP más
+        gastada, muertes y heridas (y graves) en evolución, puesto en la
+        escalera, Hell's tofus, Limero sin hechizos.
+      - Dentro del combate (`fight_statistics.go`): daño por turno y por
+        combate al bando contrario, muertes y PM por turno, PM totales, PA
+        quitados, muertes por trampa (al dueño), por casilla asesina (a la
+        víctima), casillas bonus, armadura, golpes de Aniripsa. No cuenta en
+        los combates de práctica.
+      - Desde la sesión: objetos puestos, consumibles en evolución, borrar un
+        luchador de evolución vivo.
+      Faltan 11, cada uno en su sitio: 183/187/188/189 (partidas de torneo →
+      **S09**), 198–200, 211, 226 (tutorial → **S10**), 147/222 (no existen
+      las escaleras 2v2 ni de evolución). Pruebas: 13 nuevas en
+      `internal/game` (todas por el camino real: `checkFightEnd`,
+      `forfeitCoach`, `closeCombat`, `applyTurnStartSpecialCell`,
+      `handleFighterDelete`, `useConsumableOnFighter`), `TestMaxAndAddStat`, y
+      el e2e `TestFightStatisticsUnlockAchievements` (un abandono real anuncia
+      el 22000 a los dos coaches).
 - [ ] Bits de máscara de objetivo 55 y 58–61; código 66.
 
 ## Opcodes pequeños

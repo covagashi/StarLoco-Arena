@@ -40,6 +40,10 @@ tutorial; el cliente Godot tiene una versión reducida.
       el resultado propio que abre el retail (`fightResultEvolutionTutoDialog`
       hasta el logro 284, `fightResultEvolutionChallengeDialog` después). El
       45 (Bernabé, 5/300) usa el mismo resultado.
+- [ ] Las otras estadísticas del tutorial (S19): 211 "reclutar tres guerreros
+      hablando con los maestros de clase" y 226 "pedir a Baan las bases del
+      combate". Ninguna la pone el cliente (ni diálogo ni script la nombra);
+      las debe poner el servidor cuando ocurra lo que describen.
 
 ## Criterio de cierre
 

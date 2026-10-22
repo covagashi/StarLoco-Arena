@@ -17,6 +17,11 @@ solo de principio a fin, y que el cliente Godot lo muestre.
 - [ ] 17010: torneos creados por jugadores (hoy no existe en el modelo).
 - [ ] 2411: récord de ladder por preset (necesita estadísticas por preset).
 - [ ] Comprobar si los 25 logros que dependían de torneos ya se pueden conseguir.
+      Sus estadísticas (S19, 2026-10-22) son 183 "puntos máximos en torneo",
+      187 "torneos oficiales ganados", 188 "duelos ganados en torneo" y 189
+      "inscripciones": las únicas de combate que el servidor aún no mueve,
+      porque dependen de que los torneos tengan partidas. Se apuntan como
+      las demás (`coach_statistics.go`, `statBatch`).
 
 ## Cliente Godot
 

@@ -175,9 +175,9 @@ mis-described here before they were built, and re-reading the client is what fix
    line-up is edited from the web console instead of compiled in. The *match* layer
    (brackets, scheduling, prizes) is deferred — item 32, not a decode gap.
 4. ~~**101 card sets (138)**~~ — done (B-062); the bonuses are meta, not combat.
-5. ~~**800/801/802 achievements (350)**~~ — done (item 26). What remains is *statistic
-   coverage*, not decoding: 98 counters are referenced and the server moves a handful,
-   each lighting its achievements up for free as its owning system starts counting.
+5. ~~**800/801/802 achievements (350)**~~ — done (item 26). *Statistic coverage* is
+   done too (S19): of the 98 counters the achievements reference, the client moves 7
+   and the server now moves 80 — see "Statistics" below.
 
 **What is actually left is no longer a data-decoding problem.** The remaining holes are
 the two deferred systems (2v2 → item 30, tournament matches → item 32, which between them
@@ -186,6 +186,29 @@ handful of **server-invented constants** that the client receives pre-computed a
 cannot arbitrate — `baseXPPerFight`, `standingForResult`, the reputation-per-card rate and
 the clan-board score. Those are stated in tests rather than buried, but they are ours, and
 no amount of testing here can make them retail-exact.
+
+### Statistics (the achievements' counters, client enum `or_0`)
+
+The achievements are thresholds on these, and only the server can see most of them.
+The client's own effect classes still carry the calls that fed them (`gn_0.LQ()` →
+`cl_1.l` adds, `cl_1.m` keeps the best), against stub containers — `ig_1` damage and
+kills, `sq_2` MP, `df_2` AP removed, `va_1` trap and killer-cell deaths, `NC` and its
+siblings the armour — and `content.48.<id>` describes each criterion to the player.
+That is where the semantics below come from.
+
+| who | ids | where |
+|---|---|---|
+| client (22003) | 39 Rayban, 210/218 Demon III / Demon I, 219/227 dialog replies, 221 breed master, 229 coach created | `handleStatisticUpdate` |
+| server, minute demons | 213–217 | `challenge_fights.go` |
+| server, end of fight | 42–53 / 342–353 / 642–653 biggest fighter per breed and level tier, 63, 131, 146, 148, 165, 167, 170, 171, 201–207, 209, 35, 40, 84 | `coach_statistics.go` |
+| server, in the fight | 56, 57/357/657, 58, 59/359/659, 60/360/660, 61, 62, 69, 70, 156, 161 | `fight_statistics.go` |
+| server, session | 34 worn items, 208 evolution consumables, 220 living evolution fighters deleted | `coach_statistics.go` |
+| not yet | 183/187/188/189 (tournament matches → S09), 198–200, 211, 226 (tutorial → S10), 147/222 (the 2v2 and evolution ladders do not exist yet) | |
+
+The per-level variants (`+300`, `+600`) are picked by the coach's 1v1 force before the
+fight: up to 1756 (level 20), up to 2572 (level 40), above. Values are clamped to 32767
+(the 2052 blob carries a u16 the client reads as a short). Sparring bouts bank none of
+the in-fight half.
 
 ---
 
@@ -422,6 +445,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 
 | Date | Change |
 |---|---|
+| 2026-10-22 | S19: statistic coverage, 80 of the 98 counters the achievements reference now moved by the server (from 5). Store gains `MaxStat` / `AddStat` / `StatValue`. |
 | 2026-10-22 | S19: type 400's `QA`–`QD` and `QF` decoded and named (linked achievement, xp, xpLimit); not used yet — the Demon III evolution chain that needs them is S10's. |
 | 2026-10-22 | S19: type 210 read to 13/13 (field 6, the trigger animation, the re-trigger delay; condition, field 6 and delay pinned at zero by test). B-185: an action-66 trap expires with its effect's duration. Trigger 10008 (stayed inside) wired; 10002/10003/10006 documented as not applied, with the reason. |
 | 2026-10-20 | B-179: 5200's first section now carries the worn coach cards `{i16 slot, i32 templateId}` (client `air_2` / `rb_2`); it was always sent empty. No decoder or record change. |
