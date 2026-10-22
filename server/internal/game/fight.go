@@ -299,11 +299,14 @@ type Fight struct {
 	// coaches that forfeited, and the wounds the post-fight roll dealt each.
 	gaveUp        map[uint]bool
 	woundsByCoach map[uint]int32
+	// seriousByCoach is the serious ones among woundsByCoach (statistic 206).
+	seriousByCoach map[uint]int32
 	// memberStats is the in-fight statistics tally per coach and firingArea
 	// the trap firing right now, whose owner a kill is credited to
 	// (fight_statistics.go).
 	memberStats map[uint]*memberStats
 	firingArea  *effectArea
+	punching    bool // a close-combat blow is landing (161)
 
 	Teams    [2]*FightTeam
 	Timeline []*FightFighter // initiative-descending turn order

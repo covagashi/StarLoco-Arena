@@ -30,11 +30,16 @@ const (
 	statAPRemoved       int16 = 69  // "Nombre maximum de PAs retirés à un combattant en un tour"
 	statBonusCells      int16 = 70  // "Nombre maximum de cases bonus dont on a profité au cours d'un combat"
 	statMPUsed          int16 = 156 // "Nombre total de PMs utilisés en combat"
+	statEniripsaPunches int16 = 161 // "Nombre d'adversaires finis à coup de poing par un Eniripsa"
+
+	breedEniripsa uint8 = 7
 )
 
 // memberStats is one coach's tally for the fight in progress.
 type memberStats struct {
 	damage, trapKills, deathCells, mpUsed, bonusCells int32
+	eniripsaPunches                                   int32
+	castSpell                                         bool // any spell this fight (84: "sans sort")
 	bestArmour, bestAPRemoved                         int32
 	// this turn, and the best turn so far
 	turnDamage, turnKills, turnMP             int32
@@ -67,6 +72,9 @@ func (f *Fight) noteHPLoss(caster, victim *FightFighter, amount int32) {
 		s.turnDamage += amount
 		if victim.HP <= 0 && !caster.isSummon() {
 			s.turnKills++
+			if f.punching && breedOf(caster) == breedEniripsa {
+				s.eniripsaPunches++
+			}
 		}
 	}
 	if victim.HP <= 0 && f.firingArea != nil && !f.firingArea.isAura() && f.firingArea.caster != nil &&
@@ -163,4 +171,5 @@ func (s *memberStats) bank(b *statBatch, force int32) {
 	b.max(statAPRemoved, s.bestAPRemoved)
 	b.max(statBonusCells, s.bonusCells)
 	b.add(statMPUsed, s.mpUsed)
+	b.add(statEniripsaPunches, s.eniripsaPunches)
 }

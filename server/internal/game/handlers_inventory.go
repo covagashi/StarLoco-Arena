@@ -195,6 +195,7 @@ func handleEquipmentRequest(s *Session, f *protocol.C2SFrame) error {
 		slots[i] = v
 	}
 	s.applyEquipment(s.Coach, slots)
+	s.noteStat(statWornItems, wornItems(s.Coach.Inventory), true)
 	return s.pushInventory(s.Coach)
 }
 

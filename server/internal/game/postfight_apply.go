@@ -213,6 +213,12 @@ func (d *Deps) runPostFightMeta(f *Fight, winnerTeam uint8) (
 						f.woundsByCoach = map[uint]int32{}
 					}
 					f.woundsByCoach[mem.Coach.ID]++
+					if d.Conditions.Get(int16(rep.woundID)).IsSeriousWound() {
+						if f.seriousByCoach == nil {
+							f.seriousByCoach = map[uint]int32{}
+						}
+						f.seriousByCoach[mem.Coach.ID]++
+					}
 				}
 
 				// 7. Age the fighter's timed conditions by one fight. Done LAST so a

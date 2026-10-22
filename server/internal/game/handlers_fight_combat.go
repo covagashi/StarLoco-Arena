@@ -609,6 +609,9 @@ func (f *Fight) castSpellByFighter(caster *FightFighter, spellID int32, target P
 	//    the cast against this fighter's cast-frequency history (both even on a
 	//    fumble: the AP is spent and the cast counts against the frequency limits).
 	caster.AP -= apCost
+	if s := f.stat(caster.CoachID); s != nil {
+		s.castSpell = true // 84 is for a fight won with no spell at all
+	}
 	if sp != nil {
 		caster.CastHistory.storeCast(sp.LimitKeyID(), sp.EffectiveCooldown(), sp.CastMaxPerTurn,
 			sp.CastMaxPerTarget, f.tableTurn, targetID, hasTarget)
@@ -763,7 +766,9 @@ func (f *Fight) closeCombat(ff *FightFighter, target Pos) {
 		if crit {
 			ouchBefore = f.hpSnapshot()
 		}
+		f.punching = true
 		f.applyHPDelta(ff, victim, directElementActionID(elem), 0, -final)
+		f.punching = false
 		if crit {
 			f.broadcastOuchForDamaged(ouchBefore)
 		}
@@ -910,7 +915,7 @@ func (d *Deps) checkFightEnd(f *Fight) {
 		deaths[id] = int32(len(names))
 	}
 	d.recordFightStatistics(f, fightOutcome{winnerTeam: winnerTeam, preForce: preForce,
-		gaveUp: f.gaveUp, deaths: deaths, wounds: f.woundsByCoach})
+		gaveUp: f.gaveUp, deaths: deaths, wounds: f.woundsByCoach, serious: f.seriousByCoach})
 
 	// `standingWon` is a single scalar in 8300, so each coach must receive its
 	// own frame when the awards differ (they do: a win pays more than a loss).

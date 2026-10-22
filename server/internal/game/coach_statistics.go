@@ -36,6 +36,13 @@ const (
 	statEvoWoundsDealt   int16 = 205
 	statReputation       int16 = 207 // "Réputation atteinte"
 	statWinStreakEvo     int16 = 209 // "Nombre de victoires consécutives en mode évolution"
+	statLadderGap1v1     int16 = 35  // "Haber alcanzado el puesto: 2.500 - [#1]" (content.48.35)
+	statHellsTofus       int16 = 40  // wins against challenge 3, "Hell's tofus of the death!"
+	statLimeroByPunches  int16 = 84  // challenge 12 (Limero) won without casting a spell
+	statEvoSerious       int16 = 206 // "Haber tenido [#1] heridas graves en modo evolución"
+	ladderGapBase        int32 = 2500
+	challengeHellsTofus  int32 = 3
+	challengeLimero      int32 = 12
 	statTierStep         int16 = 300 // a per-level variant is base + 300 / + 600
 	tierForceLow         int32 = 1756
 	tierForceHigh        int32 = 2572
@@ -86,6 +93,7 @@ type fightOutcome struct {
 	gaveUp     map[uint]bool
 	deaths     map[uint]int32
 	wounds     map[uint]int32
+	serious    map[uint]int32 // the serious ones among wounds
 }
 
 // recordFightStatistics banks the end-of-fight statistics for every real
@@ -122,6 +130,17 @@ func (d *Deps) recordFightStatistics(f *Fight, out fightOutcome) {
 			}
 			if mode == streakMode1v1 {
 				b.max(statForce1v1, after)
+				if rank, err := d.Store.Coaches.LadderRank(c.ID); err == nil && rank > 0 {
+					b.max(statLadderGap1v1, ladderGapBase-int32(rank))
+				}
+			}
+			if won && f.ChallengeID == challengeHellsTofus {
+				b.add(statHellsTofus, 1)
+			}
+			if won && f.ChallengeID == challengeLimero {
+				if s := f.memberStats[c.ID]; s == nil || !s.castSpell {
+					b.add(statLimeroByPunches, 1)
+				}
 			}
 			if won && (mode == streakMode1v1 || mode == streakMode2v2) {
 				gap := sideLevel(f, out.preForce, t.ID, false) - sideLevel(f, out.preForce, t.ID, true)
@@ -134,6 +153,7 @@ func (d *Deps) recordFightStatistics(f *Fight, out fightOutcome) {
 			if f.Evolution {
 				b.add(statEvoDeathsTaken, out.deaths[c.ID])
 				b.add(statEvoWoundsTaken, out.wounds[c.ID])
+				b.add(statEvoSerious, out.serious[c.ID])
 				for _, om := range opponentsOf(f, t.ID) {
 					b.add(statEvoDeathsDealt, out.deaths[om])
 					b.add(statEvoWoundsDealt, out.wounds[om])
@@ -269,4 +289,41 @@ func sideLevel(f *Fight, force map[uint]int32, team uint8, own bool) int32 {
 		return 0
 	}
 	return sum / n
+}
+
+// Statistics moved outside a fight, by the coach's own session.
+const (
+	statWornItems       int16 = 34  // "Equipar a tu jefe con [#1] objetos" (content.48.34)
+	statEvoConsumables  int16 = 208 // "Haber utilizado [#1] pócimas y objetos consumibles en modo evolución"
+	statEvoLivingDelete int16 = 220 // "Nombre de combattants évolution non morts supprimés"
+	coachSlotPet        int16 = 9   // the Familier slot: a pet, not something worn
+)
+
+// noteStat applies one statistic for the session's coach (best when best is
+// set, else a running total) and re-evaluates its achievements if it moved.
+func (s *Session) noteStat(id int16, v int32, best bool) {
+	if s.Coach == nil || s.deps.Store == nil {
+		return
+	}
+	b := statBatch{d: s.deps, coach: s.Coach.ID}
+	if best {
+		b.max(id, v)
+	} else {
+		b.add(id, v)
+	}
+	if b.moved {
+		s.evaluateAchievements()
+	}
+}
+
+// wornItems counts the coach cards worn in the clothing slots (aMK: 0-11, the
+// pet's slot left out).
+func wornItems(inv []domain.CoachCard) int32 {
+	var n int32
+	for _, c := range inv {
+		if slot := c.Pos - 1; c.Pos > 0 && slot <= 11 && slot != coachSlotPet {
+			n++
+		}
+	}
+	return n
 }

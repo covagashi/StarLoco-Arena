@@ -112,6 +112,9 @@ func (s *Session) useConsumableOnFighter(fighter *domain.Fighter, cardID int32) 
 		s.log.Debug("use item: card not owned", "coach", s.Coach.Name, "card", cardID)
 		return nil
 	}
+	if fighter.Evolution {
+		s.noteStat(statEvoConsumables, 1, false)
+	}
 	if s.deps.Store != nil {
 		_ = s.deps.Store.Fighters.SaveProgress(fighter)
 		_ = s.deps.Store.Fighters.SaveConditions(fighter.ID, fighter.Conditions)

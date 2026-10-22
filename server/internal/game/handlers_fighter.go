@@ -152,9 +152,14 @@ func handleFighterDelete(s *Session, f *protocol.C2SFrame) error {
 	if err != nil {
 		return err
 	}
+	before, _ := s.deps.Store.Fighters.Get(uint(fighterID))
 	ok, err := s.deps.Store.Fighters.Delete(uint(fighterID), s.Coach.ID)
 	if err != nil {
 		return err
+	}
+	if ok && before != nil && before.Evolution &&
+		before.State != domain.FighterStateDead && before.State != domain.FighterStateGraveyard {
+		s.noteStat(statEvoLivingDelete, 1, false)
 	}
 	result := uint8(0)
 	if !ok {
