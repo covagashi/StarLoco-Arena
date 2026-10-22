@@ -1247,16 +1247,20 @@ func _apply_displacement(d: Dictionary) -> void:
 ## fighter (aew_1: caster !PR() && !PT(), else aoy() hides it — an invisible
 ## fighter's traps don't show), so draw-time visibility follows the sprite's
 ## invisibility fade rather than a stored flag. Auras (176) re-centre on the
-## caster's live cell every frame and age one step per table turn.
+## caster's live cell every frame and age one step per table turn; a trap
+## placed by an effect with a finite duration (Bruma: 3 turns) ages the same
+## way, since the retail drops the area when that effect ends (ds_1.aK).
 func _place_area(d: Dictionary, aura: bool) -> void:
 	var tpl := int(d.get("value", 0))
 	var m := Areas.meta(tpl)
 	if m.is_empty():
 		return                     # unknown template — nothing to draw
 	var turns := 0
+	var ge := int(d.get("gen_effect", 0))
 	if aura:
-		var ge := int(d.get("gen_effect", 0))
 		turns = -1 if Effects.is_infinite(ge) else Effects.duration(ge)
+	elif not Effects.is_infinite(ge):
+		turns = Effects.duration(ge)   # 0: the trap lasts until maxExec
 	_areas.append({"tpl": tpl, "aura": aura,
 		"ctr": Vector3i(int(d.get("x", 0)), int(d.get("y", 0)),
 			int(d.get("z", 0))),
@@ -1356,10 +1360,10 @@ func _target_capped(pos: Vector2i, meta: Dictionary) -> bool:
 	return int(rec.get("tgt", {}).get(fid, 0)) >= int(meta.get("mptt", 0))
 
 
-## 8100 — auras age one table turn (server tickEffectAreas); traps don't age.
+## 8100 — auras and timed traps age one table turn (server tickEffectAreas).
 func _age_areas() -> void:
 	for a in _areas.duplicate():
-		if a.aura and int(a.turns) > 0:
+		if int(a.turns) > 0:
 			a.turns = int(a.turns) - 1
 			if int(a.turns) <= 0:
 				_areas.erase(a)

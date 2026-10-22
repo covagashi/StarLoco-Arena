@@ -491,6 +491,17 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		print("[smoke] AREAS after fire=%d" % fight_scene._areas.size())
 		if fight_scene._areas.size() != 1:
 			push_error("effect areas: one-shot trap should die after firing")
+		# S19 (B-185): Bruma (tpl 2) placed by gen 256, a 3-turn effect, dies
+		# with that effect; the untimed glyph does not age.
+		fight_scene._on_net_message(8120, mk8120.call(66, 256, 2, cc.x, cc.y, fid))
+		var timed_left: Array = []
+		for _r in 3:
+			fight_scene._age_areas()
+			timed_left.append(fight_scene._areas.size())
+		print("[smoke] AREAS timed trap per round=%s" % [timed_left])
+		if timed_left != [2, 2, 1]:
+			push_error("effect areas: the 3-turn Bruma should go on round 3, got %s"
+				% [timed_left])
 	# Cast-frequency locks — fabricate an 8110 for spell 32 (cd=5): the button
 	# must lock immediately and unlock only once _table_turn advances 5.
 	if not _cd_seen:

@@ -33,8 +33,34 @@ antes de escribir código.
 
 ## Datos retail sin leer (`server/docs/DATA-COVERAGE.md`)
 
-- [ ] Tipo 210 (trampas): política de re-disparo, máscaras y temporizador; los
-      disparadores 10002/10003/10006/10008 (la plantilla 1016 nunca se dispara).
+- [x] **Tipo 210 (trampas)** (2026-10-22): los 13 campos leídos y con nombre
+      (`aeb_0` → `er_1`/`yl_1`/`ack_1`). Hecho:
+      - **B-185**: la Bruma (153) y la Bruma mortal (427) no se iban nunca. El
+        área retail muere con el efecto 66 que la puso (`ds_1.aK`), y esos
+        dos llevan duración (3–4 turnos); el servidor solo miraba `maxExec`
+        (63, ilimitado). Ahora caduca como un aura, en servidor y en Godot.
+      - **10008** (moverse sin salir del área): cableado, por paso andado y por
+        desplazamiento forzado, como el 10001. Solo lo llevan la Bruma y la
+        Bruma mortal (la mortal hiere al moverse dentro).
+      Descartado, con la razón:
+      - Condición de aplicación (`yl_1.d`: una vez, una por equipo, una por
+        objetivo), el campo 6 (`ack_1.ahJ`, que nadie lee) y el retardo de
+        re-disparo (`yl_1.FH`): a cero / vacíos en las 16 plantillas.
+        `TestStaticEffectsUnusedFieldsReal` falla si un cambio de datos los
+        activa.
+      - **10003 / 10006**: nada en el cliente los dispara y no se sabe qué
+        significan. La 1016 (`mauvaisOeil`, solo 10003) tiene un único efecto,
+        170 "sin efecto", así que no dispararla no cambia nada.
+      - **10002** (salir: desaplicar): solo la Bruma lo lleva, y sus dos
+        efectos, 57 (invisible) y 84 (revelar), caen sobre el mismo luchador
+        en ese orden; el 84 deshace el 57 al instante (en el servidor y en el
+        `aum` del cliente), así que al salir no queda nada que quitar.
+        **Pregunta abierta**: la descripción del hechizo dice que oculta a los
+        de dentro; con esos datos, ni aquí ni (al parecer) en el retail lo
+        hace. Sin servidor retail no se puede comprobar.
+      Pruebas: `go test ./internal/game -run 'Trap|Stay'` (dos nuevas) y
+      `./internal/gamedata -run StaticEffects`; `fight_smoke` en vivo (la
+      Bruma dibujada dura 2 rondas y se va en la 3.ª: `[2, 2, 1]`).
 - [ ] Tipo 400: logro enlazado, recompensa y tope de XP.
 - [ ] Estadísticas: hay 98 contadores referenciados y el servidor mueve "un
       puñado".

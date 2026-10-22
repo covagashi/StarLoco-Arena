@@ -15,20 +15,28 @@ package gamedata
 //	effectList inner effects
 //
 // String = [i32 len][utf8]; every array = [i32 count][i32×count] (the Java BitSet
-// trigger sets are serialized as plain id arrays, NOT bit-packed). The two
-// _unknown scalars are the residual scriptId/targetsToShow — read to keep the
-// cursor aligned; their exact meaning does not affect trap behaviour.
+// trigger sets are serialized as plain id arrays, NOT bit-packed).
+//
+// Named from the client's loader (aeb_0 -> er_1 / yl_1 / ack_1, S19): field 6
+// is ack_1.ahJ, which nothing in the client reads; field 8 is the trigger
+// animation (aor.bG(er_1.eA())); field 12 is the re-trigger delay pair (yl_1.FH:
+// either value > 0 arms it). Field 7 (yl_1.aDQ) and fields 6 and 12 are zero /
+// empty in all 16 shipped templates, so the server applies none of them;
+// TestStaticEffectsUnusedFieldsReal fails if a data change ever sets one.
 type StaticEffect struct {
-	ID            int32
-	Type          string // "TRAP" (walk/turn-triggered) | "SPECIAL" (map bonus tile)
-	Label         string // e.g. "trap", "mauvaisOeil" (often "")
-	AreaShape     int32  // footprint shape (1 point, 2 circle, …)
-	AreaSize      []int32
-	MaxExec       int32   // firings before self-removal; >=63 or <0 = unlimited
-	AppCondition  int32   // 0 always / 1 once-everyone / 2 once-team / 3 once-target
-	AppTriggers   []int32 // trigger event ids that FIRE the area (10001 walk-on, 10000 turn-start, …)
-	UnappTriggers []int32 // trigger event ids that UN-apply it (exit)
-	Effects       []Effect
+	ID             int32
+	Type           string // "TRAP" (walk/turn-triggered) | "SPECIAL" (map bonus tile)
+	Label          string // e.g. "trap", "mauvaisOeil" (often "")
+	AreaShape      int32  // footprint shape (1 point, 2 circle, …)
+	AreaSize       []int32
+	MaxExec        int32   // firings before self-removal; >=63 or <0 = unlimited
+	AppCondition   int32   // yl_1.d: 0 always / 1 once-everyone / 2 once-team / 3 once-target
+	Field6         int32   // ack_1.ahJ, unread by the client
+	Animation      int32   // the trigger's animation id (aor.bG), display only
+	RetriggerDelay []int32 // yl_1.cjB: the re-trigger delay pair
+	AppTriggers    []int32 // trigger event ids that FIRE the area (10001 walk-on, 10000 turn-start, …)
+	UnappTriggers  []int32 // trigger event ids that UN-apply it (exit)
+	Effects        []Effect
 }
 
 // Unlimited reports whether the area never self-removes from a firing count
@@ -85,13 +93,13 @@ func decodeStaticEffect(data []byte) *StaticEffect {
 	t.Label = c.str()               // 3 label
 	t.AreaShape = c.i32()           // 4 areaShape
 	t.MaxExec = c.i32()             // 5 maxExecutionCount
-	_ = c.i32()                     // 6 (scriptId?/targetsToShow?)
+	t.Field6 = c.i32()              // 6 ack_1.ahJ
 	t.AppCondition = c.i32()        // 7 applicationCondition
-	_ = c.i32()                     // 8 (targetsToShow?/scriptId?)
+	t.Animation = c.i32()           // 8 trigger animation
 	t.AreaSize = c.i32Array()       // 9 areaSize
 	t.AppTriggers = c.i32Array()    // 10 applicationTriggers
 	t.UnappTriggers = c.i32Array()  // 11 unapplicationTriggers
-	_ = c.i32Array()                // 12 deactivationDelay
+	t.RetriggerDelay = c.i32Array() // 12 re-trigger delay
 	t.Effects = decodeEffectList(c) // 13 inner effects
 	if !c.ok() || t.ID <= 0 {
 		return nil

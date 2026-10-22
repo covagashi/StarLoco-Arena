@@ -122,3 +122,64 @@ func TestTrapUnlimitedNotRemoved(t *testing.T) {
 		t.Errorf("enemy HP = %d, want 30 (two walk-on triggers × 20)", enemy.HP)
 	}
 }
+
+// B-185: a fixed trap placed by an effect with a finite duration dies when that
+// running effect ends (client ds_1.aK removes the area), even with an unlimited
+// maxExec — Bruma (spell 153, template 2) and Bruma mortal (427, 1015) used to
+// stay on the board for the rest of the fight. An infinite duration (Trampa
+// Mortal, [63 0]) or none leaves the area to maxExec.
+func TestTimedTrapExpiresWithItsEffect(t *testing.T) {
+	tmpl := walkOnTrap()
+	tmpl.MaxExec = 63
+	f, caster, _ := trapTestFight(tmpl)
+	f.resolveEffect(caster, gamedata.Effect{ActionID: 66, Params: []float32{1}, Duration: []int32{3, 1}}, Pos{X: 11, Y: 15})
+	f.resolveEffect(caster, gamedata.Effect{ActionID: 66, Params: []float32{1}, Duration: []int32{63, 0}}, Pos{X: 10, Y: 15})
+	f.resolveEffect(caster, gamedata.Effect{ActionID: 66, Params: []float32{1}}, Pos{X: 9, Y: 15})
+	for round := 1; round <= 2; round++ {
+		f.tickEffectAreas()
+		if len(f.effectAreas) != 3 {
+			t.Fatalf("after %d rounds: areas=%d, want 3", round, len(f.effectAreas))
+		}
+	}
+	f.tickEffectAreas()
+	if len(f.effectAreas) != 2 {
+		t.Fatalf("after 3 rounds: areas=%d, want 2 (the 3-turn trap gone)", len(f.effectAreas))
+	}
+	for _, a := range f.effectAreas {
+		if a.center.X == 11 {
+			t.Errorf("the 3-turn trap at (11,15) is still on the board")
+		}
+	}
+	for i := 0; i < 70; i++ {
+		f.tickEffectAreas()
+	}
+	if len(f.effectAreas) != 2 {
+		t.Errorf("infinite / untimed traps aged out: areas=%d, want 2", len(f.effectAreas))
+	}
+}
+
+// Trigger 10008 (he_1.a: in the FROM and the TO footprint) fires on a step
+// taken inside the area; entering only fires 10001 and stepping out fires
+// neither. Template 1015 (Bruma mortal) carries both.
+func TestStayTriggerFiresOnAStepInside(t *testing.T) {
+	stay := &gamedata.StaticEffect{
+		ID: 1015, Type: "TRAP", AreaShape: areaShapeCircle, AreaSize: []int32{2}, MaxExec: 63,
+		AppTriggers: []int32{trapTriggerStay},
+		Effects:     []gamedata.Effect{{ActionID: 1, Params: []float32{5}}},
+	}
+	f, caster, enemy := trapTestFight(stay)
+	f.resolveEffect(caster, gamedata.Effect{ActionID: 66, Params: []float32{1015}}, Pos{X: 9, Y: 15})
+
+	f.applyFighterMove(enemy, []Pos{{X: 11, Y: 15}, {X: 10, Y: 15}, {X: 9, Y: 15}})
+	// 12 -> 11: entering (no 10001 on this template) — nothing; 11 -> 10 and
+	// 10 -> 9: two steps inside, 5 each.
+	if enemy.HP != 60 {
+		t.Errorf("enemy HP = %d, want 60 (two steps inside × 5)", enemy.HP)
+	}
+	enemy.Pos = Pos{X: 8, Y: 15}
+	f.checkEffectAreasMove(Pos{X: 9, Y: 15}, Pos{X: 8, Y: 15}, enemy) // still inside: radius 2
+	f.checkEffectAreasMove(Pos{X: 8, Y: 15}, Pos{X: 7, Y: 14}, enemy) // out
+	if enemy.HP != 55 {
+		t.Errorf("enemy HP = %d, want 55 (one more step inside, none for leaving)", enemy.HP)
+	}
+}

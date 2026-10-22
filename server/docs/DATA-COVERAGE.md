@@ -52,7 +52,7 @@ dialog trees).
 | 1 | 1 | `aet_1` → — | Standard fight parameters (singleton) | ❌ | — |
 | **100** | 907 | `aPp` → `xj` | **Coach cards** | ✅ 18/26 | `cards.go` |
 | **101** | 138 | `yp_0` → `fe_1` | **Card sets ("panoplies")** | ✅ 2/2 | `cardsets.go` |
-| **210** | 16 | `rf_2` → `er_1` | **Traps / special zones** | ✅ partial | `effectareas.go` |
+| **210** | 16 | `rf_2` → `er_1` | **Traps / special zones** | ✅ 13/13 | `effectareas.go` |
 | **220** | 203 | `co_1` → `yp_2` | **Spells** | ✅ 23/23 | `spells.go` |
 | **230** | 51 | `ama_1` → `tO` | **Per-round event cards** | ✅ full | `events.go` |
 | **250** | 75 | `uh_0` → `ve_0` | **Fighter equipment / weapons** | ✅ good | `fightercards.go` |
@@ -262,10 +262,23 @@ Decoded: id, six raw ints, reward cards, time-challenge. Of the rest, most have 
 callers in the client either**; the meaningful unread ones are the linked achievement id,
 the XP reward and the XP cap.
 
-### Type 210 — Traps / special zones (`rf_2`) — 8 of 13 fields
-Decoded: id, type string, AoE shape+params, max triggers, effects. **Not read**: the
-re-trigger policy (once per team / per target / always), the two trigger bitmasks, and
-the delayed re-trigger timer.
+### Type 210 — Traps / special zones (`rf_2`) — 13 of 13 fields
+All read (S19). Named from the loader (`aeb_0` → `er_1` / `yl_1` / `ack_1`):
+
+| field | client | shipped | server |
+|---:|---|---|---|
+| 5 | `ack_1.ahI` max firings (≥ 63 / < 0 unlimited) | 1 or 63 | ✅ |
+| 6 | `ack_1.ahJ` — nothing in the client reads it | 0 in all 16 | not applied |
+| 7 | `yl_1.aDQ` application condition (`yl_1.d`: 1 once ever, 2 once per team, 3 once per target, else always) | 0 in all 16 | not applied |
+| 8 | the trigger animation (`aor.bG(er_1.eA())`) | 101–111 | display only |
+| 12 | `yl_1.cjB` re-trigger delay pair (`FH`: either value > 0 arms it) | empty in all 16 | not applied |
+
+`TestStaticEffectsUnusedFieldsReal` fails if a data change ever sets 6, 7 or 12.
+
+**The area lives as long as the effect that placed it (B-185).** An action-66 trap
+goes when its running effect ends (`ds_1.aK`), so a cast with a duration — Bruma
+`[3 1]`, Bruma mortal `[4 1]` — ages one round per table turn like an aura, whatever
+its `maxExec`.
 
 **The trigger enum, recovered in full (B-076).** The client turns `appTriggers` /
 `unappTriggers` into two `BitSet`s keyed by trigger id (`aeb_0`), and fires them from
@@ -276,10 +289,17 @@ whether they contain the FROM cell and the TO cell:
 |---:|---|---|
 | 10000 | the fighter STARTS its turn on the footprint | ✅ |
 | 10001 | **entered** — in TO, not in FROM | ✅ (walk **and**, since B-076, every forced displacement) |
-| 10002 | **left** — in FROM, not in TO | ⬜ |
-| 10003 | unknown — the ONLY trigger on template 1016 `mauvaisOeil`, which therefore **never fires here** | ⬜ |
-| 10006 | unknown — templates 2 and 1015 | ⬜ |
-| 10008 | **stayed inside** — in TO and in FROM | ⬜ |
+| 10002 | **left** — in FROM, not in TO; an UN-apply trigger (`ack_1.l`: the area's running effects come off the fighter) | not applied (below) |
+| 10003 | unknown — nothing in the client fires it; the ONLY trigger on template 1016 `mauvaisOeil`, whose one effect is 170 "no effect" | not applied |
+| 10006 | unknown — nothing in the client fires it; templates 2 and 1015, next to 10000/10001/10008 | not applied |
+| 10008 | **stayed inside** — in TO and in FROM | ✅ (S19: per walked step, and per forced displacement) |
+
+10002 is only on template 2 (Bruma), whose two effects are 57 "becomes invisible" and
+84 "reveal the invisible" on the same fighter; 84 undoes 57 the moment it lands
+(server `applyRevealInvisible`, client `aum` expiring every `co_0`), so there is
+nothing left to take off on the way out. Whether the retail Bruma really hid its
+occupants (its spell text says so) cannot be told from the client: the order the
+two land in is the data's.
 
 `he_1.a` is a pure position-change notification and **eight** effect classes call it,
 including `go` (teleport) and `aox_1` (swap, once per swapped fighter) — which is the
@@ -288,7 +308,9 @@ evidence that forced displacement triggers areas, not just walking.
 Shipped trigger sets across the 16 templates: the 8 `SPECIAL` tiles are all `[10000]`;
 traps 1 and 1020 are `[10001]`; template 2 is `[10008 10000 10006 10001]` with
 `unapp=[10002]`; 1015 is `[10000 10001 10008 10006]`; 1016 is `[10003]`; and **1017,
-1018, 1019 carry an EMPTY trigger array**, so nothing fires them at all.
+1018, 1019 carry an EMPTY trigger array**. Those three are Sayanaura's auras (spells
+463 and 471–473, action 176), which the server fires at turn start for whoever starts
+inside, regardless of the template's triggers.
 
 ---
 
@@ -395,6 +417,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 
 | Date | Change |
 |---|---|
+| 2026-10-22 | S19: type 210 read to 13/13 (field 6, the trigger animation, the re-trigger delay; condition, field 6 and delay pinned at zero by test). B-185: an action-66 trap expires with its effect's duration. Trigger 10008 (stayed inside) wired; 10002/10003/10006 documented as not applied, with the reason. |
 | 2026-10-20 | B-179: 5200's first section now carries the worn coach cards `{i16 slot, i32 templateId}` (client `air_2` / `rb_2`); it was always sent empty. No decoder or record change. |
 | 2026-10-20 | `cmd/dumpcards` also exports each firework card's `fwType` (field 7, `tl()`: 0 burst, 1 rocket, 2 fountain) and `fwColour` (field 8, `tk()`, RGB 0..255) so the Godot lobby can draw a 22094 on its sky. No decoder or wire change. |
 | 2026-10-20 | B-177: `gamedata.CardTypeEvolution` (24, client `aMK.dYy`) names the card type the graveyard may spend; the coach-card `Type` field (already decoded) now gates 22099. No decoder or wire change. |

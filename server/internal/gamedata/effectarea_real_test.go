@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -87,4 +88,38 @@ func firstActionID(e []Effect) int32 {
 		return -1
 	}
 	return e[0].ActionID
+}
+
+// TestStaticEffectsUnusedFieldsReal pins why the server applies neither the
+// application condition (yl_1.d), ack_1.ahJ nor the re-trigger delay
+// (yl_1.FH): every shipped template leaves them at zero / empty (S19). It
+// also pins the trigger ids to the six the client knows (he_1.a, B-076). Runs
+// on the committed data-dist.
+func TestStaticEffectsUnusedFieldsReal(t *testing.T) {
+	st, err := Open(filepath.Join("..", "..", "data-dist"))
+	if err != nil {
+		t.Skip("no data-dist; skipping")
+	}
+	se, err := st.LoadStaticEffects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if se.Len() != 16 {
+		t.Errorf("templates = %d, want 16", se.Len())
+	}
+	known := map[int32]bool{10000: true, 10001: true, 10002: true, 10003: true, 10006: true, 10008: true}
+	for id, s := range se.All() {
+		if s.AppCondition != 0 || s.Field6 != 0 || len(s.RetriggerDelay) != 0 {
+			t.Errorf("template %d: appCondition=%d field6=%d delay=%v, want 0/0/[] (the server ignores them)",
+				id, s.AppCondition, s.Field6, s.RetriggerDelay)
+		}
+		for _, tr := range append(append([]int32{}, s.AppTriggers...), s.UnappTriggers...) {
+			if !known[tr] {
+				t.Errorf("template %d: unknown trigger %d", id, tr)
+			}
+		}
+	}
+	if a := se.Get(1).Animation; a != 109 {
+		t.Errorf("template 1 animation = %d, want 109", a)
+	}
 }

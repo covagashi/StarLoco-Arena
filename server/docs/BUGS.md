@@ -13,6 +13,23 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-185 · Bruma and Bruma mortal stayed on the board for the rest of the fight
+
+- **Symptom:** the Sram's Bruma (spell 153, template 2) and Bruma mortal
+  (427, template 1015) never went away. Both templates have an unlimited
+  `maxExec`, and the server only removed a fixed trap when its firings ran out.
+- **Root cause:** the area lives as long as the action-66 effect that placed
+  it: the client's `ds_1.aK()` (the running effect ending) removes it
+  (`gX().g(nu)`), and those two casts carry a duration (`[3 1]`, `[4 1]` on a
+  critical, `[4 1]`). `applySetEffectArea` ignored the duration. The Godot
+  client had the same gap: only auras aged.
+- **Fix:** a fixed trap placed by an effect with a finite duration now ages one
+  round per table turn, like an aura, and goes when it reaches 0; an infinite
+  duration (Trampa Mortal, `[63 0]`) or none still leaves it to `maxExec`.
+  `fight_view._age_areas` does the same for the drawn area.
+- **Verified:** `unit` — `TestTimedTrapExpiresWithItsEffect`; `client-ui` —
+  `fight_smoke` (a Bruma placed with effect 256 lasts rounds 1–2, gone on 3).
+
 ### B-184 · The lobby swallowed the 8010 that follows the 8000, so the versus never sent its 8011
 
 - **Symptom:** in `pvp_smoke` Ready was never pressed and placement ran out

@@ -10,10 +10,12 @@ import "github.com/StarLoco/arena-2.70/internal/gamedata"
 // v2.04b server's EffectArea system (internal/combat/effectarea.go), adapted to
 // the 2.70 fight/effect model.
 //
-// Trigger model: the 2.70 data uses a 10000-range trigger enum. Confirmed from
-// the shipped trap/special templates: 10001 = a fighter WALKS ONTO the footprint
-// (the classic trap — every TRAP template carries it); 10000 = a fighter STARTS
-// its turn on the footprint (the SPECIAL map tiles / glyphs). We fire on those.
+// Trigger model: the 2.70 data uses a 10000-range trigger enum, recovered from
+// the client's he_1.a (B-076): 10001 = a fighter ENTERS the footprint (the
+// classic trap); 10008 = it moves while staying INSIDE it (Bruma, Bruma
+// mortal); 10000 = it STARTS its turn on the footprint (the SPECIAL map tiles /
+// glyphs). We fire on those three. 10002 (left) only un-applies, and 10003 /
+// 10006 are fired by nothing in the client; see sprints/S19.
 //
 // Firing is SERVER-AUTHORITATIVE: the trap's inner effects are resolved through
 // the normal effect resolver, each broadcasting its own RUNNING_EFFECT, so the
@@ -25,6 +27,7 @@ import "github.com/StarLoco/arena-2.70/internal/gamedata"
 const (
 	trapTriggerTurnStart int32 = 10000 // start of a fighter's turn while on the footprint (glyph/special)
 	trapTriggerWalkOn    int32 = 10001 // a fighter enters the footprint during movement (trap)
+	trapTriggerStay      int32 = 10008 // a fighter moves from one footprint cell to another
 )
 
 // trapWireIDOffset namespaces live-area ids well clear of coach, fighter and
@@ -45,6 +48,11 @@ type effectArea struct {
 	// `turnsLeft` rounds (and dies with `follow`).
 	follow    *FightFighter
 	turnsLeft int32
+	// expires marks a fixed trap placed by an effect with a finite duration:
+	// the client drops the area when that running effect ends (ds_1.aK), so
+	// it lives turnsLeft rounds, like an aura. An infinite or zero duration
+	// leaves it to maxExec alone.
+	expires bool
 }
 
 // isAura reports whether this area follows a fighter (an aura vs a fixed trap).
@@ -58,6 +66,9 @@ func (a *effectArea) unlimited() bool { return a.maxExec >= 63 || a.maxExec < 0 
 func (a *effectArea) exhausted() bool {
 	if a.isAura() {
 		return a.turnsLeft <= 0 || a.follow == nil || a.follow.HP <= 0
+	}
+	if a.expires && a.turnsLeft <= 0 {
+		return true
 	}
 	return !a.unlimited() && a.maxExec <= 0
 }
@@ -76,6 +87,9 @@ func (a *effectArea) currentCenter() Pos {
 // uses its template's AppTriggers.
 func (a *effectArea) firesOnEnter() bool {
 	return !a.isAura() && containsI32(a.tmpl.AppTriggers, trapTriggerWalkOn)
+}
+func (a *effectArea) firesOnStay() bool {
+	return !a.isAura() && containsI32(a.tmpl.AppTriggers, trapTriggerStay)
 }
 func (a *effectArea) firesOnTurnStart() bool {
 	return a.isAura() || containsI32(a.tmpl.AppTriggers, trapTriggerTurnStart)
@@ -116,6 +130,9 @@ func (f *Fight) applySetEffectArea(caster *FightFighter, ef gamedata.Effect, tar
 		center:     center,
 		caster:     caster,
 		maxExec:    tmpl.MaxExec,
+	}
+	if turns, infinite := ef.DurationTurns(); !infinite && turns > 0 {
+		area.expires, area.turnsLeft = true, turns
 	}
 	f.effectAreas = append(f.effectAreas, area)
 
@@ -176,11 +193,12 @@ func (f *Fight) applySetAura(caster *FightFighter, ef gamedata.Effect, _ Pos) {
 	}
 }
 
-// tickEffectAreas ages auras by one round and prunes any that expired (or whose
-// caster died). Called at each new table turn alongside tickBuffs/tickStates.
+// tickEffectAreas ages auras and timed traps by one round and prunes any that
+// expired (or whose caster died). Called at each new table turn alongside
+// tickBuffs/tickStates.
 func (f *Fight) tickEffectAreas() {
 	for _, a := range f.effectAreas {
-		if a.isAura() && a.turnsLeft > 0 && a.turnsLeft < infiniteStateTurns {
+		if (a.isAura() || a.expires) && a.turnsLeft > 0 && a.turnsLeft < infiniteStateTurns {
 			a.turnsLeft--
 		}
 	}
@@ -188,7 +206,8 @@ func (f *Fight) tickEffectAreas() {
 }
 
 // checkEffectAreasMove fires any walk-on trap the applicant entered on a single
-// movement step (was outside the footprint at `start`, inside it at `arrival`).
+// movement step (was outside the footprint at `start`, inside it at `arrival`),
+// and any stay trap it moved within (inside at both).
 // Called per step by applyFighterMove (and any server-driven reposition), so
 // walking THROUGH a trap mid-path triggers it. Re-entrancy from an inner effect
 // that itself moves a fighter is guarded by inAreaTrigger.
@@ -197,10 +216,11 @@ func (f *Fight) checkEffectAreasMove(start, arrival Pos, applicant *FightFighter
 		return
 	}
 	for _, a := range f.snapshotAreas() {
-		if a.exhausted() || !a.firesOnEnter() {
+		if a.exhausted() || !a.contains(arrival) {
 			continue
 		}
-		if a.contains(arrival) && !a.contains(start) {
+		inBefore := a.contains(start)
+		if (!inBefore && a.firesOnEnter()) || (inBefore && a.firesOnStay()) {
 			f.fireEffectArea(a, applicant)
 			if applicant.HP <= 0 {
 				break // died in the trap; stop the walk-through
