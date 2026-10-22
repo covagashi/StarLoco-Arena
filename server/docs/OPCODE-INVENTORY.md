@@ -118,10 +118,10 @@ if this block drifts.
 |---|---|
 | Rows in the master table | 347 |
 | **C2S handled (H)** | 112 |
-| **S2C emitted (E)** | 154 |
+| **S2C emitted (E)** | 155 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
-| **Not implemented (-)** | 72 |
+| **Not implemented (-)** | 71 |
 
 A `both | H+E` row counts once on each side; there is none today. The handled
 count also equals the opcodes `RegisterAll` binds (the tests above check both
@@ -530,7 +530,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 28635 | C2S | - | TournamentAdmin? (`aeC`) | **unsendable by retail**: the class is constructed NOWHERE in the client (verified case-sensitively). Tournament admin family - see the note above the legend |
 | 28636 | S2C | - | (`aig_1`) | As 28604; answers 28635 |
 | 28644 | S2C | E | TournamentSearchUpcoming (aaj_0) | `[i64 tid][i64 startEpochMillis]` - the countdown to a tournament's next opponent-search period. `zN` shows `1 + (start-now)/60000` minutes, so a start in the PAST renders a negative count; sent only while the window is still ahead |
-| 28646 | S2C | - | (`aNq`) | `zN` case 28646 adds its `td_0` WITHOUT the duplicate guard that case 28630 has. **Blocked, not unwritten**: 28630 must stop being the tournament-selection mechanism before this can be sent, or the client accumulates duplicate entries |
+| 28646 | S2C | E | TournamentSearchOpening (aNq) | `[i64 tid][i64 durationMillis]` - *"the search period starts now, valid N minutes"*. Sent by the tournament scheduler (`tournament_schedule.go`) at the moment a period opens, to the online entrants. `zN` adds its `td_0` WITHOUT the duplicate guard 28630 has, so it is sent once per period and only after the previous period was closed with 28630 open=0, which removes the row (S09) |
 | 28648 | S2C | E | TournamentSearchEnded (df_1) | `[i64 tid][i8 forfeit]` - closes an opponent-search period. forfeit=0 is *"the other player was not searching while you were, so you are declared winner by forfeit"*; forfeit=1 is the same sentence reversed. The ONLY server-side way to dismiss `tournamentsSearchStatusDialog` (`zN` case 28648), so an unopposed coach that never gets this waits in it forever |
 | 28649 | C2S | H | TournamentTreeReq (alf_0) | `handleTournamentTreeRequest` - `[i64 tournamentId][i32 page][i32 len][utf8 highlightName]`. The page is driven by the tree dialog's paging buttons (20069) and the name by its search box (20068) |
 | 28650 | S2C | E | TournamentTree (IL) | `encodeTournamentTree` - `[i32 page][i32 n]{[i32 slot][i32 len][utf8 name]}[i32 unread]`. A 1-indexed binary heap: 1 winner, 2-3 finale, 4-7 semi, 8-15 quarter, 16-31 first round (`ah_1.getFieldValue`). Names are **UTF-8**, not cp1252. Upper rounds stay empty until a match layer decides them |
@@ -743,7 +743,7 @@ chunk of work: one handler class, one feature area.
 | Ladder | `pl_2`, `pq_1` | ~~27526~~, ~~27528~~, 27552 | **27526/27528 resolved**: the Ankama-internal avatar-upload pipeline (27528 literally POSTs to `ws.ankama.lan`) - never-implement. 27552 is decode-factory-only, inert. 108 also lands in `pl_2`. Sub-boards beyond the 1v1/clan ones we serve. |
 | Overworld / instance | `no_2` | ~~4601~~, ~~4700~~, 22092 | **4601/4700 DONE** (sit-stand, emotes). 22092 is the hover-tooltip status flag - settled wire, no source for the flag exists (deliberate non-work). 4510 reaches `no_2` and `qg_2`. |
 | Overworld (misc) | `qg_2` | 4104, 4106, ~~4510~~ | **4510 DONE** (teleports). 4104 redundant with 4098; 4106 blocked by the same spawn-precondition as 4510. |
-| Tournament notifications | `zN` | 17005, ~~25000~~, 28646 | **25000 DONE** - it's the bare `zN.M(code)` error toaster (26310's code table minus frame cleanup); now emitted for the clan-island Zaap refusal. **28646** ("search period opens now, N minutes") is blocked on a known hazard, not effort: `zN` case 28646 adds its `td_0` WITHOUT the duplicate guard case 28630 has, so emitting both for one tournament leaves two identical alert rows. 28630 must stop being the selection mechanism first. |
+| Tournament notifications | `zN` | 17005, ~~25000~~, ~~28646~~ | **25000 DONE** - it's the bare `zN.M(code)` error toaster (26310's code table minus frame cleanup); now emitted for the clan-island Zaap refusal. **28646 DONE (S09)** - sent by the scheduler when a period opens, after the previous one was closed with 28630 open=0, so the missing duplicate guard never bites. |
 | Tournament (player) | `ajp_0` | 28618 | **NOT dead** but **blocked**: it raises a real dialog whose answer sends 28617 - and it only fires for "ended while you were registered" tournaments, which requires the deferred live-match layer to ever produce an ending. |
 | System / connection | `fp_0`, `alz_2`, `tu_1` | 100, 102, 103, 105, 106, 108, 202, 204 | Low opcodes; 202/204 sit beside INTERACTIVE_ELEMENT_SPAWN (200) so are likely the element family. Semantics not established. |
 | Misc, single consumer | `add_0` / `pe_2` / `aog_1` / `WE` / `do_2` | ~~2401~~, 2411 / 4000 / 4800 / 8400 / 4311 | 2401 done (B-141); 2411's wire is fully decoded (per-preset ladder record) but needs a per-preset stats model to fill honestly. 4000's target setter is unresolvable - do not guess. |
@@ -839,15 +839,13 @@ behaviour) before deciding whether the retail client needs them:
   only reachable through `uw_2.ahZ()`, which nothing calls. A `case` label is not
   evidence of a consumer.
 
-  **Live and still open.** 28644 (`aaj_0`, `[i64 tid][i64 nextSearchEpochMillis]`,
-  the "next search period is at T" countdown) and 28646 (`aNq`,
-  `[i64 tid][i64 durationMillis]`, "search period opens now, valid N minutes") are
-  genuinely rendered by `zN`. Both need wall-clock search-period scheduling, which
-  the server does not have — `domain.Tournament` carries no schedule columns.
-
-  One hazard for whoever builds it: `zN` case 28646 adds its `td_0` notification
-  **without** the duplicate guard that case 28630 has, so emitting both for the same
-  tournament leaves two identical rows in the alert list.
+  **Done (S09).** 28644 (`aaj_0`, `[i64 tid][i64 nextSearchEpochMillis]`, the
+  countdown) and 28646 (`aNq`, `[i64 tid][i64 durationMillis]`, "search period
+  opens now") are both sent: the schedule lives on `domain.Tournament`
+  (start, period length, periods, interval, repeat) and the scheduler in
+  `tournament_schedule.go` opens and closes the periods. The 28646 duplicate
+  hazard is avoided by ordering: a period is always closed with 28630 open=0
+  (which removes the row) before the next 28646 adds it again.
 - **15xxx — solved: this is the mailbox** (15000/15001 list, 15003 send result, 15004 delete, 15005 notice, 15006/15007 attachments, 15506/15507 name lookup, plus C2S 539 send). Fully implemented.
 - **17xxx — solved: the tournament calendar** (17002/17003, now serving real standing-tournament events). 17004/17006/17008 are Test-Lua-only console actions sending hardcoded TEST events; 17010 is player-created tournaments, gated on card 807 - a real model gap (custom events have no type-1000 defId to satisfy the client's unguarded deref).
 - **22xxx (minus 22003)** — statistics/achievements beyond the single counter we handle. **22094/22095 (fireworks) and 22099 (resurrection card) are now implemented.**

@@ -376,6 +376,13 @@ const (
 	// negative, nonsensical count. Only send it while the period is still ahead.
 	OpTournamentSearchUpcoming = 28644 // S2C aaj_0
 
+	// OpTournamentSearchOpening announces that a search period starts NOW:
+	// [i64 tid][i64 durationMillis]. `zN` adds the tournament's alert row
+	// WITHOUT the duplicate guard 28630 has, and drops the 28644 countdown. So it
+	// is only sent at the moment a period opens, after the previous one was
+	// closed with 28630 open=0 (which removes the row): never twice per period.
+	OpTournamentSearchOpening = 28646 // S2C aNq
+
 	OpTournamentSearchEnded = 28648 // S2C df_1: [i64 tid][i8 forfeit]
 
 	OpTournamentTreeReq = 28649 // C2S alf_0 (arch 2): [i64 tid][i32 round][i32 nameLen][name]

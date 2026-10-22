@@ -74,6 +74,44 @@
           <div class="hint">Lower numbers appear first.</div>
         </div>
 
+        <h2 class="mt-3">Schedule</h2>
+        <p class="small muted">
+          Registration closes when the first search period starts. In each period an entrant
+          presses Combattre to meet the coach facing them; whoever was searching when the period
+          closes wins an unplayed fixture by forfeit. The tournament finishes when it has a winner
+          or its last period closes. Leave the start empty for a tournament that is always open
+          and never finishes.
+        </p>
+
+        <div class="form-row">
+          <label for="search_start">First search period starts</label>
+          <input type="datetime-local" id="search_start" name="search_start" value="{{.Start}}">
+          <div class="hint">Server time.</div>
+        </div>
+
+        <div class="form-row">
+          <label for="search_minutes">Each period lasts (minutes)</label>
+          <input type="text" id="search_minutes" name="search_minutes" value="{{.Form.SearchPeriodMinutes}}" inputmode="numeric">
+        </div>
+
+        <div class="form-row">
+          <label for="search_periods">Search periods</label>
+          <input type="text" id="search_periods" name="search_periods" value="{{.Form.SearchPeriods}}" inputmode="numeric">
+          <div class="hint">1 to 6. Each settles at most one round; 16 entrants need 4.</div>
+        </div>
+
+        <div class="form-row">
+          <label for="period_interval">Minutes from one period's start to the next</label>
+          <input type="text" id="period_interval" name="period_interval" value="{{.Form.PeriodIntervalMinutes}}" inputmode="numeric">
+          <div class="hint">1440 = the same time every day.</div>
+        </div>
+
+        <div class="form-row">
+          <label for="repeat_days">Repeat every (days)</label>
+          <input type="text" id="repeat_days" name="repeat_days" value="{{.Form.RepeatDays}}" inputmode="numeric">
+          <div class="hint">0 = once. Otherwise the next edition opens for registration as soon as this one finishes.</div>
+        </div>
+
         <div class="form-row">
           <label class="check">
             <input type="checkbox" name="enabled" value="1" {{if .Form.Enabled}}checked{{end}}>

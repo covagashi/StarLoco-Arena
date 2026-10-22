@@ -94,12 +94,10 @@ func applyByes(out map[int32]uint, seeded map[int32]bool) {
 // bracket is a sparse slot -> display name map.
 type bracket map[int32]string
 
-// buildBracket seeds entrants into the first round in the given order.
-//
-// Upper slots are left EMPTY on purpose. This server has no match layer yet, so
-// no round has been decided; inventing winners would render a bracket that says
-// results exist when none do. An empty slot is how the client shows "not decided
-// yet", which is the truthful state.
+// buildBracket seeds entrants into the first round in the given order, with
+// the upper slots empty: the shape of a draw before any fixture is decided.
+// The live tree comes from TournamentManager.BracketSlots; this is the
+// first-round-only helper the encoder tests use.
 func buildBracket(names []string) bracket {
 	b := make(bracket, len(names))
 	for i, name := range names {
@@ -233,9 +231,13 @@ func buildTournamentSearchPeriod(tid int64, open bool) ([]byte, error) {
 //
 // Sent only for tournaments the coach is REGISTERED for: a notification for one
 // it cannot enter would select a tournament whose search must then be refused.
-// The client warns to its own log if the same tournament is announced twice, so
-// re-requesting the list re-announces - acceptable, and the client de-duplicates
-// by tid before adding.
+// The client de-duplicates 28630 by tid, so re-requesting the list re-announces
+// harmlessly.
+//
+// A scheduled edition is announced only while a search period is OPEN; ahead
+// of one it gets the 28644 countdown instead. 28646 (the period opens now) is
+// the scheduler's, sent once at the moment of opening (tournament_schedule.go).
+// An unscheduled tournament keeps the old always-open alert.
 func (s *Session) announceTournamentSearchPeriods() {
 	if s.Coach == nil || s.deps == nil || s.deps.Tournaments == nil || s.deps.Store == nil {
 		return
@@ -244,9 +246,15 @@ func (s *Session) announceTournamentSearchPeriods() {
 	if err != nil {
 		return
 	}
+	now := s.deps.tournamentNow()
 	for i := range ts {
-		tid := ts[i].WireID()
+		t := &ts[i]
+		tid := t.WireID()
 		if !s.deps.Tournaments.IsRegistered(s.Coach.ID, tid) {
+			continue
+		}
+		if t.Scheduled() && !t.SearchPeriodOpenAt(now) {
+			s.announceUpcomingSearchPeriod(t, now)
 			continue
 		}
 		frame, err := buildTournamentSearchPeriod(tid, true)
@@ -257,25 +265,21 @@ func (s *Session) announceTournamentSearchPeriods() {
 			s.log.Debug("tournament search period announced",
 				"coach", s.Coach.Name, "tournament", tid)
 		}
-		s.announceUpcomingSearchPeriod(&ts[i])
 	}
 }
 
-// announceUpcomingSearchPeriod sends 28644 when this tournament's search window
-// is still ahead, so the entrant sees a countdown to it.
+// announceUpcomingSearchPeriod sends 28644 when a search period is still
+// ahead, so the entrant sees a countdown to it, once per period per session.
 //
 // Deliberately NOT sent once the window has opened or passed: `zN` computes the
 // remaining minutes as 1 + (start - now)/60000, so a start in the past produces a
 // negative countdown rather than nothing.
-//
-// 28646 ("the period opens NOW, valid N minutes") is the natural companion and is
-// still unimplemented on purpose - `zN` case 28646 adds its `td_0` WITHOUT the
-// duplicate guard that case 28630 has, so sending both for one tournament leaves
-// two identical rows in the alert list. Emitting it needs 28630 to stop being the
-// selection mechanism first.
-func (s *Session) announceUpcomingSearchPeriod(t *domain.Tournament) {
-	start := t.SearchPeriodStart
-	if start.IsZero() || t.SearchPeriodMinutes <= 0 || !start.After(time.Now()) {
+func (s *Session) announceUpcomingSearchPeriod(t *domain.Tournament, now time.Time) {
+	start := t.NextPeriodStartAt(now)
+	if start.IsZero() {
+		return
+	}
+	if s.tournamentCountdowns[t.WireID()] == start.UnixMilli() {
 		return
 	}
 	w := protocol.NewWriter().I64(t.WireID()).I64(start.UnixMilli())
@@ -284,6 +288,10 @@ func (s *Session) announceUpcomingSearchPeriod(t *domain.Tournament) {
 		return
 	}
 	if err := s.Send(frame); err == nil {
+		if s.tournamentCountdowns == nil {
+			s.tournamentCountdowns = map[int64]int64{}
+		}
+		s.tournamentCountdowns[t.WireID()] = start.UnixMilli()
 		s.log.Debug("tournament search period upcoming",
 			"coach", s.Coach.Name, "tournament", t.WireID(), "start", start)
 	}

@@ -2825,6 +2825,13 @@ instead of offering the register button.
 
 ### B-100 - the TOURNAMENT "Combattre" was also unanswered; refused visibly
 
+> **Superseded.** The refusal below was the right answer while there was no
+> bracket. Item 32 then built the match layer (28611 now accepts an entrant and
+> pairs it by fixture), and S09 (2026-10-22) put it on a schedule: the search
+> is accepted only inside an open search period, with the team kind the
+> tournament's definition names. The wire facts below (the 28616 second byte,
+> preset 9999) still hold.
+
 The third and last member of the pattern (client frame `ds_2`, twin of `vu_1` /
 `wp_0`). Its C2S pair — **28611** `ly_1` search and **28609** `bt_0` cancel — was
 unserved, so the Tournois tab's "Combattre" went silent exactly like B-098/B-099.

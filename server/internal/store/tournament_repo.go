@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -20,11 +21,36 @@ func (r *TournamentRepo) List() ([]domain.Tournament, error) {
 	return out, err
 }
 
-// ListEnabled returns only the tournaments currently offered to players.
+// ListEnabled returns only the tournaments currently offered to players:
+// enabled, and not a finished edition.
 func (r *TournamentRepo) ListEnabled() ([]domain.Tournament, error) {
 	var out []domain.Tournament
-	err := r.db.Where("enabled = ?", true).Order("position ASC, id ASC").Find(&out).Error
+	err := r.db.Where("enabled = ? AND finished_at IS NULL", true).
+		Order("position ASC, id ASC").Find(&out).Error
 	return out, err
+}
+
+// MarkFinished ends an edition, once. It reports whether THIS call did it: the
+// WHERE on finished_at makes two racing finishers (a tick and a fight end)
+// agree on a single one, so the follow-up (next edition, prize) runs once.
+func (r *TournamentRepo) MarkFinished(id uint, winner uint, at time.Time) (bool, error) {
+	res := r.db.Model(&domain.Tournament{}).
+		Where("id = ? AND finished_at IS NULL", id).
+		Updates(map[string]any{"finished_at": at, "winner_coach_id": winner})
+	return res.RowsAffected > 0, res.Error
+}
+
+// NextEdition returns the edition repeated from `id`, if one exists.
+func (r *TournamentRepo) NextEdition(id uint) (*domain.Tournament, error) {
+	var t domain.Tournament
+	err := r.db.Where("previous_id = ?", id).Order("id ASC").First(&t).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }
 
 // Get loads one tournament by row id.
@@ -69,6 +95,13 @@ func (r *TournamentRepo) Update(t *domain.Tournament) error {
 			"enabled":           t.Enabled,
 			"registration_open": t.RegistrationOpen,
 			"position":          t.Position,
+			// The schedule is editable too; it used to be left out, so a
+			// tournament could only be given one by editing the database.
+			"search_period_start":     t.SearchPeriodStart,
+			"search_period_minutes":   t.SearchPeriodMinutes,
+			"search_periods":          t.SearchPeriods,
+			"period_interval_minutes": t.PeriodIntervalMinutes,
+			"repeat_days":             t.RepeatDays,
 		}).Error
 }
 
@@ -84,7 +117,13 @@ func (r *TournamentRepo) Delete(id uint) error {
 	// Registrations are keyed by WIRE id and have no FK, so they would otherwise
 	// outlive the tournament as orphans — and, because the wire id is derived
 	// from the row id, be inherited by whatever row reused that id later.
-	return r.DeleteRegistrationsFor(domain.TournamentWireBase + int64(id))
+	tid := domain.TournamentWireBase + int64(id)
+	if err := r.DeleteRegistrationsFor(tid); err != nil {
+		return err
+	}
+	// The bracket is keyed the same way and would be inherited the same way.
+	return r.db.Where("tournament_wire_id = ?", tid).
+		Delete(&domain.TournamentSlot{}).Error
 }
 
 // --- registrations ---

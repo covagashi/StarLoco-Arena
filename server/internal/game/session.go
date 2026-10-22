@@ -30,6 +30,10 @@ type Session struct {
 	// only); 0 = the usual random pick. It exists so the live smokes play on a
 	// known map instead of whichever of the 47 comes up (S08).
 	gmArena uint16
+	// tournamentCountdowns remembers which 28644 countdowns this client already
+	// holds (tournament -> period start): `zN` adds one row per message with no
+	// duplicate guard, so re-opening the calendar used to stack them.
+	tournamentCountdowns map[int64]int64
 	// opcodes throttles the handful of opcodes that are expensive to serve or
 	// push something at another player. See opcode_gate.go.
 	opcodes *opcodeGate

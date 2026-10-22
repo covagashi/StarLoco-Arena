@@ -46,6 +46,7 @@
             <td>
               {{if .Enabled}}<span class="chip chip-online">Visible</span>{{else}}<span class="chip chip-muted">Hidden</span>{{end}}
               {{if not .RegistrationOpen}}<span class="chip">Closed</span>{{end}}
+              <div class="tiny muted">{{.Phase}}</div>
             </td>
             <td>
               <div class="flex-gap">
@@ -68,8 +69,9 @@
     </div>
 
     <p class="small muted mt-3 mb-0">
-      Registrations are stored and survive a restart. The bracket and match-scheduling
-      layer is not built yet, so signing up records intent and nothing more.
+      Registrations and brackets are stored and survive a restart. A scheduled tournament
+      runs its search periods and finishes on its own; a repeating one then opens its next
+      edition as a new row, and the finished one stays here as history.
     </p>
 
     {{else}}

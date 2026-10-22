@@ -48,3 +48,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-21 | [S08: un solo recuento de opcodes, los tres dialectos, B-181–B-184 (el cliente se congelaba en la ronda 5), cerrado](./2026-10-21-s08.md) |
 | 2026-10-22 | [S19: datos retail sin leer y opcodes pequeños (cerrado)](./2026-10-22-s19.md) |
 | 2026-10-22 | [S09 abierto: torneos, auditoría y plan](./2026-10-22-s09-apertura.md) |
+| 2026-10-22 | [S09, bloque A: torneos con horario que empiezan y terminan](./2026-10-22-s09-bloque-a.md) |

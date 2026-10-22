@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
@@ -318,5 +319,59 @@ func TestTournamentEditorWorksWithoutCatalogue(t *testing.T) {
 	}
 	if !found {
 		t.Error("the tournament was not created")
+	}
+}
+
+// TestTournamentScheduleIsSaved: the schedule fields reach the store, and the
+// list shows where the edition is.
+func TestTournamentScheduleIsSaved(t *testing.T) {
+	p := newTournamentPortal(t)
+	list, _ := p.st.Tournaments.List()
+	target := list[0]
+	path := "/admin/tournaments/" + strconv.FormatUint(uint64(target.ID), 10)
+	start := time.Now().Add(48 * time.Hour).Truncate(time.Minute)
+
+	token := p.csrfFrom(p.get(path))
+	pg := p.post(path, url.Values{
+		"csrf_token": {token}, "name": {target.Name}, "def_id": {"1"},
+		"enabled": {"1"}, "registration_open": {"1"},
+		"search_start":    {start.Format("2006-01-02T15:04")},
+		"search_minutes":  {"60"},
+		"search_periods":  {"4"},
+		"period_interval": {"1440"},
+		"repeat_days":     {"7"},
+	})
+	if pg.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", pg.Code, pg.Body)
+	}
+	got, _ := p.st.Tournaments.Get(target.ID)
+	if !got.SearchPeriodStart.Equal(start) || got.SearchPeriodMinutes != 60 ||
+		got.SearchPeriods != 4 || got.PeriodIntervalMinutes != 1440 || got.RepeatDays != 7 {
+		t.Fatalf("schedule not saved: %+v", got)
+	}
+	if body := p.get("/admin/tournaments").Body; !strings.Contains(body, "Registration until") {
+		t.Error("the list does not show the edition's phase")
+	}
+}
+
+// TestTournamentScheduleValidation refuses schedules the scheduler cannot run.
+func TestTournamentScheduleValidation(t *testing.T) {
+	p := newTournamentPortal(t)
+	start := time.Now().Add(time.Hour).Format("2006-01-02T15:04")
+	for name, v := range map[string]url.Values{
+		"overlapping periods": {"search_start": {start}, "search_minutes": {"60"}, "search_periods": {"2"}, "period_interval": {"30"}},
+		"too many periods":    {"search_start": {start}, "search_minutes": {"60"}, "search_periods": {"7"}, "period_interval": {"60"}},
+		"zero-length period":  {"search_start": {start}, "search_minutes": {"0"}, "search_periods": {"1"}},
+		"repeat, no start":    {"repeat_days": {"7"}},
+		"editions overlap":    {"search_start": {start}, "search_minutes": {"60"}, "search_periods": {"4"}, "period_interval": {"1440"}, "repeat_days": {"2"}},
+		"unreadable start":    {"search_start": {"tomorrow"}, "search_minutes": {"60"}, "search_periods": {"1"}},
+	} {
+		token := p.csrfFrom(p.get("/admin/tournaments/new"))
+		v.Set("csrf_token", token)
+		v.Set("name", "Bad "+name)
+		v.Set("def_id", "1")
+		if pg := p.post("/admin/tournaments/new", v); pg.Code != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400", name, pg.Code)
+		}
 	}
 }

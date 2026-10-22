@@ -1,8 +1,6 @@
 package game
 
 import (
-	"time"
-
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
 
@@ -10,7 +8,7 @@ import (
 // entry in the client's alert list (`iz_1.Vg()`), added when the last fixture of
 // a tournament starts and withdrawn when it ends.
 //
-// Unlike the other tournament pushes this needs no wall-clock scheduling: the
+// Unlike the search-period pushes this is not driven by the scheduler: the
 // final is simply the fixture whose parent slot is the root, which the bracket
 // already knows.
 
@@ -104,27 +102,16 @@ func (d *Deps) withdrawFinale(tid int64) {
 	}
 }
 
-// settleTournamentPeriod closes an expired opponent-search window: whoever was
-// searching takes the fixture, whoever was not is declared forfeit.
+// settleTournamentPeriod settles a search period that has just closed:
+// whoever was searching takes the fixture, whoever was not is declared forfeit.
 //
-// Driven lazily, from the totem/list request, rather than by a background ticker.
-// A tournament only needs to be up to date when somebody looks at it, and the
-// settlement is idempotent, so this avoids a goroutine with its own lifecycle and
-// shutdown ordering for no behavioural gain. It is also deterministic to test.
-//
-// The outcome does not depend on WHO triggered it: it is decided by who was
-// searching, not by who happened to open the window first.
-func (d *Deps) settleTournamentPeriod(tid int64, now time.Time) {
-	if d.Tournaments == nil || d.Store == nil {
+// Called by the scheduler when the period ends (closeSearchPeriod). It used to
+// run lazily from the tournament-list request, so a period that closed while
+// nobody looked was never settled. The outcome depends only on who was
+// searching, and SettleClosedPeriod is idempotent.
+func (d *Deps) settleTournamentPeriod(tid int64) {
+	if d.Tournaments == nil {
 		return
-	}
-	t, err := d.Store.Tournaments.GetByWireID(tid)
-	if err != nil || t == nil {
-		return
-	}
-	end := t.SearchPeriodEnd()
-	if end.IsZero() || now.Before(end) {
-		return // never scheduled, or the window is still open
 	}
 	results := d.Tournaments.SettleClosedPeriod(tid, func(coachID uint) bool {
 		return d.sessionForCoach(coachID) != nil

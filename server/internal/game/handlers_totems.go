@@ -1,7 +1,7 @@
 package game
 
 import (
-	"time"
+	"github.com/StarLoco/arena-2.70/internal/gamedata"
 
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 	"github.com/StarLoco/arena-2.70/internal/store"
@@ -124,14 +124,6 @@ func handleTournamentListRequest(s *Session, _ *protocol.C2SFrame) error {
 	if err := s.Send(frame); err != nil {
 		return err
 	}
-	// Settle any window that has closed since anyone last looked. Done lazily
-	// here rather than on a ticker: a tournament only has to be up to date when
-	// somebody opens it, and the settlement is idempotent.
-	now := time.Now()
-	for i := range ts {
-		s.deps.settleTournamentPeriod(ts[i].WireID(), now)
-	}
-
 	// AFTER the list: the search-period notification names its tournament by
 	// looking it up in the registry this message just filled.
 	s.announceTournamentSearchPeriods()
@@ -162,8 +154,8 @@ func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
 	switch t, lookupErr := s.deps.Store.Tournaments.GetByWireID(tid); {
 	case lookupErr != nil || !t.Enabled:
 		code = regRefused // unknown, or an admin has taken it offline
-	case !t.RegistrationOpen:
-		code = regRefused // listed, but closed to new entrants
+	case !t.RegistrationOpenAt(s.deps.tournamentNow()):
+		code = regRefused // closed to new entrants, by an admin or by the draw starting
 	default:
 		if s.deps.Tournaments != nil {
 			s.deps.Tournaments.Register(s.Coach.ID, tid)
@@ -189,18 +181,10 @@ func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
 // an unanswered 28611 is the SEVERE variant of the B-098/B-099 defect: the panel
 // closes, no overlay appears, and there is nothing left to click.
 //
-// WHY THIS REFUSES INSTEAD OF QUEUEING. For the other two families, accepting the
-// search is truthful Ã¢â‚¬â€ two coaches really can pair and fight. A tournament match
-// is not a free pairing: it is a specific bracket fixture between two registered
-// entrants, and this server has no bracket/match layer (28649 is answered with an
-// empty tree). Pairing arbitrary searchers would invent semantics and produce
-// fights that advance nothing, i.e. it would silently pretend tournaments work.
-// So the honest answer is the client's own "impossible to start the search",
-// which shows a message and leaves no overlay behind.
-//
-// When the bracket layer lands, this becomes: verify the coach is an entrant of
-// `tid`, accept with 28612, pair by fixture, then 28614 (which carries the
-// tournament id and prunes the overworld actors for it) followed by CREATE_FIGHT.
+// A tournament match is not a free pairing: it is a specific bracket fixture
+// between two entrants, so only an entrant may ready up, only inside an open
+// search period, only with the kind of team the tournament's definition names,
+// and its opponent is the coach in the sibling slot (TournamentManager.ReadyUp).
 func handleTournamentSearchRequest(s *Session, f *protocol.C2SFrame) error {
 	if s.Coach == nil {
 		return nil
@@ -242,6 +226,16 @@ func handleTournamentSearchRequest(s *Session, f *protocol.C2SFrame) error {
 			"coach", s.Coach.Name, "tournament", tid)
 		return s.sendTournamentSearchError(searchErrCannotStart, 0)
 	}
+
+	// The team must be the kind the tournament is for: the client's alert
+	// click-through opens the matching tab (agz_1), and each tab sends its own
+	// preset, so anything else is a modified client or a misread.
+	if !s.deps.tournamentPresetAllowed(tid, preset) {
+		s.log.Info("tournament search refused: wrong team kind",
+			"coach", s.Coach.Name, "tournament", tid, "preset", preset)
+		return s.sendTournamentSearchError(searchErrCannotStart, 0)
+	}
+	s.deps.Tournaments.SetReadyPreset(s.Coach.ID, preset)
 
 	// Accept first: 28612 is what opens the client's waiting dialog. Without it
 	// the team panel has already closed itself and the player is left with no
@@ -287,7 +281,7 @@ func handleTournamentSearchRequest(s *Session, f *protocol.C2SFrame) error {
 	}
 	s.log.Info("tournament match paired", "tournament", tid,
 		"a", other.Coach.Name, "b", s.Coach.Name)
-	return s.deps.startTournamentMatch(tid, other, s, preset)
+	return s.deps.startTournamentMatch(tid, other, s)
 }
 
 // startTournamentMatch tells both entrants the fixture is starting and builds the
@@ -296,7 +290,7 @@ func handleTournamentSearchRequest(s *Session, f *protocol.C2SFrame) error {
 // 28614 goes out FIRST: it is what closes the waiting dialog
 // ("Lancement du combat") and re-arms the client's fight frame. Sending it after
 // CREATE_FIGHT would leave the overlay on top of the arena.
-func (d *Deps) startTournamentMatch(tid int64, a, b *Session, preset uint16) error {
+func (d *Deps) startTournamentMatch(tid int64, a, b *Session) error {
 	// Decided BEFORE the fight starts: once it ends the winner has moved up and
 	// the pair no longer looks like a final.
 	final := d.isFinalFixture(tid, a.Coach.ID, b.Coach.ID)
@@ -310,38 +304,29 @@ func (d *Deps) startTournamentMatch(tid int64, a, b *Session, preset uint16) err
 	_ = b.Send(frame)
 
 	arena := d.pickArena()
-	// SECURITY: each coach fields ITS OWN roster.
-	//
-	// The `preset` off the wire used to be applied to BOTH sides. resolveTeamRoster
-	// is IDOR-guarded and returns nil for a preset the coach does not own, and a
-	// nil roster falls back to a SINGLE fighter - so whoever sent 28611 named one
-	// of its own preset ids, got its full six, and handed the opponent a
-	// one-fighter team. The winner then advances the bracket and collects the
-	// prize card, and it moves the ranked ladder too.
-	//
-	// Every other path already resolves per-coach (handlers_challenge.go uses each
-	// side's confirmed preset; the queues carry each searcher's own teamIDs); the
-	// tournament path was the only one sharing one wire value. Falling back to the
-	// titular line-up rather than fighters[0] also fixes the fidelity half: the
-	// honest client sends pseudo-presets 99/9999, so every fixture was silently
-	// one-fighter-versus-one-fighter.
-	rosterA := d.resolveTeamRoster(a.Coach.ID, uint(preset))
-	if len(rosterA) == 0 {
-		rosterA = d.titularRoster(a.Coach.ID, len(arena.startCells(0)))
-	}
-	rosterB := d.titularRoster(b.Coach.ID, len(arena.startCells(1)))
+	// SECURITY: each coach fields ITS OWN roster, from the preset IT readied
+	// with. The `preset` off the second searcher's wire used to be applied to
+	// both sides: resolveTeamRoster is IDOR-guarded, so the first side fell
+	// back to one fighter, and the second side was always its titular line-up
+	// whatever it had picked.
+	presetA, _ := d.Tournaments.ReadyPreset(a.Coach.ID)
+	presetB, _ := d.Tournaments.ReadyPreset(b.Coach.ID)
+	rosterA := d.tournamentRoster(a.Coach.ID, tid, presetA, len(arena.startCells(0)))
+	rosterB := d.tournamentRoster(b.Coach.ID, tid, presetB, len(arena.startCells(1)))
+	evolution := d.tournamentTeamType(tid) == gamedata.TournamentTeamEvolution ||
+		d.tournamentTeamType(tid) == gamedata.TournamentTeamGraveyard
 
-	teamA, err := d.buildFightTeamFor(a, 0, arena.startCells(0), rosterA)
+	teamA, err := d.buildFightTeamForMode(a, 0, arena.startCells(0), rosterA, evolution)
 	if err != nil {
 		return refuseFightError(err, a, b)
 	}
-	teamB, err := d.buildFightTeamFor(b, 1, arena.startCells(1), rosterB)
+	teamB, err := d.buildFightTeamForMode(b, 1, arena.startCells(1), rosterB, evolution)
 	if err != nil {
 		return refuseFightError(err, a, b)
 	}
 	// Ranked: a tournament match is competitive, so it feeds stats and the ladder
 	// exactly like a Combattre pairing.
-	if err := d.startFightWithTeams(arena, teamA, teamB, false, 0, false); err != nil {
+	if err := d.startFightWithTeams(arena, teamA, teamB, false, 0, evolution); err != nil {
 		return err
 	}
 	// Tag the fixture so its result can be advanced up the bracket. Done after
@@ -385,7 +370,7 @@ func (s *Session) unopposedInTournament(tid int64) bool {
 		return false
 	}
 	t, err := s.deps.Store.Tournaments.GetByWireID(tid)
-	if err != nil || t == nil || t.RegistrationOpen {
+	if err != nil || t == nil || t.RegistrationOpenAt(s.deps.tournamentNow()) {
 		return false
 	}
 	return s.deps.Tournaments.BracketSlots(tid)[bracketWinnerSlot] == s.Coach.ID
@@ -476,9 +461,9 @@ func (d *Deps) viewerDemon(coachID uint) int16 {
 	return g.DemonID
 }
 
-// tournamentSearchOpen reports whether a tournament's opponent-search window is
-// currently open. An unscheduled tournament (zero SearchPeriodEnd) is treated as
-// open: it has no window to be outside of.
+// tournamentSearchOpen reports whether a tournament's opponent search is open
+// now: inside one of its search periods, or always for an unscheduled one,
+// which has no window to be outside of. A finished edition is never open.
 func (s *Session) tournamentSearchOpen(tid int64) bool {
 	if s.deps.Store == nil || s.deps.Store.Tournaments == nil {
 		return true
@@ -487,10 +472,11 @@ func (s *Session) tournamentSearchOpen(tid int64) bool {
 	if err != nil || t == nil {
 		return true // unknown here; IsRegistered above is the real entrant gate
 	}
-	end := t.SearchPeriodEnd()
-	if end.IsZero() {
-		return true // unscheduled
+	if t.Finished() {
+		return false
 	}
-	now := time.Now()
-	return !now.Before(t.SearchPeriodStart) && !now.After(end)
+	if !t.Scheduled() {
+		return true
+	}
+	return t.SearchPeriodOpenAt(s.deps.tournamentNow())
 }

@@ -2,8 +2,11 @@ package web
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/store"
@@ -17,7 +20,41 @@ type tournamentRow struct {
 	TeamType      string
 	KnownDef      bool
 	Registrations int
+	// Phase is where the scheduler has the edition, in words.
+	Phase string
 }
+
+// tournamentPhase describes an edition's state for the console.
+func (s *Server) tournamentPhase(t *domain.Tournament, now time.Time) string {
+	switch {
+	case t.Finished():
+		if t.WinnerCoachID == 0 {
+			return "Finished, no winner"
+		}
+		name := fmt.Sprintf("coach %d", t.WinnerCoachID)
+		if c, err := s.store.Coaches.Get(t.WinnerCoachID); err == nil && c != nil {
+			name = c.Name
+		}
+		return "Finished, won by " + name
+	case !t.Scheduled():
+		return "Unscheduled (always open)"
+	case now.Before(t.SearchPeriodStart):
+		return "Registration until " + t.SearchPeriodStart.In(time.Local).Format(consoleTimeLayout)
+	}
+	if i := t.OpenPeriodAt(now); i >= 0 {
+		return fmt.Sprintf("Search period %d of %d open", i+1, t.PeriodCount())
+	}
+	if next := t.NextPeriodStartAt(now); !next.IsZero() {
+		return "Next period " + next.In(time.Local).Format(consoleTimeLayout)
+	}
+	return "Finishing"
+}
+
+// consoleTimeLayout is how the console shows a schedule time (server local).
+const consoleTimeLayout = "2006-01-02 15:04"
+
+// formTimeLayout is the <input type="datetime-local"> wire format.
+const formTimeLayout = "2006-01-02T15:04"
 
 type tournamentsData struct {
 	*baseData
@@ -42,6 +79,7 @@ func (s *Server) decorate(t domain.Tournament) tournamentRow {
 	if s.live.TournamentRegistrations != nil {
 		row.Registrations = s.live.TournamentRegistrations(t.WireID())
 	}
+	row.Phase = s.tournamentPhase(&t, time.Now())
 	return row
 }
 
@@ -78,6 +116,17 @@ type tournamentFormData struct {
 	// Registrations is shown when editing, so an admin knows whether anyone
 	// would be affected by a change.
 	Registrations int
+	// Start is the schedule's first period start, in the form's local format.
+	Start string
+}
+
+// setForm fills the form from a tournament, including its start time.
+func (d *tournamentFormData) setForm(t domain.Tournament) {
+	d.Form = t
+	d.Start = ""
+	if !t.SearchPeriodStart.IsZero() {
+		d.Start = t.SearchPeriodStart.In(time.Local).Format(formTimeLayout)
+	}
 }
 
 func (s *Server) newTournamentForm(w http.ResponseWriter, r *http.Request, title string, isNew bool) *tournamentFormData {
@@ -91,32 +140,55 @@ func (s *Server) newTournamentForm(w http.ResponseWriter, r *http.Request, title
 
 func (s *Server) handleAdminTournamentNew(w http.ResponseWriter, r *http.Request, sess session) {
 	d := s.newTournamentForm(w, r, "New tournament", true)
-	d.Form = domain.Tournament{
+	d.setForm(domain.Tournament{
 		Enabled:          true,
 		RegistrationOpen: true,
 		Organizer:        "StarLoco",
-	}
+		// A sensible schedule to edit: four daily one-hour periods, enough for
+		// a full 16-entrant draw.
+		SearchPeriodMinutes:   60,
+		SearchPeriods:         4,
+		PeriodIntervalMinutes: 24 * 60,
+	})
 	// Default to the first offered definition so the form is valid as-is.
 	if len(d.Choices) > 0 {
 		d.Form.DefID = d.Choices[0].DefID
 	}
+	// The start is left empty: an admin has to pick it on purpose.
 	s.render(w, http.StatusOK, "admin_tournament_form.html", d)
 }
 
-// readTournamentForm pulls a tournament out of a posted form.
-func readTournamentForm(r *http.Request) domain.Tournament {
+// readTournamentForm pulls a tournament out of a posted form. A start that
+// does not parse comes back as an error for the form to show.
+func readTournamentForm(r *http.Request) (domain.Tournament, error) {
 	defID, _ := strconv.ParseUint(r.PostFormValue("def_id"), 10, 16)
 	pos, _ := strconv.Atoi(r.PostFormValue("position"))
-	return domain.Tournament{
-		DefID:            uint16(defID),
-		Name:             r.PostFormValue("name"),
-		Short:            r.PostFormValue("short"),
-		Description:      r.PostFormValue("description"),
-		Organizer:        r.PostFormValue("organizer"),
-		Enabled:          r.PostFormValue("enabled") != "",
-		RegistrationOpen: r.PostFormValue("registration_open") != "",
-		Position:         pos,
+	num := func(name string) int32 {
+		n, _ := strconv.Atoi(strings.TrimSpace(r.PostFormValue(name)))
+		return int32(n)
 	}
+	var start time.Time
+	if v := strings.TrimSpace(r.PostFormValue("search_start")); v != "" {
+		var err error
+		if start, err = time.ParseInLocation(formTimeLayout, v, time.Local); err != nil {
+			return domain.Tournament{}, errors.New("The start time could not be read; use the date picker.")
+		}
+	}
+	return domain.Tournament{
+		SearchPeriodStart:     start,
+		SearchPeriodMinutes:   num("search_minutes"),
+		SearchPeriods:         num("search_periods"),
+		PeriodIntervalMinutes: num("period_interval"),
+		RepeatDays:            num("repeat_days"),
+		DefID:                 uint16(defID),
+		Name:                  r.PostFormValue("name"),
+		Short:                 r.PostFormValue("short"),
+		Description:           r.PostFormValue("description"),
+		Organizer:             r.PostFormValue("organizer"),
+		Enabled:               r.PostFormValue("enabled") != "",
+		RegistrationOpen:      r.PostFormValue("registration_open") != "",
+		Position:              pos,
+	}, nil
 }
 
 func (s *Server) handleAdminTournamentCreate(w http.ResponseWriter, r *http.Request, sess session) {
@@ -124,9 +196,13 @@ func (s *Server) handleAdminTournamentCreate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	d := s.newTournamentForm(w, r, "New tournament", true)
-	d.Form = readTournamentForm(r)
-
-	if err := s.validateTournament(&d.Form); err != nil {
+	form, err := readTournamentForm(r)
+	d.setForm(form)
+	if err == nil {
+		err = s.validateTournament(&d.Form)
+	}
+	if err != nil {
+		d.Start = r.PostFormValue("search_start")
 		d.Error = err.Error()
 		s.render(w, http.StatusBadRequest, "admin_tournament_form.html", d)
 		return
@@ -155,7 +231,7 @@ func (s *Server) handleAdminTournamentEdit(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	d := s.newTournamentForm(w, r, t.Name, false)
-	d.Form = *t
+	d.setForm(*t)
 	if s.live.TournamentRegistrations != nil {
 		d.Registrations = s.live.TournamentRegistrations(t.WireID())
 	}
@@ -178,10 +254,14 @@ func (s *Server) handleAdminTournamentSave(w http.ResponseWriter, r *http.Reques
 	}
 
 	d := s.newTournamentForm(w, r, existing.Name, false)
-	d.Form = readTournamentForm(r)
-	d.Form.ID = existing.ID
-
-	if err := s.validateTournament(&d.Form); err != nil {
+	form, err := readTournamentForm(r)
+	form.ID = existing.ID
+	d.setForm(form)
+	if err == nil {
+		err = s.validateTournament(&d.Form)
+	}
+	if err != nil {
+		d.Start = r.PostFormValue("search_start")
 		d.Error = err.Error()
 		s.render(w, http.StatusBadRequest, "admin_tournament_form.html", d)
 		return

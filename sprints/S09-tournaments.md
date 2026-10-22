@@ -42,31 +42,77 @@ depende del anterior.
 
 ## A. Servidor: un torneo con horario que empieza y termina
 
-- [ ] Horario en la consola web: inicio y duración de los periodos de
-      búsqueda (y repetición, como el `tournamentAdminCreationDialog` del
-      retail: definiciones, 6 franjas, repetir). Con prueba en
-      `web/tournaments_test.go`.
-- [ ] Estado del torneo (programado → inscripción → en juego → terminado) en
-      el modelo y el store, con migración y prueba en los tres dialectos.
-- [ ] Un planificador por reloj en el servidor: abre y cierra periodos
-      (28630 `open=1/0`, 28644 la cuenta atrás), resuelve los forfeits al
-      cerrar (28648) en vez de al pedir la lista, y cierra el torneo cuando hay
-      ganador o se acaban los periodos. Reloj inyectable para las pruebas.
-- [ ] 28646 "se abre el periodo": decidir con el cliente en la mano si se
-      manda (el `zN` no tiene la guarda de duplicados del 28630). Si la alerta
-      nativa de Godot (bloque E) deduplica por id, se manda; el retail queda
-      fuera de alcance.
-- [ ] Al terminar: se retira la alerta, se archivan inscripciones y cuadro, y
-      se limpia el gestor en memoria. De paso: borrar un torneo hoy deja sus
-      casillas y el gestor (`tournament_repo.go:76`).
-- [ ] Aplicar el tipo de equipo y las reglas de la definición al buscar
-      rival (28611): clásico con sus presets, evolución (preset 99),
-      cementerio, legendario (9999 con el banquillo de leyendas,
-      `handlers_evolution.go:114`).
-- [ ] Comentarios y docs viejos que aún dicen "no hay capa de partidas":
-      `tournaments.go:19`, `tournament_tree.go:99`, `handlers_totems.go:192`,
-      `domain/tournament.go:10,146`, `OPCODE-INVENTORY.md:845` ("no schedule
-      columns"), el texto de B-100.
+- [x] **Horario en la consola web** (2026-10-22): inicio del primer periodo,
+      duración, número de periodos (1–6, las franjas del
+      `tournamentAdminCreationDialog`), minutos entre inicios y repetir cada N
+      días. Validado: periodos que se solapan, más de 6, duración 0, repetir
+      sin inicio, ediciones que se pisan, fecha ilegible → 400. La lista
+      enseña la fase de cada edición ("Registration until…", "Search period
+      2 of 4 open", "Finished, won by X"). Sin inicio, el torneo sigue como
+      antes: siempre abierto y sin final.
+- [x] **Ediciones** (2026-10-22): `domain.Tournament` es una edición, con
+      `SearchPeriods`, `PeriodIntervalMinutes`, `RepeatDays`, `FinishedAt`,
+      `WinnerCoachID` y `PreviousID`; migración 10. La inscripción se cierra
+      sola al empezar el primer periodo (`RegistrationOpenAt`). Una edición
+      terminada sale de la lista de jugadores; si repite, el planificador crea
+      la siguiente como fila nueva (wire id nuevo, cuadro vacío) y la vieja se
+      queda como historial, que es lo que necesita el arrastre (B).
+- [x] **Planificador por reloj** (`tournament_schedule.go`, cada 5 s, reloj
+      inyectable con `Deps.TournamentClock`): al abrir un periodo manda 28646
+      a los inscritos conectados; al cerrarlo resuelve los forfeits (28648),
+      suelta a quien seguía esperando (28610) y retira la alerta (28630
+      `open=0`); termina la edición cuando el cuadro tiene ganador o se cierra
+      el último periodo (sin ganador si nadie jugó; si la final aún se está
+      jugando, espera a que acabe). La resolución perezosa al
+      pedir la lista (28601) se ha quitado. Tras un reinicio, los periodos ya
+      cerrados no se re-resuelven con los que buscan en el periodo actual.
+- [x] **28646 sí se manda** (2026-10-22). Leído el `zN`: el 28630 `open=0` y el
+      28648 quitan la fila de la alerta, y el 28646 la añade sin guarda y quita
+      la cuenta atrás del 28644. Como cada periodo se cierra con 28630 `open=0`
+      antes de que el siguiente mande su 28646, no se duplica nunca, tampoco
+      en el retail. El 28630 `open=1` queda para quien abre la lista con un
+      periodo ya abierto (el `zN` lo deduplica). Además: el 28644 se apilaba
+      (una fila por cada vez que se abría el calendario); ahora va una vez por
+      periodo y sesión.
+- [x] **Al terminar** se retiran la alerta y la finale, las inscripciones y el
+      cuadro se quedan en la base como historial y el gestor en memoria olvida
+      la edición (también al arrancar, para las ya terminadas). Borrar un
+      torneo borra ahora también sus casillas, que si no las heredaba la fila
+      que reutilizase el id.
+- [x] **Tipo de equipo** (2026-10-22, `tournament_teams.go`): el 28611 solo se
+      acepta con el preset que manda la pestaña de ese tipo (`agz_1`, `hu_2`,
+      `en_2`): clásico un preset real, evolución 99, cementerio 10000,
+      legendario 9999. Cada tipo juega su alineación: el preset (clásico), los
+      titulares (evolución y cementerio, con las reglas de evolución) o los
+      legendarios. **Bug encontrado de paso:** el preset del segundo en
+      buscar se aplicaba a los dos lados, así que el primero jugaba con un
+      solo luchador y el segundo siempre con sus titulares. Ahora cada uno
+      juega el preset con el que buscó.
+- [x] Comentarios y docs viejos: `tournaments.go`, `tournament_tree.go`,
+      `handlers_totems.go`, `domain/tournament.go`, `OPCODE-INVENTORY.md`
+      (28646 pasa a E, 155 emitidos), `STATUS.md` y una nota en B-100.
+
+Pruebas (2026-10-22):
+
+- `go test ./internal/game -run 'Scheduled|Undecided|LoneEntrant|RestartMid|RegistrationCloses|TeamKind|EachSidesOwnPreset|LastPeriodWaits'`:
+  el ciclo entero con reloj falso (inscripción → periodo 1 → forfeits → periodo 2
+  → ganador → terminado → siguiente edición una semana después), la edición
+  que termina sin ganador, el inscrito único que gana al cerrarse el cuadro,
+  el reinicio a mitad de periodo, la inscripción cerrada por el 4607 real, los
+  cuatro tipos de equipo con las definiciones reales, cada lado con su
+  preset (falla con el código anterior) y la final en juego al cerrarse el
+  último periodo.
+- `go test ./internal/store -run Edition` y `./internal/web -run Schedule`.
+- Suite completa (`go test ./internal/... ./test/...`) verde en **SQLite,
+  Postgres 16 y MariaDB 11**.
+- **En vivo** con el binario real sobre una copia de `arena.db` (migración 10
+  aplicada sin tocar nada): un torneo de 2 periodos de 1 minuto, repetición
+  diaria, dos inscritos que no juegan. Log: `search period opened` 15:24:24 →
+  `closed` 15:25:24 → `opened` → `closed` 15:26:24 → `tournament finished
+  winner=0` → `next edition opened from=2600004 to=2600005
+  start=2026-10-23T13:24:24Z`. Sin cliente conectado: lo que ve el jugador
+  (alertas, búsqueda) es el bloque E, y la partida en vivo con dos clientes
+  va en el cierre del sprint.
 
 ## B. Servidor: arrastre, puntos y estadísticas
 
@@ -152,16 +198,19 @@ un panel nativo o se descarta aquí:
 | `tournamentCreationDialog` | formulario de torneo de jugador, solo si se hace C |
 | `tournamentAdminCreationDialog` | descartar en el cliente: lo cubre la consola web (A) |
 
-## Decisiones del dueño
+## Decisiones
 
-Se trabaja con la opción *por defecto* mientras no diga otra cosa.
+El dueño las delegó el 2026-10-22 ("elige tú, lo que sea más conveniente");
+se quedan las que estaban por defecto:
 
-| Decisión | Por defecto |
+| Decisión | Tomada |
 |---|---|
-| Regla del arrastre (28617): ¿qué se lleva el coach al siguiente torneo? | la inscripción con preferencia de casilla, nada más |
+| Regla del arrastre (28617): ¿qué se lleva el coach al siguiente torneo? | la inscripción en la siguiente edición, con preferencia de casilla, nada más |
 | Puntos de torneo | ronda alcanzada por torneo terminado, acumulada |
 | Torneos de jugador (17010): ¿entran en la 1.0? | sí, sobre una definición clásica base; se cae si el modelo no da |
 | ¿Los periodos de torneo son la base de las temporadas (BACKLOG §11)? | no en este sprint; solo se deja apuntado |
+| 28646 (decidida en A) | se manda, ordenado tras el 28630 `open=0` |
+| Tipo cementerio: ¿con qué equipo se juega? (decidida en A) | los titulares con reglas de evolución, como el 99; el diálogo del cementerio solo lista los caídos de ese equipo |
 
 ## Criterio de cierre
 

@@ -274,8 +274,11 @@ Ordered by value. Item 1 is the biggest unlock; item 2 is the cheapest concrete 
    description was wrong, and three separate client rules (`afL`, the preset type, and
    the fighter entry's second i64 being the OWNING COACH) each surfaced only after the
    previous one was fixed. Read the client's validation path *before* writing code.
-9. ~~**Tournament live-match layer**~~ — **DONE** (item 32, above). What is left of
-   tournaments (carry-over, periods, player tournaments, Legends) is sprint S09.
+9. ~~**Tournament live-match layer**~~ — **DONE** (item 32, above). Since S09
+   (2026-10-22) tournaments also run on a schedule: search periods open and close
+   on the clock, forfeits settle at the close, an edition finishes and a repeating
+   one opens its next edition. Carry-over, points, player tournaments and the
+   Godot side are the rest of S09.
 10. ~~**Fusion success probability**~~ — **resolved** (B-169). The flat 60%
     was a stand-in; the real die is the altar's own `quality` field plus the
     inputs' `FusionQuality` — `roll(100) < quality` wins. Evidence: the fusion
@@ -601,4 +604,4 @@ Verified with `-race` (clean) and six consecutive runs (no failures) before land
 the previous flakiness episode (B-126..B-129) came from tests that passed once.
 
 The `-timeout 25m` in CI stays. It was a mitigation for a slow suite and is now enormous
-headroom; removing it would only buy a worse failure mode on a loaded runner.
+headroom; removing it would only buy a worse failure mode on a loaded runner.

@@ -16,10 +16,12 @@ import (
 // we accept with 28608; the bracket button sends 28649, answered by an empty tree
 // (28650).
 //
-// This server offers a set of STANDING tournaments that are always open for
-// registration. The live-match layer — opponent search, scheduled fights, bracket
-// progression and rewards — is the deferred deep part (it needs many coaches and
-// wall-clock scheduling); registration here just records intent and reports it back.
+// Each row is an edition with a schedule (see domain.Tournament): registration
+// until the first search period, then one bracket round per period, settled by
+// forfeit when a period closes, and finished by the scheduler
+// (tournament_schedule.go) once there is a winner or the last period is over.
+// A row with no schedule keeps the older standing behaviour: always open,
+// never finishing.
 //
 // The line-up lives in the database (domain.Tournament) and is edited from the web
 // admin console, so changing it no longer needs a rebuild. A fresh database is
@@ -87,7 +89,20 @@ type TournamentManager struct {
 	// Only slots above the first round are kept. The first round is derived from
 	// the registrations, so a seeding cannot drift away from who is entered.
 	advanced map[int64]map[int32]uint
-	store    tournamentRegistrationStore
+	// presets is the team preset each waiting coach readied with, so a fixture
+	// fields each side's own team rather than the one the second searcher sent.
+	presets map[uint]uint16
+	// marks is the scheduler's progress per tournament: periods already settled
+	// and opened. Process-lived: on a restart the first tick re-derives it from
+	// the clock (see periodMarks).
+	marks map[int64]tournamentMarks
+	store tournamentRegistrationStore
+}
+
+// tournamentMarks is how far the scheduler has taken one tournament.
+type tournamentMarks struct {
+	settled int // search periods closed and settled
+	opened  int // search periods announced as open
 }
 
 // NewTournamentManager returns an empty, non-persisting registration tracker.
@@ -505,6 +520,83 @@ func (m *TournamentManager) ReadyUp(tid int64, coachID uint) (uint, bool) {
 	return 0, false
 }
 
+// SetReadyPreset records the preset a coach readied with.
+func (m *TournamentManager) SetReadyPreset(coachID uint, preset uint16) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.presets == nil {
+		m.presets = map[uint]uint16{}
+	}
+	m.presets[coachID] = preset
+}
+
+// ReadyPreset returns the preset a coach readied with.
+func (m *TournamentManager) ReadyPreset(coachID uint) (uint16, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.presets[coachID]
+	return p, ok
+}
+
+// ClearReady empties one tournament's ready set and returns who was in it: the
+// coaches left waiting when a search period closes.
+func (m *TournamentManager) ClearReady(tid int64) []uint {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []uint
+	for c := range m.ready[tid] {
+		out = append(out, c)
+	}
+	delete(m.ready, tid)
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+// Forget drops a finished tournament from memory. Its registrations and slots
+// stay in the store as the edition's history; the manager only caches what can
+// still change.
+func (m *TournamentManager) Forget(tid int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for coachID, set := range m.reg {
+		delete(set, tid)
+		if len(set) == 0 {
+			delete(m.reg, coachID)
+		}
+	}
+	delete(m.ready, tid)
+	delete(m.advanced, tid)
+	delete(m.marks, tid)
+}
+
+// periodMarks returns the scheduler's progress for a tournament. The first time
+// a tournament is seen, periods already closed count as settled: the ready set
+// is process-lived, so after a restart there is nobody to settle them for, and
+// settling a closed period with the CURRENT period's searchers would hand out
+// forfeits mid-search.
+func (m *TournamentManager) periodMarks(tid int64, closedNow int) tournamentMarks {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if mk, ok := m.marks[tid]; ok {
+		return mk
+	}
+	mk := tournamentMarks{settled: closedNow, opened: closedNow}
+	if m.marks == nil {
+		m.marks = map[int64]tournamentMarks{}
+	}
+	m.marks[tid] = mk
+	return mk
+}
+
+func (m *TournamentManager) setPeriodMarks(tid int64, mk tournamentMarks) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.marks == nil {
+		m.marks = map[int64]tournamentMarks{}
+	}
+	m.marks[tid] = mk
+}
+
 // CancelReady removes a coach from every tournament's ready set.
 func (m *TournamentManager) CancelReady(coachID uint) bool {
 	m.mu.Lock()
@@ -553,9 +645,20 @@ func writeTournamentEvent(w *protocol.Writer, t *domain.Tournament, now time.Tim
 	// unconditionally, so rows created before the schedule existed still render.
 	phaseStartMs := now.Add(time.Hour).UnixMilli()
 	phaseEndMs := now.Add(2 * time.Hour).UnixMilli()
-	if end := t.SearchPeriodEnd(); !end.IsZero() {
-		phaseStartMs = t.SearchPeriodStart.UnixMilli()
-		phaseEndMs = end.UnixMilli()
+	if t.Scheduled() {
+		// The period under way, else the next one, else the last.
+		i := t.OpenPeriodAt(now)
+		if i < 0 {
+			i = t.PeriodCount() - 1
+			for j := 0; j < t.PeriodCount(); j++ {
+				if start, _ := t.Period(j); start.After(now) {
+					i = j
+					break
+				}
+			}
+		}
+		start, end := t.Period(i)
+		phaseStartMs, phaseEndMs = start.UnixMilli(), end.UnixMilli()
 	}
 
 	w.I32(tournamentContentTypeID) // [i32 typeId] -> qr_0
@@ -583,6 +686,7 @@ func writeTournamentEvent(w *protocol.Writer, t *domain.Tournament, now time.Tim
 // tournaments, keyed by their client definition id. coachStatus reflects whether
 // this coach has already registered, so a re-opened window shows the right state.
 func buildTournamentList(coachID uint, tm *TournamentManager, ts []domain.Tournament) ([]byte, error) {
+	now := time.Now()
 	w := protocol.NewWriter().I32(int32(len(ts))) // [i32 count]
 	for i := range ts {
 		t := &ts[i]
@@ -591,11 +695,11 @@ func buildTournamentList(coachID uint, tm *TournamentManager, ts []domain.Tourna
 			status = tournamentCoachFirstRound
 		}
 		w.I64(t.WireID())
-		w.U8(0)                            // openedSearch: opponent search closed
-		w.U8(uint8(status))                // coachStatus
-		w.U16(t.DefID)                     // tournamentDefinitionId (real aub id)
-		w.U8(boolByte(t.RegistrationOpen)) // registrationOpen
-		w.I32(0)                           // fightParamCount: no special rules
+		w.U8(0)                                   // openedSearch: opponent search closed
+		w.U8(uint8(status))                       // coachStatus
+		w.U16(t.DefID)                            // tournamentDefinitionId (real aub id)
+		w.U8(boolByte(t.RegistrationOpenAt(now))) // registrationOpen
+		w.I32(0)                                  // fightParamCount: no special rules
 		w.StringU32(t.Name)
 		w.StringU32(t.Description)
 		w.StringU32(t.Organizer)

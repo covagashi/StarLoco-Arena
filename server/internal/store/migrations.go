@@ -192,6 +192,16 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.BugReport{})
 		},
 	},
+	{
+		// Tournament editions (S09): several search periods, repeat, and the
+		// finished state the scheduler sets. Additive columns, numbered step for
+		// the same reason as 8.
+		Version: 10,
+		Name:    "tournament_editions",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.Tournament{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

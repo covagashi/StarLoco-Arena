@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
@@ -114,6 +115,9 @@ func (s *Server) validateTournament(t *domain.Tournament) error {
 	case len(t.Organizer) > tournamentNameMax:
 		return fmt.Errorf("The organiser must be at most %d characters.", tournamentNameMax)
 	}
+	if err := validateTournamentSchedule(t); err != nil {
+		return err
+	}
 	if t.Short == "" {
 		t.Short = t.Name
 	}
@@ -136,4 +140,38 @@ func (s *Server) validateTournament(t *domain.Tournament) error {
 	}
 	return fmt.Errorf("Tournament type %d is not one this game client knows about. "+
 		"Pick one from the list — an unknown type crashes the client when a player opens the tournament window.", t.DefID)
+}
+
+// tournamentMaxPeriods is the most search periods an edition may have: six,
+// like the date slots of retail's own admin scheduler, and more than the four
+// rounds a 16-entrant draw needs.
+const tournamentMaxPeriods = 6
+
+// validateTournamentSchedule checks the schedule half of the form. No start
+// means unscheduled, which leaves the rest irrelevant (and zeroes it).
+func validateTournamentSchedule(t *domain.Tournament) error {
+	if t.SearchPeriodStart.IsZero() {
+		if t.RepeatDays != 0 {
+			return errors.New("A repeating tournament needs a start time.")
+		}
+		t.SearchPeriodMinutes, t.SearchPeriods, t.PeriodIntervalMinutes = 0, 0, 0
+		return nil
+	}
+	switch {
+	case t.SearchPeriodMinutes < 1 || t.SearchPeriodMinutes > 24*60:
+		return errors.New("A search period lasts between 1 minute and 24 hours.")
+	case t.SearchPeriods < 1 || t.SearchPeriods > tournamentMaxPeriods:
+		return fmt.Errorf("A tournament has between 1 and %d search periods.", tournamentMaxPeriods)
+	case t.SearchPeriods > 1 && t.PeriodIntervalMinutes < t.SearchPeriodMinutes:
+		return errors.New("The time between period starts must be at least one period long, or two periods would be open at once.")
+	case t.RepeatDays < 0 || t.RepeatDays > 365:
+		return errors.New("Repeat every 0 to 365 days (0 = do not repeat).")
+	}
+	if t.RepeatDays > 0 {
+		span := t.LastPeriodEnd().Sub(t.SearchPeriodStart)
+		if span >= time.Duration(t.RepeatDays)*24*time.Hour {
+			return errors.New("The next edition would start before this one ends; repeat less often or shorten the schedule.")
+		}
+	}
+	return nil
 }

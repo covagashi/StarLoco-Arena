@@ -6,10 +6,12 @@ import "time"
 // admin console.
 //
 // These used to be a compiled-in table, which meant changing the server's
-// tournament line-up needed a rebuild. The rows are still deliberately thin:
-// this describes what the client is TOLD about a tournament (the calendar entry
-// and the registerable-list row), not a bracket engine. The live-match layer —
-// opponent search, scheduled fights, progression, rewards — remains deferred.
+// tournament line-up needed a rebuild. A row is one EDITION of a tournament: it
+// opens for registration, plays its search periods on a schedule and finishes
+// (FinishedAt). A repeating tournament is not reset in place when it ends; the
+// scheduler creates the next edition as a new row (PreviousID points back), so
+// the finished one keeps its registrations and bracket as history and the next
+// starts with a fresh wire id.
 //
 // DefID is the part an operator cannot be allowed to get wrong. It references a
 // real client definition (a data.bdat type-1000 `aub` record; retail ships 22,
@@ -59,26 +61,142 @@ type Tournament struct {
 	SearchPeriodStart   time.Time
 	SearchPeriodMinutes int32 `gorm:"not null;default:0"`
 
+	// SearchPeriods is how many search periods the edition plays, one bracket
+	// round each at most (a 16-entrant draw needs 4). PeriodIntervalMinutes is
+	// the gap from one period's START to the next's. 0 periods on a scheduled
+	// row means 1, so rows scheduled before these columns existed keep their
+	// single window.
+	SearchPeriods         int32 `gorm:"not null;default:0"`
+	PeriodIntervalMinutes int32 `gorm:"not null;default:0"`
+
+	// RepeatDays > 0 makes the scheduler open the next edition, that many days
+	// later, when this one finishes. Retail's admin scheduler had the same
+	// "repeat" switch (tournamentAdminCreationDialog).
+	RepeatDays int32 `gorm:"not null;default:0"`
+
+	// FinishedAt is set once, by the scheduler, when the edition ends: a winner
+	// is decided or its last search period has closed. A finished edition is
+	// no longer listed to players. WinnerCoachID is 0 when nobody won (an empty
+	// draw, or fixtures nobody turned up for).
+	FinishedAt    *time.Time
+	WinnerCoachID uint `gorm:"not null;default:0"`
+
+	// PreviousID is the edition this one was repeated from (0 = the first). It
+	// is what "the next tournament of the same type" means for the carry-over
+	// question (28618), which needs an edition to carry INTO.
+	PreviousID uint `gorm:"index;not null;default:0"`
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-// SearchPeriodEnd is when the opponent-search window closes, or the zero time if
-// none is scheduled.
-func (t *Tournament) SearchPeriodEnd() time.Time {
-	if t == nil || t.SearchPeriodStart.IsZero() || t.SearchPeriodMinutes <= 0 {
-		return time.Time{}
-	}
-	return t.SearchPeriodStart.Add(time.Duration(t.SearchPeriodMinutes) * time.Minute)
+// Scheduled reports whether the edition has a search schedule. An unscheduled
+// row keeps the old standing behaviour: always open, never finishing.
+func (t *Tournament) Scheduled() bool {
+	return t != nil && !t.SearchPeriodStart.IsZero() && t.SearchPeriodMinutes > 0
 }
 
-// SearchPeriodOpenAt reports whether the search window contains `now`.
+// Finished reports whether the scheduler has ended this edition.
+func (t *Tournament) Finished() bool { return t != nil && t.FinishedAt != nil }
+
+// PeriodCount is how many search periods a scheduled edition plays (>= 1).
+func (t *Tournament) PeriodCount() int {
+	if !t.Scheduled() {
+		return 0
+	}
+	if t.SearchPeriods <= 1 {
+		return 1
+	}
+	return int(t.SearchPeriods)
+}
+
+// Period returns the start and end of search period i (0-based).
+//
+// The interval is clamped to at least the period's own length: periods that
+// overlapped would have two windows open at once and settle each other's
+// fixtures mid-search.
+func (t *Tournament) Period(i int) (start, end time.Time) {
+	length := time.Duration(t.SearchPeriodMinutes) * time.Minute
+	step := time.Duration(t.PeriodIntervalMinutes) * time.Minute
+	if step < length {
+		step = length
+	}
+	start = t.SearchPeriodStart.Add(time.Duration(i) * step)
+	return start, start.Add(length)
+}
+
+// SearchPeriodEnd is when the FIRST search period closes, or the zero time if
+// none is scheduled.
+func (t *Tournament) SearchPeriodEnd() time.Time {
+	if !t.Scheduled() {
+		return time.Time{}
+	}
+	_, end := t.Period(0)
+	return end
+}
+
+// LastPeriodEnd is when the edition's final search period closes: past it,
+// nothing more can be decided and the edition finishes.
+func (t *Tournament) LastPeriodEnd() time.Time {
+	if !t.Scheduled() {
+		return time.Time{}
+	}
+	_, end := t.Period(t.PeriodCount() - 1)
+	return end
+}
+
+// OpenPeriodAt returns the index of the search period containing `now`, or -1.
+func (t *Tournament) OpenPeriodAt(now time.Time) int {
+	if t.Finished() {
+		return -1
+	}
+	for i := 0; i < t.PeriodCount(); i++ {
+		start, end := t.Period(i)
+		if !now.Before(start) && now.Before(end) {
+			return i
+		}
+	}
+	return -1
+}
+
+// ClosedPeriodsAt counts the search periods that have ended by `now`.
+func (t *Tournament) ClosedPeriodsAt(now time.Time) int {
+	n := 0
+	for i := 0; i < t.PeriodCount(); i++ {
+		if _, end := t.Period(i); !now.Before(end) {
+			n++
+		}
+	}
+	return n
+}
+
+// NextPeriodStartAt returns the start of the first period still ahead of `now`,
+// or the zero time when none is.
+func (t *Tournament) NextPeriodStartAt(now time.Time) time.Time {
+	if t.Finished() {
+		return time.Time{}
+	}
+	for i := 0; i < t.PeriodCount(); i++ {
+		if start, _ := t.Period(i); start.After(now) {
+			return start
+		}
+	}
+	return time.Time{}
+}
+
+// SearchPeriodOpenAt reports whether any search window contains `now`.
 func (t *Tournament) SearchPeriodOpenAt(now time.Time) bool {
-	end := t.SearchPeriodEnd()
-	if end.IsZero() {
+	return t.OpenPeriodAt(now) >= 0
+}
+
+// RegistrationOpenAt is RegistrationOpen as of `now`: a scheduled edition stops
+// taking entrants when its first search period starts (the draw is fixed from
+// then on), and a finished one never takes any.
+func (t *Tournament) RegistrationOpenAt(now time.Time) bool {
+	if t == nil || !t.RegistrationOpen || t.Finished() {
 		return false
 	}
-	return !now.Before(t.SearchPeriodStart) && now.Before(end)
+	return !t.Scheduled() || now.Before(t.SearchPeriodStart)
 }
 
 func (Tournament) TableName() string { return "tournaments" }
@@ -144,8 +262,8 @@ const TournamentWireBase int64 = 2_600_000
 func (t *Tournament) WireID() int64 { return TournamentWireBase + int64(t.ID) }
 
 // TournamentKindPrivate is the 28602 wire kind (ks_1) every tournament here
-// uses: a registerable event with no automatic opponent search and no bracket,
-// which is the only shape this server actually runs. It is deliberately not
+// uses: a registerable event whose opponent search the entrant starts from the
+// alert list, which is the only shape this server runs. It is deliberately not
 // editable from the console — the other kinds pull the client into flows that
 // have no server behind them.
 const TournamentKindPrivate uint8 = 1

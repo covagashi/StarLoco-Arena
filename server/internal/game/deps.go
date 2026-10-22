@@ -2,6 +2,7 @@ package game
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/store"
@@ -69,9 +70,12 @@ type Deps struct {
 	Challenges   *ChallengeManager
 	Fights       *FightManager
 	Sessions     *SessionRegistry
-	// Tournaments tracks which coaches registered for which standing tournament
-	// (the tournament totem's list/calendar). In-memory, process-lived.
+	// Tournaments tracks registrations, the bracket and the waiting searchers,
+	// written through to the store.
 	Tournaments *TournamentManager
+	// TournamentClock is the scheduler's clock (tournament_schedule.go); nil
+	// means time.Now. Tests set it to walk an edition through its periods.
+	TournamentClock func() time.Time
 	// TeamUps holds pending 2v2 invitations and the duos they form.
 	TeamUps *teamUps
 	// WebBaseURL is the portal address announced to Godot clients that ask

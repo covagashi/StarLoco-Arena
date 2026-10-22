@@ -201,6 +201,10 @@ func run(configPath, dataOverride string) error {
 		go checkForUpdate(ctx, cfg, log)
 	}
 
+	// Scheduled tournaments open and close their search periods and finish on
+	// the clock, whether or not anyone is looking.
+	go deps.RunTournamentScheduler(ctx)
+
 	if err := srv.Serve(ctx, gameLn); err != nil {
 		return fmt.Errorf("game server stopped: %w", err)
 	}
@@ -383,8 +387,19 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 		var err error
 		if tm, err = game.NewTournamentManagerWithStore(st.Tournaments); err != nil {
 			log.Warn("tournament registrations failed to load", "err", err)
-		} else if n := tm.Loaded(); n > 0 {
-			log.Info("tournament registrations restored", "count", n)
+		} else {
+			// Finished editions keep their rows as history; only the ones
+			// still running belong in memory.
+			if all, err := st.Tournaments.List(); err == nil {
+				for i := range all {
+					if all[i].Finished() {
+						tm.Forget(all[i].WireID())
+					}
+				}
+			}
+			if n := tm.Loaded(); n > 0 {
+				log.Info("tournament registrations restored", "count", n)
+			}
 		}
 	} else {
 		tm = game.NewTournamentManager()
