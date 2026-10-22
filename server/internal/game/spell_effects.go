@@ -331,11 +331,21 @@ func (f *Fight) applyVisualEffect(caster *FightFighter, ef gamedata.Effect, cell
 		return
 	}
 	val := ef.Roll(f.rngSource())
+	if ef.ActionID == actionDamageRedirect {
+		turns, infinite := ef.DurationTurns()
+		if infinite {
+			turns = infiniteStateTurns
+		}
+		victim.addState(stateRedirected, max(turns, 1))
+	}
 	eff, _ := buildRunningEffect(f.nextActionUID(), ef.ActionID, ef.EffectID,
 		caster.WireID, victim.WireID, victim.Pos, val, 0, false,
 		sourceSpellPart(f.sourceSpellID))
 	f.broadcast(eff)
 }
+
+// actionDamageRedirect is 139, the one visual effect that also leaves a state.
+const actionDamageRedirect int32 = 139
 
 // --- HP effects (damage / leech / heal / %HP / instant death) ---
 

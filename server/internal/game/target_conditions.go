@@ -78,26 +78,50 @@ const (
 // shipped spell relies on them and dangerous the moment one does, which is
 // exactly the kind of data-drift this project has been bitten by before.
 //
-// The eight bits below are decidable from state this server already models (the
-// state mapping is the one in states.go, whose comments name the very same client
-// enum members: dev/dew/dex/deA/deB). Bit 55 (deC) and bits 58-61 (elemental
-// resistance below -60) are still not decidable here, so they remain outside
-// evaluableTargetBits and still trip the escape hatch - but now they are the ONLY
-// things that do.
+// Every bit of the bank is decidable from state this server models (the state
+// mapping is the one in states.go, whose comments name the very same client enum
+// members: dev/dew/dex/deA/deB/deC). Bits 55 and 58-61 were not until S19: 55
+// needed the damage-redirect state, and 58-61 compare damage against
+// resistance, which combat_stats.go now holds.
 const (
 	condTargetIntransposable int64 = 1 << 49 // deB, on target OR caster
 	condTargetStabilized     int64 = 1 << 50 // dev
 	condTargetAnchored       int64 = 1 << 51 // deA - cannot be carried
 	condTargetAtFullHP       int64 = 1 << 52 // HP >= MaxHP
-	condTargetNoAP           int64 = 1 << 53 // AP == 0 (or AP-loss resist >= 100)
-	condTargetNoMP           int64 = 1 << 54 // MP == 0 (or MP-loss resist >= 100)
+	condTargetNoAP           int64 = 1 << 53 // AP == 0 or AP-loss resist >= 100
+	condTargetNoMP           int64 = 1 << 54 // MP == 0 or MP-loss resist >= 100
+	condTargetRedirected     int64 = 1 << 55 // deC - under a damage redirect (139, aOp)
 	condTargetRooted         int64 = 1 << 56 // dex
 	condTargetPetrified      int64 = 1 << 57 // dew
+	// 58-61: the caster's damage % against the target's resistance % in one
+	// element (ig_1.a), rejected below -60. The element of each bit is ig_1's
+	// own pairing of the Lr characteristics: bqH/bqD earth, bqI/bqE air,
+	// bqG/bqC water, bqF/bqB fire.
+	condTargetResistsEarth int64 = 1 << 58
+	condTargetResistsAir   int64 = 1 << 59
+	condTargetResistsWater int64 = 1 << 60
+	condTargetResistsFire  int64 = 1 << 61
 
 	stateTargetBits = condTargetIntransposable | condTargetStabilized |
 		condTargetAnchored | condTargetAtFullHP | condTargetNoAP |
-		condTargetNoMP | condTargetRooted | condTargetPetrified
+		condTargetNoMP | condTargetRedirected | condTargetRooted | condTargetPetrified |
+		condTargetResistsEarth | condTargetResistsAir | condTargetResistsWater |
+		condTargetResistsFire
+
+	resistGapReject int32 = -60  // aLc: ig_1.a(...) < -60
+	statBound       int32 = 1000 // Lr's [-1000, 1000] clamp (gn_0.a)
 )
+
+// elementalEdge is ig_1.a: the caster's all + element damage %, clamped, less
+// the target's all + element resistance %, clamped.
+func elementalEdge(caster, target *FightFighter, elem int) int32 {
+	var dmg int32
+	if caster != nil {
+		dmg = clampInt32(caster.Stats.dmgPctAll+caster.Stats.dmgPct[elem], -statBound, statBound)
+	}
+	res := clampInt32(target.Stats.resPctAll+target.Stats.resPct[elem], -statBound, statBound)
+	return dmg - res
+}
 
 // stateConditionRejects reports whether any modelled state bit in cond rules the
 // target out. Mirrors aLc.java:89-131, where each matching bit returns dMP
@@ -121,15 +145,25 @@ func stateConditionRejects(caster, target *FightFighter, cond int64) bool {
 	if cond&condTargetAtFullHP != 0 && target.HP >= target.MaxHP {
 		return true
 	}
-	// The client also rejects when AP/MP-loss RESISTANCE is >= 100. That stat is
-	// not modelled here, so only the "already at zero" half is checked - strictly
-	// more permissive, which is the safe direction: the server can fail to reject,
-	// never wrongly reject a legitimate cast.
-	if cond&condTargetNoAP != 0 && target.AP == 0 {
+	if cond&condTargetNoAP != 0 && (target.AP == 0 || target.Stats.resAPLoss >= 100) {
 		return true
 	}
-	if cond&condTargetNoMP != 0 && target.MP == 0 {
+	if cond&condTargetNoMP != 0 && (target.MP == 0 || target.Stats.resMPLoss >= 100) {
 		return true
+	}
+	if cond&condTargetRedirected != 0 && target.hasState(stateRedirected) {
+		return true
+	}
+	for _, r := range [...]struct {
+		bit  int64
+		elem int
+	}{
+		{condTargetResistsEarth, elemEarth}, {condTargetResistsAir, elemAir},
+		{condTargetResistsWater, elemWater}, {condTargetResistsFire, elemFire},
+	} {
+		if cond&r.bit != 0 && elementalEdge(caster, target, r.elem) < resistGapReject {
+			return true
+		}
 	}
 	if cond&condTargetRooted != 0 && target.hasState(stateRooted) {
 		return true

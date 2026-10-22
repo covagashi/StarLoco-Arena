@@ -109,7 +109,21 @@ antes de escribir código.
       `handleFighterDelete`, `useConsumableOnFighter`), `TestMaxAndAddStat`, y
       el e2e `TestFightStatisticsUnlockAchievements` (un abandono real anuncia
       el 22000 a los dos coaches).
-- [ ] Bits de máscara de objetivo 55 y 58–61; código 66.
+- [x] **Bits de máscara 55 y 58–61** (2026-10-22): ya son decidibles. El 55
+      es el estado `deC` que pone la 139 "redirección de daños" (`aOp`): el
+      servidor solo la dibujaba y ahora deja el estado. Los 58–61 son
+      `ig_1.a`, daño % del lanzador menos resistencia % del objetivo en un
+      elemento (con los "a todo"), rechazado por debajo de −60: tierra, aire,
+      agua y fuego, por el emparejamiento `Lr` del propio `ig_1`. De paso, los
+      bits 53/54 ya miran también la resistencia ≥ 100 a perder PA/PM (el
+      comentario decía que no estaba modelada, y sí lo está). Solo los bits
+      62/63 siguen en la válvula de escape. Ningún comportamiento cambia con
+      los datos: los 3 hechizos con máscara obligatoria no los usan (sí muchas
+      máscaras no obligatorias). Pruebas: `TestRedirectedTargetBit`,
+      `TestElementalResistBits`, el canario de siempre.
+- [x] **Código 66** (`badCoachCardQuantity`): descartado aquí. Es el único
+      código que no está en `je_2`, y su único disparador plausible es el
+      17010 (torneos creados por jugadores), que es de **S09**.
 
 ## Opcodes pequeños
 

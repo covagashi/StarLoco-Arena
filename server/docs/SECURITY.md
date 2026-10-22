@@ -268,9 +268,12 @@ is a race an attacker wins by connecting first.
 - **`MaxActive`** (spell field 8). A canary test proves it is redundant against
   shipped data and says when to revisit; a second, subtly different gate would
   risk rejecting casts the client believes are legal.
-- **Target-mask bits 55 and 58-61** (deC, elemental resist < -60). Not decidable
-  from modelled state. Only three spells set `EnforceTargetMasks` and none use
-  these; a real-data canary guards the assumption.
+- ~~**Target-mask bits 55 and 58-61**~~ — evaluated since S19: 55 is the
+  damage-redirect state (139 now leaves it), 58-61 compare the caster's damage %
+  with the target's resistance % per element (`ig_1.a`, reject below -60), and
+  bits 53/54 also reject a target fully resistant to the loss. Only bits 62/63
+  still trip the escape hatch. The three shipped enforced masks use none of them
+  (the canary still holds); plenty of unenforced masks do.
 - **Hand-driving your own summon.** Contradicts a comment, not a rule; AP/MP are
   debited normally, so there is no gain.
 

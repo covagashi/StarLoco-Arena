@@ -83,6 +83,10 @@ const (
 	stateMaskClass
 	stateMaskCoward
 	stateMaskBerzerk
+	// stateRedirected is the client's deC, set by 139 "Redirection des
+	// dégâts" (aOp). The redirect itself is visual; the state is what target
+	// mask bit 55 reads.
+	stateRedirected
 )
 
 // stateByAction maps an mh_2 state action id to the modelled state.
