@@ -181,6 +181,7 @@ func (d *Deps) finishTournament(t *domain.Tournament, winner uint, now time.Time
 	if !won {
 		return // someone else finished it
 	}
+	d.settleTournamentResults(t, winner)
 	if winner != 0 {
 		// Usually paid already, by the final or the forfeit that decided it;
 		// the claim is single-shot, so this only covers a winner carried to the

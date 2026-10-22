@@ -30,6 +30,7 @@ func registerTotemHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpTournamentRegister, handleTournamentRegister)
 	r.Register(protocol.OpTournamentTreeReq, handleTournamentTreeRequest)
 	r.Register(protocol.OpTournamentSearchRequest, handleTournamentSearchRequest)
+	r.Register(protocol.OpTournamentCarryStanding, handleTournamentCarryStanding)
 	r.Register(protocol.OpTournamentSearchCancel, handleTournamentSearchCancel)
 }
 
@@ -125,8 +126,10 @@ func handleTournamentListRequest(s *Session, _ *protocol.C2SFrame) error {
 		return err
 	}
 	// AFTER the list: the search-period notification names its tournament by
-	// looking it up in the registry this message just filled.
+	// looking it up in the registry this message just filled. So does the
+	// carry-over question.
 	s.announceTournamentSearchPeriods()
+	s.offerTournamentCarry()
 	return nil
 }
 
@@ -157,8 +160,8 @@ func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
 	case !t.RegistrationOpenAt(s.deps.tournamentNow()):
 		code = regRefused // closed to new entrants, by an admin or by the draw starting
 	default:
-		if s.deps.Tournaments != nil {
-			s.deps.Tournaments.Register(s.Coach.ID, tid)
+		if s.deps.Tournaments != nil && s.deps.Tournaments.Register(s.Coach.ID, tid) {
+			s.noteTournamentEntry()
 		}
 	}
 

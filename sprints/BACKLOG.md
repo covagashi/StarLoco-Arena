@@ -76,6 +76,13 @@ qué el visual no puede correr en CI).
 - [x] (2026-10-21: Social no pedía la lista 512 al abrirse; ahora sí) **La tabla de miembros del clan sale vacía** en Social → Clan con el coach `test`
       (líder de un clan de un miembro). Visto el 2026-10-20 en `capturas/s18/clan-demon.png`;
       sin investigar si falta pedir la lista (512) o si es el filtro de `part`.
+- [ ] **Ranking 1v1 en el cliente retail con más de 10 clasificados** (visto leyendo
+      el código en S09, 2026-10-22, sin probar en vivo): `afl_1` 27501 escribe cada fila
+      en `adn_1.aPj()`, una lista de 10 sin comprobar índices, y el servidor manda hasta
+      20 (`ladderPageSize`); además limpia hasta `total`, que va con el total real. Con
+      más de 10 coaches clasificados el retail fallaría al abrir el ranking. Godot no
+      tiene el problema. Arreglo: páginas de 10 para el retail, y `total` = tamaño de
+      página (como el 27507 desde S09).
 - [ ] Inscripción a torneos: el cliente solo sabe que estás inscrito si lo hiciste en esta
       sesión (ningún mensaje lo dice al entrar). Volver a pulsar "Inscribirme" es inocuo:
       el servidor la guarda una vez. → [S09](./S09-tournaments.md) (bloques B y E).

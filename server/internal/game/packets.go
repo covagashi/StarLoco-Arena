@@ -24,9 +24,11 @@ func buildCoachInformation(c *domain.Coach, tome []int32, guild *handshake.Guild
 		Sex:       c.Sex,
 		Standing:  c.Standing,
 		Strength:  c.Strength,
-		Criteria:  coachCriteria(c),
-		Tome:      tome,
-		Guild:     guild,
+		// Statistic 183 is that running total; no second copy is kept.
+		TournamentPoints: coachStat(c, statTournamentPoints),
+		Criteria:         coachCriteria(c),
+		Tome:             tome,
+		Guild:            guild,
 	})
 }
 
@@ -273,4 +275,14 @@ func buildActorDespawn(ids []uint) ([]byte, error) {
 		w.I64(int64(id))
 	}
 	return protocol.EncodeS2C(protocol.OpActorDespawn, w.Bytes())
+}
+
+// coachStat is one of a coach's persisted statistics (0 when absent).
+func coachStat(c *domain.Coach, id int16) int32 {
+	for _, st := range c.Stats {
+		if st.StatID == id {
+			return st.Value
+		}
+	}
+	return 0
 }

@@ -177,7 +177,8 @@ mis-described here before they were built, and re-reading the client is what fix
 4. ~~**101 card sets (138)**~~ — done (B-062); the bonuses are meta, not combat.
 5. ~~**800/801/802 achievements (350)**~~ — done (item 26). *Statistic coverage* is
    done too (S19): of the 98 counters the achievements reference, the client moves 7
-   and the server now moves 80 — see "Statistics" below.
+   and the server now moves 84 (80 in S19, the four tournament ones in S09) — see
+   "Statistics" below.
 
 **What is actually left is no longer a data-decoding problem.** The remaining holes are
 the two deferred systems (2v2 → item 30, tournament matches → item 32, which between them
@@ -203,7 +204,8 @@ That is where the semantics below come from.
 | server, end of fight | 42–53 / 342–353 / 642–653 biggest fighter per breed and level tier, 63, 131, 146, 148, 165, 167, 170, 171, 201–207, 209, 35, 40, 84 | `coach_statistics.go` |
 | server, in the fight | 56, 57/357/657, 58, 59/359/659, 60/360/660, 61, 62, 69, 70, 156, 161 | `fight_statistics.go` |
 | server, session | 34 worn items, 208 evolution consumables, 220 living evolution fighters deleted | `coach_statistics.go` |
-| not yet | 183/187/188/189 (tournament matches → S09), 198–200, 211, 226 (tutorial → S10), 147/222 (the 2v2 and evolution ladders do not exist yet) | |
+| server, tournaments (S09) | 183 points, 187/190 tournaments won (only with a fixture actually won, not by byes alone), 188 duels won (played fixtures, not forfeits), 189 entries | `tournament_results.go` |
+| not yet | 198–200, 211, 226 (tutorial → S10), 147/222 (the 2v2 and evolution ladders do not exist yet) | |
 
 The per-level variants (`+300`, `+600`) are picked by the coach's 1v1 force before the
 fight: up to 1756 (level 20), up to 2572 (level 40), above. Values are clamped to 32767
@@ -445,6 +447,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 
 | Date | Change |
 |---|---|
+| 2026-10-22 | S09: the tournament statistics 183, 187, 188, 189 (and 190) moved by the server; the 25 achievements 182–206 can be earned. |
 | 2026-10-22 | S19: statistic coverage, 80 of the 98 counters the achievements reference now moved by the server (from 5). Store gains `MaxStat` / `AddStat` / `StatValue`. |
 | 2026-10-22 | S19: type 400's `QA`–`QD` and `QF` decoded and named (linked achievement, xp, xpLimit); not used yet — the Demon III evolution chain that needs them is S10's. |
 | 2026-10-22 | S19: type 210 read to 13/13 (field 6, the trigger animation, the re-trigger delay; condition, field 6 and delay pinned at zero by test). B-185: an action-66 trap expires with its effect's duration. Trigger 10008 (stayed inside) wired; 10002/10003/10006 documented as not applied, with the reason. |

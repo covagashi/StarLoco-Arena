@@ -385,6 +385,14 @@ const (
 
 	OpTournamentSearchEnded = 28648 // S2C df_1: [i64 tid][i8 forfeit]
 
+	// The carry-over pair (S09). 28618 asks "you could not finish tournament X;
+	// carry your place to the next one of the same type?"; YES answers 28617
+	// with the same id, NO sends nothing. `ajp_0` looks the id up in the
+	// 28602 registry and drops the question when it is not there, so the id is
+	// the NEXT edition's (same name), not the finished one's.
+	OpTournamentUnfinished    = 28618 // S2C ahd_0: [i64 tid]
+	OpTournamentCarryStanding = 28617 // C2S afg_2 (arch 2): [i64 tid]
+
 	OpTournamentTreeReq = 28649 // C2S alf_0 (arch 2): [i64 tid][i32 round][i32 nameLen][name]
 	OpTournamentTree    = 28650 // S2C IL: [i32 treeSize][i32 count]{[i32 id][i32 nameLen][name]}[i32 bib]
 

@@ -1,14 +1,16 @@
 package game
 
 import (
+	"time"
+
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 	"github.com/StarLoco/arena-2.70/internal/store"
 )
 
 // The ranking window is SEVEN independent leaderboards, one opcode pair each
-// (client controller afl_1, dialog ladderInformationDialog.xml). Only the 1v1
-// board carries data in this build; the other subsystems do not exist yet, so
-// their tabs are answered with well-formed EMPTY windows. Getting the empty forms
+// (client controller afl_1, dialog ladderInformationDialog.xml). The boards
+// whose subsystem exists carry data (see the table); the rest are answered with
+// well-formed EMPTY windows. Getting the empty forms
 // byte-exact is what makes the panel open cleanly instead of throwing in the
 // client's decoder.
 //
@@ -17,7 +19,7 @@ import (
 //	Coach       27508 aa_2     27509 jw_0     — (no coach reputation) -> empty
 //	2 vs 2      27504 vg_1     27505 aka_0    — (no 2v2 teams)        -> empty
 //	Clan        27502 pc_1     27503 ij_1     — (no guild system)     -> empty
-//	Tournoi     27506 qk_2     27507 uj_0     — (no tournament points yet) -> empty
+//	Tournoi     27506 qk_2     27507 uj_0     tournament points (S09)
 //	Ligue Pro   27514 ck_2     27515 amu_0    — (no pro league)       -> empty
 //	Démon       27512 ow_2     27513 xn_2     the 24 overworld demons
 //
@@ -399,11 +401,12 @@ func buildDemonList(startIndex int) ([]byte, error) {
 //
 //	[i32 monthStart][i32 trimStart][i32 yearStart][i8 month][i8 trimester][i16 year]
 //
-// It replies with 27507 (uj_0), a tournament-POINTS board carrying three windows in
-// one message (month, trimester, year). Tournament matches do not run yet (the
-// live-match layer is deferred, see B-044), so nobody has scored a tournament
-// point: all three windows are legitimately EMPTY rather than stubbed. The
-// selectors are echoed so the tab's period buttons keep the state the player chose.
+// It replies with 27507 (uj_0), the tournament-POINTS board: three windows in
+// one message (the month, trimester and year the player picked), each ranking
+// the coaches by the points earned in editions that finished in that period
+// (S09). The client's selectors are 0-based (month 0-11, `"month" + m`;
+// trimester 0-3, shown +1) and its year buttons only reach this year and last;
+// a request with year 0 (the Godot client's first one) means "now".
 //
 // This tab previously received NO reply and therefore rendered blank — it was
 // mislabelled "seasonal" (see B-046).
@@ -412,11 +415,13 @@ func handleTournamentLadderRequest(s *Session, f *protocol.C2SFrame) error {
 		return nil
 	}
 	r := protocol.NewReader(f.Payload)
-	// The three window starts are echoed back as-is; with zero rows the client
-	// simply renders an empty page at that scroll offset.
-	_, _ = r.I32() // monthStart
-	_, _ = r.I32() // trimStart
-	_, _ = r.I32() // yearStart
+	var starts [3]int32
+	for i := range starts {
+		starts[i], _ = r.I32()
+		if starts[i] < 0 {
+			starts[i] = 0
+		}
+	}
 	month, err := r.U8()
 	if err != nil {
 		return err
@@ -429,41 +434,94 @@ func handleTournamentLadderRequest(s *Session, f *protocol.C2SFrame) error {
 	if err != nil {
 		return err
 	}
+	if year == 0 {
+		now := time.Now()
+		year, month = uint16(now.Year()), uint8(now.Month()-1)
+		trimester = month / 3
+	}
+	month, trimester = month%12, trimester%4
 
-	frame, err := buildTournamentLadder(month, trimester, year)
+	var wins [3]tournamentLadderWindow
+	var mine [3]int32
+	if s.deps.Store != nil && s.deps.Store.Tournaments != nil {
+		for i, p := range tournamentLadderPeriods(month, trimester, year) {
+			rows, _, err := s.deps.Store.Tournaments.PointsBoard(p[0], p[1], int(starts[i]), tournamentLadderPage)
+			if err != nil {
+				return err
+			}
+			pts, rank, err := s.deps.Store.Tournaments.PointsAndRank(s.Coach.ID, p[0], p[1])
+			if err != nil {
+				return err
+			}
+			wins[i] = tournamentLadderWindow{start: int(starts[i]), rows: rows, myRank: rank}
+			mine[i] = pts
+		}
+	}
+	frame, err := buildTournamentLadder(month, trimester, year, mine, wins)
 	if err != nil {
 		return err
 	}
-	s.log.Debug("tournament ladder (empty: no tournament points yet)",
-		"coach", s.Coach.Name, "month", month, "trimester", trimester, "year", year)
+	s.log.Debug("tournament ladder", "coach", s.Coach.Name, "month", month,
+		"trimester", trimester, "year", year)
 	return s.Send(frame)
+}
+
+// tournamentLadderPage is how many rows one window carries: the client's three
+// lists (`adn_1` dxh/dxi/dxj) are pre-sized to 10 and indexed without a check.
+const tournamentLadderPage = 10
+
+// tournamentLadderWindow is one of the board's three windows.
+type tournamentLadderWindow struct {
+	start  int
+	rows   []store.PointsEntry
+	myRank int
+}
+
+// tournamentLadderPeriods is [from, to) for the month, trimester and year
+// windows, in server time.
+func tournamentLadderPeriods(month, trimester uint8, year uint16) [3][2]time.Time {
+	y := int(year)
+	at := func(m int) time.Time { return time.Date(y, time.Month(m), 1, 0, 0, 0, 0, time.Local) }
+	return [3][2]time.Time{
+		{at(int(month) + 1), at(int(month) + 2)},
+		{at(int(trimester)*3 + 1), at(int(trimester)*3 + 4)},
+		{at(1), at(13)},
+	}
 }
 
 // buildTournamentLadder builds TOURNAMENT_LADDER (27507 uj_0):
 //
 //	[i8 month][i8 trimester][i16 year]
 //	[i32 myPointsMonth][i32 myPointsTrimester][i32 myPointsYear]
-//	3 × { [i32 total][i32 start][i32 end][i32 myRank]
+//	3 × { [i32 count][i32 start][i32 end][i32 myRank]
 //	      (end-start) × {[i32 nameLen][name][i32 points]}
 //	      [i8 searchButton] }
 //
-// The window contract is the same as the 1v1 board: the client loops `end - start`
-// times, so end MUST equal start + len(rows). Each of the three blocks indexes a
-// pre-sized client list, so zero rows requires zero counts.
-func buildTournamentLadder(month, trimester uint8, year uint16) ([]byte, error) {
-	w := protocol.NewWriter().
-		U8(month).
-		U8(trimester).
-		U16(year).
-		I32(0). // my points this month
-		I32(0). // my points this trimester
-		I32(0)  // my points this year
-	for i := 0; i < 3; i++ { // month, trimester, year windows
-		w.I32(0). // total ranked coaches
-				I32(0). // window start
-				I32(0). // window end (= start + rows)
-				I32(0). // my rank
-				U8(1)   // search button enabled
+// end MUST equal start + len(rows): the client loops `end - start` times. The
+// first i32 is not the board's size but how far the client clears its list
+// after the rows (`afl_1` 27507: `for n = rows; n < count; ++n list.get(n).clear()`),
+// so it is the page size whenever there are rows (stale rows from the previous
+// page are cleared) and 0 on an empty board, which the 10-slot list allows
+// either way.
+func buildTournamentLadder(month, trimester uint8, year uint16, mine [3]int32, wins [3]tournamentLadderWindow) ([]byte, error) {
+	w := protocol.NewWriter().U8(month).U8(trimester).U16(year)
+	for _, p := range mine {
+		w.I32(p)
+	}
+	for _, win := range wins {
+		count := 0
+		if len(win.rows) > 0 {
+			count = tournamentLadderPage
+		}
+		w.I32(int32(count)).
+			I32(int32(win.start)).
+			I32(int32(win.start + len(win.rows))).
+			I32(int32(win.myRank))
+		for _, e := range win.rows {
+			writeLadderString(w, e.Name)
+			w.I32(e.Points)
+		}
+		w.U8(1) // search button enabled
 	}
 	return protocol.EncodeS2C(protocol.OpTournamentLadder, w.Bytes())
 }

@@ -202,6 +202,14 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.Tournament{})
 		},
 	},
+	{
+		// Tournament points and the carry-over flags on each entry (S09).
+		Version: 11,
+		Name:    "tournament_results",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.TournamentRegistration{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

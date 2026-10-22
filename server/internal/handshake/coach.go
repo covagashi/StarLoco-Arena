@@ -73,6 +73,9 @@ type Coach struct {
 	// pops its level-up dialog when it changes, so sending 0 pinned every coach
 	// at level 1 no matter how much it had earned.
 	Standing int32
+	// TournamentPoints is the coach's tournament points (aez_0.anV), its
+	// running total over every finished edition.
+	TournamentPoints int32
 	// Criteria are the coach's persisted achievement criteria, emitted in the
 	// 0x200 stat-pairs blob. criterionZaapUnlock is always added on top, so this
 	// may be nil. See buildCriteriaBlob for the ordering/dedup rules.
@@ -261,8 +264,8 @@ func EncodeCoachInformations(c Coach) ([]byte, error) {
 	w.U16(0) // UF look id (0 is safe; client derives look from sex)
 
 	// 0x100: tournament points + ladder-levels blob (empty)
-	w.I32(0) // anV tournamentPoints
-	w.U16(0) // Q blob length = 0
+	w.I32(c.TournamentPoints) // anV tournamentPoints
+	w.U16(0)                  // Q blob length = 0
 
 	// 0x400: standing
 	w.I32(c.Standing) // bMU

@@ -117,11 +117,11 @@ if this block drifts.
 | Bucket | Count |
 |---|---|
 | Rows in the master table | 347 |
-| **C2S handled (H)** | 112 |
-| **S2C emitted (E)** | 155 |
+| **C2S handled (H)** | 113 |
+| **S2C emitted (E)** | 156 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
-| **Not implemented (-)** | 71 |
+| **Not implemented (-)** | 69 |
 
 A `both | H+E` row counts once on each side; there is none today. The handled
 count also equals the opcodes `RegisterAll` binds (the tests above check both
@@ -520,8 +520,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 28612 | S2C | E | TournamentSearchResult (DR) | `[i64 tid][i16 preset][i8 accepted]` - opens the client's waiting dialog (`tournamentsSearchStatusDialog`). Must be sent, or the team panel closes leaving no overlay |
 | 28614 | S2C | E | TournamentFightStarting (azj_0) | `[i64 tid]` - *"Lancement du combat"*. Closes the waiting dialog, so it goes out BEFORE CREATE_FIGHT |
 | 28616 | S2C | E | TournamentSearchError |  |
-| 28617 | C2S | - | TournamentCarryStanding (afg_2) | `[i64 tid]` - the player answering YES to 28618's *"report my position to the next tournament of the same type?"* dialog (`ajp_0`:152 -> `gs_2`, answer 16). Reachable and player-facing but **blocked, not dead**: the whole flow is gated on 28618, which only makes sense once tournaments actually END - the live-match layer (opponent search, scheduled fights, bracket progression) is the documented deferral in tournaments.go. Implementing the ack alone would fabricate a carry rule with no unfinished tournaments to carry from |
-| 28618 | S2C | - | TournamentUnfinished (ahd_0) | `[i64 tid]` - *"Vous avez participe a un tournoi que vous n'avez pu terminer"* + the carry-over question. The SERVER must send this to start the flow; answering it sends 28617. **Blocked on the same live-match deferral as 28617**: no tournament ever reaches "ended while you were registered" today, so there is nothing honest to report |
+| 28617 | C2S | H | TournamentCarryStanding (afg_2) | `handleTournamentCarryStanding` - `[i64 tid]`, the YES to 28618 (`ajp_0`:152 -> `gs_2`, answer 16; NO sends nothing). The id is the NEXT edition's; honoured only for a coach that was offered the carry-over from its predecessor, while the next edition still takes entrants. Registers the coach there, seeded ahead of new entrants, and refreshes 28602 (no reply message exists). S09 |
+| 28618 | S2C | E | TournamentUnfinished (ahd_0) | `[i64 tid]` - *"Vous avez participe a un tournoi que vous n'avez pu terminer"* + the carry-over question. Sent after 28602 to a coach left in contention when a repeating edition ran out of periods with no winner, once per edition (a NO is silent, so it is not re-asked). `ajp_0` looks the id up in the 28602 registry and drops the question if absent, and a finished edition is no longer listed - so the id is the NEXT edition's, which has the same name. S09 |
 | 28620 | S2C | E | TournamentFinale (Yq) | ADD `[i8 1][i64 id][i32 n]{i64 coachId}[i32 n]{[i32 len][utf8]}[i32 len][utf8 tournamentName]`, REMOVE `[i8 2][i64 id]`. The "Finale du tournoi X - A VS B" alert. **`Yq.a` reads BOTH arrays backwards**, so they are written in reverse or the finalists are announced swapped |
 | 28622 | S2C | - | (`uw_2`) | Consumer `ds_2` case 28622 is `bl2 = false; break;` - it assigns a local flag and returns. **No-op**: sending it changes nothing. (This is the row that scores "substantive" in the mechanical empty-body sweep precisely because of that assignment - see the sweep's stated limitation) |
 | 28630 | S2C | E | TournamentSearchPeriod (dg_0) | `[i64 tid][i8 open]` - opens/closes a tournament's opponent-search period. Creates the client's tournament NOTIFICATION (`zN` builds a `td_0`), and clicking that is the ONLY way to select a tournament (`agz_1` -> `vk_1.ad(tid)`). Without it `hu_2` refuses Combattre with `error.noTournamentSelected` forever |
@@ -579,7 +579,8 @@ Coverage today: see [Summary counts](#summary-counts). Of the unimplemented rows
    22004 is abuse-report support (no moderation pipeline); 22093/22097 are
    cross-game card transfer (no other game exists); 27525/27527 are the
    Ankama-internal avatar pipeline (X); 27551 flips a client-local toast flag;
-   28617 is blocked behind 28618, which needs tournaments that actually END.
+   28617 was blocked behind 28618, which needed tournaments that actually END;
+   both done in S09.
 10. ~~S2C family sweep~~ - 2411's wire is now fully decoded (per-preset ladder record;
     needs a per-preset stats model to fill honestly); 22092 is a hover-tooltip
     status flag with no server-side source; the 4900/4901 pair feeds a client-side
@@ -666,7 +667,7 @@ flag.
 | 28603 | `ayQ` | dead | DEAD in retail - tournament CREATE. No `new ayQ()` anywhere; its reply 28604 is handled only by ajp_0, whose output sink (ajp_0.a(apk_0)) is never installed. The web admin console covers this capability instead. |
 | 28605 | `bi_2` | dead | DEAD in retail - no constructor anywhere. Same family as 28603. |
 | 28607 | `ago_0` | dead | DEAD in retail - no constructor anywhere. Same family as 28603. |
-| 28617 | `afg_2` | reachable | REACHABLE and player-facing, but blocked behind 28618 - which only makes sense once tournaments END (live-match layer is the documented deferral). Implementing the ack alone would fabricate the carry rule. |
+| 28617 | `afg_2` | reachable | DONE (S09): handled, see the main table. |
 | 28633 | `kx_2` | dead | DEAD in retail - no constructor; same ajp_0-only reply path as 28603. |
 | 28635 | `aeC` | dead | DEAD in retail - no constructor; same ajp_0-only reply path as 28603. |
 
@@ -677,7 +678,8 @@ vous que votre position soit reportee au prochain tournoi de meme type ?"*, and
 answering yes sends 28617 `afg_2` = `[i64 tid]` (`ajp_0` line 152 -> the `gs_2`
 dialog callback, which fires on answer 16). It is a player-facing 'carry my standing
 into the next tournament of the same type' flow, fully reachable - it just needs the
-SERVER to send 28618 first. Genuine open work, not dead code.
+SERVER to send 28618 first. Genuine open work, not dead code - and done in S09
+(2026-10-22): see the main table.
 
 The 16 marked *reachable* above have a real constructor in a production class and are
 genuine gaps; the caller is named so the next person starts from evidence rather
@@ -744,7 +746,7 @@ chunk of work: one handler class, one feature area.
 | Overworld / instance | `no_2` | ~~4601~~, ~~4700~~, 22092 | **4601/4700 DONE** (sit-stand, emotes). 22092 is the hover-tooltip status flag - settled wire, no source for the flag exists (deliberate non-work). 4510 reaches `no_2` and `qg_2`. |
 | Overworld (misc) | `qg_2` | 4104, 4106, ~~4510~~ | **4510 DONE** (teleports). 4104 redundant with 4098; 4106 blocked by the same spawn-precondition as 4510. |
 | Tournament notifications | `zN` | 17005, ~~25000~~, ~~28646~~ | **25000 DONE** - it's the bare `zN.M(code)` error toaster (26310's code table minus frame cleanup); now emitted for the clan-island Zaap refusal. **28646 DONE (S09)** - sent by the scheduler when a period opens, after the previous one was closed with 28630 open=0, so the missing duplicate guard never bites. |
-| Tournament (player) | `ajp_0` | 28618 | **NOT dead** but **blocked**: it raises a real dialog whose answer sends 28617 - and it only fires for "ended while you were registered" tournaments, which requires the deferred live-match layer to ever produce an ending. |
+| Tournament (player) | `ajp_0` | ~~28618~~ | **DONE (S09)**: sent with the next edition's id once a repeating edition ends with the coach still in contention; the YES (28617) is handled. |
 | System / connection | `fp_0`, `alz_2`, `tu_1` | 100, 102, 103, 105, 106, 108, 202, 204 | Low opcodes; 202/204 sit beside INTERACTIVE_ELEMENT_SPAWN (200) so are likely the element family. Semantics not established. |
 | Misc, single consumer | `add_0` / `pe_2` / `aog_1` / `WE` / `do_2` | ~~2401~~, 2411 / 4000 / 4800 / 8400 / 4311 | 2401 done (B-141); 2411's wire is fully decoded (per-preset ladder record) but needs a per-preset stats model to fill honestly. 4000's target setter is unresolvable - do not guess. |
 

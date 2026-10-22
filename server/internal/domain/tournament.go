@@ -245,6 +245,17 @@ type TournamentRegistration struct {
 	// index, which makes it the natural place to make payment idempotent.
 	PrizeAwarded bool `gorm:"not null;default:false"`
 
+	// Set when the edition finishes (S09). Points are the tournament points
+	// this entry earned (see game.tournamentPoints). Unfinished marks a coach
+	// still in contention when an edition ended without a winner, which is who
+	// is offered the carry-over (28618); CarryOffered records that the offer
+	// went out, since a "no" sends nothing back. Carried marks an entry made by
+	// accepting it (28617): carried entrants are seeded ahead of new ones.
+	Points       int32 `gorm:"not null;default:0"`
+	Unfinished   bool  `gorm:"not null;default:false"`
+	CarryOffered bool  `gorm:"not null;default:false"`
+	Carried      bool  `gorm:"not null;default:false"`
+
 	CreatedAt time.Time
 }
 

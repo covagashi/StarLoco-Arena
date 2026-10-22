@@ -93,3 +93,19 @@ func TestCoachInformationsCarriesLadderStrength(t *testing.T) {
 		t.Errorf("an unranked coach sent %d ladder entries, want 0", p[len(p)-5])
 	}
 }
+
+// TestCoachInformationsCarriesTournamentPoints: anV, the first field of the
+// 0x100 blob, right after the look (offset 15). It was a hard 0 until S09.
+func TestCoachInformationsCarriesTournamentPoints(t *testing.T) {
+	const want int32 = 1234
+	frame, err := EncodeCoachInformations(Coach{ID: 1, Name: "X", TournamentPoints: want})
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	p := frame[4:]
+	const off = 8 + 1 + 1 + 1 + 1 + 1 + 2
+	got := int32(uint32(p[off])<<24 | uint32(p[off+1])<<16 | uint32(p[off+2])<<8 | uint32(p[off+3]))
+	if got != want {
+		t.Errorf("tournament points on the wire = %d, want %d", got, want)
+	}
+}

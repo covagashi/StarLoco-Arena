@@ -269,6 +269,15 @@ type fakeRegStore struct {
 	slotSets int
 }
 
+func (f *fakeRegStore) MarkCarried(coachID uint, tid int64) error {
+	for i := range f.rows {
+		if f.rows[i].CoachID == coachID && f.rows[i].TournamentWireID == tid {
+			f.rows[i].Carried = true
+		}
+	}
+	return nil
+}
+
 func (f *fakeRegStore) ListSlots() ([]domain.TournamentSlot, error) {
 	return f.slots, f.slotErr
 }

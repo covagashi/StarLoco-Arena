@@ -62,6 +62,7 @@ type tournamentRegistrationStore interface {
 	RemoveRegistration(coachID uint, tid int64) error
 	ListSlots() ([]domain.TournamentSlot, error)
 	SetSlot(tid int64, slot int32, coachID uint) error
+	MarkCarried(coachID uint, tid int64) error
 }
 
 // TournamentManager records which coaches have registered for which standing
@@ -96,7 +97,10 @@ type TournamentManager struct {
 	// and opened. Process-lived: on a restart the first tick re-derives it from
 	// the clock (see periodMarks).
 	marks map[int64]tournamentMarks
-	store tournamentRegistrationStore
+	// carried holds the entries made by accepting the carry-over (28617):
+	// tournament -> coach. They are seeded ahead of new entrants.
+	carried map[int64]map[uint]bool
+	store   tournamentRegistrationStore
 }
 
 // tournamentMarks is how far the scheduler has taken one tournament.
@@ -130,6 +134,9 @@ func NewTournamentManagerWithStore(s tournamentRegistrationStore) (*TournamentMa
 			m.reg[r.CoachID] = set
 		}
 		set[r.TournamentWireID] = true
+		if r.Carried {
+			m.markCarriedLocked(r.CoachID, r.TournamentWireID)
+		}
 	}
 	// Prime the bracket. A failure here is returned like a registration failure:
 	// starting with a silently empty bracket would look exactly like "everyone
@@ -186,6 +193,45 @@ func (m *TournamentManager) Register(coachID uint, tid int64) bool {
 	return true
 }
 
+// RegisterCarried registers a coach that accepted the carry-over into tid.
+// Unlike Register it also flags an existing entry, so a coach that had already
+// signed up again still gets its seeding priority.
+func (m *TournamentManager) RegisterCarried(coachID uint, tid int64) {
+	m.Register(coachID, tid)
+	m.mu.Lock()
+	m.markCarriedLocked(coachID, tid)
+	store := m.store
+	m.mu.Unlock()
+	if store != nil {
+		_ = store.MarkCarried(coachID, tid)
+	}
+}
+
+func (m *TournamentManager) markCarriedLocked(coachID uint, tid int64) {
+	if m.carried == nil {
+		m.carried = map[int64]map[uint]bool{}
+	}
+	if m.carried[tid] == nil {
+		m.carried[tid] = map[uint]bool{}
+	}
+	m.carried[tid][coachID] = true
+}
+
+// FixturesWon counts the fixtures a coach actually won in a tournament: the
+// stored slots above the first round, which only a played fixture or a forfeit
+// fills. Byes are derived, never stored, so they do not count.
+func (m *TournamentManager) FixturesWon(tid int64, coachID uint) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for _, c := range m.advanced[tid] {
+		if c == coachID {
+			n++
+		}
+	}
+	return n
+}
+
 // Unregister withdraws coachID from tid. Idempotent; reports whether anything was
 // actually removed.
 func (m *TournamentManager) Unregister(coachID uint, tid int64) bool {
@@ -235,7 +281,9 @@ func (m *TournamentManager) CountFor(tid int64) int {
 //
 // Registration order is not recoverable - the tracker is a set - so ids are
 // sorted, which at least guarantees the same seeding every time rather than map
-// order shuffling the bracket under the player.
+// order shuffling the bracket under the player. Entrants carried over from an
+// unfinished edition come first: the draw takes 16, and the carry-over is a
+// promise of a place in it.
 func (m *TournamentManager) EntrantsFor(tid int64) []uint {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -245,7 +293,13 @@ func (m *TournamentManager) EntrantsFor(tid int64) []uint {
 			out = append(out, coachID)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	carried := m.carried[tid]
+	sort.Slice(out, func(i, j int) bool {
+		if carried[out[i]] != carried[out[j]] {
+			return carried[out[i]]
+		}
+		return out[i] < out[j]
+	})
 	return out
 }
 
@@ -567,6 +621,7 @@ func (m *TournamentManager) Forget(tid int64) {
 	delete(m.ready, tid)
 	delete(m.advanced, tid)
 	delete(m.marks, tid)
+	delete(m.carried, tid)
 }
 
 // periodMarks returns the scheduler's progress for a tournament. The first time

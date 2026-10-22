@@ -411,7 +411,7 @@ func TestLadder2v2Rows(t *testing.T) {
 // Regression guard for B-046: this tab previously received NO reply and rendered
 // blank because it was mislabelled a "seasonal" board.
 func TestTournamentLadderEmptyIsWellFormed(t *testing.T) {
-	frame, err := buildTournamentLadder(3, 1, 2026)
+	frame, err := buildTournamentLadder(3, 1, 2026, [3]int32{}, [3]tournamentLadderWindow{})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

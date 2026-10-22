@@ -69,12 +69,14 @@ func tieredStat(base int16, force int32) int16 {
 }
 
 // fightStatMode is the ladder a finished fight counts for, or 0 for none:
-// practice, challenges and tournament fixtures keep no streaks.
+// practice and challenges keep no streaks. A tournament fixture counts for its
+// mode (1v1, or evolution for evolution-type tournaments): it is ranked and
+// moves the 1v1 force like any Combattre pairing (S09).
 func fightStatMode(f *Fight) int16 {
 	switch {
 	case f.Evolution:
 		return streakModeEvolution
-	case f.Practice || f.ChallengeID != 0 || f.TournamentID != 0:
+	case f.Practice || f.ChallengeID != 0:
 		return 0
 	}
 	for _, t := range f.Teams {

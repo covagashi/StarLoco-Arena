@@ -116,24 +116,54 @@ Pruebas (2026-10-22):
 
 ## B. Servidor: arrastre, puntos y estadísticas
 
-- [ ] **28618 / 28617, arrastre entre torneos.** El retail solo dice la
-      pregunta ("¿llevar mi posición al siguiente torneo del mismo tipo?"); la
-      regla no está en el cliente. Por defecto (ver "Decisiones"): el coach
-      que estaba inscrito en un torneo terminado sin jugar todas sus rondas
-      recibe el 28618 al entrar; si dice que sí (28617), queda inscrito en el
-      siguiente torneo de la misma definición con preferencia de casilla.
-- [ ] **Puntos de torneo del coach** en el 2052 (blob 0x100, `aez_0.anV`;
-      hoy 0 fijo en `handshake/coach.go:263`) y la clasificación Tournoi
-      (27507, hoy vacía, `handlers_ladder.go:437`). Necesita un modelo de
-      puntos: por defecto, ronda alcanzada en cada torneo terminado.
-- [ ] **Estadísticas 183, 187, 188, 189** (puntos máximos en torneo, torneos
-      oficiales ganados, duelos ganados en torneo, inscripciones): apuntarlas
-      en `coach_statistics.go` (`statBatch`) como las demás. Las rachas en
-      combates de torneo (hoy fuera, `coach_statistics.go:76`).
-- [ ] Comprobar uno a uno los 25 logros que dependían de torneos
-      (`v2.70:ROADMAP.md:1651`) y dejar escrito cuáles ya se consiguen.
-- [ ] Inscripción visible al entrar (BACKLOG §1, "Inscripción a torneos"): el
-      28602 ya lleva el estado por coach; que Godot lo use (bloque E).
+- [x] **28618 / 28617, arrastre** (2026-10-22, `tournament_carry.go`). Al
+      terminar sin ganador una edición que se repite, los inscritos que seguían
+      en liza (su cruce sin decidir) quedan marcados `Unfinished`. Tras el
+      siguiente 28602 se les pregunta **una vez** (un "no" no manda nada, así
+      que volver a preguntar sería insistir). **Trampa encontrada en el
+      cliente:** `ajp_0` busca el id del 28618 en el registro del 28602 y, si
+      no está, no enseña nada; una edición terminada ya no se lista, así que el
+      28618 lleva el id de la **siguiente** edición (mismo nombre). El "sí"
+      (28617) solo vale para quien recibió la pregunta y mientras la siguiente
+      edición admite inscripciones; inscribe al coach con prioridad de
+      casilla: los arrastrados se siembran primero, así que nunca se quedan
+      fuera del cuadro de 16. Como el 28617 no tiene respuesta, se reenvía el
+      28602 para que la fila salga inscrita.
+- [x] **Puntos de torneo** (2026-10-22, `tournament_results.go`): por edición,
+      1 por participar y 3, 6 o 10 según los cruces ganados; el ganador, 20.
+      Los pases sin rival no cuentan: quien gana un torneo vacío por estar solo
+      se lleva 1 punto, no 20. La escala sale de los logros: el de más puntos
+      pide 20 000 y el de más victorias 1 000, o sea 20 por victoria. El total
+      es la estadística 183 y va en el 2052 (`aez_0.anV`, antes 0 fijo).
+- [x] **Clasificación Tournoi (27507)** con datos: puntos de las ediciones
+      terminadas en el mes, trimestre y año elegidos (0-based, como el
+      cliente; año 0 = ahora, que es lo que manda Godot al abrir), con el
+      puesto propio. **Encontrado:** las tres listas del cliente retail son de
+      10 filas, sin comprobar índices, y el primer entero de cada ventana es
+      hasta dónde limpia la lista, no el total; ahora va el tamaño de página
+      (10). El ranking 1v1 (27501) manda hasta 20 filas a una lista de 10,
+      así que en el retail con más de 10 clasificados fallaría: apuntado en el
+      BACKLOG (§1), sin tocar, porque Godot no tiene el problema.
+- [x] **Estadísticas** 183 (puntos), 187 y 190 (torneos ganados, solo con un
+      cruce ganado de verdad), 188 (duelos ganados, solo jugados, no por
+      incomparecencia), 189 (inscripciones, una por torneo). Las rachas: un
+      cruce de torneo cuenta ya para la racha de su modo (1v1, o evolución),
+      porque es clasificatorio y mueve la fuerza 1v1.
+- [x] **Los 25 logros** (182–206): todos son umbrales sobre 183, 187, 188 y
+      189 (5 a 1 000; 5 a 20 000 los de puntos), así que ya se pueden
+      conseguir. Probado de punta a punta el 182: cinco inscripciones por el
+      4607 real y llega el 22000.
+- [ ] Inscripción visible al entrar (BACKLOG §1): el 28602 ya lleva el estado
+      por coach; falta que Godot lo use (bloque E).
+
+Pruebas (2026-10-22): `go test ./internal/game -run 'TournamentPoints|Finished|ByeWinner|PlayedFixture|RegistrationCounts|CarryOver|TournamentLadder|TournamentAchievements'`
+y `./internal/handshake -run TournamentPoints`. Suite completa verde en
+SQLite; en Postgres 16 y MariaDB 11, los tests de torneos (`internal/game`,
+el filtro de arriba más los del bloque A) y de `internal/store`. La suite
+completa en esos dos dialectos se pasó por tiempo (10 min) porque la máquina
+estaba saturada por otros procesos (carga media 72–150, 1,2 GB libres; hasta
+`web`, que el bloque B no toca, se pasó), así que se repitió solo lo afectado.
+Migración 11.
 
 ## C. Servidor: torneos de jugador (17010, cartas 807 y 808)
 
@@ -205,8 +235,8 @@ se quedan las que estaban por defecto:
 
 | Decisión | Tomada |
 |---|---|
-| Regla del arrastre (28617): ¿qué se lleva el coach al siguiente torneo? | la inscripción en la siguiente edición, con preferencia de casilla, nada más |
-| Puntos de torneo | ronda alcanzada por torneo terminado, acumulada |
+| Regla del arrastre (28617): ¿qué se lleva el coach al siguiente torneo? | la inscripción en la siguiente edición, sembrado antes que los nuevos (nunca se queda fuera del cuadro de 16), nada más |
+| Puntos de torneo | por edición: 1 / 3 / 6 / 10 según cruces ganados, 20 el ganador (sin contar pases); acumulados |
 | Torneos de jugador (17010): ¿entran en la 1.0? | sí, sobre una definición clásica base; se cae si el modelo no da |
 | ¿Los periodos de torneo son la base de las temporadas (BACKLOG §11)? | no en este sprint; solo se deja apuntado |
 | 28646 (decidida en A) | se manda, ordenado tras el 28630 `open=0` |

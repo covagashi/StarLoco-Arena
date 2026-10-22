@@ -301,3 +301,116 @@ func (r *TournamentRepo) ClaimTournamentPrize(coachID uint, tid int64) (bool, er
 	}
 	return true, nil
 }
+
+// --- edition results (S09) ---
+
+// TournamentResult is what one entrant takes from a finished edition.
+type TournamentResult struct {
+	CoachID    uint
+	Points     int32
+	Unfinished bool
+}
+
+// SetResults records each entrant's points and carry-over eligibility.
+func (r *TournamentRepo) SetResults(tid int64, results []TournamentResult) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, res := range results {
+			if err := tx.Model(&domain.TournamentRegistration{}).
+				Where("coach_id = ? AND tournament_wire_id = ?", res.CoachID, tid).
+				Updates(map[string]any{"points": res.Points, "unfinished": res.Unfinished}).
+				Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// PendingCarryOffers lists a coach's entries in finished editions that left it
+// unfinished and have not been offered the carry-over yet.
+func (r *TournamentRepo) PendingCarryOffers(coachID uint) ([]domain.TournamentRegistration, error) {
+	var out []domain.TournamentRegistration
+	err := r.db.Where("coach_id = ? AND unfinished = ? AND carry_offered = ?", coachID, true, false).
+		Find(&out).Error
+	return out, err
+}
+
+// MarkCarryOffered records that a coach was asked about one entry.
+func (r *TournamentRepo) MarkCarryOffered(coachID uint, tid int64) error {
+	return r.db.Model(&domain.TournamentRegistration{}).
+		Where("coach_id = ? AND tournament_wire_id = ?", coachID, tid).
+		Update("carry_offered", true).Error
+}
+
+// OfferedCarry reports whether a coach was offered the carry-over from the
+// edition whose wire id is fromTID.
+func (r *TournamentRepo) OfferedCarry(coachID uint, fromTID int64) (bool, error) {
+	var n int64
+	err := r.db.Model(&domain.TournamentRegistration{}).
+		Where("coach_id = ? AND tournament_wire_id = ? AND unfinished = ? AND carry_offered = ?",
+			coachID, fromTID, true, true).
+		Count(&n).Error
+	return n > 0, err
+}
+
+// MarkCarried flags an entry as made by the carry-over.
+func (r *TournamentRepo) MarkCarried(coachID uint, tid int64) error {
+	return r.db.Model(&domain.TournamentRegistration{}).
+		Where("coach_id = ? AND tournament_wire_id = ?", coachID, tid).
+		Update("carried", true).Error
+}
+
+// PointsEntry is one row of the tournament-points board.
+type PointsEntry struct {
+	CoachID uint
+	Name    string
+	Points  int32
+}
+
+// pointsBoard is the shared query: points per coach over the editions that
+// finished in [from, to). The join goes through the wire id, which is the row
+// id plus a fixed base, so it is plain arithmetic in every dialect.
+func (r *TournamentRepo) pointsBoard(from, to time.Time) *gorm.DB {
+	return r.db.Table("tournament_registrations AS r").
+		Joins("JOIN tournaments AS t ON r.tournament_wire_id = t.id + ?", domain.TournamentWireBase).
+		Joins("JOIN coaches AS c ON c.id = r.coach_id").
+		Where("t.finished_at >= ? AND t.finished_at < ? AND r.points > 0", from, to).
+		Group("r.coach_id, c.name")
+}
+
+// PointsBoard returns the window [offset, offset+limit) of the board, best
+// first, and how many coaches are on it.
+func (r *TournamentRepo) PointsBoard(from, to time.Time, offset, limit int) ([]PointsEntry, int, error) {
+	var all []PointsEntry
+	err := r.pointsBoard(from, to).
+		Select("r.coach_id AS coach_id, c.name AS name, SUM(r.points) AS points").
+		Order("points DESC, coach_id ASC").
+		Scan(&all).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	total := len(all)
+	if offset > total {
+		offset = total
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	return all[offset:end], total, nil
+}
+
+// PointsAndRank returns one coach's points over [from, to) and its 1-based
+// rank on that board (0 when it scored nothing).
+func (r *TournamentRepo) PointsAndRank(coachID uint, from, to time.Time) (int32, int, error) {
+	all, _, err := r.PointsBoard(from, to, 0, 1<<30)
+	if err != nil {
+		return 0, 0, err
+	}
+	for i, e := range all {
+		if e.CoachID == coachID {
+			return e.Points, i + 1, nil
+		}
+	}
+	return 0, 0, nil
+}
