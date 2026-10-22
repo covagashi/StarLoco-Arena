@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -16,7 +17,7 @@ import (
 // that checkable rather than a matter of trust, so the next person does not spend
 // a session chasing it.
 func TestLoadElementViewsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

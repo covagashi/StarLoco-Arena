@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -9,7 +10,7 @@ import (
 // and cross-checks it against the Sphere Board: an Item node names a pool, so
 // every pool a node points at must exist and every pool must be pointed at.
 func TestLoadEquipmentPoolsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

@@ -1,13 +1,10 @@
 package gamedata
 
-import (
-	"path/filepath"
-	"testing"
-)
+import "testing"
 
 func loadMaps(t *testing.T) *FightMaps {
 	t.Helper()
-	m, err := LoadFightMaps(filepath.Join("..", "..", "data"))
+	m, err := LoadFightMaps(clientBdataDir)
 	if err != nil {
 		t.Skipf("map data not available: %v", err)
 	}

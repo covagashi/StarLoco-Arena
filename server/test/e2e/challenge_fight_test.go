@@ -23,7 +23,7 @@ func challengeLaunch(challengeID int32) []byte {
 // exercise a successful launch.
 func challengeServer(t *testing.T) string {
 	t.Helper()
-	st, err := gamedata.Open(filepath.Join("..", "..", "data"))
+	st, err := gamedata.Open(filepath.Join("..", "..", "data-dist"))
 	if err != nil {
 		t.Skipf("game data not available: %v", err)
 	}

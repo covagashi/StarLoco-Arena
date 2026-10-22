@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -10,7 +11,7 @@ import (
 // HP/AP/MP, and that both spell-casting creatures and spell-less blockers exist
 // (the two ends of the summon-AI behaviour range). Skips without client data.
 func TestLoadSummoningsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

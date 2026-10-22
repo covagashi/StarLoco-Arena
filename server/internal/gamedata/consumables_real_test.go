@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -10,7 +11,7 @@ import (
 // and throw the rest away, which silently made every other usable card inert —
 // this is the canary against that regression returning.
 func TestConsumableCardsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

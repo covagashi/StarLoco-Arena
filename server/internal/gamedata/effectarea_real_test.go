@@ -12,7 +12,7 @@ import (
 // 2) and the SPECIAL map tiles. A wrong layout would mis-decode the type string,
 // area shape or the inner-effect list. Skips without client data.
 func TestLoadStaticEffectsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

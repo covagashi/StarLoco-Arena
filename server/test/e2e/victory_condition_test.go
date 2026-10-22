@@ -32,7 +32,7 @@ func TestChallengeVictoryConditionEndsFight(t *testing.T) {
 	if raceEnabled {
 		t.Skip("timing-sensitive full-fight E2E; flaky under -race's slowdown")
 	}
-	st, err := gamedata.Open(filepath.Join("..", "..", "data"))
+	st, err := gamedata.Open(filepath.Join("..", "..", "data-dist"))
 	if err != nil {
 		t.Skipf("game data not available: %v", err)
 	}

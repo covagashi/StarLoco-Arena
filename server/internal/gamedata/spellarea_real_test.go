@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -11,7 +12,7 @@ import (
 // size read the empty vestigial 4th array and every zone spell collapsed to a
 // point. Logs the shape->size distribution for eyeballing. Skips without data.
 func TestSpellAreaSizeReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

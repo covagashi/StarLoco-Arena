@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 )
@@ -11,7 +12,7 @@ import (
 // Spell.Damage() (the real per-effect magnitude, not the budget Value) and that
 // heal spells are detected. Skips without client data.
 func TestSpellEffectsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

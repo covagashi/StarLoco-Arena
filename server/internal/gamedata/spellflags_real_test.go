@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -12,7 +13,7 @@ import (
 // the field labeled NeedFreeCell were actually (say) TestLoS, most damage spells
 // would light it up, exposing the mislabel. Skips without client data.
 func TestDumpSpellFlagsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

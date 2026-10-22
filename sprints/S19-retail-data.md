@@ -31,6 +31,15 @@ antes de escribir código.
       son las traducciones del retail para los efectos 127/128 (en inglés
       "Impossible to carry / to transpose"); se dejan como vienen.
 
+- [x] **Encontrado de paso: ~40 tests que nunca corrían** (2026-10-22).
+      `internal/gamedata` leía los datos de `clientBdataDir`, una ruta de
+      Windows del autor original (`E:\Projets\…`), así que 32 tests se
+      saltaban en cualquier otra máquina; otros apuntaban a `server/data/`
+      (git-ignorado), entre ellos 6 e2e de desafíos y el del studio. Todos
+      leen ahora `data-dist/`, que trae los mismos registros, y **pasan sin
+      tocar nada más**. `go test ./... -v` pasa de ~40 `SKIP` a 1 (el de
+      dialecto, que solo corre con Postgres/MySQL configurado).
+
 ## Datos retail sin leer (`server/docs/DATA-COVERAGE.md`)
 
 - [x] **Tipo 210 (trampas)** (2026-10-22): los 13 campos leídos y con nombre

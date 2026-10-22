@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -10,7 +11,7 @@ import (
 // asserting the passive stat bonuses of a few known cards. Skips when the
 // copyrighted data files are absent.
 func TestLoadFighterCardsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)
@@ -69,7 +70,7 @@ func TestLoadFighterCardsReal(t *testing.T) {
 // the container-type split, the AP cost, and above all the range field ORDER,
 // which the record stores max-before-min.
 func TestFighterCardUseEffectsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

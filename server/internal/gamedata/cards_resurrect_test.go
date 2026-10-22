@@ -13,7 +13,7 @@ import (
 // the exact known values and that NO other card is mistaken for a resurrection
 // card.
 func TestCardResurrectPercentReal(t *testing.T) {
-	st, err := Open(filepath.Join("..", "..", "data"))
+	st, err := Open(clientBdataDir)
 	if err != nil {
 		t.Skipf("game data not available: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestCardResurrectPercentReal(t *testing.T) {
 // skipped. The two tradability flags are the ones that matter: the server, not the
 // client, has to police what may be staked in an exchange.
 func TestCoachCardFullDecodeReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

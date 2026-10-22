@@ -3,6 +3,7 @@ package gamedata
 import (
 	"math"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -14,7 +15,7 @@ import (
 // that ends precisely where the decoder stops, 907 times out of 907, is not a
 // coincidence — it is the strongest evidence available that the layout is right.
 func TestCoachCardTailReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

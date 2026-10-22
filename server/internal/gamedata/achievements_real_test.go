@@ -2,17 +2,18 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 // achievementDataDir is the shipped subset, which carries types 800/801/802, so
 // this test does not need a local client tree. It still skips rather than fails
 // if the directory is missing.
-const achievementDataDir = `..\..\data-dist`
+var achievementDataDir = filepath.Join("..", "..", "data-dist")
 
 func openAchievements(t *testing.T) *Achievements {
 	t.Helper()
-	if _, err := os.Stat(achievementDataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(achievementDataDir, "data.bdat")); err != nil {
 		t.Skip("no data-dist")
 	}
 	st, err := Open(achievementDataDir)
@@ -32,7 +33,7 @@ func openAchievements(t *testing.T) *Achievements {
 // Since achievement completion is evaluated FROM these records, a silent
 // mis-parse would make the server unlock the wrong things.
 func TestAchievementRecordsAreConsumedExactly(t *testing.T) {
-	if _, err := os.Stat(achievementDataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(achievementDataDir, "data.bdat")); err != nil {
 		t.Skip("no data-dist")
 	}
 	st, err := Open(achievementDataDir)

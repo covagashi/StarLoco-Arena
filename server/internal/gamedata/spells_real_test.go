@@ -2,11 +2,12 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestLoadSpellsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)
@@ -41,7 +42,7 @@ func TestLoadSpellsReal(t *testing.T) {
 // field 7 -> per-target cap, field 8 -> max live instances, field 9 -> per-turn
 // cap, field 10 -> cooldown in table turns (63 = once per fight).
 func TestSpellCastLimitsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

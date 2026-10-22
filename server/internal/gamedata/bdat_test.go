@@ -2,16 +2,20 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
-// clientBdataDir is where the (git-ignored) 2.70 client data lives locally.
-const clientBdataDir = `E:\Projets\DofusArena2-06\client\compiled\game\contents\bdata`
+// clientBdataDir is the committed data-dist store, the same records the
+// shipped client carries for every type these tests read. It used to be a
+// Windows path to a local client copy, so every test below skipped on any
+// other machine (S19).
+var clientBdataDir = filepath.Join("..", "..", "data-dist")
 
 // TestOpenRealData loads the real client store if present; skips otherwise so
 // the suite passes on machines without the copyrighted data files.
 func TestOpenRealData(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("client data.bdat not present; skipping")
 	}
 	store, err := Open(clientBdataDir)

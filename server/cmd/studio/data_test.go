@@ -10,7 +10,7 @@ import (
 // matching the repo convention.
 func realDataDir(t *testing.T) string {
 	t.Helper()
-	dir := filepath.Join("..", "..", "data")
+	dir := filepath.Join("..", "..", "data-dist")
 	if !looksLikeDataDir(dir) {
 		t.Skipf("v2.70 .bdat store not found at %s; skipping real-data test", dir)
 	}

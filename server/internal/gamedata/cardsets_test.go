@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -9,7 +10,7 @@ import (
 // engine rule is the PER-EFFECT threshold (client sj_1: apply when
 // threshold <= equipped count of that set); fe_1's half/full split is only UI.
 func TestLoadCardSetsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)

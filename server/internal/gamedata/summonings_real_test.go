@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -9,7 +10,7 @@ import (
 // six flags decide whether a creature can be shoved, swapped, carried or walk at
 // all — a wall summon that can be pushed is a wrong-looking fight.
 func TestSummonInnateFlagsReal(t *testing.T) {
-	if _, err := os.Stat(clientBdataDir + `\data.bdat`); err != nil {
+	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
 	}
 	st, err := Open(clientBdataDir)
