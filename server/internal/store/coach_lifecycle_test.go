@@ -129,3 +129,38 @@ func TestDeleteCoachMissing(t *testing.T) {
 		t.Fatalf("DeleteCoach(missing) err = %v, want nil", err)
 	}
 }
+
+func TestMaxAndAddStat(t *testing.T) {
+	s := newTestStore(t)
+	acc, _ := s.Accounts.CreateAccount("Counts", "pw", false)
+	coach, _ := s.Coaches.Create(acc.ID, "Counter", 0, 0, 0)
+	get := func(id int16) int32 {
+		var st domain.CoachStat
+		if err := s.DB().Where("coach_id = ? AND stat_id = ?", coach.ID, id).First(&st).Error; err != nil {
+			return -1
+		}
+		return st.Value
+	}
+	if moved, err := s.Coaches.MaxStat(coach.ID, 59, 40); err != nil || !moved || get(59) != 40 {
+		t.Fatalf("MaxStat insert: moved=%v err=%v value=%d", moved, err, get(59))
+	}
+	if moved, _ := s.Coaches.MaxStat(coach.ID, 59, 30); moved || get(59) != 40 {
+		t.Errorf("MaxStat lower: moved=%v value=%d, want unchanged 40", moved, get(59))
+	}
+	if moved, _ := s.Coaches.MaxStat(coach.ID, 59, 99999); !moved || get(59) != StatValueMax {
+		t.Errorf("MaxStat clamp: moved=%v value=%d, want %d", moved, get(59), StatValueMax)
+	}
+	if moved, _ := s.Coaches.AddStat(coach.ID, 156, 0); moved || get(156) != -1 {
+		t.Errorf("AddStat 0 on an absent row wrote one: moved=%v value=%d", moved, get(156))
+	}
+	_, _ = s.Coaches.AddStat(coach.ID, 156, 3)
+	_, _ = s.Coaches.AddStat(coach.ID, 156, 4)
+	if get(156) != 7 {
+		t.Errorf("AddStat total = %d, want 7", get(156))
+	}
+	var count int64
+	s.DB().Model(&domain.CoachStat{}).Where("coach_id = ? AND stat_id = ?", coach.ID, 156).Count(&count)
+	if count != 1 {
+		t.Errorf("rows = %d, want 1", count)
+	}
+}

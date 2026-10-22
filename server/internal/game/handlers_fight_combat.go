@@ -819,6 +819,17 @@ func (d *Deps) checkFightEnd(f *Fight) {
 	// was still spent. Idempotent, so the later teardown does not double-count.
 	d.creditFightTime(f)
 
+	// The level gap and the per-level statistics read the force each coach
+	// brought to the fight, before the loop below moves it.
+	preForce := map[uint]int32{}
+	for _, mem := range f.members() {
+		if mem.Coach != nil {
+			mem.Coach.Mu.Lock()
+			preForce[mem.Coach.ID] = mem.Coach.Strength
+			mem.Coach.Mu.Unlock()
+		}
+	}
+
 	var winners, losers []endFightCoach
 	wonCardsByCoach := map[uint][]int32{}
 	for _, t := range f.Teams {
@@ -890,6 +901,15 @@ func (d *Deps) checkFightEnd(f *Fight) {
 	// Coach META pass: XP / morale / fatigue per fighter + coach reputation. It
 	// must run BEFORE the packet is built, because its output IS part of 8300.
 	reports, standingByCoach, killed, injured, diedByCoach := d.runPostFightMeta(f, winnerTeam)
+
+	// Statistics only the server can see (fights, ladder, evolution), which
+	// unlock their achievements (S19).
+	deaths := map[uint]int32{}
+	for id, names := range diedByCoach {
+		deaths[id] = int32(len(names))
+	}
+	d.recordFightStatistics(f, fightOutcome{winnerTeam: winnerTeam, preForce: preForce,
+		gaveUp: f.gaveUp, deaths: deaths, wounds: f.woundsByCoach})
 
 	// `standingWon` is a single scalar in 8300, so each coach must receive its
 	// own frame when the awards differ (they do: a win pays more than a loss).

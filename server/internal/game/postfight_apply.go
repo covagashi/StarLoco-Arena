@@ -209,6 +209,10 @@ func (d *Deps) runPostFightMeta(f *Fight, winnerTeam uint8) (
 				}
 				if rep.woundID != 0 {
 					injured++
+					if f.woundsByCoach == nil {
+						f.woundsByCoach = map[uint]int32{}
+					}
+					f.woundsByCoach[mem.Coach.ID]++
 				}
 
 				// 7. Age the fighter's timed conditions by one fight. Done LAST so a

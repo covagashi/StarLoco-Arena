@@ -295,8 +295,13 @@ type Fight struct {
 	// graveyard from real play. Only evolution fights persist deaths; ranked,
 	// practice and PvE-challenge fights never do. See persistEvolutionDeaths.
 	Evolution bool
-	Teams     [2]*FightTeam
-	Timeline  []*FightFighter // initiative-descending turn order
+	// gaveUp and woundsByCoach feed the end-of-fight statistics (S19): the
+	// coaches that forfeited, and the wounds the post-fight roll dealt each.
+	gaveUp        map[uint]bool
+	woundsByCoach map[uint]int32
+
+	Teams    [2]*FightTeam
+	Timeline []*FightFighter // initiative-descending turn order
 
 	// turnAutoPassed marks the CURRENT turn as one the server is passing on the
 	// fighter's behalf (skip-turn, petrified, or a disconnected team). The turn is

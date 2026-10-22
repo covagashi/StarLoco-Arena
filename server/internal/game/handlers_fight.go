@@ -719,6 +719,10 @@ func (d *Deps) forfeitCoach(f *Fight, coachID uint) {
 	if t == nil {
 		return
 	}
+	if f.gaveUp == nil {
+		f.gaveUp = map[uint]bool{}
+	}
+	f.gaveUp[coachID] = true // statistics 170 / 171
 	for _, ff := range t.Fighters {
 		if ff.HP > 0 {
 			ff.HP = 0

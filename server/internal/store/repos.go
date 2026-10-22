@@ -414,6 +414,69 @@ func (r *CoachRepo) UpsertStat(coachID uint, statID int16, value int32) error {
 	})
 }
 
+// StatValueMax is the largest counter the client can hold: the 2052 criteria
+// blob carries each value as a u16 the client reads back as a short.
+const StatValueMax int32 = 32767
+
+// MaxStat raises a coach's counter to value if that is higher than what it
+// holds (a "best ever" statistic) and reports whether it moved. Values are
+// clamped to StatValueMax.
+func (r *CoachRepo) MaxStat(coachID uint, statID int16, value int32) (bool, error) {
+	return r.bumpStat(coachID, statID, func(cur int32) int32 {
+		if value > cur {
+			return value
+		}
+		return cur
+	})
+}
+
+// AddStat adds delta to a coach's counter (a running total) and reports
+// whether it moved. The result is clamped to [0, StatValueMax].
+func (r *CoachRepo) AddStat(coachID uint, statID int16, delta int32) (bool, error) {
+	return r.bumpStat(coachID, statID, func(cur int32) int32 { return cur + delta })
+}
+
+// StatValue reads one counter (0 when absent or unreadable).
+func (r *CoachRepo) StatValue(coachID uint, statID int16) int32 {
+	var stat domain.CoachStat
+	if err := r.db.Where("coach_id = ? AND stat_id = ?", coachID, statID).
+		First(&stat).Error; err != nil {
+		return 0
+	}
+	return stat.Value
+}
+
+// bumpStat applies next to the stored value (0 when absent) in one
+// transaction, so two fights ending at once cannot lose an increment.
+func (r *CoachRepo) bumpStat(coachID uint, statID int16, next func(int32) int32) (bool, error) {
+	moved := false
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var stat domain.CoachStat
+		err := tx.Where("coach_id = ? AND stat_id = ?", coachID, statID).
+			First(&stat).Error
+		absent := errors.Is(err, gorm.ErrRecordNotFound)
+		if err != nil && !absent {
+			return err
+		}
+		v := next(stat.Value)
+		if v > StatValueMax {
+			v = StatValueMax
+		}
+		if v < 0 {
+			v = 0
+		}
+		if v == stat.Value {
+			return nil
+		}
+		moved = true
+		if absent {
+			return tx.Create(&domain.CoachStat{CoachID: coachID, StatID: statID, Value: v}).Error
+		}
+		return tx.Model(&domain.CoachStat{}).Where("id = ?", stat.ID).Update("value", v).Error
+	})
+	return moved, err
+}
+
 // SyncTome folds the given card templates into the coach's tome and returns the
 // resulting full set.
 //
