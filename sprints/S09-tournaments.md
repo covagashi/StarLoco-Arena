@@ -158,7 +158,8 @@ Pruebas (2026-10-22):
 
 Pruebas (2026-10-22): `go test ./internal/game -run 'TournamentPoints|Finished|ByeWinner|PlayedFixture|RegistrationCounts|CarryOver|TournamentLadder|TournamentAchievements'`
 y `./internal/handshake -run TournamentPoints`. Suite completa verde en
-SQLite; en Postgres 16 y MariaDB 11, los tests de torneos (`internal/game`,
+SQLite, y en Postgres 12 y MariaDB 10.3 en `oracle-1` (ver el bloque C); antes,
+en Postgres 16 y MariaDB 11, los tests de torneos (`internal/game`,
 el filtro de arriba más los del bloque A) y de `internal/store`. La suite
 completa en esos dos dialectos se pasó por tiempo (10 min) porque la máquina
 estaba saturada por otros procesos (carga media 72–150, 1,2 GB libres; hasta
@@ -200,10 +201,15 @@ Pruebas (2026-10-22): `go test ./internal/game -run 'PlayerTournament|EntryCard|
 (el 17010 construido byte a byte como `aFu.encode`, sin carta → código 66,
 siete rechazos que no cuestan la carta, sin puntos ni 187, la 808 cobrada una
 vez con el id negado, `/GIVECARD`) y `./internal/web -run Tournament`.
-Suite completa verde en SQLite. En Postgres pasaron store, web y e2e; `game`
-se pasó de tiempo (25 min) con la máquina sin memoria (250 MB libres, carga
-83, por otros procesos), y MariaDB no llegó a correr. **Pendiente**: repetir
-`internal/game` en Postgres y todo en MariaDB cuando la máquina esté libre.
+Suite completa verde en SQLite. En esta máquina, Postgres se pasó de tiempo
+por falta de memoria, así que los dialectos se corrieron en la VPS `oracle-1`
+(2026-10-22): binarios de test compilados aquí con `CGO_ENABLED=0 go test -c`
+y lanzados allí contra **Postgres 12.22** y **MariaDB 10.3.39** (los de Ubuntu
+20.04, instalados por apt y apagados y desactivados al terminar). `game`,
+`store`, `web` y `e2e` pasan en los dos (con el código de los bloques A, B y C;
+unas 36 000 transacciones en Postgres y 143 000 consultas en MariaDB confirman
+que no corrió SQLite). Las versiones son más viejas que las de AGENTS.md
+(Postgres 16, MariaDB 11): si algo funciona en 12 y 10.3, también en las nuevas.
 
 ## D. 2411, récord de ladder por preset
 
