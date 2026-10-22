@@ -167,25 +167,51 @@ Migración 11.
 
 ## C. Servidor: torneos de jugador (17010, cartas 807 y 808)
 
-- [ ] **17010**: el cliente lo manda con la carta 807 "Création de Tournoi"
-      (`oz_1` 20072: nombre, descripción, mes y hora) y no espera respuesta.
-      El hueco del modelo: un torneo de jugador no tiene definición tipo 1000
-      y el cliente la lee sin guarda al inscribirse. Por defecto: se crea
-      sobre una definición base (clásica, sin carta de entrada ni premio), se
-      gasta la 807 y entra en el calendario de todos.
-- [ ] Código de error 66 `badCoachCardQuantity` (el único que no está en
-      `je_2`): su disparador plausible es este.
-- [ ] Carta 808 "Ticket MasterCoach" (viene de S05): leer qué la mira en el
-      flujo de torneos y hacerla o descartarla por escrito.
+- [x] **17010** (2026-10-22, `tournament_player.go`). **Corrección de lo que
+      se daba por sabido:** el inventario decía que un torneo de jugador "no
+      tiene definición tipo 1000"; leyendo `aFu.encode` y `aob_2`, el mensaje
+      **sí la lleva** (`selectedTournamentDefinition`, 1 por defecto), así que
+      no hay hueco de modelo: es una edición más, con `CreatorCoachID`.
+      Formato entero en `OPCODE-INVENTORY.md`. Se toman la definición, el
+      nombre, la descripción y los periodos de juego (hasta 4) como periodos
+      de búsqueda. Cuesta una 807; se refusa una definición con premio o con
+      entrada (sería un grifo de cartas entre amigos), un inicio pasado o a
+      más de un año, periodos solapados o de menos de un minuto o más de 24 h.
+      Sin repetición. Las reglas personalizadas del diálogo **no se aplican**
+      (tampoco las de las definiciones; queda dicho en el log). Un torneo de
+      jugador **no da puntos ni cuenta como oficial** (187), sí como torneo
+      ganado (190), para que no sirva para inflar la clasificación.
+- [x] **Código 66** `badCoachCardQuantity`: 25000 con 66 si se manda el 17010
+      sin la 807 (el cliente ya lo comprueba antes, así que uno honrado no lo
+      ve). Primero se crea la fila y luego se cobra la carta: si falla el
+      cobro se borra, y un rechazo nunca cuesta la carta.
+- [x] **Carta 808 "Ticket MasterCoach"**: es la carta de entrada de la
+      definición 19 (y la 16 de la 13). El cliente ya preguntaba "¿gastar
+      una?" y mandaba su id en el 4607 (a veces negado); el servidor ahora la
+      cobra al inscribirse, una sola vez. La consola ofrece ya esas dos
+      definiciones, con la carta en la etiqueta.
+- [x] **Nadie da esas cartas** (encontrado): 16, 807 y 808 no tienen precio
+      ni salen como premio de desafío o de torneo en los datos 2.70; en el
+      retail se repartían por eventos. Nuevo comando de GM
+      `/GIVECARD <coach> <carta> [cantidad]` (solo admin), que también sirve
+      para los premios de temporada que el dueño tiene en mente (BACKLOG §11).
 
-Si al leerlo el modelo cuesta más que lo que da, este bloque se descarta por
-escrito o sale a su propio sprint; no bloquea el cierre de A, B, D y E.
+Pruebas (2026-10-22): `go test ./internal/game -run 'PlayerTournament|EntryCard|GMGiveCard'`
+(el 17010 construido byte a byte como `aFu.encode`, sin carta → código 66,
+siete rechazos que no cuestan la carta, sin puntos ni 187, la 808 cobrada una
+vez con el id negado, `/GIVECARD`) y `./internal/web -run Tournament`.
+Suite completa verde en SQLite. En Postgres pasaron store, web y e2e; `game`
+se pasó de tiempo (25 min) con la máquina sin memoria (250 MB libres, carga
+83, por otros procesos), y MariaDB no llegó a correr. **Pendiente**: repetir
+`internal/game` en Postgres y todo en MariaDB cuando la máquina esté libre.
 
 ## D. 2411, récord de ladder por preset
 
-- [ ] Necesita estadísticas por preset, que hoy no existen (todo es por
-      coach). No es de torneos: **se decide al llegar** si se hace aquí o sale
-      a S14 (recompensas) o al BACKLOG.
+- [x] **Sale del sprint** (decidido el 2026-10-22, al llegar): necesita un
+      modelo de estadísticas por preset (fuerza, victorias, derrotas y racha
+      de cada preset, apuntadas al acabar cada combate con el preset usado)
+      que hoy no existe, y no tiene que ver con los torneos. Pasa al BACKLOG
+      §1 con el formato ya descifrado; no bloquea el cierre de S09.
 
 ## E. Cliente Godot
 

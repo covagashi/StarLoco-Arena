@@ -22,6 +22,8 @@ type tournamentRow struct {
 	Registrations int
 	// Phase is where the scheduler has the edition, in words.
 	Phase string
+	// Creator is the coach who created a player tournament ("" = official).
+	Creator string
 }
 
 // tournamentPhase describes an edition's state for the console.
@@ -80,6 +82,12 @@ func (s *Server) decorate(t domain.Tournament) tournamentRow {
 		row.Registrations = s.live.TournamentRegistrations(t.WireID())
 	}
 	row.Phase = s.tournamentPhase(&t, time.Now())
+	if t.CreatorCoachID != 0 {
+		row.Creator = fmt.Sprintf("coach %d", t.CreatorCoachID)
+		if c, err := s.store.Coaches.Get(t.CreatorCoachID); err == nil && c != nil {
+			row.Creator = c.Name
+		}
+	}
 	return row
 }
 

@@ -18,14 +18,14 @@ import (
 // A tournament row carries a client definition id, and the client dereferences
 // that definition unguarded: `LS.Yf().gG(defId)` returns null for an id it does
 // not have and the list/detail/register code walks straight into it. The retail
-// build ships 22 definitions (ids 1 and 4..24) and nothing else. On top of that,
-// a definition with a non-zero inscription card makes the client demand an entry
-// ticket before it will register — one this server never grants — so the player
-// simply cannot join.
+// build ships 22 definitions (ids 1 and 4..24) and nothing else.
 //
-// Neither rule can be left to the operator to remember, so both are enforced
-// here against the decoded type-1000 catalogue, and the form only ever offers
-// definitions that satisfy them.
+// That rule cannot be left to the operator to remember, so it is enforced here
+// against the decoded type-1000 catalogue, and the form only ever offers
+// definitions the client has. Definitions with an inscription card (13: card
+// 16, 19: card 808) used to be filtered out because nothing took the card; the
+// server now takes it at registration (S09), so they are offered, labelled.
+// Nothing in the game GRANTS those cards, though: /GIVECARD does.
 
 // tournamentNameMax is the wire limit, not a style choice: the calendar entry
 // length-prefixes the name and short label with a SIGNED byte, so 128 bytes
@@ -64,7 +64,7 @@ func teamTypeLabel(t uint8) string {
 }
 
 // tournamentChoices lists the definitions an admin may pick: those that exist in
-// the client's own data AND need no entry card.
+// the client's own data.
 //
 // With no catalogue loaded (a server running without game data) it returns nil,
 // and the caller falls back to accepting the id as typed — refusing to let an
@@ -76,17 +76,23 @@ func (s *Server) tournamentChoices() []tournamentChoice {
 	}
 	var out []tournamentChoice
 	for id, d := range s.tournamentDefs.All() {
-		if d == nil || d.InscriptionCard != 0 || id <= 0 {
+		if d == nil || id <= 0 {
 			continue
 		}
 		out = append(out, tournamentChoice{
 			DefID:    uint16(id),
 			TeamType: d.TeamType,
 			Rules:    len(d.Rules),
-			Label: fmt.Sprintf("%d — %s%s", id, teamTypeLabel(d.TeamType),
+			Label: fmt.Sprintf("%d — %s%s%s", id, teamTypeLabel(d.TeamType),
 				func() string {
 					if n := len(d.Rules); n > 0 {
 						return fmt.Sprintf(", %d rule(s)", n)
+					}
+					return ""
+				}(),
+				func() string {
+					if d.InscriptionCard != 0 {
+						return fmt.Sprintf(", entry costs card %d", d.InscriptionCard)
 					}
 					return ""
 				}()),

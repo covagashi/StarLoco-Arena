@@ -49,9 +49,10 @@
               {{end}}
             </select>
             <div class="hint">
-              These are the tournament definitions your game client actually ships, filtered to
-              the ones that need no entry card. Picking anything else would crash the client,
-              so the list is the whole choice.
+              These are the tournament definitions your game client actually ships. Picking
+              anything else would crash the client, so the list is the whole choice. A
+              definition whose entry costs a card takes one from each player who registers;
+              nothing in the game hands those cards out, so give them with /GIVECARD.
             </div>
           {{else}}
             <input type="text" id="def_id" name="def_id" value="{{.Form.DefID}}" inputmode="numeric" required>

@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"github.com/StarLoco/arena-2.70/internal/store"
 	"strconv"
 	"strings"
 
@@ -43,7 +44,7 @@ func handleGMCommand(s *Session, line string) error {
 
 	switch verb {
 	case "HELP":
-		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0] /TABLETURN n")
+		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0] /TABLETURN n /GIVECARD coach cardId [qty]")
 	case "ANNOUNCE":
 		if len(args) == 0 {
 			return s.gmFeedback("usage: /ANNOUNCE <message>")
@@ -84,6 +85,8 @@ func handleGMCommand(s *Session, line string) error {
 		s.Coach.Strength = int32(n)
 		_ = s.deps.Store.Coaches.Save(s.Coach)
 		return s.gmFeedback(fmt.Sprintf("strength set to %d", n))
+	case "GIVECARD":
+		return s.gmGiveCard(args)
 	default:
 		// Retail has a frame for this and it is translated: 3206
 		// (error.chat.malformedCommand -> "Commande incorrecte."). The old
@@ -542,4 +545,38 @@ func firstArg(args []string) string {
 		return ""
 	}
 	return args[0]
+}
+
+// gmGiveCard is /GIVECARD <coach> <cardId> [qty]: free cards for a coach. It
+// exists for the cards nothing in the game grants - 807 "Création de Tournoi"
+// and 808 "Ticket MasterCoach" have no price, drop or reward in the 2.70 data
+// (retail handed them out by events), so without it player tournaments and the
+// restricted definition 19 could never be used (S09).
+func (s *Session) gmGiveCard(args []string) error {
+	if len(args) < 2 {
+		return s.gmFeedback("usage: /GIVECARD <coach> <cardId> [qty]")
+	}
+	target, err := s.deps.Store.Coaches.GetByName(args[0])
+	if err != nil || target == nil {
+		return s.gmFeedback("no such coach")
+	}
+	card, err := strconv.Atoi(args[1])
+	if err != nil || card <= 0 || (s.deps.Cards != nil && s.deps.Cards.Get(int32(card)) == nil) {
+		return s.gmFeedback("no such card")
+	}
+	qty := 1
+	if len(args) > 2 {
+		if qty, err = strconv.Atoi(args[2]); err != nil || qty < 1 || qty > 100 {
+			return s.gmFeedback("qty is 1 to 100")
+		}
+	}
+	if err := s.deps.Store.Coaches.GrantCards(target.ID,
+		[]store.GrantCard{{TemplateID: int32(card), Quantity: int16(qty)}}); err != nil {
+		return s.gmFeedback("grant failed: " + err.Error())
+	}
+	if t := s.deps.sessionForCoach(target.ID); t != nil {
+		t.refreshAndPushInventory()
+	}
+	s.log.Info("GM gave cards", "by", s.Coach.Name, "to", target.Name, "card", card, "qty", qty)
+	return s.gmFeedback(fmt.Sprintf("gave %d x card %d to %s", qty, card, target.Name))
 }

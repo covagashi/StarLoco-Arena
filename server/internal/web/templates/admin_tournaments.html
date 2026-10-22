@@ -36,6 +36,7 @@
             <td>
               <strong>{{.Name}}</strong>
               {{if .Short}}<span class="muted small"> · {{.Short}}</span>{{end}}
+              {{if .Creator}}<span class="chip">by {{.Creator}}</span>{{end}}
               <div class="tiny muted">{{.Description}}</div>
             </td>
             <td>

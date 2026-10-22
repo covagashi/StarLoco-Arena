@@ -117,11 +117,11 @@ if this block drifts.
 | Bucket | Count |
 |---|---|
 | Rows in the master table | 347 |
-| **C2S handled (H)** | 113 |
+| **C2S handled (H)** | 114 |
 | **S2C emitted (E)** | 156 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
-| **Not implemented (-)** | 69 |
+| **Not implemented (-)** | 68 |
 
 A `both | H+E` row counts once on each side; there is none today. The handled
 count also equals the opcodes `RegisterAll` binds (the tests above check both
@@ -420,7 +420,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 17005 | S2C | - | (`aef_1`) | `[i32 typeId]` followed by a **polymorphic** payload: the client resolves `tb_0.zl().dD(typeId)` to an `iz_0` and lets IT read the rest. Consumed by **`zN`** (line 58), so this 17xxx block is tournament-adjacent rather than an unknown subsystem. Not implemented: the payload shape depends on a type registry we do not model |
 | 17006 | C2S | - | (`agh_2`) | `[i64 5][iz_0 event]` - **Test-Lua-only** (`alc_2` console action): sends a hardcoded `wk_1` TEST event. Same class as 513/551 |
 | 17008 | C2S | - | (`ald_2`) | `[u8 n]{iz_0 events}` - **Test-Lua-only** (`avb_0` console action): pushes hardcoded `jF`/`qr_0`/`nc_0`/`ayo` TEST events. Same class as 513/551 |
-| 17010 | C2S | - | (`aFu`) | **Player-created calendar tournaments** (`oz_1` case 20072): gated on card 807 (owned or inscribed in tome, `bW(-807)`), sends name+description+round schedule; the client locally shows "tournamentCreated" and expects no ack. Deliberate non-work for now: ours are admin-curated `domain.Tournament` rows against the 22-record type-1000 catalogue, and a defId-less custom event could never satisfy the client's unguarded definition deref at registration time - a real model gap, not a codec |
+| 17010 | C2S | H | TournamentCreate (`aFu`) | `handleTournamentCreate` - **player-created tournaments** (`oz_1` case 20072, gated client-side on card 807): `[i32 _][i16 n]{i32 fightParam}[i64 regStart][i64 regEnd][i64 eventEnd][u8 n]{i64 start,i64 end}[u8+utf8 name][i16+utf8 desc][u8 definition][i64 period jx_0][i32 repetition][u8 n]{i32 proLeague}`. The message DOES carry a type-1000 definition (`selectedTournamentDefinition`, 1 by default), so the 'no defId' model gap it was filed under did not exist. Becomes an ordinary edition row (`CreatorCoachID`), costs one 807 (missing -> 25000 code 66); prize/ticket definitions refused; no repeat; custom rules not applied. No reply: the client says `tournamentCreated` itself. S09 |
 
 ### 22000 – 23116 — statistics / achievements, fight-setup & matchmaking
 
@@ -574,8 +574,8 @@ Coverage today: see [Summary counts](#summary-counts). Of the unimplemented rows
 9. ~~Reachable C2S (`4514/4518/4519/4523/4701/5204/17004-17010/22004/22093/22097/
    27525/27527/27551/28617`)~~ - **fully resolved**: 4514/4701 were already handled;
    4518/4519/4523 are console commands with no counterpart stream; 17004/17006/17008
-   are `adg_1` Test-Lua actions sending hardcoded TEST events; 17010 needs a
-   custom-tournament model that cannot satisfy the client's unguarded defId deref;
+   are `adg_1` Test-Lua actions sending hardcoded TEST events; 17010 was filed as
+   needing a model with no defId - wrong, it carries one; done in S09;
    22004 is abuse-report support (no moderation pipeline); 22093/22097 are
    cross-game card transfer (no other game exists); 27525/27527 are the
    Ankama-internal avatar pipeline (X); 27551 flips a client-local toast flag;
@@ -656,7 +656,7 @@ flag.
 | 17004 | `fu_2` | reachable | Test-Lua-only (`acL` console action) - `[i64 1]`. Deliberate non-work, same class as 513/551. |
 | 17006 | `agh_2` | reachable | Test-Lua-only (`alc_2` console action) - hardcoded TEST calendar event. Deliberate non-work. |
 | 17008 | `ald_2` | reachable | Test-Lua-only (`avb_0` console action) - hardcoded TEST events. Deliberate non-work. |
-| 17010 | `aFu` | reachable | Player-created calendar tournaments (card 807 gate, `oz_1` 20072). Real model gap - custom events have no type-1000 defId, and registration derefs it unguarded. Documented deliberate non-work, not a codec. |
+| 17010 | `aFu` | reachable | DONE (S09): handled, see the main table. The 'no type-1000 defId' gap was a misreading: the message carries the definition. |
 | 22004 | `axH` | reachable | Abuse-report support (`[i64 coachId]`, sent with AddIgnore by `chat.reportIncorrectBehaviour`). Deliberate non-work - no moderation pipeline. |
 | 22093 | `Tx` | reachable | Use a title card (type 28, `agn_0` 16443). Deliberate non-work - the 2.70 client never shows a coach title. |
 | 22097 | `OB` | reachable | Cross-game card transfer (`agn_0` 16442, `otherGameCardSent` toast). Deliberate non-work - same reason. |
@@ -849,7 +849,7 @@ behaviour) before deciding whether the retail client needs them:
   hazard is avoided by ordering: a period is always closed with 28630 open=0
   (which removes the row) before the next 28646 adds it again.
 - **15xxx — solved: this is the mailbox** (15000/15001 list, 15003 send result, 15004 delete, 15005 notice, 15006/15007 attachments, 15506/15507 name lookup, plus C2S 539 send). Fully implemented.
-- **17xxx — solved: the tournament calendar** (17002/17003, now serving real standing-tournament events). 17004/17006/17008 are Test-Lua-only console actions sending hardcoded TEST events; 17010 is player-created tournaments, gated on card 807 - a real model gap (custom events have no type-1000 defId to satisfy the client's unguarded deref).
+- **17xxx — solved: the tournament calendar** (17002/17003, now serving real standing-tournament events). 17004/17006/17008 are Test-Lua-only console actions sending hardcoded TEST events; 17010 is player-created tournaments, gated on card 807 - done in S09 (the message carries its definition id after all).
 - **22xxx (minus 22003)** — statistics/achievements beyond the single counter we handle. **22094/22095 (fireworks) and 22099 (resurrection card) are now implemented.**
 - **23xxx (minus 23103/23110/23112/23114)** — remaining fight-setup / matchmaking variants. **23000 is not fight-setup at all** — it is the evolution-mode fighter state change (titular/bench/graveyard/legendary), now handled.
 - **10/11/12 Property\*** — client config/property push; check whether login blocks without it.

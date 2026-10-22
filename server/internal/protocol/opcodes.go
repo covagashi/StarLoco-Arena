@@ -314,6 +314,10 @@ const (
 	OpDemonLadderRequest = 27510 // C2S aid_1 (arch 2): [i16 demonId][i16 flag][i32 startRank] — per-demon drill-down
 	OpDemonLadder        = 27511 // S2C anc_0: [i16 demonId][i16 flag][i32 start][i32 N]{guild,i64,i64,i64}[i64 affil]
 	OpTournamentCalReq   = 17002 // C2S yq_1 (arch 3): empty
+	// OpTournamentCreate is a player creating a tournament with the "Création
+	// de Tournoi" card (807), from tournamentCreationDialog. No reply exists:
+	// the client says "tournamentCreated" on its own. See tournament_player.go.
+	OpTournamentCreate   = 17010 // C2S aFu (arch 3)
 	OpTournamentCalendar = 17003 // S2C awa_0: [i16 count]{[i32 typeId=4][qr_0 tournament event]}
 	OpTournamentListReq  = 28601 // C2S wa_2 (arch 2): empty
 	OpTournamentList     = 28602 // S2C ng_2: [i32 count]{[i64 tid][u8 search][i8 status][i16 defId][u8 regOpen][i32 fp+i32[]][3×str32][u8 kind]}

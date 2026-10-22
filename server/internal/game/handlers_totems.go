@@ -31,6 +31,7 @@ func registerTotemHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpTournamentTreeReq, handleTournamentTreeRequest)
 	r.Register(protocol.OpTournamentSearchRequest, handleTournamentSearchRequest)
 	r.Register(protocol.OpTournamentCarryStanding, handleTournamentCarryStanding)
+	r.Register(protocol.OpTournamentCreate, handleTournamentCreate)
 	r.Register(protocol.OpTournamentSearchCancel, handleTournamentSearchCancel)
 }
 
@@ -135,8 +136,11 @@ func handleTournamentListRequest(s *Session, _ *protocol.C2SFrame) error {
 
 // handleTournamentRegister handles TOURNAMENT_REGISTER (4607 aik_0):
 // [i64 tournamentId][i64 coachId][i16 teamPreset][i32 cardId]. It is sent by the
-// register button; the definitions we offer need no card, so cardId is 0 and
-// teamPreset is -1. The server trusts the session identity and ignores the
+// register button with teamPreset -1. cardId is 0 unless the definition names
+// an inscription card (13: card 16, 19: 808 "Ticket MasterCoach"); then the
+// client asks "spend one?" (`aug.registerTournament` -> `ado_1`) and sends the
+// card's id, possibly negated (the client's second card pile), and the server
+// takes one. The server trusts the session identity and ignores the
 // client-supplied coach id. Reply is 28608 dy_0: [i64 tournamentId][i8 errorCode]
 // where 0 = accepted (2 = full, any other = refused).
 func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
@@ -148,6 +152,9 @@ func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
 	if err != nil {
 		return err
 	}
+	_, _ = r.I64() // coach id (trust the session)
+	_, _ = r.U16() // team preset (-1)
+	cardID, _ := r.I32()
 
 	const (
 		regAccepted uint8 = 0
@@ -159,8 +166,22 @@ func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
 		code = regRefused // unknown, or an admin has taken it offline
 	case !t.RegistrationOpenAt(s.deps.tournamentNow()):
 		code = regRefused // closed to new entrants, by an admin or by the draw starting
+	case s.deps.Tournaments == nil:
+	case s.deps.Tournaments.IsRegistered(s.Coach.ID, tid):
+		// Already in: accepted again, and no second ticket taken.
 	default:
-		if s.deps.Tournaments != nil && s.deps.Tournaments.Register(s.Coach.ID, tid) {
+		if card := s.deps.tournamentInscriptionCard(t); card != 0 {
+			if cardID != card && cardID != -card {
+				code = regRefused // the ticket was not offered
+				break
+			}
+			if !s.consumeCard(card) {
+				code = regRefused // not owned (any more)
+				break
+			}
+			s.refreshAndPushInventory()
+		}
+		if s.deps.Tournaments.Register(s.Coach.ID, tid) {
 			s.noteTournamentEntry()
 		}
 	}

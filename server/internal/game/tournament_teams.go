@@ -96,3 +96,15 @@ func (d *Deps) fightersInState(coachID uint, state uint8, max int) []int64 {
 	}
 	return ids
 }
+
+// tournamentInscriptionCard is the card a tournament costs to enter (0 = free),
+// from its definition.
+func (d *Deps) tournamentInscriptionCard(t *domain.Tournament) int32 {
+	if d.TournamentDefs == nil || t == nil {
+		return 0
+	}
+	if def := d.TournamentDefs.Get(int16(t.DefID)); def != nil {
+		return def.InscriptionCard
+	}
+	return 0
+}

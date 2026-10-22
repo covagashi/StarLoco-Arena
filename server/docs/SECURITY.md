@@ -190,13 +190,12 @@ server does not implement at all; with no ruleset, nothing is forbidden.
 
 ### Still open
 
-- **Code 66 `badCoachCardQuantity`** — deliberately NOT implemented. It is the one
-  code absent from `je_2`, so it is server-only logic with no client counterpart.
-  Two hypotheses survive (custom-tournament rule cards on opcode 17010; coach
-  equipped-card quantity at fight creation) and the evidence does not separate
-  them. Both would gate an action honest clients already pre-check, so a wrong
-  reading would refuse legitimate fights for no gain. **"I could not determine
-  this" is the correct answer here** — revisit only with new evidence.
+- ~~**Code 66 `badCoachCardQuantity`**~~ — resolved in S09. Of the two
+  hypotheses, the 17010 one is now the server's: creating a player tournament
+  without card 807 is answered with 25000 code 66 ("you do not have the required
+  cards"). It refuses only what the client itself pre-checks, so an honest
+  client never sees it. The other hypothesis (equipped-card quantity at fight
+  creation) is still not applied.
 - **Target-mask bits 49-62** (states, HP/AP/MP, elemental resist) remain
   unrepresentable, so a mask using them is skipped whole. Only three spells set
   `EnforceTargetMasks` today and none rely on those bits; the real-data canary test
@@ -262,9 +261,8 @@ is a race an attacker wins by connecting first.
 - **Fighter budget as a hard cap outside fight entry.** The client only *warns*
   when a team exceeds 6000 and submits anyway; the cap is enforced where it
   matters (fight creation, code 46).
-- **Code 66 `badCoachCardQuantity`.** The one code absent from `je_2`, so
-  server-only logic with no client counterpart, and its only plausible trigger
-  (opcode 17010) is not implemented here. No reachable path to guard.
+- ~~**Code 66 `badCoachCardQuantity`.**~~ Used since S09 for 17010 without
+  card 807 (see above).
 - **`MaxActive`** (spell field 8). A canary test proves it is redundant against
   shipped data and says when to revisit; a second, subtly different gate would
   risk rejecting casts the client believes are legal.

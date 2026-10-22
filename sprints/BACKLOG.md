@@ -76,6 +76,11 @@ qué el visual no puede correr en CI).
 - [x] (2026-10-21: Social no pedía la lista 512 al abrirse; ahora sí) **La tabla de miembros del clan sale vacía** en Social → Clan con el coach `test`
       (líder de un clan de un miembro). Visto el 2026-10-20 en `capturas/s18/clan-demon.png`;
       sin investigar si falta pedir la lista (512) o si es el filtro de `part`.
+- [ ] **2411, récord de clasificación por preset** (sale de S09 el 2026-10-22). El formato
+      está descifrado entero en `OPCODE-INVENTORY.md` (por preset: fuerza, victorias,
+      derrotas, racha; se lee AL REVÉS). Falta el modelo: apuntar esas cuatro cifras por
+      preset al acabar cada combate clasificatorio, con el preset que se usó. Rellenarlo
+      con las cifras del coach mentiría en la interfaz.
 - [ ] **Ranking 1v1 en el cliente retail con más de 10 clasificados** (visto leyendo
       el código en S09, 2026-10-22, sin probar en vivo): `afl_1` 27501 escribe cada fila
       en `adn_1.aPj()`, una lista de 10 sin comprobar índices, y el servidor manda hasta

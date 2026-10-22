@@ -50,9 +50,11 @@ func (d *Deps) settleTournamentResults(t *domain.Tournament, winner uint) {
 	var results []store.TournamentResult
 	for _, coachID := range d.Tournaments.EntrantsFor(tid) {
 		won := d.Tournaments.FixturesWon(tid, coachID)
-		res := store.TournamentResult{
-			CoachID: coachID,
-			Points:  tournamentPoints(won, coachID == winner),
+		res := store.TournamentResult{CoachID: coachID}
+		// Only official tournaments score: a player tournament among friends
+		// would otherwise be a points tap for the board.
+		if t.Official() {
+			res.Points = tournamentPoints(won, coachID == winner)
 		}
 		// Still in contention when the edition ran out of periods: its seat's
 		// fixture was never decided. Only worth flagging when a next edition
@@ -69,7 +71,9 @@ func (d *Deps) settleTournamentResults(t *domain.Tournament, winner uint) {
 		b := statBatch{d: d, coach: coachID}
 		b.add(statTournamentPoints, res.Points)
 		if coachID == winner && won > 0 {
-			b.add(statOfficialWins, 1)
+			if t.Official() {
+				b.add(statOfficialWins, 1)
+			}
 			b.add(statTournamentWins, 1)
 		}
 		if s := d.sessionForCoach(coachID); s != nil && b.moved {

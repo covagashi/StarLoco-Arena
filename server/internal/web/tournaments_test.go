@@ -85,27 +85,28 @@ func TestTournamentRejectsUnknownDefinition(t *testing.T) {
 	}
 }
 
-// A definition that needs an entry card can never be joined on this server,
-// because nothing grants the card.
-func TestTournamentRejectsDefinitionNeedingACard(t *testing.T) {
+// TestTournamentAcceptsDefinitionNeedingACard: since S09 the server takes the
+// entry card at registration, so a ticketed definition can be offered.
+func TestTournamentAcceptsDefinitionNeedingACard(t *testing.T) {
 	p := newTournamentPortal(t)
 	token := p.csrfFrom(p.get("/admin/tournaments/new"))
 
 	pg := p.post("/admin/tournaments/new", url.Values{
 		"csrf_token": {token},
 		"name":       {"Ticketed Cup"},
-		"def_id":     {"13"}, // exists, but InscriptionCard = 16
+		"def_id":     {"13"}, // InscriptionCard = 16
 		"enabled":    {"1"},
 	})
-	if pg.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want 400", pg.Code)
+	if pg.Code != http.StatusOK {
+		t.Fatalf("status = %d, want the save to go through", pg.Code)
 	}
 	list, _ := p.st.Tournaments.List()
 	for _, tr := range list {
 		if tr.Name == "Ticketed Cup" {
-			t.Fatal("a tournament nobody could register for was saved")
+			return
 		}
 	}
+	t.Fatal("the ticketed tournament was not saved")
 }
 
 // The picker must only offer definitions that pass both rules, so the default
@@ -117,8 +118,8 @@ func TestTournamentPickerOffersOnlyUsableDefinitions(t *testing.T) {
 	if !strings.Contains(body, `value="1"`) || !strings.Contains(body, `value="17"`) {
 		t.Error("the picker is missing a usable definition")
 	}
-	if strings.Contains(body, `value="13"`) {
-		t.Error("the picker offers definition 13, which needs an entry card nobody can get")
+	if !strings.Contains(body, "entry costs card 16") {
+		t.Error("the picker does not say that definition 13 costs card 16 to enter")
 	}
 	if !strings.Contains(body, "graveyard") {
 		t.Error("the picker does not describe what each definition is")

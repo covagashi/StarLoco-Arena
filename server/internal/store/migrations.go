@@ -210,6 +210,14 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.TournamentRegistration{})
 		},
 	},
+	{
+		// Player-created tournaments (17010, S09): who created the row.
+		Version: 12,
+		Name:    "tournament_creator",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.Tournament{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

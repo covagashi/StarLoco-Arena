@@ -17,10 +17,10 @@ import "time"
 // real client definition (a data.bdat type-1000 `aub` record; retail ships 22,
 // ids {1, 4..24}), and the client dereferences it unguarded — a row pointing at
 // a definition the client does not have takes the client down with a null
-// dereference rather than showing an error. It must also be a definition whose
-// inscription card is 0, or the client demands an entry ticket this server never
-// grants and registration can never complete. Both rules are enforced when a
-// tournament is saved; see internal/web's tournament validation.
+// dereference rather than showing an error. That rule is enforced when a
+// tournament is saved; see internal/web's tournament validation. A definition
+// with an inscription card (13: card 16, 19: card 808 "Ticket MasterCoach")
+// costs one of that card to enter, taken at registration (4607).
 type Tournament struct {
 	ID uint `gorm:"primaryKey"`
 
@@ -85,6 +85,13 @@ type Tournament struct {
 	// is what "the next tournament of the same type" means for the carry-over
 	// question (28618), which needs an edition to carry INTO.
 	PreviousID uint `gorm:"index;not null;default:0"`
+
+	// CreatorCoachID is the coach who created this tournament with the
+	// "Création de Tournoi" card (17010), or 0 for an official one set up from
+	// the console. Player tournaments award no tournament points and do not
+	// count as official wins (statistic 187), so they cannot be used to farm
+	// the board among friends.
+	CreatorCoachID uint `gorm:"index;not null;default:0"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -278,3 +285,7 @@ func (t *Tournament) WireID() int64 { return TournamentWireBase + int64(t.ID) }
 // editable from the console — the other kinds pull the client into flows that
 // have no server behind them.
 const TournamentKindPrivate uint8 = 1
+
+// Official reports whether the tournament was set up from the console rather
+// than created by a player.
+func (t *Tournament) Official() bool { return t != nil && t.CreatorCoachID == 0 }
