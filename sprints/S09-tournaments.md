@@ -1,6 +1,6 @@
 # S09 — Torneos completos
 
-**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 siguiente (esbozo; se detalla al abrirlo)
 
 ## Objetivo
 
@@ -14,7 +14,11 @@ solo de principio a fin, y que el cliente Godot lo muestre.
       terminen de verdad.
 - [ ] 28646 "se abre el periodo de búsqueda": necesita planificación por reloj, y
       antes resolver el riesgo de alertas duplicadas del 28630.
-- [ ] 17010: torneos creados por jugadores (hoy no existe en el modelo).
+- [ ] 17010: torneos creados por jugadores (hoy no existe en el modelo). Con
+      él, el código de error 66 `badCoachCardQuantity`, el único que no está
+      en `je_2` y cuyo único disparador plausible es este (S19).
+- [ ] Los puntos de torneo del coach en el 2052 (blob 0x100, `aez_0.anV`):
+      hoy siempre 0 (S19).
 - [ ] 2411: récord de ladder por preset (necesita estadísticas por preset).
 - [ ] Comprobar si los 25 logros que dependían de torneos ya se pueden conseguir.
       Sus estadísticas (S19, 2026-10-22) son 183 "puntos máximos en torneo",

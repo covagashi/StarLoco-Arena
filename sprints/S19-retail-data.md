@@ -1,6 +1,6 @@
 # S19 — Datos retail sin leer y opcodes pequeños
 
-**Planificado:** 2026-10-21 (al cerrar S08, que se partió en dos) · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 abierto (2026-10-22)
+**Planificado:** 2026-10-21 (al cerrar S08, que se partió en dos) · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟢 cerrado (2026-10-22)
 
 ## Objetivo
 
@@ -176,3 +176,55 @@ antes de escribir código.
 Cada punto leído en el cliente y hecho con prueba, o descartado por escrito
 con la clase que lo demuestra; el resumen de `OPCODE-INVENTORY.md` (que un test
 recuenta) baja en lo que se haga.
+
+## Resultado (2026-10-22)
+
+Cerrado en una sesión, con todos sus puntos hechos con prueba o descartados
+por escrito con la clase o el fichero que lo demuestra.
+
+Lo que más pesa:
+
+- **Los logros, por fin alcanzables.** De los 98 contadores que piden, el
+  servidor movía 5; ahora 80. La semántica no se ha inventado: el código de
+  combate compartido del cliente aún lleva cada llamada (`ig_1`, `sq_2`,
+  `df_2`, `va_1`…) y `content.48` describe cada criterio. Los 11 que faltan
+  tienen dueño: S09 (torneos), S10 (tutorial) y las escaleras 2v2/evolución.
+- **Bugs reales**: **B-185** (la Bruma y la Bruma mortal no se iban nunca) y
+  **B-186** (el lobby retail enseñaba a todo coach sin clasificar al entrar).
+- **Unos 40 tests que no corrían en ninguna máquina** (una ruta de Windows del
+  autor original y `server/data/` git-ignorado) leen ahora `data-dist/` y
+  pasan: `go test ./... -v` baja de ~40 `SKIP` a 1.
+- **Lo que el inventario daba por "decisión de política" estaba en el
+  cliente**: el 8250 (turnos más cortos al coach inactivo) trae su regla en el
+  propio texto y su cálculo en el temporizador; hecho en servidor y en Godot.
+- Las cartas de evento describen sus efectos como el retail (port de
+  `are_0.format` y `asf_0.a`, con los casos de prueba del propio cliente).
+- Tipo 210 a 13/13 y tipo 400 completo, con lo que no se usa fijado por test
+  (condición, retardo, campo 6 a cero en las 16 plantillas).
+- Bits de máscara 55 y 58–61 evaluados; el 3212 tiene por fin una llamada.
+
+Recuento de opcodes (`OPCODE-INVENTORY.md`, lo recuenta
+`TestOpcodeInventorySummaryMatchesTable`): H 111 → 112, E 152 → 154,
+I 6 → 5, sin implementar 74 → 72.
+
+Pasa a otros sprints:
+
+- **S09**: estadísticas 183/187/188/189, los puntos de torneo del 2052 (0x100),
+  el 17010 (torneos de jugador) y con él el código 66.
+- **S10**: la cadena del Demonio III (desafíos 29–31 en modo evolución, su XP,
+  los logros 280/281 que filtran la lista y los criterios 198–200), Bernabé
+  (45), las estadísticas 211 y 226, y el 4800 RunScript.
+- **Pregunta abierta** (sin servidor retail no se puede comprobar): la Bruma
+  aplica "invisible" y "revelar" al mismo luchador en ese orden, así que no
+  oculta a nadie, aunque su texto diga que sí.
+
+Evidencia, todo el 2026-10-22:
+
+```
+cd server && go vet ./... && go test ./...          # 11 paquetes ok
+python3 tools/asset-import/test_npc_dialogs.py      # 16/16 ok
+cd godot && ./run_tests.sh                          # 13 suites, 261 checks, 0 fallos; lane visual exit 0
+godot --headless --path . -s test/fight_smoke.gd    # carta 14 con efectos, Bruma [2, 2, 1], 8250 [2, 2, 6, 1]
+godot --headless --path . -s test/login_smoke.gd    # 2052 con la fuerza del coach test, LOGIN OK
+```
+

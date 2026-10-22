@@ -46,3 +46,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-20 | [S18: avisos de invitación nativos](./2026-10-20-s18-invitaciones.md) |
 | 2026-10-21 | [S18: los "sin probar", probados, y el sprint terminado](./2026-10-21-s18-cierre.md) |
 | 2026-10-21 | [S08: un solo recuento de opcodes, los tres dialectos, B-181–B-184 (el cliente se congelaba en la ronda 5), cerrado](./2026-10-21-s08.md) |
+| 2026-10-22 | [S19: datos retail sin leer y opcodes pequeños (cerrado)](./2026-10-22-s19.md) |
