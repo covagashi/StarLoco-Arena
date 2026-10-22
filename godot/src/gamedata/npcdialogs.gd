@@ -181,6 +181,18 @@ static func achievement_done(id: int, criteria: Dictionary,
 	return true
 
 
+## The statistic thresholds an achievement needs ({statId: threshold}).
+static func achievement_stats(id: int) -> Dictionary:
+	_ensure()
+	var a: Variant = _ach.get(id)
+	if a == null:
+		return {}
+	var out := {}
+	for sid in _dict(a.get("stats")):
+		out[int(sid)] = int(a.stats[sid])
+	return out
+
+
 ## Achievement display name (content.37) / description (content.49) /
 ## criterion label (content.48) — the aea_1 "name"/"description" fields and
 ## the ako condition row label.

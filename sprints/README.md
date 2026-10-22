@@ -79,8 +79,8 @@ Linux y Windows).
 | [S08](./S08-server-debt.md) | M3 | L | 🟢 cerrado | Deuda de servidor: bugs abiertos, docs que se contradicen, pruebas en los tres dialectos |
 | [S19](./S19-retail-data.md) | M3 | M | 🟢 cerrado | Datos retail sin leer, texto de las cartas de evento y opcodes pequeños (la otra mitad de S08) |
 | [S09](./S09-tournaments.md) | M3 | L | 🟢 cerrado | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
-| [S10](./S10-tutorial-onboarding.md) | M3 | M | 🟡 abierto | Tutorial Kanojedo y onboarding del jugador nuevo |
-| [S11](./S11-replays-spectator.md) | M3 | M | ⚪ esbozo | Replays y modo espectador (alcance por decidir) |
+| [S10](./S10-tutorial-onboarding.md) | M3 | M | 🟢 cerrado | Tutorial Kanojedo y onboarding del jugador nuevo |
+| [S11](./S11-replays-spectator.md) | M3 | M | 🟡 siguiente | Replays y modo espectador (alcance por decidir) |
 | [S12](./S12-async-pvp-server.md) | M4 | M | ⚪ esbozo | Async PvP fase 3: `ghost_teams` y opcodes |
 | [S13](./S13-async-pvp-client.md) | M4 | L | ⚪ esbozo | Async PvP fase 4: panel de ghosts y editor de reglas |
 | [S14](./S14-async-pvp-ladder.md) | M4 | M | ⚪ esbozo | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |

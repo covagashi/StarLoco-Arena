@@ -1,6 +1,6 @@
 # S10 — Tutorial y onboarding
 
-**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-22 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 abierto (2026-10-22)
+**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-22 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟢 cerrado (2026-10-22)
 
 ## Objetivo
 
@@ -104,18 +104,87 @@ y `./test/e2e -run Recruits` (tres luchadores por el 6001 real → 211 = 3).
 
 ## B. Cliente Godot
 
-- [ ] Ayuda: arreglar los títulos; "Primeros pasos" (siguiente logro del
-      tutorial con sus criterios) y "Reglas básicas".
-- [ ] Intro de Adamai la primera vez (escenarios 0/1), con "Saltar".
-- [ ] Servicios → "Aprendizaje": maestros de clase (reclutar con la clase
-      fijada, como `fighterCreationTutorialDialog`), Demonio III (29/30/31 en
-      orden), Baan (desafío 46).
-- [ ] Monólogos de los escenarios que lanzan los logros (105–107, 115, 116,
-      118, 119) y los del 46 (200/201) al empezar ese combate.
-- [ ] "Entrenamiento" sin luchadores: aviso para reclutar.
+- [x] **Ayuda**: títulos arreglados (h0–h3 sobre b0–b3; fuera las claves viejas
+      `h4`, `p1`–`p4`). Dos secciones nuevas:
+      - **"Primeros pasos"**: los seis logros del tutorial en el orden del
+        retail (275, 276, 284, 278, 277, 279). Los hechos llevan ✓ y el
+        siguiente ▶, cada uno con cómo hacerlo aquí.
+      - **"Reglas básicas"**: cinco reglas propias (es/en/fr).
+- [x] **Intro de Adamai** la primera vez que se entra al lobby (escenarios 0 y
+      1, 12 páginas). "Cerrar" la salta.
+- [x] **Servicios → "Aprendizaje"**, el primer grupo: Baan, los 12 maestros de
+      clase y el Demonio III, sacados de los mundos 85 y 35 sin viajar.
+      - El maestro ofrece "Reclutar un guerrero", que abre la creación con su
+        clase ya elegida.
+      - El Demonio III solo ofrece el 30 tras el logro 280 y el 31 tras el 281.
+- [x] **Monólogos** de los escenarios que abren los logros (280 → 105,
+      281 → 106, 284 → 107, 278 → 115, 279 → 116, 454 → 118, 455 → 119). La
+      lección de Baan (200 + 201, 10 páginas) sale antes de su combate.
+      **Decisión:** en el retail los dos salían dentro del combate, con sus
+      pasos (mover, lanzar Presión). Aquí son una lección previa: el cliente
+      de combate no tiene enganches para guiar paso a paso, y el contenido es
+      el mismo.
+- [x] **"Entrenamiento" sin luchadores**: no lanza nada y dice dónde
+      reclutar.
+- [x] **Encontrado y arreglado:** el cliente no veía los contadores que solo
+      mueve el servidor (211, 198–200) hasta el siguiente 2052, así que el
+      Demonio III seguía sin ofrecer nada tras reclutar. Ahora, al llegar un
+      22000, el cliente sube a su umbral los criterios de ese logro: es cierto
+      por construcción, porque el servidor solo lo anuncia cuando se cumplen.
 
 ## Criterio de cierre
 
 Una cuenta nueva recorre el tutorial de principio a fin (intro, reclutar tres,
 la cadena del Demonio III con sus monólogos y su XP, Baan) en un smoke contra
 un servidor real, con capturas.
+
+## Resultado
+
+Cerrado el 2026-10-22. Las decisiones están arriba; todas delegadas.
+
+**El tutorial de una cuenta nueva, probado en dos mitades:**
+
+- **Interfaz** (`godot -s test/tutorial_smoke.gd -- --as=<login nuevo>`,
+  servidor real; la cuenta la crea el propio inicio de sesión): **10/10**.
+  Cubre:
+  - la intro de Adamai (8 + 4 páginas);
+  - "Entrenamiento" sin luchadores, que no lanza nada;
+  - "Primeros pasos" con el 275 como siguiente;
+  - "Aprendizaje" con sus 14 personajes;
+  - "Reclutar" de un maestro, que abre la creación con su clase;
+  - el "Soy nuevo" de Baan, que marca el 219;
+  - el Demonio III, tras los tres reclutas, ofreciendo solo el 29;
+  - el monólogo del logro 280 (escenario 105);
+  - la lección de Baan antes de su combate, que empieza (8000).
+
+  Capturas revisadas: la intro, la Ayuda y Servicios.
+- **Los combates** (`go test ./test/e2e -run TutorialChain`, por socket con
+  los datos reales). Una cuenta nueva:
+  - recluta tres (logro 276);
+  - ve rechazado el 30;
+  - gana el 29, el 30 y el 31 (logros 280, 281 y 284, 6 de XP);
+  - gana el 46 de Baan (logro 446).
+
+  Los combates se ganan con `/ENDFIGHT`, porque jugarlos desde el smoke de
+  Godot recarga la escena principal y deja al smoke sin su instancia.
+
+**Lo que no se hizo, y por qué:**
+
+- **La XP de los desafíos no sale en la pantalla de resultado.** Se paga, pero
+  los desafíos no tienen informe de combate por luchador (no pasan por el
+  META); se ve en la ficha del luchador. El diálogo propio del retail
+  (`fightResultEvolutionTuto/ChallengeDialog`) no se ha hecho.
+- **La guía paso a paso dentro del combate de Baan** (escenarios 200/201 con
+  sus disparadores): se cuenta antes del combate.
+- **Las barras de menú y el equipo "tutorial"** que bloqueaban la interfaz:
+  descartados (ver "Decisiones").
+- **Escenarios sin disparador ni sitio en el lobby:** el 100 (mapa), el 102 y
+  103 (presentaciones de la isla), el 104 (maestros) y el 108 y 109 (Zaap y
+  mundo 37). Su contenido lo cubren "Primeros pasos" y los propios diálogos
+  de los personajes.
+- `docs/wiki/` no se usa (es de la 2.04).
+
+**Revisión de los esbozos de detrás:** S11 (replays y espectador) pasa a
+siguiente. Su decisión pendiente ("¿grabar como el retail o solo
+espectador?") se toma al abrirlo, con la opción por defecto si no hay
+motivo para otra.

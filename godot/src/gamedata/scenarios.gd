@@ -10,7 +10,7 @@ extends RefCounted
 ##
 ##   "ach"   — criterion sent on start (22003 {id,1,1})
 ##   "pages" — content.29 text ids, shown one per Next click
-##   "zaap"  — follow-up page shown the next time the Zaap dialog opens
+##   "speaker" — "adamai" / "baan" (else the tutorial voice)
 ##
 ## 113 and 117 are not zone triggers: they are the intros the demon-challenge
 ## elements (kind 7) play before offering their challenge.
@@ -30,7 +30,31 @@ const SCRIPTS := {
 	# offer; the script ends in runInteractiveElementSpecialAction).
 	113: {"pages": [231, 232, 233, 234]},
 	117: {"pages": [277, 278, 279]},
+	# S10: the intro cinematic (0) and the landing (1), Adamai speaking; the
+	# island they led to is gone, so they play once on the first lobby entry.
+	0: {"speaker": "adamai", "pages": [90, 91, 92, 93, 94, 95, 96, 97]},
+	1: {"speaker": "adamai", "pages": [98, 147, 148, 149]},
+	# Fired by achievements (zN 22000 -> scriptID, see ACHIEVEMENT_SCRIPTS).
+	115: {"pages": [238, 239]},
+	116: {"pages": [242, 243, 244, 245, 246]},
+	118: {"pages": [300, 303, 302, 301]},
+	119: {"pages": [307, 306, 305, 304]},
+	# Baan's tutorial (challenge 46, record fields 200/201): placement, then
+	# moving and casting. Retail ran them inside the fight on its own cues;
+	# here they are the lesson before the fight (S10).
+	200: {"speaker": "baan", "pages": [282, 283, 284, 285]},
+	201: {"speaker": "baan", "pages": [286, 287, 288, 289, 293, 294]},
 }
+
+## Achievement -> the scenario it starts when it unlocks (type 800 scriptID,
+## played by zN on the 22000 while the tutorial toasts are on).
+const ACHIEVEMENT_SCRIPTS := {
+	278: 115, 279: 116, 280: 105, 281: 106, 284: 107, 454: 118, 455: 119,
+}
+
+## The tutorial achievements in the order retail's help (tooltipTutoDialog,
+## asA) offered them as "the next step".
+const TUTORIAL_STEPS := [275, 276, 284, 278, 277, 279]
 
 
 static func script(id: int) -> Dictionary:

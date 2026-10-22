@@ -725,6 +725,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# retail acks the tutorial instance (4517) and reports criterion
 			# 229 done (22003) on every entry until the server persists it.
 			if not State.criteria.has(229):
+				# S10: the first time ever — Adamai's intro (scenarios 0, 1);
+				# "Cerrar" skips it, as retail's "Saltarse el tutorial"
+				_queue_scenario(0)
+				_scenario_queue.append(1)
 				State.criteria[229] = 1
 				State.net.send_message(OP_TUTORIAL_READY,
 					PackedByteArray(), 3)
@@ -1320,6 +1324,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# ones, but the client-side gate is part of the contract).
 			var aid := int(payload.get_i16())
 			var ainfo := NpcDialogs.achievement_info(aid)
+			# The server announces an achievement only once its criteria
+			# meet their thresholds, so they are at least that now. Counters
+			# only the server moves (211 recruits, 198-200 the Demon III
+			# chain) would otherwise stay stale until the next 2052, and the
+			# client-side gates that read them (Demon III's offer) with them.
+			var need := NpcDialogs.achievement_stats(aid)
+			for sid in need:
+				State.criteria[sid] = maxi(int(State.criteria.get(sid, 0)), int(need[sid]))
 			if not bool(ainfo.get("hid", false)):
 				var pts := int(ainfo.get("pts", 0))
 				var aname := NpcDialogs.achievement_name(aid)
@@ -1327,6 +1339,9 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					"pts": " (+%d pts)" % pts if pts > 0 else ""}))
 				_log_line("[color=yellow]%s[/color]" % I18n.t("ach.unlocked",
 					{"name": aname}))
+				# the tutorial scenario this achievement opens (S10)
+				if Scenarios.ACHIEVEMENT_SCRIPTS.has(aid):
+					_queue_scenario(int(Scenarios.ACHIEVEMENT_SCRIPTS[aid]))
 		OP_STAT_DATA:
 			# 22002 — reply to opening the achievements tab; the pairs also
 			# refresh the local criterion map the pane evaluates against.
@@ -1643,6 +1658,12 @@ func _search_error_text(code: int, evo := false) -> String:
 
 
 func _on_practice_pressed() -> void:
+	# S10: a new coach has no fighters; the server would field an invented
+	# one. Point at where to recruit instead.
+	if State.roster.is_empty():
+		_log_line("[color=red]%s[/color]" % I18n.t("fight.need_fighter"))
+		_toast(I18n.t("fight.need_fighter"))
+		return
 	# TeamTest 26330 doubles as overworld challenge launch:
 	# [i32 challengeId][i16 99] — 34 = "Démon de la 58ème minute" practice
 	# demon. The server fields the opponent side; one client suffices.
@@ -2098,10 +2119,10 @@ const _FV := preload("res://src/fight/fight_view.gd")
 var _create_fighter_evo := false
 
 
-func _on_new_fighter_dialog(_args: Array, _w, evo := false) -> void:
+func _on_new_fighter_dialog(_args: Array, _w, evo := false, breed := 1) -> void:
 	_create_fighter_evo = evo
 	_gui.gui.model.set_value("teamManagement", {
-		"breedId": 1, "sex": 0, "version": 2 if evo else 1,
+		"breedId": breed, "sex": 0, "version": 2 if evo else 1,
 		# no colour picker (S07): the breed's own colours
 		"skin": Palettes.NO_TINT, "hair": Palettes.NO_TINT, "eye": Palettes.NO_TINT,
 		"name": "",
@@ -3508,6 +3529,13 @@ const _CITY_ONE_PER_KIND := [2, 12]
 const _CITY_HIDDEN := [4, 8, 10, 11, 13]
 ## Display order of the kinds in the City panel: shops and mail first.
 const _CITY_ORDER := [1, 2, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
+## S10: the tutorial island's people, brought to the lobby (no worlds, S05):
+## world 35's twelve class masters (kind 5) and the Demon III (kind 6), and
+## Baan from world 85 (element 143). One "Aprendizaje" group, listed first.
+const LEARNING_WORLD := 35
+const LEARNING_KINDS := [5, 6]
+const BAAN := {"world": 85, "id": 143}
+const CITY_LEARNING := 100   # the group's pseudo-kind
 
 
 ## Env record of an element from the coach's world or any lobby island.
@@ -3515,7 +3543,7 @@ func _env_element(id: int) -> Variant:
 	var t: Variant = Elements.for_world(State.current_world).get(id)
 	if t != null:
 		return t
-	for w in LOBBY_WORLDS:
+	for w in LOBBY_WORLDS + [LEARNING_WORLD, int(BAAN.world)]:
 		t = Elements.for_world(w).get(id)
 		if t != null:
 			return t
@@ -3578,6 +3606,20 @@ func _push_city_model() -> void:
 				by_kind[kind] = []
 			by_kind[kind].append({"id": int(id), "label": label})
 	var groups: Array = []
+	var learning: Array = []
+	var lt := Elements.for_world(LEARNING_WORLD)
+	var lids := lt.keys()
+	lids.sort()
+	for id in lids:
+		var e: Dictionary = lt[id]
+		if int(e.type) in LEARNING_KINDS:
+			learning.append({"id": int(id), "label": _city_label(int(e.type), e)})
+	var baan: Variant = Elements.for_world(int(BAAN.world)).get(int(BAAN.id))
+	if baan != null:
+		learning.insert(0, {"id": int(BAAN.id), "label": _city_label(int(baan.type), baan)})
+	if not learning.is_empty():
+		groups.append({"kind": CITY_LEARNING, "services": learning,
+			"name": I18n.t("elem.learning")})
 	for kind in _CITY_ORDER:
 		if by_kind.has(kind):
 			var n := I18n.t("elem.%d" % kind)
@@ -4777,6 +4819,8 @@ var _watch_target := -1       # coach id asked in the pending 2260
 var _npc := {}                # open NPC dialog {name, replies}
 var _fired_triggers := {}     # zone-trigger element ids already run this session
 var _scenario_queue := []     # pending tutorial monologues (overlapping zones)
+const BAAN_TUTORIAL := 46      # "Tutorial de Baan" (challenge, mode 9)
+var _baan_lesson_done := false # his lesson plays once per session
 
 ## Ranking window tabs (retail ladderInformationDialog order): the request
 ## opcode and a payload builder; replies land in _on_message below.
@@ -5406,6 +5450,14 @@ func _challenge_choice(chal: int, mode := 99, label := "") -> Dictionary:
 func _launch_challenge(chal: int, mode: int) -> void:
 	if chal <= 0:
 		return
+	if chal == BAAN_TUTORIAL and not _baan_lesson_done:
+		# S10: Baan's two lessons (scenarios 200, 201) before his fight
+		_baan_lesson_done = true
+		_talk_close()
+		var sc := Scenarios.script(200)
+		var pages: Array = sc.get("pages", []) + Scenarios.script(201).get("pages", [])
+		_talk_pages(I18n.t("talk.baan"), pages, func(): _launch_challenge(chal, mode))
+		return
 	var w := WireWriter.new()
 	w.put_i32(chal)
 	w.put_u16(mode)
@@ -5478,11 +5530,10 @@ func _npc_reply(i: int) -> void:
 	var r: Dictionary = replies[i]
 	match int(r.get("act", 0)):
 		1: # Lancer un défi — 26330 [i32 challengeId][i16 challenge.Qu()]
+			# through _launch_challenge, so Baan's lesson plays first (S10)
 			var chal := int(r.get("params", [0])[0])
-			var w := WireWriter.new()
-			w.put_i32(chal)
-			w.put_u16(NpcDialogs.challenge_mode(chal))
-			Session.send(OP_TEAM_TEST, w.raw(), 2)
+			_launch_challenge(chal, NpcDialogs.challenge_mode(chal))
+			return
 		2: # Donne un exploit — 22003 {i16 criterionId, u8 1, i16 1}
 			var crit := int(r.get("params", [0])[0])
 			_report_criterion(crit)
@@ -5575,9 +5626,18 @@ func _open_demon3(e: Dictionary) -> void:
 	else:
 		var choices: Array = []
 		for c in fields.slice(7):
-			choices.append(_challenge_choice(int(c)))
+			# 30 opens with achievement 280, 31 with 281 (challengeDialog
+			# hides them by afz_0.achievementLinkedCompleted; the server
+			# refuses them too)
+			var gate := int(DEMON3_GATES.get(int(c), 0))
+			if gate == 0 or _ach_done(gate):
+				choices.append(_challenge_choice(int(c)))
 		choices.append(_close_choice())
 		_talk_show(speaker, NpcDialogs.npc_name(texts[4]), choices)
+
+
+## The Demon III chain's order (type 400 QB).
+const DEMON3_GATES := {30: 280, 31: 281}
 
 
 ## zs_1 Breed Master (kind 5): desc "nameId;textId;textId;breed;challengeId".
@@ -5588,6 +5648,14 @@ func _open_breed_master(e: Dictionary) -> void:
 	var choices: Array = []
 	if chal > 0:
 		choices.append(_challenge_choice(chal, 99, I18n.t("btn.accept")))
+	# "Reclutar un guerrero" (zs_1 → fighterCreationTutorialDialog): the
+	# fighter creation with this master's class picked (S10)
+	var breed := int(fields[3]) if fields.size() > 3 else 0
+	if breed >= 1 and breed <= 12:
+		choices.append({"label": I18n.t("talk.recruit"), "kind": "primary",
+			"do": func():
+				_talk_close()
+				_on_new_fighter_dialog([], null, false, breed)})
 	choices.append(_close_choice("btn.refuse"))
 	_talk_show(NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else "",
 		NpcDialogs.npc_name(fields[1]) if fields.size() > 1 else "", choices)
@@ -5636,11 +5704,22 @@ func _run_scenario(id: int) -> void:
 	if ach > 0:
 		_report_criterion(ach)
 	_elem_kind = ELEM_SCENARIO
-	_talk_pages(I18n.t("talk.tutorial"), s.get("pages", []), func():
+	var speaker := str(s.get("speaker", ""))
+	_talk_pages(I18n.t("talk." + speaker) if speaker != "" else I18n.t("talk.tutorial"),
+		s.get("pages", []), func():
 		_talk_close()
 		if not _scenario_queue.is_empty():
 			_run_scenario(_scenario_queue.pop_front()))
 	DebugLog.add("tutorial scenario %d fired" % id)
+
+
+## Play a scenario now, or after the monologue on screen (one at a time, like
+## the retail Lua VM's event loop).
+func _queue_scenario(id: int) -> void:
+	if _gui.is_open("npcTalkDialog"):
+		_scenario_queue.append(id)
+	else:
+		_run_scenario(id)
 
 
 ## desc is the element's ";" descriptor — decode the numeric fields.

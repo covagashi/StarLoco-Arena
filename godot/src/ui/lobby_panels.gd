@@ -4,6 +4,8 @@ const Direction8 := preload("res://src/util/direction8.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
 const TournamentDefs := preload("res://src/gamedata/tournament_defs.gd")
 const State := preload("res://src/state.gd")
+const Scenarios := preload("res://src/gamedata/scenarios.gd")
+const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 ## Native presentations over the existing GuiModel and action handlers.
 ## No XML layout or protocol serialization lives in these panels.
 
@@ -654,9 +656,32 @@ func _city() -> void:
 
 
 func _help() -> void:
+	_first_steps()
+	label(body, I18n.t("help.rules"), 22)
+	for i in 5:
+		label(body, "· " + I18n.t("help.rule%d" % i))
 	for i in 4:
 		label(body, I18n.t("help.h%d" % i), 22)
 		label(body, I18n.t("help.b%d" % i))
+
+
+## "Primeros pasos" (S10): the tutorial achievements in the order retail's
+## help (tooltipTutoDialog) offered them, the first one still open marked as
+## the next step, with how to do it here (the lobby, not the island).
+func _first_steps() -> void:
+	label(body, I18n.t("help.steps"), 22).name = "FirstSteps"
+	var next := -1
+	for aid in Scenarios.TUTORIAL_STEPS:
+		var done := NpcDialogs.achievement_done(aid, State.criteria, State.inventory)
+		if not done and next < 0:
+			next = aid
+		var line := label(body, "%s %s — %s" % ["✓" if done else ("▶" if aid == next else "·"),
+			NpcDialogs.achievement_name(aid), I18n.t("help.step_%d" % aid)])
+		line.name = "Step%d" % aid
+		if done:
+			line.add_theme_color_override("font_color", OneBit.MUTED)
+	if next < 0:
+		label(body, I18n.t("help.steps_done"))
 
 
 func _options() -> void:
