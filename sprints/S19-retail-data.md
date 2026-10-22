@@ -1,6 +1,6 @@
 # S19 — Datos retail sin leer y opcodes pequeños
 
-**Planificado:** 2026-10-21 (al cerrar S08, que se partió en dos) · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 siguiente (esbozo; se detalla al abrirlo)
+**Planificado:** 2026-10-21 (al cerrar S08, que se partió en dos) · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 abierto (2026-10-22)
 
 ## Objetivo
 
@@ -11,10 +11,25 @@ antes de escribir código.
 
 ## Heredado de S08
 
-- [ ] **Texto de 36 cartas de evento**: el retail lo genera a partir de los
-      efectos de cada evento (`tO.getDescription` → `asf_0`); hoy enseñan su
-      texto de ambiente (`content.9`). Generar la línea de efectos con los
-      datos del evento.
+- [x] **Texto de 36 cartas de evento** (2026-10-22). El retail
+      (`tO.getDescription` → `asf_0.a(id, flag, efectos, null, 27)`), para los
+      eventos con el byte de descripción (`ama_1.iG`, 36 de 51), escribe cada
+      efecto con `content.22.<acción>` y sus parámetros, le pega la duración
+      (`cast.durationDescription`, ≥ 63 → `cast.infiniteDuration`), separa los
+      críticos y lo envuelve en `cast.effectDescription`; luego añade
+      `content.27` (vacío en esos 36, a mano en los otros 15). Como todo es
+      estático, lo hace el exportador: `dumpnpcdialogs` saca los efectos de
+      cada evento y `npc_dialogs.py` porta `are_0.format` (los bloques
+      `{[cond]?sí:no}`, `[#n]`, `[£n]`) y `asf_0.a`. Los iconos en línea
+      (elemento, turno) pasan a palabra en cada idioma, porque el tooltip es
+      texto plano. De paso: el `\n` de `content.27` llegaba crudo al tooltip
+      de los 15 escritos a mano; ahora se resuelven los escapes de
+      `.properties`. Pruebas: `tools/asset-import/test_npc_dialogs.py` 16/16
+      (con los casos que el propio `are_0.main()` trae); `fight_smoke` en
+      vivo: la carta 14 dice "Efecto: Estabiliza al objetivo (…) (1 turno),
+      está enraizado (1 turno), vuelve enraizado (1 turno)". Esas dos últimas
+      son las traducciones del retail para los efectos 127/128 (en inglés
+      "Impossible to carry / to transpose"); se dejan como vienen.
 
 ## Datos retail sin leer (`server/docs/DATA-COVERAGE.md`)
 

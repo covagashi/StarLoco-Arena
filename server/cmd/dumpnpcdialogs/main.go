@@ -143,7 +143,27 @@ func main() {
 		}
 	}
 
+	// Event cards (type 230, ama_1 -> tO): the retail hover text is
+	// asf_0.a(id, flag, effects, null, 27) — when the flag is set, the
+	// effect list written out through content.22 (action id + params) and
+	// each effect's duration, then content.27 if the event has an entry.
+	// The exporter renders it; this carries what it needs.
+	events := map[string]any{}
+	if evs, err := st.LoadEvents(); err == nil && evs != nil {
+		for _, id := range evs.IDs() {
+			ev := evs.Get(id)
+			effs := make([]map[string]any, 0, len(ev.Effects))
+			for _, e := range ev.Effects {
+				effs = append(effs, map[string]any{
+					"a": e.ActionID, "p": e.Params, "d": e.Duration, "c": e.IsCritical,
+				})
+			}
+			events[fmt.Sprint(id)] = map[string]any{"flag": ev.DescriptionFlag, "effects": effs}
+		}
+	}
+
 	blob := map[string]any{
+		"events":         events,
 		"groups":         jsonGroups,
 		"challengeModes": modes,
 		"achievements":   achievements,

@@ -35,6 +35,7 @@ extract `DofusArena-v2.70.zip`'s `game/` folder there). Python 3, stdlib only.
 | `anm_scr_patch.py <animations.jar> <anims_root> [set…]` | Backfill `meta.scr` into already-exported `meta.json`s — replays each action's frame walk to collect `pb_1` runScript parts without re-rendering frames |
 | `musics.py <musics.jar> <out_dir>` | The three music tracks (`loading`, `island`, `fight`) → `godot/assets/musics/*.ogg`, read raw by `src/audio/audio.gd` |
 | `test_anm.py` | Parse sweep + render checks (skips if jar absent) |
+| `test_npc_dialogs.py` | `npc_dialogs.py`'s port of the client text formatter (`are_0.format`, with the retail class's own test cases) and of the event-card description (`asf_0.a`); needs nothing git-ignored |
 
 ## Export layout
 

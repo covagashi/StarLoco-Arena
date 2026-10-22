@@ -150,10 +150,11 @@ static func event_name(id: int) -> String:
 	return str(_tr("eventNames", id, _event_names, ""))
 
 
-## The event card's hover text: what it does and for how long ("Efectos: …
-## / Duración: 1 turno", content.27) where the retail ships it — 15 of 51.
-## The retail builds the rest from the event's effects (asf_0); until then
-## the card's flavour text (content.9). "" for a table exported before S07.
+## The event card's hover text: what it does and for how long. The exporter
+## writes it the retail's way (tO.getDescription -> asf_0): the effect list
+## from the event's effects for 36 of the 51, the hand-written content.27 for
+## the rest. A table exported before S07 has none, so the card's flavour text
+## (content.9) stands in; "" before that.
 static func event_desc(id: int) -> String:
 	_ensure()
 	var d := str(_tr("eventDescs", id, _event_descs, ""))

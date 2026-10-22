@@ -400,9 +400,12 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		if nc > 0:
 			last_txt = (strip.get_child(nc - 1).get_child(0) as Label).text
 		print("[smoke] EVENT CARDS n=%d last='%s'" % [nc, last_txt])
-		# S07: hovering the card tells what the event does
+		# S07: hovering the card tells what the event does. S19: event 14 is
+		# one of the 36 the retail describes from its effects (asf_0), so the
+		# text carries their durations, and no raw "\n" escape is left.
 		var tip: String = strip.get_child(nc - 1).tooltip_text if nc > 0 else ""
-		_event_desc_ok = tip != "" and tip == NpcDialogs.event_desc(14)
+		_event_desc_ok = tip != "" and tip == NpcDialogs.event_desc(14) \
+				and "(1 " in tip and not "\\" in tip
 		print("[smoke] EVENT CARD tooltip '%s'" % tip.replace("\n", " / "))
 		if nc == 0 or last_txt != NpcDialogs.event_name(14):
 			push_error("event card strip: expected '%s', got n=%d '%s'" % [
