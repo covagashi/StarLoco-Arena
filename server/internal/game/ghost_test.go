@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
+	"github.com/StarLoco/arena-2.70/internal/protocol"
 	"github.com/StarLoco/arena-2.70/internal/store"
 	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
@@ -42,7 +43,7 @@ func ghostFixture(t *testing.T) (*Deps, *store.Store, *domain.Coach) {
 // fighters — and changing the team later does not change the ghost.
 func TestGhostSnapshotIsFrozenAndDetached(t *testing.T) {
 	d, st, coach := ghostFixture(t)
-	g, code := d.saveGhost(coach.ID, "Mi fantasma", map[int][]byte{1: []byte(passRules)})
+	g, code := d.saveGhost(coach.ID, "Mi fantasma", nil)
 	if code != ghostOK {
 		t.Fatalf("save code = %d", code)
 	}
@@ -76,8 +77,9 @@ func TestGhostSnapshotIsFrozenAndDetached(t *testing.T) {
 // TestGhostTeamIsSyntheticWithRules: in a fight the ghost is the synthetic
 // coach, its wire ids sit in their own range, and its rules are attached.
 func TestGhostTeamIsSyntheticWithRules(t *testing.T) {
-	d, _, coach := ghostFixture(t)
-	g, _ := d.saveGhost(coach.ID, "G", map[int][]byte{1: []byte(passRules)})
+	d, st, coach := ghostFixture(t)
+	live, _ := st.Fighters.ListByCoach(coach.ID)
+	g, _ := d.saveGhost(coach.ID, "G", map[uint][]byte{live[1].ID: []byte(passRules)})
 	team, err := d.buildGhostTeam(1, []Pos{{X: 1, Y: 1}, {X: 2, Y: 2}}, g)
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +99,7 @@ func TestGhostTeamIsSyntheticWithRules(t *testing.T) {
 		}
 	}
 	if team.Fighters[0].Gambits != nil || team.Fighters[1].Gambits == nil {
-		t.Error("rules must land on roster index 1 only")
+		t.Error("rules must land on the fighter they were written for only")
 	}
 	f := &Fight{Teams: [2]*FightTeam{{ID: 0}, team}}
 	if !f.isAIControlled(team.Fighters[0]) {
@@ -105,20 +107,23 @@ func TestGhostTeamIsSyntheticWithRules(t *testing.T) {
 	}
 }
 
-// TestGhostSaveRefusals: name, broken rules, a rule for a fighter that is not
-// there, the per-coach cap, and a coach with no fighters.
+// TestGhostSaveRefusals: name, broken rules, the per-coach cap and a coach
+// with no fighters are refused; a rule for a fighter outside the snapshot is
+// dropped, not an error.
 func TestGhostSaveRefusals(t *testing.T) {
 	d, st, coach := ghostFixture(t)
 	if _, c := d.saveGhost(coach.ID, "", nil); c != ghostBadName {
 		t.Errorf("empty name: %d", c)
 	}
-	if _, c := d.saveGhost(coach.ID, "G", map[int][]byte{0: []byte(`{"version":1,`)}); c != ghostBadRules {
+	live, _ := st.Fighters.ListByCoach(coach.ID)
+	if _, c := d.saveGhost(coach.ID, "G", map[uint][]byte{live[0].ID: []byte(`{"version":1,`)}); c != ghostBadRules {
 		t.Errorf("broken rules: %d", c)
 	}
-	if _, c := d.saveGhost(coach.ID, "G", map[int][]byte{5: []byte(passRules)}); c != ghostBadRules {
-		t.Errorf("rule for roster index 5: %d", c)
+	g, c := d.saveGhost(coach.ID, "G", map[uint][]byte{999999: []byte(passRules)})
+	if c != ghostOK || g.Rules != "{}" {
+		t.Errorf("rule for a fighter not in the snapshot: code %d rules %q", c, g.Rules)
 	}
-	for i := 0; i < maxGhostsPerCoach; i++ {
+	for i := 1; i < maxGhostsPerCoach; i++ {
 		if _, c := d.saveGhost(coach.ID, "G", nil); c != ghostOK {
 			t.Fatalf("save %d: %d", i, c)
 		}
@@ -161,5 +166,30 @@ func TestDecisionHash(t *testing.T) {
 	b := []fightDecision{{Round: 1, Turn: 0, WireID: 7, Kind: decisionCast, Detail: "spell=2"}}
 	if decisionHash(a) != decisionHash(a) || decisionHash(a) == decisionHash(b) {
 		t.Error("the hash must follow the log exactly")
+	}
+}
+
+// TestGhostDeleteOnlyOwn: 60015 deletes the caller's own ghost and refuses
+// anyone else's; ghosts are open to non-admins since S13.
+func TestGhostDeleteOnlyOwn(t *testing.T) {
+	d, st, coach := ghostFixture(t)
+	g, _ := d.saveGhost(coach.ID, "G", nil)
+	acc, _ := st.Accounts.CreateAccount("other", "pw", false)
+	other, _ := st.Coaches.Create(acc.ID, "Other", 0, 0, 0)
+	stranger := &Session{Coach: other, Account: acc, deps: d, log: slog.Default(), out: make(chan []byte, 8), quit: make(chan struct{})}
+	if !stranger.ghostAllowed() {
+		t.Fatal("a non-admin coach may use ghosts")
+	}
+	frame := func(id uint) *protocol.C2SFrame {
+		return &protocol.C2SFrame{Payload: protocol.NewWriter().I64(int64(id)).Bytes()}
+	}
+	_ = handleGhostDelete(stranger, frame(g.ID))
+	if still, _ := st.Ghosts.Get(g.ID); still == nil {
+		t.Fatal("a stranger deleted someone else's ghost")
+	}
+	owner := &Session{Coach: coach, deps: d, log: slog.Default(), out: make(chan []byte, 8), quit: make(chan struct{})}
+	_ = handleGhostDelete(owner, frame(g.ID))
+	if gone, _ := st.Ghosts.Get(g.ID); gone != nil {
+		t.Error("the owner's delete did not remove the ghost")
 	}
 }

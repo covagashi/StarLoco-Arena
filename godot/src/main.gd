@@ -40,6 +40,12 @@ const OP_AUTH_RESULT := 1024
 ## for server runtime config, 60001 answers a key/value map (web_base_url).
 const OP_CLIENT_CONFIG_REQ := 60000
 const OP_CLIENT_CONFIG := 60001
+const OP_GHOST_SAVE := 60010           # C2S [str name][u8 n]{[i64 fighter][u16 len][json]}
+const OP_GHOST_RESULT := 60011         # S2C [u8 action][u8 code][i64 id]
+const OP_GHOST_LIST_REQ := 60012       # C2S empty
+const OP_GHOST_LIST := 60013           # S2C [u16 n]{i64 id, str name, str owner, u8 n, i32 elo, u8 mine}
+const OP_GHOST_FIGHT := 60014          # C2S [i64 ghost][i64 replayOf]
+const OP_GHOST_DELETE := 60015         # C2S [i64 ghost]
 const OP_COACH_CREATE_REQ := 2048
 const OP_COACH_CREATE := 2049
 const OP_COACH_CREATION_RESULT := 2050
@@ -767,6 +773,22 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				if k == "web_base_url":
 					State.web_base_url = _web_base_url(v)
 			DebugLog.add("client config: web_base_url=%s" % State.web_base_url)
+		OP_GHOST_LIST:
+			var list := []
+			for i in payload.get_u16():
+				list.append({"id": payload.get_i64(), "name": payload.get_str("u8", "utf8"),
+					"owner": payload.get_str("u8", "utf8"), "fighters": payload.get_u8(),
+					"elo": payload.get_i32(), "mine": payload.get_u8() == 1})
+			_gui.gui.model.set_value("ghosts", list, "list")
+		OP_GHOST_RESULT:
+			var action := payload.get_u8()
+			var code := payload.get_u8()
+			var key := "ghost.ok.%d" % action if code == 0 else "ghost.err.%d" % code
+			_gui.gui.model.set_value("ghosts", I18n.t(key), "status")
+			if code != 0 and action == 2:
+				_log_line("[color=red]%s[/color]" % I18n.t(key))
+			if code == 0 and action != 2:
+				Session.send(OP_GHOST_LIST_REQ, PackedByteArray(), 3)
 		OP_FIGHT_CREATION:
 			State.fight_world = State.current_world
 			State.fight_data = Codec.decode(opcode, payload)
@@ -1768,6 +1790,20 @@ func _answer_match(yes: bool) -> void:
 	else:
 		Session.send(OP_QUICK_CANCEL, PackedByteArray(), 2)
 	_match = {}
+
+
+## S13: save the titular line-up as a ghost, with each fighter's rule set
+## (GambitEditor.ruleset) keyed by fighter id.
+func _ghost_save(ghost_name: String, rules: Dictionary) -> void:
+	var w := WireWriter.new()
+	w.put_str(ghost_name, "u8", "utf8")
+	w.put_u8(rules.size())
+	for fid in rules:
+		var json := JSON.stringify(rules[fid]).to_utf8_buffer()
+		w.put_i64(int(fid))
+		w.put_u16(json.size())
+		w.put_bytes(json)
+	Session.send(OP_GHOST_SAVE, w.raw(), 3)
 
 
 ## --- Spectate (2260/2261/26331) ------------------------------------------------
@@ -5032,6 +5068,23 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			var err := ReplayPlayer.play(get_tree(), str(args[0]))
 			if err != "":
 				_log_line("[color=red]%s[/color]" % I18n.t(err))
+			return
+		"nativeGhostList":
+			Session.send(OP_GHOST_LIST_REQ, PackedByteArray(), 3)
+			return
+		"nativeGhostSave":
+			_ghost_save(str(args[0]), args[1])
+			return
+		"nativeGhostFight":
+			var w := WireWriter.new()
+			w.put_i64(int(args[0]))
+			w.put_i64(0)
+			Session.send(OP_GHOST_FIGHT, w.raw(), 3)
+			return
+		"nativeGhostDelete":
+			var w := WireWriter.new()
+			w.put_i64(int(args[0]))
+			Session.send(OP_GHOST_DELETE, w.raw(), 3)
 			return
 		"nativeWatch":
 			if str(args[0]) != "":

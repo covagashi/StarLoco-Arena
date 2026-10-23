@@ -26,13 +26,13 @@ func TestGhostFightReplaysWithItsSeed(t *testing.T) {
 	c, coachID := dialLogin(t, addr, "ghost_admin", "GhostAdmin") // first account: admin
 	reachWorld(t, c)
 	createFighter(t, c, st, uint(coachID), "Fantasmon", 8)
-	createFighter(t, c, st, uint(coachID), "Espectra", 9)
+	second := createFighter(t, c, st, uint(coachID), "Espectra", 9)
 	c.DrainReceived(200 * time.Millisecond)
 
 	// 60010: save, with a close-combat rule for the second fighter
 	rules := []byte(`{"version":1,"rules":[{"if":{"kind":"always"},"do":{"kind":"close_combat"}}]}`)
 	save := testclient.NewW().U8(uint8(len("Mi fantasma"))).Raw([]byte("Mi fantasma")).
-		U8(1).U8(1).U16(uint16(len(rules))).Raw(rules).Bytes()
+		U8(1).I64(int64(second)).U16(uint16(len(rules))).Raw(rules).Bytes()
 	_ = c.Send(3, protocol.OpGhostSave, save)
 	f, _, err := c.WaitFor(protocol.OpGhostResult, testclient.DefaultTimeout)
 	if err != nil {

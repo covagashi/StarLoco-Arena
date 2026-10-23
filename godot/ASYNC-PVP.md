@@ -95,11 +95,13 @@ existing archetype AI.
 Same pattern as the 60000/60001 client-config pair — the retail client never
 sends these, so it never sees the replies:
 
-- `60010` C2S GhostListReq → `60011` S2C ghost-ladder/opponent list
-- `60012` C2S GhostSaveReq (roster + rules JSON) → `60013` ack/err
-- `60014` C2S GhostFightReq (ghost id or "matchmake") → existing fight-start
-  frames
-
+As built in S12 (`server/internal/game/ghost.go`, rows in
+`server/docs/OPCODE-INVENTORY.md`):
+- `60010` C2S GhostSave (name + per-fighter rules JSON; the roster is the
+  server's snapshot of the titular line-up, never the wire's) → `60011` result
+- `60012` C2S GhostListReq → `60013` S2C ghost list
+- `60014` C2S GhostFight (ghost id, or a recorded fight id to replay it) →
+  existing fight-start frames, or `60011` on refusal
 Filler ghosts ship in `data-dist/` as authored JSON (a few dozen hand-made or
 budget-random rosters with simple rules — no ML, no generation at runtime).
 

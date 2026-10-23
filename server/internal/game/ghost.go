@@ -23,8 +23,7 @@ import (
 // from the seed, not from the global rand, so the same seed, arena and inputs
 // give the same fight (the decision-log hash proves it).
 //
-// Admin-only for now (S13 opens it). Practice fights: no ladder, no rewards
-// (S14).
+// Open to every coach since S13. Practice fights: no ladder, no rewards (S14).
 
 // ghostCoachID is the synthetic coach owning every ghost side in a fight, far
 // above any real coach id like the other synthetic ones (isSyntheticCoach).
@@ -41,8 +40,9 @@ const maxGhostsPerCoach = 3
 
 // 60011 actions and result codes.
 const (
-	ghostActionSave  uint8 = 1
-	ghostActionFight uint8 = 2
+	ghostActionSave   uint8 = 1
+	ghostActionFight  uint8 = 2
+	ghostActionDelete uint8 = 3
 
 	ghostOK         uint8 = 0
 	ghostNotAllowed uint8 = 1 // not an admin (yet)
@@ -65,6 +65,30 @@ func registerGhostHandlers(r *Router, _ *Deps) {
 	r.Register(protocol.OpGhostSave, handleGhostSave)
 	r.Register(protocol.OpGhostListRequest, handleGhostList)
 	r.Register(protocol.OpGhostFight, handleGhostFight)
+	r.Register(protocol.OpGhostDelete, handleGhostDelete)
+}
+
+// handleGhostDelete (60015) deletes one of the caller's own ghosts. The fights
+// recorded against it stay: they are history, and their ghost id dangles.
+func handleGhostDelete(s *Session, frame *protocol.C2SFrame) error {
+	if s.Coach == nil {
+		return nil
+	}
+	if !s.ghostAllowed() {
+		return s.sendGhostResult(ghostActionDelete, ghostNotAllowed, 0)
+	}
+	gid, err := protocol.NewReader(frame.Payload).I64()
+	if err != nil {
+		return err
+	}
+	g, err := s.deps.Store.Ghosts.Get(uint(gid))
+	if err != nil || g == nil || g.CoachID != s.Coach.ID {
+		return s.sendGhostResult(ghostActionDelete, ghostNotFound, uint(gid))
+	}
+	if err := s.deps.Store.Ghosts.Delete(g.ID); err != nil {
+		return err
+	}
+	return s.sendGhostResult(ghostActionDelete, ghostOK, g.ID)
 }
 
 func (s *Session) sendGhostResult(action, code uint8, id uint) error {
@@ -76,8 +100,10 @@ func (s *Session) sendGhostResult(action, code uint8, id uint) error {
 	return s.Send(frame)
 }
 
+// ghostAllowed: any logged-in coach since S13 (S12 kept it to admins while the
+// client had no panel).
 func (s *Session) ghostAllowed() bool {
-	return s.Coach != nil && s.Account != nil && s.Account.IsAdmin && s.deps.Store != nil
+	return s.Coach != nil && s.deps.Store != nil && s.deps.Store.Ghosts != nil
 }
 
 // handleGhostSave (60010) snapshots the caller's titular line-up as a ghost.
@@ -93,10 +119,10 @@ func handleGhostSave(s *Session, frame *protocol.C2SFrame) error {
 	if err != nil {
 		return err
 	}
-	rules := map[int][]byte{}
+	rules := map[uint][]byte{}
 	if n, err := r.U8(); err == nil {
 		for i := 0; i < int(n); i++ {
-			idx, err := r.U8()
+			fid, err := r.I64()
 			if err != nil {
 				return err
 			}
@@ -108,7 +134,7 @@ func handleGhostSave(s *Session, frame *protocol.C2SFrame) error {
 			if err != nil {
 				return err
 			}
-			rules[int(idx)] = b
+			rules[uint(fid)] = b
 		}
 	}
 	g, code := s.deps.saveGhost(s.Coach.ID, name, rules)
@@ -119,9 +145,11 @@ func handleGhostSave(s *Session, frame *protocol.C2SFrame) error {
 	return s.sendGhostResult(ghostActionSave, ghostOK, g.ID)
 }
 
-// saveGhost validates and stores a ghost for coachID. rules maps a roster
-// index to that fighter's gambit rule set JSON.
-func (d *Deps) saveGhost(coachID uint, name string, rules map[int][]byte) (*domain.GhostTeam, uint8) {
+// saveGhost validates and stores a ghost for coachID. rules maps one of the
+// coach's fighter ids to that fighter's gambit rule set JSON; a fighter that is
+// not in the snapshot (benched, over the cap) has its rules dropped — the
+// client cannot know exactly which fighters titularRoster keeps.
+func (d *Deps) saveGhost(coachID uint, name string, rules map[uint][]byte) (*domain.GhostTeam, uint8) {
 	if len(name) == 0 || len(name) > 32 {
 		return nil, ghostBadName
 	}
@@ -131,19 +159,20 @@ func (d *Deps) saveGhost(coachID uint, name string, rules map[int][]byte) (*doma
 	if n, err := d.Store.Ghosts.CountByCoach(coachID); err != nil || n >= maxGhostsPerCoach {
 		return nil, ghostLimit
 	}
-	roster, ok := d.ghostSnapshot(coachID)
+	roster, sourceIDs, ok := d.ghostSnapshot(coachID)
 	if !ok {
 		return nil, ghostBadRoster
 	}
 	stored := map[string]json.RawMessage{}
-	for idx, raw := range rules {
-		if idx < 0 || idx >= len(roster) {
-			return nil, ghostBadRules
-		}
+	for fid, raw := range rules {
 		if _, err := parseGambitRules(raw); err != nil {
 			return nil, ghostBadRules
 		}
-		stored[strconv.Itoa(idx)] = json.RawMessage(raw)
+		for idx, src := range sourceIDs {
+			if src == fid {
+				stored[strconv.Itoa(idx)] = json.RawMessage(raw)
+			}
+		}
 	}
 	rosterJSON, err := json.Marshal(roster)
 	if err != nil {
@@ -164,12 +193,13 @@ func (d *Deps) saveGhost(coachID uint, name string, rules map[int][]byte) (*doma
 
 // ghostSnapshot freezes the coach's titular line-up the way a fight would
 // field it: a legal roster, spells filtered for legality, sphere spells added.
-// Every id is zeroed so nothing keyed by a fighter id can reach the real rows.
-func (d *Deps) ghostSnapshot(coachID uint) ([]domain.Fighter, bool) {
+// Every id is zeroed so nothing keyed by a fighter id can reach the real rows;
+// the second result keeps the source ids, index by index, for the rules.
+func (d *Deps) ghostSnapshot(coachID uint) ([]domain.Fighter, []uint, bool) {
 	ids := d.titularRoster(coachID, maxTeamMembers)
 	fighters, err := d.Store.Fighters.ListByCoach(coachID)
 	if err != nil {
-		return nil, false
+		return nil, nil, false
 	}
 	byID := map[uint]*domain.Fighter{}
 	for i := range fighters {
@@ -182,10 +212,12 @@ func (d *Deps) ghostSnapshot(coachID uint) ([]domain.Fighter, bool) {
 		}
 	}
 	if len(chosen) == 0 || validateRoster(chosen, false) != rosterOK {
-		return nil, false
+		return nil, nil, false
 	}
 	out := make([]domain.Fighter, 0, len(chosen))
+	src := make([]uint, 0, len(chosen))
 	for _, fr := range chosen {
+		src = append(src, fr.ID)
 		fr = fighterWithSphereSpells(fighterWithLegalSpells(d, fr), d.SphereBoards)
 		snap := *fr
 		snap.ID, snap.CoachID = 0, 0
@@ -207,7 +239,7 @@ func (d *Deps) ghostSnapshot(coachID uint) ([]domain.Fighter, bool) {
 		}
 		out = append(out, snap)
 	}
-	return out, true
+	return out, src, true
 }
 
 // handleGhostList (60012) answers 60013 with the newest ghosts.

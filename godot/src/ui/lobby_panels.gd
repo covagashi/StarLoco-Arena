@@ -7,6 +7,7 @@ const State := preload("res://src/state.gd")
 const Scenarios := preload("res://src/gamedata/scenarios.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const ReplayFile := preload("res://src/net/replay_file.gd")
+const GambitEditor := preload("res://src/ui/gambit_editor.gd")
 ## Native presentations over the existing GuiModel and action handlers.
 ## No XML layout or protocol serialization lives in these panels.
 
@@ -26,6 +27,7 @@ const TITLES := {
 	"guildCoachStatsDialog": "panel.guild_member",
 	"cityDialog": "panel.city",
 	"replayDialog": "panel.replays",
+	"ghostDialog": "panel.ghosts",
 }
 var _preview
 var _preview_look := ""
@@ -53,6 +55,7 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		"guildManagementDialog": ["guild", "guildSelectedRank"],
 		"guildCoachStatsDialog": ["guildCoachStats"],
 		"cityDialog": ["city"],
+		"ghostDialog": ["ghosts"],
 	}
 	if model_name.split(".")[0] in watched.get(panel_name, []):
 		schedule_refresh()
@@ -87,12 +90,13 @@ func refresh() -> void:
 		"teamNameDialog", "team2vs2NameDialog", "newTeamTournamentDialog": _team_name()
 		"cityDialog": _city()
 		"replayDialog": _replays()
+		"ghostDialog": _ghosts()
 
 
 func _menu() -> void:
 	label(body, I18n.t("menu.subtitle"), 22)
 	var actions := column(body)
-	for entry in [["menu.options", "optionsDialog"], ["menu.help", "tooltipDialog"], ["menu.team", "teamManagementDialog"], ["menu.replays", "replayDialog"]]:
+	for entry in [["menu.options", "optionsDialog"], ["menu.help", "tooltipDialog"], ["menu.team", "teamManagementDialog"], ["menu.replays", "replayDialog"], ["menu.ghosts", "ghostDialog"]]:
 		button(actions, I18n.t(entry[0]), func():
 			closed.emit()
 			send("nativeOpen", [entry[1]]))
@@ -641,6 +645,113 @@ func _clan_demon() -> void:
 		button(bar, I18n.t("clan.demon_offer"), func(): send("nativeDemonOpen")).name = "DemonOffer"
 	else:
 		label(bar, I18n.t("clan.demon_leader"))
+
+
+## Async PvP ghosts (S13, server ghost.go): fight someone else's saved team,
+## manage your own, or save your titular line-up with gambit rules per fighter.
+## main pushes `ghosts` = {list: [{id, name, owner, fighters, elo, mine}],
+## status}; the draft (name, rules by fighter id) lives in `draft` so the
+## rebuild on every push does not lose it.
+func _ghosts() -> void:
+	if not draft.has("ghost_asked"):
+		draft["ghost_asked"] = true
+		send("nativeGhostList")
+	tabs(body, [I18n.t("ghost.tab_fight"), I18n.t("ghost.tab_mine"), I18n.t("ghost.tab_new")])
+	var status := str(data("ghosts.status", ""))
+	if status != "":
+		label(body, status).name = "GhostStatus"
+	var all: Array = data("ghosts.list", [])
+	match tab:
+		0, 1:
+			var items := []
+			for g in all:
+				if (tab == 1) == bool(g.get("mine", false)):
+					var it: Dictionary = g.duplicate()
+					it["size"] = str(g.get("fighters", 0))
+					items.append(it)
+			label(body, I18n.t("ghost.fight_hint") if tab == 0 else I18n.t("ghost.mine_hint",
+				{"n": items.size()}))
+			table(body, [I18n.t("ghost.col_name"), I18n.t("ghost.col_owner"),
+				I18n.t("ghost.col_size"), I18n.t("ghost.col_elo")],
+				["name", "owner", "size", "elo"], items, func(_i): schedule_refresh())
+			var bar := row(body)
+			var picked := not selected.is_empty() and selected.has("id")
+			if tab == 0:
+				button(bar, I18n.t("ghost.fight"), func():
+					closed.emit()
+					send("nativeGhostFight", [int(selected.id)]), picked).name = "GhostFight"
+			else:
+				button(bar, I18n.t("ghost.delete"), func():
+					confirm_action(I18n.t("ghost.delete_confirm"), func():
+						send("nativeGhostDelete", [int(selected.id)])), picked).name = "GhostDelete"
+			button(bar, I18n.t("ghost.refresh"), func(): send("nativeGhostList"))
+		2:
+			_ghost_new()
+
+
+func _ghost_new() -> void:
+	label(body, I18n.t("ghost.new_hint"))
+	var top := row(body)
+	var name_edit := field(top, "ghost_name", I18n.t("ghost.name_ph"))
+	name_edit.name = "GhostName"
+	name_edit.max_length = 32
+	var rules: Dictionary = draft.get("ghost_rules", {})
+	draft["ghost_rules"] = rules
+	var fighters := _ghost_lineup()
+	if fighters.is_empty():
+		label(body, I18n.t("ghost.no_lineup"))
+		return
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size.y = 260
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 10)
+	scroll.add_child(list)
+	body.add_child(scroll)
+	for f in fighters:
+		var fid := int(f.get("id", 0))
+		if not rules.has(fid):
+			rules[fid] = []
+		var cap: Label = OneBit.caption(_rules_caption(f, rules[fid]))
+		list.add_child(cap)
+		var ed := GambitEditor.new(rules[fid], f.get("spells", []))
+		ed.name = "Rules%d" % fid
+		ed.changed.connect(func(): cap.text = _rules_caption(f, rules[fid]).to_upper())
+		list.add_child(ed)
+	var bar := row(body)
+	button(bar, I18n.t("ghost.save"), func():
+		var nm := str(draft.get("ghost_name", "")).strip_edges()
+		if nm == "":
+			model.set_value("ghosts", I18n.t("ghost.err.7"), "status")
+			return
+		var out := {}
+		for fid in rules:
+			var rs := GambitEditor.ruleset(rules[fid])
+			if not rs.is_empty():
+				out[fid] = rs
+		send("nativeGhostSave", [nm, out])).name = "GhostSave"
+
+
+func _rules_caption(f: Dictionary, list: Array) -> String:
+	return "%s · %s" % [str(f.get("name", "?")), I18n.t("ghost.rules_n", {"n": list.size()})]
+
+
+## The fighters the server will snapshot — titularRoster's own pick: titular
+## (state 0), in roster order, at most two of a breed, at most six. Rules for
+## anyone else would be dropped there.
+func _ghost_lineup() -> Array:
+	var out := []
+	var per_breed := {}
+	for f in State.roster:
+		if int(f.get("state", 0)) != 0 or out.size() >= 6:
+			continue
+		var b := int(f.get("breed", 0))
+		if int(per_breed.get(b, 0)) >= 2:
+			continue
+		per_breed[b] = int(per_breed.get(b, 0)) + 1
+		out.append(f)
+	return out
 
 
 ## The replays this client recorded (S11, user://replays): newest first,

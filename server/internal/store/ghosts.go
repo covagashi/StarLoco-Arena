@@ -29,6 +29,11 @@ func (r *GhostRepo) Get(id uint) (*domain.GhostTeam, error) {
 	return &g, nil
 }
 
+// Delete removes one ghost team.
+func (r *GhostRepo) Delete(id uint) error {
+	return r.db.Delete(&domain.GhostTeam{}, id).Error
+}
+
 // List returns up to limit ghost teams, newest first. The roster and rules
 // columns are left out: a list shows names, not fighters.
 func (r *GhostRepo) List(limit int) ([]domain.GhostTeam, error) {

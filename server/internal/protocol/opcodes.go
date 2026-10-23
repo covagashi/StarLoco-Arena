@@ -600,13 +600,14 @@ const (
 	OpClientConfigRequest = 60000 // C2S (Godot only): empty
 	OpClientConfig        = 60001 // S2C (Godot only): key/value map; key "web_base_url"
 
-	// Async PvP ghost teams (S12, game/ghost.go) — Godot only, admin only for
-	// now. Strings are u8-length UTF-8.
-	OpGhostSave        = 60010 // C2S: [str name][u8 n]{[u8 rosterIndex][u16 len][rules JSON]}
-	OpGhostResult      = 60011 // S2C: [u8 action 1 save|2 fight][u8 code][i64 id]
+	// Async PvP ghost teams (S12/S13, game/ghost.go) — Godot only. Strings
+	// are u8-length UTF-8.
+	OpGhostSave        = 60010 // C2S: [str name][u8 n]{[i64 fighterId][u16 len][rules JSON]}
+	OpGhostResult      = 60011 // S2C: [u8 action 1 save|2 fight|3 delete][u8 code][i64 id]
 	OpGhostListRequest = 60012 // C2S: empty
 	OpGhostList        = 60013 // S2C: [u16 n]{[i64 id][str name][str owner][u8 fighters][i32 elo][u8 mine]}
 	OpGhostFight       = 60014 // C2S: [i64 ghostId][i64 replayOfFightId, 0 = a fresh fight]
+	OpGhostDelete      = 60015 // C2S: [i64 ghostId] — the caller's own
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).
