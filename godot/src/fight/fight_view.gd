@@ -6,6 +6,8 @@ extends Node2D
 ##
 ## Projection (maprender.go): screen = ((x-y)*43, (x+y)*21.5 - alt*10).
 
+const ReplayPlayer := preload("res://src/fight/replay_player.gd")
+const ReplayBar := preload("res://src/fight/replay_bar.gd")
 const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
@@ -83,6 +85,7 @@ var _card_hover := -1      # fighter whose card the pointer is on
 var _dragging := false
 var _press_pos := Vector2.ZERO
 var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
+var _replay_bar: Control = null  # S11 transport, only while a replay plays
 
 
 func _ready() -> void:
@@ -108,6 +111,8 @@ func _ready() -> void:
 		_face_btn.disabled = true
 		_end_turn.text = I18n.t("fight.spectating")
 		$UI/Menu/SurrenderBtn.disabled = true
+		if State.replay != null:
+			_end_turn.text = I18n.t("replay.tag")
 	else:
 		$UI/Menu/SurrenderBtn.pressed.connect(_confirm_surrender)
 	$UI/Menu/BackBtn.pressed.connect(_on_back_pressed)
@@ -192,6 +197,12 @@ func _ready() -> void:
 		State.net.scene_active = true
 	# Combat controls use the same native Godot visual family as the lobby.
 	# The XML fight controls obscured both the map and the functional buttons.
+	if State.replay != null:
+		# S11: the transport takes the PASS button's place
+		_replay_bar = ReplayBar.new(State.replay)
+		_replay_bar.theme = _lobby_theme()
+		_replay_bar.leave_requested.connect(_on_back_pressed)
+		$UI.add_child(_replay_bar)
 	get_viewport().size_changed.connect(_layout_fight_ui)
 	_layout_fight_ui()
 	_wire_fight_focus.call_deferred()
@@ -371,6 +382,12 @@ func _layout_fight_ui() -> void:
 	if pass_pos.x < spells_end + 12.0:
 		pass_pos.x = right_edge - PASS_SIZE.x
 	_anchor_rect($UI/PassBtn, Vector4(0, 0, 0, 0), Rect2(pass_pos, PASS_SIZE))
+	if _replay_bar != null:
+		$UI/PassBtn.visible = false
+		var bar_size := _replay_bar.get_combined_minimum_size()
+		_replay_bar.position = Vector2((vp.x - bar_size.x) * 0.5,
+			vp.y - bar_size.y - 12.0)
+		_replay_bar.size = bar_size
 	var bar_end := pass_pos.x - 12.0 if pass_pos.x > bar_x else right_edge
 	_anchor_rect($UI/SpellScroll, Vector4(0, 0, 0, 0),
 		Rect2(bar_x, bar_y, maxf(bar_end - bar_x, SPELL_SIDE), SPELL_SIDE + 12.0))
@@ -631,6 +648,8 @@ func _exit_tree() -> void:
 		State.net.scene_active = false
 		if State.net.message_received.is_connected(_on_net_message):
 			State.net.message_received.disconnect(_on_net_message)
+	# a replay hands the live session back (S11)
+	ReplayPlayer.finish()
 
 
 func _on_net_message(opcode: int, raw: PackedByteArray) -> void:

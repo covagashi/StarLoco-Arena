@@ -5,6 +5,7 @@ extends Node
 ## `State.net`; scenes consume `State.net.message_received` + drain().
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
+const ReplayRecorder := preload("res://src/net/replay_recorder.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const State := preload("res://src/state.gd")
@@ -14,10 +15,14 @@ signal connected
 signal disconnected
 
 var client := ArenaClient.new()
+## Saves every fight this client plays or watches (S11).
+var recorder := ReplayRecorder.new()
 
 
 func _ready() -> void:
 	add_child(client)
+	add_child(recorder)
+	recorder.attach(client)
 	State.net = client
 	client.message_received.connect(func(op, p): message.emit(op, p))
 	client.connected.connect(func(): connected.emit())

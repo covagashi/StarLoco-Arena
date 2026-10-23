@@ -14,6 +14,7 @@ extends Control
 ##   2052 CoachInfos     login burst begins; 4600 EnterInstance; 4516 Ready
 ##   8   InvalidVersion  [u8 2][u16 70] — server keeps socket open; we close it.
 
+const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const Codec := preload("res://src/net/codec.gd")
 const Overrides := preload("res://src/net/codec_overrides.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -510,6 +511,7 @@ func _ready() -> void:
 	# gamePreferences, these apply the side effects, and the GUI layer saves
 	# them after every handler (user://gui_settings.cfg [prefs])
 	_gui.on("setMusicMute", func(_a, _w): _apply_audio_prefs())
+	_gui.on("setSaveReplay", func(_a, _w): pass)   # S11: saved; read per fight
 	_gui.on("setMusicVolume", func(_a, _w): _apply_audio_prefs())
 	_gui.on("setSoundsMute", func(_a, _w): _apply_audio_prefs())
 	_gui.on("setSoundsVolume", func(_a, _w): _apply_audio_prefs())
@@ -5025,6 +5027,15 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"openBugReport":
 			_open_bug_report()
+			return
+		"nativePlayReplay":
+			var err := ReplayPlayer.play(get_tree(), str(args[0]))
+			if err != "":
+				_log_line("[color=red]%s[/color]" % I18n.t(err))
+			return
+		"nativeWatch":
+			if str(args[0]) != "":
+				_watch_coach(str(args[0]))
 			return
 		"nativeUseElement":
 			_use_element(int(args[0]))

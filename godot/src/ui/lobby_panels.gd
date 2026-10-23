@@ -6,6 +6,7 @@ const TournamentDefs := preload("res://src/gamedata/tournament_defs.gd")
 const State := preload("res://src/state.gd")
 const Scenarios := preload("res://src/gamedata/scenarios.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
+const ReplayFile := preload("res://src/net/replay_file.gd")
 ## Native presentations over the existing GuiModel and action handlers.
 ## No XML layout or protocol serialization lives in these panels.
 
@@ -24,6 +25,7 @@ const TITLES := {
 	"guildManagementDialog": "panel.guild_ranks",
 	"guildCoachStatsDialog": "panel.guild_member",
 	"cityDialog": "panel.city",
+	"replayDialog": "panel.replays",
 }
 var _preview
 var _preview_look := ""
@@ -84,12 +86,13 @@ func refresh() -> void:
 		"fighterEquipmentDialog": _equipment()
 		"teamNameDialog", "team2vs2NameDialog", "newTeamTournamentDialog": _team_name()
 		"cityDialog": _city()
+		"replayDialog": _replays()
 
 
 func _menu() -> void:
 	label(body, I18n.t("menu.subtitle"), 22)
 	var actions := column(body)
-	for entry in [["menu.options", "optionsDialog"], ["menu.help", "tooltipDialog"], ["menu.team", "teamManagementDialog"]]:
+	for entry in [["menu.options", "optionsDialog"], ["menu.help", "tooltipDialog"], ["menu.team", "teamManagementDialog"], ["menu.replays", "replayDialog"]]:
 		button(actions, I18n.t(entry[0]), func():
 			closed.emit()
 			send("nativeOpen", [entry[1]]))
@@ -609,6 +612,13 @@ func _social() -> void:
 		if not text.strip_edges().is_empty(): send(add, [text.strip_edges()]))
 	if tab < 2:
 		button(toolbar, I18n.t("social.remove_sel"), func(): send("removeFromFriendList" if tab == 0 else "removeFromIgnoreList", [selected]), not selected.is_empty())
+	if tab == 0:
+		# S11: watch a friend's fight (2260 → 26331), as /watch does
+		var online := bool(selected.get("connected", selected.get("online", false)))
+		button(toolbar, I18n.t("social.watch"), func():
+			closed.emit()
+			send("nativeWatch", [str(selected.get("name", ""))]),
+			online).name = "WatchBtn"
 	else:
 		toolbar = row(body)
 		if str(data("guild.name", "")).is_empty():
@@ -631,6 +641,47 @@ func _clan_demon() -> void:
 		button(bar, I18n.t("clan.demon_offer"), func(): send("nativeDemonOpen")).name = "DemonOffer"
 	else:
 		label(bar, I18n.t("clan.demon_leader"))
+
+
+## The replays this client recorded (S11, user://replays): newest first,
+## watch or delete. Retail's replayDialog listed its game/replays folder.
+func _replays() -> void:
+	var all := ReplayFile.list()
+	var items := []
+	for r in all:
+		var h: Dictionary = r.header
+		var when := Time.get_datetime_dict_from_unix_time(int(h.get("recorded_at", 0)))
+		var res := str(h.get("result", "none"))
+		var item := {
+			"id": r.path, "path": r.path,
+			"date": "%02d/%02d %02d:%02d" % [when.day, when.month, when.hour, when.minute],
+			"vs": "%s — %s" % [h.get("left", "?"), h.get("right", "?")],
+			"result": I18n.t("replay.result." + res) if res in ["win", "loss"] \
+				else I18n.t("replay.result.watched" if h.get("spectating", false) else "replay.result.none"),
+			"length": _mmss(int(h.get("duration_ms", 0))) + ("" if h.get("complete", false) else " *"),
+		}
+		items.append(item)
+	label(body, I18n.t("replay.subtitle", {"n": items.size(), "keep": ReplayFile.KEEP}))
+	table(body, [I18n.t("replay.col_date"), I18n.t("replay.col_vs"),
+		I18n.t("replay.col_result"), I18n.t("replay.col_length")],
+		["date", "vs", "result", "length"], items, func(_item): schedule_refresh())
+	var toolbar := row(body)
+	var picked := not selected.is_empty() and selected.has("path")
+	button(toolbar, I18n.t("replay.watch"), func():
+		closed.emit()
+		send("nativePlayReplay", [str(selected.path)]), picked).name = "PlayReplay"
+	button(toolbar, I18n.t("replay.delete"), func():
+		confirm_action(I18n.t("replay.delete_confirm"), func():
+			DirAccess.remove_absolute(str(selected.path))
+			selected = {}
+			schedule_refresh()), picked).name = "DeleteReplay"
+	if not bool(data("gamePreferences.saveReplays", true)):
+		label(body, I18n.t("replay.off"))
+
+
+static func _mmss(ms: int) -> String:
+	var sec := maxi(ms, 0) / 1000
+	return "%d:%02d" % [sec / 60, sec % 60]
 
 
 ## The services the walkable hall used to reach, from every island at once
@@ -740,6 +791,14 @@ func _options() -> void:
 	choices(life_bar, [I18n.t("opt.life.bar"), I18n.t("opt.life.ring")],
 		maxi(0, ArtStyle.HUD_LIFE.find(ArtStyle.hud_life())),
 		func(i): ArtStyle.set_hud_life(ArtStyle.HUD_LIFE[i]))
+	# retail's gamePreferences.saveReplays (S11): the recorder reads it at
+	# each fight's start
+	var save := CheckButton.new()
+	save.name = "saveReplays"
+	save.text = I18n.t("opt.save_replays")
+	save.button_pressed = bool(data("gamePreferences.saveReplays", true))
+	save.toggled.connect(func(value): model.set_value("gamePreferences", value, "saveReplays"); send("setSaveReplay"))
+	body.add_child(save)
 	label(body, I18n.t("opt.account"), 22)
 	button(body, I18n.t("opt.destroy_coach"), func(): confirm_action(I18n.t("coach.destroy_confirm"), func(): send("destroyCoach")))
 

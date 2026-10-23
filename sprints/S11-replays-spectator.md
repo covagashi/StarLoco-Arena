@@ -1,6 +1,6 @@
 # S11 — Replays y espectador
 
-**Planificado:** 2026-10-16 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** ⚪ esbozo · **Alcance por decidir**
+**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-23 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 abierto
 
 ## Objetivo
 
@@ -16,23 +16,96 @@ espectador en vivo? Por defecto: grabar y reproducir los combates propios. Para
 el marketing de S04 (clips de combates en 1 bit) los replays son muy útiles:
 permiten volver a renderizar un combate con otro estilo.
 
-## Para retomar (2026-10-23)
+## Punto de partida (auditoría del 2026-10-23)
 
-S10 se cerró en la sesión anterior y S11 quedó como siguiente, sin abrir. La
-investigación previa (cómo grababa el retail sus replays, el modo observador
-y si `fight_view.gd` se puede alimentar con un flujo grabado sin socket) se
-cortó por el límite de uso. Lo único que llegó a ver: hay ficheros de replay
-de ejemplo reales en el repo. Hay que empezar por ahí. Las decisiones se
-toman por heurística y se anotan en el sprint (ver la memoria
-"autonomous-sprints").
+**El retail grababa en local, en el cliente.** `tu_1` (el lector) y el
+`replayDialog` trabajan sobre `game/replays/*.rda`, un fichero de texto con
+una línea por suceso: `código|tiempo|campos…`. Los códigos (0 cabecera,
+100 el combate en bytes, 200 la cámara, 300 colocación, 400–418 acciones,
+500 fin, -1 el certificado `replayIdentificationCertificate`) **no son
+opcodes**: son las clases de acción internas del cliente (`vu_0`, `act`,
+`mv_0`…), metidas en su línea de tiempo `RO.aer()`.
 
-## Tareas candidatas
+- Hay **51 `.rda` reales** en `client/compiled/game/replays/`: los grabó el
+  cliente retail contra este servidor Go (18–20 de julio, "Loov VS
+  Sparring"). Solo 13 llegan al 500; los otros 38 se cortan antes.
+- Leerlos exigiría reimplementar esas clases internas una a una. El cliente
+  Godot no tiene esa línea de tiempo: dibuja a partir de los mensajes del
+  servidor.
+- **El cliente Godot no graba nada.** `gamePreferences.saveReplays` existe en
+  el modelo (`gui_layer.gd`) pero nadie lo lee ni lo enseña.
+- **El espectador en vivo funciona** (`/watch`, 2260 → 26331, y la final
+  de un torneo). El servidor le manda un resync neutro (`sendFightResync`
+  con `spectator`) y luego todos los `broadcast`. Solo se entra por chat o
+  desde el aviso de la final.
+- **`fight_view` se puede alimentar sin socket.** Solo usa
+  `State.net.message_received`, `drain()`, `scene_active` y
+  `send_message()`. Basta un nodo con esa misma forma.
 
-- [ ] Formato de replay: ¿el del retail (su carpeta `replays/`) o uno propio a
-      partir del flujo de mensajes del combate?
-- [ ] Grabar al jugar y reproducir desde un panel.
-- [ ] Espectador: entrar desde la UI, no solo por chat.
+## Decisiones (delegadas: "toma usando heurística"; el dueño pidió además reels de combates, 2026-10-23)
+
+| Decisión | Tomada | Por qué |
+|---|---|---|
+| Replays completos o solo espectador | **completos**: grabar y reproducir | el dueño quiere reels de combates, y un replay se puede volver a renderizar con otro estilo |
+| Formato | **propio**: los frames S2C tal como llegan (opcode + payload) con su tiempo, en gzip; **no** el `.rda` | el `.rda` guarda clases internas del cliente retail; el flujo de mensajes es lo que `fight_view` ya sabe pintar, y se mantiene válido mientras el protocolo no cambie (no cambia) |
+| ¿Dónde se graba? | **en el cliente**, como el retail (`user://replays/`) | sin opcode ni tabla nueva; se graba también lo que se ve como espectador |
+| Los `.rda` del retail | no se leen; se documenta el formato | 38 de 51 están cortados, y leerlos es reimplementar la línea de tiempo retail |
+| Perspectiva al reproducir | modo solo lectura (como espectador), con el título del resultado según el que grabó | `fight_view` ya sabe ser espectador |
+| Tiempos muertos | al reproducir, ninguna espera entre mensajes pasa de 1,5 s; velocidad ×1/×2/×4 y pausa | un combate real tiene turnos de hasta 30 s pensando |
+| Cuántos se guardan | los 30 últimos; el resto se borra solo | un combate pesa pocos KB, pero sin límite crece para siempre |
+| Nombre del fichero | `AAMMDDhhmm_A_VS_B.slr`, como el retail | se ve igual que su carpeta |
+| Espectador desde la UI | un botón "Ver combate" en los amigos conectados que están luchando | el chat (`/watch`) no se descubre |
+| Reels | un modo de captura: reproduce un replay a 9:16 con `--write-movie` y lo pasa a mp4 con ffmpeg | reutiliza el replay; sin música (la del retail no es nuestra) |
+
+## A. Grabar y reproducir (cliente)
+
+- [x] `replay_file.gd`: escribir y leer el formato (cabecera JSON + frames).
+- [x] `replay_recorder.gd`: graba desde el 8000 hasta el 8300 si
+      `saveReplays` está activo; guarda el combate cortado si se cae la
+      conexión.
+- [x] `replay_client.gd`: un `State.net` falso que emite los frames a su
+      tiempo, con pausa y velocidad; el 26321 de cierre recibe un 4600
+      sintético.
+- [x] Barra de reproducción en `fight_view` (pausa, ×1/×2/×4, salir).
+- [x] Vuelta al lobby tras el replay sin esperar al servidor.
+
+## B. Panel de replays
+
+- [x] "Replays" en el menú: lista (fecha, rivales, resultado, duración),
+      ver y borrar.
+- [x] "Guardar replays" en Opciones → Combate.
+
+## C. Espectador desde la UI
+
+- [x] "Ver combate" en Social para los amigos conectados.
+
+**Pruebas (A–C):**
+
+- `test/unit/replay_test.gd`, 33 comprobaciones: el formato ida y vuelta, la
+  cola cortada, el grabador (empieza en 8000, quita los susurros, para en
+  8300 o al caerse, respeta `saveReplays`), el reloj comprimido, la pausa,
+  la velocidad y el 26321 → 4600.
+- `test/replay_smoke.gd`: un combate real contra el demonio del minuto 58
+  (desafío 34), rendición en el turno 7. Lo graba (≈190 frames) y lo
+  reproduce a ×4 en un `fight_view` nuevo. Casillas, daño (74), muertes,
+  turno de mesa (8) y ganadores salen **iguales**, y se emiten todos los
+  frames.
+- `test/replay_lobby_smoke.gd`, 29 comprobaciones por el `main.tscn` real:
+  Menú → Replays → Ver → barra (×4) → "Continuar" → el lobby vuelve con
+  la sesión viva; Borrar pide confirmación y borra; Opciones apaga y
+  enciende el grabador; Social tiene "Ver combate".
+- `native_panels.gd` (xvfb): 128 PASS, `replayDialog` incluido.
+- Con la salida del replay salió un aviso viejo de `xps_fx.gd`: dos lambdas
+  guardaban la partícula, y Godot avisa si se libera antes de su
+  temporizador. Ahora van con `weakref`.
+
+## D. Reels
+
+- [ ] `tools/reel/`: replay → vídeo 9:16 (Godot `--write-movie` + ffmpeg).
+- [ ] Una primera tanda de clips para que el dueño elija.
 
 ## Criterio de cierre
 
 Un combate grabado se reproduce entero en el cliente y coincide con lo que pasó.
+
+Y un reel sale de un replay con un solo comando.

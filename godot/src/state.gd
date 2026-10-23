@@ -94,6 +94,10 @@ static var fight_result := {}
 ## anyway; this stops the client from even offering them).
 static var spectating := false
 
+## The ReplayClient while a replay plays (S11, fight/replay_player.gd) —
+## then also State.net; null otherwise.
+static var replay: Node = null
+
 ## Live ArenaClient — set by the Session autoload (app) or the test harness.
 ## Scenes read `net.message_received` and `net.drain()`.
 static var net: Node = null

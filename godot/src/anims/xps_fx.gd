@@ -224,14 +224,20 @@ static func _schedule_emit(n: Node2D) -> void:
 			continue
 		var start := float(p.get_meta("start_s", 0.0))
 		var stop := float(p.get_meta("stop_s", 0.0))
+		# a weak ref, not the node: the tree timer outlives a fight scene
+		# left mid-effect, and a lambda holding a freed node logs an error
 		if start > 0.0:
-			var tree := n.get_tree()
-			tree.create_timer(start).timeout.connect(
-				func(): if is_instance_valid(p): p.emitting = true)
+			n.get_tree().create_timer(start).timeout.connect(
+				_set_emitting.bind(weakref(p), true))
 		if stop > 0.0:
-			var tree2 := n.get_tree()
-			tree2.create_timer(stop).timeout.connect(
-				func(): if is_instance_valid(p): p.emitting = false)
+			n.get_tree().create_timer(stop).timeout.connect(
+				_set_emitting.bind(weakref(p), false))
+
+
+static func _set_emitting(ref: WeakRef, on: bool) -> void:
+	var p: Object = ref.get_ref()
+	if p != null:
+		p.emitting = on
 
 
 ## Spawn a one-shot burst at `at` (screen space). Returns the node (auto-freed).

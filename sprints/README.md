@@ -80,7 +80,7 @@ Linux y Windows).
 | [S19](./S19-retail-data.md) | M3 | M | 🟢 cerrado | Datos retail sin leer, texto de las cartas de evento y opcodes pequeños (la otra mitad de S08) |
 | [S09](./S09-tournaments.md) | M3 | L | 🟢 cerrado | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
 | [S10](./S10-tutorial-onboarding.md) | M3 | M | 🟢 cerrado | Tutorial Kanojedo y onboarding del jugador nuevo |
-| [S11](./S11-replays-spectator.md) | M3 | M | 🟡 siguiente | Replays y modo espectador (alcance por decidir) |
+| [S11](./S11-replays-spectator.md) | M3 | M | 🟡 abierto | Replays (grabar y reproducir), espectador desde la UI, reels |
 | [S12](./S12-async-pvp-server.md) | M4 | M | ⚪ esbozo | Async PvP fase 3: `ghost_teams` y opcodes |
 | [S13](./S13-async-pvp-client.md) | M4 | L | ⚪ esbozo | Async PvP fase 4: panel de ghosts y editor de reglas |
 | [S14](./S14-async-pvp-ladder.md) | M4 | M | ⚪ esbozo | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |
@@ -102,7 +102,7 @@ afectado trabaja con la opción marcada como *por defecto*.
 |---|---|---|
 | ¿El 1 bit es el estilo **por defecto** o un modo opcional? | S04, S07 | opcional, conmutable |
 | Servicios del hall (Card Master, Zaap…): ¿entradas en el lobby o revivir el hall caminable? | S05 | entradas en el lobby |
-| Replays: ¿grabar/reproducir como el retail, o solo espectador en vivo? | S11 | solo lo que ya hay + guardar replays |
+| Replays: ¿grabar/reproducir como el retail, o solo espectador en vivo? | S11 | grabar y reproducir (tomada en S11 por heurística, 2026-10-23: el dueño pidió reels) |
 | X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo (aplicado en S08; se reabre si el dueño dice) |
 | Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas |
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |
