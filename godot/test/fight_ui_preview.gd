@@ -11,7 +11,10 @@ extends Node2D
 ## summons per team, to load the columns), FIGHT_UI_HOVER=<fid> (pointer on
 ## that fighter's card), FIGHT_UI_SPECTATE=1 (watching, not playing),
 ## FIGHT_UI_PLACEMENT=1 (the placement phase instead of turn 7),
-## FIGHT_UI_MAP=<arena> (default 10).
+## FIGHT_UI_MAP=<arena> (default 10). FIGHT_UI_TACTICS=spell (Arel's spell 4
+## armed, the pointer on a castable cell: reach, AoE, hover, plus a placed
+## trap) or =move (the walk preview and its MP cost) — the tactical aids S04
+## re-tunes for the 1-bit style.
 
 const State := preload("res://src/state.gd")
 
@@ -63,6 +66,22 @@ func _ready() -> void:
 		fight._selected = 1
 		fight._refresh_timeline()
 		fight.queue_redraw()
+	match OS.get_environment("FIGHT_UI_TACTICS"):
+		"spell":
+			fight._ap_left = 6
+			fight._on_spell_button(4)
+			fight._hover = _cell_near(fight, 2, 4)
+			var me: Vector3i = fight._actor_cells[1]
+			fight._areas.append({"tpl": 2, "ctr": me + Vector3i(1, 2, 0),
+				"caster": 1, "aura": false, "left": 2, "turns": 2})
+			fight.queue_redraw()
+		"move":
+			# Arel is rooted in this staging: Cael walks
+			fight._on_turn_begin(3)
+			fight._spell_mode = -1
+			fight._mp_left = 3
+			fight._hover = _cell_near(fight, 0, 4)   # one step past the 3 MP
+			fight.queue_redraw()
 	if OS.get_environment("FIGHT_UI_HOVER") != "":
 		fight._on_card_hover(int(OS.get_environment("FIGHT_UI_HOVER")), true)
 	if OS.get_environment("FIGHT_UI_CHAT") == "open":
@@ -147,3 +166,29 @@ func _stage(fight: Node) -> void:
 		spr.modulate.a = 0.0                           # unseen enemy
 	fight._kill_actor(6)
 	fight._refresh_timeline()
+
+
+## A ground cell about `dist` steps from the acting fighter: castable (`want`
+## 2 in the reach overlay) or exactly `dist` walk steps away (`want` 0).
+func _cell_near(fight: Node, want: int, dist: int) -> Vector2i:
+	var me: Vector3i = fight._actor_cells[fight._current_fid]
+	var best := Vector2i(me.x, me.y)
+	var best_d := 999
+	for pos in fight._cells:
+		if not fight._cells[pos].ground:
+			continue
+		var taken := false
+		for id in fight._actor_cells:
+			var c: Vector3i = fight._actor_cells[id]
+			taken = taken or (c.x == pos.x and c.y == pos.y)
+		if taken:
+			continue
+		if want == 2 and int(fight._range_overlay.get(pos, 0)) != 2:
+			continue
+		if want == 0 and fight._find_path(Vector2i(me.x, me.y), pos, fight._current_fid).size() != dist:
+			continue
+		var d: int = abs(pos.x - me.x) + abs(pos.y - me.y)
+		if abs(d - dist) < best_d:
+			best_d = abs(d - dist)
+			best = pos
+	return best

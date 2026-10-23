@@ -15,6 +15,7 @@ const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
 const TeamAura := preload("res://src/fight/team_aura.gd")
+const OneBitMarks := preload("res://src/fight/onebit_marks.gd")
 const FightHud := preload("res://src/fight/fight_hud.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
@@ -3320,6 +3321,11 @@ var _zone_ghost := OS.get_environment("ARENA_ZONE_GHOST") != "0"   # on unless =
 var _ov_collect := false   # true while _depth_overlays gathers, false = draw now
 var _ov: Array = []        # [{key, o, d: Callable(ci)}] gathered marks
 
+## 1-bit mark colours (OneBitMarks): the reach and the AoE, fully saturated —
+## the dot density, not the alpha, says how strong a mark is.
+const REACH_COL := Color(1.0, 0.55, 0.1)
+const AOE_COL := Color(1.0, 0.25, 0.15)
+
 ## Draw order inside one depth slot: zones under reach under path/hover.
 enum OvLayer { ZONE, SPECIAL, AREA, REACH, AOE, PATH, HOVER }
 
@@ -3395,8 +3401,12 @@ func _draw_ground_overlays() -> void:
 		var col: Color = sm[2]
 		var letter: String = sm[0]
 		_ground(int(sp.x), int(sp.y), OvLayer.SPECIAL, func(ci):
-			ci.draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
-			ci.draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
+			if _onebit:
+				ci.draw_colored_polygon(dm, Color.BLACK)
+				OneBitMarks.outline(ci, dm, col, 1.5)
+			else:
+				ci.draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
+				ci.draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
 			ci.draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), letter,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col))
 	# placed traps/glyphs/auras — footprint tinted per the type-210 template.
@@ -3419,6 +3429,10 @@ func _draw_ground_overlays() -> void:
 			var cz := int(_cells.get(cell, {}).get("alt", actr.z))
 			var fp := _cell_poly(cell.x, cell.y, cz)
 			_ground(cell.x, cell.y, OvLayer.AREA, func(ci):
+				if _onebit:
+					OneBitMarks.fill(ci, fp, acol, 0.3)
+					OneBitMarks.outline(ci, fp, acol, 1.0)
+					return
 				ci.draw_colored_polygon(fp, Color(acol.r, acol.g, acol.b, 0.14))
 				ci.draw_polyline(fp + PackedVector2Array([fp[0]]),
 					Color(acol.r, acol.g, acol.b, 0.7), 1.0))
@@ -3473,6 +3487,12 @@ func _draw_ground_overlays() -> void:
 		var legal: bool = _range_overlay[pos] == 2
 		var rp := _cell_poly(pos.x, pos.y, rc.alt)
 		_ground(pos.x, pos.y, OvLayer.REACH, func(ci):
+			if _onebit:
+				# castable: dense dots + outline; in range but blocked: sparse
+				OneBitMarks.fill(ci, rp, REACH_COL, 0.5 if legal else 0.16)
+				if legal:
+					OneBitMarks.outline(ci, rp, REACH_COL, 1.0)
+				return
 			ci.draw_colored_polygon(rp, Color(1.0, 0.5, 0.1, 0.45) if legal
 				else Color(1.0, 0.5, 0.1, 0.12)))
 	# movement path preview — retail dots the walk steps (the MP cost floats
@@ -3483,7 +3503,11 @@ func _draw_ground_overlays() -> void:
 			else Color(1.0, 0.35, 0.3, 0.9)
 		for p in path:
 			var dc := _iso(p.x + 0.5, p.y + 0.5, p.z)
-			_ground(p.x, p.y, OvLayer.PATH, func(ci): ci.draw_circle(dc, 3.5, pc))
+			_ground(p.x, p.y, OvLayer.PATH, func(ci):
+				if _onebit:
+					OneBitMarks.dot(ci, dc, Color(pc.r, pc.g, pc.b, 1.0), 4.0)
+				else:
+					ci.draw_circle(dc, 3.5, pc))
 	if not _placement and _is_my_turn() and _cells.has(_hover):
 		var hc: Dictionary = _cells[_hover]
 		# AoE preview — an armed spell/card's effect zones (data-side `zn`,
@@ -3503,12 +3527,18 @@ func _draw_ground_overlays() -> void:
 						var zp := _cell_poly(cell.x, cell.y,
 							int(_cells[cell].get("alt", 0)))
 						_ground(cell.x, cell.y, OvLayer.AOE, func(ci):
-							ci.draw_colored_polygon(zp, Color(1.0, 0.45, 0.15, 0.22)))
+							if _onebit:
+								OneBitMarks.fill(ci, zp, AOE_COL, 0.7)
+							else:
+								ci.draw_colored_polygon(zp, Color(1.0, 0.45, 0.15, 0.22)))
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
 		var hcol := Color(1, 0.3, 0.25, 0.9) if _spell_mode != -1 \
 			else Color(1, 1, 1, 0.8)
 		_ground(_hover.x, _hover.y, OvLayer.HOVER, func(ci):
-			ci.draw_polyline(poly + PackedVector2Array([poly[0]]), hcol, 2.0))
+			if _onebit:
+				OneBitMarks.outline(ci, poly, Color(hcol.r, hcol.g, hcol.b, 1.0), 2.5)
+			else:
+				ci.draw_polyline(poly + PackedVector2Array([poly[0]]), hcol, 2.0))
 
 
 func _draw_top_overlays() -> void:
@@ -3531,9 +3561,12 @@ func _draw_top_overlays() -> void:
 	if not path.is_empty():
 		var pc := Color(0.4, 1.0, 0.4, 0.9) if path.size() <= _mp_left \
 			else Color(1.0, 0.35, 0.3, 0.9)
-		draw_string(ThemeDB.fallback_font,
-			_iso(_hover.x + 0.5, _hover.y + 0.5, _cells[_hover].alt) + Vector2(8, -10),
-			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, pc)
+		var mp_at := _iso(_hover.x + 0.5, _hover.y + 0.5, _cells[_hover].alt) + Vector2(8, -10)
+		if _onebit:
+			draw_string_outline(ThemeDB.fallback_font, mp_at, "%d MP" % path.size(),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 4, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, mp_at,
+			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14 if _onebit else 13, pc)
 	if debug_overlay:
 		# white crosshair at each live actor's cell center
 		for id in _actor_cells:
