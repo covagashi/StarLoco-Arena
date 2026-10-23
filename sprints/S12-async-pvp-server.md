@@ -74,6 +74,8 @@ combate es reproducible con su semilla.
   - e2e `TestGhostFightReplaysWithItsSeed`: crear, listar, combatir IA
     contra IA y repetir. Ganador, rondas, arena y hash **iguales**. Pasada
     tres veces con semillas distintas (16, 20 y 23 rondas).
+  - Unidad, migraciones y e2e del ghost también en **Postgres 16 y MariaDB
+    11**, con contenedores podman locales.
 - **Encontrado:**
   - **GORM y `default:`.** Con `default:-1` en `WinnerTeam`, un 0 (gana el
     retador) se guardaba como -1: GORM toma el valor cero como "sin
