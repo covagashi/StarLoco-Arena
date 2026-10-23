@@ -18,9 +18,33 @@ type GhostTeam struct {
 	// Rules is the JSON of the per-fighter gambit rule sets, by roster index
 	// ({"0": {...}, "2": {...}}); "" or "{}" = archetype AI for everyone.
 	Rules string `gorm:"type:text"`
-	// EloGhost is the ghost-ladder rating (S14); 1000 until then.
+	// EloGhost is the ghost's rating on the ghost ladder (S14). A filler's
+	// (CoachID 0) never moves: fillers are the scale's anchors.
 	EloGhost int32 `gorm:"not null;default:1000"`
+	// Battles and Wins count the rated fights against this ghost and the ones
+	// it won (S14).
+	Battles int32 `gorm:"not null;default:0"`
+	Wins    int32 `gorm:"not null;default:0"`
 }
+
+// GhostFillerCoach is the CoachID of the server-made filler ghosts (S14): no
+// real coach owns them.
+const GhostFillerCoach uint = 0
+
+// GhostRating is a coach's own rating on the ghost ladder — moved by the fights
+// it plays against ghosts, apart from the live 1v1 Strength (S14).
+type GhostRating struct {
+	CoachID uint  `gorm:"primaryKey;autoIncrement:false"`
+	Elo     int32 `gorm:"not null;index"`
+	Fights  int32 `gorm:"not null"`
+	Wins    int32 `gorm:"not null"`
+}
+
+// TableName pins the table name.
+func (GhostRating) TableName() string { return "ghost_ratings" }
+
+// GhostEloStart is the rating of a coach or ghost that has not fought yet.
+const GhostEloStart int32 = 1000
 
 // TableName pins the table name.
 func (GhostTeam) TableName() string { return "ghost_teams" }

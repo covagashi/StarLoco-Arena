@@ -17,6 +17,8 @@ extends "res://test/world_smoke.gd"
 ## Then as `test2`: Retar lists that ghost; Combatir → 60014 → the fight view
 ## on the ghost; test2 passes its turns, the AI plays the ghost (its casts are
 ## counted); the fight ends (8300) and the result screen comes up.
+## S14: back in the lobby, Clasificación ranks test2 (60016 → 60017), and
+## Retar shows the twelve arena (filler) ghosts and "Rival automático".
 
 const ID_FILE := "user://ghost_smoke_id.txt"
 const GHOST_NAME := "Fantasma smoke"
@@ -170,6 +172,28 @@ func _challenge() -> void:
 	await _shot("ghost-result")
 	_record(0, "ends", over, "the fight against the ghost ends with a result screen")
 	_record(0, "ghost plays", _ghost_casts > 0, "%d spells cast by the ghost's fighters" % _ghost_casts)
+	if not over:
+		return
+	# S14: back in the lobby, the ladder ranks test2 and lists the fillers
+	fv._close_fight_result()
+	await _wait(func(): return current_scene != null \
+		and current_scene.scene_file_path.ends_with("main.tscn"), 10.0)
+	_main = current_scene
+	await create_timer(1.0).timeout
+	var lp = await _panel("ghost.tab_ladder")
+	await _wait(func(): return lp != null and _main._gui.gui.model.get_value("ghosts.ladder") != null, 3.0)
+	await create_timer(0.4).timeout
+	var l: Dictionary = _main._gui.gui.model.get_value("ghosts.ladder")
+	var me_listed: bool = l.get("rows", []).any(func(r): return r.mine and str(r.name) == "test2")
+	_record(0, "ladder", int(l.get("fights", 0)) >= 1 and int(l.get("rank", 0)) >= 1 and me_listed,
+		"60017: Elo %s, rank %s, %s fights; test2 listed: %s" % [l.get("elo"), l.get("rank"),
+			l.get("fights"), me_listed])
+	await _shot("ghost-ladder")
+	var fp = await _panel("ghost.tab_fight")
+	var fillers: Array = _main._gui.gui.model.get_value("ghosts.list").filter(func(g): return str(g.owner) == "")
+	_record(0, "fillers", fillers.size() == 12 and fp.find_child("GhostAuto", true, false) != null,
+		"%d arena ghosts to fight, and 'Rival automático'" % fillers.size())
+	await _shot("ghost-fillers")
 
 
 func _count_casts(op: int, raw: PackedByteArray) -> void:

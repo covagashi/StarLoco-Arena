@@ -1185,5 +1185,12 @@
   "gambit.target.nearest_enemy": "l'ennemi le plus proche",
   "gambit.target.weakest_enemy": "l'ennemi le plus faible",
   "gambit.target.weakest_ally": "l'allié le plus blessé",
-  "gambit.target.self": "soi-même"
+  "gambit.target.self": "soi-même",
+  "ghost.tab_ladder": "Classement",
+  "ghost.auto": "Adversaire auto",
+  "ghost.filler_owner": "L'arène",
+  "ghost.loading": "Chargement…",
+  "ghost.my_rating": "Votre Elo : {elo} · rang {rank} · {wins} victoires en {fights} combats",
+  "ghost.ladder_hint": "Combattre des fantômes change cet Elo, pas celui du 1 contre 1. Les fantômes de l'arène ne changent jamais le leur. Aucune carte n'est gagnée.",
+  "ghost.col_record": "Victoires / combats"
 }

@@ -8,7 +8,9 @@ log, server-internal, no wire change), and **phase 3's server half** (S12,
 2026-10-23): `ghost_teams`/`ghost_fights`, Godot-only opcodes 60010–60014
 (admin only), the arena drawn from the seed, and a recorded ghost fight that
 replays to the same decision-log hash (`TestGhostFightReplaysWithItsSeed`).
-The client panel and rule editor are S13; ladder and rewards S14.
+Phase 4 (S13): the Ghosts panel and rule editor in the Godot client, open to
+every coach. Phase 5 (S14): 12 server-made filler ghosts, matchmaking by
+rating, the `ghost_ratings` Elo ladder (60016/60017), no card rewards, no decay.
 
 ## Problem
 

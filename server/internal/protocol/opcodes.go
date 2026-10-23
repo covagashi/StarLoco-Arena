@@ -606,8 +606,12 @@ const (
 	OpGhostResult      = 60011 // S2C: [u8 action 1 save|2 fight|3 delete][u8 code][i64 id]
 	OpGhostListRequest = 60012 // C2S: empty
 	OpGhostList        = 60013 // S2C: [u16 n]{[i64 id][str name][str owner][u8 fighters][i32 elo][u8 mine]}
-	OpGhostFight       = 60014 // C2S: [i64 ghostId][i64 replayOfFightId, 0 = a fresh fight]
+	OpGhostFight       = 60014 // C2S: [i64 ghostId, 0 = matchmake][i64 replayOfFightId, 0 = a fresh fight]
 	OpGhostDelete      = 60015 // C2S: [i64 ghostId] — the caller's own
+	// Ghost ladder (S14): [i32 elo][i32 rank, 0 = unranked][i32 fights][i32 wins]
+	// [u16 n]{[str coach][i32 elo][i32 fights][i32 wins][u8 me]}
+	OpGhostLadderRequest = 60016 // C2S: empty
+	OpGhostLadder        = 60017 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

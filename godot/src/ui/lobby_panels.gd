@@ -656,7 +656,10 @@ func _ghosts() -> void:
 	if not draft.has("ghost_asked"):
 		draft["ghost_asked"] = true
 		send("nativeGhostList")
-	tabs(body, [I18n.t("ghost.tab_fight"), I18n.t("ghost.tab_mine"), I18n.t("ghost.tab_new")])
+	tabs(body, [I18n.t("ghost.tab_fight"), I18n.t("ghost.tab_mine"), I18n.t("ghost.tab_new"),
+		I18n.t("ghost.tab_ladder")], func(i):
+			if i == 3:
+				send("nativeGhostLadder"))
 	var status := str(data("ghosts.status", ""))
 	if status != "":
 		label(body, status).name = "GhostStatus"
@@ -668,6 +671,8 @@ func _ghosts() -> void:
 				if (tab == 1) == bool(g.get("mine", false)):
 					var it: Dictionary = g.duplicate()
 					it["size"] = str(g.get("fighters", 0))
+					if str(g.get("owner", "")) == "":
+						it["owner"] = I18n.t("ghost.filler_owner")   # S14 filler
 					items.append(it)
 			label(body, I18n.t("ghost.fight_hint") if tab == 0 else I18n.t("ghost.mine_hint",
 				{"n": items.size()}))
@@ -680,6 +685,10 @@ func _ghosts() -> void:
 				button(bar, I18n.t("ghost.fight"), func():
 					closed.emit()
 					send("nativeGhostFight", [int(selected.id)]), picked).name = "GhostFight"
+				# S14: the server picks the ghost nearest our rating
+				button(bar, I18n.t("ghost.auto"), func():
+					closed.emit()
+					send("nativeGhostFight", [0])).name = "GhostAuto"
 			else:
 				button(bar, I18n.t("ghost.delete"), func():
 					confirm_action(I18n.t("ghost.delete_confirm"), func():
@@ -687,6 +696,32 @@ func _ghosts() -> void:
 			button(bar, I18n.t("ghost.refresh"), func(): send("nativeGhostList"))
 		2:
 			_ghost_new()
+		3:
+			_ghost_ladder()
+
+
+## S14: the ghost ladder — our rating, place and record, then the top 50.
+## main pushes `ghosts.ladder` = {elo, rank, fights, wins, rows: [...]}.
+func _ghost_ladder() -> void:
+	var l: Dictionary = data("ghosts.ladder", {})
+	if l.is_empty():
+		label(body, I18n.t("ghost.loading"))
+		return
+	var rank := int(l.get("rank", 0))
+	label(body, I18n.t("ghost.my_rating", {"elo": l.get("elo", 1000),
+		"rank": rank if rank > 0 else "—", "fights": l.get("fights", 0),
+		"wins": l.get("wins", 0)}), 18).name = "GhostMine"
+	label(body, I18n.t("ghost.ladder_hint"))
+	var rows := []
+	var pos := 0
+	for r in l.get("rows", []):
+		pos += 1
+		var it: Dictionary = r.duplicate()
+		it["pos"] = str(pos)
+		it["record"] = "%d / %d" % [int(r.wins), int(r.fights)]
+		rows.append(it)
+	table(body, ["#", I18n.t("ghost.col_owner"), I18n.t("ghost.col_elo"),
+		I18n.t("ghost.col_record")], ["pos", "name", "elo", "record"], rows)
 
 
 func _ghost_new() -> void:

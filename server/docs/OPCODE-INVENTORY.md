@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 353 |
-| **C2S handled (H)** | 118 |
-| **S2C emitted (E)** | 158 |
+| Rows in the master table | 355 |
+| **C2S handled (H)** | 119 |
+| **S2C emitted (E)** | 159 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -540,8 +540,10 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60011 | S2C | E | Godot extension (no retail class) | ghost result - `[u8 action 1 save|2 fight|3 delete][u8 code][i64 id]`; codes 0 ok, 1 not allowed, 2 bad roster, 3 bad rules, 4 not found, 5 busy, 6 limit, 7 bad name |
 | 60012 | C2S | H | Godot extension (no retail class) | `handleGhostList` - empty; answered by 60013 |
 | 60013 | S2C | E | Godot extension (no retail class) | ghost list - `[u16 n] n×{[i64 id][u8 len][utf8 name][u8 len][utf8 owner][u8 fighters][i32 elo][u8 mine]}`, newest 50 |
-| 60014 | C2S | H | Godot extension (no retail class) | `handleGhostFight` - `[i64 ghostId][i64 replayOfFightId]`: a practice fight of the titular line-up against the ghost (8000…); with a recorded `ghost_fights` id it reuses that fight's seed and arena, so it plays the same fight again |
+| 60014 | C2S | H | Godot extension (no retail class) | `handleGhostFight` - `[i64 ghostId, 0 = the ghost nearest the caller's rating (S14)][i64 replayOfFightId]`: a practice fight of the titular line-up against the ghost (8000…); with a recorded `ghost_fights` id it reuses that fight's seed and arena, so it plays the same fight again |
 | 60015 | C2S | H | Godot extension (no retail class) | `handleGhostDelete` (S13) - `[i64 ghostId]`: deletes one of the caller's own ghosts (60011 action 3); the fights recorded against it stay |
+| 60016 | C2S | H | Godot extension (no retail class) | `handleGhostLadder` (S14) - empty; answered by 60017 |
+| 60017 | S2C | E | Godot extension (no retail class) | ghost ladder - `[i32 elo][i32 rank, 0 = unranked][i32 fights][i32 wins][u16 n] n×{[u8 len][utf8 coach][i32 elo][i32 fights][i32 wins][u8 me]}`, top 50 by `ghost_ratings.elo` |
 
 ---
 

@@ -1185,5 +1185,12 @@
   "gambit.target.nearest_enemy": "nearest enemy",
   "gambit.target.weakest_enemy": "weakest enemy",
   "gambit.target.weakest_ally": "weakest ally",
-  "gambit.target.self": "self"
+  "gambit.target.self": "self",
+  "ghost.tab_ladder": "Ladder",
+  "ghost.auto": "Auto opponent",
+  "ghost.filler_owner": "The arena",
+  "ghost.loading": "Loading…",
+  "ghost.my_rating": "Your Elo: {elo} · rank {rank} · {wins} wins in {fights} fights",
+  "ghost.ladder_hint": "Fighting ghosts moves this Elo, not the 1v1 one. The arena's ghosts never change theirs. No cards are won.",
+  "ghost.col_record": "Wins / fights"
 }

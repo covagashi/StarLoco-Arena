@@ -46,6 +46,8 @@ const OP_GHOST_LIST_REQ := 60012       # C2S empty
 const OP_GHOST_LIST := 60013           # S2C [u16 n]{i64 id, str name, str owner, u8 n, i32 elo, u8 mine}
 const OP_GHOST_FIGHT := 60014          # C2S [i64 ghost][i64 replayOf]
 const OP_GHOST_DELETE := 60015         # C2S [i64 ghost]
+const OP_GHOST_LADDER_REQ := 60016     # C2S empty
+const OP_GHOST_LADDER := 60017         # S2C [i32 elo][i32 rank][i32 fights][i32 wins][u16 n]{str, i32×3, u8}
 const OP_COACH_CREATE_REQ := 2048
 const OP_COACH_CREATE := 2049
 const OP_COACH_CREATION_RESULT := 2050
@@ -780,6 +782,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					"owner": payload.get_str("u8", "utf8"), "fighters": payload.get_u8(),
 					"elo": payload.get_i32(), "mine": payload.get_u8() == 1})
 			_gui.gui.model.set_value("ghosts", list, "list")
+		OP_GHOST_LADDER:
+			var l := {"elo": payload.get_i32(), "rank": payload.get_i32(),
+				"fights": payload.get_i32(), "wins": payload.get_i32(), "rows": []}
+			for i in payload.get_u16():
+				l.rows.append({"name": payload.get_str("u8", "utf8"), "elo": payload.get_i32(),
+					"fights": payload.get_i32(), "wins": payload.get_i32(),
+					"mine": payload.get_u8() == 1})
+			_gui.gui.model.set_value("ghosts", l, "ladder")
 		OP_GHOST_RESULT:
 			var action := payload.get_u8()
 			var code := payload.get_u8()
@@ -5071,6 +5081,9 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeGhostList":
 			Session.send(OP_GHOST_LIST_REQ, PackedByteArray(), 3)
+			return
+		"nativeGhostLadder":
+			Session.send(OP_GHOST_LADDER_REQ, PackedByteArray(), 3)
 			return
 		"nativeGhostSave":
 			_ghost_save(str(args[0]), args[1])

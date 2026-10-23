@@ -23,7 +23,8 @@ import (
 // from the seed, not from the global rand, so the same seed, arena and inputs
 // give the same fight (the decision-log hash proves it).
 //
-// Open to every coach since S13. Practice fights: no ladder, no rewards (S14).
+// Open to every coach since S13. Practice fights; the ghost ladder and the
+// fillers are ghost_ladder.go (S14).
 
 // ghostCoachID is the synthetic coach owning every ghost side in a fight, far
 // above any real coach id like the other synthetic ones (isSyntheticCoach).
@@ -66,6 +67,7 @@ func registerGhostHandlers(r *Router, _ *Deps) {
 	r.Register(protocol.OpGhostListRequest, handleGhostList)
 	r.Register(protocol.OpGhostFight, handleGhostFight)
 	r.Register(protocol.OpGhostDelete, handleGhostDelete)
+	r.Register(protocol.OpGhostLadderRequest, handleGhostLadder)
 }
 
 // handleGhostDelete (60015) deletes one of the caller's own ghosts. The fights
@@ -250,15 +252,19 @@ func handleGhostList(s *Session, _ *protocol.C2SFrame) error {
 	if !s.ghostAllowed() {
 		return s.sendGhostResult(ghostActionFight, ghostNotAllowed, 0)
 	}
+	s.deps.ensureFillerGhosts()
 	list, err := s.deps.Store.Ghosts.List(50)
 	if err != nil {
 		return err
 	}
 	w := protocol.NewWriter().U16(uint16(len(list)))
 	for _, g := range list {
-		owner := "?"
-		if c, err := s.deps.Store.Coaches.Get(g.CoachID); err == nil && c != nil {
-			owner = c.Name
+		owner := "" // a filler: the client names it
+		if g.CoachID != domain.GhostFillerCoach {
+			owner = "?"
+			if c, err := s.deps.Store.Coaches.Get(g.CoachID); err == nil && c != nil {
+				owner = c.Name
+			}
 		}
 		n := 0
 		if full, err := s.deps.Store.Ghosts.Get(g.ID); err == nil {
@@ -298,6 +304,19 @@ func handleGhostFight(s *Session, frame *protocol.C2SFrame) error {
 	replayOf, _ := r.I64()
 	if s.deps.Fights.ByCoach(s.Coach.ID) != nil {
 		return s.sendGhostResult(ghostActionFight, ghostBusy, uint(gid))
+	}
+	if gid == 0 && replayOf == 0 {
+		// "Rival automático" (S14): the ghost nearest our rating
+		s.deps.ensureFillerGhosts()
+		me, err := s.deps.Store.Ghosts.Rating(s.Coach.ID)
+		if err != nil {
+			return err
+		}
+		pick := s.deps.pickGhostFor(s.Coach.ID, me.Elo)
+		if pick == nil {
+			return s.sendGhostResult(ghostActionFight, ghostNotFound, 0)
+		}
+		gid = int64(pick.ID)
 	}
 	g, err := s.deps.Store.Ghosts.Get(uint(gid))
 	if err != nil || g == nil {
@@ -439,4 +458,7 @@ func (d *Deps) recordGhostFight(f *Fight, winnerTeam int8) {
 	d.Log.Info("ghost fight recorded", "id", rec.ID, "ghost", rec.GhostID,
 		"seed", rec.Seed, "arena", rec.ArenaID, "winner", rec.WinnerTeam,
 		"rounds", rec.Rounds, "hash", rec.DecisionHash[:12])
+	if rec.ReplayOf == 0 {
+		d.rateGhostFight(rec.GhostID, rec.CoachID, rec.WinnerTeam)
+	}
 }

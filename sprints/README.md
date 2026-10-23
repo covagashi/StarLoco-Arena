@@ -83,8 +83,8 @@ Linux y Windows).
 | [S11](./S11-replays-spectator.md) | M3 | M | 🟡 a la espera del dueño (elegir reel) | Replays (grabar y reproducir), espectador desde la UI, reels |
 | [S12](./S12-async-pvp-server.md) | M4 | M | 🟢 cerrado | Async PvP fase 3: `ghost_teams` y opcodes |
 | [S13](./S13-async-pvp-client.md) | M4 | L | 🟢 cerrado (falta el visto bueno) | Async PvP fase 4: panel de ghosts y editor de reglas |
-| [S14](./S14-async-pvp-ladder.md) | M4 | M | 🟡 siguiente | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |
-| [S15](./S15-client-packaging.md) | M5 | L | ⚪ esbozo | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
+| [S14](./S14-async-pvp-ladder.md) | M4 | M | 🟢 cerrado (recompensas y decaimiento, a decidir) | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |
+| [S15](./S15-client-packaging.md) | M5 | L | 🟡 siguiente | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
 | [S16](./S16-release-1.0.md) | M5 | M | ⚪ esbozo | Release pública 1.0: pipeline, instancia segura, docs, legal |
 
 Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · ⏸ en pausa · 🟢 cerrado.
@@ -104,7 +104,7 @@ afectado trabaja con la opción marcada como *por defecto*.
 | Servicios del hall (Card Master, Zaap…): ¿entradas en el lobby o revivir el hall caminable? | S05 | entradas en el lobby |
 | Replays: ¿grabar/reproducir como el retail, o solo espectador en vivo? | S11 | grabar y reproducir (tomada en S11 por heurística, 2026-10-23: el dueño pidió reels) |
 | X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo (aplicado en S08; se reabre si el dueño dice) |
-| Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas |
+| Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas, sin decaimiento (aplicado en S14) |
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |
 | ¿JS en el portal web? | S16 | sin JS |
 | ¿Seguir publicando `data-dist/` y `client/decompiled/`? | S16 | sin cambios |

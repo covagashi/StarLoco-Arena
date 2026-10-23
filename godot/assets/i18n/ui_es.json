@@ -1185,5 +1185,12 @@
   "gambit.target.nearest_enemy": "al rival más cercano",
   "gambit.target.weakest_enemy": "al rival más débil",
   "gambit.target.weakest_ally": "al aliado más herido",
-  "gambit.target.self": "a sí mismo"
+  "gambit.target.self": "a sí mismo",
+  "ghost.tab_ladder": "Clasificación",
+  "ghost.auto": "Rival automático",
+  "ghost.filler_owner": "La arena",
+  "ghost.loading": "Cargando…",
+  "ghost.my_rating": "Tu Elo: {elo} · puesto {rank} · {wins} victorias en {fights} combates",
+  "ghost.ladder_hint": "Combatir a fantasmas mueve este Elo, no el del 1 contra 1. Los fantasmas de la arena nunca cambian el suyo. No se ganan cartas.",
+  "ghost.col_record": "Victorias / combates"
 }

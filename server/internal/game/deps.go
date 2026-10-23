@@ -2,6 +2,7 @@ package game
 
 import (
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
@@ -10,6 +11,8 @@ import (
 
 // Deps is the dependency container every handler closure captures.
 type Deps struct {
+	// fillerOnce seeds the filler ghosts on the first ghost request (S14).
+	fillerOnce sync.Once
 	// Rules are the server-invented numbers (XP, standing, social caps). Zero
 	// value means "use DefaultRules" - see rules.go.
 	Rules Rules
