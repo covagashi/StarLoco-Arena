@@ -917,6 +917,7 @@ func (d *Deps) checkFightEnd(f *Fight) {
 	}
 	d.recordFightStatistics(f, fightOutcome{winnerTeam: winnerTeam, preForce: preForce,
 		gaveUp: f.gaveUp, deaths: deaths, wounds: f.woundsByCoach, serious: f.seriousByCoach})
+	d.recordGhostFight(f, int8(winnerTeam))
 
 	// `standingWon` is a single scalar in 8300, so each coach must receive its
 	// own frame when the awards differ (they do: a win pays more than a loss).

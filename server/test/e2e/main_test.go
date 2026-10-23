@@ -24,7 +24,9 @@ import (
 // through a turn nobody ends still gets control back inside its budget.
 func TestMain(m *testing.M) {
 	restore := game.SetTurnClockForTest(12 * time.Second)
+	restoreAI := game.SetAITurnClockForTest(200 * time.Millisecond)
 	code := m.Run()
+	restoreAI()
 	restore()
 	os.Exit(code)
 }

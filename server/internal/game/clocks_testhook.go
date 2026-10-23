@@ -23,3 +23,13 @@ func SetTurnClockForTest(d time.Duration) (restore func()) {
 	turnClock = d
 	return func() { turnClock = prev }
 }
+
+// SetAITurnClockForTest shortens how long an AI turn lingers. The e2e package
+// sets it once in TestMain (it is a package global, like the turn clock): an
+// AI-vs-AI ghost fight runs ~90 turns, which at the production 1.2 s made
+// that one test take three minutes.
+func SetAITurnClockForTest(d time.Duration) (restore func()) {
+	prev := aiTurnClock
+	aiTurnClock = d
+	return func() { aiTurnClock = prev }
+}

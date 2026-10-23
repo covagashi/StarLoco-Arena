@@ -406,6 +406,9 @@ type Fight struct {
 	// server-side — it is never written to any frame, because a client that knew
 	// it could foresee its own crits and fumbles.
 	seed int64
+	// ghost is set on a fight against a ghost team (ghost.go): it records the
+	// fight's seed and outcome when it ends.
+	ghost *ghostFightInfo
 	// decisions is the per-turn decision log: one row per action a fighter takes
 	// (see fightlog.go). Capped at maxFightDecisions. turnActions counts the
 	// actions the CURRENT turn's fighter has taken so a turn that ends without

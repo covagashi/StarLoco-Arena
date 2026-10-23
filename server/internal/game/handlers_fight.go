@@ -71,6 +71,13 @@ func (d *Deps) startFight(pm *pendingMatch) error {
 // I/O and pre-marked ready in every phase gate, so a single real coach's ready
 // still advances the fight. When practice is true the fight is unranked.
 func (d *Deps) startFightWithTeams(a *arena, teamA, teamB *FightTeam, practice bool, challengeID int32, evolution bool) error {
+	return d.startFightWithTeamsSeeded(a, teamA, teamB, practice, challengeID, evolution, nil)
+}
+
+// startFightWithTeamsSeeded is startFightWithTeams with a hook that runs on the
+// new Fight before it is registered — where a ghost fight sets its seed (which
+// Create would otherwise draw) and its ghost record (ghost.go).
+func (d *Deps) startFightWithTeamsSeeded(a *arena, teamA, teamB *FightTeam, practice bool, challengeID int32, evolution bool, setup func(*Fight)) error {
 	f := &Fight{
 		arena:        a,
 		Practice:     practice,
@@ -94,6 +101,9 @@ func (d *Deps) startFightWithTeams(a *arena, teamA, teamB *FightTeam, practice b
 		}
 	}
 	f.Timeline = buildTimeline(f)
+	if setup != nil {
+		setup(f)
+	}
 	f.startActor()
 	d.Fights.Create(f)
 

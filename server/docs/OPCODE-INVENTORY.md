@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 347 |
-| **C2S handled (H)** | 114 |
-| **S2C emitted (E)** | 156 |
+| Rows in the master table | 352 |
+| **C2S handled (H)** | 117 |
+| **S2C emitted (E)** | 158 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -536,6 +536,11 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 28650 | S2C | E | TournamentTree (IL) | `encodeTournamentTree` - `[i32 page][i32 n]{[i32 slot][i32 len][utf8 name]}[i32 unread]`. A 1-indexed binary heap: 1 winner, 2-3 finale, 4-7 semi, 8-15 quarter, 16-31 first round (`ah_1.getFieldValue`). Names are **UTF-8**, not cp1252. Upper rounds stay empty until a match layer decides them |
 | 60000 | C2S | H | Godot extension (no retail class) | `handleClientConfigRequest` - empty request; the Godot client asks once after auth to learn the portal's `web_base_url` for its built-in bug reporter. Retail never sends it |
 | 60001 | S2C | E | Godot extension (no retail class) | answer to 60000 - `[u8 n] n×{[u8 keyLen][key][u16 valueLen][value]}`; today only `web_base_url` (from `web.public_url` or the bound listener). Key/value so new settings need no new opcode |
+| 60010 | C2S | H | Godot extension (no retail class) | `handleGhostSave` (S12, admin only) - `[u8 len][utf8 name][u8 n] n×{[u8 rosterIndex][u16 len][gambit rules JSON]}`: snapshots the titular line-up as a ghost team (`ghost_teams`), ids zeroed, rules checked by `parseGambitRules`; max 3 per coach |
+| 60011 | S2C | E | Godot extension (no retail class) | ghost result - `[u8 action 1 save|2 fight][u8 code][i64 id]`; codes 0 ok, 1 not allowed, 2 bad roster, 3 bad rules, 4 not found, 5 busy, 6 limit, 7 bad name |
+| 60012 | C2S | H | Godot extension (no retail class) | `handleGhostList` (admin only) - empty; answered by 60013 |
+| 60013 | S2C | E | Godot extension (no retail class) | ghost list - `[u16 n] n×{[i64 id][u8 len][utf8 name][u8 len][utf8 owner][u8 fighters][i32 elo][u8 mine]}`, newest 50 |
+| 60014 | C2S | H | Godot extension (no retail class) | `handleGhostFight` (admin only) - `[i64 ghostId][i64 replayOfFightId]`: a practice fight of the titular line-up against the ghost (8000…); with a recorded `ghost_fights` id it reuses that fight's seed and arena, so it plays the same fight again |
 
 ---
 

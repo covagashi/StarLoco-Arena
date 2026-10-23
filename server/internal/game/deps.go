@@ -126,6 +126,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerTotemHandlers(r, d)
 	registerTeamUpHandlers(r, d)
 	registerClientConfigHandlers(r, d)
+	registerGhostHandlers(r, d)
 }
 
 // UseGameData copies a loaded bundle into the container. cmd/server and the e2e

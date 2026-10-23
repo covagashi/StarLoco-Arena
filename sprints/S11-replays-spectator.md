@@ -1,6 +1,6 @@
 # S11 — Replays y espectador
 
-**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-23 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟡 abierto
+**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-23 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟢 terminado (falta que el dueño elija la variante de reel)
 
 ## Objetivo
 

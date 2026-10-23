@@ -82,6 +82,8 @@ func baselineModels() []any {
 		&domain.Tournament{},
 		&domain.TournamentRegistration{},
 		&domain.BugReport{},
+		&domain.GhostTeam{},
+		&domain.GhostFight{},
 	}
 }
 
@@ -216,6 +218,23 @@ var migrations = []migration{
 		Name:    "tournament_creator",
 		Up: func(tx *gorm.DB) error {
 			return tx.AutoMigrate(&domain.Tournament{})
+		},
+	},
+	{
+		// Async PvP ghost teams (S12): the frozen line-up and its rules.
+		Version: 13,
+		Name:    "ghost_teams",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.GhostTeam{})
+		},
+	},
+	{
+		// The fights played against them, with the seed and arena that replay
+		// each one (S12).
+		Version: 14,
+		Name:    "ghost_fights",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.GhostFight{})
 		},
 	},
 }
