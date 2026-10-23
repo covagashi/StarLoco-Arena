@@ -1134,5 +1134,6 @@
   "replay.off": "L'enregistrement des replays est désactivé dans Options → Combat.",
   "replay.err_file": "Ce replay est illisible.",
   "opt.save_replays": "Enregistrer les replays de mes combats",
-  "social.watch": "Voir le combat"
+  "social.watch": "Voir le combat",
+  "replay.reel.winner": "Victoire de"
 }

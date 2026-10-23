@@ -1134,5 +1134,6 @@
   "replay.off": "Guardar replays está desactivado en Opciones → Combate.",
   "replay.err_file": "Ese replay no se puede leer.",
   "opt.save_replays": "Guardar replays de mis combates",
-  "social.watch": "Ver combate"
+  "social.watch": "Ver combate",
+  "replay.reel.winner": "Gana"
 }

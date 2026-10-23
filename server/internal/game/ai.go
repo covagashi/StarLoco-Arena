@@ -116,15 +116,23 @@ func (f *Fight) runArchetypeTurn(ff *FightFighter) {
 // damage -> aggressive (or kite if very mobile); a debuff -> kite; a self-only
 // buff -> self-buff.
 func (f *Fight) classifyAI(ff *FightFighter) aiBehavior {
-	// No signature spell => blocker: walk in and use close combat. Note this is
-	// reached by any AI fighter whose SummonSpellID is 0, INCLUDING one that has a
-	// full Fighter.Spells loadout - the repertoire is never consulted from the
-	// blocker branch. Challenge demons therefore have a breed spell assigned for
-	// exactly this reason (challenge_fights.go pickBreedSpell).
-	if ff.SummonSpellID == 0 || f.deps == nil || f.deps.Spells == nil {
+	// No signature spell => blocker: walk in and use close combat. A server
+	// fighter carries its signature in SummonSpellID (challenge demons get a
+	// breed spell for it, challenge_fights.go pickBreedSpell). A PLAYER's fighter
+	// has none, so an AI-played one (its coach left, or /AUTOPILOT) reads its
+	// signature off its own loadout: the first spell that harms an enemy. Before
+	// S11 it stayed a blocker and only ever punched, whatever it had equipped.
+	if f.deps == nil || f.deps.Spells == nil {
 		return behaviorBlocker
 	}
-	sp := f.deps.Spells.Get(ff.SummonSpellID)
+	sig := ff.SummonSpellID
+	if sig == 0 {
+		sig = f.loadoutSignature(ff)
+	}
+	if sig == 0 {
+		return behaviorBlocker
+	}
+	sp := f.deps.Spells.Get(sig)
 	if sp == nil {
 		return behaviorBlocker
 	}
@@ -265,6 +273,20 @@ func (f *Fight) aiRepertoire(ff *FightFighter) []int32 {
 		}
 	}
 	return out
+}
+
+// loadoutSignature is the first spell of ff's own loadout that the AI would aim
+// at an opponent (aiSpellHarmsEnemy), or 0. See classifyAI.
+func (f *Fight) loadoutSignature(ff *FightFighter) int32 {
+	if ff == nil || ff.Fighter == nil {
+		return 0
+	}
+	for _, s := range ff.Fighter.Spells {
+		if sp := f.deps.Spells.Get(s.SpellID); sp != nil && aiSpellHarmsEnemy(sp) {
+			return s.SpellID
+		}
+	}
+	return 0
 }
 
 // aiSpellAPCost mirrors castSpellByFighter's cost rule so the AI budgets its AP

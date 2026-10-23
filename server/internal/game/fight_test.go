@@ -156,6 +156,30 @@ func TestIsAIControlled(t *testing.T) {
 	}
 }
 
+// TestAutopilotHandsFightersToTheAI: /AUTOPILOT (S11 reels) makes a coach's
+// fighters AI-played while its session stays attached — so the coach's client
+// still gets every frame — and turning it off gives them back.
+func TestAutopilotHandsFightersToTheAI(t *testing.T) {
+	f := buildTestFight()
+	m := f.Teams[0].Members[0]
+	m.Session = &Session{}
+	human := f.Teams[0].Fighters[0]
+	if f.isAIControlled(human) {
+		t.Fatal("a live coach's fighter starts human-played")
+	}
+	m.Autopilot = true
+	if !f.isAIControlled(human) {
+		t.Error("autopilot on: the AI plays the coach's fighter")
+	}
+	if m.Session == nil {
+		t.Error("autopilot must keep the session (the client still watches)")
+	}
+	m.Autopilot = false
+	if f.isAIControlled(human) {
+		t.Error("autopilot off: the coach plays again")
+	}
+}
+
 // TestCoachActionDeckNeverEmitsCardIDs locks the id NAMESPACE of the 8000 coach
 // deck blob. It used to carry `CoachCard.TemplateID`, which is wrong: the client
 // deserialises this blob with `new ajO(je_1.Wa(), 8)`, and `je_1`'s castable map

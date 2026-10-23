@@ -5,6 +5,7 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/store"
 	"strconv"
 	"strings"
+	"time"
 
 	"sync"
 
@@ -44,7 +45,7 @@ func handleGMCommand(s *Session, line string) error {
 
 	switch verb {
 	case "HELP":
-		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0] /TABLETURN n /GIVECARD coach cardId [qty]")
+		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0] /TABLETURN n /GIVECARD coach cardId [qty] /AUTOPILOT [on|off]")
 	case "ANNOUNCE":
 		if len(args) == 0 {
 			return s.gmFeedback("usage: /ANNOUNCE <message>")
@@ -74,6 +75,8 @@ func handleGMCommand(s *Session, line string) error {
 		return s.gmArenaPin(args)
 	case "TABLETURN":
 		return s.gmTableTurn(args)
+	case "AUTOPILOT":
+		return s.gmAutopilot(args)
 	case "STRENGTH":
 		if len(args) < 1 {
 			return s.gmFeedback("usage: /STRENGTH <n>")
@@ -538,6 +541,40 @@ func (s *Session) gmTableTurn(args []string) error {
 	}
 	f.Post(func(f *Fight) { f.tableTurn = int32(n) })
 	return s.gmFeedback(fmt.Sprintf("table turn set to %d", n))
+}
+
+// gmAutopilot is /AUTOPILOT [on|off] (no argument toggles): the server AI plays
+// the caller's fighters in its current fight, while the caller's client keeps
+// watching it as a coach. It exists for the S11 reels — a recorded AI-vs-AI
+// fight has both sides actually fighting, which a smoke that passes its turns
+// never shows. If one of the caller's fighters is mid-turn, the AI takes that
+// turn over at once instead of waiting out the human clock.
+func (s *Session) gmAutopilot(args []string) error {
+	f := s.deps.Fights.ByCoach(s.Coach.ID)
+	if f == nil {
+		return s.gmFeedback("not in a fight")
+	}
+	arg := strings.ToLower(firstArg(args))
+	if arg != "" && arg != "on" && arg != "off" {
+		return s.gmFeedback("usage: /AUTOPILOT [on|off]")
+	}
+	cid := s.Coach.ID
+	state := f.syncStr(2*time.Second, func(f *Fight) string {
+		m := f.memberOfCoach(cid)
+		if m == nil {
+			return "not in a fight"
+		}
+		m.Autopilot = arg == "on" || (arg == "" && !m.Autopilot)
+		if cur := f.currentFighter(); m.Autopilot && cur != nil && cur.CoachID == cid &&
+			f.Phase() == PhaseAction {
+			f.armClock(aiTurnClock, func(f *Fight) { f.runAITurn(cur) })
+		}
+		if m.Autopilot {
+			return "autopilot on"
+		}
+		return "autopilot off"
+	})
+	return s.gmFeedback(state)
 }
 
 func firstArg(args []string) string {

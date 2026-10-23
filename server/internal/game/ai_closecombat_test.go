@@ -119,3 +119,43 @@ func TestKiteAIDoesNotMelee(t *testing.T) {
 			caster.AP, closeCombatAP)
 	}
 }
+
+// TestPlayerFighterAICastsItsLoadout: a player's fighter has no SummonSpellID,
+// so an AI-played one (its coach left, or /AUTOPILOT) used to classify as a
+// blocker and only ever punch, whatever it had equipped. It now reads its
+// signature off its loadout — the first spell that harms an enemy — and casts.
+func TestPlayerFighterAICastsItsLoadout(t *testing.T) {
+	heal := &gamedata.Spell{ID: 601, AP: 2, RangeMin: 0, RangeMax: 0,
+		Effects: []gamedata.Effect{{ActionID: 108, EffectID: 6010, Params: []float32{10, 10}}}}
+	hit := &gamedata.Spell{ID: 602, AP: 3, RangeMin: 1, RangeMax: 6, CastMaxPerTurn: 1,
+		Effects: []gamedata.Effect{{ActionID: 5, EffectID: 6020, Params: []float32{30, 30}}}}
+	f, caster, enemy := aiMeleeFight(t)
+	f.deps.Spells = gamedata.NewSpells(heal, hit)
+	caster.SummonSpellID = 0
+	caster.Fighter.Spells = []domain.FighterSpell{{SpellID: 601}, {SpellID: 602}}
+	caster.AP, caster.MaxAP = 6, 6
+	caster.MP, caster.MaxMP = 0, 0
+	enemy.HP, enemy.MaxHP = 500, 500
+
+	if got := f.loadoutSignature(caster); got != 602 {
+		t.Fatalf("loadoutSignature = %d, want 602 (the heal is skipped)", got)
+	}
+	if got := f.classifyAI(caster); got != behaviorAggressive {
+		t.Fatalf("classifyAI = %d, want aggressive", got)
+	}
+	f.Timeline = []*FightFighter{caster, enemy}
+	f.turnIndex = 0
+	f.runAITurn(caster)
+	if caster.AP > 6-3 {
+		t.Errorf("AP = %d: the loadout spell (3 AP) was never cast", caster.AP)
+	}
+	if enemy.HP >= 500 {
+		t.Errorf("enemy HP = %d, want < 500", enemy.HP)
+	}
+
+	// No harmful spell at all: still a blocker, as before.
+	caster.Fighter.Spells = []domain.FighterSpell{{SpellID: 601}}
+	if got := f.classifyAI(caster); got != behaviorBlocker {
+		t.Errorf("heal-only loadout: classifyAI = %d, want blocker", got)
+	}
+}

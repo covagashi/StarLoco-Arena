@@ -183,6 +183,10 @@ type FightMember struct {
 	// turn_penalty.go.
 	idle     time.Duration
 	turnMode int
+	// Autopilot hands this coach's fighters to the server AI while its session
+	// stays attached and keeps receiving every frame — the dev-only /AUTOPILOT
+	// (handlers_gm.go), for AI-vs-AI fights a client can record (S11 reels).
+	Autopilot bool
 }
 
 // FightTeam is one side of a fight.
@@ -701,7 +705,7 @@ func (f *Fight) isAIControlled(ff *FightFighter) bool {
 	// leave a synthetic coach's fighters waiting forever for input that never
 	// comes).
 	if m := t.MemberFor(ff.CoachID); m != nil {
-		return m.Session == nil
+		return m.Session == nil || m.Autopilot
 	}
 	// No member owns it (a summon whose owner already left, or a fighter built
 	// without an owner): fall back to the side having nobody connected at all.

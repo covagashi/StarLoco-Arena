@@ -1134,5 +1134,6 @@
   "replay.off": "Saving replays is off in Options → Fight.",
   "replay.err_file": "That replay can't be read.",
   "opt.save_replays": "Save replays of my fights",
-  "social.watch": "Watch fight"
+  "social.watch": "Watch fight",
+  "replay.reel.winner": "Winner"
 }

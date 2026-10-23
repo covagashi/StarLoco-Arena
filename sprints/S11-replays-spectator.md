@@ -101,8 +101,42 @@ opcodes**: son las clases de acción internas del cliente (`vu_0`, `act`,
 
 ## D. Reels
 
-- [ ] `tools/reel/`: replay → vídeo 9:16 (Godot `--write-movie` + ffmpeg).
-- [ ] Una primera tanda de clips para que el dueño elija.
+- [x] `/AUTOPILOT [on|off]` (GM, admin): la IA del servidor juega los
+      luchadores del coach que lo pide; su sesión sigue enganchada y recibe
+      todos los frames. Así un cliente graba un combate IA contra IA.
+- [x] La IA de un luchador de jugador **lanza sus hechizos**. `classifyAI`
+      solo leía `SummonSpellID`, que un luchador de jugador no tiene, así que
+      quedaba como "bloqueador" y solo pegaba cuerpo a cuerpo (el propio
+      comentario lo daba por sabido). Ahora la firma es el primer hechizo
+      ofensivo de su equipo. También juegan mejor los coaches que se caen a
+      mitad de combate.
+      Medido (desafío 34, arena 36, IA contra IA): antes, 0 hechizos en
+      18 rondas; ahora, 12 hechizos, 4 golpes y 2 muertes en 6 rondas.
+- [x] `tools/reel/record.gd`: login, `/ARENA`, desafío, colocación,
+      `/AUTOPILOT on`; graba en `--out`.
+- [x] `tools/reel/render.gd` + `make_reel.sh`: replay → mp4 vertical
+      (540×960 → 1080×1920 sin suavizado, 30 fps): portada, cámara sobre el
+      que actúa, cámara lenta en cada muerte, cartel del ganador. Sin
+      botones ni chat.
+- [ ] Una primera tanda de clips para que el dueño elija: **hecha, falta
+      que elija.** `~/codigo/capturas/s11/reel-retail.mp4` y
+      `reel-1bit.mp4`: el mismo combate (desafío 34, arena 36, IA contra IA),
+      22 s, 1080×1920.
+
+**Notas del bloque D:**
+
+- El movie maker de Godot graba al tamaño de ventana del proyecto leído al
+  arrancar. Ni `--resolution` ni un cambio de tamaño desde el script lo
+  mueven (salía a 1280×720 estirado), así que `make_reel.sh` pone el
+  tamaño vertical con un `override.cfg` temporal y lo borra al salir.
+- `_initialize` de un `-s` corre antes de que `root` procese los `_ready`
+  (`fight_view` aún sin HUD). El renderizador arranca diferido.
+- Los luchadores salen como siluetas oscuras **también en vivo**
+  (`fight_smoke`): así pinta hoy el cliente sus sprites. No es cosa del
+  replay.
+- Los reels llevan el arte del retail (Ankama). Publicarlos es decisión del
+  dueño.
+- Con xvfb y llvmpipe, un reel de 22 s tarda alrededor de 1 min.
 
 ## Criterio de cierre
 
