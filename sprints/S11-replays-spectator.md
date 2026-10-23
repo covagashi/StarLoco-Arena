@@ -16,6 +16,16 @@ espectador en vivo? Por defecto: grabar y reproducir los combates propios. Para
 el marketing de S04 (clips de combates en 1 bit) los replays son muy útiles:
 permiten volver a renderizar un combate con otro estilo.
 
+## Para retomar (2026-10-23)
+
+S10 se cerró en la sesión anterior y S11 quedó como siguiente, sin abrir. La
+investigación previa (cómo grababa el retail sus replays, el modo observador
+y si `fight_view.gd` se puede alimentar con un flujo grabado sin socket) se
+cortó por el límite de uso. Lo único que llegó a ver: hay ficheros de replay
+de ejemplo reales en el repo. Hay que empezar por ahí. Las decisiones se
+toman por heurística y se anotan en el sprint (ver la memoria
+"autonomous-sprints").
+
 ## Tareas candidatas
 
 - [ ] Formato de replay: ¿el del retail (su carpeta `replays/`) o uno propio a
