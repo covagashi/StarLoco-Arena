@@ -159,7 +159,13 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 		if not eff.is_empty() and mimg != null:
 			_apply_tints(img, mimg, eff)
 		if st == 3:
-			_apply_lineart(img)
+			# Line art is GDScript per pixel: ~80 ms for a whole action, a
+			# visible hitch each time a fighter does something new (S04). So
+			# each frame is converted the first time it is drawn (~3 ms) —
+			# see _realize — and the cost spreads over the animation.
+			_frames.append({"tex": null, "img": img, "off": Vector2(fr.ox, fr.oy),
+				"w": int(fr.w), "h": int(fr.h), "foot": int(fr.h) - 1})
+			continue
 		elif st == 4:
 			_apply_duotone(img, team_color if team_color.a > 0.0 else Color(0.5, 0.5, 0.5))
 		elif st > 0:
@@ -167,22 +173,10 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 				team_color if st >= 2 and team_color.a > 0.0 else Color.BLACK)
 		var w := int(fr.w)
 		var h := int(fr.h)
-		# lowest row containing visible pixels — the authored PNG bottom can
-		# carry a transparent margin that lifts the feet off the ground.
-		var foot := h - 1
-		for y in range(h - 1, -1, -1):
-			var found := false
-			for x in w:
-				if img.get_pixel(x, y).a > 0.15:
-					found = true
-					break
-			if found:
-				foot = y
-				break
 		_frames.append({
 			"tex": ImageTexture.create_from_image(img),
 			"off": Vector2(fr.ox, fr.oy),
-			"w": w, "h": h, "foot": foot,
+			"w": w, "h": h, "foot": _foot_row(img, w, h),
 		})
 	_sfx = {}
 	for k in meta.get("sfx", {}):
@@ -255,8 +249,30 @@ func draw_on(ci: CanvasItem, world_pos: Vector2) -> void:
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+## The lowest row with visible pixels — the authored PNG bottom can carry a
+## transparent margin that lifts the feet off the ground.
+static func _foot_row(img: Image, w: int, h: int) -> int:
+	for y in range(h - 1, -1, -1):
+		for x in w:
+			if img.get_pixel(x, y).a > 0.15:
+				return y
+	return h - 1
+
+
+## A line-art frame left unconverted by load_action: convert it now, once
+## (the frame dict is shared through _cache, so every sprite gains).
+static func _realize(fr: Dictionary) -> void:
+	var img: Image = fr.img
+	_apply_lineart(img)
+	fr.foot = _foot_row(img, int(fr.w), int(fr.h))
+	fr.tex = ImageTexture.create_from_image(img)
+	fr.erase("img")
+
+
 func _draw_frame(ci: CanvasItem, at: Vector2) -> void:
 	var fr: Dictionary = _frames[_cur]
+	if fr.tex == null:
+		_realize(fr)
 	var pos: Vector2 = at + fr.off
 	if foot_pivot:
 		# pin the feet (lowest visible row), centered, to the node origin
