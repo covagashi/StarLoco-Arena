@@ -85,6 +85,31 @@ El dueño: "sigue con los sprints". Orden por lo que desbloquea:
   - Evidencia: `TestPracticeLaunchIsNeverStory`; en vivo, `native_lobby`
     28 PASS y el log `challenge=34 … story=false`.
 
+### Bloque C — anims en atlas (2026-10-24)
+
+- `tools/asset-import/anm_pack.py <anims_root> [set…] [--check]` convierte
+  cada acción exportada en `atlas.png` (+ `atlas_m.png` con las máscaras de
+  tinte). Cada fotograma pasa a ser un rect `r` en el meta. Solo usa la
+  librería estándar, como el resto de `asset-import`.
+- `AnmSprite` lee los dos formatos, así que empaquetar es opcional.
+- **Medido** con tres conjuntos reales (luchador, coach con máscaras y PNJ):
+  - ficheros: 13.873 → 796;
+  - tamaño: 78 MB → 18 MB;
+  - tiempo: 6,7 s con `--check`, que compara cada fotograma recortado byte
+    a byte con el original.
+- **Evidencia:** `test/unit/anm_pack_test.gd` (las dos disposiciones dan
+  los mismos píxeles, offsets y tamaños, con y sin tintes); headless
+  429/0.
+- **Pendiente:** empaquetar el árbol entero cuando el generador lo incluya
+  como etapa.
+
+### El pie de las ventanas (2026-10-24)
+
+El dueño: "en la screen que veo, no se nota el footer del modal". Ahora todas
+las ventanas (`lobby_panel.gd`) tienen pie propio: una franja más oscura bajo
+una línea dorada, con los botones de acción y la pista de teclas. Captura
+`footer-historia.png`; `native_panels` 138 PASS.
+
 ### Por qué el build de macOS duplicaba los assets (2026-10-24)
 
 El `dist/macos/assets` antiguo tiene 648.471 ficheros frente a los 329.499

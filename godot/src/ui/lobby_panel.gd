@@ -74,9 +74,29 @@ func _ready() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 14)
 	scroll.add_child(body)
-	pinned_actions = row(column)
+	# The footer (S15, the owner: "no se nota el footer del modal"): its own
+	# darker band under a gold rule, holding the window's actions and the
+	# key hint, so they read apart from the content that scrolls above.
+	var footer := PanelContainer.new()
+	footer.name = "Footer"
+	var fs := StyleBoxFlat.new()
+	fs.bg_color = UiStyle.PAPER.darkened(0.35)
+	fs.border_color = UiStyle.RIM
+	fs.border_width_top = 2
+	fs.set_corner_radius_all(8)
+	fs.content_margin_left = 14
+	fs.content_margin_right = 14
+	fs.content_margin_top = 10
+	fs.content_margin_bottom = 8
+	footer.add_theme_stylebox_override("panel", fs)
+	column.add_child(footer)
+	var foot := VBoxContainer.new()
+	foot.add_theme_constant_override("separation", 6)
+	footer.add_child(foot)
+	pinned_actions = row(foot)
 	pinned_actions.hide()
-	label(column, I18n.t("panel.hint"), 13)
+	var hint := label(foot, I18n.t("panel.hint"), 13)
+	hint.add_theme_color_override("font_color", UiStyle.MUTED)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	model.changed.connect(_model_changed)

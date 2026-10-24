@@ -116,13 +116,32 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 	_time = 0.0
 	_fps = float(meta.get("fps", 25))
 	var dir := meta_path.get_base_dir()
+	# S15: a packed action keeps every frame in one atlas.png (+ atlas_m.png
+	# for the tint masks), each frame an `r` rect into it — see
+	# tools/asset-import/anm_pack.py. Loose f*.png frames still load.
+	var atlas: Image = null
+	var matlas: Image = null
+	if str(meta.get("atlas", "")) != "":
+		atlas = AssetPaths.load_image_at("%s/%s" % [dir, meta.atlas])
+		if atlas == null:
+			return false
+		if str(meta.get("mask_atlas", "")) != "" and not eff.is_empty():
+			matlas = AssetPaths.load_image_at("%s/%s" % [dir, meta.mask_atlas])
 	for fr in meta.get("frames", []):
-		var img := AssetPaths.load_image_at("%s/%s" % [dir, fr.png])
+		var img: Image = null
+		var mimg: Image = null
+		if atlas != null:
+			var r: Array = fr.get("r", [0, 0, 0, 0])
+			var rect := Rect2i(int(r[0]), int(r[1]), int(r[2]), int(r[3]))
+			img = atlas.get_region(rect)
+			if matlas != null and bool(fr.get("masked", false)):
+				mimg = matlas.get_region(rect)
+		else:
+			img = AssetPaths.load_image_at("%s/%s" % [dir, fr.png])
+			if img != null and fr.get("mask", "") != "" and not eff.is_empty():
+				mimg = AssetPaths.load_image_at("%s/%s" % [dir, fr.mask])
 		if img == null:
 			continue
-		var mimg: Image = null
-		if fr.get("mask", "") != "" and not eff.is_empty():
-			mimg = AssetPaths.load_image_at("%s/%s" % [dir, fr.mask])
 		if not eff.is_empty() and mimg != null:
 			_apply_tints(img, mimg, eff)
 		var w := int(fr.w)
