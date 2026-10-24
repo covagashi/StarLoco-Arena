@@ -26,6 +26,7 @@ const Spells := preload("res://src/gamedata/spells.gd")
 const Elements := preload("res://src/gamedata/elements.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const Features := preload("res://src/features.gd")
+const Story := preload("res://src/gamedata/story.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
@@ -49,6 +50,8 @@ const OP_GHOST_LIST := 60013           # S2C [u16 n]{i64 id, str name, str owner
 const OP_GHOST_FIGHT := 60014          # C2S [i64 ghost][i64 replayOf]
 const OP_GHOST_DELETE := 60015         # C2S [i64 ghost]
 const OP_GHOST_LADDER_REQ := 60016     # C2S empty
+const OP_STORY_REQUEST := 60020        # C2S empty (S21)
+const OP_STORY := 60021                # S2C [u16 n]{i32 challengeId} — the campaign challenges won
 const OP_GHOST_LADDER := 60017         # S2C [i32 elo][i32 rank][i32 fights][i32 wins][u16 n]{str, i32×3, u8}
 const OP_COACH_CREATE_REQ := 2048
 const OP_COACH_CREATE := 2049
@@ -793,6 +796,11 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					"owner": payload.get_str("u8", "utf8"), "fighters": payload.get_u8(),
 					"elo": payload.get_i32(), "mine": payload.get_u8() == 1})
 			_gui.gui.model.set_value("ghosts", list, "list")
+		OP_STORY:
+			_story_won = []
+			for i in payload.get_u16():
+				_story_won.append(int(payload.get_i32()))
+			_push_story_model()
 		OP_GHOST_LADDER:
 			var l := {"elo": payload.get_i32(), "rank": payload.get_i32(),
 				"fights": payload.get_i32(), "wins": payload.get_i32(), "rows": []}
@@ -5144,6 +5152,13 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 		"nativeOpen":
 			_gui.open(str(args[0]))
 			return
+		"nativeStoryPlay":
+			_story_play(int(args[0]))
+			return
+		"nativeStory":
+			_gui.close("teamManagementDialog")
+			_open_story()
+			return
 		"nativeLadderTab":
 			_ladder_tab = int(args[0])
 			_ladder_start = 0
@@ -5445,6 +5460,41 @@ func _set_searching(on: bool) -> void:
 		_lobby_screen.set_searching(on)
 
 
+## --- Historia (S21): the campaign panel ---------------------------------
+var _story_won: Array = []          # campaign challenge ids won (60021)
+var _story_intro_seen := {}         # challenge id -> its demon intro played
+
+
+func _open_story() -> void:
+	_push_story_model()
+	Session.send(OP_STORY_REQUEST, PackedByteArray(), 2)
+	_gui.open("storyDialog")
+
+
+func _push_story_model() -> void:
+	if _gui == null:
+		return
+	var titulars := 0
+	for fr in State.roster:
+		if int(fr.get("type", 2)) == 2 and int(fr.get("state", 0)) == 0:
+			titulars += 1
+	_gui.gui.model.set_value("story", {"won": _story_won.duplicate(), "titulars": titulars})
+
+
+## Jugar on a Historia challenge: its demon's intro the first time (as in the
+## lobby), Nilo's lessons before his (in _launch_challenge), then the fight.
+func _story_play(chal: int) -> void:
+	_gui.close("storyDialog")
+	var task := int(Story.INTROS.get(chal, 0))
+	if task != 0 and not _story_intro_seen.has(chal):
+		_story_intro_seen[chal] = true
+		var intro: Dictionary = Scenarios.script(task)
+		if not intro.get("pages", []).is_empty():
+			_talk_pages(NpcDialogs.challenge_name(chal), intro.pages, func(): _launch_challenge(chal, 99))
+			return
+	_launch_challenge(chal, 99)
+
+
 ## The hub cards' live lines (S20B): how many Story starters, the Elite
 ## teams with the one Ranking will field, and the tournament this coach can
 ## search now. Pushed whenever the roster, the presets or the tournament
@@ -5486,6 +5536,7 @@ func _push_hub_model() -> void:
 			tourn.label = I18n.t("hub.tourn.open", {"name": _tourn_name(tid)})
 	if str(tourn.label) == "" and first_name != "":
 		tourn.label = I18n.t("hub.tourn.shut", {"name": first_name})
+	_push_story_model()
 	_gui.gui.model.set_value("hub", {
 		"story": {"titulars": titulars, "bench": bench},
 		"ranked": {"teams": teams, "selected": _tm_preset_sel},
@@ -5500,6 +5551,7 @@ func _on_lobby_action(action: String) -> void:
 		"quick": _on_quick_search()
 		"evo": _on_evo_search()
 		# S20B hub cards
+		"story": _open_story()
 		"ghost":
 			if _searching:
 				_on_cancel_search()
@@ -5876,7 +5928,8 @@ func _open_breed_master(e: Dictionary) -> void:
 		choices.append({"label": I18n.t("talk.recruit"), "kind": "primary",
 			"do": func():
 				_talk_close()
-				_on_new_fighter_dialog([], null, false, breed)})
+				# a recruit joins Historia (S21: the campaign fields its starters)
+				_on_new_fighter_dialog([], null, true, breed)})
 	choices.append(_close_choice("btn.refuse"))
 	_talk_show(NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else "",
 		NpcDialogs.npc_name(fields[1]) if fields.size() > 1 else "", choices)

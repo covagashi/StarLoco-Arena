@@ -612,6 +612,11 @@ const (
 	// [u16 n]{[str coach][i32 elo][i32 fights][i32 wins][u8 me]}
 	OpGhostLadderRequest = 60016 // C2S: empty
 	OpGhostLadder        = 60017 // S2C
+
+	// Story (S21, game/story.go) — Godot only: which campaign challenges this
+	// coach has already won. [u16 n]{[i32 challengeId]}
+	OpStoryRequest = 60020 // C2S: empty
+	OpStory        = 60021 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

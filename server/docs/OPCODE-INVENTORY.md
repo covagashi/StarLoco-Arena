@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 355 |
-| **C2S handled (H)** | 119 |
-| **S2C emitted (E)** | 159 |
+| Rows in the master table | 357 |
+| **C2S handled (H)** | 120 |
+| **S2C emitted (E)** | 160 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -544,6 +544,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60015 | C2S | H | Godot extension (no retail class) | `handleGhostDelete` (S13) - `[i64 ghostId]`: deletes one of the caller's own ghosts (60011 action 3); the fights recorded against it stay |
 | 60016 | C2S | H | Godot extension (no retail class) | `handleGhostLadder` (S14) - empty; answered by 60017 |
 | 60017 | S2C | E | Godot extension (no retail class) | ghost ladder - `[i32 elo][i32 rank, 0 = unranked][i32 fights][i32 wins][u16 n] n×{[u8 len][utf8 coach][i32 elo][i32 fights][i32 wins][u8 me]}`, top 50 by `ghost_ratings.elo` |
+| 60020 | C2S | H | Godot extension (no retail class) | `handleStoryRequest` (S21) - empty; answered by 60021 |
+| 60021 | S2C | E | Godot extension (no retail class) | Historia - `[u16 n] n×{[i32 challengeId]}`, the campaign challenges (`storyChapters`) this coach has won (`statChallengeDoneBase + id`) |
 
 ---
 

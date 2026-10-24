@@ -304,6 +304,11 @@ type Fight struct {
 	// graveyard from real play. Only evolution fights persist deaths; ranked,
 	// practice and PvE-challenge fights never do. See persistEvolutionDeaths.
 	Evolution bool
+	// Story marks a campaign challenge fought for the first time (S21,
+	// story.go): it runs the evolution META pass — XP, fatigue, morale,
+	// wounds, death — while staying a challenge on the wire (its name, its
+	// reward cards). A replay of a won challenge is plain practice.
+	Story bool
 	// gaveUp and woundsByCoach feed the end-of-fight statistics (S19): the
 	// coaches that forfeited, and the wounds the post-fight roll dealt each.
 	gaveUp        map[uint]bool

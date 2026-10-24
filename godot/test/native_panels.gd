@@ -123,7 +123,7 @@ func exercise_controls() -> void:
 	# each keeps its retail game-mode id
 	var features: GDScript = load("res://src/features.gd")
 	var modes: Array = features.team_modes()
-	for entry in [["Élite", 1], ["2v2", 2], ["Torneos", 3], ["Leyendas", 4], ["Evolución", 0]]:
+	for entry in [["Élite", 1], ["2v2", 2], ["Torneos", 3], ["Leyendas", 4], ["Historia", 0]]:
 		var b = find_button(panel, entry[0])
 		if not modes.has(entry[1]):
 			check(b == null, "hidden tab %s is not shown" % entry[0])
@@ -151,7 +151,8 @@ func exercise_controls() -> void:
 	await create_timer(0.1).timeout
 	check(find_button(panel, "Equipamiento y hechizos") != null, "populated fighter selection exposes actions")
 	await shot("team-populated")
-	var fight_button := find_button(panel, "Buscar combate")
+	# S21: the Historia tab's footer opens the campaign (no evolution queue)
+	var fight_button: Button = panel.find_child("OpenStory", true, false) if main._tm_tab() == 0 else find_button(panel, "Buscar combate")
 	check(fight_button.get_global_rect().end.y <= panel.frame.get_global_rect().end.y, "populated team combat footer fits")
 	var original_size := root.size
 	root.size = Vector2i(1024, 768)

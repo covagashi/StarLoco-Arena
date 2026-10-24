@@ -305,7 +305,9 @@ func (d *Deps) runPostFightMeta(f *Fight, winnerTeam uint8) (
 //     challenges — "tu n'auras pas de fatigue ni de blessure ou de mort dans un
 //     défi du temps" — and challenge rewards are cards, granted elsewhere.
 func fightFeedsProgression(f *Fight) bool {
-	if f.Evolution {
+	// A first-time campaign challenge (Story, S21) is the exception to the
+	// challenge rule below: the owner made Evolution the story mode.
+	if f.Evolution || f.Story {
 		return true
 	}
 	return !f.Practice && f.ChallengeID == 0

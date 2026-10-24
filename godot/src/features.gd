@@ -11,6 +11,12 @@ const DUO := false
 ## the tournament picker.
 const LEGENDS := false
 
+## The Evolution PvP queue (23003): off since Historia is the campaign of PvE
+## challenges (S21). Hides "Buscar combate" on the Team panel's Historia tab;
+## the hub's Historia card opens the campaign. Tournaments of the evolution
+## kind still field the same team.
+const EVO_PVP := false
+
 
 ## The Team panel tabs that show, by retail game-mode id (0 evolution,
 ## 1 elite, 2 2v2, 3 tournaments, 4 legends).

@@ -129,6 +129,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerTotemHandlers(r, d)
 	registerTeamUpHandlers(r, d)
 	registerClientConfigHandlers(r, d)
+	registerStoryHandlers(r, d)
 	registerGhostHandlers(r, d)
 }
 

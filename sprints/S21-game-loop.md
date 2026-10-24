@@ -1,6 +1,6 @@
 # S21 — Un game-loop de hoy: lobby, modos y fin de combate
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** ⚪ esbozo · **Depende de:** S20
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** S20
 
 ## Origen
 
@@ -194,6 +194,53 @@ ni pagos):
 |---|---|
 | ¿Historia es la campaña PvE de desafíos y demonios, y se esconde la cola PvP de Evolución? | **sí** (dueño, 2026-10-24) |
 | ¿Qué entra en el game-loop moderno que el retail no tiene (misiones diarias, recompensa por primera victoria, temporadas)? | se apunta en el BACKLOG; un sprint aparte si el dueño lo quiere |
+
+## Resultado (en curso)
+
+### Bloque A — un solo fin de combate (2026-10-24)
+
+- **En el combate:** el modal de "Victoria" (que solo listaba cartas) pasa a
+  ser una palabra grande, VICTORIA o DERROTA, que entra con una animación
+  corta. "Continuar" o 2,5 s de tiempo real, que no se acelera en las
+  repeticiones a ×4, y vuelta al lobby.
+- **En el lobby:** el informe es el único sitio donde se cuenta el resultado.
+  El resultado en grande, lo que ganaste como tiles con el arte de la carta,
+  al lado tus luchadores (XP, moral, cansancio, estado), y la fuerza de cada
+  coach en una línea si hubo rival. Cabe en 720p sin scroll.
+- **Evidencia:** `report_smoke` 8/8; `run_tests.sh --visual` (captura
+  `/tmp/fight-result-ui.png`); `replay_lobby_smoke` (Continuar en una
+  repetición a ×4 vuelve al lobby). Capturas en `~/codigo/capturas/s21/`.
+
+### Bloque B — Historia, la campaña (2026-10-24)
+
+| Qué | Evidencia |
+|---|---|
+| **Servidor** (`server/internal/game/story.go`): tres capítulos, `{46, 29, 30, 31}`, `{34, 35, 36, 32, 33}` y `{45, 3, 13, 16, 14}`. La primera victoria de cada desafío lleva `Fight.Story`, que hace pasar el combate por la progresión de Evolución (XP, cansancio, moral, heridas, muerte) sin dejar de ser un desafío en el cable (su nombre, sus cartas). Repetir uno ganado es entrenamiento. Nuevo par Godot-only 60020 → 60021: los desafíos de la campaña ganados (el blob de criterios no lleva esa contabilidad a propósito) | `story_test.go`: primera vez Story y repetición práctica; una victoria Story suma XP; 60021 lista los ganados; la lista del cliente y la del servidor coinciden (`TestStoryChallengesMatchClient` lee `story.gd`). `OPCODE-INVENTORY.md` al día |
+| **Fallo encontrado:** los desafíos los peleaba cualquier titular, también los luchadores clásicos de Élite (estado 0 es el de todos). Con Story habrían ganado XP y cansancio que Élite no tiene. `storyRoster` usa solo titulares de Historia (o los titulares si aún no hay ninguno); `titularRoster` no cambia, porque fantasmas y torneos lo usan | `TestStoryRosterFieldsHistoriaStarters`; en vivo, el log del servidor (`story=true`, 1 informe) y solo la titular 15 sumó XP |
+| **Fallo encontrado:** "Reclutar un guerrero" de los maestros de clase creaba un luchador clásico de Élite. Ahora crea uno de Historia | `tutorial_smoke` 10/10 con una cuenta nueva |
+| **Cliente:** panel Historia (`storyDialog`). Capítulos con su progreso, cada desafío como ✓ ganado, ▶ siguiente o bloqueado ("gana antes el anterior"), qué está en juego ("Primera vez: tus titulares ganan experiencia… y pueden morir" / "Ya lo ganaste: repetirlo es entrenamiento"), y Jugar o Repetir. La intro del demonio la primera vez (36 → 113, 45 → 117) y las lecciones de Nilo antes del 46. La tarjeta Historia del hub y el pie de la pestaña Historia de Equipo lo abren | `story_smoke` 4/4: 14 filas (12 bloqueadas), siguiente "Tutorial de Nilo", un ganado dice Repetir, Jugar → lecciones → 26330 → 8000, Equipo sin "Buscar combate" |
+| **La cola PvP de Evolución, escondida** (`Features.EVO_PVP = false`). La pestaña "Evolución" de Equipo pasa a llamarse **Historia** | `native_panels` 138 PASS (el pie de Historia cabe), `modes_smoke`, `hub_smoke` |
+| Regresión | `go test ./...` y e2e en verde. `TestTutorialChainOverTheWire` esperaba solo la XP de los desafíos (6); ahora cada primera victoria suma la de Evolución (≥ 306, en vivo 393). `run_tests.sh --headless` 381/0 |
+
+**Base de pruebas:** la luchadora 5 de `test` pasa a Historia (segunda
+titular, como la 15). `report_smoke` pelea el desafío 14 ("aguanta 20
+rondas") con el equipo de Historia, y con una sola titular de nivel 0
+perdía. Se restauraron la XP de la 15 y la de la 2 y la 3, que había
+cobrado la primera pasada antes del arreglo.
+
+**Decisiones (delegadas):**
+
+- **Solo la primera victoria cuenta.** Así no se puede granjear XP con los
+  capítulos fáciles, porque los rivales de los desafíos tienen stats
+  planas.
+- **La campaña va en orden.** Dentro de un capítulo se juega en orden, y un
+  capítulo se abre al acabar el anterior.
+- **Ningún desafío de clase en la campaña.** Los 17–28 de los maestros
+  quedan como pruebas sueltas en Servicios.
+- Los desafíos que existen en los datos pero ningún sitio ofrece (6, 11,
+  12, 15 y los contrarreloj 37–44) quedan para un capítulo futuro.
+- **El abandono no tira muerte:** sigue siendo un combate de práctica en
+  ese aspecto.
 
 ## Criterio de cierre
 

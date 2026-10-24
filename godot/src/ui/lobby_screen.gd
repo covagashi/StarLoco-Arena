@@ -271,7 +271,8 @@ func _card_pressed(id: String, extra: bool) -> void:
 			elif int(hub.get("story", {}).get("titulars", 0)) <= 0:
 				_emit("team_story")
 			else:
-				_emit("evo")
+				# the campaign (S21); the evolution PvP queue only if switched on
+				_emit("evo" if Features.EVO_PVP else "story")
 		"ranked":
 			if extra:
 				_emit("ghost")

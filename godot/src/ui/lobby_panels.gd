@@ -9,6 +9,7 @@ const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const ReplayFile := preload("res://src/net/replay_file.gd")
 const GambitEditor := preload("res://src/ui/gambit_editor.gd")
 const Features := preload("res://src/features.gd")
+const Story := preload("res://src/gamedata/story.gd")
 ## Native presentations over the existing GuiModel and action handlers.
 ## No XML layout or protocol serialization lives in these panels.
 
@@ -29,6 +30,7 @@ const TITLES := {
 	"cityDialog": "panel.city",
 	"replayDialog": "panel.replays",
 	"ghostDialog": "panel.ghosts",
+	"storyDialog": "panel.story",
 }
 var _preview
 var _preview_look := ""
@@ -57,6 +59,7 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		"guildCoachStatsDialog": ["guildCoachStats"],
 		"cityDialog": ["city"],
 		"ghostDialog": ["ghosts"],
+		"storyDialog": ["story", "evolutionTeam", "teamManagement"],
 	}
 	if model_name.split(".")[0] in watched.get(panel_name, []):
 		schedule_refresh()
@@ -92,6 +95,63 @@ func refresh() -> void:
 		"cityDialog": _city()
 		"replayDialog": _replays()
 		"ghostDialog": _ghosts()
+		"storyDialog": _story()
+
+
+## Historia (S21): the campaign's chapters and their challenges, what is at
+## stake in each, and Jugar. Reads `story` {won:[ids], titulars}; answers
+## nativeStoryPlay [id] and nativeOpen ["teamManagementDialog"].
+func _story() -> void:
+	var st: Dictionary = data("story", {})
+	var won: Array = st.get("won", [])
+	var titulars := int(st.get("titulars", 0))
+	if not draft.has("pick"):
+		draft["pick"] = Story.next_challenge(won)
+	var pick := int(draft.get("pick", -1))
+	label(body, I18n.t("story.intro"), 17)
+	var split := row(body)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var left := column(split)
+	for i in Story.CHAPTERS.size():
+		var ch: Dictionary = Story.CHAPTERS[i]
+		var head := label(left, "%s  ·  %d/%d" % [I18n.t(str(ch.key)), Story.chapter_done(i, won),
+			ch.challenges.size()], 20)
+		head.add_theme_color_override("font_color", UiStyle.GOLD)
+		for c in ch.challenges:
+			var id := int(c)
+			var state := Story.status(id, won)
+			var mark: String = {"won": "✓", "next": "▶", "locked": "·"}[state]
+			var b := button(left, "%s  %s" % [mark, NpcDialogs.challenge_name(id)], func():
+				draft["pick"] = id
+				schedule_refresh(), state != "locked")
+			b.name = "Story%d" % id
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.toggle_mode = true
+			b.button_pressed = id == pick
+			if state == "locked":
+				b.tooltip_text = I18n.t("story.locked_tip")
+	var detail := column(split, false)
+	detail.custom_minimum_size.x = 380
+	if pick < 0:
+		label(detail, I18n.t("story.all_done"), 20)
+		return
+	var state := Story.status(pick, won)
+	label(detail, NpcDialogs.challenge_name(pick), 23).name = "StoryPick"
+	var stake := label(detail, I18n.t("story.stake_first") if state != "won" else I18n.t("story.stake_replay"))
+	stake.name = "Stake"
+	if state != "won":
+		stake.add_theme_color_override("font_color", UiStyle.GOLD)
+	label(detail, I18n.t("story.team", {"n": titulars}) if titulars > 0 else I18n.t("story.no_team"))
+	pinned_actions.show()
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pinned_actions.add_child(spacer)
+	button(pinned_actions, I18n.t("story.team_btn"), func(): send("nativeOpen", ["teamManagementDialog"]))
+	var play := button(pinned_actions, I18n.t("story.replay") if state == "won" else I18n.t("hub.play"),
+		func(): send("nativeStoryPlay", [pick]), titulars > 0 and state != "locked")
+	play.name = "StoryPlay"
+	play.custom_minimum_size.x = 190
+	UiStyle.primary(play, 20)
 
 
 func _menu() -> void:
@@ -199,8 +259,14 @@ func _team() -> void:
 		# preset its kind sends); the lobby bar shows it and cancels it
 		var fb := button(footer, I18n.t("team.find_tourn"), func(): send("nativeTournSearch", [tourn]), tourn >= 0)
 		fb.name = "FindTournament"
+	elif tab == 0:
+		# Historia (S21): the campaign, not the evolution PvP queue
+		if Features.EVO_PVP:
+			button(footer, I18n.t("team.find_fight"), func(): send("launchEvolutionFight"), true)
+		else:
+			button(footer, I18n.t("story.open"), func(): send("nativeStory")).name = "OpenStory"
 	else:
-		button(footer, I18n.t("team.find_fight"), func(): send("launchEvolutionFight" if tab == 0 else "setClassicReadyForFight"), true)
+		button(footer, I18n.t("team.find_fight"), func(): send("setClassicReadyForFight"), true)
 
 
 ## The Tournaments / Legends tabs' tournament: the editions we are entered in

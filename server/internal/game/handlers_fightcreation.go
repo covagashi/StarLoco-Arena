@@ -157,15 +157,19 @@ func (s *Session) startPvEChallenge(challengeID int32) error {
 	// exists, and silently hand the coach a single fighter against a whole demon
 	// team.)
 	fightArena := s.deps.pickArena()
-	roster := s.deps.titularRoster(s.Coach.ID, len(fightArena.team0))
+	roster := s.deps.storyRoster(s.Coach.ID, len(fightArena.team0))
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {
 		return refuseFightError(err, s)
 	}
 	teamB := s.deps.buildChallengeTeam(1, fightArena.startCells(1), challengeID, len(teamA.Fighters))
+	// Historia (S21): the first win of a campaign challenge counts like an
+	// evolution fight; once won, it is practice (no XP to farm, no death).
+	story := isStoryChallenge(challengeID) && !s.deps.challengeAlreadyDone(s.Coach.ID, challengeID)
 	s.log.Info("challenge fight", "coach", s.Coach.Name, "challenge", challengeID,
-		"opponents", len(teamB.Fighters), "opponent", teamB.Coach().Name)
-	return s.deps.startFightWithTeams(fightArena, teamA, teamB, true, challengeID, false)
+		"opponents", len(teamB.Fighters), "opponent", teamB.Coach().Name, "story", story)
+	return s.deps.startFightWithTeamsSeeded(fightArena, teamA, teamB, true, challengeID, false,
+		func(f *Fight) { f.Story = story })
 }
 
 // sendFightCreationError sends FIGHT_CREATION_ERROR (26310 nx_1):
@@ -341,6 +345,22 @@ func handleFightReadyConfirm(s *Session, f *protocol.C2SFrame) error {
 // (overworld challenges). Order is the store's, so it is stable across runs.
 // Returns nil when the coach has none, letting buildFightTeamFor fall back.
 func (d *Deps) titularRoster(coachID uint, max int) []int64 {
+	return d.titulars(coachID, max, false)
+}
+
+// storyRoster is titularRoster limited to Historia's starters (S21): a
+// classic Elite fighter is a titular too (state 0 is every fighter's
+// default) but has no evolution to bank, and a first-time story challenge
+// banks XP, fatigue and wounds. A coach with no Historia starter yet falls
+// back to its titulars, so a challenge never starts with nobody on the board.
+func (d *Deps) storyRoster(coachID uint, max int) []int64 {
+	if ids := d.titulars(coachID, max, true); len(ids) > 0 {
+		return ids
+	}
+	return d.titulars(coachID, max, false)
+}
+
+func (d *Deps) titulars(coachID uint, max int, evoOnly bool) []int64 {
 	// The caller's cap is arena seats, but the roster rules cap a fielded
 	// team at maxTeamMembers — a coach whose titular list grew past six
 	// (rewards, seeds) must not have every challenge launch refuse at
@@ -355,7 +375,7 @@ func (d *Deps) titularRoster(coachID uint, max int) []int64 {
 	ids := make([]int64, 0, max)
 	perBreed := map[uint8]int{}
 	for i := range fighters {
-		if fighters[i].State != domain.FighterStateTitular {
+		if fighters[i].State != domain.FighterStateTitular || (evoOnly && !fighters[i].Evolution) {
 			continue
 		}
 		if len(ids) >= max {

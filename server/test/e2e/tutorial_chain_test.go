@@ -82,7 +82,9 @@ func TestTutorialChainOverTheWire(t *testing.T) {
 	win(31)
 	expectAchievement(284, "challenge 31")
 
-	// Their XP: 1 (cap 1), +2 (cap 10), +3 (cap 15) for each fighter fielded.
+	// Their XP: the challenges' own 1 (cap 1), +2 (cap 10), +3 (cap 15) for
+	// each fighter fielded — and, since S21 (Historia), each FIRST win also
+	// runs the evolution META pass, worth at least the base 100 a fight.
 	fighters, _ := st.Fighters.ListByCoach(uint(coachID))
 	best := int32(0)
 	for _, fr := range fighters {
@@ -90,8 +92,8 @@ func TestTutorialChainOverTheWire(t *testing.T) {
 			best = fr.TotalXP
 		}
 	}
-	if best != 6 {
-		t.Errorf("best fighter XP after the chain = %d, want 6 (1+2+3)", best)
+	if best < 6+3*100 {
+		t.Errorf("best fighter XP after the chain = %d, want at least 306 (1+2+3 and three story wins)", best)
 	}
 
 	win(46)
