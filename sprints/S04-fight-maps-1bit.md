@@ -1,6 +1,6 @@
 # S04 — Mapas de pelea en 1 bit (dithering + capas de luz)
 
-**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** 🟢 terminado (2026-10-24) — falta el visto bueno del dueño: mapas de referencia, color retail · **Depende de:** S03 (render sin pantalla)
+**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** 🟢 terminado (2026-10-24) — falta el visto bueno del dueño: mapas de referencia del 1 bit · **Depende de:** S03 (render sin pantalla)
 
 ## Objetivo
 
@@ -215,7 +215,7 @@ estilos y con `./run_tests.sh` completo.
 - [x] `test/fight_ui_preview.tscn` también con el estilo 1 bit: el carril
       visual de `run_tests.sh` lo pasa en las dos resoluciones si el mapa 10
       está convertido (2026-10-17).
-- [x] ~~Luces de ambiente: efectos puntuales (crítico, hechizo), antorchas.~~ (ver 2026-10-24)
+- [x] Luces de ambiente: efectos puntuales en críticos y muertes; antorchas descartadas (ver 2026-10-24)
 - [x] Decodificar `contents/maps/light/<id>.jar` (2026-10-17):
       [`client/analysis/MAP-LIGHT.md`](../client/analysis/MAP-LIGHT.md). No
       son fuentes de luz sino **sombreado horneado por elemento** (clave
@@ -277,10 +277,11 @@ El dueño: "hay que terminar al 100 % los sprints".
   - **Ahora.** Cada fotograma se convierte la primera vez que se dibuja: la
     carga baja a 3,7 ms y cada fotograma, como mucho, a 6,2 ms. La imagen no
     cambia (la diferencia queda dentro del ruido entre pasadas).
-- **Luces de ambiente.** Probé un oscurecimiento breve con luz en el impacto
-  en críticos y muertes. **El dueño lo vio feo** ("muy oscuro y feo") y **se
-  quitó** (revert; está en `361e2198` por si alguna vez se quiere algo mucho
-  más suave). **Antorchas: descartadas.** Las luces dinámicas del retail
+- **Luces de ambiente.** En críticos y muertes, menos de un segundo de
+  oscuridad de puntos Bayer con un charco de luz en el impacto, que sigue a
+  la cámara (`onebit_flash.gd`). El dueño la quitó al ver la captura,
+  creyendo que era un estado fijo. Como animación le parece bien
+  (2026-10-24), así que se repuso. **Antorchas: descartadas.** Las luces dinámicas del retail
   solo las crean efectos y scripts Lua (`addGlobalLight`, `addPointLight`),
   y ninguno de los 675 Lua del cliente las usa. Además, en un mundo siempre
   de día no se verían.
@@ -299,10 +300,7 @@ El dueño: "hay que terminar al 100 % los sprints".
   - **Ahora.** `map_gfx.py` exporta `"c"` por sprite (624 181 de 975 501
     sprites en los 114 mapas) y `map_gfx.gd` lo aplica en el estilo retail;
     el 1 bit no lo usa.
-  - **Para el dueño.** Algunas arenas cambian mucho: la 10 se vuelve rojiza
-    (lava y árboles secos), la 77 oscura, la 52 azul. Tiene pinta de
-    ambientes hechos a propósito con los mismos decorados. Capturas
-    `color-retail-*` en `~/codigo/capturas/s04/`. **Falta que el dueño
-    confirme** que así se veían en el retail. Si no, se quita con una línea
-    (`retail_colour`).
+  - **Visto bueno del dueño (2026-10-24):** "el retail se ve muy bien".
+    Algunas arenas cambian mucho de ambiente (la 10 rojiza, la 77 oscura,
+    la 52 azul). Capturas `color-retail-*` en `~/codigo/capturas/s04/`.
 - **Siguen siendo del dueño:** los mapas de referencia y el visto bueno final.
