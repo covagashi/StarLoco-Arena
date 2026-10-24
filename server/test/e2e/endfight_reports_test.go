@@ -84,8 +84,10 @@ func assertEndFightReportsAreRosterIDs(t *testing.T, st *store.Store, payload []
 
 // TestEndFightReportsResolveInTheRecipientsRoster is the end-to-end guard for
 // B-096. It needs a fight that actually produces debriefs, which means real
-// roster fighters (progression skips placeholder fighters with id 0) and a
-// RANKED fight (fightFeedsProgression excludes practice and challenge bouts).
+// roster fighters (progression skips placeholder fighters with id 0) and an
+// EVOLUTION fight between two coaches: since S21 only Evolution and Historia
+// fights bank per-fighter reports (a ranked Elite fight leaves its fighters
+// as they were), so this pairs two coaches through the evolution search.
 func TestEndFightReportsResolveInTheRecipientsRoster(t *testing.T) {
 	t.Parallel()
 	if raceEnabled {
@@ -93,9 +95,26 @@ func TestEndFightReportsResolveInTheRecipientsRoster(t *testing.T) {
 	}
 	st, addr := testServerWithStore(t)
 
-	a, b := matchIntoFight(t, addr, func(c *testclient.Client, coachID int64) {
-		createFighter(t, c, st, uint(coachID), "Debrief", 8)
-	})
+	a, aID := dialLogin(t, addr, "c1", "Combatant1")
+	reachWorld(t, a)
+	b, bID := dialLogin(t, addr, "c2", "Combatant2")
+	reachWorld(t, b)
+	giveTitulars(t, st.Fighters, aID, "Debrief A")
+	giveTitulars(t, st.Fighters, bID, "Debrief B")
+	a.DrainReceived(150 * time.Millisecond)
+	b.DrainReceived(150 * time.Millisecond)
+	_ = a.Send(2, opEvoSearchRequest, evoSearchPayload(aID))
+	if _, _, err := a.WaitFor(opEvoSearchResult, testclient.DefaultTimeout); err != nil {
+		t.Fatalf("A: no 23004: %v", err)
+	}
+	_ = b.Send(2, opEvoSearchRequest, evoSearchPayload(bID))
+	for _, c := range []*testclient.Client{a, b} {
+		if _, _, err := c.WaitFor(testclient.OpCreateFight, testclient.DefaultTimeout); err != nil {
+			t.Fatalf("no CREATE_FIGHT from the evolution pairing: %v", err)
+		}
+	}
+	a.DrainReceived(150 * time.Millisecond)
+	b.DrainReceived(150 * time.Millisecond)
 	readyGate(a, b, testclient.OpReadyForPlacement)
 	readyGate(a, b, testclient.OpReadyForObservation)
 	_ = a.Send(3, testclient.OpReadyForAction, nil)

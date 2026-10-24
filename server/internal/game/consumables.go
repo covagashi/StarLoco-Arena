@@ -51,6 +51,14 @@ func (s *Session) useConsumableOnFighter(fighter *domain.Fighter, cardID int32) 
 		s.log.Debug("use item: card is not consumable", "coach", s.Coach.Name, "card", cardID)
 		return nil
 	}
+	// S21 (no pay-to-win): potions, balms and blessings are Historia's — an
+	// Elite fighter is "everyone at the same level", so nothing bought or
+	// dropped may lift it (retail sold these in its card packs).
+	if !fighter.IsEvolution() {
+		s.log.Info("use item refused: not a Historia fighter", "coach", s.Coach.Name,
+			"fighter", fighter.ID, "card", cardID)
+		return nil
+	}
 
 	// Work on a copy of the mutable fields so a refused application leaves the
 	// fighter untouched.

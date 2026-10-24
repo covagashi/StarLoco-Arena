@@ -157,3 +157,30 @@ func TestStoryRosterFieldsHistoriaStarters(t *testing.T) {
 		t.Errorf("titularRoster %v, want both titulars (ghosts and tournaments keep using it)", got)
 	}
 }
+
+// TestRankedFightLeavesFighters (S21, no pay-to-win): a ranked Elite fight
+// banks no XP, fatigue or wounds on the fighters — Elite is everyone at the
+// same level — but the coach still earns its reputation.
+func TestRankedFightLeavesFighters(t *testing.T) {
+	d, coachID, fr := tutorialDeps(t)
+	before := xpOf(t, d, fr.ID)
+	f := buildTestFight()
+	f.Teams[0].Coach().ID = coachID
+	f.Teams[0].Fighters[0].Fighter = fr
+	f.Teams[0].Fighters[0].CoachID = coachID
+	f.Practice = false
+	f.setPhase(PhaseAction)
+	d.Fights.Create(f)
+	for _, ff := range f.allFighters() {
+		if ff.TeamID == 1 {
+			ff.HP = 0
+		}
+	}
+	d.checkFightEnd(f)
+	if after := xpOf(t, d, fr.ID); after != before {
+		t.Errorf("TotalXP %d → %d after a ranked win, want unchanged", before, after)
+	}
+	if f.Teams[0].Coach().Standing <= 0 {
+		t.Errorf("coach standing = %d after a ranked win, want the fight's reputation", f.Teams[0].Coach().Standing)
+	}
+}

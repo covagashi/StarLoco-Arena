@@ -260,6 +260,77 @@ cobrado la primera pasada antes del arreglo.
 - **Evidencia:** `test/help_smoke.gd` 5/5; `tutorial_smoke` 10/10 (Primeros
   pasos); `native_panels` 138 PASS; headless 381/0.
 
+### Bloque D — el mapa del pay-to-win y lo que se arregló (2026-10-24)
+
+**Lo que vendía el retail por dinero** (los textos del propio juego):
+
+- `content.59.80`: «La plus courante, est grâce aux boufteurs que tu peux
+  récupérer sur le site en échange de quelques ogrines».
+- `content.59.11`: «des boufteurs (que tu achètes grâce aux ogrines sur le
+  site web du jeu)».
+- `content.59.54`: para curar una herida «il n'existe qu'une solution :
+  Utiliser une kard de soin … dans les boufteurs que tu peux acheter contre
+  quelques ogrines».
+- `content.29.306`: en los sobres hay pociones de resurrección.
+- `content.42.19`: el Ticket MasterCoach, «uniquement dans les boufteurs
+  MasterCoach».
+- El cliente enlazaba a `dofus-arena.com/<lang>/kards-boufteurs`.
+
+Es decir, **se vendían curas, resurrecciones y tickets**: justo lo que decide
+los combates de Evolución. Y por un fallo (abajo), también los de Élite.
+
+**De dónde sale el poder hoy, y si pesa en Ranking:**
+
+| Fuente | En combate | En Ranking |
+|---|---|---|
+| Equipo de luchador (tipo 250, 75 cartas) | PV, PA, PM, alcance, pasivas | **No es p2w**: Élite ofrece todas las cartas del tipo sin mirar la colección (`spheres.go:166`); solo limita el presupuesto de 6000 (600 por raza + valor del equipo; los hechizos no cuentan) |
+| Esferas del Kanodo (XP) | efectos y hechizos extra | Solo Historia… salvo que un luchador de Historia entre en un equipo de Élite o en un fantasma (abajo) |
+| Condiciones / bendiciones (consumibles AI 15) | efectos todo el combate | **Era p2w**: se podían aplicar a luchadores de Élite. **Arreglado** |
+| Heridas y muerte, curas y resurrecciones (tipo 24) | stats perdidas, luchador fuera | **Era p2w**: los combates de Ranking pasaban por la progresión de Evolución (B-188). **Arreglado** |
+| Bonus de set del equipo del coach (XP, moral, heridas y muerte propias **y del rival**) | meta | **Era p2w** por la misma vía. **Arreglado** (ya no hay progresión de luchadores en Ranking) |
+| Drops tras ganar | cartas | Se podían **granjear** contra el muñeco de entrenamiento, los fantasmas y los desafíos repetidos. **Arreglado** |
+| Fuerza ±25 fija por combate | clasificación | Premia el volumen de partidas, no el nivel del rival. **Pendiente** (abajo) |
+| Cartas "Combat" (tipo 26), fusión | — | sin efecto en combate |
+
+**Arreglado en este bloque** (decisiones delegadas: aplican la regla del
+dueño, "nada que cambie un combate se gana con dinero ni con horas"):
+
+| Arreglo | Evidencia |
+|---|---|
+| **B-188: Élite deja de tocar a los luchadores.** Solo los combates de Evolución y de Historia pasan por XP, cansancio, moral, heridas y muerte (`postfight_apply.go`). La reputación del coach sigue en todos los modos. Es lo que decía el retail de Élite: «todos parten del mismo nivel… sin XP ni muertes» | `TestRankedFightLeavesFighters`; sin el arreglo: `TotalXP 0 → 150 after a ranked win`. El e2e de B-096 pasa a emparejar por Evolución para seguir teniendo informes |
+| **Consumibles solo en luchadores de Historia** (`consumables.go`) | `TestConsumableRefusedOnEliteFighter` (la poción no cura y no se gasta) |
+| **Sin drops en práctica**: muñeco, fantasmas y desafíos repetidos. La primera victoria de Historia sí roba (`fightPaysDrops`) | `TestFightPaysDrops` |
+
+**Pendiente, con propuesta:**
+
+- **Fantasmas con luchadores de Historia.** El fantasma se congela de
+  `titularRoster`, que mezcla titulares de Élite y de Historia (con sus
+  esferas). Propuesta: que el fantasma salga del **equipo de Élite**
+  elegido. Toca el editor de S13, así que va en S22 con los paneles.
+- **Equipos de Élite con luchadores de Historia.** El panel no lo deja
+  (solo lista clásicos), pero el servidor no lo rechaza. Propuesta:
+  rechazarlo en `validateRoster` para los combates de Ranking.
+- **Fuerza ±25 fija.** Propuesta: Elo (como ya usan los fantasmas, K = 32),
+  para que ganar a alguien más fuerte valga más. Cambia la escala de la
+  clasificación. **Decide el dueño.**
+
+**Catálogo de cosméticos** (lo que puede venderse o darse como recompensa
+porque no toca el combate):
+
+| Qué | Hoy | Falta para venderlo |
+|---|---|---|
+| Fuegos artificiales (tipo 25, 30 cartas) | se lanzan en el cielo del lobby | el servidor **no comprueba que tengas la carta ni la gasta** |
+| Emotes (tipo 1, 10 cartas) | tabla fija | comprobar propiedad |
+| Títulos (tipo 28, 12 cartas) | sin implementar (3212) | implementarlos |
+| Colores (tipo 29, 23 cartas) | quitados en S07 | solo como recompensa de temporada (dueño, 2026-10-21) |
+| Iconos y fondos de equipo | existen en el preset | arte propio |
+| Aspecto del coach (sombrero, tatuaje, peinado…) | **no es puro**: lleva bonus de set | separar aspecto y bonus |
+| Dorsos y marcos de carta | no existen | arte |
+
+**Regla para una tienda futura:** solo tipos 1, 25, 28 y las cosas de arte
+propio. Nunca tipo 24 (curas, resurrecciones, runas, pociones de XP), equipo
+ni tickets. Pagos, proveedor y legal, en S16.
+
 ## Criterio de cierre
 
 Desde el lobby, cada modo tiene una sola entrada y dice qué es; el mapa del

@@ -13,6 +13,24 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-188 · Ranked Elite fights banked XP, wounds and deaths on Elite fighters
+
+- **Symptom:** after a ranked (Combattre) win or loss, the Elite fighters
+  gained XP and fatigue, rolled wounds and could die; the coach's set
+  bonuses also raised the rival's wound and death chances. A bigger card
+  collection and more hours decided ranked games (S21, the pay-to-win map).
+- **Root cause:** `fightFeedsProgression` ran the META pass for every fight
+  that was neither practice nor a challenge, and `runPostFightMeta` applied
+  the per-fighter part to all of them. The retail Elite mode is "everyone
+  at the same level… no XP, no deaths" (`content.59.46`).
+- **Fix:** the per-fighter part runs only for Evolution and Historia
+  (`f.Evolution || f.Story`); the coach's reputation still counts in every
+  mode. Consumables refuse non-Historia fighters; practice pays no drop.
+- **Verified:** `unit` — `TestRankedFightLeavesFighters` (before the fix:
+  TotalXP 0 → 150), `TestConsumableRefusedOnEliteFighter`,
+  `TestFightPaysDrops`; `e2e` — B-096's report test now pairs through the
+  evolution search.
+
 ### B-187 · The Godot client read every achievement criterion swapped (id ↔ value)
 
 - **Symptom:** Aldebrán's intro (S10) played on every login, not just the

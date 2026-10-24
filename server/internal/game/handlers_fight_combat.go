@@ -893,7 +893,7 @@ func (d *Deps) checkFightEnd(f *Fight) {
 			// coach, bucketed at its evolution level, with the map's and the
 			// equipment's drop-chance modifiers. Runs on every win, challenge
 			// or not: the pet i18n says drops apply "dans tous les modes de jeu".
-			if won && !isSyntheticCoach(mem.Coach.ID) {
+			if won && !isSyntheticCoach(mem.Coach.ID) && fightPaysDrops(f) {
 				if dropped := d.rollFightDrops(f, mem.Coach, mem.Session); len(dropped) > 0 {
 					wonCardsByCoach[mem.Coach.ID] = append(wonCardsByCoach[mem.Coach.ID], dropped...)
 				}
@@ -1142,4 +1142,12 @@ func (d *Deps) awardTournamentPrize(tid int64, coachID uint, sess *Session) {
 	if err := sess.pushInventory(fresh); err != nil {
 		d.Log.Warn("push inventory after tournament prize", "coach", coachID, "err", err)
 	}
+}
+
+
+// fightPaysDrops (S21): no drop draw in practice — the training dummy, ghosts
+// and a replayed challenge paid a card per win, so cards could be farmed with
+// no opponent at all. A first-time Historia win still draws.
+func fightPaysDrops(f *Fight) bool {
+	return !f.Practice || f.Story
 }

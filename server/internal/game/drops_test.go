@@ -127,3 +127,23 @@ func TestRollFightDropsNilSafe(t *testing.T) {
 		t.Fatalf("bare deps rollFightDrops = %v, want nil", got)
 	}
 }
+
+// TestFightPaysDrops (S21): practice pays no drop — no farming the dummy,
+// ghosts or a replayed challenge — but a ranked win and a first-time
+// Historia win do.
+func TestFightPaysDrops(t *testing.T) {
+	for _, c := range []struct {
+		f    *Fight
+		want bool
+		what string
+	}{
+		{&Fight{Practice: false}, true, "ranked"},
+		{&Fight{Practice: true}, false, "training dummy / ghost"},
+		{&Fight{Practice: true, ChallengeID: 29}, false, "replayed challenge"},
+		{&Fight{Practice: true, ChallengeID: 29, Story: true}, true, "first-time Historia"},
+	} {
+		if got := fightPaysDrops(c.f); got != c.want {
+			t.Errorf("%s: fightPaysDrops = %v, want %v", c.what, got, c.want)
+		}
+	}
+}

@@ -58,7 +58,7 @@ func consumableHarness(t *testing.T) (*Session, *domain.Fighter, *store.Store) {
 	}
 
 	f := &domain.Fighter{CoachID: coach.ID, BreedID: 8, Name: "Patient",
-		State: domain.FighterStateTitular, Budget: 600,
+		State: domain.FighterStateTitular, Evolution: true, Budget: 600,
 		Tiredness: 80, Morale: 30, XP: 100, TotalXP: 100}
 	if err := st.Fighters.Create(f); err != nil {
 		t.Fatalf("create fighter: %v", err)
@@ -218,5 +218,24 @@ func TestConsumableRefusedForOtherCoach(t *testing.T) {
 	got, _ := st.Fighters.Get(f.ID)
 	if !got.HasCondition(1) {
 		t.Error("another coach healed a fighter that is not theirs")
+	}
+}
+
+// TestConsumableRefusedOnEliteFighter (S21, no pay-to-win): an Elite fighter
+// is "everyone at the same level"; a potion on it does nothing and is kept.
+func TestConsumableRefusedOnEliteFighter(t *testing.T) {
+	SeedResurrectRand(3)
+	s, f, st := consumableHarness(t)
+	f.Evolution = false
+	if err := st.DB().Model(f).Update("evolution", false).Error; err != nil {
+		t.Fatal(err)
+	}
+	useItemOn(t, s, f.ID, 320)
+	got, _ := st.Fighters.Get(f.ID)
+	if !got.HasCondition(1) {
+		t.Error("a potion healed an Elite fighter")
+	}
+	if n := cardCount(t, st, s.Coach.ID, 320); n != 3 {
+		t.Errorf("card count = %d, want 3 (none spent)", n)
 	}
 }

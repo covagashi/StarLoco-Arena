@@ -144,6 +144,15 @@ func (d *Deps) runPostFightMeta(f *Fight, winnerTeam uint8) (
 				if ff == nil || ff.Fighter == nil || ff.Fighter.ID == 0 {
 					continue // summons and synthetic fighters have no persistent row
 				}
+				// S21 (no pay-to-win): only Evolution and Historia fights touch
+				// the FIGHTERS. Elite is "everyone at the same level" (retail
+				// content.59.46): a ranked fight used to bank XP, fatigue,
+				// wounds and deaths on Elite fighters too — and the coach's set
+				// bonuses against the rival — so a bigger collection decided
+				// ranked games. The coach's reputation below still counts.
+				if !f.Evolution && !f.Story {
+					continue
+				}
 				fr := ff.Fighter
 				rep := &postFightReport{won: won}
 				hours := hoursSince(fr.LastFightAt, now)
