@@ -1,6 +1,6 @@
 # S22 — Los paneles, con un toque moderno
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** S20, S21 (qué paneles sobreviven)
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟢 cerrado (2026-10-24) · **Depende de:** S20, S21 (qué paneles sobreviven)
 
 ## Origen
 
@@ -57,7 +57,7 @@ retratos, iconos) puede ir **a color y grande**.
 - [ ] Accesibilidad: tamaño mínimo de texto y de botones, contraste, todo
       alcanzable con teclado y mando (la Ally es un mando).
 
-## Resultado (en curso)
+## Resultado
 
 ### Bloque A — 2026-10-24
 
@@ -146,6 +146,34 @@ retratos, iconos) puede ir **a color y grande**.
 - **Evidencia:** `test/inventory_smoke.gd` 4/4 (22 tiles = inventario; 9 de
   equipo del coach; "para qué" correcto; ordenadas por valor, la de 35000
   primero); `native_panels` 138 PASS. Captura `inventory-coach.png`.
+
+### Bloque E — Ranking solo de Élite, equipo del coach y título (2026-10-24)
+
+| Qué | Evidencia |
+|---|---|
+| **Fantasmas solo de Élite.** El fantasma se hace con el equipo de Élite elegido en la tarjeta Ranking del hub. El paquete de guardado (60010) lleva al final la alineación `[u8 m]{i64}`, opcional: un cliente antiguo guarda con los titulares de Élite. El servidor descarta cualquier luchador de Historia, que traería esferas y condiciones | `TestGhostIsEliteOnly` (de [Craette, Historia, Iopette] queda [Craette, Iopette]); `ghost_smoke` como test 5/5 y como test2 7/7 (el fantasma juega 3 hechizos; escalera) |
+| **Ranking rechaza luchadores de Historia** en "Combattre" (23103): búsqueda refusada con su código. La búsqueda 2301 no se toca, porque el retail la usa para varios modos (un e2e encola con ella un luchador de Evolución) | `TestRankedRefusesHistoriaFighters` |
+| **Equipo del coach en tiles:** las doce casillas con el arte de su carta; al elegir una, tus cartas para esa casilla y un clic la pone. "Quitar", "Deshacer" y "Llevar puesto" se quedan | `screens_smoke` 11/11, adaptado a pulsar la casilla y la carta como un jugador |
+| El panel Equipo se llama **"Equipo"** (era "Equipo y arena") | — |
+
+### Bloque F — el HUD de combate dice las cosas en tu idioma (2026-10-24)
+
+- Repaso del HUD de S17 con el criterio de S24. Los chips de estado y de
+  stats de los luchadores salían en inglés en un combate en español:
+  "Rooted", "Drunk", "AP", "res% all", "FR dmg"…
+- `_fx_word` traduce la palabra (la clave es la inglesa: `fx.rooted`,
+  `fx.ap`, `fx.res_pct`, `fx.fr`…). La comprobación de invisibilidad
+  mira el efecto (57), no la palabra.
+- **Evidencia:** captura del carril visual (`/tmp/fight-result-ui.png`):
+  "+2 PA·2", "Enraizado·1", "Borracho·2". Headless 390/0; Go y e2e en
+  verde.
+
+**Cierre (2026-10-24).** Sin hoja de opciones ni aprobación en la Ally (el
+dueño: "sigue con los sprints y no abras el juego"). Quedan fuera:
+
+- la accesibilidad fina (tamaño mínimo de texto en todos los paneles);
+- el resto de paneles (estadísticas, calendario, social, clan), que no
+  estaban en la lista del dueño y ya pasaron por S18.
 
 ## Criterio de cierre
 

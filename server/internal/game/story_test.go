@@ -184,3 +184,19 @@ func TestRankedFightLeavesFighters(t *testing.T) {
 		t.Errorf("coach standing = %d after a ranked win, want the fight's reputation", f.Teams[0].Coach().Standing)
 	}
 }
+
+// TestRankedRefusesHistoriaFighters (S22): a ranked team holding a Historia
+// fighter is refused (its spheres would be power the rival cannot have).
+func TestRankedRefusesHistoriaFighters(t *testing.T) {
+	d, coachID, fr := tutorialDeps(t) // fr: a classic titular
+	evo := &domain.Fighter{CoachID: coachID, BreedID: 2, Name: "Historia", State: domain.FighterStateTitular, Evolution: true}
+	if err := d.Store.Fighters.Create(evo); err != nil {
+		t.Fatal(err)
+	}
+	if d.rosterHasHistoria(coachID, []int64{int64(fr.ID)}) {
+		t.Error("a classic team was flagged")
+	}
+	if !d.rosterHasHistoria(coachID, []int64{int64(fr.ID), int64(evo.ID)}) {
+		t.Error("a team with a Historia fighter was not flagged")
+	}
+}

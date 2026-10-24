@@ -269,6 +269,14 @@ func handleClassicReadyForFight(s *Session, f *protocol.C2SFrame) error {
 		// merges the ally in when the fight is built.
 	}
 	roster := s.deps.resolveTeamRoster(s.Coach.ID, uint(teamID))
+	// S21/S22 (no pay-to-win): Ranking is Elite — everyone at the same level.
+	// A Historia fighter brings its spheres and conditions; the Elite panel
+	// never lists one, so only a crafted team gets here.
+	if s.deps.rosterHasHistoria(s.Coach.ID, roster) {
+		s.log.Info("combattre refused: a Historia fighter in a ranked team",
+			"coach", s.Coach.Name, "team", teamID)
+		return classicSearchFamily.sendError(s, searchErrCannotStart)
+	}
 
 	// Clicking "Combattre" twice must not put the coach in the queue twice.
 	s.deps.Matchmaker.CancelSearch(s.Coach.ID)
@@ -345,7 +353,7 @@ func handleFightReadyConfirm(s *Session, f *protocol.C2SFrame) error {
 // (overworld challenges). Order is the store's, so it is stable across runs.
 // Returns nil when the coach has none, letting buildFightTeamFor fall back.
 func (d *Deps) titularRoster(coachID uint, max int) []int64 {
-	return d.titulars(coachID, max, false)
+	return d.titulars(coachID, max, nil)
 }
 
 // storyRoster is titularRoster limited to Historia's starters (S21): a
@@ -354,13 +362,19 @@ func (d *Deps) titularRoster(coachID uint, max int) []int64 {
 // banks XP, fatigue and wounds. A coach with no Historia starter yet falls
 // back to its titulars, so a challenge never starts with nobody on the board.
 func (d *Deps) storyRoster(coachID uint, max int) []int64 {
-	if ids := d.titulars(coachID, max, true); len(ids) > 0 {
+	if ids := d.titulars(coachID, max, historiaFighter); len(ids) > 0 {
 		return ids
 	}
-	return d.titulars(coachID, max, false)
+	return d.titulars(coachID, max, nil)
 }
 
-func (d *Deps) titulars(coachID uint, max int, evoOnly bool) []int64 {
+// The two halves of a roster: Historia's starters carry spheres and
+// conditions; Elite fighters are everyone-at-the-same-level (S21/S22).
+func historiaFighter(f *domain.Fighter) bool { return f.Evolution }
+func eliteFighter(f *domain.Fighter) bool    { return !f.IsEvolution() }
+
+// titulars lists up to max titulars that `keep` accepts (nil = all).
+func (d *Deps) titulars(coachID uint, max int, keep func(*domain.Fighter) bool) []int64 {
 	// The caller's cap is arena seats, but the roster rules cap a fielded
 	// team at maxTeamMembers — a coach whose titular list grew past six
 	// (rewards, seeds) must not have every challenge launch refuse at
@@ -375,7 +389,7 @@ func (d *Deps) titulars(coachID uint, max int, evoOnly bool) []int64 {
 	ids := make([]int64, 0, max)
 	perBreed := map[uint8]int{}
 	for i := range fighters {
-		if fighters[i].State != domain.FighterStateTitular || (evoOnly && !fighters[i].Evolution) {
+		if fighters[i].State != domain.FighterStateTitular || (keep != nil && !keep(&fighters[i])) {
 			continue
 		}
 		if len(ids) >= max {
@@ -434,4 +448,29 @@ func buildSparringTeam(side uint8, anchor Pos) *FightTeam {
 		Block: st.Block, Dodge: st.Dodge,
 	}
 	return &FightTeam{ID: side, Members: []*FightMember{{Coach: coach}}, Fighters: []*FightFighter{ff}}
+}
+
+
+// rosterHasHistoria reports whether any of a coach's fighters in ids is a
+// Historia (evolution) fighter — refused in Ranking (S22).
+func (d *Deps) rosterHasHistoria(coachID uint, ids []int64) bool {
+	if d.Store == nil || len(ids) == 0 {
+		return false
+	}
+	fighters, err := d.Store.Fighters.ListByCoach(coachID)
+	if err != nil {
+		return false
+	}
+	evo := map[int64]bool{}
+	for i := range fighters {
+		if fighters[i].IsEvolution() {
+			evo[int64(fighters[i].ID)] = true
+		}
+	}
+	for _, id := range ids {
+		if evo[id] {
+			return true
+		}
+	}
+	return false
 }

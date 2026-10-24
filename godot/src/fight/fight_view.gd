@@ -985,12 +985,12 @@ static func _elem_fx(id: int) -> Array:
 		var span := id - int(fam[0])
 		if span >= 0 and span < 8:
 			return [1 if span % 2 == 0 else -1,
-				"%s %s" % [ELEM_ABBR[span / 2], fam[1]]]
+				"%s %s" % [_fx_word(ELEM_ABBR[span / 2]), _fx_word(str(fam[1]))]]
 	match id:
-		80: return [1, "res% all"]
-		81: return [-1, "res% all"]
-		82: return [1, "dmg% all"]
-		83: return [-1, "dmg% all"]
+		80: return [1, "%s %s" % [_fx_word("res%"), _fx_word("all")]]
+		81: return [-1, "%s %s" % [_fx_word("res%"), _fx_word("all")]]
+		82: return [1, "%s %s" % [_fx_word("dmg%"), _fx_word("all")]]
+		83: return [-1, "%s %s" % [_fx_word("dmg%"), _fx_word("all")]]
 	return []
 
 
@@ -1071,7 +1071,7 @@ func _on_running_effect(d: Dictionary) -> void:
 					_mp_left -= value
 			_refresh_apmp()
 	elif FX_STATE.has(int(d.effect_id)):
-		_float_text(target, FX_STATE[int(d.effect_id)], Color(0.9, 0.9, 1.0))
+		_float_text(target, _fx_word(FX_STATE[int(d.effect_id)]), Color(0.9, 0.9, 1.0))
 		var spr: AnmSprite = _sprites.get(target)
 		if int(d.effect_id) == 57 and spr != null:
 			# invisible — retail hides the sprite from enemies entirely and
@@ -1655,14 +1655,23 @@ func _announce_event(evname: String, effect: String) -> void:
 func _buff_label(action_id: int, value: int) -> String:
 	if FX_RES_ID.has(action_id) or not _elem_fx(action_id).is_empty():
 		var e: Array = FX_RES_ID.get(action_id, _elem_fx(action_id))
-		return "%s%d %s" % ["-" if int(e[0]) < 0 else "+", value, e[1]]
+		# _elem_fx already speaks the UI language; FX_RES_ID holds keys
+		var word := str(e[1]) if not FX_RES_ID.has(action_id) else _fx_word(str(e[1]))
+		return "%s%d %s" % ["-" if int(e[0]) < 0 else "+", value, word]
 	if FX_STATE.has(action_id):
-		return FX_STATE[action_id]
+		return _fx_word(FX_STATE[action_id])
 	if FX_HP_GAIN.has(action_id):
-		return "+%d HP" % value
+		return "+%d %s" % [value, _fx_word("HP")]
 	if FX_HP_LOSS.has(action_id):
-		return "-%d HP" % value
+		return "-%d %s" % [value, _fx_word("HP")]
 	return ""
+
+
+## A state or stat word in the UI language (S22: the chips read "Rooted",
+## "Drunk", "AP" in a Spanish fight). The English word is the key.
+static func _fx_word(word: String) -> String:
+	var key := "fx." + word.to_lower().replace(" ", "_").replace("-", "_").replace("%", "_pct")
+	return I18n.t(key) if I18n.has(key) else word
 
 
 func _attach_buff(fid: int, action_id: int, src: int, value: int,
@@ -1677,7 +1686,7 @@ func _attach_buff(fid: int, action_id: int, src: int, value: int,
 			b.inf = inf
 			_refresh_buffs(fid)
 			return
-	list.append({"label": label, "left": left, "inf": inf, "src": src})
+	list.append({"label": label, "left": left, "inf": inf, "src": src, "act": action_id})
 	_refresh_buffs(fid)
 
 
@@ -1803,7 +1812,7 @@ func fight_hud_model() -> Dictionary:
 		var invisible := false
 		for b in _buffs.get(fid, []):
 			chips.append(str(b.label) if b.inf else "%s·%d" % [b.label, b.left])
-			invisible = invisible or str(b.label) == "Invisible"
+			invisible = invisible or int(b.get("act", 0)) == 57   # by effect, not by its word
 		var spr: AnmSprite = _sprites.get(fid)
 		if spr != null and spr.modulate.a < 0.5 and not _dead.get(fid, false):
 			invisible = true

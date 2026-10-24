@@ -193,3 +193,45 @@ func TestGhostDeleteOnlyOwn(t *testing.T) {
 		t.Error("the owner's delete did not remove the ghost")
 	}
 }
+
+// TestGhostIsEliteOnly (S22, no pay-to-win): ghosts fight in the Ranking,
+// so a Historia fighter never enters one — not from the titulars, not from
+// a named line-up — and a named line-up is kept in its order.
+func TestGhostIsEliteOnly(t *testing.T) {
+	d, st, coach := ghostFixture(t)
+	evo := &domain.Fighter{CoachID: coach.ID, BreedID: 1, Name: "Historia",
+		Evolution: true, State: domain.FighterStateTitular}
+	if err := st.Fighters.Create(evo); err != nil {
+		t.Fatal(err)
+	}
+	names := func(g *domain.GhostTeam) []string {
+		var roster []domain.Fighter
+		_ = json.Unmarshal([]byte(g.Roster), &roster)
+		out := []string{}
+		for _, fr := range roster {
+			out = append(out, fr.Name)
+		}
+		return out
+	}
+	g, code := d.saveGhost(coach.ID, "Titulares", nil)
+	if code != ghostOK || len(names(g)) != 2 {
+		t.Fatalf("titulars ghost: code %d, %v — want the two Elite fighters", code, names(g))
+	}
+	live, _ := st.Fighters.ListByCoach(coach.ID)
+	var crae, iop uint
+	for _, fr := range live {
+		switch fr.Name {
+		case "Craette":
+			crae = fr.ID
+		case "Iopette":
+			iop = fr.ID
+		}
+	}
+	g, code = d.saveGhostLineup(coach.ID, "Elegido", nil, []uint{crae, evo.ID, iop})
+	if code != ghostOK {
+		t.Fatalf("line-up ghost: code %d", code)
+	}
+	if got := names(g); len(got) != 2 || got[0] != "Craette" || got[1] != "Iopette" {
+		t.Errorf("line-up ghost = %v, want [Craette Iopette] (the Historia one dropped)", got)
+	}
+}

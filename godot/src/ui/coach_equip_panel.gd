@@ -1,10 +1,10 @@
-extends "res://src/ui/lobby_panel.gd"
-## The native coach equipment (S18): replaces the debug EquipDlg, which only
-## the hidden debug row could open. Opened from Inventario → "Equipo del
-## coach". The twelve wearable slots on the left (hat, tattoo, hair, …) with
-## what each holds; your wearable cards on the right, each naming its slot.
-## Changes are a draft until "Llevar puesto" sends the layout (5201); set
-## bonuses (resurrection, XP, morale…) count what the coach wears.
+extends "res://src/ui/card_panel.gd"   # lobby_panel + the card tile helpers
+## The native coach equipment (S18; tiles since S22). Opened from Inventario
+## → "Equipo del coach". The twelve wearable slots on top as tiles with the
+## card each holds; pick one and your cards for that slot show below — a
+## click puts one on, "Quitar" takes the slot's card off. Changes are a draft
+## until "Llevar puesto" sends the layout (5201); set bonuses (resurrection,
+## XP, morale…) count what the coach wears.
 ##
 ## Reads `coachEquip` {slots:[{slot, label, card, name}], owned:[{id, name,
 ## qty, slot, slotName}], dirty}; answers nativeEquipPut [card] /
@@ -28,37 +28,44 @@ func refresh() -> void:
 	clear_body()
 	title.text = I18n.t("ce.title")
 	var d: Dictionary = data("coachEquip", {})
-	var split := row(body)
-	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var left := column(split)
-	label(left, I18n.t("ce.worn"), 20)
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 6)
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.add_child(grid)
-	for sl in d.get("slots", []):
-		var cell := VBoxContainer.new()
-		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(cell)
-		cell.add_child(UiStyle.caption(str(sl.label)))
+	var slots: Array = d.get("slots", [])
+	var pick := int(draft.get("slot", int(slots[0].slot) if not slots.is_empty() else 0))
+	label(body, I18n.t("ce.worn"), 20)
+	var top := HFlowContainer.new()
+	top.name = "Slots"
+	top.add_theme_constant_override("h_separation", 8)
+	top.add_theme_constant_override("v_separation", 8)
+	body.add_child(top)
+	for sl in slots:
 		var has := int(sl.card) != 0
-		var b := button(cell, str(sl.name) if has else I18n.t("ce.empty"),
-			func(): send("nativeEquipTake", [int(sl.slot)]), has)
+		var b := _tile(top, {"id": int(sl.card), "name": str(sl.name) if has else I18n.t("ce.empty")},
+			int(sl.slot) == pick, "", str(sl.label))
 		b.name = "Slot%d" % int(sl.slot)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.tooltip_text = I18n.t("ce.take_tip") if has else ""
-	var right := column(split)
-	label(right, I18n.t("ce.yours"), 20)
-	var owned: Array = d.get("owned", [])
-	var t := table(right, [I18n.t("inv.col_card"), I18n.t("ce.col_slot"), I18n.t("inv.col_qty")],
-		["name", "slotName", "qty"], owned, func(item): draft["put"] = int(item.id); schedule_refresh())
-	t.name = "Owned"
-	var put_id := int(draft.get("put", -1))
-	if not owned.any(func(c): return int(c.id) == put_id):
-		put_id = -1
-	button(right, I18n.t("ce.put"), func(): send("nativeEquipPut", [put_id]), put_id > 0).name = "Put"
+		var slot_id := int(sl.slot)
+		b.pressed.connect(func(): draft["slot"] = slot_id; schedule_refresh())
+	var worn: Dictionary = {}
+	for sl in slots:
+		if int(sl.slot) == pick:
+			worn = sl
+	var line := row(body)
+	label(line, I18n.t("ce.slot_x", {"slot": str(worn.get("label", "")),
+		"name": str(worn.get("name", "")) if int(worn.get("card", 0)) != 0 else I18n.t("ce.empty")}), 18)
+	var take := button(line, I18n.t("ce.take_tip"), func(): send("nativeEquipTake", [pick]),
+		int(worn.get("card", 0)) != 0)
+	take.name = "Take"
+	var owned: Array = d.get("owned", []).filter(func(c): return int(c.get("slot", -1)) == pick)
+	var grid := HFlowContainer.new()
+	grid.name = "Owned"
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	body.add_child(grid)
+	if owned.is_empty():
+		_muted(grid, I18n.t("ce.none_for_slot"))
+	for c in owned:
+		var t := _tile(grid, c, int(c.id) == int(worn.get("card", 0)), "×%d" % int(c.get("qty", 1)))
+		t.name = "Own%d" % int(c.id)
+		var cid := int(c.id)
+		t.pressed.connect(func(): send("nativeEquipPut", [cid]))
 	pinned_actions.show()
 	var hint := label(pinned_actions, I18n.t("ce.hint_dirty") if bool(d.get("dirty", false)) else I18n.t("ce.hint"))
 	hint.autowrap_mode = TextServer.AUTOWRAP_OFF

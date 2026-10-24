@@ -134,8 +134,14 @@ func _equipment() -> void:
 	var p = _main._gui.dialogs.get("coachEquipDialog")
 	var slot0: Button = p.find_child("Slot0", true, false) if p != null else null
 	var hat_name: String = load("res://src/gamedata/cards.gd").name_of(HAT_A)
-	_record(5200, "panel", slot0 != null and slot0.text == hat_name,
-		"native panel, the hat slot shows '%s'" % (slot0.text if slot0 != null else "—"))
+	# S22: a tile — the card's name is a label inside it
+	var slot_text := ""
+	if slot0 != null:
+		for l in slot0.find_children("*", "Label", true, false):
+			if l.text == hat_name:
+				slot_text = l.text
+	_record(5200, "panel", slot0 != null and slot_text == hat_name,
+		"native panel, the hat slot shows '%s'" % slot_text)
 	await _shot("coach-equip")
 	if slot0 == null:
 		return
@@ -149,26 +155,20 @@ func _equipment() -> void:
 
 
 func _wear(p, cid: int) -> bool:
-	# Pick the card in the "Owned" table the way a click does (item_selected),
-	# not by writing the draft: S20 found "Poner" never woke up on a real click
-	# because only this smoke refreshed the panel.
-	var owned: Tree = p.find_child("Owned", true, false)
-	var row: TreeItem = null
-	if owned != null:
-		for it in owned.get_root().get_children():
-			var m: Variant = it.get_metadata(0)
-			if m is Dictionary and int(m.get("id", -1)) == cid:
-				row = it
-	if row == null:
-		_record(5200, "put", false, "card %d not in the Owned table" % cid)
+	# S22: pick the card's slot, then press its tile (a click puts it on);
+	# like a player, not by writing the panel's draft
+	var slot: int = int(_main.COACH_SLOT_FOR_TYPE.get(int(load("res://src/gamedata/cards.gd").meta(cid).get("type", -1)), -1))
+	var sb: Button = p.find_child("Slot%d" % slot, true, false)
+	if sb == null:
+		_record(5200, "put", false, "no slot tile %d for card %d" % [slot, cid])
 		return false
-	row.select(0)   # emits item_selected, like a click
+	sb.pressed.emit()
 	await create_timer(0.3).timeout
-	var put: Button = p.find_child("Put", true, false)
-	if put == null or put.disabled:
+	var tile: Button = p.find_child("Own%d" % cid, true, false)
+	if tile == null:
 		_record(5200, "put", false, "card %d not offered" % cid)
 		return false
-	put.pressed.emit()
+	tile.pressed.emit()
 	await create_timer(0.3).timeout
 	_seen.erase(5200)
 	p.find_child("Wear", true, false).pressed.emit()

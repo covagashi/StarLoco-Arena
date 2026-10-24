@@ -955,21 +955,35 @@ func _ghost_new() -> void:
 			var rs := GambitEditor.ruleset(rules[fid])
 			if not rs.is_empty():
 				out[fid] = rs
-		send("nativeGhostSave", [nm, out])).name = "GhostSave"
+		send("nativeGhostSave", [nm, out, fighters.map(func(f): return int(f.get("id", 0)))])).name = "GhostSave"
 
 
 func _rules_caption(f: Dictionary, list: Array) -> String:
 	return "%s · %s" % [str(f.get("name", "?")), I18n.t("ghost.rules_n", {"n": list.size()})]
 
 
-## The fighters the server will snapshot — titularRoster's own pick: titular
-## (state 0), in roster order, at most two of a breed, at most six. Rules for
-## anyone else would be dropped there.
+## The fighters the ghost is made of (S22): the Elite team picked on the
+## hub's Ranking card — ghosts fight in the Ranking, so no Historia fighter
+## (spheres, conditions). Without one, the Elite titulars, at most two of a
+## breed and six in all, as the server's fallback picks them.
 func _ghost_lineup() -> Array:
+	var by_id := {}
+	for f in State.roster:
+		by_id[int(f.get("id", 0))] = f
+	var picked: Array = []
+	var sel := int(data("hub.ranked.selected", -1))
+	for p in State.presets:
+		if int(p.get("id", -1)) == sel:
+			for pf in p.get("fighters", []):
+				picked.append(int(pf.get("id", 0)))
 	var out := []
 	var per_breed := {}
-	for f in State.roster:
-		if int(f.get("state", 0)) != 0 or out.size() >= 6:
+	var source: Array = picked if not picked.is_empty() else State.roster.map(func(f): return int(f.get("id", 0)))
+	for fid in source:
+		var f: Variant = by_id.get(fid)
+		if f == null or int(f.get("type", 2)) != 1 or out.size() >= 6:
+			continue
+		if picked.is_empty() and int(f.get("state", 0)) != 0:
 			continue
 		var b := int(f.get("breed", 0))
 		if int(per_breed.get(b, 0)) >= 2:

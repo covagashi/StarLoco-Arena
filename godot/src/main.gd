@@ -1856,7 +1856,7 @@ func _answer_match(yes: bool) -> void:
 
 ## S13: save the titular line-up as a ghost, with each fighter's rule set
 ## (GambitEditor.ruleset) keyed by fighter id.
-func _ghost_save(ghost_name: String, rules: Dictionary) -> void:
+func _ghost_save(ghost_name: String, rules: Dictionary, lineup: Array = []) -> void:
 	var w := WireWriter.new()
 	w.put_str(ghost_name, "u8", "utf8")
 	w.put_u8(rules.size())
@@ -1865,6 +1865,10 @@ func _ghost_save(ghost_name: String, rules: Dictionary) -> void:
 		w.put_i64(int(fid))
 		w.put_u16(json.size())
 		w.put_bytes(json)
+	# S22: the line-up itself — the Elite team picked on the Ranking card
+	w.put_u8(lineup.size())
+	for fid in lineup:
+		w.put_i64(int(fid))
 	Session.send(OP_GHOST_SAVE, w.raw(), 3)
 
 
@@ -5261,7 +5265,7 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			Session.send(OP_GHOST_LADDER_REQ, PackedByteArray(), 3)
 			return
 		"nativeGhostSave":
-			_ghost_save(str(args[0]), args[1])
+			_ghost_save(str(args[0]), args[1], args[2] if args.size() > 2 else [])
 			return
 		"nativeGhostFight":
 			var w := WireWriter.new()

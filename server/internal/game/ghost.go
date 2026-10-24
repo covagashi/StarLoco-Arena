@@ -139,7 +139,20 @@ func handleGhostSave(s *Session, frame *protocol.C2SFrame) error {
 			rules[uint(fid)] = b
 		}
 	}
-	g, code := s.deps.saveGhost(s.Coach.ID, name, rules)
+	// S22: the line-up itself, after the rules — [u8 m]{[i64 fighterId]}, the
+	// Elite team the player picked. Optional, so an older client still saves
+	// (its ghost is the Elite titulars).
+	var lineup []uint
+	if m, err := r.U8(); err == nil {
+		for i := 0; i < int(m); i++ {
+			fid, err := r.I64()
+			if err != nil {
+				break
+			}
+			lineup = append(lineup, uint(fid))
+		}
+	}
+	g, code := s.deps.saveGhostLineup(s.Coach.ID, name, rules, lineup)
 	if code != ghostOK {
 		return s.sendGhostResult(ghostActionSave, code, 0)
 	}
@@ -152,6 +165,12 @@ func handleGhostSave(s *Session, frame *protocol.C2SFrame) error {
 // not in the snapshot (benched, over the cap) has its rules dropped — the
 // client cannot know exactly which fighters titularRoster keeps.
 func (d *Deps) saveGhost(coachID uint, name string, rules map[uint][]byte) (*domain.GhostTeam, uint8) {
+	return d.saveGhostLineup(coachID, name, rules, nil)
+}
+
+// saveGhostLineup is saveGhost with the fighters to snapshot named (nil =
+// the coach's Elite titulars).
+func (d *Deps) saveGhostLineup(coachID uint, name string, rules map[uint][]byte, lineup []uint) (*domain.GhostTeam, uint8) {
 	if len(name) == 0 || len(name) > 32 {
 		return nil, ghostBadName
 	}
@@ -161,7 +180,7 @@ func (d *Deps) saveGhost(coachID uint, name string, rules map[uint][]byte) (*dom
 	if n, err := d.Store.Ghosts.CountByCoach(coachID); err != nil || n >= maxGhostsPerCoach {
 		return nil, ghostLimit
 	}
-	roster, sourceIDs, ok := d.ghostSnapshot(coachID)
+	roster, sourceIDs, ok := d.ghostSnapshot(coachID, lineup)
 	if !ok {
 		return nil, ghostBadRoster
 	}
@@ -197,8 +216,19 @@ func (d *Deps) saveGhost(coachID uint, name string, rules map[uint][]byte) (*dom
 // field it: a legal roster, spells filtered for legality, sphere spells added.
 // Every id is zeroed so nothing keyed by a fighter id can reach the real rows;
 // the second result keeps the source ids, index by index, for the rules.
-func (d *Deps) ghostSnapshot(coachID uint) ([]domain.Fighter, []uint, bool) {
-	ids := d.titularRoster(coachID, maxTeamMembers)
+//
+// S22 (no pay-to-win): ghosts fight in the Ranking, so they are ELITE
+// fighters only — a Historia fighter would bring its spheres and conditions.
+// `lineup` is the team the player picked; empty means the Elite titulars.
+func (d *Deps) ghostSnapshot(coachID uint, lineup []uint) ([]domain.Fighter, []uint, bool) {
+	var ids []int64
+	if len(lineup) > 0 {
+		for _, id := range lineup {
+			ids = append(ids, int64(id))
+		}
+	} else {
+		ids = d.titulars(coachID, maxTeamMembers, eliteFighter)
+	}
 	fighters, err := d.Store.Fighters.ListByCoach(coachID)
 	if err != nil {
 		return nil, nil, false
@@ -208,10 +238,14 @@ func (d *Deps) ghostSnapshot(coachID uint) ([]domain.Fighter, []uint, bool) {
 		byID[fighters[i].ID] = &fighters[i]
 	}
 	var chosen []*domain.Fighter
+	seen := map[uint]bool{}
 	for _, id := range ids {
-		if fr := byID[uint(id)]; fr != nil {
-			chosen = append(chosen, fr)
+		fr := byID[uint(id)]
+		if fr == nil || seen[fr.ID] || fr.IsEvolution() || len(chosen) >= maxTeamMembers {
+			continue
 		}
+		seen[fr.ID] = true
+		chosen = append(chosen, fr)
 	}
 	if len(chosen) == 0 || validateRoster(chosen, false) != rosterOK {
 		return nil, nil, false
