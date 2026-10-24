@@ -21,13 +21,13 @@ generar sus assets sin saber qué es Python.
 
 ## Tareas candidatas
 
-- [ ] Presets de Linux y Windows; revisar el de macOS (firma, notarización).
+- [x] Presets de Linux y Windows (bloque B). macOS: firma y notarización piden una cuenta de Apple, **decide el dueño**.
 - [ ] **Generador de assets para el jugador:** un solo comando (o un binario Go)
       que, dada la carpeta de su cliente retail, genere `assets/` completo. Esto
       sirve también para la regeneración en desarrollo.
 - [ ] **Peso:** `anims/` son 312.121 PNG sueltos (2,9 GB). Empaquetar cada
       animación como spritesheet o atlas, como ya se hace en `mapgfx`.
-- [ ] Averiguar por qué el build de macOS duplica el tamaño de los assets.
+- [x] Averiguar por qué el build de macOS duplica el tamaño de los assets → ficheros `.import` (abajo).
 - [ ] Job de CI que exporte las tres plataformas (sin assets).
 - [ ] El cliente en la release, junto al servidor (hoy GoReleaser solo publica
       el servidor).
@@ -84,6 +84,19 @@ El dueño: "sigue con los sprints". Orden por lo que desbloquea:
     Historia (`challengePractice`). El 99 del retail no cambia.
   - Evidencia: `TestPracticeLaunchIsNeverStory`; en vivo, `native_lobby`
     28 PASS y el log `challenge=34 … story=false`.
+
+### Por qué el build de macOS duplicaba los assets (2026-10-24)
+
+El `dist/macos/assets` antiguo tiene 648.471 ficheros frente a los 329.499
+de `godot/assets/`. La diferencia son **319.210 ficheros `.import`**, los
+metadatos que crea el importador de Godot. Se copiaron porque entonces
+`godot/assets/` no llevaba `.gdignore`; hoy lleva siete (anims, gui,
+mapgfx…) y Godot ya no los importa.
+
+Además, el `anims/` de aquel build era una exportación más antigua y pesada:
+2,9 GB frente a 1,7 GB hoy.
+
+Regla para empaquetar: copiar `assets/` **sin `*.import`**.
 
 ## Criterio de cierre
 
