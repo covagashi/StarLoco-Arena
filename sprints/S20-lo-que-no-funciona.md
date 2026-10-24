@@ -44,17 +44,17 @@ diseño. Va primero porque no tiene sentido rediseñar un panel que no guarda.
 - [x] **4. Buscar rival como hoy.** Mientras busca: un cronómetro grande
       (0:12…), el modo que se busca, y "Cancelar" a tamaño de botón
       principal. Esc también cancela. El diseño fino va en S21.
-- [ ] **5. Leyendas, fuera** (dueño, 2026-10-24). Se quitan de la interfaz
+- [x] **5. Leyendas, fuera** (dueño, 2026-10-24). Se quitan de la interfaz
       la pestaña, el botón "Convertir en leyenda" y los torneos de Leyendas.
       El servidor no se toca, porque es retail; solo deja de ofrecerse.
 - [x] **6. Evolución no cuenta para la clasificación.** Es el modo historia
       (dueño, 2026-10-24), así que deja de mover la fuerza en
       `handlers_fight_combat.go:857`. Test Go.
-- [ ] **7. 2vs2, escondido** (dueño, 2026-10-24: "para no tener problemas de
+- [x] **7. 2vs2, escondido** (dueño, 2026-10-24: "para no tener problemas de
       baja población"). Fuera del lobby y de Equipo (la pestaña, el dúo y su
       clasificación vacía). El código se queda, detrás de un interruptor, por
       si vuelve con más gente.
-- [ ] **8. Textos retail en francés** de Nilo: traducidos al español (y al
+- [x] **8. Textos retail en francés** de Nilo: traducidos al español (y al
       inglés si faltan), y el "Gracias" cierra la conversación.
 
 ## Decisiones
@@ -86,6 +86,22 @@ Kanodo al luchador 1. Se deshicieron las tres de hoy (filas 12–14 de
 `fighter_spheres`, +37 de XP y cursor de vuelta a (31,1), la casilla de la
 esfera 15358) con el servidor parado. A `fight1` se le puso la contraseña
 `test123` para probar la creación.
+
+### Bloque B — 2026-10-24: 5, 7 y 8
+
+| # | Qué se hizo | Evidencia |
+|---|---|---|
+| 5, 7 | `godot/src/features.gd`: dos interruptores, `DUO` y `LEGENDS`, los dos apagados. El código sigue, solo deja de ofrecerse. Con ellos apagados no aparecen: la pestaña 2v2 ni la de Leyendas en Equipo, la acción "2v2 dúo" del lobby, "Convertir en leyenda", y el torneo de Leyendas (definición 24) en el Calendario y en el selector. `tabs()` acepta ahora ids, así que cada pestaña conserva su número de modo del retail (Torneos sigue siendo el 3) | `test/modes_smoke.gd` 5/5 (lobby con 5 acciones sin dúo; pestañas Evolución, Élite, Torneos; Torneos → modo 3; sin "Convertir en leyenda"; 0 torneos de Leyendas en el Calendario, aunque la base de pruebas puede no tener ninguno programado). `native_panels.gd` 133 PASS, ahora comprueba que las escondidas no salen. `pvp_smoke` sigue probando el dúo directamente con `_on_lobby_action("duo")` |
+| 8 | `godot/src/gamedata/npc_text_fix.gd`: traducciones de los grupos de Nilo que el retail dejó en francés. En español: 69, 74–80, 83 y respuestas de 8, 17 y 84. En inglés, donde la tabla base trae aún más francés: 8, 66, 69, 74–84. `NpcDialogs.group()` las aplica por idioma. La respuesta 4 del grupo 8 ("Gracias. Quizás vuelva más tarde.") llevaba a la lección de orientación (69), a la que no llegaba ninguna pregunta; ahora es la pregunta «¿Importa hacia dónde mira mi luchador?». Del grupo 80 se quitó a propósito la línea de los "boufteurs" (sobres) que se compraban en la web con ogrinas | `test/unit/npc_text_fix_test.gd` (sin marcas de francés en ninguna corrección; el carril headless pasa a 381 checks). `test/nilo_smoke.gd` 4/4 en vivo: grupo 8 sin francés, la 69 empieza por «Sí:», las preguntas de las cartas en español y la 80 sin ogrinas |
+
+`tournaments_smoke.gd` sin sembrar: pasan sus tres pasos de "Equipo →
+Torneos" (la pestaña con el modo 3, buscar y cancelar). Fallan los tres que
+necesitan los torneos "Copa Smoke…" sembrados con el SQL de S09, y no son
+de este cambio.
+
+**Para S21 (monetización):** el grupo 80 es la prueba del pay-to-win del
+original. Decía: «La forma más común [de conseguir cartas] son los
+*boufteurs* que puedes conseguir en la web a cambio de unas ogrinas».
 
 **Visto de paso, para S22:** los nombres de los hechizos salen en inglés
 ("Pressure", "Jump") con la interfaz en español.

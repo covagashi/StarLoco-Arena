@@ -119,8 +119,16 @@ func find_button(node: Node, text: String) -> Button:
 func exercise_controls() -> void:
 	var panel = main._gui.open("teamManagementDialog")
 	await create_timer(0.1).timeout
+	# the tabs src/features.gd leaves on (S20: 2v2 hidden, Leyendas removed);
+	# each keeps its retail game-mode id
+	var features: GDScript = load("res://src/features.gd")
+	var modes: Array = features.team_modes()
 	for entry in [["Élite", 1], ["2v2", 2], ["Torneos", 3], ["Leyendas", 4], ["Evolución", 0]]:
-		await click(find_button(panel, entry[0]))
+		var b = find_button(panel, entry[0])
+		if not modes.has(entry[1]):
+			check(b == null, "hidden tab %s is not shown" % entry[0])
+			continue
+		await click(b)
 		await create_timer(0.1).timeout
 		check(main._tm_tab() == entry[1], "real tab click " + entry[0])
 	await click(find_button(panel, "Crear luchador"))

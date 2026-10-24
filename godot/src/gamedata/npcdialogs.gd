@@ -21,6 +21,7 @@ extends RefCounted
 ## Behaviour (next/act/params, modes, achievements) is language-free.
 
 const NpcRename := preload("res://src/gamedata/npc_rename.gd")
+const NpcTextFix := preload("res://src/gamedata/npc_text_fix.gd")
 const PATH := "gamedata/npcdialogs.json"
 const State := preload("res://src/state.gd")
 
@@ -133,7 +134,8 @@ static func challenge_name(id: int) -> String:
 static func group(id: int) -> Dictionary:
 	_ensure()
 	var g: Variant = _tr("groups", id, _groups, null)
-	return g if g is Dictionary else {}
+	# Nilo's groups the retail left in French (S20)
+	return _renamed(NpcTextFix.apply(State.locale, id, g)) if g is Dictionary else {}
 
 
 ## The i16 second field of a 26330 NPC-dialog challenge launch —

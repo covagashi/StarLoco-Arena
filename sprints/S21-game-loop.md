@@ -161,6 +161,10 @@ ni pagos):
 
 **Tareas:**
 
+- **Prueba en los datos** (S20, 2026-10-24): el grupo 80 de Nilo, en
+  francés en el retail: «La plus courante, est grâce aux boufteurs que tu
+  peux récupérer sur le site en échange de quelques ogrines». Los sobres de
+  cartas se compraban con dinero real.
 - [ ] **Mapa del p2w:** cada fuente de poder, cómo se consigue y qué pasaría
       si se vendiera. Además, contrastar con lo que se sabe del Dofus Arena
       original (qué vendía Ankama por ogrinas: sobres de cartas, cuentas

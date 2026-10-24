@@ -200,17 +200,20 @@ func choices(parent: Node, labels: Array, index: int, callback: Callable) -> Opt
 	return result
 
 
-func tabs(parent: Node, labels: Array, callback: Callable = Callable()) -> void:
+## `ids` (optional) gives each tab its own value for `tab` and the callback,
+## so a panel can hide tabs without renumbering what they mean (S20).
+func tabs(parent: Node, labels: Array, callback: Callable = Callable(), ids: Array = []) -> void:
 	var bar := row(parent)
 	for i in labels.size():
+		var id: int = int(ids[i]) if i < ids.size() else i
 		var b := button(bar, str(labels[i]), func():
-			tab = i
+			tab = id
 			selected = {}
 			if callback.is_valid():
-				callback.call(i)
+				callback.call(id)
 			schedule_refresh())
 		b.toggle_mode = true
-		b.button_pressed = tab == i
+		b.button_pressed = tab == id
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 

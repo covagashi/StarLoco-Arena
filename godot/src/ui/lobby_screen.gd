@@ -19,6 +19,7 @@ const CHAT_FRAME := Rect2(40, 512, 650, 182)
 const COACH_RECT := Rect2(40, 150, 320, 350)
 const MENU_RECT := Rect2(720, 512, 510, 182)
 const UiStyle := preload("res://src/ui/ui_style.gd")
+const Features := preload("res://src/features.gd")
 const MENUS := [
 	["nav.team", "teamManagementDialog"],
 	["nav.stats", "coachStatisticsDialog"], ["nav.inventory", "coachInventoryDialog"],
@@ -50,6 +51,7 @@ var _subtitle: Label
 var _hint: Label
 var _menu_buttons: Array = []
 var _actions: Array[Button] = []
+var _action_rows: Array = []   # ACTIONS minus what Features switches off
 var _social_btn: Button
 var _cancel_search: Button
 var _searching := false
@@ -112,8 +114,9 @@ func _init() -> void:
 	_box.add_child(_spr)
 	_bubble = _label(Rect2(70, 460, 260, 30), "", 16)
 	_title = _label(Rect2(400, 159, 824, 32), "", 24)
-	for i in range(ACTIONS.size()):
-		var row: Array = ACTIONS[i]
+	_action_rows = ACTIONS.filter(func(a): return Features.DUO or str(a[1]) != "duo")
+	for i in range(_action_rows.size()):
+		var row: Array = _action_rows[i]
 		var r := Rect2(400 + (i % 3) * 280, 210 if i < 3 else 352, 264, 126 if i < 3 else 92)
 		var b := _button(r, "", func():
 			_last_action = str(row[1])
@@ -226,7 +229,7 @@ func set_searching(on: bool) -> void:
 
 
 func _search_mode_text() -> String:
-	for row in ACTIONS:
+	for row in _action_rows:
 		if str(row[1]) == _last_action:
 			return _t(str(row[0]))
 	return ""
@@ -306,8 +309,8 @@ func _retranslate() -> void:
 	_search_mode.text = _search_mode_text()
 	_hint.text = _t("lobby.chat_hint")
 	for i in range(_actions.size()):
-		_actions[i].text = _t(str(ACTIONS[i][0]))
-		_actions[i].tooltip_text = _t(str(ACTIONS[i][2]))
+		_actions[i].text = _t(str(_action_rows[i][0]))
+		_actions[i].tooltip_text = _t(str(_action_rows[i][2]))
 	for i in range(_menu_buttons.size()):
 		_menu_buttons[i].text = _t(str(MENUS[i][0]))
 		_menu_buttons[i].tooltip_text = _t(str(MENUS[i][0]))

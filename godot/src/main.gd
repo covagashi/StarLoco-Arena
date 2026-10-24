@@ -25,6 +25,7 @@ const DebugLog := preload("res://src/util/debug_log.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const Elements := preload("res://src/gamedata/elements.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
+const Features := preload("res://src/features.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
@@ -3922,6 +3923,8 @@ func _push_calendar_model() -> void:
 			var row: Dictionary = _tourn_rows.get(tid, {})
 			if row.is_empty():
 				continue   # a finished edition: the list no longer carries it
+			if not Features.LEGENDS and TournamentDefs.kind(_tourn_def(tid)) == TournamentDefs.LEGENDARY:
+				continue   # Leyendas removed (owner, 2026-10-24)
 			evs.append(_tourn_event_model(e, row))
 		cells.append({"day": str(day_i), "events": evs,
 			"hasMoreEventsToShow": evs.size() > 3, "style": ""})
@@ -4121,6 +4124,8 @@ func _push_tourn_search_model() -> void:
 		if not _registered_tids.has(tid):
 			continue
 		var def := _tourn_def(tid)
+		if not Features.LEGENDS and TournamentDefs.kind(def) == TournamentDefs.LEGENDARY:
+			continue
 		rows.append({"id": tid, "name": _tourn_name(tid),
 			"tab": TournamentDefs.team_tab(def),
 			"kind": TournamentDefs.kind(def),

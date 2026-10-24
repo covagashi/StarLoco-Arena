@@ -8,6 +8,7 @@ const Scenarios := preload("res://src/gamedata/scenarios.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const ReplayFile := preload("res://src/net/replay_file.gd")
 const GambitEditor := preload("res://src/ui/gambit_editor.gd")
+const Features := preload("res://src/features.gd")
 ## Native presentations over the existing GuiModel and action handlers.
 ## No XML layout or protocol serialization lives in these panels.
 
@@ -106,10 +107,15 @@ func _menu() -> void:
 
 
 func _team() -> void:
+	var modes: Array = Features.team_modes()
 	tab = clampi(int(data("gamePreferences.lastSelectedGameModeId", tab)), 0, 4)
-	tabs(body, [I18n.t("team.tab_evolution"), I18n.t("team.tab_elite"),
+	if not tab in modes:
+		tab = int(modes[0])   # a saved tab the owner has since hidden
+	var mode_names := [I18n.t("team.tab_evolution"), I18n.t("team.tab_elite"),
 		I18n.t("team.tab_duo"), I18n.t("team.tab_tournaments"),
-		I18n.t("team.tab_legends")], func(i): send("changeTeamTab", [], null, i))
+		I18n.t("team.tab_legends")]
+	tabs(body, modes.map(func(m): return mode_names[m]),
+		func(i): send("changeTeamTab", [], null, i), modes)
 	var classic := tab in [1, 2, 3]
 	var toolbar := row(body)
 	if classic:
@@ -175,9 +181,10 @@ func _team() -> void:
 			var evo_row := row(detail)
 			var sph := button(evo_row, I18n.t("team.spheres"), func(): send("nativeKanodo", [int(selected.get("id", -1))]))
 			sph.name = "Spheres"
-			var leg := button(evo_row, I18n.t("team.make_legend"), func(): confirm_action(I18n.t("team.make_legend_confirm"), func(): send("becomeALegend", [selected], selected)))
-			for b in [sph, leg]:
-				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sph.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if Features.LEGENDS:
+				var leg := button(evo_row, I18n.t("team.make_legend"), func(): confirm_action(I18n.t("team.make_legend_confirm"), func(): send("becomeALegend", [selected], selected)))
+				leg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button(detail, I18n.t("team.delete_fighter"), func(): confirm_action(I18n.t("team.delete_fighter_confirm", {"name": selected.get("name", "")}), func(): send("deleteFighter", [selected], selected)))
 	pinned_actions.show()
 	var footer := pinned_actions
