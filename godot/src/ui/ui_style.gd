@@ -142,6 +142,19 @@ static func card_art(cid: int) -> Texture2D:
 	return tex
 
 
+## A FIGHTER equipment card's art (equipments/fighters/icons). Its id is
+## shared with a coach card whose illustration card_art() would find first,
+## a different item (S22).
+static var _fighter_art_cache := {}
+
+
+static func fighter_card_art(cid: int) -> Texture2D:
+	if not _fighter_art_cache.has(cid):
+		var img := AssetPaths.load_image("gui/images/equipments/fighters/icons/%d.png" % cid)
+		_fighter_art_cache[cid] = ImageTexture.create_from_image(img) if img != null else null
+	return _fighter_art_cache[cid]
+
+
 ## The one primary action of a screen: the gold button of the fight's PASS.
 static func primary(b: Button, font_size := 24) -> void:
 	var n := box(Color("a8701a"), Color("f6dc8c"), 2, 12)

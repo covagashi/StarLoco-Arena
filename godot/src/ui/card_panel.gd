@@ -39,6 +39,8 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(col)
 	var art := _art(int(item.get("id", 0)), Vector2(TILE.x - 16, 100))
+	if bool(item.get("fighter", false)):   # fighter equipment: its own art (S22)
+		(art as TextureRect).texture = UiStyle.fighter_card_art(int(item.get("id", 0)))
 	col.add_child(art)
 	var name_l := _small(col, str(item.get("name", "")), 13)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

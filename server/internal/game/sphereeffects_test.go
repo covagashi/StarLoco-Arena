@@ -376,3 +376,22 @@ func TestEntitlementIsInertWithoutData(t *testing.T) {
 		t.Errorf("kept %v, want both - entitlement must be inert without data", got)
 	}
 }
+
+// TestWearableCards (S22): the Godot editor's list (60023) follows
+// entitledEquip — a Historia fighter sees what its spheres unlocked, an
+// Elite fighter every fighter card.
+func TestWearableCards(t *testing.T) {
+	d := entitlementDeps(t)
+	d.FighterCards = gamedata.NewFighterCards(
+		&gamedata.FighterCard{ID: 500, Type: 1}, &gamedata.FighterCard{ID: 501, Type: 2},
+		&gamedata.FighterCard{ID: 600, Type: 3}, &gamedata.FighterCard{ID: 999, Type: 4})
+	evo := &domain.Fighter{ID: 1, BreedID: 8, Evolution: true,
+		Spheres: []domain.FighterSphere{{SphereID: 104}}}
+	if got := d.wearableCards(evo); len(got) != 2 || got[0] != 500 || got[1] != 501 {
+		t.Errorf("Historia fighter: %v, want [500 501] (pool 9)", got)
+	}
+	elite := &domain.Fighter{ID: 2, BreedID: 8}
+	if got := d.wearableCards(elite); len(got) != 4 {
+		t.Errorf("Elite fighter: %v, want all four cards", got)
+	}
+}

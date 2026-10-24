@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 357 |
-| **C2S handled (H)** | 120 |
-| **S2C emitted (E)** | 160 |
+| Rows in the master table | 359 |
+| **C2S handled (H)** | 121 |
+| **S2C emitted (E)** | 161 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -546,6 +546,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60017 | S2C | E | Godot extension (no retail class) | ghost ladder - `[i32 elo][i32 rank, 0 = unranked][i32 fights][i32 wins][u16 n] n×{[u8 len][utf8 coach][i32 elo][i32 fights][i32 wins][u8 me]}`, top 50 by `ghost_ratings.elo` |
 | 60020 | C2S | H | Godot extension (no retail class) | `handleStoryRequest` (S21) - empty; answered by 60021 |
 | 60021 | S2C | E | Godot extension (no retail class) | Historia - `[u16 n] n×{[i32 challengeId]}`, the campaign challenges (`storyChapters`) this coach has won (`statChallengeDoneBase + id`) |
+| 60022 | C2S | H | Godot extension (no retail class) | `handleFighterEquipRequest` (S22) - `[i64 fighterId]`; answered by 60023 |
+| 60023 | S2C | E | Godot extension (no retail class) | the fighter cards it may wear - `[i64 fighterId][u16 n] n×{[i32 cardId]}`: all for an Elite fighter, the sphere-unlocked pools for a Historia one (`entitledEquip`'s rule) |
 
 ---
 

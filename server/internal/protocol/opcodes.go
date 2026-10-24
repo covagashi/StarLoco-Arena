@@ -617,6 +617,12 @@ const (
 	// coach has already won. [u16 n]{[i32 challengeId]}
 	OpStoryRequest = 60020 // C2S: empty
 	OpStory        = 60021 // S2C
+
+	// The equipment a fighter may wear (S22) — Godot only: for a Historia
+	// fighter, the cards its bought spheres unlocked; for an Elite one,
+	// every fighter card. [i64 fighterId] → [i64 fighterId][u16 n]{[i32 cardId]}
+	OpFighterEquipRequest = 60022 // C2S
+	OpFighterEquip        = 60023 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

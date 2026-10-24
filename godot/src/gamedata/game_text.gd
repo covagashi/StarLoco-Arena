@@ -14,6 +14,7 @@ const State := preload("res://src/state.gd")
 
 const SPELL := 3
 const CARD := 23
+const FIGHTER_CARD := 1   # fighter equipment names (S22); 2 = their lore
 
 static var _tables := {}   # locale -> Dictionary (the whole i18n json), or {}
 

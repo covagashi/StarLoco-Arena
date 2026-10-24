@@ -71,30 +71,26 @@ func _audit() -> void:
 		if int(it.id) == int(f.id):
 			back = it.get("spells", []).has(sid)
 	_record(6010, "restore", back, "spell %d is back" % sid)
+	# the equipment tab: the five slots and the cards for the picked one
+	for b in p.find_children("*", "Button", true, false):
+		if b.toggle_mode and b.text == i18n.t("fe.equip"):
+			b.pressed.emit()
+	await create_timer(0.5).timeout
+	var slots = p.find_child("Slots", true, false)
+	var pool = p.find_child("Pool", true, false)
+	_record(6011, "equipment", slots != null and slots.get_child_count() == 5 and pool != null and pool.get_child_count() > 0,
+		"5 slots, %d cards offered" % (pool.get_child_count() if pool != null else 0))
+	await _shot("loadout-equipment")
 	_close_all()
 
 
-func _toggle_spell(p, sid: int, button_key: String) -> bool:
-	var tree: Tree = null
-	for t in p.find_children("*", "Tree", true, false):
-		tree = t
-	var row: TreeItem = null
-	if tree != null:
-		for it in tree.get_root().get_children():
-			var m: Variant = it.get_metadata(0)
-			if m is Dictionary and int(m.get("id", -1)) == sid:
-				row = it
-	if row == null:
-		_record(6011, "spell row", false, "spell %d not listed" % sid)
+func _toggle_spell(p, sid: int, _button_key: String) -> bool:
+	# S22: spells are tiles; a click equips or takes one off
+	var b: Button = p.find_child("Spell%d" % sid, true, false)
+	if b == null or b.disabled:
+		_record(6011, "spell tile", false, "spell %d has no usable tile" % sid)
 		return false
-	row.select(0)
-	await create_timer(0.3).timeout
-	var btns: Array = []
-	_collect_buttons(p, root.get_node("I18n").t(button_key), btns)
-	if btns.is_empty():
-		_record(6011, "spell button", false, "no '%s' button" % button_key)
-		return false
-	btns[0].pressed.emit()
+	b.pressed.emit()
 	await create_timer(0.3).timeout
 	return true
 

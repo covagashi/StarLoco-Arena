@@ -1,6 +1,9 @@
 package game
 
 import (
+	"sort"
+
+	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
 
@@ -32,6 +35,36 @@ func isStoryChallenge(id int32) bool {
 
 func registerStoryHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpStoryRequest, handleStoryRequest)
+	r.Register(protocol.OpFighterEquipRequest, handleFighterEquipRequest)
+}
+
+// handleFighterEquipRequest (60022 → 60023, S22) lists the fighter cards one
+// of the caller's fighters may wear: everything for an Elite fighter (only
+// the budget limits it), what its bought spheres unlocked for a Historia one
+// — the same rule entitledEquip enforces on save, so the Godot editor offers
+// exactly what will stick.
+func handleFighterEquipRequest(s *Session, f *protocol.C2SFrame) error {
+	if s.Coach == nil || s.deps.Store == nil || s.deps.FighterCards == nil {
+		return nil
+	}
+	fid, err := protocol.NewReader(f.Payload).I64()
+	if err != nil {
+		return err
+	}
+	fr, err := s.deps.Store.Fighters.Get(uint(fid))
+	if err != nil || fr == nil || fr.CoachID != s.Coach.ID {
+		return nil
+	}
+	ids := s.deps.wearableCards(fr)
+	w := protocol.NewWriter().I64(fid).U16(uint16(len(ids)))
+	for _, id := range ids {
+		w.I32(id)
+	}
+	frame, err := protocol.EncodeS2C(protocol.OpFighterEquip, w.Bytes())
+	if err != nil {
+		return err
+	}
+	return s.Send(frame)
 }
 
 // handleStoryRequest (60020) answers 60021 with the campaign challenges this
@@ -61,4 +94,27 @@ func handleStoryRequest(s *Session, _ *protocol.C2SFrame) error {
 		return err
 	}
 	return s.Send(frame)
+}
+
+
+// wearableCards is entitledEquip's rule as a list: every fighter card for an
+// Elite fighter, the sphere-unlocked pools for a Historia one.
+func (d *Deps) wearableCards(fr *domain.Fighter) []int32 {
+	if d.FighterCards == nil || fr == nil {
+		return nil
+	}
+	var unlocked []int32
+	limited := fr.IsEvolution() && d.EquipmentPools != nil && d.SphereBoards != nil
+	if limited {
+		unlocked = sphereEquipmentPools(fr, d.SphereBoards)
+	}
+	ids := make([]int32, 0, len(d.FighterCards.All()))
+	for id := range d.FighterCards.All() {
+		if limited && !d.EquipmentPools.Grants(unlocked, id) {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	return ids
 }

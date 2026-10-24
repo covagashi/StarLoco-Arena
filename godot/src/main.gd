@@ -27,6 +27,7 @@ const Elements := preload("res://src/gamedata/elements.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const Features := preload("res://src/features.gd")
 const Story := preload("res://src/gamedata/story.gd")
+const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
@@ -52,6 +53,8 @@ const OP_GHOST_DELETE := 60015         # C2S [i64 ghost]
 const OP_GHOST_LADDER_REQ := 60016     # C2S empty
 const OP_STORY_REQUEST := 60020        # C2S empty (S21)
 const OP_STORY := 60021                # S2C [u16 n]{i32 challengeId} — the campaign challenges won
+const OP_FIGHTER_EQUIP_REQUEST := 60022  # C2S [i64 fighterId] (S22)
+const OP_FIGHTER_EQUIP := 60023          # S2C [i64 fighterId][u16 n]{i32 cardId} — what it may wear
 const OP_GHOST_LADDER := 60017         # S2C [i32 elo][i32 rank][i32 fights][i32 wins][u16 n]{str, i32×3, u8}
 const OP_COACH_CREATE_REQ := 2048
 const OP_COACH_CREATE := 2049
@@ -796,6 +799,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					"owner": payload.get_str("u8", "utf8"), "fighters": payload.get_u8(),
 					"elo": payload.get_i32(), "mine": payload.get_u8() == 1})
 			_gui.gui.model.set_value("ghosts", list, "list")
+		OP_FIGHTER_EQUIP:
+			var wfid := int(payload.get_i64())
+			var wear: Array = []
+			for i in payload.get_u16():
+				wear.append(int(payload.get_i32()))
+			_eq_wearable[wfid] = wear
+			if wfid == _eq_fid:
+				_push_fequip_model()
 		OP_STORY:
 			_story_won = []
 			for i in payload.get_u16():
@@ -2939,12 +2950,13 @@ func _on_evo_card_infos(_args: Array, w: GWidget) -> void:
 ## slots {0..4 → card}, spells list, breedSpells offer. Save → 6011.
 const _EQ_FIELDS := ["weaponEquipment", "petEquipment", "cloakEquipment",
 	"hatEquipment", "dofusEquipment"]
-const _EQ_PER_PAGE := 8
+const _EQ_PER_PAGE := 12
 
 var _eq_fid := -1
 var _eq_cards := {}          # slot int 0-4 -> card template id
 var _eq_spells: Array = []   # spell ids currently equipped
 var _eq_save_state := ""     # "" / "saving" / "saved" / "error" (S20: the panel says it)
+var _eq_wearable := {}       # fighter id -> card ids it may wear (60023, S22)
 var _eq_type := 0            # selectedItemCardListType (slot filter)
 var _eq_page := 0
 
@@ -2961,6 +2973,11 @@ func _on_eq_edit_fighter(args: Array, w: GWidget) -> void:
 		return
 	_eq_fid = int(f.id)
 	_eq_save_state = ""
+	# ask what this fighter may wear: its spheres' cards (Historia) or all
+	# (Elite) — the rule the server applies on save (S22)
+	var req := WireWriter.new()
+	req.put_i64(_eq_fid)
+	Session.send(OP_FIGHTER_EQUIP_REQUEST, req.raw(), 2)
 	_eq_cards = {}
 	for c in f.get("cards", []):
 		_eq_cards[int(c.get("slot", 0))] = int(c.get("id", 0))
@@ -2988,11 +3005,15 @@ func _spell_item(sid: int) -> Dictionary:
 
 ## Equipment slot item — the slot dndc binds itemIconUrl on top of the
 ## shared card fields.
-func _equip_slot_item(cid: int) -> Variant:
-	if cid <= 0 or int(State.inventory.get(cid, 0)) <= 0:
+func _equip_slot_item(cid: int, owned_only := true) -> Variant:
+	if cid <= 0 or (owned_only and int(State.inventory.get(cid, 0)) <= 0):
 		return null
 	var it := _card_item(cid)
 	it["itemIconUrl"] = str(cid)
+	# a fighter card, not the coach card that shares its id (S22)
+	it["name"] = FighterCards.label(cid)
+	it["value"] = FighterCards.value_of(cid)
+	it["fighter"] = true
 	return it
 
 
@@ -3036,15 +3057,27 @@ func _push_fequip_model() -> void:
 	ef["dirty"] = dirty
 	ef["saveState"] = _eq_save_state
 	for s in _EQ_FIELDS.size():
-		ef[_EQ_FIELDS[s]] = _equip_slot_item(int(_eq_cards.get(s, 0)))
+		# what it wears is a fighter card, not an inventory one (S22)
+		ef[_EQ_FIELDS[s]] = _equip_slot_item(int(_eq_cards.get(s, 0)), false)
 	model.set_value("teamManagement", ef, "editableFighter")
 	model.set_value("teamManagement", _eq_type,
 		"selectedItemCardListType")
+	# An Elite fighter may wear EVERY card of the slot's type (retail aca_0,
+	# server entitledEquip): only the 6000 budget limits it. Offering just
+	# the owned ones made the collection decide Elite teams (S22, no p2w).
+	# A Historia fighter keeps its own cards (the server keeps what its
+	# spheres unlocked).
+	# The server's list (60023) when it has come; until then, every card for
+	# an Elite fighter and none for a Historia one (its spheres decide).
+	var elite := int(f.get("type", 2)) == 1
+	var wearable: Array = _eq_wearable.get(_eq_fid, FighterCards.all_ids() if elite else [])
 	var pool: Array = []
-	for cid in State.inventory:
-		if int(Cards.meta(int(cid)).get("type", 0)) == _eq_type + 1 \
-				and int(State.inventory[cid]) > 0:
-			pool.append(_equip_slot_item(int(cid)))
+	for cid in wearable:
+		if FighterCards.slot_type(int(cid)) == _eq_type + 1:
+			var it: Variant = _equip_slot_item(int(cid), false)
+			if it != null:
+				pool.append(it)
+	pool.sort_custom(func(a, b): return int(a.get("value", 0)) < int(b.get("value", 0)))
 	var max_page := maxi(0, (pool.size() - 1) / _EQ_PER_PAGE)
 	_eq_page = clampi(_eq_page, 0, max_page)
 	model.set_value("teamManagement",
@@ -3091,7 +3124,7 @@ func _on_eq_add_equipment(_a: Array, w: GWidget) -> void:
 	if not (row is Dictionary):
 		return
 	var cid := int(row.get("id", 0))
-	var t := int(Cards.meta(cid).get("type", 0))
+	var t := FighterCards.slot_type(cid)   # the fighter slot, not the coach one (S22)
 	if t >= 1 and t <= 5:
 		_eq_cards[t - 1] = cid
 		_push_fequip_model()
@@ -3155,7 +3188,7 @@ func _on_eq_drop_equipment(args: Array, _w: GWidget) -> void:
 	var cid := int(payload.get("id", 0))
 	if slot < 0 or cid <= 0:
 		return
-	if int(Cards.meta(cid).get("type", 0)) != slot + 1:
+	if FighterCards.slot_type(cid) != slot + 1:
 		return
 	if dnd.has("from_slot"):
 		_eq_cards.erase(int(dnd["from_slot"]))

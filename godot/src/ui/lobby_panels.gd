@@ -1222,32 +1222,72 @@ func _team_name() -> void:
 	create.name = "Create"
 
 
+## Equipo del luchador (S22): what the owner found dense, as tiles. Spells:
+## the equipped ones on top (up to 6), the rest below — a click equips or
+## takes one off. Equipment: the five slots with the card's art; the cards
+## for the picked slot below, a click puts one on. "Guardar" sends it all.
 func _equipment() -> void:
 	var fighter: Dictionary = data("teamManagement.editableFighter", {})
-	label(body, str(fighter.get("name", "")), 23)
+	var head := row(body)
+	label(head, str(fighter.get("name", "")), 24)
+	var budget := label(head, I18n.t("fe.budget", {"n": int(fighter.get("value", 0))}), 16)
+	budget.add_theme_color_override("font_color", UiStyle.MUTED)
 	tabs(body, [I18n.t("fe.spells"), I18n.t("fe.equip")])
 	if tab == 0:
 		var spells: Array = data("teamManagement.editableFighter.breedSpells", [])
-		var rows: Array = []
-		for spell in spells:
-			var item: Dictionary = spell.duplicate()
-			item["status"] = I18n.t("fe.equipped") if item.get("equipped", false) else I18n.t("fe.available")
-			rows.append(item)
-		table(body, [I18n.t("fe.col_spell"), I18n.t("fe.col_ap"), I18n.t("fe.col_range"), I18n.t("fe.col_status")], ["name", "actionPoints", "range", "status"], rows, func(_item): schedule_refresh())
-		button(body, I18n.t("fe.remove_spell") if selected.get("equipped", false) else I18n.t("fe.equip_spell"), func(): send("removeSpell" if selected.get("equipped", false) else "addSpell", [], selected), not selected.is_empty())
-		label(body, I18n.t("fe.spell_hint"))
+		var on: Array = spells.filter(func(sp): return bool(sp.get("equipped", false)))
+		var off: Array = spells.filter(func(sp): return not bool(sp.get("equipped", false)))
+		label(body, I18n.t("fe.equipped_n", {"n": on.size()}), 18)
+		var top := HFlowContainer.new()
+		top.name = "SpellsOn"
+		body.add_child(top)
+		if on.is_empty():
+			_muted(top, I18n.t("fe.no_spells"))
+		for sp in on:
+			_spell_tile(top, sp, true, false)
+		label(body, I18n.t("fe.available"), 18)
+		var rest := HFlowContainer.new()
+		rest.name = "SpellsOff"
+		body.add_child(rest)
+		for sp in off:
+			_spell_tile(rest, sp, false, on.size() >= 6)
+		_muted(body, I18n.t("fe.spell_hint"))
 	else:
 		var slots := [I18n.t("fe.slot_weapon"), I18n.t("fe.slot_pet"), I18n.t("fe.slot_cloak"), I18n.t("fe.slot_hat"), I18n.t("fe.slot_dofus")]
 		var slot := int(data("teamManagement.selectedItemCardListType", 0))
-		choices(body, slots, slot, func(i): selected = {}; send("changeItemCardType", [i]))
+		var bar := HBoxContainer.new()
+		bar.name = "Slots"
+		bar.add_theme_constant_override("separation", 8)
+		body.add_child(bar)
+		for i in slots.size():
+			var worn: Dictionary = data("teamManagement.editableFighter." + EQ_FIELDS[i], {})
+			var b := _tile(bar, {"id": int(worn.get("id", 0)), "fighter": true,
+				"name": str(worn.get("name", I18n.t("fe.none")))}, i == slot, "", str(slots[i]))
+			b.name = "Slot%d" % i
+			b.custom_minimum_size = Vector2(150, 180)
+			var idx := i
+			b.pressed.connect(func(): selected = {}; send("changeItemCardType", [idx]))
 		var equipped: Dictionary = data("teamManagement.editableFighter." + EQ_FIELDS[slot], {})
-		label(body, I18n.t("fe.equipped_x", {"name": str(equipped.get("name", I18n.t("fe.none")))}))
-		button(body, I18n.t("fe.unequip"), func(): send("removeEquipment", [slot]), not equipped.is_empty())
-		table(body, [I18n.t("inv.col_card"), I18n.t("inv.col_qty"), I18n.t("inv.col_value")], ["name", "quantity", "value"], data("teamManagement.selectedItemCardList", []), func(_item): schedule_refresh())
+		var line := row(body)
+		label(line, I18n.t("fe.equipped_x", {"name": str(equipped.get("name", I18n.t("fe.none")))}), 17)
+		button(line, I18n.t("fe.unequip"), func(): send("removeEquipment", [slot]), not equipped.is_empty()).name = "Unequip"
+		var pool: Array = data("teamManagement.selectedItemCardList", [])
+		var grid := HFlowContainer.new()
+		grid.name = "Pool"
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		body.add_child(grid)
+		if pool.is_empty():
+			_muted(grid, I18n.t("fe.no_cards"))
+		for it in pool:
+			var t := _tile(grid, it, int(it.get("id", 0)) == int(equipped.get("id", -1)), "",
+				I18n.t("fe.value", {"n": int(it.get("value", 0))}))
+			t.name = "Card%d" % int(it.get("id", 0))
+			var item: Dictionary = it
+			t.pressed.connect(func(): send("addEquipment", [], item))
 		var nav := row(body)
 		button(nav, I18n.t("ladder.prev"), func(): send("decreaseList"))
 		button(nav, I18n.t("ladder.next"), func(): send("increaseList"))
-		button(nav, I18n.t("fe.equip_card"), func(): send("addEquipment", [], selected), not selected.is_empty())
 	# The save says what happened (S20): enabled only with changes, then
 	# "Guardando…", then "✓ Guardado" until the next edit.
 	var dirty := bool(fighter.get("dirty", false))
@@ -1257,13 +1297,57 @@ func _equipment() -> void:
 		save_text = I18n.t("fe.saving")
 	elif state == "saved" and not dirty:
 		save_text = I18n.t("fe.saved")
-	var save := button(body, save_text, func(): send("saveEditableFighter"),
+	pinned_actions.show()
+	if state == "error":
+		label(pinned_actions, I18n.t("fe.save_failed")).add_theme_color_override(
+			"font_color", Color("e07a5f"))
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pinned_actions.add_child(spacer)
+	var save := button(pinned_actions, save_text, func(): send("saveEditableFighter"),
 		dirty and state != "saving")
 	save.name = "Save"
+	save.custom_minimum_size.x = 220
 	UiStyle.primary(save, 20)
-	if state == "error":
-		label(body, I18n.t("fe.save_failed")).add_theme_color_override(
-			"font_color", Color("e07a5f"))
+
+
+## One spell as a tile: its icon, name and AP; a click equips it or takes it
+## off (full = six equipped, so the rest are offered but disabled).
+func _spell_tile(parent: Node, sp: Dictionary, equipped: bool, full: bool) -> void:
+	var b := Button.new()
+	b.name = "Spell%d" % int(sp.get("id", 0))
+	b.custom_minimum_size = Vector2(176, 64)
+	b.disabled = full and not equipped
+	b.tooltip_text = I18n.t("fe.spell_tip", {"ap": int(sp.get("actionPoints", 0)), "range": str(sp.get("range", ""))})
+	parent.add_child(b)
+	var h := HBoxContainer.new()
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	h.offset_left = 6
+	h.offset_right = -6
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(h)
+	var icon := TextureRect.new()
+	icon.texture = _ach_icon("gui/images/spells/icons/%d.png" % int(sp.get("id", 0)))
+	icon.custom_minimum_size = Vector2(48, 48)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if not equipped:
+		icon.modulate = Color(1, 1, 1, 0.55)
+	h.add_child(icon)
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(col)
+	var nm := _small(col, str(sp.get("name", "")), 14)
+	nm.clip_text = true
+	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var ap := _small(col, I18n.t("fe.ap", {"n": int(sp.get("actionPoints", 0))}), 12)
+	ap.add_theme_color_override("font_color", UiStyle.GOLD if equipped else UiStyle.MUTED)
+	var item := sp
+	b.pressed.connect(func(): send("removeSpell" if equipped else "addSpell", [], item))
 
 
 func _guild_creation() -> void:

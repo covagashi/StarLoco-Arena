@@ -1,6 +1,6 @@
 // dumpfightercards dumps every fighter-equipment card's ACTIVE-ability data
 // (the 8107 FIGHTER_CARD_USE attack) for the Godot client's fight spell bar:
-// {"<id>": {"ap":N,"min":N,"max":N,"usable":bool}}. Display names resolve
+// {"<id>": {"ap":N,"min":N,"max":N,"usable":bool,"type":N,"value":N}}. Display names resolve
 // through the coach-card table (same id space) already in cards.json.
 //
 // Usage: go run ./cmd/dumpfightercards <data-dir> <out.json>
@@ -30,6 +30,13 @@ type rec struct {
 	// Effect zones for the Godot AoE preview — deduped [shape, size…]
 	// tuples from UseEffects (point/empty/all produce no tint).
 	Zones [][]int32 `json:"zn,omitempty"`
+	// Type is the FIGHTER slot type (vi_1: 1 weapon, 2 pet, 3 cloak, 4 hat,
+	// 5 dofus; the server's canonicalEquipSlots puts it at Type-1). The
+	// coach-card table shares the id but its own type is the COACH slot, so
+	// the Godot loadout editor must read this one (S22).
+	Type int16 `json:"type"`
+	// Value is what the card adds to the fighter's budget (Elite: 6000).
+	Value int32 `json:"value"`
 }
 
 func main() {
@@ -48,6 +55,7 @@ func main() {
 			AP: c.APCost, Min: c.RangeMin, Max: c.RangeMax,
 			Usable: c.Usable(), Script: c.ScriptID,
 			LoS: c.TestLoS, Line: c.OnlyLine, Free: c.NeedFreeCell,
+			Type: c.Type, Value: c.Value,
 		}
 		seen := map[string]bool{}
 		for _, ef := range c.UseEffects {
