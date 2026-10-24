@@ -53,3 +53,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-22 | [S09, bloque C: torneos de jugador y cartas de entrada](./2026-10-22-s09-bloque-c.md) |
 | 2026-10-22 | [S09, bloque E y cierre: los torneos en Godot](./2026-10-22-s09-bloque-e.md) |
 | 2026-10-22 | [S10: tutorial y onboarding (abierto y cerrado)](./2026-10-22-s10.md) |
+| 2026-10-24 | [Login con ✕ y ojo; la lista del dueño, en sprints S20–S24 (M6)](./2026-10-24-sprints-m6.md) |

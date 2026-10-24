@@ -1,0 +1,111 @@
+# S21 — Un game-loop de hoy: lobby, modos y fin de combate
+
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** ⚪ esbozo · **Depende de:** S20
+
+## Origen
+
+El dueño, 2026-10-24, tras probar el cliente en la Ally (texto literal, es
+el origen de S20–S24):
+
+> la ventana de "equipo del luchador" hazlo mas ameno y accesible, le doy a
+> guardar cambios y no hay ninguna seña de nada. que diferencia hay entre
+> evolucion, elite, 2vs2, torneos y leyendas? haz mejor la parte de logros,
+> estoy seguro de que ya existia iconos. por que hay la redundancia de "elige
+> tu proximo combate" con la parte de "equipo"? la parte de ayuda es muy vaga.
+> los botones de mover el pj no funciona. el boton de cancelar es muy
+> "pequeño" y no es visible, los juegos actuales hay como una cuenta atras.
+> que es eso de evolucion? la parte de "servicios" es demasiado condensaado y
+> cuando está hablando Nilo o cualquier npc no sale la cara ni nada de eso.
+> por que en la parte de arriba en el combate dice "es la hora de la accion",
+> "dios sram", "ira guerrera", diosa sacrogrito"? cuando uno gana el combate,
+> sale vistoria y continuar y en el lobby sale otro panel/modal, con la misma
+> informacion, se podrian combinar para no duplicar. el equipo del coach no
+> funciona, y la parte del inventario está bien pero es denso, ahora que no
+> hacemos el 1bit, creo que podriamos hacer mas. y mejor los paneles
+> originales pero darle un toque moderno, sin redundancias, tambien dime o
+> ponme los textos de cada npc que hay en servicio y cuando abrí el juego me
+> abló un tal aldebaran, no estoy seguro si eso es un servicio o parte de
+> tutorial. faltan muchaas cosas y creo que está muy sobre cargado, ya sé que
+> esto es lo que tiene el servidor original, pero esto es algo del 2015 o mas
+> antiguo, hoy en dia los game-loop son diferentes, así que ahora, en mi
+> opinion, no está preparado para los los ultimos sprints
+
+Reparto: lo roto → [S20](./S20-lo-que-no-funciona.md); lobby, modos, fin de
+combate y ayuda → este; paneles → [S22](./S22-paneles-modernos.md); NPCs →
+[S23](./S23-npcs-con-cara.md); el letrero del combate →
+[S24](./S24-combate-legible.md).
+
+## Objetivo
+
+Que quien entra sepa en diez segundos **qué puede jugar, con qué equipo y qué
+gana**, sin cinco caminos al mismo sitio. El servidor sigue siendo el del
+retail; lo que cambia es cómo se presenta.
+
+## Los cinco modos, hoy (2026-10-24, leyendo el código)
+
+| Modo | Qué es para el jugador | Equipo | Qué se juega | Servidor |
+|---|---|---|---|---|
+| **Evolución** | El modo para empezar y el de progresión: tus luchadores ganan XP y desbloquean hechizos y equipo con el Kanodo (esferas que se compran con XP). Se cansan, se hieren y **pueden morir**; las cartas de resurrección los traen de vuelta. Es donde más cartas se ganan | un equipo: hasta 6 titulares y 7 en el banquillo | XP, cartas, heridas y muertes (y hoy también fuerza de clasificación, ver S20 #6) | 23003 con el pseudo-equipo 99 (`handlers_evolution_search.go:44`) |
+| **Élite** | El competitivo: todos parten del mismo nivel, con todos los hechizos y equipo. 6000 puntos para armar el equipo, como mucho 2 de la misma clase. Sin XP ni muertes | equipos guardados de luchadores clásicos | la fuerza: ±25 entre 1000 y 3000 (`domain/ladder.go:20`) | 23103 con el id del equipo |
+| **2vs2** | Élite con un amigo de tu lista: un equipo compartido | un dúo (6024–6028) | lo mismo que Élite; los dos pulsan Combatir | 23103 |
+| **Torneos** | Te inscribes en el Calendario (a veces pagando una carta), hay periodos de búsqueda con horario y se ganan puntos y fichas de torneo | según el torneo: Élite, titulares de Evolución, cementerio o Leyendas | puntos y fichas | 28611 |
+| **Leyendas** | Los luchadores de Evolución de mayor rango se vuelven inmortales y solo combaten en torneos de Leyendas. **No es una cola**, es un tipo de torneo. Hoy está roto (S20 #5) | luchadores en estado 4 | torneos de Leyendas | — |
+
+## La redundancia "Elige tu próximo combate" ↔ "Equipo"
+
+Seis botones en el lobby (`lobby_screen.gd:29-36`), y cuatro son atajos a algo
+que ya está en el panel Equipo:
+
+| Botón del lobby | Igual que |
+|---|---|
+| Entrenamiento | "Entrenamiento" al pie de Equipo |
+| Combate (clasificado) | "Buscar combate" en Élite/2v2; desde el lobby no se ve **con qué equipo** |
+| Evolución | "Buscar combate" en Evolución |
+| 2v2 dúo | "Nuevo equipo" en la pestaña 2v2 |
+| Equipo | también en el menú inferior y en Esc (tres accesos) |
+| Aleatorio | — (el único propio) |
+
+Además, las pestañas Élite y 2v2 muestran la misma lista mezclada de equipos
+(`lobby_panels.gd:116`).
+
+## Tareas candidatas
+
+- [ ] **Una sola puerta por modo.** Propuesta: el lobby enseña los modos como
+      tarjetas grandes (nombre, una frase de qué es, qué ganas, con qué equipo
+      juegas y un "Jugar"). El panel Equipo queda para **preparar** el
+      equipo, no para lanzar combates. Fuera los duplicados.
+- [ ] **Decir qué es cada modo** donde se elige, con las frases de la tabla
+      de arriba, no escondido en la Ayuda.
+- [ ] **Buscar rival:** cronómetro, modo, equipo y cancelar grande (lo mínimo
+      va en S20 #4; aquí, el diseño).
+- [ ] **Un solo fin de combate.** Hoy hay dos: el modal "Victoria/Derrota" de
+      `fight_view.gd:2983` (solo cartas ganadas y perdidas) y
+      `report_panel.gd` en el lobby (resultado, posición ±, muertos y
+      heridos, coaches, XP/moral/cansancio por luchador, cartas, y después la
+      subida de nivel). Se unen en una pantalla que sale al acabar: resultado
+      grande, lo que ganaste y después el detalle, y "Continuar" lleva al
+      lobby sin otro modal.
+- [ ] **Ayuda útil.** Hoy (`lobby_panels.gd:855-881`): primeros pasos,
+      reglas en 5 líneas y 4 bloques genéricos; dice que las cartas de evento
+      duran "unos turnos" y duran 1. Propuesta: menos texto general y más
+      ayuda **en el sitio**: un "?" en cada panel que explica ese panel, y
+      una página por modo.
+- [ ] **Menos carga.** Revisar el lobby entero con el dueño: qué se ve de
+      entrada y qué va dentro. Hoy hay ~21 paneles. La referencia son los
+      juegos de cartas y autobattlers actuales (un botón Jugar, misiones
+      diarias, pase de temporada…). Lo que el servidor no tiene se apunta,
+      no se inventa en este sprint.
+
+## Decisiones pendientes del dueño
+
+| Decisión | Por defecto |
+|---|---|
+| ¿Se mantienen los cinco modos tal cual, o se agrupan (p. ej. "Progresión" = Evolución, "Clasificado" = Élite y 2v2, "Eventos" = Torneos y Leyendas)? | agrupar en tres puertas, sin cambiar las reglas del servidor |
+| ¿Qué entra en el game-loop moderno que el retail no tiene (misiones diarias, recompensa por primera victoria, temporadas)? | se apunta en el BACKLOG; un sprint aparte si el dueño lo quiere |
+
+## Criterio de cierre
+
+Desde el lobby, cada modo tiene una sola entrada y dice qué es; buscar rival
+tiene cronómetro y cancelar visible; al acabar un combate sale una sola
+pantalla de resultado; la Ayuda explica cada panel. El dueño lo aprueba en la
+Ally.
