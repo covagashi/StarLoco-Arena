@@ -111,8 +111,8 @@ afectado trabaja con la opción marcada como *por defecto*.
 | X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo (aplicado en S08; se reabre si el dueño dice) |
 | Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas, sin decaimiento (aplicado en S14) |
 | Modos: Evolución = historia, Élite = ranking, Torneos igual; 2vs2 escondido, Leyendas fuera | S20, S20B, S21 | **tomada** (dueño, 2026-10-24) |
-| ¿Fantasmas dentro del Ranking (relleno cuando no hay rival) o con entrada propia? | S20B | dentro del Ranking |
-| ¿Historia = campaña PvE de desafíos y demonios (y se esconde la cola PvP de Evolución)? | S21 | sí |
+| ¿Fantasmas dentro del Ranking (relleno cuando no hay rival) o con entrada propia? | S20B | **tomada**: dentro del Ranking, dos escaleras (dueño, 2026-10-24) |
+| ¿Historia = campaña PvE de desafíos y demonios (y se esconde la cola PvP de Evolución)? | S21 | **tomada**: sí (dueño, 2026-10-24) |
 | Monetización: solo cosméticos; ¿qué se hace con lo que hoy da ventaja? | S21 | mapa del p2w primero, después se decide |
 | ¿Qué botones eran "mover el pj"? | S20 | se arreglan los tres candidatos |
 | ¿Qué añade el game-loop moderno que el retail no tiene (misiones diarias, primera victoria, temporadas)? | S21 | se apunta; sprint aparte si el dueño lo quiere |

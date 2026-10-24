@@ -69,8 +69,8 @@ de Élite y `ghost_ratings`, por decisión de S14); unirlas o no se decide aquí
 
 | Decisión | Por defecto |
 |---|---|
-| ¿Los fantasmas van dentro del Ranking (como relleno cuando no hay rival) o con su propia entrada? | dentro del Ranking, como relleno |
-| ¿Una escalera o dos (Élite y fantasmas)? | dos, como hoy, hasta tener datos |
+| ¿Los fantasmas van dentro del Ranking (como relleno cuando no hay rival) o con su propia entrada? | **dentro del Ranking** (dueño, 2026-10-24: "de acuerdo") |
+| ¿Una escalera o dos (Élite y fantasmas)? | **dos, como hoy, hasta tener datos** (dueño, 2026-10-24) |
 
 ## Criterio de cierre
 

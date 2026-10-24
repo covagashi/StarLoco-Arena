@@ -61,6 +61,23 @@ cadena de desafíos y demonios como campaña, con las reglas de Evolución (XP,
 heridas, muerte), y la cola PvP de Evolución escondida como el 2vs2. A
 confirmar.
 
+## Borrador de las fichas de modo (para que el dueño las corrija)
+
+El dueño, 2026-10-24: "pásame la parte de las fichas y yo cambio los textos
+o te digo qué cambiar". El mismo día aceptó las opciones por defecto
+("de acuerdo, me parece bien"): los fantasmas van dentro del Ranking, y
+Historia es la campaña PvE de desafíos y demonios.
+
+| | Historia | Ranking | Torneos |
+|---|---|---|---|
+| **Frase** | Recluta luchadores y hazlos crecer combate a combate contra los demonios del Horamundo. | Todos empiezan igual: gana el mejor jefe, no la mejor colección. | Inscríbete, combate en tu horario y sube en el cuadro. |
+| **Qué ganas** | Experiencia, cartas y esferas para el Kanodo | Puntos de ranking y tu puesto en la clasificación | Fichas de torneo y puntos |
+| **Con qué equipo** | Tus titulares de Historia (hasta 6) | Un equipo de Élite (6000 puntos, como mucho 2 de la misma clase) | El que pida el torneo |
+| **Aviso** | Tus luchadores se cansan, se hieren y pueden morir. | Si no hay rival en vivo, peleas contra el fantasma de un jugador de tu nivel. | Próximo torneo: {fecha} · Inscrito / Sin inscribir |
+| **Botón** | Jugar | Jugar | Ver torneos |
+
+Al buscar: «Buscando rival… 0:12» y «Cancelar».
+
 ## Los cinco modos del retail (2026-10-24, leyendo el código)
 
 | Modo | Qué es para el jugador | Equipo | Qué se juega | Servidor |
@@ -171,7 +188,7 @@ ni pagos):
 
 | Decisión | Por defecto |
 |---|---|
-| ¿Historia es la campaña PvE de desafíos y demonios, y se esconde la cola PvP de Evolución? | sí |
+| ¿Historia es la campaña PvE de desafíos y demonios, y se esconde la cola PvP de Evolución? | **sí** (dueño, 2026-10-24) |
 | ¿Qué entra en el game-loop moderno que el retail no tiene (misiones diarias, recompensa por primera victoria, temporadas)? | se apunta en el BACKLOG; un sprint aparte si el dueño lo quiere |
 
 ## Criterio de cierre
