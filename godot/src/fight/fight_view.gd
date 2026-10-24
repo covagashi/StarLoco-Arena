@@ -2978,8 +2978,12 @@ func _end_fight_ack() -> void:
 	State.net.send_message(OP_END_FIGHT_DONE, PackedByteArray(), 3)
 
 
-## fightResultDialog on 8300 — model: localWinner/cards/teamFighters.
-## Returns false when the dialog can't load (caller acks right away).
+## The end of a fight (S21): one big word over the board — VICTORIA or
+## DERROTA — and back to the lobby, where the report says everything once
+## (cards, XP, the ladder). Until S21 a small modal listed the cards here and
+## the lobby listed them again. Continues by itself after 2.5 s (real time:
+## replays run at ×2/×4); "Continuar" or any key goes at once.
+## Returns false when it can't show (caller acks right away).
 func _show_fight_result() -> bool:
 	var res: Dictionary = State.fight_result
 	_focus_before_result = get_viewport().gui_get_focus_owner()
@@ -2988,68 +2992,50 @@ func _show_fight_result() -> bool:
 	_result_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	$UI.add_child(_result_modal)
 	var shade := ColorRect.new()
-	shade.color = Color(0.02, 0.025, 0.018, 0.76)
+	shade.color = Color(0.02, 0.025, 0.018, 0.55)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_result_modal.add_child(shade)
-	var panel := Panel.new()
-	panel.theme = _lobby_theme()
-	var style := _chat_surface()
-	style.bg_color = Color("292c20")
-	style.border_color = Color("ad965a")
-	style.set_border_width_all(2)
-	panel.add_theme_stylebox_override("panel", style)
-	_result_modal.add_child(panel)
-	var vp := get_viewport().get_visible_rect().size
-	panel.size = Vector2(minf(480, vp.x - 32), minf(220, vp.y - 32))
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.5
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.5
+	var won: bool = res.get("win_str", {}).has(State.my_coach_id)
 	var column := VBoxContainer.new()
-	column.position = Vector2(24, 24)
-	column.size = panel.size - Vector2(48, 48)
-	column.add_theme_constant_override("separation", 14)
-	panel.add_child(column)
+	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 18)
+	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	column.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_result_modal.add_child(column)
 	var title := Label.new()
-	title.text = I18n.t("fight.result.victory") if res.get("win_str", {}).has(State.my_coach_id) \
-		else I18n.t("fight.result.defeat")
+	title.name = "Outcome"
+	title.text = (I18n.t("fight.result.victory") if won else I18n.t("fight.result.defeat")).to_upper()
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 96)
+	title.add_theme_constant_override("outline_size", 18)
+	title.add_theme_color_override("font_outline_color", Color(0.05, 0.04, 0.02))
+	title.add_theme_color_override("font_color", Color("e2bd6e") if won else Color("c9583f"))
 	var title_font := FontFile.new()
 	title_font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
 	title.add_theme_font_override("font", title_font)
 	column.add_child(title)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(scroll)
-	var rewards := VBoxContainer.new()
-	rewards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rewards.add_theme_constant_override("separation", 6)
-	scroll.add_child(rewards)
-	for entry in [["won_cards", "fight.result.won"], ["lost_cards", "fight.result.lost"]]:
-		var cards: Array = res.get(entry[0], [])
-		if cards.is_empty():
-			continue
-		var names: Array[String] = []
-		for id in cards:
-			names.append(CardsDB.name_of(int(id)))
-		var label := Label.new()
-		label.text = I18n.t(entry[1]) + ": " + ", ".join(names)
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rewards.add_child(label)
 	var done := Button.new()
+	done.name = "Continue"
 	done.text = I18n.t("fight.result.continue")
-	done.custom_minimum_size.y = 42
+	done.theme = _lobby_theme()
+	done.custom_minimum_size = Vector2(220, 48)
+	done.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	done.pressed.connect(_close_fight_result)
 	column.add_child(done)
-	panel.position = (vp - panel.size) / 2.0
+	# the word lands: a short scale-in
+	title.pivot_offset = Vector2(300, 60)
+	title.scale = Vector2(0.6, 0.6)
+	title.modulate.a = 0.0
+	var tw := title.create_tween().set_parallel()
+	tw.tween_property(title, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(title, "modulate:a", 1.0, 0.25)
+	get_tree().create_timer(2.5, true, false, true).timeout.connect(func():
+		if is_instance_valid(_result_modal):
+			_close_fight_result())
 	done.focus_next = done.get_path()
 	done.focus_previous = done.get_path()
-	done.focus_neighbor_left = done.get_path()
-	done.focus_neighbor_right = done.get_path()
-	done.focus_neighbor_top = done.get_path()
-	done.focus_neighbor_bottom = done.get_path()
 	done.grab_focus.call_deferred()
 	return true
 

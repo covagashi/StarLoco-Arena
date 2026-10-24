@@ -152,7 +152,9 @@ func _evolution_rows() -> void:
 	var cards = panel.find_child("Cards", true, false) if panel != null else null
 	var rows: int = fighters.get_root().get_child_count() if fighters != null else 0
 	var r: Dictionary = _main._gui.gui.model.get_value("fightReport")
-	_record(8300, "fighter rows", panel != null and str(panel.title.text) == "Victoria"
+	# S21: the outcome is the big line under the title, the cards are tiles
+	var hero = panel.find_child("Outcome", true, false) if panel != null else null
+	_record(8300, "fighter rows", hero != null and str(hero.text) == "VICTORIA"
 		and rows == 2 and cards != null and str(r.fighters[1].state) == "Muerto" and _fits(panel)
 		and int(State.roster[0].get("morale", -1)) == 55,
 		"Victoria, %d fighter rows (2nd '%s'), cards %s, roster morale %d → %d" % [rows,

@@ -6036,7 +6036,7 @@ func _show_fight_result() -> void:
 		counts[cid] = int(counts.get(cid, 0)) + 1
 	var cards: Array = []
 	for cid in counts:
-		cards.append({"name": Cards.name_of(int(cid)), "qty": int(counts[cid])})
+		cards.append({"id": int(cid), "name": Cards.name_of(int(cid)), "qty": int(counts[cid])})
 	_gui.gui.model.set_value("fightReport", {"outcome": outcome,
 		"summary": summary, "coaches": coaches, "fighters": fighters,
 		"cards": cards})
