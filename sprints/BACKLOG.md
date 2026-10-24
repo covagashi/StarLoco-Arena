@@ -230,6 +230,10 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 
 ## 9. Estilo visual
 
+> **2026-10-24: el dueño abandonó el 1 bit** (combate y pantallas). Lo de
+> abajo es historia; ver [`S04`](./S04-fight-maps-1bit.md) y
+> [`S18`](./S18-screens-redesign.md).
+
 - [ ] **Mapas de pelea en 1 bit** (dithering Bayer 8×8 + capas de luz, sobre el arte
       retail) — [`S04`](./S04-fight-maps-1bit.md). Dirección artística del dueño.
 - [ ] Decodificar `contents/maps/light/<id>.jar` (datos de luz del retail, 114 jars, sin

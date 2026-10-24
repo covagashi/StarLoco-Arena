@@ -45,7 +45,7 @@ func refresh() -> void:
 	var yes := button(pinned_actions, I18n.t("btn.accept"), func(): _answer(true))
 	yes.name = "Accept"
 	yes.custom_minimum_size.x = 150
-	OneBit.primary(yes, 20)
+	UiStyle.primary(yes, 20)
 	yes.grab_focus.call_deferred()
 
 

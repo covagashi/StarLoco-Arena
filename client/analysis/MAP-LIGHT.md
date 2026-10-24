@@ -145,10 +145,8 @@ shader and was not read**, so it is the part to confirm.
 
 ## Use in this project
 
-- **Retail fidelity** (sprints/S07): `map_gfx.py` could export a per-sprite
-  colour (tint × light) and `map_gfx.gd` draw with it as `modulate`. Today
-  every element is drawn at full brightness, so our arenas are flatter and
-  lighter than retail.
-- **1-bit style** (sprints/S04): the light map is a ready-made shadow mask
-  per element — data for the soft ambient layer the owner allowed, instead of
-  placing lights by hand.
+- **Retail fidelity** (sprints/S07, done 2026-10-24): `map_gfx.py` exports the
+  per-sprite colour (tint × light, "c") and `map_gfx.gd` draws with it as
+  `modulate`.
+- The 1-bit style that might have used the light map as a shadow mask was
+  dropped (2026-10-24).

@@ -42,7 +42,7 @@ func refresh() -> void:
 		var cell := VBoxContainer.new()
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(cell)
-		cell.add_child(OneBit.caption(str(sl.label)))
+		cell.add_child(UiStyle.caption(str(sl.label)))
 		var has := int(sl.card) != 0
 		var b := button(cell, str(sl.name) if has else I18n.t("ce.empty"),
 			func(): send("nativeEquipTake", [int(sl.slot)]), has)
@@ -68,4 +68,4 @@ func refresh() -> void:
 	var wear := button(pinned_actions, I18n.t("ce.wear"), func(): send("nativeEquipWear"), bool(d.get("dirty", false)))
 	wear.name = "Wear"
 	wear.custom_minimum_size.x = 190
-	OneBit.primary(wear, 20)
+	UiStyle.primary(wear, 20)

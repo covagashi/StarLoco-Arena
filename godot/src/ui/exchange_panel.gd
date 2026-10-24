@@ -56,7 +56,7 @@ func refresh() -> void:
 	if status != "":
 		var line := label(right, status)
 		line.name = "Status"
-		line.add_theme_color_override("font_color", OneBit.MUTED)
+		line.add_theme_color_override("font_color", UiStyle.MUTED)
 	pinned_actions.show()
 	var hint := label(pinned_actions, I18n.t("ex.hint") if bool(d.get("accepted", false)) else I18n.t("ex.waiting", {"name": other}))
 	hint.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -69,13 +69,13 @@ func refresh() -> void:
 		func(): send("nativeExReady"), bool(d.get("accepted", false)) and not my_ready)
 	ready.name = "Ready"
 	ready.custom_minimum_size.x = 170
-	OneBit.primary(ready, 20)
+	UiStyle.primary(ready, 20)
 
 
 func _offer(parent: Node, heading: String, cards: Array, value: int, ready: bool, key: String, mine: bool) -> void:
 	var head := row(parent)
 	label(head, heading, 20)
-	var flag := OneBit.caption(I18n.t("ex.is_ready") if ready else I18n.t("ex.not_ready"))
+	var flag := UiStyle.caption(I18n.t("ex.is_ready") if ready else I18n.t("ex.not_ready"))
 	flag.name = key + "Ready"
 	head.add_child(flag)
 	var t := table(parent, [I18n.t("inv.col_card"), I18n.t("inv.col_qty"), I18n.t("inv.col_value")],

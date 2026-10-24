@@ -18,7 +18,7 @@ const CHAT_RECT := Rect2(50, 524, 630, 134)
 const CHAT_FRAME := Rect2(40, 512, 650, 182)
 const COACH_RECT := Rect2(40, 150, 320, 350)
 const MENU_RECT := Rect2(720, 512, 510, 182)
-const OneBit := preload("res://src/ui/onebit.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 const MENUS := [
 	["nav.team", "teamManagementDialog"],
 	["nav.stats", "coachStatisticsDialog"], ["nav.inventory", "coachInventoryDialog"],
@@ -64,10 +64,10 @@ func _init() -> void:
 	_box.size = REF
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_box)
-	# 1-bit UI (S18): dithered backdrop and native windows where the baked
-	# stone slabs used to be; the controls take the shared theme.
-	_box.theme = OneBit.theme()
-	var bd := OneBit.backdrop(REF)
+	# the stone backdrop and native windows where the baked slabs used to
+	# be; the controls take the shared theme (src/ui/ui_style.gd).
+	_box.theme = UiStyle.theme()
+	var bd := UiStyle.backdrop(REF)
 	_box.add_child(bd)
 	# the sky the fireworks play in: over the backdrop, behind the windows
 	_sky = Control.new()
@@ -80,26 +80,27 @@ func _init() -> void:
 		w.position = r.position
 		w.size = r.size
 		w.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		w.add_theme_stylebox_override("panel", OneBit.window())
+		w.add_theme_stylebox_override("panel", UiStyle.window())
 		_box.add_child(w)
 	var pedestal := Panel.new()
 	pedestal.position = Vector2(95, 426)
 	pedestal.size = Vector2(210, 40)
 	pedestal.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var ps := OneBit.box(OneBit.PAPER, OneBit.INK, 2, 0)
+	var ps := UiStyle.box(UiStyle.PAPER, UiStyle.INK, 2, 0)
 	ps.set_corner_radius_all(20)
 	ps.anti_aliasing = true
 	pedestal.add_theme_stylebox_override("panel", ps)
 	_box.add_child(pedestal)
-	_font = OneBit.title_font()
+	_font = UiStyle.title_font()
 	var brand := _label(Rect2(0, 14, REF.x, 34), "PIPPOP", 26)
 	brand.add_theme_constant_override("outline_size", 8)
+	brand.add_theme_color_override("font_color", UiStyle.GOLD)
 	var logo := _label(Rect2(0, 52, REF.x, 90), "ARENA", 72)
 	logo.add_theme_constant_override("outline_size", 12)
+	logo.add_theme_color_override("font_color", UiStyle.GOLD)
 	_name = _label(Rect2(60, 158, 280, 36), "", 25)
 	_level = _label(Rect2(60, 194, 280, 26), "", 16)
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
-	OneBit.doll(_spr)
 	_spr.foot_pivot = true
 	_spr.position = Vector2(200, 443)
 	_spr.scale = Vector2(2.5, 2.5)
@@ -111,7 +112,7 @@ func _init() -> void:
 		var r := Rect2(400 + (i % 3) * 280, 210 if i < 3 else 352, 264, 126 if i < 3 else 92)
 		var b := _button(r, "", func(): action_requested.emit(str(row[1])), 24)
 		if str(row[1]) == "fight":
-			OneBit.primary(b, 28)
+			UiStyle.primary(b, 28)
 		_actions.append(b)
 	_subtitle = _label(Rect2(400, 456, 824, 30), "", 16)
 	# matchmaking in progress (S18): the subtitle says so and Cancelar stops
@@ -174,10 +175,10 @@ func bind_model(model, chat: Control) -> void:
 	_model = model
 	_chat = chat
 	if is_instance_valid(_chat):
-		_chat.theme = OneBit.theme(3)
+		_chat.theme = UiStyle.theme(3)
 		var display: Control = _chat.get_node_or_null("Display")
 		if display != null:
-			display.add_theme_stylebox_override("normal", OneBit.box(OneBit.PAPER, OneBit.PAPER, 0, 8))
+			display.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.PAPER, UiStyle.PAPER, 0, 8))
 	_model.changed.connect(_on_model_changed)
 	_sync()
 	_relayout()

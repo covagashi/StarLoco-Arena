@@ -14,9 +14,6 @@ const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
-const TeamAura := preload("res://src/fight/team_aura.gd")
-const OneBitMarks := preload("res://src/fight/onebit_marks.gd")
-const OneBitFlash := preload("res://src/fight/onebit_flash.gd")
 const FightHud := preload("res://src/fight/fight_hud.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
@@ -71,9 +68,6 @@ var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
 ## Off only for art renders (tools/render_fightmap.gd): the map without the
 ## spawn zones and placement rings drawn over it.
 var overlays_visible := true
-## 1-bit fight style (ArtStyle "onebit", sprints/S04): 1-bit map art, line-art
-## actors, team auras instead of base rings. Read once in _ready.
-var _onebit := false
 
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
@@ -88,12 +82,10 @@ var _dragging := false
 var _press_pos := Vector2.ZERO
 var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 var _replay_bar: Control = null  # S11 transport, only while a replay plays
-var _flash: CanvasLayer = null   # S04 1-bit light beats (crit, death)
 
 
 func _ready() -> void:
 	Audio.play_music("fight")
-	_onebit = ArtStyle.onebit()
 	_skin_fight_ui()
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
@@ -146,16 +138,7 @@ func _ready() -> void:
 	add_child(_gfx)
 	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
 	_gfx.overlay_source = _depth_overlays   # ground marks in depth order
-	if _onebit:
-		_flash = OneBitFlash.new()
-		add_child(_flash)
-		move_child(_flash, $UI.get_index())   # over the world, under the HUD
-		_gfx.use_onebit(true)
-		AnmSprite.onebit_style = 3   # line art; reset in _exit_tree
-		# the void around the arena is ink, not Godot's grey
-		RenderingServer.set_default_clear_color(Color.BLACK)
 	_fight_hud = FightHud.new()
-	_fight_hud.onebit = _onebit
 	if ArtStyle.hud_life() == "ring":
 		_fight_hud.hp_style = FightHud.FighterCard.HpStyle.RING
 	_fight_hud.team_colors = TEAM_TINTS
@@ -216,22 +199,20 @@ func _ready() -> void:
 
 func _skin_fight_ui() -> void:
 	var theme := _lobby_theme()
-	if _onebit:
-		_ink_theme(theme)
 	for node in [$UI/TopBar, $UI/Menu, $UI/SpellScroll, $UI/Chat, $UI/PassBtn]:
 		node.theme = theme
-	var text := Color.WHITE if _onebit else Color("f1e5c1")
+	var text := Color("f1e5c1")
 	for lbl in [info]:
 		lbl.add_theme_color_override("font_color", text)
 		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
 		lbl.add_theme_constant_override("shadow_offset_x", 1)
 		lbl.add_theme_constant_override("shadow_offset_y", 2)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# the hint sits on the map: a dark pill keeps it legible on any floor
-	# (the 1-bit dither especially); empty text hides it with the label
+	# the hint sits on the map: a dark pill keeps it legible on any floor;
+	# empty text hides it with the label
 	var pill := StyleBoxFlat.new()
 	pill.bg_color = Color(0, 0, 0, 0.82)
-	pill.set_corner_radius_all(0 if _onebit else 9)
+	pill.set_corner_radius_all(9)
 	pill.content_margin_left = 12
 	pill.content_margin_right = 12
 	info.add_theme_stylebox_override("normal", pill)
@@ -245,10 +226,6 @@ func _skin_fight_ui() -> void:
 	$UI/TopBar/MapId.custom_minimum_size.x = 76
 	$UI/TopBar/MapId.max_length = 6
 	var chat_bg := _chat_surface()
-	if _onebit:
-		chat_bg.bg_color = Color(0, 0, 0, 0.92)
-		chat_bg.border_color = Color.WHITE
-		chat_bg.set_corner_radius_all(0)
 	$UI/Chat/Display.add_theme_stylebox_override("normal", chat_bg)
 	$UI/Chat/Display.add_theme_color_override("default_color", text)
 	$UI/Chat/Display.custom_minimum_size.y = 80
@@ -268,19 +245,19 @@ func _style_pass_button() -> void:
 		var f := FontFile.new()
 		if f.load_dynamic_font(path) == OK:
 			b.add_theme_font_override("font", f)
-	var ink := Color.WHITE if _onebit else Color("f6dc8c")
+	var ink := Color("f6dc8c")
 	var base := StyleBoxFlat.new()
-	base.bg_color = Color.BLACK if _onebit else Color("8a5a12")
+	base.bg_color = Color("8a5a12")
 	base.border_color = ink
-	base.set_border_width_all(3 if _onebit else 2)
-	base.set_corner_radius_all(0 if _onebit else 10)
+	base.set_border_width_all(2)
+	base.set_corner_radius_all(10)
 	var hover := base.duplicate()
-	hover.bg_color = Color(0.2, 0.2, 0.2) if _onebit else Color("a8701a")
+	hover.bg_color = Color("a8701a")
 	var pressed := base.duplicate()
-	pressed.bg_color = Color(0.35, 0.35, 0.35) if _onebit else Color("6c4510")
+	pressed.bg_color = Color("6c4510")
 	var off := base.duplicate()
-	off.bg_color = Color.BLACK if _onebit else Color("3a3426")
-	off.border_color = Color(0.45, 0.45, 0.45) if _onebit else Color("6e6448")
+	off.bg_color = Color("3a3426")
+	off.border_color = Color("6e6448")
 	var focus := base.duplicate()
 	focus.draw_center = false
 	focus.border_color = Color.WHITE
@@ -292,38 +269,9 @@ func _style_pass_button() -> void:
 	for st in [["normal", base], ["hover", hover], ["pressed", pressed],
 			["disabled", off], ["focus", focus]]:
 		b.add_theme_stylebox_override(st[0], st[1])
-	b.add_theme_color_override("font_color", Color.WHITE if _onebit else Color("fff0c5"))
+	b.add_theme_color_override("font_color", Color("fff0c5"))
 	b.add_theme_color_override("font_hover_color", Color.WHITE)
 	b.add_theme_color_override("font_disabled_color", Color(0.55, 0.55, 0.55))
-
-
-## The 1-bit look for the fight's own controls: ink buttons with a white
-## hairline, inverted when pressed or hovered. Mutates the lobby theme so
-## fonts and sizes stay the same.
-func _ink_theme(t: Theme) -> void:
-	var box := func(bg: Color, edge: Color, w := 1) -> StyleBoxFlat:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = bg
-		sb.border_color = edge
-		sb.set_border_width_all(w)
-		sb.content_margin_left = 8
-		sb.content_margin_right = 8
-		sb.content_margin_top = 4
-		sb.content_margin_bottom = 4
-		return sb
-	for type in ["Button", "OptionButton", "LineEdit"]:
-		t.set_stylebox("normal", type, box.call(Color.BLACK, Color.WHITE))
-		t.set_stylebox("hover", type, box.call(Color(0.22, 0.22, 0.22), Color.WHITE))
-		for st in ["pressed", "hover_pressed"]:
-			t.set_stylebox(st, type, box.call(Color.WHITE, Color.WHITE))
-		t.set_stylebox("disabled", type, box.call(Color.BLACK, Color(0.4, 0.4, 0.4)))
-		t.set_stylebox("focus", type, box.call(Color(0, 0, 0, 0), Color.WHITE, 2))
-		for c in ["font_color", "font_hover_color", "font_focus_color"]:
-			t.set_color(c, type, Color.WHITE)
-		t.set_color("font_pressed_color", type, Color.BLACK)
-		t.set_color("font_hover_pressed_color", type, Color.BLACK)
-		t.set_color("font_disabled_color", type, Color(0.45, 0.45, 0.45))
-	t.set_color("font_color", "Label", Color.WHITE)
 
 
 func _lobby_theme() -> Theme:
@@ -454,12 +402,6 @@ func _wire_fight_focus() -> void:
 func _load() -> void:
 	var map_id := int($UI/TopBar/MapId.text)
 	_gfx_active = _gfx.load_world(map_id)
-	if not _gfx_active and _onebit:
-		# not converted yet (tools/asset-import/onebit.py): retail art beats
-		# the placeholder floors
-		push_warning("fight: no 1-bit art for map %d, using the retail art" % map_id)
-		_gfx.use_onebit(false)
-		_gfx_active = _gfx.load_world(map_id)
 	_fmd = FightMap.load(map_id)
 	var topo := Topology.load_world(map_id, Topology.SCOPE_ARENA)
 	_cells = topo.get("cells", {})
@@ -643,10 +585,6 @@ const WEAPON_FAMILY := {
 
 
 func _exit_tree() -> void:
-	if _onebit:
-		AnmSprite.onebit_style = 0   # lobby and creation keep the retail art
-		RenderingServer.set_default_clear_color(
-			ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color"))
 	# If we leave the tree without being freed (e.g. replaced by an explicit
 	# add_child in tests), drop the net subscription — a stale instance would
 	# keep consuming the shared WireReader and starve the new scene.
@@ -772,8 +710,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_face_toward(caster, aimed)
 			if miss or crit:
 				_zoom_punch(caster, aimed)
-			if crit:
-				_light_beat("crit", caster, aimed)
 			if not miss:
 				_play_cast(caster, sid)
 				_cast_sfx(caster, sid)
@@ -803,8 +739,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_face_toward(atk, waim)
 			if wmiss or wcrit:
 				_zoom_punch(atk, waim)
-			if wcrit:
-				_light_beat("crit", atk, waim)
 			if not wmiss:
 				# akg_2 hard-codes script 8000 (AnimPoings): the unarmed
 				# fist strike is AnimStatique03-219 in the fighter's set
@@ -838,8 +772,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_face_toward(user, caim)
 			if cmiss or ccrit:
 				_zoom_punch(user, caim)
-			if ccrit:
-				_light_beat("crit", user, caim)
 			if not cmiss:
 				# Weapon cards run scripts 800x — the armed gesture family
 				# AnimStatique03-<fam>; non-weapon cards keep the generic
@@ -914,7 +846,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# fight.die: "[name] is dead."
 			var dname := str(State.fighters.get(dead, {}).get("name", ""))
 			_fight_log(I18n.t("fight.log_dead", {"name": dname}))
-			_light_beat("death", dead, Vector2i(-9999, -9999))
 			_kill_actor(dead)
 		OP_RUNNING_EFFECT:
 			_on_running_effect(Codec.decode(opcode, payload))
@@ -1611,10 +1542,6 @@ func _add_event_card(ev: int, evname: String) -> void:
 		return
 	var card := PanelContainer.new()
 	var face := _chat_surface()
-	if _onebit:
-		face.bg_color = Color.BLACK
-		face.border_color = Color.WHITE
-		face.set_corner_radius_all(0)
 	card.add_theme_stylebox_override("panel", face)
 	var lab := Label.new()
 	lab.text = evname if not evname.is_empty() else "Event %d" % ev
@@ -2065,16 +1992,16 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 		b.clip_text = true
 		b.add_theme_font_size_override("font_size", 11)
 	var slot := StyleBoxFlat.new()
-	slot.bg_color = Color.BLACK if _onebit else Color("1d2017")
-	slot.border_color = Color.WHITE if _onebit else Color("ad965a")
-	slot.set_border_width_all(1 if _onebit else 2)
-	slot.set_corner_radius_all(0 if _onebit else 6)
+	slot.bg_color = Color("1d2017")
+	slot.border_color = Color("ad965a")
+	slot.set_border_width_all(2)
+	slot.set_corner_radius_all(6)
 	slot.content_margin_left = 3
 	slot.content_margin_right = 3
 	slot.content_margin_top = 3
 	slot.content_margin_bottom = 3
 	var hover := slot.duplicate()
-	hover.border_color = Color("f6dc8c") if not _onebit else Color(0.7, 0.7, 0.7)
+	hover.border_color = Color("f6dc8c")
 	hover.bg_color = slot.bg_color.lightened(0.12)
 	var armed := slot.duplicate()
 	armed.border_color = Color(1.0, 0.85, 0.3)
@@ -2092,8 +2019,7 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 		cost.add_theme_font_size_override("font_size", 11)
 		cost.add_theme_color_override("font_color", Color.WHITE)
 		cost.add_theme_constant_override("outline_size", 4)
-		cost.add_theme_color_override("font_outline_color", Color(0.1, 0.2, 0.55)
-			if not _onebit else Color.BLACK)
+		cost.add_theme_color_override("font_outline_color", Color(0.1, 0.2, 0.55))
 		cost.position = Vector2(SPELL_SIDE - 13, SPELL_SIDE - 19)
 		cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(cost)
@@ -2628,18 +2554,6 @@ func _face_toward(fid: int, cell: Vector2i) -> void:
 ## re_0 crit/fumble camera work: the retail action zooms the fight camera to
 ## the attacker↔target midpoint at 1.4× for the action's run, then restores
 ## (afH || afI gate). Only cosmetic; the user pan/zoom stays as it was.
-## 1-bit only (S04): dim the world for an instant around the impact — the
-## aimed cell when there is one, else the fighter.
-func _light_beat(kind: String, fid: int, cell: Vector2i) -> void:
-	if _flash == null:
-		return
-	var at: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
-	var pos := _iso(at.x + 0.5, at.y + 0.5, at.z)
-	if cell.x > -999 and _cells.has(cell):
-		pos = _iso(cell.x + 0.5, cell.y + 0.5, int(_cells[cell].get("alt", 0)))
-	_flash.beat(kind, global_transform * (pos + Vector2(0, -30)), cam.zoom.x if cam else 1.0)
-
-
 func _zoom_punch(fid: int, cell: Vector2i) -> void:
 	if cam == null:
 		return
@@ -3337,18 +3251,10 @@ func _draw() -> void:
 ## before their own fighter. Only text (MP cost) and debug marks stay on
 ## top. Without the painted map everything draws straight onto this canvas.
 
-## Zones are a translucent team-colour fill. ARENA_ZONES=lines draws the
-## 1-bit outline variant instead (auditioned 2026-10-17: once the zones sat
-## in depth, thin lines vanished under the 1-bit grass; the fill still reads).
-var _zone_lines := OS.get_environment("ARENA_ZONES") == "lines"
+## Zones are a translucent team-colour fill.
 var _zone_ghost := OS.get_environment("ARENA_ZONE_GHOST") != "0"   # on unless =0
 var _ov_collect := false   # true while _depth_overlays gathers, false = draw now
 var _ov: Array = []        # [{key, o, d: Callable(ci)}] gathered marks
-
-## 1-bit mark colours (OneBitMarks): the reach and the AoE, fully saturated —
-## the dot density, not the alpha, says how strong a mark is.
-const REACH_COL := Color(1.0, 0.55, 0.1)
-const AOE_COL := Color(1.0, 0.25, 0.15)
 
 ## Draw order inside one depth slot: zones under reach under path/hover.
 enum OvLayer { ZONE, SPECIAL, AREA, REACH, AOE, PATH, HOVER }
@@ -3383,15 +3289,7 @@ func _under_actor(p: Vector3i, fn: Callable) -> void:
 
 func _draw_zone(ci: CanvasItem, poly: PackedVector2Array, col: Color,
 		alpha: float) -> void:
-	if not (_onebit and _zone_lines):
-		ci.draw_colored_polygon(poly, Color(col.r, col.g, col.b, alpha))
-		return
-	var ctr := (poly[0] + poly[2]) * 0.5
-	var inner := PackedVector2Array()
-	for v in poly:
-		inner.append(ctr + (v - ctr) * 0.72)
-	ci.draw_polyline(poly + PackedVector2Array([poly[0]]), col, 2.0)
-	ci.draw_polyline(inner + PackedVector2Array([inner[0]]), col, 1.0)
+	ci.draw_colored_polygon(poly, Color(col.r, col.g, col.b, alpha))
 
 
 func _draw_overlays() -> void:
@@ -3425,12 +3323,8 @@ func _draw_ground_overlays() -> void:
 		var col: Color = sm[2]
 		var letter: String = sm[0]
 		_ground(int(sp.x), int(sp.y), OvLayer.SPECIAL, func(ci):
-			if _onebit:
-				ci.draw_colored_polygon(dm, Color.BLACK)
-				OneBitMarks.outline(ci, dm, col, 1.5)
-			else:
-				ci.draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
-				ci.draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
+			ci.draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
+			ci.draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
 			ci.draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), letter,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col))
 	# placed traps/glyphs/auras — footprint tinted per the type-210 template.
@@ -3453,10 +3347,6 @@ func _draw_ground_overlays() -> void:
 			var cz := int(_cells.get(cell, {}).get("alt", actr.z))
 			var fp := _cell_poly(cell.x, cell.y, cz)
 			_ground(cell.x, cell.y, OvLayer.AREA, func(ci):
-				if _onebit:
-					OneBitMarks.fill(ci, fp, acol, 0.3)
-					OneBitMarks.outline(ci, fp, acol, 1.0)
-					return
 				ci.draw_colored_polygon(fp, Color(acol.r, acol.g, acol.b, 0.14))
 				ci.draw_polyline(fp + PackedVector2Array([fp[0]]),
 					Color(acol.r, acol.g, acol.b, 0.7), 1.0))
@@ -3478,13 +3368,7 @@ func _draw_ground_overlays() -> void:
 		var col: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
 		var dead: bool = _dead.has(id)
 		var acting: bool = id == _current_fid
-		if _onebit:
-			# 1-bit style: a team aura; corpses get none, and none while
-			# placing (the zones already say the team; aura + zone fill
-			# dithered into a halo)
-			if not dead and not _placement:
-				_under_actor(p, func(ci): TeamAura.draw(ci, ctr, col, acting))
-		elif dead:
+		if dead:
 			_under_actor(p, func(ci):
 				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.15), 1.0))
 		elif acting:
@@ -3511,12 +3395,6 @@ func _draw_ground_overlays() -> void:
 		var legal: bool = _range_overlay[pos] == 2
 		var rp := _cell_poly(pos.x, pos.y, rc.alt)
 		_ground(pos.x, pos.y, OvLayer.REACH, func(ci):
-			if _onebit:
-				# castable: dense dots + outline; in range but blocked: sparse
-				OneBitMarks.fill(ci, rp, REACH_COL, 0.5 if legal else 0.16)
-				if legal:
-					OneBitMarks.outline(ci, rp, REACH_COL, 1.0)
-				return
 			ci.draw_colored_polygon(rp, Color(1.0, 0.5, 0.1, 0.45) if legal
 				else Color(1.0, 0.5, 0.1, 0.12)))
 	# movement path preview — retail dots the walk steps (the MP cost floats
@@ -3528,10 +3406,7 @@ func _draw_ground_overlays() -> void:
 		for p in path:
 			var dc := _iso(p.x + 0.5, p.y + 0.5, p.z)
 			_ground(p.x, p.y, OvLayer.PATH, func(ci):
-				if _onebit:
-					OneBitMarks.dot(ci, dc, Color(pc.r, pc.g, pc.b, 1.0), 4.0)
-				else:
-					ci.draw_circle(dc, 3.5, pc))
+				ci.draw_circle(dc, 3.5, pc))
 	if not _placement and _is_my_turn() and _cells.has(_hover):
 		var hc: Dictionary = _cells[_hover]
 		# AoE preview — an armed spell/card's effect zones (data-side `zn`,
@@ -3551,18 +3426,12 @@ func _draw_ground_overlays() -> void:
 						var zp := _cell_poly(cell.x, cell.y,
 							int(_cells[cell].get("alt", 0)))
 						_ground(cell.x, cell.y, OvLayer.AOE, func(ci):
-							if _onebit:
-								OneBitMarks.fill(ci, zp, AOE_COL, 0.7)
-							else:
-								ci.draw_colored_polygon(zp, Color(1.0, 0.45, 0.15, 0.22)))
+							ci.draw_colored_polygon(zp, Color(1.0, 0.45, 0.15, 0.22)))
 		var poly := _cell_poly(_hover.x, _hover.y, hc.alt)
 		var hcol := Color(1, 0.3, 0.25, 0.9) if _spell_mode != -1 \
 			else Color(1, 1, 1, 0.8)
 		_ground(_hover.x, _hover.y, OvLayer.HOVER, func(ci):
-			if _onebit:
-				OneBitMarks.outline(ci, poly, Color(hcol.r, hcol.g, hcol.b, 1.0), 2.5)
-			else:
-				ci.draw_polyline(poly + PackedVector2Array([poly[0]]), hcol, 2.0))
+			ci.draw_polyline(poly + PackedVector2Array([poly[0]]), hcol, 2.0))
 
 
 func _draw_top_overlays() -> void:
@@ -3586,11 +3455,8 @@ func _draw_top_overlays() -> void:
 		var pc := Color(0.4, 1.0, 0.4, 0.9) if path.size() <= _mp_left \
 			else Color(1.0, 0.35, 0.3, 0.9)
 		var mp_at := _iso(_hover.x + 0.5, _hover.y + 0.5, _cells[_hover].alt) + Vector2(8, -10)
-		if _onebit:
-			draw_string_outline(ThemeDB.fallback_font, mp_at, "%d MP" % path.size(),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 4, Color.BLACK)
 		draw_string(ThemeDB.fallback_font, mp_at,
-			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14 if _onebit else 13, pc)
+			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, pc)
 	if debug_overlay:
 		# white crosshair at each live actor's cell center
 		for id in _actor_cells:

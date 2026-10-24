@@ -35,7 +35,6 @@ func refresh() -> void:
 	split.add_child(stage)
 	var coach: Dictionary = data("localCoach", {})
 	var spr := AnmSprite.new()
-	OneBit.doll(spr)
 	spr.foot_pivot = true
 	spr.position = Vector2(100, 225)
 	spr.scale = Vector2(2.2, 2.2)
@@ -59,5 +58,5 @@ func refresh() -> void:
 	var go := button(pinned_actions, I18n.t("fight.result.continue"), func(): closed.emit())
 	go.name = "Continue"
 	go.custom_minimum_size.x = 150
-	OneBit.primary(go, 20)
+	UiStyle.primary(go, 20)
 	go.grab_focus.call_deferred()

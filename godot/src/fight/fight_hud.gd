@@ -19,7 +19,6 @@ const FighterCard := preload("res://src/fight/fighter_card.gd")
 const Medallion := preload("res://src/fight/fight_medallion.gd")
 const AssetPaths := preload("res://src/util/asset_paths.gd")
 
-var onebit := false
 var hp_style: int = FighterCard.HpStyle.BAR
 var team_colors: Array = [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)]
 
@@ -59,7 +58,6 @@ func _ready() -> void:
 			_title_font = f
 	medallion = Medallion.new()
 	medallion.name = "Medallion"
-	medallion.onebit = onebit
 	add_child(medallion)
 	banner = Control.new()
 	banner.name = "Banner"
@@ -148,7 +146,6 @@ func _rebuild(order: Array, fighters: Dictionary) -> void:
 			c.pressed.connect(func(id): card_pressed.emit(id))
 			c.hovered.connect(func(id, on): card_hovered.emit(id, on))
 			add_child(c)
-		c.onebit = onebit
 		c.hp_style = hp_style
 		kept[fid] = c
 	cards = kept
@@ -245,8 +242,8 @@ func _layout_column(col: Array, is_left: bool, top: float, p: float,
 
 func _draw_banner() -> void:
 	var r := Rect2(Vector2.ZERO, banner.size)
-	var ink := Color.WHITE if onebit else Color("ad965a")
-	var plate := Color.BLACK if onebit else Color("292c20")
+	var ink := Color("ad965a")
+	var plate := Color("292c20")
 	_draw_clock(r, ink, plate)
 	if _title.is_empty() and _sub.is_empty():
 		return
@@ -261,7 +258,7 @@ func _draw_banner() -> void:
 	banner.draw_polyline(loop, ink, 2.0, true)
 	var font: Font = _title_font if _title_font != null else get_theme_default_font()
 	var body := get_theme_default_font()
-	var tc := Color.WHITE if onebit else Color("f6dc8c")
+	var tc := Color("f6dc8c")
 	_centered(font, _title, Vector2(r.size.x * 0.5, 23.0), 20, tc)
 	_centered(body, _sub, Vector2(r.size.x * 0.5, 43.0), 14,
 		_sub_col.lightened(0.25))

@@ -37,14 +37,18 @@ func _run() -> void:
 		"skin": 0, "hair": 0, "actorDirection": 5,
 		"actorDescriptorLibrary": "coach_7000",
 		"actorMaterial": Palettes.coach_tints(0, 0)})
+	# on a CanvasLayer, as main.gd mounts it: the full-rect backdrop needs
+	# a viewport-sized parent, which this Node2D is not
+	var login_layer := CanvasLayer.new()
+	add_child(login_layer)
 	var login := Login.new()
-	add_child(login)
+	login_layer.add_child(login)
 	await get_tree().process_frame
 	_check(get_viewport().gui_get_focus_owner() == login.name_edit,
 		"login initial focus")
 	_check(login.name_edit.focus_next != NodePath(""), "login tab order")
 	await _shot("login")
-	login.queue_free()
+	login_layer.queue_free()
 	await get_tree().process_frame
 	var creation := Creation.new()
 	add_child(creation)

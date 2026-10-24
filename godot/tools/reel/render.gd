@@ -5,19 +5,17 @@ extends SceneTree
 ## every frame is written at a fixed 30 fps however slow the machine is, at
 ## the 540x960 its override.cfg sets.
 ##
-## On top of the plain replay: a title card, the camera on whoever acts, a
+## On top of the plain replay: a title card (the two sides, no brand), the camera on whoever acts, a
 ## slow-motion beat on every death, the winner card at the end, and only the
 ## fight's own banner/HUD on screen (no buttons, chat or transport).
 ##
 ##   godot --path godot --write-movie out/f.png \
 ##       --fixed-fps 30 -s tools/reel/render.gd -- --replay=<file.slr> \
 ##       [--speed=1.5] [--hud=banner|full] [--zoom=1.8 (max)]
-## The art style comes from ARENA_ART_STYLE (retail | onebit), as in the game.
 
 const ReplayFile := preload("res://src/net/replay_file.gd")
 const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const State := preload("res://src/state.gd")
-const ArtStyle := preload("res://src/util/art_style.gd")
 
 const FPS := 30.0
 const INTRO_FRAMES := 45        # title card
@@ -37,7 +35,6 @@ var _slowmo := 0
 var _focus := -1           # fighter the camera follows
 var _end_at := -1
 var _speed := 1.5
-var _ink := false
 
 
 func _initialize() -> void:
@@ -55,7 +52,6 @@ func _start() -> void:
 		return
 	head = replay.header
 	_speed = float(opts.speed)
-	_ink = ArtStyle.onebit()
 	if ReplayPlayer.play_data(self, replay, false) != "":
 		quit(1)
 		return
@@ -231,12 +227,11 @@ func _line(card: Control, text: String, size: int, color := Color.WHITE) -> void
 
 
 func _gold() -> Color:
-	return Color.WHITE if _ink else Color("e8c66a")
+	return Color("e8c66a")
 
 
 func _title_card(left: String, right: String) -> Control:
 	var card := _base_card()
-	_line(card, "STARLOCO ARENA", 46, _gold())
 	_line(card, left, 30)
 	_line(card, "VS", 24, _gold())
 	_line(card, right, 30)
@@ -253,7 +248,6 @@ func _winner_card() -> Control:
 		won.append(names.get(int(id), "?"))
 	_line(card, I18n_t("replay.reel.winner"), 26, _gold())
 	_line(card, " & ".join(won) if not won.is_empty() else "—", 36)
-	_line(card, "STARLOCO ARENA", 22, _gold())
 	var rect: Control = card.get_child(0).get_child(0)
 	rect.modulate.a = 0.0
 	create_tween().tween_property(rect, "modulate:a", 1.0, 0.4)

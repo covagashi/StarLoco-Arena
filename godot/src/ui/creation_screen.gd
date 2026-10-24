@@ -1,7 +1,7 @@
 class_name PippopCoachCreation
 extends Control
-## Native coach creation screen in the 1-bit UI system (S18,
-## src/ui/onebit.gd), real controls only (no baked art). Drives the shared `localCoach` model so the
+## Native coach creation screen (src/ui/ui_style.gd), real controls only
+## (no baked art). Drives the shared `localCoach` model so the
 ## existing handlers (_on_localcoach_changed/_on_coach_dir/_on_coach_random/
 ## _on_coach_create) keep working unchanged.
 
@@ -10,7 +10,7 @@ signal random_pressed
 signal submit
 signal closed
 
-const OneBit := preload("res://src/ui/onebit.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 const REF := Vector2(1280, 720)
 const R_FORM := Rect2(200, 150, 440, 450)
 const R_STAGE := Rect2(680, 150, 400, 450)
@@ -30,23 +30,21 @@ var _hair_cells := {}
 var _skin_cells := {}
 
 
-## 1-bit UI (S18): the chrome is black and white; the swatches and the doll
-## keep their colours, because colour is what is being chosen — like the
-## 1-bit fights, where each actor keeps its own colours.
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_box = Control.new()
 	_box.size = REF
-	_box.theme = OneBit.theme()
+	_box.theme = UiStyle.theme()
 	add_child(_box)
-	_box.add_child(OneBit.backdrop(REF))
+	_box.add_child(UiStyle.backdrop(REF))
 
 	var title := Label.new()
 	title.text = I18n.t("creation.title").to_upper()
 	title.position = Vector2(0, 56)
 	title.size = Vector2(REF.x, 80)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_override("font", OneBit.title_font())
+	title.add_theme_font_override("font", UiStyle.title_font())
+	title.add_theme_color_override("font_color", UiStyle.GOLD)
 	title.add_theme_font_size_override("font_size", 60)
 	title.add_theme_constant_override("outline_size", 12)
 	_box.add_child(title)
@@ -55,14 +53,14 @@ func _init() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 	form.add_child(col)
-	col.add_child(OneBit.caption(I18n.t("creation.name")))
+	col.add_child(UiStyle.caption(I18n.t("creation.name")))
 	name_edit = LineEdit.new()
 	name_edit.max_length = 20
 	name_edit.custom_minimum_size.y = 44
 	name_edit.add_theme_font_size_override("font_size", 20)
 	name_edit.text_changed.connect(func(t): _set_lc("name", t))
 	col.add_child(name_edit)
-	col.add_child(OneBit.caption(I18n.t("creation.sex")))
+	col.add_child(UiStyle.caption(I18n.t("creation.sex")))
 	var sexes := HBoxContainer.new()
 	sexes.add_theme_constant_override("separation", 10)
 	col.add_child(sexes)
@@ -70,11 +68,11 @@ func _init() -> void:
 		func(): _set_lc("sex", 0))
 	_sex_btns[1] = _toggle(sexes, "♀  " + I18n.t("creation.female"),
 		func(): _set_lc("sex", 1))
-	col.add_child(OneBit.caption(I18n.t("creation.hair")))
+	col.add_child(UiStyle.caption(I18n.t("creation.hair")))
 	var hair := _grid(col)
 	for i in range(14):
 		_hair_cells[i] = _swatch(hair, Palettes.HAIR[i], func(): _set_lc("hair", i))
-	col.add_child(OneBit.caption(I18n.t("creation.skin")))
+	col.add_child(UiStyle.caption(I18n.t("creation.skin")))
 	var skin := _grid(col)
 	for i in range(11):
 		_skin_cells[i] = _swatch(skin, Palettes.SKIN[i], func(): _set_lc("skin", i))
@@ -98,12 +96,11 @@ func _init() -> void:
 	ok.position = R_VALIDATE.position
 	ok.size = R_VALIDATE.size
 	ok.tooltip_text = I18n.t("creation.validate")
-	OneBit.primary(ok)
+	UiStyle.primary(ok)
 	ok.pressed.connect(func(): submit.emit())
 	_box.add_child(ok)
 
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
-	OneBit.doll(_spr)
 	_spr.foot_pivot = true
 	_spr.position = DOLL_POS
 	_spr.scale = Vector2(DOLL_SCALE, DOLL_SCALE)
@@ -176,7 +173,7 @@ func _window(r: Rect2) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.position = r.position
 	p.size = r.size
-	p.add_theme_stylebox_override("panel", OneBit.window(26))
+	p.add_theme_stylebox_override("panel", UiStyle.window(26))
 	_box.add_child(p)
 	return p
 
@@ -209,19 +206,17 @@ func _swatch(parent: Control, v: Vector3, cb: Callable) -> Control:
 	var holder := Control.new()
 	holder.custom_minimum_size = SWATCH
 	var fill := Panel.new()
-	var sb := OneBit.box(Color(clampf(v.x, 0.0, 1.0), clampf(v.y, 0.0, 1.0),
-		clampf(v.z, 0.0, 1.0)), OneBit.INK, 1, 0)
+	var sb := UiStyle.box(Color(clampf(v.x, 0.0, 1.0), clampf(v.y, 0.0, 1.0),
+		clampf(v.z, 0.0, 1.0)), UiStyle.INK, 1, 0)
 	fill.add_theme_stylebox_override("panel", sb)
 	fill.set_anchors_preset(Control.PRESET_FULL_RECT)
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(fill)
 	var ring := Panel.new()
-	var rs := OneBit.box(Color(0, 0, 0, 0), OneBit.INK, 3, 0)
+	var rs := UiStyle.box(Color(0, 0, 0, 0), UiStyle.INK, 3, 0)
 	rs.draw_center = false
 	rs.set_expand_margin_all(4)
-	rs.shadow_color = OneBit.INK
-	rs.shadow_size = 1
-	rs.shadow_offset = Vector2(3, 3)
+	rs.border_color = UiStyle.RIM_HI
 	ring.add_theme_stylebox_override("panel", rs)
 	ring.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -230,7 +225,7 @@ func _swatch(parent: Control, v: Vector3, cb: Callable) -> Control:
 	var b := Button.new()
 	b.set_anchors_preset(Control.PRESET_FULL_RECT)
 	b.flat = true
-	b.add_theme_stylebox_override("focus", OneBit.focus_ring())
+	b.add_theme_stylebox_override("focus", UiStyle.focus_ring())
 	b.pressed.connect(cb)
 	holder.add_child(b)
 	holder.set_meta("_ring", ring)

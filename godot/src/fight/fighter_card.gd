@@ -29,7 +29,6 @@ var invisible := false
 var summon := false
 var buffs: Array = []       # chip strings, newest last
 var inward := 1             # +1: the map is to the right (left column), -1: left
-var onebit := false
 var hp_style := HpStyle.BAR
 var side := 56.0            # portrait side in px; fight_hud picks it per column
 var chip_gap := 0.0         # extra px the chips skip (inner columns of a wrap)
@@ -124,9 +123,9 @@ func _draw() -> void:
 	if dead:
 		frame_col = Color(0.4, 0.4, 0.42)
 	# backing: a dark team wash behind the (transparent-background) art
-	var back := Color.BLACK if onebit else team_color.darkened(0.78)
+	var back := team_color.darkened(0.78)
 	draw_rect(outer, Color(0.08, 0.08, 0.07) if dead else back)
-	if not onebit and not dead:
+	if not dead:
 		draw_rect(Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.5)),
 			Color(1, 1, 1, 0.06))
 	# portrait
@@ -150,7 +149,7 @@ func _draw() -> void:
 	else:
 		draw_rect(outer.grow(-fw * 0.5), frame_col, false, fw)
 	if active:
-		var glow := Color.WHITE if onebit else Color("f6dc8c")
+		var glow := Color("f6dc8c")
 		draw_rect(outer.grow(2.0), glow, false, 2.0)
 		# a notch pointing at the map: "this one is playing"
 		var tip_x := outer.end.x + 7.0 if inward > 0 else outer.position.x - 7.0
@@ -233,8 +232,6 @@ func _draw_hp_number(font: Font, inner: Rect2) -> void:
 	var pill := Rect2(inner.end.x - w - 6.0, inner.end.y - fs - 3.0, w + 6.0, fs + 3.0)
 	draw_rect(pill, Color(0, 0, 0, 0.82))
 	var col := Color.WHITE if hp_max <= 0 else hp_color(hp_ratio()).lightened(0.35)
-	if onebit:
-		col = Color.WHITE
 	draw_string(font, Vector2(pill.position.x + 3.0, pill.end.y - 3.0), s,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
@@ -255,7 +252,7 @@ func _draw_chips(font: Font, outer: Rect2) -> void:
 			else outer.position.x - 10.0 - chip_gap - w
 		var r := Rect2(x, y, w, chip_h)
 		draw_rect(r, Color(0, 0, 0, 0.85))
-		draw_rect(r, team_color if onebit else Color(0.75, 0.85, 1.0, 0.7), false, 1.0)
+		draw_rect(r, Color(0.75, 0.85, 1.0, 0.7), false, 1.0)
 		draw_string(font, Vector2(x + 4.0, y + chip_h - 3.0), str(s),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.92, 0.95, 1.0))
 		y += chip_h + 2.0

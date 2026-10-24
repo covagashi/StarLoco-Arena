@@ -10,7 +10,7 @@ extends Control
 ##
 ## set_sides(left, right): {coach, fighters: [{name, breed}]}.
 
-const OneBit := preload("res://src/ui/onebit.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 
 signal ready_pressed
 
@@ -30,8 +30,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var frame := PanelContainer.new()
 	frame.name = "Frame"
-	frame.theme = OneBit.theme()
-	frame.add_theme_stylebox_override("panel", OneBit.window())
+	frame.theme = UiStyle.theme()
+	frame.add_theme_stylebox_override("panel", UiStyle.window())
 	frame.custom_minimum_size = SIZE
 	frame.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	frame.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -46,7 +46,7 @@ func _ready() -> void:
 	col.add_child(sides)
 	_side(sides, _left, "Left")
 	var vs := _label(sides, I18n.t("vs.vs"), 64)
-	vs.add_theme_font_override("font", OneBit.title_font())
+	vs.add_theme_font_override("font", UiStyle.title_font())
 	vs.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_side(sides, _right, "Right")
 	var bar := HBoxContainer.new()
@@ -57,7 +57,7 @@ func _ready() -> void:
 	_go.name = "Go"
 	_go.text = I18n.t("vs.go")
 	_go.custom_minimum_size.x = 200
-	OneBit.primary(_go, 22)
+	UiStyle.primary(_go, 22)
 	_go.pressed.connect(_fire)
 	bar.add_child(_go)
 	_go.grab_focus.call_deferred()
@@ -94,7 +94,7 @@ func _side(parent: Node, d: Dictionary, node_name: String) -> void:
 	parent.add_child(box)
 	var coach := _label(box, str(d.get("coach", "")), 30)
 	coach.name = "Coach"
-	coach.add_theme_font_override("font", OneBit.title_font())
+	coach.add_theme_font_override("font", UiStyle.title_font())
 	box.add_child(HSeparator.new())
 	for f in d.get("fighters", []):
 		var line := str(f.get("name", ""))

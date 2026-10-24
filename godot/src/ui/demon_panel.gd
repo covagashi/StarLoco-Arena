@@ -76,7 +76,7 @@ func refresh() -> void:
 		var line := label(right, str(status.get("text", "")))
 		line.name = "Status"
 		if not bool(status.get("ok", true)):
-			line.add_theme_color_override("font_color", OneBit.MUTED)
+			line.add_theme_color_override("font_color", UiStyle.MUTED)
 	label(right, I18n.t("dm.ladder", {"demon": demon_name}), 18)
 	var ladder: Array = d.get("ladder", [])
 	var t3 := table(right, [I18n.t("ladder.col_clan"), I18n.t("ladder.col_rep")], ["name", "points"], ladder)
@@ -95,4 +95,4 @@ func refresh() -> void:
 		not basket.is_empty() and not bool(d.get("pending", false)))
 	offer.name = "Offer"
 	offer.custom_minimum_size.x = 170
-	OneBit.primary(offer, 20)
+	UiStyle.primary(offer, 20)

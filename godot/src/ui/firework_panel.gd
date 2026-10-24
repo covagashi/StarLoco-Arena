@@ -64,4 +64,4 @@ func refresh() -> void:
 	var go := button(pinned_actions, I18n.t("fw.launch"), func(): send("nativeFwLaunch"), not slots.is_empty())
 	go.name = "Launch"
 	go.custom_minimum_size.x = 170
-	OneBit.primary(go, 20)
+	UiStyle.primary(go, 20)

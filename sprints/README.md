@@ -25,8 +25,8 @@ Fijada el 2026-10-16. La 1.0 está hecha cuando se cumplen las cinco:
 2. **Servidor sin huecos conocidos.** Los opcodes sin implementar son solo los
    descartados a propósito, y no queda ningún bug abierto que rompa una partida.
 3. **Lo propio, terminado.** Async PvP con sus cinco fases.
-4. **Identidad visual propia.** El estilo 1 bit decidido y aplicado donde el
-   dueño del proyecto diga.
+4. **Identidad visual propia.** Pantallas nativas propias en piedra y oro, y
+   combates con el arte retail (el 1 bit se abandonó el 2026-10-24).
 5. **Un jugador nuevo puede jugar.** Instala el cliente en Linux, Windows o
    macOS siguiendo una guía, genera sus assets desde su propio cliente retail y
    se conecta a una instancia pública configurada de forma segura.
@@ -51,13 +51,11 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | Hito | Qué se nota al llegar | Sprints |
 |---|---|---|
 | **M1 — Jugable de punta a punta** | desde el cliente Godot se llega a todo lo que el retail ofrece fuera del combate, con sonido y opciones | S03, S05, S06 |
-| **M2 — Identidad visual** | combates en 1 bit, HUD propio y pantallas propias | S04, S17, S18, S07 |
+| **M2 — Identidad visual** | HUD propio y pantallas propias (el 1 bit, abandonado) | S04, S17, S18, S07 |
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S19, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16 |
 
-S04 (1 bit) va pronto aunque sea de M2: es lo que el dueño quiere trabajar ya,
-y su dependencia real es solo S03.
 
 Si se quiere gente probando antes de la 1.0, el sitio natural para una **beta
 cerrada** es tras M1 + M2, adelantando la parte mínima de S15 (un export para
@@ -70,7 +68,7 @@ Linux y Windows).
 | [S01](./S01-client-test-net.md) | — | — | 🟢 cerrado | Red de pruebas del cliente + raíz de assets (B-173, B-174, B-175) |
 | [S02](./S02-studio-tooling.md) | — | — | 🟢 cerrado | Tooling del stack en el studio: pnpm, oxlint, oxfmt, knip, lane de CI |
 | [S03](./S03-base-linux.md) | M1 | S | 🟡 a la espera del dueño (CI) | Base en Linux headless: Godot, render con xvfb, tests portables, CI viva |
-| [S04](./S04-fight-maps-1bit.md) | M2 | M | 🟢 terminado (visto bueno del dueño) | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
+| [S04](./S04-fight-maps-1bit.md) | M2 | M | ⛔ abandonado (dueño, 2026-10-24) | Mapas de pelea en 1 bit: quitado; se queda el color retail por elemento |
 | [S17](./S17-fight-hud.md) | M2 | M | 🟢 cerrado | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
 | [S05](./S05-lobby-services.md) | M1 | M | 🟡 a la espera del dueño (cierre) | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
 | [S18](./S18-screens-redesign.md) | M2 | L | 🟢 terminado (falta el visto bueno de las pantallas nuevas) | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
@@ -100,7 +98,7 @@ afectado trabaja con la opción marcada como *por defecto*.
 
 | Decisión | Afecta a | Por defecto |
 |---|---|---|
-| ¿El 1 bit es el estilo **por defecto** o un modo opcional? | S04, S07 | opcional, conmutable |
+| ¿El 1 bit es el estilo **por defecto** o un modo opcional? | S04, S07 | **ninguno: abandonado** (dueño, 2026-10-24); combates en retail, pantallas en piedra y oro |
 | Servicios del hall (Card Master, Zaap…): ¿entradas en el lobby o revivir el hall caminable? | S05 | entradas en el lobby |
 | Replays: ¿grabar/reproducir como el retail, o solo espectador en vivo? | S11 | grabar y reproducir (tomada en S11 por heurística, 2026-10-23: el dueño pidió reels) |
 | X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo (aplicado en S08; se reabre si el dueño dice) |

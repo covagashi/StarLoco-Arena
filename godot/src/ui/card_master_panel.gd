@@ -117,7 +117,7 @@ func _catalog_grid(parent: Node) -> void:
 
 
 func _offer_grid(parent: Node) -> void:
-	parent.add_child(OneBit.caption(I18n.t("cm.offer_title")))
+	parent.add_child(UiStyle.caption(I18n.t("cm.offer_title")))
 	var items: Array = data("cardMasterTrade.offer", [])
 	if items.is_empty():
 		var l := label(parent, I18n.t("cm.no_offer"))
@@ -145,7 +145,7 @@ func _detail_side(side: VBoxContainer) -> void:
 		return
 	side.add_child(_framed_art(sel, Vector2(300, 224)))
 	var name_l := label(side, str(item.get("name", "")), 22)
-	name_l.add_theme_font_override("font", OneBit.title_font())
+	name_l.add_theme_font_override("font", UiStyle.title_font())
 	var facts := VBoxContainer.new()
 	facts.add_theme_constant_override("separation", 4)
 	side.add_child(facts)
@@ -178,7 +178,7 @@ func _detail_side(side: VBoxContainer) -> void:
 		schedule_refresh())
 	if price.is_empty():
 		# Barter-only (most retail sets): barter is the screen's action.
-		OneBit.primary(barter_btn, 20)
+		UiStyle.primary(barter_btn, 20)
 		barter_btn.custom_minimum_size = Vector2(200, 54)
 		actions.add_child(barter_btn)
 		return
@@ -187,7 +187,7 @@ func _detail_side(side: VBoxContainer) -> void:
 	buy.text = I18n.t("cm.buy")
 	buy.custom_minimum_size = Vector2(170, 54)
 	buy.disabled = not bool(item.get("canBuyTokens", false))
-	OneBit.primary(buy, 20)
+	UiStyle.primary(buy, 20)
 	buy.pressed.connect(func(): send("nativeCmBuy"))
 	actions.add_child(buy)
 	barter_btn.custom_minimum_size = Vector2(150, 46)
@@ -198,14 +198,14 @@ func _detail_side(side: VBoxContainer) -> void:
 func _barter_side(side: VBoxContainer) -> void:
 	var sel := int(data("cardMasterTrade.selectedId", -1))
 	var item := _catalog_item(sel)
-	side.add_child(OneBit.caption(I18n.t("cm.wanted")))
+	side.add_child(UiStyle.caption(I18n.t("cm.wanted")))
 	var head := row(side)
 	head.add_child(_framed_art(sel, Vector2(150, 112)))
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(info)
 	var name_l := label(info, str(item.get("name", "")), 18)
-	name_l.add_theme_font_override("font", OneBit.title_font())
+	name_l.add_theme_font_override("font", UiStyle.title_font())
 	_muted(info, I18n.t("cm.value", {"v": int(item.get("value", 0))}))
 	var offered := int(data("cardMasterTrade.offered", 0))
 	var wanted := int(data("cardMasterTrade.wanted", 0))
@@ -218,7 +218,7 @@ func _barter_side(side: VBoxContainer) -> void:
 	side.add_child(list)
 	if staged.is_empty():
 		var hint := label(list, I18n.t("cm.offer_hint"), 16)
-		hint.add_theme_color_override("font_color", OneBit.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.MUTED)
 	for s in staged:
 		var cid := int(s.get("id", 0))
 		var b := Button.new()
@@ -238,7 +238,7 @@ func _barter_side(side: VBoxContainer) -> void:
 	trade.text = I18n.t("cm.trade")
 	trade.custom_minimum_size = Vector2(200, 54)
 	trade.disabled = not bool(data("cardMasterTrade.canBuyCards", false))
-	OneBit.primary(trade, 20)
+	UiStyle.primary(trade, 20)
 	trade.pressed.connect(func(): send("nativeCmBarter"))
 	actions.add_child(trade)
 	var back := Button.new()
@@ -259,7 +259,7 @@ func _status(parent: Node) -> void:
 	var l := label(parent, text, 15)
 	l.name = "Status"
 	if not bool(data("cardMasterTrade.statusOk", false)):
-		l.add_theme_color_override("font_color", OneBit.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.MUTED)
 
 
 # --- small pieces ------------------------------------------------------------

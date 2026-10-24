@@ -6,8 +6,7 @@ extends "res://src/ui/card_panel.gd"
 ## Reads `fusionTrade` (main.gd _push_fusion_model: lab, targets, fuel,
 ## inputs, power, quality, chance, reason, status) and asks main.gd for
 ## every change through `nativeFus*` events — the wire (5490/5491) stays in
-## main.gd. Same 1-bit rules as the Card Master: white interface, card art
-## in dither.
+## main.gd. Same look as the Card Master (src/ui/ui_style.gd).
 
 const COLUMNS := 4
 
@@ -22,7 +21,7 @@ func _ready() -> void:
 	# wallet: they are the altar's identity, not something to scroll past.
 	_lab_label = Label.new()
 	_lab_label.add_theme_font_size_override("font_size", 16)
-	_lab_label.add_theme_color_override("font_color", OneBit.MUTED)
+	_lab_label.add_theme_color_override("font_color", UiStyle.MUTED)
 	var header := close_button.get_parent()
 	header.add_child(_lab_label)
 	header.move_child(_lab_label, close_button.get_index())
@@ -79,7 +78,7 @@ func _fill_lab() -> void:
 # --- left: your cards --------------------------------------------------------
 
 func _fuel_grid(parent: Node) -> void:
-	parent.add_child(OneBit.caption(I18n.t("fus.fuel_title")))
+	parent.add_child(UiStyle.caption(I18n.t("fus.fuel_title")))
 	var items: Array = data("fusionTrade.fuel", [])
 	var width := COLUMNS * TILE.x + (COLUMNS - 1) * 12 + 18
 	if items.is_empty():
@@ -129,13 +128,13 @@ func _fuel_sub(item: Dictionary) -> String:
 
 func _recipe_side(side: VBoxContainer) -> void:
 	side.add_theme_constant_override("separation", 8)
-	side.add_child(OneBit.caption(I18n.t("fus.targets")))
+	side.add_child(UiStyle.caption(I18n.t("fus.targets")))
 	_target_rows(side)
 	var sel := int(data("fusionTrade.targetId", -1))
 	var target := _target_item(sel)
 	if target.is_empty():
 		var pick := label(side, I18n.t("fus.pick_target"), 16)
-		pick.add_theme_color_override("font_color", OneBit.MUTED)
+		pick.add_theme_color_override("font_color", UiStyle.MUTED)
 	else:
 		var head := row(side)
 		head.add_child(_framed_art(sel, Vector2(100, 75)))
@@ -145,18 +144,18 @@ func _recipe_side(side: VBoxContainer) -> void:
 		info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		head.add_child(info)
 		var name_l := label(info, str(target.get("name", "")), 18)
-		name_l.add_theme_font_override("font", OneBit.title_font())
+		name_l.add_theme_font_override("font", UiStyle.title_font())
 		_muted(info, "%s · %s" % [I18n.t("cm.value", {"v": int(target.get("value", 0))}),
 			I18n.t("cm.owned", {"n": int(target.get("owned", 0))})])
 		_recipe(side)
 	var inputs: Array = data("fusionTrade.inputs", [])
-	side.add_child(OneBit.caption("%s · %d/%d" % [I18n.t("fus.given"),
+	side.add_child(UiStyle.caption("%s · %d/%d" % [I18n.t("fus.given"),
 		int(data("fusionTrade.inputCount", 0)), int(data("fusionTrade.slotCount", 0))]))
 	if inputs.is_empty() and str(data("fusionTrade.status", "")) == "":
 		# the how-to, until there is a result to read instead
 		var hint := label(side, I18n.t("fus.given_hint",
 			{"n": int(data("fusionTrade.slotCount", 0))}), 15)
-		hint.add_theme_color_override("font_color", OneBit.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.MUTED)
 	else:
 		# chips, several per line: the grid already shows them highlighted
 		var flow := HFlowContainer.new()
@@ -184,7 +183,7 @@ func _recipe_side(side: VBoxContainer) -> void:
 	fuse.text = I18n.t("fus.fuse")
 	fuse.custom_minimum_size = Vector2(200, 54)
 	fuse.disabled = not bool(data("fusionTrade.canFusion", false))
-	OneBit.primary(fuse, 20)
+	UiStyle.primary(fuse, 20)
 	fuse.pressed.connect(func(): send("nativeFusRequest"))
 	actions.add_child(fuse)
 	var clear := Button.new()
@@ -199,8 +198,8 @@ func _recipe_side(side: VBoxContainer) -> void:
 
 ## The boost cards the altar can make, one row per side they push: power
 ## (the rubies), quality (the sapphires), both (Potaras). A chip reads its
-## boost ("+5"); the card's name and art come up in the detail. The 1-bit
-## dither leaves 7 thumbnails all alike, the numbers are what you choose by.
+## boost ("+5"); the card's name and art come up in the detail. The 7
+## thumbnails look much alike, so the numbers are what you choose by.
 func _target_rows(side: VBoxContainer) -> void:
 	var groups := {"power": [], "quality": [], "both": []}
 	for t in data("fusionTrade.targets", []):
@@ -215,7 +214,7 @@ func _target_rows(side: VBoxContainer) -> void:
 		r.add_theme_constant_override("separation", 8)
 		var l := _small(r, I18n.t("fus." + key), 15)
 		l.custom_minimum_size.x = 76
-		l.add_theme_color_override("font_color", OneBit.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.MUTED)
 		for t in groups[key]:
 			var cid := int(t.get("id", 0))
 			var fp := int(t.get("fusPower", 0))
@@ -254,7 +253,7 @@ func _recipe(side: VBoxContainer) -> void:
 	if reason != "" and reason != "fus.pick_target" and reason != "fus.need_two":
 		var why := label(facts, I18n.t(reason), 15)
 		why.name = "Reason"
-		why.add_theme_color_override("font_color", OneBit.MUTED)
+		why.add_theme_color_override("font_color", UiStyle.MUTED)
 
 
 func _status(parent: Node) -> void:
@@ -264,7 +263,7 @@ func _status(parent: Node) -> void:
 	var l := label(parent, text, 15)
 	l.name = "Status"
 	if not bool(data("fusionTrade.statusOk", false)):
-		l.add_theme_color_override("font_color", OneBit.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.MUTED)
 
 
 ## A small text button; the chosen one gets the thick border and the hard
@@ -274,18 +273,16 @@ func _chip(parent: Node, text: String, chosen: bool) -> Button:
 	b.text = text
 	b.custom_minimum_size = Vector2(60, 28)
 	b.add_theme_font_size_override("font_size", 15)
-	var normal := OneBit.box(OneBit.PAPER, OneBit.INK, 4 if chosen else 2, 4)
+	var normal := UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4 if chosen else 2, 4)
 	if chosen:
-		normal.shadow_color = OneBit.INK
-		normal.shadow_size = 1
-		normal.shadow_offset = Vector2(4, 4)
+		normal.border_color = UiStyle.RIM_HI
 	var hover := normal.duplicate()
 	hover.set_border_width_all(4)
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
 	b.add_theme_stylebox_override("hover_pressed", hover)
-	b.add_theme_stylebox_override("focus", OneBit.focus_ring())
+	b.add_theme_stylebox_override("focus", UiStyle.focus_ring())
 	parent.add_child(b)
 	return b
 

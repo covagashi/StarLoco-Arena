@@ -59,5 +59,5 @@ func refresh() -> void:
 	var go := button(pinned_actions, I18n.t("fight.result.continue"), func(): closed.emit())
 	go.name = "Continue"
 	go.custom_minimum_size.x = 170
-	OneBit.primary(go, 20)
+	UiStyle.primary(go, 20)
 	go.grab_focus.call_deferred()

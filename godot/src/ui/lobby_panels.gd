@@ -293,7 +293,7 @@ func _revive_status_line(hint: Label) -> void:
 	hint.text = str(status.get("text", ""))
 	hint.name = "ReviveStatus"
 	if not bool(status.get("ok", true)):
-		hint.add_theme_color_override("font_color", OneBit.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.MUTED)
 
 
 func _statistics() -> void:
@@ -394,7 +394,7 @@ func _ladder() -> void:
 		var b := button(footer, I18n.t(entry[0]), func(): send(entry[1]))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if entry[0] == "ladder.me":
-			OneBit.primary(b, 18)
+			UiStyle.primary(b, 18)
 
 
 func _calendar() -> void:
@@ -454,7 +454,7 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 		facts.append(I18n.t("cal.rules", {"n": int(event.rules)}))
 	if str(event.get("organizer", "")) != "":
 		facts.append(I18n.t("cal.organizer", {"name": event.organizer}))
-	parent.add_child(OneBit.caption(" · ".join(facts)))
+	parent.add_child(UiStyle.caption(" · ".join(facts)))
 	var periods: Array = event.get("periods", [])
 	if not periods.is_empty():
 		label(parent, I18n.t("cal.periods", {"list": ", ".join(periods)})).name = "Periods%d" % tid
@@ -469,7 +469,7 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 		I18n.t("cal.reg_open") if bool(event.get("regOpen", true)) else I18n.t("cal.reg_closed"))
 	if bool(event.get("searching", false)):
 		state = I18n.t("cal.searching")
-	parent.add_child(OneBit.caption(state))
+	parent.add_child(UiStyle.caption(state))
 	var bar := row(parent)
 	if not registered:
 		var ticketed := int(event.get("entryCard", 0)) != 0
@@ -489,7 +489,7 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 		var line := label(parent, str(status.get("text", "")))
 		line.name = "TournStatus%d" % tid
 		if not bool(status.get("ok", true)):
-			line.add_theme_color_override("font_color", OneBit.MUTED)
+			line.add_theme_color_override("font_color", UiStyle.MUTED)
 	if int(bracket.get("tid", -2)) == tid:
 		var slots: Dictionary = bracket.get("slots", {})
 		if slots.is_empty():
@@ -518,7 +518,7 @@ func _bracket(parent: Node, slots: Dictionary) -> Control:
 		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		box.add_child(col)
-		col.add_child(OneBit.caption(I18n.t(r[0])))
+		col.add_child(UiStyle.caption(I18n.t(r[0])))
 		for n in names:
 			var l := label(col, ("▶ %s" % n) if n == me else str(n))
 			l.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -636,7 +636,7 @@ func _social() -> void:
 ## The clan's demon (S18: the demon totem's job). The leader opens the
 ## offering panel; the first accepted offering affiliates the clan.
 func _clan_demon() -> void:
-	body.add_child(OneBit.caption(I18n.t("clan.demon")))
+	body.add_child(UiStyle.caption(I18n.t("clan.demon")))
 	var bar := row(body)
 	var demon := int(data("guild.demon", 0))
 	label(bar, I18n.t("clan.demon_is", {"demon": str(data("guild.demonName", ""))})
@@ -748,7 +748,7 @@ func _ghost_new() -> void:
 		var fid := int(f.get("id", 0))
 		if not rules.has(fid):
 			rules[fid] = []
-		var cap: Label = OneBit.caption(_rules_caption(f, rules[fid]))
+		var cap: Label = UiStyle.caption(_rules_caption(f, rules[fid]))
 		list.add_child(cap)
 		var ed := GambitEditor.new(rules[fid], f.get("spells", []))
 		ed.name = "Rules%d" % fid
@@ -876,7 +876,7 @@ func _first_steps() -> void:
 			NpcDialogs.achievement_name(aid), I18n.t("help.step_%d" % aid)])
 		line.name = "Step%d" % aid
 		if done:
-			line.add_theme_color_override("font_color", OneBit.MUTED)
+			line.add_theme_color_override("font_color", UiStyle.MUTED)
 	if next < 0:
 		label(body, I18n.t("help.steps_done"))
 
@@ -927,11 +927,6 @@ func _options() -> void:
 	# client-only fight look (sprints/S04, S17) — user://settings.cfg, read
 	# when the next fight opens
 	label(body, I18n.t("opt.fight"), 22)
-	var style_bar := row(body)
-	label(style_bar, I18n.t("opt.art_style"))
-	choices(style_bar, [I18n.t("opt.style.retail"), I18n.t("opt.style.onebit")],
-		maxi(0, ArtStyle.STYLES.find(ArtStyle.current())),
-		func(i): ArtStyle.set_style(ArtStyle.STYLES[i]))
 	var life_bar := row(body)
 	label(life_bar, I18n.t("opt.hud_life"))
 	choices(life_bar, [I18n.t("opt.life.bar"), I18n.t("opt.life.ring")],
@@ -985,7 +980,6 @@ func _fighter_creation() -> void:
 	stage.custom_minimum_size = Vector2(320, 330)
 	split.add_child(stage)
 	_preview = preload("res://src/anims/anm_sprite.gd").new()
-	OneBit.doll(_preview)
 	_preview.foot_pivot = true
 	_preview.position = Vector2(160, 300)
 	_preview.scale = Vector2(2.5, 2.5)

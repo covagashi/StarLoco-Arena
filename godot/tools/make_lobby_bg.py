@@ -69,7 +69,7 @@ ICON_PATHS = [
 ]
 
 
-# White since S18 (1-bit UI); the theme turns them black on inverted buttons.
+# Light icons on the dark stone buttons (src/ui/ui_style.gd).
 ICON_INK = (255, 255, 255)
 
 

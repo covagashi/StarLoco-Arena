@@ -1,7 +1,7 @@
 extends Node2D
 ## One firework on the lobby sky (S18): the hall's particle show had no world
 ## to play in, so a 22094 now lands here. Square pixel particles in the
-## card's own colour (in 1 bit, content keeps its colour) with a white core.
+## card's own colour with a white core.
 ##
 ## kind — the card's fwType (dumpcards → cards.json):
 ##   1 Fairywork  a rocket climbs from the ground, then bursts
@@ -51,7 +51,7 @@ func _particles(amount: int, lifetime: float) -> CPUParticles2D:
 	p.local_coords = false
 	p.scale_amount_min = 1.0
 	p.scale_amount_max = 1.6
-	# additive: a burst glows over the dithered backdrop instead of greying
+	# additive: a burst glows over the dark backdrop instead of greying
 	var mat := CanvasItemMaterial.new()
 	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	p.material = mat

@@ -66,7 +66,7 @@ func refresh() -> void:
 	if status != "":
 		var s := label(side, status)
 		s.name = "Status"
-		s.add_theme_color_override("font_color", OneBit.MUTED)
+		s.add_theme_color_override("font_color", UiStyle.MUTED)
 	pinned_actions.show()
 	var hint := label(pinned_actions, I18n.t("kanodo.legend"))
 	hint.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -75,7 +75,7 @@ func refresh() -> void:
 	var buy := button(pinned_actions, I18n.t("kanodo.buy"), func(): send("nativeKanodoBuy"), bool(k.get("canBuy", false)))
 	buy.name = "Buy"
 	buy.custom_minimum_size.x = 170
-	OneBit.primary(buy, 20)
+	UiStyle.primary(buy, 20)
 
 
 func _centre(cell: Vector2i) -> void:

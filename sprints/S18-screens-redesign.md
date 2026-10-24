@@ -232,3 +232,26 @@ informe de bug (capturas en `~/codigo/capturas/s18/`).
 Todo con smokes en vivo: `world`, `talk`, `cardmaster`, `mailbox`, `fusion`,
 `revive`, `revive_edge`, `totems`, `report`, `pvp`, `ask`, `ask2`,
 `screens`, `native_panels`, `native_lobby`, `login` y las dos lanes.
+
+## Del 1 bit a piedra y oro (2026-10-24)
+
+El dueño abandonó el 1 bit, también en las pantallas ("combate y
+pantallas"). El sistema `OneBit` pasa a `src/ui/ui_style.gd`, con la misma
+API y la **dirección A** de los bocetos: la familia del HUD de combate en
+color (S17).
+
+- **Aspecto:** placas de piedra oliva, borde dorado gastado, esquinas
+  redondeadas, sombras suaves, texto crema, títulos dorados y un botón
+  principal dorado por pantalla (el PASAR del combate).
+- **En color:** el arte de las cartas, los iconos y el muñeco del coach.
+- **Fondo:** `assets/ui/ui_bg.png`, generado con `tools/make_ui_bg.py`
+  (el marco de piedra de los fondos antiguos, sin sus huecos).
+- **Selección:** borde dorado en lugar de la sombra blanca dura; el modal se
+  sombrea con oscuro en lugar de trama.
+- **Pruebas:** `ui_review_preview` monta el login en un `CanvasLayer`, como
+  `main.gd` (si no, el fondo no tenía tamaño).
+- **Verificado:** `run_tests.sh` completo, `native_panels` 133 PASS,
+  `replay_lobby_smoke`, `ghost_smoke` (las dos pasadas) y `screens_smoke`
+  9/9. A `test` le faltaba la carta 131 (el sombrero de esa prueba), así que
+  se le devolvió una en `arena.db`.
+- **Para el dueño:** el visto bueno del aspecto nuevo.

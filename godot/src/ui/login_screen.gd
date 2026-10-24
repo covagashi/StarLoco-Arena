@@ -1,13 +1,12 @@
 class_name PippopLogin
 extends Control
-## Login screen in the 1-bit UI system (S18, direction B; src/ui/onebit.gd):
-## a dithered arena backdrop, the title, one black window with the three
-## fields and one primary button. Replaces the retail logonDialog; emits
+## Login screen (src/ui/ui_style.gd): the stone backdrop, the title, one
+## window with the three fields and one primary button. Replaces the retail logonDialog; emits
 ## `submit(login, password, proxy)`.
 
 signal submit(login: String, password: String, proxy: String)
 
-const OneBit := preload("res://src/ui/onebit.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 const REF := Vector2(1280, 720)
 const R_PANEL := Rect2(440, 262, 400, 330)
 const R_BTN := Rect2(520, 620, 240, 64)
@@ -23,10 +22,10 @@ var _box: Control  # REF-sized child, scaled+centered
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(OneBit.backdrop())
+	add_child(UiStyle.backdrop())
 	_box = Control.new()
 	_box.size = REF
-	_box.theme = OneBit.theme()
+	_box.theme = UiStyle.theme()
 	add_child(_box)
 
 	var brand := Label.new()
@@ -34,7 +33,8 @@ func _init() -> void:
 	brand.position = Vector2(0, 58)
 	brand.size = Vector2(REF.x, 44)
 	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	brand.add_theme_font_override("font", OneBit.title_font())
+	brand.add_theme_font_override("font", UiStyle.title_font())
+	brand.add_theme_color_override("font_color", UiStyle.GOLD)
 	brand.add_theme_font_size_override("font_size", 36)
 	brand.add_theme_constant_override("outline_size", 10)
 	_box.add_child(brand)
@@ -43,9 +43,10 @@ func _init() -> void:
 	title.position = Vector2(0, 92)
 	title.size = Vector2(REF.x, 110)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_override("font", OneBit.title_font())
+	title.add_theme_font_override("font", UiStyle.title_font())
+	title.add_theme_color_override("font_color", UiStyle.GOLD)
 	title.add_theme_font_size_override("font_size", 96)
-	# a black outline keeps white type clean over the dithered arena
+	# a dark outline keeps the title clean over the stone
 	title.add_theme_constant_override("outline_size", 14)
 	_box.add_child(title)
 	var tagline := Label.new()
@@ -60,19 +61,19 @@ func _init() -> void:
 	var panel := PanelContainer.new()
 	panel.position = R_PANEL.position
 	panel.size = R_PANEL.size
-	panel.add_theme_stylebox_override("panel", OneBit.window(38))
+	panel.add_theme_stylebox_override("panel", UiStyle.window(38))
 	_box.add_child(panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 6)
 	panel.add_child(col)
-	col.add_child(OneBit.caption(I18n.t("login.user")))
+	col.add_child(UiStyle.caption(I18n.t("login.user")))
 	name_edit = _field(col)
 	_gap(col)
-	col.add_child(OneBit.caption(I18n.t("login.pass")))
+	col.add_child(UiStyle.caption(I18n.t("login.pass")))
 	pass_edit = _field(col)
 	pass_edit.secret = true
 	_gap(col)
-	col.add_child(OneBit.caption(I18n.t("login.server")))
+	col.add_child(UiStyle.caption(I18n.t("login.server")))
 	proxy_opt = OptionButton.new()
 	proxy_opt.custom_minimum_size.y = 46
 	proxy_opt.add_theme_font_size_override("font_size", 19)
@@ -82,7 +83,7 @@ func _init() -> void:
 	btn.text = I18n.t("net.connect").to_upper()
 	btn.position = R_BTN.position
 	btn.size = R_BTN.size
-	OneBit.primary(btn)
+	UiStyle.primary(btn)
 	btn.pressed.connect(_do_submit)
 	_box.add_child(btn)
 

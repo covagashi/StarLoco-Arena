@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bw7t1xt02scrk"
-path="res://.godot/imported/onebit_bg_rayos.png-1f9e541c08ef9247e954f04999d2ba02.ctex"
+uid="uid://jlj4ny1hwd"
+path="res://.godot/imported/ui_bg.png-a751130f772ac49cb4da3e3551c15090.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/onebit_bg_rayos.png"
-dest_files=["res://.godot/imported/onebit_bg_rayos.png-1f9e541c08ef9247e954f04999d2ba02.ctex"]
+source_file="res://assets/ui/ui_bg.png"
+dest_files=["res://.godot/imported/ui_bg.png-a751130f772ac49cb4da3e3551c15090.ctex"]
 
 [params]
 

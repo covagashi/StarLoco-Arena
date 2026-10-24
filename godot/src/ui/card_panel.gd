@@ -1,7 +1,7 @@
 extends "res://src/ui/lobby_panel.gd"
 ## Shared pieces for the native panels that show game cards (S18): the Card
-## Master, the fusion altar and whatever comes next. A card tile with its art
-## in the 1-bit dither, the big framed art, token amounts, small and muted
+## Master, the fusion altar and whatever comes next. A card tile with its art,
+## the big framed art, token amounts, small and muted
 ## text, and the have/need meter. Nothing here touches the wire or a model
 ## field; the panels decide what each piece means.
 
@@ -11,25 +11,23 @@ static var _token_cache := {}
 
 
 ## One card: art, name and an optional value line; a badge (copies) top
-## right. Selected = thick border plus the hard white shadow.
+## right. Selected = a thick gold rim.
 func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 		sub := "") -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = TILE
 	b.focus_mode = Control.FOCUS_ALL
-	var normal := OneBit.box(OneBit.PAPER, OneBit.INK, 4 if chosen else 2, 6)
+	var normal := UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4 if chosen else 2, 6)
 	if chosen:
-		normal.shadow_color = OneBit.INK
-		normal.shadow_size = 1
-		normal.shadow_offset = Vector2(6, 6)
+		normal.border_color = UiStyle.RIM_HI
 	var hover := normal.duplicate()
 	hover.set_border_width_all(4)
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
 	b.add_theme_stylebox_override("hover_pressed", hover)
-	b.add_theme_stylebox_override("disabled", OneBit.box(OneBit.PAPER, OneBit.MUTED, 1, 6))
-	b.add_theme_stylebox_override("focus", OneBit.focus_ring())
+	b.add_theme_stylebox_override("disabled", UiStyle.box(UiStyle.PAPER, UiStyle.MUTED, 1, 6))
+	b.add_theme_stylebox_override("focus", UiStyle.focus_ring())
 	parent.add_child(b)
 	var col := VBoxContainer.new()
 	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -50,13 +48,13 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	if sub != "":
 		var s := _small(col, sub, 12)
 		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		s.add_theme_color_override("font_color", OneBit.MUTED)
+		s.add_theme_color_override("font_color", UiStyle.MUTED)
 	if badge != "":
 		var tag := Label.new()
 		tag.text = badge
 		tag.add_theme_font_size_override("font_size", 12)
-		tag.add_theme_color_override("font_color", OneBit.PAPER)
-		tag.add_theme_stylebox_override("normal", OneBit.box(OneBit.INK, OneBit.INK, 0, 3))
+		tag.add_theme_color_override("font_color", UiStyle.PAPER)
+		tag.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.INK, UiStyle.INK, 0, 3))
 		tag.position = Vector2(TILE.x - 44, 4)
 		tag.size = Vector2(40, 18)
 		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -70,9 +68,9 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 func _meter(have: int, need: int) -> Control:
 	var box := Panel.new()
 	box.custom_minimum_size = Vector2(0, 16)
-	box.add_theme_stylebox_override("panel", OneBit.box(OneBit.PAPER, OneBit.INK, 2, 0))
+	box.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 2, 0))
 	var fill := ColorRect.new()
-	fill.color = OneBit.INK
+	fill.color = UiStyle.INK
 	fill.anchor_bottom = 1.0
 	fill.anchor_right = clampf(float(have) / maxf(1.0, float(need)), 0.0, 1.0)
 	fill.offset_left = 4
@@ -96,7 +94,6 @@ func _amount(parent: Node, type: int, amount: int, font_size: int) -> void:
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.custom_minimum_size = Vector2(font_size + 6, font_size + 6)
-	icon.material = OneBit.art_material()
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(icon)
 
@@ -121,17 +118,15 @@ func _small(parent: Node, text: String, font_size: int) -> Label:
 
 func _muted(parent: Node, text: String) -> Label:
 	var l := _small(parent, text, 16)
-	l.add_theme_color_override("font_color", OneBit.MUTED)
+	l.add_theme_color_override("font_color", UiStyle.MUTED)
 	return l
 
 
-## The big art, in a box with the hard shadow, like the selected tile.
+## The big art, in a box with the gold rim of the selected tile.
 func _framed_art(cid: int, size: Vector2) -> Control:
 	var frame_box := PanelContainer.new()
-	var st := OneBit.box(OneBit.PAPER, OneBit.INK, 3, 8)
-	st.shadow_color = OneBit.INK
-	st.shadow_size = 1
-	st.shadow_offset = Vector2(6, 6)
+	var st := UiStyle.box(UiStyle.PAPER, UiStyle.INK, 3, 8)
+	st.border_color = UiStyle.RIM_HI
 	frame_box.add_theme_stylebox_override("panel", st)
 	frame_box.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	frame_box.add_child(_art(cid, size))
@@ -140,11 +135,10 @@ func _framed_art(cid: int, size: Vector2) -> Control:
 
 func _art(cid: int, size: Vector2) -> Control:
 	var tr := TextureRect.new()
-	tr.texture = OneBit.card_art(cid)
+	tr.texture = UiStyle.card_art(cid)
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tr.custom_minimum_size = size
-	tr.material = OneBit.art_material()
 	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return tr
 

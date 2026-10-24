@@ -1,7 +1,7 @@
 class_name LobbyPanel
 extends Control
 
-const OneBit := preload("res://src/ui/onebit.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 ## Shared native modal surface. Containers own all interior geometry.
 ## The bounded reference frame scales down to fit; lists scroll internally.
 
@@ -26,16 +26,15 @@ var _shade: Control
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# 1-bit (S18): a dither shade instead of a translucent one, and a
-	# black window with a hard white shadow.
-	_shade = OneBit.shade()
+	# a dark shade behind, and a stone window (src/ui/ui_style.gd)
+	_shade = UiStyle.shade()
 	# sized by hand in _layout (see there), so no full-rect anchors: they
 	# would make every size assignment warn
 	_shade.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	add_child(_shade)
 	frame = PanelContainer.new()
 	frame.theme = _theme()
-	frame.add_theme_stylebox_override("panel", OneBit.window())
+	frame.add_theme_stylebox_override("panel", UiStyle.window())
 	add_child(frame)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 16)
@@ -264,7 +263,7 @@ func confirm_action(text: String, callback: Callable) -> void:
 
 
 func _theme() -> Theme:
-	return OneBit.theme()
+	return UiStyle.theme()
 
 
 ## Tab stays within the active modal instead of reaching the lobby behind it.

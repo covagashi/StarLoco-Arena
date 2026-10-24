@@ -17,26 +17,8 @@ var _ready_ok := false
 ## {id: {k: Callable -> int zkey, d: Callable(CanvasItem)}}.
 var _dynamic := {}
 var debug := OS.has_environment("MAPGFX_DEBUG")
-## Asset folder the art comes from. "mapgfx_1bit" is the per-texture 1-bit
-## conversion (tools/asset-import/onebit.py, sprints/S04); set it before
-## load_world(), together with use_onebit().
+## Asset folder the art comes from (tools/asset-import/map_gfx.py).
 var source_dir := "mapgfx"
-## Round sprite positions to whole pixels. The retail layout puts half the
-## rows at .5 px, which blurs crisp 1-bit art even under nearest filtering.
-var pixel_snap := false
-## Draw each sprite with its retail colour (map_gfx.py "c": tint × baked
-## light). Off in the 1-bit style, whose textures are ink and paper.
-var retail_colour := true
-
-
-## Switch to the 1-bit art set: its own folder, nearest filtering, whole-pixel
-## positions. Reload the world afterwards.
-func use_onebit(on: bool) -> void:
-	source_dir = "mapgfx_1bit" if on else "mapgfx"
-	pixel_snap = on
-	retail_colour = not on
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if on \
-		else CanvasItem.TEXTURE_FILTER_PARENT_NODE
 
 
 ## Retail sort key for a live actor on cell (x,y): the feet sit on the
@@ -102,10 +84,9 @@ func load_world(world_id: int) -> bool:
 		var t: Texture2D = _tex.get(int(s.tex))
 		if t == null:
 			continue
-		# the retail colour (tint × baked light, map_gfx.py "c"): only in the
-		# retail art; the 1-bit textures are ink and paper
+		# the retail colour (tint × baked light, map_gfx.py "c")
 		var col := Color.WHITE
-		if s.has("c") and retail_colour:
+		if s.has("c"):
 			col = Color(float(s.c[0]), float(s.c[1]), float(s.c[2]))
 		_sprites.append({"t": t, "sx": float(s.sx), "sy": float(s.sy),
 			"w": float(s.w), "h": float(s.h), "uv": s.uv,
@@ -163,8 +144,6 @@ func _draw() -> void:
 			continue
 		var uv = s.uv
 		var dst := Rect2(s.sx, s.sy, s.w, s.h)
-		if pixel_snap:
-			dst.position = dst.position.floor()
 		if uv != null:
 			draw_texture_rect_region(s.t, dst,
 				Rect2(uv[0], uv[1], uv[2], uv[3]), s.c)

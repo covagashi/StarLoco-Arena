@@ -116,11 +116,11 @@ func _reading(side: VBoxContainer, mails: Array, status: String) -> void:
 		_status(side, status)
 		return
 	var head := label(side, _title_of(open), 22)
-	head.add_theme_font_override("font", OneBit.title_font())
+	head.add_theme_font_override("font", UiStyle.title_font())
 	var who := I18n.t("mb.to", {"name": open.get("receiver", ""), "date": open.get("date", "")}) \
 		if tab == 1 else I18n.t("mb.from", {"name": open.get("sender", ""), "date": open.get("date", "")})
 	var meta := label(side, who, 15)
-	meta.add_theme_color_override("font_color", OneBit.MUTED)
+	meta.add_theme_color_override("font_color", UiStyle.MUTED)
 	side.add_child(HSeparator.new())
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -131,7 +131,7 @@ func _reading(side: VBoxContainer, mails: Array, status: String) -> void:
 	text.name = "Message"
 	var cards: Array = open.get("cards", [])
 	if not cards.is_empty():
-		side.add_child(OneBit.caption(I18n.t("mb.attached")))
+		side.add_child(UiStyle.caption(I18n.t("mb.attached")))
 		var strip := HBoxContainer.new()
 		strip.add_theme_constant_override("separation", 10)
 		side.add_child(strip)
@@ -145,7 +145,7 @@ func _reading(side: VBoxContainer, mails: Array, status: String) -> void:
 		take.name = "Take"
 		take.text = I18n.t("mb.take")
 		take.custom_minimum_size = Vector2(220, 54)
-		OneBit.primary(take, 20)
+		UiStyle.primary(take, 20)
 		take.pressed.connect(func(): send("nativeMailTake"))
 		actions.add_child(take)
 	if tab == 0:
@@ -178,7 +178,7 @@ func _compose() -> void:
 	right.add_theme_constant_override("separation", 8)
 	split.add_child(right)
 
-	left.add_child(OneBit.caption(I18n.t("mb.to_label")))
+	left.add_child(UiStyle.caption(I18n.t("mb.to_label")))
 	var to_row := row(left)
 	var to := field(to_row, "to", I18n.t("mb.to_ph"))
 	to.name = "To"
@@ -193,11 +193,11 @@ func _compose() -> void:
 		var ok := label(left, I18n.t("mb.found" if rid > 0 else "mb.not_found"), 15)
 		ok.name = "Found"
 		if rid < 0:
-			ok.add_theme_color_override("font_color", OneBit.MUTED)
-	left.add_child(OneBit.caption(I18n.t("mb.subject")))
+			ok.add_theme_color_override("font_color", UiStyle.MUTED)
+	left.add_child(UiStyle.caption(I18n.t("mb.subject")))
 	var subject := field(left, "title", "")
 	subject.name = "Subject"
-	left.add_child(OneBit.caption(I18n.t("mb.message")))
+	left.add_child(UiStyle.caption(I18n.t("mb.message")))
 	var msg := TextEdit.new()
 	msg.name = "Body"
 	msg.text = str(draft.get("message", ""))
@@ -208,10 +208,10 @@ func _compose() -> void:
 	left.add_child(msg)
 
 	var staged: Array = data("mailbox.newMail.cards", [])
-	right.add_child(OneBit.caption(I18n.t("mb.attach", {"n": staged.size(), "max": MAX_CARDS})))
+	right.add_child(UiStyle.caption(I18n.t("mb.attach", {"n": staged.size(), "max": MAX_CARDS})))
 	if staged.is_empty():
 		var hint := label(right, I18n.t("mb.attach_hint"), 15)
-		hint.add_theme_color_override("font_color", OneBit.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.MUTED)
 	var strip := HFlowContainer.new()
 	strip.add_theme_constant_override("h_separation", 8)
 	strip.add_theme_constant_override("v_separation", 8)
@@ -224,7 +224,7 @@ func _compose() -> void:
 		var idx := i
 		b.pressed.connect(func(): send("nativeMailDetach", [idx]))
 		strip.add_child(b)
-	right.add_child(OneBit.caption(I18n.t("mb.your_cards")))
+	right.add_child(UiStyle.caption(I18n.t("mb.your_cards")))
 	var offer: Array = data("mailbox.native.offer", [])
 	if offer.is_empty():
 		label(right, I18n.t("mb.no_cards"), 15)
@@ -257,7 +257,7 @@ func _compose() -> void:
 	go.name = "Send"
 	go.text = I18n.t("mb.send")
 	go.custom_minimum_size = Vector2(180, 54)
-	OneBit.primary(go, 20)
+	UiStyle.primary(go, 20)
 	go.pressed.connect(func():
 		send("nativeMailSend", [str(draft.get("to", "")),
 			str(draft.get("title", "")), str(draft.get("message", ""))]))
@@ -280,21 +280,21 @@ func _status(parent: Node, text: String) -> void:
 	var l := label(parent, text, 15)
 	l.name = "Status"
 	if not bool(data("mailbox.native.statusOk", false)):
-		l.add_theme_color_override("font_color", OneBit.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.MUTED)
 
 
-## A small card: dithered art over its name. A button when `clickable`.
+## A small card: its art over its name. A button when `clickable`.
 func _mini_card(cid: int, card_name: String, clickable := false) -> Control:
 	var root: Control
 	if clickable:
 		var b := Button.new()
-		b.add_theme_stylebox_override("normal", OneBit.box(OneBit.PAPER, OneBit.INK, 2, 4))
-		b.add_theme_stylebox_override("hover", OneBit.box(OneBit.PAPER, OneBit.INK, 4, 4))
-		b.add_theme_stylebox_override("pressed", OneBit.box(OneBit.PAPER, OneBit.INK, 4, 4))
+		b.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 2, 4))
+		b.add_theme_stylebox_override("hover", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4, 4))
+		b.add_theme_stylebox_override("pressed", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4, 4))
 		root = b
 	else:
 		var p := PanelContainer.new()
-		p.add_theme_stylebox_override("panel", OneBit.box(OneBit.PAPER, OneBit.INK, 2, 4))
+		p.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 2, 4))
 		root = p
 	root.custom_minimum_size = Vector2(88, 96)
 	root.tooltip_text = card_name
@@ -309,11 +309,10 @@ func _mini_card(cid: int, card_name: String, clickable := false) -> Control:
 		col.offset_bottom = -4
 	root.add_child(col)
 	var art := TextureRect.new()
-	art.texture = OneBit.card_art(cid)
+	art.texture = UiStyle.card_art(cid)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	art.custom_minimum_size = Vector2(80, 60)
-	art.material = OneBit.art_material()
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(art)
 	var n := Label.new()

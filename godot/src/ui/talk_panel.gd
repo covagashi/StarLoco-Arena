@@ -4,7 +4,7 @@ extends "res://src/ui/lobby_panel.gd"
 ## demons, NPCs — and the tutorial monologues. A smaller window than the
 ## lobby panels: who speaks (the title), what they say, then the choices.
 ## Replies and challenges are a list of buttons; "Siguiente" / "Aceptar" /
-## "Cerrar" go in the action row, the main one in the 1-bit primary style.
+## "Cerrar" go in the action row, the main one in the primary style.
 ##
 ## Reads the `talk` model (main.gd _talk_show): {name, text (BBCode), page,
 ## pages, choices:[{label, kind}]} with kind reply / challenge / primary /
@@ -38,21 +38,21 @@ func refresh() -> void:
 	speech.scroll_active = false
 	speech.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	speech.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	speech.add_theme_font_override("normal_font", OneBit.body_font())
+	speech.add_theme_font_override("normal_font", UiStyle.body_font())
 	speech.add_theme_font_size_override("normal_font_size", 19)
 	speech.add_theme_font_size_override("bold_font_size", 19)
-	speech.add_theme_color_override("default_color", OneBit.INK)
+	speech.add_theme_color_override("default_color", UiStyle.INK)
 	speech.text = str(talk.get("text", ""))
 	body.add_child(speech)
 	var pages := int(talk.get("pages", 0))
 	if pages > 1:
-		var where := OneBit.caption(I18n.t("talk.page", {"n": int(talk.get("page", 1)), "of": pages}))
+		var where := UiStyle.caption(I18n.t("talk.page", {"n": int(talk.get("page", 1)), "of": pages}))
 		where.name = "Page"
 		body.add_child(where)
 	var rows: Array = talk.get("choices", [])
 	var listed := rows.filter(func(c): return str(c.kind) in ["reply", "challenge"])
 	if listed.any(func(c): return str(c.kind) == "challenge"):
-		body.add_child(OneBit.caption(I18n.t("talk.challenges")))
+		body.add_child(UiStyle.caption(I18n.t("talk.challenges")))
 	var first: Button = null
 	var main: Button = null
 	for i in rows.size():
@@ -77,7 +77,7 @@ func refresh() -> void:
 			b.name = "Choice%d" % i
 			b.custom_minimum_size.x = 150
 			if kind == "primary":
-				OneBit.primary(b, 20)
+				UiStyle.primary(b, 20)
 				main = b
 	var target: Button = main if main != null else first
 	if target != null:

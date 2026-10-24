@@ -1,6 +1,6 @@
 # S04 — Mapas de pelea en 1 bit (dithering + capas de luz)
 
-**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** 🟢 terminado (2026-10-24) — falta el visto bueno del dueño: mapas de referencia del 1 bit · **Depende de:** S03 (render sin pantalla)
+**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** ⛔ abandonado (2026-10-24) — el dueño: "abandonemos el 1bit y dejémoslo con retail (original), elimina toda la parte del 1bit" · **Depende de:** S03 (render sin pantalla)
 
 ## Objetivo
 
@@ -304,3 +304,23 @@ El dueño: "hay que terminar al 100 % los sprints".
     Algunas arenas cambian mucho de ambiente (la 10 rojiza, la 77 oscura,
     la 52 azul). Capturas `color-retail-*` en `~/codigo/capturas/s04/`.
 - **Siguen siendo del dueño:** los mapas de referencia y el visto bueno final.
+
+## Abandonado (2026-10-24)
+
+El dueño: "por el momento abandonemos el 1bit y dejémoslo con retail
+(original), elimina toda la parte del 1bit"; en el alcance, "combate y
+pantallas".
+
+- **Quitado del combate:** el estilo y su opción en Opciones (`ArtStyle`
+  ahora solo guarda la vida del HUD), los mapas convertidos
+  (`assets/mapgfx_1bit`, `tools/asset-import/onebit.py`), los muñecos a
+  línea y los demás estilos de `AnmSprite`, las auras de equipo, las marcas
+  de puntos, el destello de luz, el shader y `tools/render_fightmap.gd`, más
+  `tools/contact_sheet.py` y `tools/mock_screens.py` y la pasada 1 bit de
+  `run_tests.sh --visual`.
+- **Se queda:** el **color retail por elemento** (tinte × luz horneada), que
+  es del estilo retail y el dueño aprobó.
+- **Pantallas:** ver la nota del mismo día en
+  [`S18`](./S18-screens-redesign.md).
+- El historial de git conserva todo lo quitado: el último commit con el
+  1 bit es el anterior a "drop the 1-bit style".

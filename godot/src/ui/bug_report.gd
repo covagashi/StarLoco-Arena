@@ -21,7 +21,7 @@ extends AcceptDialog
 const State := preload("res://src/state.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const DebugLog := preload("res://src/util/debug_log.gd")
-const OneBit := preload("res://src/ui/onebit.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 
 var base_url := ""
 var _types := ["bug.type.game", "bug.type.display", "bug.type.chat",
@@ -72,7 +72,7 @@ func _init(url: String) -> void:
 	_send_btn.text = I18n.t("bug.send")
 	_send_btn.name = "Send"
 	_send_btn.pressed.connect(_send)
-	OneBit.primary(_send_btn, 20)
+	UiStyle.primary(_send_btn, 20)
 	vb.add_child(_send_btn)
 	confirmed.connect(func(): queue_free())
 	canceled.connect(func(): queue_free())
@@ -110,11 +110,11 @@ func _ready() -> void:
 		_status.text = I18n.t("bug.unavailable")
 
 
-## The 1-bit system's theme (S18): the lobby panels' black window with the
-## hard white shadow, their fields and buttons, the title in the title font.
+## The native theme (src/ui/ui_style.gd): the lobby panels' stone window,
+## their fields and buttons, the title in the title font.
 func _theme() -> Theme:
-	var result: Theme = OneBit.theme()
-	var win := OneBit.window()
+	var result: Theme = UiStyle.theme()
+	var win := UiStyle.window()
 	# the embedded window's title bar sits ABOVE its content rect: the frame
 	# must grow up to cover it, or the title floats over the backdrop
 	win.expand_margin_top = 44
@@ -122,11 +122,11 @@ func _theme() -> Theme:
 	win.expand_margin_right = 8
 	win.expand_margin_bottom = 8
 	result.set_constant("title_height", "Window", 40)
-	result.set_stylebox("panel", "AcceptDialog", OneBit.box(OneBit.PAPER, OneBit.PAPER, 0, 18))
+	result.set_stylebox("panel", "AcceptDialog", UiStyle.box(UiStyle.PAPER, UiStyle.PAPER, 0, 18))
 	result.set_stylebox("embedded_border", "Window", win)
 	result.set_stylebox("embedded_unfocused_border", "Window", win)
-	result.set_color("title_color", "Window", OneBit.INK)
-	result.set_font("title_font", "Window", OneBit.title_font())
+	result.set_color("title_color", "Window", UiStyle.INK)
+	result.set_font("title_font", "Window", UiStyle.title_font())
 	result.set_font_size("title_font_size", "Window", 22)
 	return result
 

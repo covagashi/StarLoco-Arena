@@ -15,7 +15,6 @@ var lost := 0
 var ap := 0
 var mp := 0
 var shown := false      # false between turns: an empty socket
-var onebit := false
 var radius := 46.0
 
 const RING_W := 7.0
@@ -33,14 +32,14 @@ func _ready() -> void:
 func _draw() -> void:
 	var font := get_theme_default_font()
 	var c := Vector2(size.x * 0.5, size.y - radius - RING_W - 4.0)
-	var ink := Color.WHITE if onebit else Color("ad965a")
-	var plate := Color.BLACK if onebit else Color("292c20")
+	var ink := Color("ad965a")
+	var plate := Color("292c20")
 	draw_circle(c, radius + RING_W + 3.0, plate)
 	draw_arc(c, radius + RING_W + 3.0, 0.0, TAU, 64, ink, 2.0, true)
 	if not shown:
 		draw_circle(c, radius, Color(0, 0, 0, 0.6))
 		return
-	draw_circle(c, radius, Color.BLACK if onebit else team_color.darkened(0.78))
+	draw_circle(c, radius, team_color.darkened(0.78))
 	if portrait != null:
 		_draw_round_texture(portrait, c, radius)
 	elif not initials.is_empty():
@@ -70,10 +69,10 @@ func _draw() -> void:
 
 
 func _badge(font: Font, at: Vector2, r: float, text: String, col: Color) -> void:
-	var edge := Color.WHITE if onebit else Color("f1e5c1")
+	var edge := Color("f1e5c1")
 	draw_circle(at, r + 1.5, Color.BLACK)
-	draw_circle(at, r, Color.BLACK if onebit else col)
-	draw_arc(at, r, 0.0, TAU, 32, col if onebit else edge, 1.5, true)
+	draw_circle(at, r, col)
+	draw_arc(at, r, 0.0, TAU, 32, edge, 1.5, true)
 	var fs := int(r * 1.05)
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	draw_string(font, at + Vector2(-w * 0.5, fs * 0.36), text,
