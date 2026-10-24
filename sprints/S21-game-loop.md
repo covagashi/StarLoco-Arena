@@ -242,6 +242,24 @@ cobrado la primera pasada antes del arreglo.
 - **El abandono no tira muerte:** sigue siendo un combate de práctica en
   ese aspecto.
 
+### Bloque C — la Ayuda (2026-10-24)
+
+- La Ayuda pasa de una página vaga a **cuatro pestañas**:
+  - Empezar: los primeros pasos, ya apuntando a los capítulos de Historia,
+    y los controles de ratón, teclado y mando.
+  - Modos: Historia, Ranking con fantasmas, y Torneos.
+  - Combate: colocación, PA/PM, espalda/lado, placaje, cartas de evento
+    (una ronda) y condición de victoria.
+  - Paneles: para qué sirve cada tile.
+- **Cada ventana se explica con su "?"** (`lobby_panel.gd`). Si existe
+  `help.panel.<ventana>` en los textos, aparece el botón, que muestra dos
+  líneas en dorado bajo el título. Lo tienen 15 ventanas.
+- Corregido lo que la Ayuda decía mal: las cartas de evento duran una
+  ronda, no "unos turnos"; el 2v2 ya no existe; Evolución no cuenta para el
+  ranking.
+- **Evidencia:** `test/help_smoke.gd` 5/5; `tutorial_smoke` 10/10 (Primeros
+  pasos); `native_panels` 138 PASS; headless 381/0.
+
 ## Criterio de cierre
 
 Desde el lobby, cada modo tiene una sola entrada y dice qué es; el mapa del

@@ -925,14 +925,31 @@ func _city() -> void:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
+## Ayuda (S21): four tabs instead of one vague page — how to start, the three
+## modes, the fight's rules, and what each lobby panel is for. Every panel
+## also explains itself with its "?" (lobby_panel.gd).
 func _help() -> void:
-	_first_steps()
-	label(body, I18n.t("help.rules"), 22)
-	for i in 5:
-		label(body, "· " + I18n.t("help.rule%d" % i))
-	for i in 4:
-		label(body, I18n.t("help.h%d" % i), 22)
-		label(body, I18n.t("help.b%d" % i))
+	tabs(body, [I18n.t("help.tab_start"), I18n.t("help.tab_modes"), I18n.t("help.tab_fight"),
+		I18n.t("help.tab_panels")])
+	match tab:
+		0:
+			_first_steps()
+			label(body, I18n.t("help.controls"), 22)
+			label(body, I18n.t("help.controls_b"))
+		1:
+			for m in ["story", "ranked", "tourn"]:
+				var h := label(body, I18n.t("hub." + m), 24)
+				h.add_theme_color_override("font_color", UiStyle.GOLD)
+				label(body, I18n.t("help.mode_%s" % m))
+		2:
+			for i in 6:
+				label(body, "· " + I18n.t("help.fight%d" % i))
+		3:
+			for key in ["nav.team", "nav.inventory", "nav.ladder", "nav.calendar", "nav.achievements",
+					"nav.city", "nav.stats", "nav.social"]:
+				var h := label(body, I18n.t(key), 20)
+				h.add_theme_color_override("font_color", UiStyle.GOLD)
+				label(body, I18n.t("help.panel_%s" % key.trim_prefix("nav.")))
 
 
 ## "Primeros pasos" (S10): the tutorial achievements in the order retail's

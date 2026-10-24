@@ -15,6 +15,7 @@ var model: GuiModel
 var body: VBoxContainer
 var pinned_actions: HBoxContainer
 var close_button: Button
+var _about: Label    # the "?" explanation, hidden until asked
 var frame: PanelContainer
 var title: Label
 var tab := 0
@@ -48,8 +49,21 @@ func _ready() -> void:
 	var font := FontFile.new()
 	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
 	title.add_theme_font_override("font", font)
+	# "?" (S21): what this window is for, in two lines, where it is used —
+	# the help no longer lives only in the Ayuda panel
+	var help_key := "help.panel." + panel_name
+	if I18n.has(help_key):
+		var about := button(header, "?", func(): _about.visible = not _about.visible)
+		about.name = "About"
+		about.custom_minimum_size.x = 46
+		about.tooltip_text = I18n.t("help.about_tip")
 	close_button = button(header, I18n.t("panel.close"), func(): closed.emit())
 	close_button.name = "Close"
+	if I18n.has(help_key):
+		_about = label(column, I18n.t(help_key), 16)
+		_about.name = "AboutText"
+		_about.add_theme_color_override("font_color", UiStyle.GOLD)
+		_about.visible = false
 	column.add_child(HSeparator.new())
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

@@ -76,6 +76,11 @@ func _read(rel: String) -> Dictionary:
 	return d if d is Dictionary else {}
 
 
+## Whether a key exists (in the language or its English fallback).
+func has(key: String) -> bool:
+	return _table.has(key) or _fallback.has(key)
+
+
 ## tr("key") or tr("key", {a: x}) — "{a}" placeholders expand inline.
 func t(key: String, args: Dictionary = {}) -> String:
 	var s: String = _table.get(key, _fallback.get(key, key))
