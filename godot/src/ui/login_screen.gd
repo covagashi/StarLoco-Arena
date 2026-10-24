@@ -15,6 +15,7 @@ const R_ERR := Rect2(340, 690, 600, 24)
 
 var name_edit: LineEdit
 var pass_edit: LineEdit
+var reveal_btn: Button  # eye toggle: show / hide the password
 var proxy_opt: OptionButton
 var err_lbl: Label
 var _box: Control  # REF-sized child, scaled+centered
@@ -70,8 +71,20 @@ func _init() -> void:
 	name_edit = _field(col)
 	_gap(col)
 	col.add_child(UiStyle.caption(I18n.t("login.pass")))
-	pass_edit = _field(col)
+	var pass_row := HBoxContainer.new()
+	pass_row.add_theme_constant_override("separation", 6)
+	col.add_child(pass_row)
+	pass_edit = _field(pass_row)
+	pass_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pass_edit.secret = true
+	reveal_btn = Button.new()
+	reveal_btn.toggle_mode = true
+	reveal_btn.focus_mode = Control.FOCUS_NONE
+	reveal_btn.custom_minimum_size = Vector2(46, 46)
+	reveal_btn.tooltip_text = I18n.t("login.show_pass")
+	reveal_btn.toggled.connect(_on_reveal)
+	reveal_btn.draw.connect(_draw_eye)
+	pass_row.add_child(reveal_btn)
 	_gap(col)
 	col.add_child(UiStyle.caption(I18n.t("login.server")))
 	proxy_opt = OptionButton.new()
@@ -138,9 +151,36 @@ func _field(parent: Control) -> LineEdit:
 	var e := LineEdit.new()
 	e.custom_minimum_size.y = 46
 	e.add_theme_font_size_override("font_size", 19)
+	e.clear_button_enabled = true   # the "x" that empties the field
 	e.text_submitted.connect(func(_t): _do_submit())
 	parent.add_child(e)
 	return e
+
+
+func _on_reveal(on: bool) -> void:
+	pass_edit.secret = not on
+	reveal_btn.tooltip_text = I18n.t(
+		"login.hide_pass" if on else "login.show_pass")
+	reveal_btn.queue_redraw()
+
+
+## An eye drawn over the button; crossed out while the password is hidden.
+func _draw_eye() -> void:
+	var c := reveal_btn.size / 2.0
+	var col := UiStyle.GOLD if reveal_btn.button_pressed else UiStyle.MUTED
+	var top := PackedVector2Array()
+	var bot := PackedVector2Array()
+	for i in 17:
+		var t := -1.0 + i / 8.0
+		var y := 7.0 * (1.0 - t * t)
+		top.append(c + Vector2(t * 13.0, -y))
+		bot.append(c + Vector2(t * 13.0, y))
+	reveal_btn.draw_polyline(top, col, 2.0, true)
+	reveal_btn.draw_polyline(bot, col, 2.0, true)
+	reveal_btn.draw_circle(c, 3.5, col)
+	if not reveal_btn.button_pressed:
+		reveal_btn.draw_line(c + Vector2(-12, 10), c + Vector2(12, -10),
+			col, 2.5, true)
 
 
 func _gap(parent: Control) -> void:

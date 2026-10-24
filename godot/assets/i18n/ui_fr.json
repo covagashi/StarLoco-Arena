@@ -688,6 +688,8 @@
   "gmb.kick_confirm": "Exclure ce membre du clan ?",
   "login.user": "Compte",
   "login.pass": "Mot de passe",
+  "login.show_pass": "Afficher le mot de passe",
+  "login.hide_pass": "Masquer le mot de passe",
   "login.enter_account": "Entre ton compte",
   "login.server": "Serveur",
   "login.tagline": "Ligues JcE et JcJ",

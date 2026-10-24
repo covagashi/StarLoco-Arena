@@ -688,6 +688,8 @@
   "gmb.kick_confirm": "Kick this clan member?",
   "login.user": "Account",
   "login.pass": "Password",
+  "login.show_pass": "Show password",
+  "login.hide_pass": "Hide password",
   "login.enter_account": "Enter your account",
   "login.server": "Server",
   "login.tagline": "PvE and PvP leagues",

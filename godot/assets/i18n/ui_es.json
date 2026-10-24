@@ -688,6 +688,8 @@
   "gmb.kick_confirm": "¿Expulsar al miembro del clan?",
   "login.user": "Cuenta",
   "login.pass": "Contraseña",
+  "login.show_pass": "Mostrar contraseña",
+  "login.hide_pass": "Ocultar contraseña",
   "login.enter_account": "Escribe tu cuenta",
   "login.server": "Servidor",
   "login.tagline": "Ligas PvE y PvP",
