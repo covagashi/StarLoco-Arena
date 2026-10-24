@@ -200,3 +200,29 @@ func TestRankedRefusesHistoriaFighters(t *testing.T) {
 		t.Error("a team with a Historia fighter was not flagged")
 	}
 }
+
+
+// TestPracticeLaunchIsNeverStory (S15): the lobby's Entrenamiento plays
+// challenge 34 — the first fight of chapter 2 — with the practice marker
+// (98), and that never counts as Historia.
+func TestPracticeLaunchIsNeverStory(t *testing.T) {
+	d, coachID, _ := tutorialDeps(t)
+	d.Matchmaker = NewMatchmaker()
+	d.Sessions = NewSessionRegistry()
+	coach, _ := d.Store.Coaches.Get(coachID)
+	s := tmSession(d, coachID, coach.Name)
+	drain(t, s)
+	w := protocol.NewWriter().I32(34).U16(challengePractice)
+	_ = handleTeamTest(s, &protocol.C2SFrame{Opcode: protocol.OpTeamTest, Payload: w.Bytes()})
+	f := d.Fights.ByCoach(coachID)
+	if f == nil {
+		t.Fatal("the practice launch of 34 did not start")
+	}
+	d.Fights.Remove(f)
+	if f.Story || fightFeedsProgression(f) || f.ChallengeID != 34 {
+		t.Errorf("practice 34: Story=%v feeds=%v challenge=%d, want plain practice", f.Story, fightFeedsProgression(f), f.ChallengeID)
+	}
+	if g := launchStory(t, d, s, coachID, 34); g == nil || !g.Story {
+		t.Error("the same 34 from Historia (99) should still count")
+	}
+}

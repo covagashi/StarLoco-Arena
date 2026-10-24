@@ -48,6 +48,13 @@ const sparringCoachID uint = 1 << 31
 // both send it with **arch byte 2** rather than the usual 3.
 const challengeAcceptBreed uint16 = 99
 
+// challengePractice (S15, Godot only) launches a challenge as PRACTICE even
+// when it is a Historia one not yet won: the lobby's "Entrenamiento" plays the
+// minute demon 34, which S21 made the first fight of chapter 2 — without this
+// a training bout could wound or kill a starter. The retail client never
+// sends it.
+const challengePractice uint16 = 98
+
 // practiceFightType is the value the client puts in the FIRST field of 26330
 // for the team panel's "Tester" practice launch (hu_2 hardcodes fH(12)). It
 // collides with challenge id 12 in the data table, which is why the NPC-dialog
@@ -81,6 +88,9 @@ func handleTeamTest(s *Session, f *protocol.C2SFrame) error {
 	}
 	if teamID == challengeAcceptBreed {
 		return s.startPvEChallenge(first)
+	}
+	if teamID == challengePractice && s.deps.ChallengeDefs != nil && s.deps.ChallengeDefs.Get(first) != nil {
+		return s.startPvEChallengeMode(first, true)
 	}
 	// NPC-dialog challenge launch (client th_0, the "Lancer un défi" reply
 	// action): first = the challenge id as well, but the second field is the
@@ -132,6 +142,12 @@ func handleTeamTest(s *Session, f *protocol.C2SFrame) error {
 // has already armed its fight handlers by the time it sends 26330, so silence
 // would leave it waiting forever.
 func (s *Session) startPvEChallenge(challengeID int32) error {
+	return s.startPvEChallengeMode(challengeID, false)
+}
+
+// startPvEChallengeMode is startPvEChallenge; practiceOnly never counts as a
+// Historia fight (challengePractice).
+func (s *Session) startPvEChallengeMode(challengeID int32, practiceOnly bool) error {
 	if s.deps.ChallengeDefs.Get(challengeID) == nil {
 		// Either the data table is absent (dev without data/) or the element
 		// references a challenge this build does not ship.
@@ -165,7 +181,7 @@ func (s *Session) startPvEChallenge(challengeID int32) error {
 	teamB := s.deps.buildChallengeTeam(1, fightArena.startCells(1), challengeID, len(teamA.Fighters))
 	// Historia (S21): the first win of a campaign challenge counts like an
 	// evolution fight; once won, it is practice (no XP to farm, no death).
-	story := isStoryChallenge(challengeID) && !s.deps.challengeAlreadyDone(s.Coach.ID, challengeID)
+	story := !practiceOnly && isStoryChallenge(challengeID) && !s.deps.challengeAlreadyDone(s.Coach.ID, challengeID)
 	s.log.Info("challenge fight", "coach", s.Coach.Name, "challenge", challengeID,
 		"opponents", len(teamB.Fighters), "opponent", teamB.Coach().Name, "story", story)
 	return s.deps.startFightWithTeamsSeeded(fightArena, teamA, teamB, true, challengeID, false,

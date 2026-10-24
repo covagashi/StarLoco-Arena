@@ -1755,7 +1755,9 @@ func _on_practice_pressed() -> void:
 	# demon. The server fields the opponent side; one client suffices.
 	var w := WireWriter.new()
 	w.put_i32(34)
-	w.put_u16(99)
+	# 98, not 99: practice even though 34 is Historia's chapter 2 opener —
+	# a training bout must never wound or kill a starter (S15)
+	w.put_u16(98)
 	Session.send(26330, w.raw(), 2)
 	DebugLog.add("practice challenge 34 sent")
 	_log_line(I18n.t("search.practice"))
