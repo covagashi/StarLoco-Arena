@@ -382,40 +382,71 @@ func _statistics() -> void:
 	table(body, [I18n.t("stats.col_name"), I18n.t("stats.col_value")], ["name", "value"], rows)
 
 
+## Inventario (S22): "está bien pero es denso". Two tabs (cards, sets); the
+## cards filtered by what they are FOR (coach gear, consumables, cosmetics,
+## combat rules, fusion, DOFUS items), sorted by name / value / quantity, a
+## search that filters as you type, and a detail that says what the card is
+## and where it is used.
+const INV_KINDS := {
+	"coach": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+	"consumable": [24], "cosmetic": [1, 25, 28, 29], "combat": [26],
+	"fusion": [27], "dofus": [30],
+}
+
+
+static func _inv_kind(card_type: int) -> String:
+	for k in INV_KINDS:
+		if card_type in INV_KINDS[k]:
+			return k
+	return "other"
+
+
 func _inventory() -> void:
-	tabs(body, [I18n.t("inv.all"), I18n.t("inv.equipment"),
-		I18n.t("inv.special"), I18n.t("inv.sets")])
-	var paths := ["cardInventory", "filtredEquipmentCardInventory", "specialCardInventory", "cardSets"]
-	var items: Array = data("localCoach." + paths[tab], [])
+	tabs(body, [I18n.t("inv.cards"), I18n.t("inv.sets")])
 	var toolbar := row(body)
 	var search := field(toolbar, "search", I18n.t("inv.search_ph"))
-	button(toolbar, I18n.t("inv.search"), schedule_refresh)
-	search.text_submitted.connect(func(_text): schedule_refresh())
-	button(toolbar, I18n.t("inv.clear"), func(): draft["search"] = ""; schedule_refresh())
+	search.text_changed.connect(func(_t): schedule_refresh())
 	button(toolbar, I18n.t("inv.coach_equip"), func(): send("nativeEquipOpen")).name = "CoachEquip"
-	# an empty search keeps everything: Godot's "x".contains("") is false, so
-	# filtering on it hid the whole inventory (S18)
 	var needle := str(draft.get("search", "")).strip_edges().to_lower()
-	if needle != "":
-		items = items.filter(func(item): return str(item.get("name", "")).to_lower().contains(needle))
-	if tab == 3:
-		table(body, [I18n.t("inv.col_set"), I18n.t("inv.col_owned"), I18n.t("inv.col_total")], ["name", "completion", "size"], items, func(_item): schedule_refresh())
+	if tab == 1:
+		var sets: Array = data("localCoach.cardSets", [])
+		if needle != "":
+			sets = sets.filter(func(item): return str(item.get("name", "")).to_lower().contains(needle))
+		table(body, [I18n.t("inv.col_set"), I18n.t("inv.col_owned"), I18n.t("inv.col_total")], ["name", "completion", "size"], sets, func(_item): schedule_refresh())
 		if not selected.is_empty():
 			label(body, str(selected.get("name", "")), 20)
 			table(body, [I18n.t("inv.col_card"), I18n.t("inv.col_qty")], ["name", "quantity"], selected.get("collection", []))
 		return
-	# the cards themselves (S18): tiles with their art, the picked one large
+	var items: Array = data("localCoach.cardInventory", [])
+	var kinds: Array = ["all"] + INV_KINDS.keys() + ["other"]
+	var kind_pick := clampi(int(draft.get("kind", 0)), 0, kinds.size() - 1)
+	var filters := row(body)
+	choices(filters, kinds.map(func(k): return I18n.t("inv.kind_%s" % k)), kind_pick,
+		func(i): draft["kind"] = i; selected = {}; schedule_refresh()).name = "KindPick"
+	var sorts := ["name", "value", "qty"]
+	var sort_pick := clampi(int(draft.get("sort", 0)), 0, sorts.size() - 1)
+	choices(filters, sorts.map(func(k): return I18n.t("inv.sort_%s" % k)), sort_pick,
+		func(i): draft["sort"] = i; schedule_refresh()).name = "SortPick"
+	if kind_pick > 0:
+		items = items.filter(func(it): return _inv_kind(int(it.get("cardType", 0))) == kinds[kind_pick])
+	if needle != "":
+		items = items.filter(func(item): return str(item.get("name", "")).to_lower().contains(needle))
+	match sorts[sort_pick]:
+		"name": items.sort_custom(func(a, b): return str(a.get("name", "")).naturalnocasecmp_to(str(b.get("name", ""))) < 0)
+		"value": items.sort_custom(func(a, b): return int(a.get("value", 0)) > int(b.get("value", 0)))
+		"qty": items.sort_custom(func(a, b): return int(a.get("quantity", 0)) > int(b.get("quantity", 0)))
+	_muted(filters, I18n.t("inv.count", {"n": items.size()})).name = "InvCount"
+	# the cards themselves: tiles with their art, the picked one large
 	var split := row(body)
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var grid := GridContainer.new()
+	var grid := HFlowContainer.new()
 	grid.name = "CardGrid"
-	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	split.add_child(grid)
 	if items.is_empty():
-		label(grid, I18n.t("common.empty"))
+		_muted(grid, I18n.t("common.empty"))
 	var pick := int(selected.get("id", -1))
 	for item in items:
 		var t := _tile(grid, item, int(item.get("id", -2)) == pick, "×%d" % int(item.get("quantity", 0)),
@@ -427,10 +458,16 @@ func _inventory() -> void:
 	var detail := column(split, false)
 	detail.custom_minimum_size.x = 300
 	if selected.is_empty() or not items.any(func(i): return int(i.get("id", -2)) == pick):
-		label(detail, I18n.t("inv.pick_hint"))
+		_muted(detail, I18n.t("inv.pick_hint"))
 		return
 	detail.add_child(_framed_art(pick, Vector2(260, 200)))
 	label(detail, str(selected.get("name", "")), 20).name = "CardName"
+	var kind := _inv_kind(int(selected.get("cardType", 0)))
+	var what := label(detail, I18n.t("inv.kind_%s" % kind), 16)
+	what.add_theme_color_override("font_color", UiStyle.GOLD)
+	var use := label(detail, I18n.t("inv.use_%s" % kind))
+	use.name = "CardUse"
+	use.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label(detail, I18n.t("inv.collection", {"name": str(selected.get("cardSetName", "—"))}))
 	label(detail, "%s ×%d · %s" % [I18n.t("inv.col_qty"), int(selected.get("quantity", 0)),
 		I18n.t("inv.value_n", {"n": int(selected.get("value", 0))})])

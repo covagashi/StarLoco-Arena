@@ -131,6 +131,22 @@ retratos, iconos) puede ir **a color y grande**.
   `talk_smoke` 8/8, `nilo_smoke` 4/4, `tutorial_smoke` 10/10,
   `native_panels` 138 PASS. Captura `servicios.png`.
 
+### Bloque D — Inventario (2026-10-24)
+
+- Dos pestañas, Cartas y Colecciones.
+- Las cartas se pueden **filtrar por lo que son**: equipo del coach,
+  consumibles, cosméticos, reglas de combate, fusión, objetos DOFUS y otros.
+- Se ordenan por nombre, valor o cantidad, y la búsqueda filtra mientras
+  escribes.
+- Un contador dice cuántas se ven.
+- Las tiles se reparten solas en vez de en 4 columnas fijas.
+- El detalle dice **qué es la carta y dónde se usa** ("Póntela en «Equipo
+  del coach»…", "Úsala sobre un luchador de Historia desde Equipo…",
+  "Solo cambia cómo te ves…").
+- **Evidencia:** `test/inventory_smoke.gd` 4/4 (22 tiles = inventario; 9 de
+  equipo del coach; "para qué" correcto; ordenadas por valor, la de 35000
+  primero); `native_panels` 138 PASS. Captura `inventory-coach.png`.
+
 ## Criterio de cierre
 
 Cada panel que sobrevive a S21 tiene su versión nueva aprobada por el dueño y
