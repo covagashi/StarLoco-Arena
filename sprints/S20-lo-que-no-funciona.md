@@ -44,12 +44,16 @@ diseño. Va primero porque no tiene sentido rediseñar un panel que no guarda.
 - [ ] **4. Buscar rival como hoy.** Mientras busca: un cronómetro grande
       (0:12…), el modo que se busca, y "Cancelar" a tamaño de botón
       principal. Esc también cancela. El diseño fino va en S21.
-- [ ] **5. Leyendas.** El 23000 con flag 1 convierte al luchador en
-      leyenda (estado 4), con las condiciones del retail (rango). Test Go.
-- [ ] **6. Evolución y clasificación.** Decisión (abajo); según cuál, se
-      corrige el servidor o la Ayuda.
-- [ ] **7. Clasificación 2v2** con datos, o fuera de la interfaz si no tiene
-      sentido sin gente.
+- [ ] **5. Leyendas, fuera** (dueño, 2026-10-24). Se quitan de la interfaz
+      la pestaña, el botón "Convertir en leyenda" y los torneos de Leyendas.
+      El servidor no se toca, porque es retail; solo deja de ofrecerse.
+- [ ] **6. Evolución no cuenta para la clasificación.** Es el modo historia
+      (dueño, 2026-10-24), así que deja de mover la fuerza en
+      `handlers_fight_combat.go:857`. Test Go.
+- [ ] **7. 2vs2, escondido** (dueño, 2026-10-24: "para no tener problemas de
+      baja población"). Fuera del lobby y de Equipo (la pestaña, el dúo y su
+      clasificación vacía). El código se queda, detrás de un interruptor, por
+      si vuelve con más gente.
 - [ ] **8. Textos retail en francés** de Nilo: traducidos al español (y al
       inglés si faltan), y el "Gracias" cierra la conversación.
 
@@ -58,7 +62,8 @@ diseño. Va primero porque no tiene sentido rediseñar un panel que no guarda.
 | Fecha | Decisión | Quién |
 |---|---|---|
 | 2026-10-24 | S20–S24 van antes de S15 y S16: "no está preparado para los últimos sprints" | dueño |
-| — | ¿Evolución cuenta para la clasificación? Por defecto **no** (lo que dice la Ayuda y lo que espera quien llega) | pendiente |
+| 2026-10-24 | Los modos se quedan así: **Evolución = modo historia**, **Élite = ranking**, **Torneos** igual; **2vs2 se esconde** (baja población) y **Leyendas se quita** | dueño |
+| 2026-10-24 | Evolución, como modo historia, **no cuenta para la clasificación** | se sigue de la anterior |
 | — | ¿Qué botones eran "mover el pj"? Por defecto, se arreglan los tres candidatos | pendiente |
 
 ## Criterio de cierre

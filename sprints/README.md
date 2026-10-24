@@ -54,7 +54,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | **M2 — Identidad visual** | HUD propio y pantallas propias (el 1 bit, abandonado) | S04, S17, S18, S07 |
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S19, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
-| **M6 — Un juego de hoy** | un game-loop actual: lo roto arreglado, una puerta por modo, paneles con respuesta, NPCs con cara y un combate que se explica. Va **antes** de M5 (dueño, 2026-10-24: "no está preparado para los últimos sprints") | S20, S21, S22, S23, S24 |
+| **M6 — Un juego de hoy** | un game-loop actual: lo roto arreglado, una puerta por modo, paneles con respuesta, NPCs con cara y un combate que se explica. Va **antes** de M5 (dueño, 2026-10-24: "no está preparado para los últimos sprints") | S20, S20B, S21, S22, S23, S24 |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16 |
 
 
@@ -83,8 +83,9 @@ Linux y Windows).
 | [S12](./S12-async-pvp-server.md) | M4 | M | 🟢 cerrado | Async PvP fase 3: `ghost_teams` y opcodes |
 | [S13](./S13-async-pvp-client.md) | M4 | L | 🟢 cerrado | Async PvP fase 4: panel de ghosts y editor de reglas |
 | [S14](./S14-async-pvp-ladder.md) | M4 | M | 🟢 cerrado (recompensas y decaimiento, a decidir) | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |
-| [S20](./S20-lo-que-no-funciona.md) | M6 | M | 🟡 siguiente | Lo que no funciona: guardar sin señal, girar el PJ, equipo del coach, cancelar búsqueda, Leyendas |
-| [S21](./S21-game-loop.md) | M6 | L | ⚪ esbozo | Un game-loop de hoy: una puerta por modo, buscar rival con cronómetro, un solo fin de combate, ayuda útil |
+| [S20](./S20-lo-que-no-funciona.md) | M6 | M | 🟡 siguiente | Lo que no funciona: guardar sin señal, girar el PJ, equipo del coach, cancelar búsqueda; fuera Leyendas y 2vs2 |
+| [S20B](./S20B-hub.md) | M6 | L | ⚪ esbozo | Modernizar el hub: el wireframe del lobby de 2026-10-05 (Devin), rehecho alrededor de Historia, Ranking (con fantasmas) y Torneos |
+| [S21](./S21-game-loop.md) | M6 | L | ⚪ esbozo | Un game-loop de hoy: qué es cada modo, buscar rival con cronómetro, un solo fin de combate, ayuda útil y **monetización solo cosmética, sin p2w** |
 | [S22](./S22-paneles-modernos.md) | M6 | L | ⚪ esbozo | Los paneles originales con un toque moderno: equipo del luchador, inventario, logros con iconos, servicios |
 | [S23](./S23-npcs-con-cara.md) | M6 | M | ⚪ esbozo | Los NPC con retrato, Aldebrán presentado y los textos revisados (anexo con todos) |
 | [S24](./S24-combate-legible.md) | M6 | S | ⚪ esbozo | Un combate que se entiende: el letrero de la carta de evento dice qué hace |
@@ -109,9 +110,11 @@ afectado trabaja con la opción marcada como *por defecto*.
 | Replays: ¿grabar/reproducir como el retail, o solo espectador en vivo? | S11 | grabar y reproducir (tomada en S11 por heurística, 2026-10-23: el dueño pidió reels) |
 | X-vs-X (ítem 33 heredado): ¿cerrarlo como muerto en esta build? | S08 | cerrarlo (aplicado en S08; se reabre si el dueño dice) |
 | Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas, sin decaimiento (aplicado en S14) |
-| ¿Evolución cuenta para la clasificación? | S20 | no (lo que dice la Ayuda) |
+| Modos: Evolución = historia, Élite = ranking, Torneos igual; 2vs2 escondido, Leyendas fuera | S20, S20B, S21 | **tomada** (dueño, 2026-10-24) |
+| ¿Fantasmas dentro del Ranking (relleno cuando no hay rival) o con entrada propia? | S20B | dentro del Ranking |
+| ¿Historia = campaña PvE de desafíos y demonios (y se esconde la cola PvP de Evolución)? | S21 | sí |
+| Monetización: solo cosméticos; ¿qué se hace con lo que hoy da ventaja? | S21 | mapa del p2w primero, después se decide |
 | ¿Qué botones eran "mover el pj"? | S20 | se arreglan los tres candidatos |
-| ¿Cinco modos o tres puertas (Progresión, Clasificado, Eventos)? | S21 | tres puertas, mismas reglas del servidor |
 | ¿Qué añade el game-loop moderno que el retail no tiene (misiones diarias, primera victoria, temporadas)? | S21 | se apunta; sprint aparte si el dueño lo quiere |
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |
 | ¿JS en el portal web? | S16 | sin JS |

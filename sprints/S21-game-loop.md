@@ -41,7 +41,27 @@ Que quien entra sepa en diez segundos **qué puede jugar, con qué equipo y qué
 gana**, sin cinco caminos al mismo sitio. El servidor sigue siendo el del
 retail; lo que cambia es cómo se presenta.
 
-## Los cinco modos, hoy (2026-10-24, leyendo el código)
+## Los modos: lo que decidió el dueño (2026-10-24)
+
+"Evolución: este es el modo historia. Élite: ranking. 2vs2: lo quitamos
+(escondemos) para no tener problemas de baja población. Torneos: ok, lo
+mantenemos. Leyendas: lo quitamos."
+
+Quedan tres: **Historia** (Evolución), **Ranking** (Élite, y los fantasmas,
+ver [S20B](./S20B-hub.md)) y **Torneos**. Lo de quitar y esconder lo hace S20
+(#5–7), el hub lo diseña S20B y este sprint define qué es cada uno para el
+jugador.
+
+**Historia, hoy, no es historia** (nota del agente): Evolución es una cola
+**PvP** contra otros jugadores de Evolución (23003). Un modo historia
+normalmente se juega contra la IA. El servidor ya tiene la pieza: los
+desafíos y los demonios (Demonio III, los demonios de los minutos, Demonio
+I) son combates PvE con texto y recompensas. Propuesta: Historia = la
+cadena de desafíos y demonios como campaña, con las reglas de Evolución (XP,
+heridas, muerte), y la cola PvP de Evolución escondida como el 2vs2. A
+confirmar.
+
+## Los cinco modos del retail (2026-10-24, leyendo el código)
 
 | Modo | Qué es para el jugador | Equipo | Qué se juega | Servidor |
 |---|---|---|---|---|
@@ -70,9 +90,9 @@ Además, las pestañas Élite y 2v2 muestran la misma lista mezclada de equipos
 
 ## Tareas candidatas
 
-- [ ] **Una sola puerta por modo.** Propuesta: el lobby enseña los modos como
-      tarjetas grandes (nombre, una frase de qué es, qué ganas, con qué equipo
-      juegas y un "Jugar"). El panel Equipo queda para **preparar** el
+- [ ] **Una sola puerta por modo.** La disposición la decide S20B; aquí,
+      el contenido de cada tarjeta: nombre, una frase de qué es, qué ganas y
+      con qué equipo juegas. El panel Equipo queda para **preparar** el
       equipo, no para lanzar combates. Fuera los duplicados.
 - [ ] **Decir qué es cada modo** donde se elige, con las frases de la tabla
       de arriba, no escondido en la Ayuda.
@@ -96,16 +116,68 @@ Además, las pestañas Élite y 2v2 muestran la misma lista mezclada de equipos
       diarias, pase de temporada…). Lo que el servidor no tiene se apunta,
       no se inventa en este sprint.
 
+## Monetización: solo cosméticos, sin pay-to-win
+
+El dueño, 2026-10-24: "en el S21 tienes que añadir la parte de monetización.
+Por lo que he leído, el Dofus Arena era muy pay-to-win, y aquí sería solo
+cosméticos, y mejorar y determinar la parte de p2w y ver cómo solucionarlo".
+
+**Regla:** nada que cambie un combate se compra con dinero. Con dinero solo
+se compra lo que se ve.
+
+**Punto de partida, en el servidor de hoy** (sin dinero real; no hay ogrinas
+ni pagos):
+
+- **De dónde salen las cartas:**
+  - drops al acabar el combate, de la tabla de sorteo de las cartas
+    `ObtainableInDraw` (`gamedata/carddraw.go`, `game/drops.go:55`);
+  - recompensas de desafío (`challenge_fights.go:343`);
+  - el Card Master: compra con fichas del monedero `coach_currencies`
+    (`handlers_shop.go`), o trueque de cartas por cartas;
+  - el altar de fusión.
+- **Lo que da poder:**
+  - las cartas de equipo, que dan estadísticas;
+  - los hechizos y el equipo que desbloquea el Kanodo con XP;
+  - las cartas de resurrección;
+  - las cartas de fuerza de la fusión;
+  - en Historia, el tamaño del banquillo.
+
+**Tareas:**
+
+- [ ] **Mapa del p2w:** cada fuente de poder, cómo se consigue y qué pasaría
+      si se vendiera. Además, contrastar con lo que se sabe del Dofus Arena
+      original (qué vendía Ankama por ogrinas: sobres de cartas, cuentas
+      abonadas…). Lo que se encuentre se cita, no se supone.
+- [ ] **Arreglar lo que ya es p2w sin dinero:** lo que hoy decide un combate
+      por haber jugado más horas o por suerte en el sorteo. En Ranking, que
+      la ventaja de colección no decida. Opciones: equipo normalizado en
+      Élite, límite de valor por equipo (ya existe el de 6000) o todas las
+      cartas de equipo disponibles en Ranking.
+- [ ] **Catálogo de cosméticos:**
+  - aspecto del coach;
+  - dorsos y marcos de carta;
+  - fuegos artificiales (ya existen: 22094);
+  - emotes;
+  - títulos;
+  - fondos del lobby;
+  - auras y anillos de equipo (las cartas de color **solo como recompensa
+    de temporada**, regla del dueño de 2026-10-21).
+- [ ] **Cómo se ganan sin pagar:** pase de temporada con una vía gratuita,
+      logros y torneos. Lo de pago, solo cosmético.
+- [ ] **Lo legal y los pagos** (proveedor, impuestos, menores, y que el arte
+      es retail): se apunta para S16; aquí solo el diseño.
+
 ## Decisiones pendientes del dueño
 
 | Decisión | Por defecto |
 |---|---|
-| ¿Se mantienen los cinco modos tal cual, o se agrupan (p. ej. "Progresión" = Evolución, "Clasificado" = Élite y 2v2, "Eventos" = Torneos y Leyendas)? | agrupar en tres puertas, sin cambiar las reglas del servidor |
+| ¿Historia es la campaña PvE de desafíos y demonios, y se esconde la cola PvP de Evolución? | sí |
 | ¿Qué entra en el game-loop moderno que el retail no tiene (misiones diarias, recompensa por primera victoria, temporadas)? | se apunta en el BACKLOG; un sprint aparte si el dueño lo quiere |
 
 ## Criterio de cierre
 
-Desde el lobby, cada modo tiene una sola entrada y dice qué es; buscar rival
+Desde el lobby, cada modo tiene una sola entrada y dice qué es; el mapa del
+p2w está escrito y decidido, con el catálogo de cosméticos; buscar rival
 tiene cronómetro y cancelar visible; al acabar un combate sale una sola
 pantalla de resultado; la Ayuda explica cada panel. El dueño lo aprueba en la
 Ally.
