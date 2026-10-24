@@ -112,6 +112,25 @@ retratos, iconos) puede ir **a color y grande**.
   - Evidencia: `TestWearableCards`; `loadout_smoke` 7/7 con el 60023
     recibido en vivo; `OPCODE-INVENTORY.md` al día.
 
+### Bloque C — Servicios (2026-10-24)
+
+- **Menos condensado:** de una sola cuadrícula de 50 botones a dos
+  columnas.
+  - A la izquierda, los grupos con su número: Aprendizaje, Card Master,
+    Buzón, Altar de fusión, Fuegos artificiales y Retos.
+  - A la derecha, el grupo elegido: su nombre, una línea de qué ofrece y
+    sus servicios como tiles.
+  - Los maestros de clase llevan el retrato de su clase y el Demonio III su
+    ilustración.
+  - **Retos** junta los tres grupos de antes (retos, retos de demonio y
+    demonios).
+- Cada servicio lleva su tipo de elemento en el modelo (`kind`). Así
+  `world_smoke` y `talk_smoke` siguen esperando la respuesta correcta
+  aunque Retos mezcle tres tipos.
+- **Evidencia:** `world_smoke` 45/45 (todos los servicios, uno por uno),
+  `talk_smoke` 8/8, `nilo_smoke` 4/4, `tutorial_smoke` 10/10,
+  `native_panels` 138 PASS. Captura `servicios.png`.
+
 ## Criterio de cierre
 
 Cada panel que sobrevive a S21 tiene su versión nueva aprobada por el dueño y

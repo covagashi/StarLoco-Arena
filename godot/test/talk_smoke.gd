@@ -25,7 +25,12 @@ func _audit() -> void:
 	var by_kind := {}
 	if city != null:
 		for g in _main._gui.gui.model.get_value("city").get("groups", []):
-			by_kind[int(g.kind)] = g.services
+			# by each service's own kind (S22: the Retos group mixes three)
+			for sv in g.services:
+				var k := int(sv.get("kind", g.kind))
+				if not by_kind.has(k):
+					by_kind[k] = []
+				by_kind[k].append(sv)
 	_close_all()
 	await _demon1(by_kind.get(9, []))
 	await _picker(by_kind.get(3, []))

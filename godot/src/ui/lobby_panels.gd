@@ -986,23 +986,60 @@ static func _mmss(ms: int) -> String:
 ## The services the walkable hall used to reach, from every island at once
 ## (the game has a lobby, not worlds): one button per service, grouped by
 ## kind. main pushes `city` from the client's env table.
+## Servicios (S22): what was one dense grid is two columns — the groups on
+## the left (each with what it offers), the picked group's services on the
+## right as tiles, with a face where there is one.
 func _city() -> void:
 	var groups: Array = data("city.groups", [])
 	if groups.is_empty():
 		label(body, I18n.t("city.none"))
-	for g in groups:
-		label(body, str(g.get("name", "")), 18)
-		var grid := GridContainer.new()
-		grid.columns = 3
-		grid.add_theme_constant_override("h_separation", 8)
-		grid.add_theme_constant_override("v_separation", 8)
-		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		body.add_child(grid)
-		for s in g.get("services", []):
-			var b := button(grid, str(s.get("label", "")), func():
-				closed.emit()
-				send("nativeUseElement", [int(s.get("id", -1))]))
-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		return
+	var pick := clampi(int(draft.get("group", 0)), 0, groups.size() - 1)
+	var split := row(body)
+	split.add_theme_constant_override("separation", 18)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var left := column(split, false)
+	left.custom_minimum_size.x = 300
+	for i in groups.size():
+		var g: Dictionary = groups[i]
+		var b := button(left, "%s  ·  %d" % [str(g.get("name", "")), g.get("services", []).size()],
+			func(): draft["group"] = i; schedule_refresh())
+		b.name = "Group%d" % i
+		b.toggle_mode = true
+		b.button_pressed = i == pick
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.custom_minimum_size.y = 48
+	var right := column(split)
+	var g: Dictionary = groups[pick]
+	var h := label(right, str(g.get("name", "")), 24)
+	h.add_theme_color_override("font_color", UiStyle.GOLD)
+	if str(g.get("desc", "")) != "":
+		var desc := _muted(right, str(g.desc))
+		desc.name = "GroupDesc"
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc.custom_minimum_size.x = 200   # wrap instead of widening the window
+	var grid := HFlowContainer.new()
+	grid.name = "Services"
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	right.add_child(grid)
+	for sv in g.get("services", []):
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(240, 60)
+		b.name = "Service%d" % int(sv.get("id", -1))
+		b.text = str(sv.get("label", ""))
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		if sv.has("portrait"):
+			b.icon = _ach_icon(str(sv.portrait))
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 44)
+		var sid := int(sv.get("id", -1))
+		b.pressed.connect(func():
+			closed.emit()
+			send("nativeUseElement", [sid]))
+		grid.add_child(b)
 
 
 ## Ayuda (S21): four tabs instead of one vague page — how to start, the three

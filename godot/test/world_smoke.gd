@@ -115,7 +115,8 @@ func _audit() -> void:
 	var services: Array = []
 	for g in city.groups:
 		for s in g.services:
-			services.append([int(g.kind), s])
+			# the element's own kind (S22: the Retos group mixes three)
+			services.append([int(s.get("kind", g.kind)), s])
 	_close_all()
 	for entry in services:
 		var kind: int = entry[0]
@@ -190,22 +191,22 @@ func _open_city():
 	return _main._gui.dialogs.get("cityDialog")
 
 
-## The panel button for service `id` (opens City first).
+## The panel button for service `id` (opens City first). Since S22 the
+## panel shows one group at a time: pick the group that holds it.
 func _service_button(id: int) -> Button:
 	var panel = await _open_city()
 	if panel == null:
 		return null
 	var city: Dictionary = _main._gui.gui.model.get_value("city")
-	var want := ""
-	for g in city.get("groups", []):
-		for s in g.services:
+	var groups: Array = city.get("groups", [])
+	for i in groups.size():
+		for s in groups[i].services:
 			if int(s.id) == id:
-				want = str(s.label)
-	if want == "":
-		return null
-	var found: Array = []
-	_collect_buttons(panel, want, found)
-	return found[0] if not found.is_empty() else null
+				panel.draft["group"] = i
+				panel.schedule_refresh()
+				await create_timer(0.3).timeout
+				return panel.find_child("Service%d" % id, true, false)
+	return null
 
 
 func _collect_buttons(node: Node, text: String, out: Array) -> void:

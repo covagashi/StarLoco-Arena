@@ -3685,6 +3685,8 @@ const LEARNING_WORLD := 35
 const LEARNING_KINDS := [5, 6]
 const BAAN := {"world": 85, "id": 143}
 const CITY_LEARNING := 100   # the group's pseudo-kind
+const CITY_CHALLENGES := 101   # S22: challenges, demon challenges and Demon I together
+const CITY_CHALLENGE_KINDS := [3, 6, 7, 9]
 
 
 ## Env record of an element from the coach's world or any lobby island.
@@ -3753,7 +3755,7 @@ func _push_city_model() -> void:
 			seen["%d|%s" % [kind, label]] = true
 			if not by_kind.has(kind):
 				by_kind[kind] = []
-			by_kind[kind].append({"id": int(id), "label": label})
+			by_kind[kind].append({"id": int(id), "label": label, "kind": kind})
 	var groups: Array = []
 	var learning: Array = []
 	var lt := Elements.for_world(LEARNING_WORLD)
@@ -3762,18 +3764,37 @@ func _push_city_model() -> void:
 	for id in lids:
 		var e: Dictionary = lt[id]
 		if int(e.type) in LEARNING_KINDS:
-			learning.append({"id": int(id), "label": _city_label(int(e.type), e)})
+			var row := {"id": int(id), "label": _city_label(int(e.type), e), "kind": int(e.type)}
+			# S22: a face on each tile — the class master's class portrait,
+			# the Demon III's challenge art
+			var f := _desc_fields(str(e.get("desc", "")))
+			if int(e.type) == 5 and f.size() > 3 and f[3] >= 1 and f[3] <= 12:
+				row["portrait"] = "gui/images/breeds/fightTimeline/%d.png" % (int(f[3]) * 10)
+			elif int(e.type) == 6:
+				row["portrait"] = "gui/images/challenges/illustrations/29.png"
+			learning.append(row)
 	var baan: Variant = Elements.for_world(int(BAAN.world)).get(int(BAAN.id))
 	if baan != null:
-		learning.insert(0, {"id": int(BAAN.id), "label": _city_label(int(baan.type), baan)})
+		learning.insert(0, {"id": int(BAAN.id), "label": _city_label(int(baan.type), baan),
+			"kind": int(baan.type)})
 	if not learning.is_empty():
 		groups.append({"kind": CITY_LEARNING, "services": learning,
-			"name": I18n.t("elem.learning")})
+			"name": I18n.t("elem.learning"), "desc": I18n.t("city.desc.learning")})
+	# S22: one "Retos" group for every challenge giver (they were three)
+	var challenges: Array = []
 	for kind in _CITY_ORDER:
-		if by_kind.has(kind):
-			var n := I18n.t("elem.%d" % kind)
-			groups.append({"kind": kind, "services": by_kind[kind],
-				"name": Elements.kind_name(kind) if n == "elem.%d" % kind else n})
+		if not by_kind.has(kind):
+			continue
+		if kind in CITY_CHALLENGE_KINDS:
+			challenges.append_array(by_kind[kind])
+			continue
+		var n := I18n.t("elem.%d" % kind)
+		groups.append({"kind": kind, "services": by_kind[kind],
+			"name": Elements.kind_name(kind) if n == "elem.%d" % kind else n,
+			"desc": I18n.t("city.desc.%d" % kind) if I18n.has("city.desc.%d" % kind) else ""})
+	if not challenges.is_empty():
+		groups.append({"kind": CITY_CHALLENGES, "services": challenges,
+			"name": I18n.t("elem.3"), "desc": I18n.t("city.desc.challenges")})
 	_gui.gui.model.set_value("city", {"groups": groups})
 
 
