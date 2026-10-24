@@ -1,6 +1,6 @@
 # S11 — Replays y espectador
 
-**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-23 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟢 terminado (falta que el dueño elija la variante de reel)
+**Planificado:** 2026-10-16 · **Detallado y abierto:** 2026-10-23 · **Hito:** M3 — Paridad de contenido · **Tamaño:** M · **Estado:** 🟢 cerrado (2026-10-24)
 
 ## Objetivo
 
@@ -143,3 +143,17 @@ opcodes**: son las clases de acción internas del cliente (`vu_0`, `act`,
 Un combate grabado se reproduce entero en el cliente y coincide con lo que pasó.
 
 Y un reel sale de un replay con un solo comando.
+
+## Cierre (2026-10-24)
+
+El dueño: "me gustó el primer reel, pero recuerda que es Pippop Arena, no
+StarLoco".
+
+- **El reel:** sale `~/codigo/capturas/s11/reel-pippop.mp4` (arena 36, en
+  retail). La portada y el cartel final dicen **PIPPOP ARENA**
+  (`render.gd`, `BRAND`); la variante 1 bit y el segundo reel se borraron.
+- **El título de la ventana del cliente:** también es "Pippop Arena"
+  (`main.gd`, `WINDOW_TITLE`). En `project.godot` el nombre se queda en
+  "StarLoco Arena", porque también da nombre a la carpeta de datos
+  (preferencias, replays): cambiarlo, aun con `custom_user_dir`, la movía
+  de sitio.

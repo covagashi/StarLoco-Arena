@@ -259,7 +259,13 @@ var _pending_login := ""      # login queued while connecting
 var _pending_pass := ""       # password queued while connecting
 
 
+## What the window says. project.godot keeps "StarLoco Arena" as the internal
+## name, because it also names the user data folder (settings, replays).
+const WINDOW_TITLE := "Pippop Arena"
+
+
 func _ready() -> void:
+	get_window().title = WINDOW_TITLE
 	Session.connected.connect(_on_connected)
 	Session.disconnected.connect(_on_disconnected)
 	Session.message.connect(_on_message)

@@ -78,7 +78,7 @@ Linux y Windows).
 | [S19](./S19-retail-data.md) | M3 | M | 🟢 cerrado | Datos retail sin leer, texto de las cartas de evento y opcodes pequeños (la otra mitad de S08) |
 | [S09](./S09-tournaments.md) | M3 | L | 🟢 cerrado | Torneos completos: arrastre, periodos, torneos de jugador, Leyendas |
 | [S10](./S10-tutorial-onboarding.md) | M3 | M | 🟢 cerrado | Tutorial Kanojedo y onboarding del jugador nuevo |
-| [S11](./S11-replays-spectator.md) | M3 | M | 🟡 a la espera del dueño (elegir reel) | Replays (grabar y reproducir), espectador desde la UI, reels |
+| [S11](./S11-replays-spectator.md) | M3 | M | 🟢 cerrado | Replays (grabar y reproducir), espectador desde la UI, reels |
 | [S12](./S12-async-pvp-server.md) | M4 | M | 🟢 cerrado | Async PvP fase 3: `ghost_teams` y opcodes |
 | [S13](./S13-async-pvp-client.md) | M4 | L | 🟢 cerrado (falta el visto bueno) | Async PvP fase 4: panel de ghosts y editor de reglas |
 | [S14](./S14-async-pvp-ladder.md) | M4 | M | 🟢 cerrado (recompensas y decaimiento, a decidir) | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |

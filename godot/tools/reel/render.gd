@@ -5,7 +5,7 @@ extends SceneTree
 ## every frame is written at a fixed 30 fps however slow the machine is, at
 ## the 540x960 its override.cfg sets.
 ##
-## On top of the plain replay: a title card (the two sides, no brand), the camera on whoever acts, a
+## On top of the plain replay: a title card (the game's name and the two sides), the camera on whoever acts, a
 ## slow-motion beat on every death, the winner card at the end, and only the
 ## fight's own banner/HUD on screen (no buttons, chat or transport).
 ##
@@ -17,6 +17,8 @@ const ReplayFile := preload("res://src/net/replay_file.gd")
 const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const State := preload("res://src/state.gd")
 
+## The game's name on the cards (the owner: Pippop Arena, never the fork's).
+const BRAND := "PIPPOP ARENA"
 const FPS := 30.0
 const INTRO_FRAMES := 45        # title card
 const OUTRO_FRAMES := 75        # winner card
@@ -232,6 +234,7 @@ func _gold() -> Color:
 
 func _title_card(left: String, right: String) -> Control:
 	var card := _base_card()
+	_line(card, BRAND, 46, _gold())
 	_line(card, left, 30)
 	_line(card, "VS", 24, _gold())
 	_line(card, right, 30)
@@ -248,6 +251,7 @@ func _winner_card() -> Control:
 		won.append(names.get(int(id), "?"))
 	_line(card, I18n_t("replay.reel.winner"), 26, _gold())
 	_line(card, " & ".join(won) if not won.is_empty() else "—", 36)
+	_line(card, BRAND, 22, _gold())
 	var rect: Control = card.get_child(0).get_child(0)
 	rect.modulate.a = 0.0
 	create_tween().tween_property(rect, "modulate:a", 1.0, 0.4)
