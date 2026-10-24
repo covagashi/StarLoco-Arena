@@ -827,6 +827,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# Lobby roster (et_2 blobs) — fills the selectable fighter list.
 			var d := Codec.decode(opcode, payload)
 			State.roster = d.get("fighters", [])
+			_push_hub_model.call_deferred()
 			# the Team panel lists them; the chat only says when there are none
 			# (S07: it used to print the whole roster on every push)
 			if State.roster.is_empty():
@@ -836,6 +837,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TEAM_PRESETS:
 			var d := Codec.decode(opcode, payload)
 			State.presets = d.get("presets", [])
+			_push_hub_model.call_deferred()
 		OP_FIGHTER_CREATE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
@@ -4136,6 +4138,7 @@ func _push_tourn_search_model() -> void:
 			"searching": _tourn_search_tid == tid})
 	_gui.gui.model.set_value("tournamentSearch", {"rows": rows,
 		"searching": _tourn_search_tid})
+	_push_hub_model()
 
 
 ## The player tournament form (17010 aFu, S09): one or more daily search
@@ -5024,10 +5027,14 @@ func _show_lobby_screen() -> void:
 		_lobby_screen.bind_model(_gui.gui.model, $UI/Chat)
 		_lobby_screen.dialog_requested.connect(func(n): _gui.toggle(n))
 		_lobby_screen.action_requested.connect(_on_lobby_action)
+		_lobby_screen.team_picked.connect(func(pid):
+			_tm_preset_sel = pid
+			_push_hub_model())
 		log.bubble.connect(func(id, text):
 			if id == State.my_coach_id:
 				_lobby_screen.show_bubble(text))
 	_lobby_screen.set_actions_ready(_lobby_ready)
+	_push_hub_model()
 	$UI/Chat.show()
 
 
@@ -5438,6 +5445,53 @@ func _set_searching(on: bool) -> void:
 		_lobby_screen.set_searching(on)
 
 
+## The hub cards' live lines (S20B): how many Story starters, the Elite
+## teams with the one Ranking will field, and the tournament this coach can
+## search now. Pushed whenever the roster, the presets or the tournament
+## state change.
+func _push_hub_model() -> void:
+	if _gui == null:
+		return
+	var titulars := 0
+	var bench := 0
+	for fr in State.roster:
+		if int(fr.get("type", 2)) != 2:
+			continue
+		match int(fr.get("state", 0)):
+			0: titulars += 1
+			1: bench += 1
+	var teams: Array = []
+	for p in State.presets:
+		if int(p.get("type", 0)) in [-5, -6, -7]:
+			continue   # 2v2 presets (Features.DUO)
+		if int(p.get("id", 0)) <= 0:
+			continue   # the roster's pseudo-preset, not a team to pick
+		teams.append({"id": int(p.get("id", 0)), "name": str(p.get("name", ""))})
+	# Ranking fields the Team panel's pick; with none, the first Elite team
+	if not teams.any(func(t): return int(t.id) == _tm_preset_sel) and not teams.is_empty():
+		_tm_preset_sel = int(teams[0].id)
+	var tourn := {"registered": 0, "label": "", "search_tid": -1}
+	var first_name := ""
+	for tid in _tourn_rows:
+		if not _registered_tids.has(tid):
+			continue
+		var def := _tourn_def(tid)
+		if not Features.LEGENDS and TournamentDefs.kind(def) == TournamentDefs.LEGENDARY:
+			continue
+		tourn.registered += 1
+		if first_name == "":
+			first_name = _tourn_name(tid)
+		if bool(_search_open.get(tid, false)) and int(tourn.search_tid) < 0:
+			tourn.search_tid = int(tid)
+			tourn.label = I18n.t("hub.tourn.open", {"name": _tourn_name(tid)})
+	if str(tourn.label) == "" and first_name != "":
+		tourn.label = I18n.t("hub.tourn.shut", {"name": first_name})
+	_gui.gui.model.set_value("hub", {
+		"story": {"titulars": titulars, "bench": bench},
+		"ranked": {"teams": teams, "selected": _tm_preset_sel},
+		"tourn": tourn})
+
+
 func _on_lobby_action(action: String) -> void:
 	match action:
 		"cancel_search": _on_cancel_search()
@@ -5445,6 +5499,19 @@ func _on_lobby_action(action: String) -> void:
 		"fight": _on_fight_pressed()
 		"quick": _on_quick_search()
 		"evo": _on_evo_search()
+		# S20B hub cards
+		"ghost":
+			if _searching:
+				_on_cancel_search()
+			_gui.open("ghostDialog")
+		"team_story", "team_elite":
+			_gui.gui.model.set_value("gamePreferences",
+				0 if action == "team_story" else 1, "lastSelectedGameModeId")
+			_gui.open("teamManagementDialog")
+		"tourn_search":
+			var hub: Variant = _gui.gui.model.get_value("hub")
+			if hub is Dictionary:
+				_tourn_search(int(hub.get("tourn", {}).get("search_tid", -1)))
 		"duo":
 			# S18: the native 2v2 team panel, with the online friends to pick
 			_push_social_model()

@@ -1,7 +1,7 @@
 extends "res://test/world_smoke.gd"
 
 ## S20: the modes the owner kept (2026-10-24). 2vs2 hidden and Leyendas
-## removed (src/features.gd): the lobby has no dúo action, the Team panel
+## removed (src/features.gd): the hub has Historia / Ranking / Torneos and no dúo, the Team panel
 ## shows Evolución / Élite / Torneos, an evolution fighter offers no
 ## "Convertir en leyenda", and no Legends tournament reaches the Calendar.
 ##
@@ -14,9 +14,12 @@ func _audit() -> void:
 	i18n.set_locale("es")
 	await create_timer(0.3).timeout
 	var lobby = _main._lobby_screen
-	var names: Array = lobby._actions.map(func(b): return b.text)
-	_record(0, "lobby", lobby._actions.size() == 5 and not names.has(i18n.t("lobby.action.duo")),
-		"actions: %s" % ", ".join(names))
+	# S20B: one card per mode kept; no dúo anywhere in the hub
+	var titles: Array = ["story", "ranked", "tourn"].map(func(id): return lobby._cards[id].title.text)
+	var texts: Array = lobby.find_children("*", "Button", true, false).map(func(b): return b.text)
+	_record(0, "lobby", titles == [i18n.t("hub.story"), i18n.t("hub.ranked"), i18n.t("hub.tourn")]
+		and not texts.has(i18n.t("lobby.action.duo")),
+		"cards: %s" % ", ".join(titles))
 	_close_all()
 	for b in lobby._menu_buttons:
 		if b.text == i18n.t("nav.team"):

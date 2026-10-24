@@ -83,8 +83,9 @@ func _run() -> void:
 	await process_frame
 	_main._show_lobby_screen()
 	_check(_main._lobby_screen != null, "lobby remounts")
-	# The actual native button invokes the unchanged practice handler.
-	_main._lobby_screen._actions[0].pressed.emit()
+	# The actual native button invokes the unchanged practice handler (S20B:
+	# the Story card's secondary button).
+	_main._lobby_screen._cards.story.extra.pressed.emit()
 	for i in range(100):
 		await create_timer(0.1).timeout
 		if not is_instance_valid(_main):

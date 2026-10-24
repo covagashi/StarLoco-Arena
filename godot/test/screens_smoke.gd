@@ -68,7 +68,7 @@ func _search_cancel() -> void:
 	var shown: bool = btn != null and btn.is_visible_in_tree() and btn.size.x >= 200 \
 		and lobby._subtitle.text == "Buscando rival…"
 	var ticking: bool = clock != null and clock.is_visible_in_tree() and clock.text != "0:00"
-	var hidden: bool = lobby._actions.all(func(b): return not b.visible)
+	var hidden: bool = lobby._actions.all(func(b): return not b.is_visible_in_tree())
 	await _shot("lobby-searching")
 	_record(2304, "search card", shown and ticking and hidden,
 		"card with a %s Cancelar, clock '%s', actions hidden=%s" % [

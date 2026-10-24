@@ -1,6 +1,6 @@
 # S20B — Modernizar el hub (el lobby)
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** S20 · **Lo usa:** S21 (qué va en cada puerta), S22 (paneles)
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟢 cerrado (2026-10-24) · **Depende de:** S20 · **Lo usa:** S21 (qué va en cada puerta), S22 (paneles)
 
 > "S20B" porque va justo detrás de S20 y antes de S21; el dueño lo pidió con
 > ese nombre.
@@ -53,17 +53,17 @@ ofrece pelear contra un fantasma de un rival de tu nivel. También se puede
 elegir el fantasma directamente. Hoy son dos escaleras separadas (la fuerza
 de Élite y `ghost_ratings`, por decisión de S14); unirlas o no se decide aquí.
 
-## Tareas candidatas
+## Tareas
 
-- [ ] Inventario del hub actual: cada elemento, qué hace y cuántas veces se
-      usa en una partida tipo.
-- [ ] Dos o tres wireframes nuevos (bloques grises, sin arte), en una hoja
-      para el dueño. Referencias: hubs de juegos de cartas y autobattlers
-      actuales.
-- [ ] El elegido, en piedra y oro, sustituyendo `lobby_screen.gd`. Los
-      nueve menús se reparten: lo diario a la vista y el resto en un menú.
-- [ ] Navegación con mando y teclado en todo el hub.
-- [ ] Smoke `native_lobby.gd` actualizado al nuevo diseño.
+- [x] Inventario del hub actual: arriba, en "De dónde viene el lobby de hoy",
+      y la tabla de redundancias de S21.
+- [x] ~~Dos o tres wireframes para el dueño~~ → **un diseño, decidido por
+      heurística** (Decisiones). El dueño: "simplemente sigue con los
+      sprints".
+- [x] El hub nuevo en piedra y oro, sustituyendo `lobby_screen.gd`.
+- [x] Navegación con mando y teclado.
+- [x] Smokes al día: `hub_smoke.gd` nuevo; `native_lobby`, `modes_smoke` y
+      `screens_smoke` adaptados.
 
 ## Decisiones pendientes del dueño
 
@@ -72,7 +72,49 @@ de Élite y `ghost_ratings`, por decisión de S14); unirlas o no se decide aquí
 | ¿Los fantasmas van dentro del Ranking (como relleno cuando no hay rival) o con su propia entrada? | **dentro del Ranking** (dueño, 2026-10-24: "de acuerdo") |
 | ¿Una escalera o dos (Élite y fantasmas)? | **dos, como hoy, hasta tener datos** (dueño, 2026-10-24) |
 
+## Decisiones
+
+| Fecha | Decisión | Quién |
+|---|---|---|
+| 2026-10-24 | **Un diseño, sin hoja de opciones.** El dueño no quiere que se le pare a elegir. Se toma el patrón de los hubs actuales de juegos de cartas y autobattlers: una tarjeta por modo con su "Jugar", el personaje a un lado y los paneles diarios como tiles | delegada |
+| 2026-10-24 | **Fuera del hub:** "Aleatorio" (2301, la búsqueda rápida con el preset elegido; repetía Ranking), "Equipo" como acción (sigue como tile) y el título "Elige tu próximo combate". El código de la búsqueda rápida se queda | delegada |
+| 2026-10-24 | Barra superior para lo ocasional (Estadísticas, Social, Ayuda); abajo, seis tiles con el icono sobre el texto | delegada |
+| 2026-10-24 | **Ranking dice con qué equipo juega** (selector con los equipos de Élite). Antes, el "Combate" del lobby mandaba el último elegido en el panel Equipo sin decirlo. Sin equipos, "Jugar" pasa a "Crear equipo" y abre Equipo en Élite | delegada |
+| 2026-10-24 | **Fantasmas en el Ranking**, de dos formas: "Contra un fantasma" siempre a mano, y la tarjeta de búsqueda lo ofrece a los 20 s de un Ranking sin rival (cancela la búsqueda y abre el panel). Hasta ahora los fantasmas solo se alcanzaban desde el menú Esc | delegada (el dueño aceptó "dentro del Ranking") |
+| 2026-10-24 | "Jugar" en Historia sigue lanzando la cola de Evolución (23003) hasta que S21 haga la campaña PvE | delegada |
+| 2026-10-24 | Frase del Ranking: «Combates en igualdad: tu fuerza sube al ganar y baja al perder.», no «gana el mejor jefe, no la mejor colección», que no será verdad hasta que S21 resuelva el p2w | delegada |
+| 2026-10-24 | Los avisos (`_toast`) pasan **arriba, en el centro**: abajo tapaban el texto de las ventanas (se vio en la Ayuda) | delegada |
+
+## Resultado
+
+Capturas en `~/codigo/capturas/s20b/` (`hub.png`, `hub-searching.png`).
+
+| Qué | Evidencia |
+|---|---|
+| Hub nuevo (`src/ui/lobby_screen.gd`), con el modelo `hub` que empuja `main._push_hub_model()` (titulares, equipos de Élite y el que juega, torneo inscrito con búsqueda abierta) | `test/hub_smoke.gd` 7/7: las tres tarjetas con sus líneas (`1 titulares · 1 en el banquillo`, `Élite de prueba`, `Tournoi 1v1 Classique · búsqueda abierta`); elegir equipo en el Ranking cambia el preset que se envía (119); Jugar → búsqueda con «Ranking» y oferta de fantasma a los 20 s; Cancelar devuelve las tarjetas; "Contra un fantasma" abre el panel; los 9 menús abren su panel; mando: derecha → Torneos, abajo → los tiles |
+| **B-187**, encontrado al capturar: Aldebrán salía en cada entrada. El cliente leía los criterios del 2052 al revés (`d[a()] = b()` evalúa primero la derecha en GDScript) | `test/criteria_smoke.gd`; `tutorial_smoke` 10/10 con una cuenta nueva; la misma cuenta, al volver a entrar, ya no ve la intro |
+| Regresión | `run_tests.sh --headless` 381/0; `native_panels` 133 PASS; `native_lobby` 28 PASS (el entrenamiento, ahora botón de la tarjeta Historia, entra al combate y vuelve); `modes_smoke` 5/5; `screens_smoke` 11/11; `coach_turn` 4/4; `loadout` 6/6 |
+
+**Base de pruebas:**
+
+- Fuera los 25 equipos "zz…" que dejaban los smokes antiguos: llenaban el
+  selector del Ranking. Copia previa en `/tmp/claude-1000/arena.db.bak-s20b`.
+- `test` tiene ahora un equipo **"Élite de prueba"** (id 119, luchadores 2–4)
+  para el Ranking.
+- Se deshizo la esfera que compró `screens_smoke`.
+- Se descartan del selector los presets con id 0 (el pseudo-preset del
+  roster).
+
+**Para S21:** la Ayuda sigue diciendo que el 2v2 y Élite son
+clasificatorios, que las cartas de evento duran "unos turnos" y que
+Evolución no cuenta (ahora es verdad). Hay que reescribirla con los tres
+modos.
+
 ## Criterio de cierre
 
 El dueño elige un wireframe; el hub nuevo está en el cliente con su smoke, y
 el dueño lo aprueba en la Ally.
+
+**Cerrado sin elección ni prueba del dueño**, por su indicación del
+2026-10-24 ("sigue con los sprints y no abras el juego"): un diseño por
+heurística, smokes y capturas de xvfb.

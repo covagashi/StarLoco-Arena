@@ -11,10 +11,29 @@ our own stonework backdrop, `assets/ui/ui_bg.png`, made by
 `tools/make_ui_bg.py` (the outer frame of the old baked screens, without their
 slots); without the file, an olive gradient.
 
-The lobby is a fixed 1280×720 composition, uniformly scaled and centred. It
-has a coach window at (40,150,320,350), six central actions in two rows with
-Combate as the primary, chat in (40,512,650,182) and nine menu controls in
-(720,512,510,182). The baked Pillow art (`lobby_bg.png`, `login_bg.png`,
+The lobby is the **hub** (S20B, 2026-10-24), a fixed 1280×720 composition,
+uniformly scaled and centred:
+
+- a top bar: "PIPPOP ARENA" on one line at the left, Estadísticas, Social and
+  Ayuda at the right;
+- the coach window at (40,84,320,416), with « » to turn the paper doll;
+- three mode cards in (380,84,860,416): **Historia** (Evolution), **Ranking**
+  (Elite, with the team it fields as a picker and "Contra un fantasma") and
+  **Torneos**. Each card says what the mode is, what it pays, which team
+  plays and a warning, then one secondary button and the gold "Jugar". With
+  nothing to play with, Jugar says what to do instead (Reclutar, Crear
+  equipo, Ver torneos);
+- while a search runs, one card covers the three: the mode, a running clock,
+  a full-size Cancelar (Esc too) and, after 20 s of a Ranking search, an
+  offer to fight a ghost;
+- chat in (40,512,650,182) and the six everyday panels as icon-over-label
+  tiles in (720,512,520,182): Equipo, Inventario, Clasificación, Calendario,
+  Logros, Servicios.
+
+Pad and keyboard paths are set by hand (`_wire_focus`): left and right move
+between the cards, down leaves for the tiles, up returns. The 2026-10-05
+lobby-first layout (six actions, four of them duplicates of the Team panel)
+is gone; the baked Pillow art (`lobby_bg.png`, `login_bg.png`,
 `creation_bg.png`) is no longer drawn; `tools/make_lobby_bg.py --icons` still
 makes the (light) menu icon atlas.
 
@@ -30,7 +49,7 @@ The localCoach producer derives the coach level from State.coach_standing (2052 
 
 ## Validation
 
-`test/native_lobby.gd` runs the real windowed login, nine dialog toggles, chat focus, model refresh, shell remount, practice fight transition and return (the debug strip no longer exists). Credentials are command-line arguments. Screenshots are written to `/tmp/native-lobby.png` and `/tmp/native-lobby-social.png`.
+`test/hub_smoke.gd` checks the cards, the Ranking team, the search card and its ghost offer, the nine menus and the pad paths. `test/native_lobby.gd` runs the real windowed login, nine dialog toggles, chat focus, model refresh, shell remount, practice fight transition and return (the debug strip no longer exists). Credentials are command-line arguments. Screenshots are written to `/tmp/native-lobby.png` and `/tmp/native-lobby-social.png`.
 
 `test/window_skin.gd` checks missing app-skin border/title resources and custom-theme precedence.
 
@@ -75,8 +94,7 @@ wire stays in `main.gd`:
 
 The fallen fighters (the retail graveyard) are a section of Team → Evolution;
 tournaments (register, bracket, opponent search) are the Calendar's day
-detail; matchmaking shows "Buscando rival…" with Cancelar under the lobby
-actions. NPC texts follow the UI language (`npcdialogs.json` `locales`).
+detail; matchmaking covers the hub's mode cards with the search card (above). NPC texts follow the UI language (`npcdialogs.json` `locales`).
 
 ## Native combat HUD
 
