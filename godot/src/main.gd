@@ -2977,7 +2977,7 @@ func _on_eq_edit_fighter(args: Array, w: GWidget) -> void:
 ## spells/icons/<id>.png; ap/min/max come from the exported table).
 func _spell_item(sid: int) -> Dictionary:
 	var m := Spells.meta(sid)
-	return {"id": sid, "name": str(m.get("name", "Spell %d" % sid)),
+	return {"id": sid, "name": Spells.name_of(sid),   # UI language (S22: was the English export)
 		"iconUrl": str(sid), "illustrationUrl": str(sid),
 		"actionPoints": int(m.get("ap", 0)),
 		"range": "%d-%d" % [int(m.get("min", 0)), int(m.get("max", 0))],
@@ -4206,11 +4206,18 @@ func _achievement_items() -> Array:
 				and int(info.get("sub", 0)) != _ach_sel["sub"]:
 			continue
 		var done := bool(r0.done)
+		# retail's icon (aea_1): min(points / 5, 5), the dimmed negative while
+		# not done; under 5 points it would be 0, which has no file (S22)
+		var grade := clampi(int(info.get("pts", 0)) / 5, 1, 5)
 		items.append({"id": aid,
 			"name": NpcDialogs.achievement_name(aid),
 			"points": int(info.get("pts", 0)),
 			"grade": int(info.get("cat", 0)),
-			"iconUrl": "", "keyIconUrl": "",
+			"iconUrl": "gui/images/achievement/icons/%d.png" % (grade if done else -grade),
+			"keyIconUrl": "gui/images/achievement/key/%d.png" % grade,
+			"done": done,
+			# what it asks, done or not (it was only filled once done)
+			"desc": _achievement_asks(aid, info),
 			"completion": 100 if done else
 				NpcDialogs.achievement_progress(
 					aid, State.criteria, State.inventory),
@@ -4219,6 +4226,21 @@ func _achievement_items() -> Array:
 			"isSelected": false,
 			"style": "done" if done else "", "subtypes": []})
 	return items
+
+
+## The data's description, or — when it has none — its conditions: each
+## statistic with its target, each card it wants.
+func _achievement_asks(aid: int, info: Dictionary) -> String:
+	var d := NpcDialogs.achievement_desc(aid)
+	if d.strip_edges() != "":
+		return d
+	var parts: Array = []
+	for c in info.get("conds", []):
+		if str(c.kind) == "card":
+			parts.append(I18n.t("ach.needs_card", {"card": Cards.name_of(int(c.id))}))
+		else:
+			parts.append("%s: %d" % [NpcDialogs.criterion_name(int(c.id)), int(c.thr)])
+	return "\n".join(parts)
 
 
 func _push_achievement_model() -> void:

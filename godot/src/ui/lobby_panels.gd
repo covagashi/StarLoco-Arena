@@ -651,6 +651,19 @@ func _tournament_form() -> void:
 		schedule_refresh())
 
 
+## Logros (S22): tiles with retail's icons (the grade by points, dimmed
+## until done), a progress bar each, Pendientes / Hechos / Todos, and the
+## selected one's detail: what it asks and how far you are.
+static var _icon_cache := {}
+
+
+func _ach_icon(path: String) -> Texture2D:
+	if not _icon_cache.has(path):
+		var img: Image = AssetPaths.load_image(path) if path != "" else null
+		_icon_cache[path] = ImageTexture.create_from_image(img) if img != null else null
+	return _icon_cache[path]
+
+
 func _achievements() -> void:
 	var toolbar := row(body)
 	label(toolbar, I18n.t("ach.points", {"n": data("achievementManager.achievementsTotalPoints", 0)}), 22)
@@ -660,10 +673,77 @@ func _achievements() -> void:
 	if category > 0 and category < types.size():
 		var subs: Array = [{"name": I18n.t("ach.all_subs"), "cat": types[category].cat, "sub": -1}] + types[category].get("subtypes", [])
 		choices(toolbar, subs.map(func(t): return str(t.name)), int(draft.get("subcategory", 0)), func(i): draft["subcategory"] = i; send("selectAchievementSubtype", [], subs[i]))
-	var items: Array = data("achievementManager.achievementsList", [])
-	table(body, [I18n.t("ach.col_name"), I18n.t("ach.col_progress"), I18n.t("ach.col_points")], ["name", "completion", "points"], items, func(_item): schedule_refresh())
-	if not selected.is_empty():
-		label(body, str(selected.get("descriptionDone", selected.get("name", ""))))
+	var show := int(draft.get("show", 0))
+	choices(toolbar, [I18n.t("ach.show_pending"), I18n.t("ach.show_done"), I18n.t("ach.show_all")], show,
+		func(i): draft["show"] = i; selected = {}; schedule_refresh()).name = "AchShow"
+	var items: Array = data("achievementManager.achievementsList", []).filter(func(it):
+		return show == 2 or bool(it.get("done", false)) == (show == 1))
+	var split := row(body)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var grid := GridContainer.new()
+	grid.name = "AchGrid"
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(grid)
+	if items.is_empty():
+		_muted(grid, I18n.t("ach.none"))
+	for it in items:
+		var b := Button.new()
+		b.name = "Ach%d" % int(it.get("id", 0))
+		b.custom_minimum_size = Vector2(228, 74)
+		b.toggle_mode = true
+		b.button_pressed = int(selected.get("id", -1)) == int(it.get("id", 0))
+		b.pressed.connect(func(): selected = it; schedule_refresh())
+		grid.add_child(b)
+		var h := HBoxContainer.new()
+		h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		h.offset_left = 8
+		h.offset_right = -8
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(h)
+		var icon := TextureRect.new()
+		icon.texture = _ach_icon(str(it.get("iconUrl", "")))
+		icon.custom_minimum_size = Vector2(52, 52)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(icon)
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(col)
+		var nm := _small(col, str(it.get("name", "")), 14)
+		nm.clip_text = true
+		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		var bar := ProgressBar.new()
+		bar.value = float(it.get("completion", 0))
+		bar.show_percentage = false
+		bar.custom_minimum_size.y = 8
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(bar)
+		var pts := _small(col, I18n.t("ach.pts", {"n": int(it.get("points", 0))}), 12)
+		pts.add_theme_color_override("font_color", UiStyle.GOLD if bool(it.get("done", false)) else UiStyle.MUTED)
+	var detail := column(split, false)
+	detail.custom_minimum_size.x = 300
+	if selected.is_empty():
+		_muted(detail, I18n.t("ach.pick"))
+		return
+	var big := TextureRect.new()
+	big.texture = _ach_icon(str(selected.get("iconUrl", "")))
+	big.custom_minimum_size = Vector2(96, 96)
+	big.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	big.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	detail.add_child(big)
+	label(detail, str(selected.get("name", "")), 22).name = "AchName"
+	var desc := label(detail, str(selected.get("desc", "")))
+	desc.name = "AchDesc"
+	var state := I18n.t("ach.done") if bool(selected.get("done", false)) \
+		else I18n.t("ach.progress", {"n": int(selected.get("completion", 0))})
+	label(detail, "%s · %s" % [state, I18n.t("ach.pts", {"n": int(selected.get("points", 0))})], 16)
 
 
 func _social() -> void:

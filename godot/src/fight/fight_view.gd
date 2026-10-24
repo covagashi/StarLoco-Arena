@@ -2002,7 +2002,7 @@ func _build_spell_bar(f: Dictionary) -> void:
 	var bar: HBoxContainer = $UI/SpellScroll/SpellBar
 	for sid in f.get("spells", []):
 		var sm := Spells.meta(int(sid))
-		var b := _action_button(str(sm.get("name", "S%d" % int(sid))),
+		var b := _action_button(Spells.name_of(int(sid)),   # UI language (S22)
 			"gui/images/spells/icons/%d.png" % int(sid), int(sm.get("ap", -1)))
 		b.tooltip_text = I18n.t("fight.spell_tip", {"name": b.get_meta("label"),
 			"ap": int(sm.get("ap", -1)), "min": int(sm.get("min", 0)),

@@ -1,6 +1,6 @@
 # S22 — Los paneles, con un toque moderno
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** ⚪ esbozo · **Depende de:** S20, S21 (qué paneles sobreviven)
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** S20, S21 (qué paneles sobreviven)
 
 ## Origen
 
@@ -56,6 +56,15 @@ retratos, iconos) puede ir **a color y grande**.
       botón o animación. Nunca solo una línea en el chat.
 - [ ] Accesibilidad: tamaño mínimo de texto y de botones, contraste, todo
       alcanzable con teclado y mando (la Ally es un mando).
+
+## Resultado (en curso)
+
+### Bloque A — 2026-10-24
+
+| Qué | Evidencia |
+|---|---|
+| **Hechizos en el idioma de la interfaz.** El panel del luchador y la barra del combate usaban el nombre inglés de la exportación; ahora usan `Spells.name_of` ("Presión", "Espada del Destino") | lectura de `gui/i18n_es.json` (`content.3.4` = Presión); `native_panels` 138 PASS |
+| **Logros con sus iconos.** Tiles con el icono del retail: el grado sale de los puntos, `min(puntos/5, 5)`, mínimo 1 porque no hay `0.png`, y el icono va apagado (candado del color del grado) hasta conseguirlo. Cada tile lleva barra de progreso y puntos. Filtro Pendientes / Hechos / Todos. Al elegir uno, el detalle con el icono grande, **qué pide** (antes la descripción solo existía una vez conseguido; si los datos no traen texto, se arma con sus condiciones) y el progreso | `test/achievements_smoke.gd` 3/3: 103 pendientes, todos con icono; 6 hechos; detalle "Tener la carta Hombreras Jalatranki". Capturas en `~/codigo/capturas/s22/` |
 
 ## Criterio de cierre
 
