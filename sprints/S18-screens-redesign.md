@@ -1,6 +1,6 @@
 # S18 — Todas las pantallas, nuevas
 
-**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** L · **Estado:** 🟢 terminado el 2026-10-21; falta el visto bueno del dueño a las pantallas nuevas · **Depende de:** S05 (servicios accesibles)
+**Planificado:** 2026-10-17 · **Hito:** M2 — Identidad visual · **Tamaño:** L · **Estado:** 🟢 cerrado (visto bueno del dueño, 2026-10-24, ya en piedra y oro) · **Depende de:** S05 (servicios accesibles)
 
 > El número es el de creación; el orden lo da la tabla de
 > [`README.md`](./README.md).
@@ -254,4 +254,4 @@ color (S17).
   `replay_lobby_smoke`, `ghost_smoke` (las dos pasadas) y `screens_smoke`
   9/9. A `test` le faltaba la carta 131 (el sombrero de esa prueba), así que
   se le devolvió una en `arena.db`.
-- **Para el dueño:** el visto bueno del aspecto nuevo.
+- **Visto bueno del dueño (2026-10-24):** "doy mi ok".

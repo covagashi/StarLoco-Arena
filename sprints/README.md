@@ -71,7 +71,7 @@ Linux y Windows).
 | [S04](./S04-fight-maps-1bit.md) | M2 | M | ⛔ abandonado (dueño, 2026-10-24) | Mapas de pelea en 1 bit: quitado; se queda el color retail por elemento |
 | [S17](./S17-fight-hud.md) | M2 | M | 🟢 cerrado | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
 | [S05](./S05-lobby-services.md) | M1 | M | 🟡 a la espera del dueño (cierre) | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
-| [S18](./S18-screens-redesign.md) | M2 | L | 🟢 terminado (falta el visto bueno de las pantallas nuevas) | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
+| [S18](./S18-screens-redesign.md) | M2 | L | 🟢 cerrado | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
 | [S06](./S06-options-audio.md) | M1 | S | 🟢 cerrado | Opciones que no hacen nada, música y volúmenes |
 | [S07](./S07-gui-fidelity.md) | M2 | M | 🟢 cerrado | Lo que el retail tenía y aquí falta: nivel del coach, ficha del luchador, versus, colores |
 | [S08](./S08-server-debt.md) | M3 | L | 🟢 cerrado | Deuda de servidor: bugs abiertos, docs que se contradicen, pruebas en los tres dialectos |
