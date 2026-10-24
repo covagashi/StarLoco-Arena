@@ -70,7 +70,7 @@ Linux y Windows).
 | [S01](./S01-client-test-net.md) | — | — | 🟢 cerrado | Red de pruebas del cliente + raíz de assets (B-173, B-174, B-175) |
 | [S02](./S02-studio-tooling.md) | — | — | 🟢 cerrado | Tooling del stack en el studio: pnpm, oxlint, oxfmt, knip, lane de CI |
 | [S03](./S03-base-linux.md) | M1 | S | 🟡 a la espera del dueño (CI) | Base en Linux headless: Godot, render con xvfb, tests portables, CI viva |
-| [S04](./S04-fight-maps-1bit.md) | M2 | M | ⏸ en pausa | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
+| [S04](./S04-fight-maps-1bit.md) | M2 | M | 🟢 terminado (visto bueno del dueño) | Mapas de pelea en 1 bit: dithering Bayer + capas de luz |
 | [S17](./S17-fight-hud.md) | M2 | M | 🟢 cerrado | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
 | [S05](./S05-lobby-services.md) | M1 | M | 🟡 a la espera del dueño (cierre) | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
 | [S18](./S18-screens-redesign.md) | M2 | L | 🟢 terminado (falta el visto bueno de las pantallas nuevas) | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
