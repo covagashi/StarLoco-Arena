@@ -6,6 +6,9 @@
 #
 #   tools/asset-import/portraits.sh [assets_root]   (default godot/assets)
 #
+# ANIMATIONS_JAR points it at another client's animations.jar (make_assets.sh
+# passes the player's own).
+#
 # The retail talk window (npcTalkDialog) showed a GUI animation per speaker:
 # bob_interface (Baan → Nilo), demon1, and the gostofos. Adamai's own GUI
 # animation (gui.jar, 2008) is an older .anm layout the parser does not
@@ -13,8 +16,8 @@
 # 0.lua: Actor.createActor(m_emisaryId, 2500, …)), which has a talk loop.
 set -euo pipefail
 ROOT="${1:-godot/assets}/anims"
-JAR=client/compiled/game/contents/animations.jar
-R=tools/asset-import/anm_render.py
+JAR="${ANIMATIONS_JAR:-client/compiled/game/contents/animations.jar}"
+R="$(dirname "$0")/anm_render.py"
 mkdir -p "$ROOT"
 export_one() {   # <entry> <portrait name> [actions to keep…] (default: all)
 	local tmp entry=$1 name=$2

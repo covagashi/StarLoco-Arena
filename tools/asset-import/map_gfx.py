@@ -41,7 +41,11 @@ import struct
 import sys
 import zipfile
 
-ROOT = os.path.dirname(os.path.abspath(__file__)) + "/../../client/compiled/game/contents"
+# The retail client's contents/ dir; ARENA_CONTENTS points it at another
+# client (tools/make_assets.sh sets it to the player's own).
+ROOT = os.environ.get("ARENA_CONTENTS") or (
+    os.path.dirname(os.path.abspath(__file__)) +
+    "/../../client/compiled/game/contents")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from anm_render import load_tgam, write_png  # noqa: E402
 

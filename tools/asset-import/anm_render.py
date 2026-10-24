@@ -594,10 +594,13 @@ def export_action(z, entry, action, out_dir):
             fr_meta["mask"] = mname
             meta["mask"] = True
         meta["frames"].append(fr_meta)
-    if fr.son_hits:
-        meta["sfx"] = meta_sfx(fr.son_hits, meta["frames"])
-    if fr.scr_hits:
-        meta["scr"] = meta_scr(fr.scr_hits, meta["frames"])
+    # only when a trigger lands on a written frame (an empty map is noise)
+    sfx = meta_sfx(fr.son_hits, meta["frames"]) if fr.son_hits else None
+    if sfx:
+        meta["sfx"] = sfx
+    scr = meta_scr(fr.scr_hits, meta["frames"]) if fr.scr_hits else None
+    if scr:
+        meta["scr"] = scr
     with open(os.path.join(dst, "meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     return len(meta["frames"])
@@ -630,10 +633,13 @@ def export_action_composite(cr, anm, entry, action, out_dir):
             fr_meta["mask"] = mname
             meta["mask"] = True
         meta["frames"].append(fr_meta)
-    if cr.son_hits:
-        meta["sfx"] = meta_sfx(cr.son_hits, meta["frames"])
-    if cr.scr_hits:
-        meta["scr"] = meta_scr(cr.scr_hits, meta["frames"])
+    # only when a trigger lands on a written frame (an empty map is noise)
+    sfx = meta_sfx(cr.son_hits, meta["frames"]) if cr.son_hits else None
+    if sfx:
+        meta["sfx"] = sfx
+    scr = meta_scr(cr.scr_hits, meta["frames"]) if cr.scr_hits else None
+    if scr:
+        meta["scr"] = scr
     with open(os.path.join(dst, "meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     return len(meta["frames"])

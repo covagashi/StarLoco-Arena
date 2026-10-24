@@ -121,6 +121,8 @@ __pycache__/
 !/godot/assets/mapgfx_1bit/.gdignore
 /godot/assets/musics/*
 !/godot/assets/musics/.gdignore
+# tools/make_assets.sh's logs and anims --resume stamps
+/godot/assets/.make_assets/
 # Agent worktrees: a full second checkout of this repo, created by Claude Code
 # for isolated work. Never committable. Project-level .claude/settings.json is
 # deliberately NOT ignored, so only this subtree is listed.

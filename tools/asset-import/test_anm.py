@@ -68,7 +68,7 @@ def main():
             print(f"  FAIL {tag}: quads={len(fr.quads)} out={out is not None}")
             fails += 1
             continue
-        W, H, rgba, off = out
+        W, H, rgba, _mask, off = out
         px = _alpha_px(rgba)
         ok = px >= min_px
         print(f"  {'ok' if ok else 'FAIL'} {tag}: "

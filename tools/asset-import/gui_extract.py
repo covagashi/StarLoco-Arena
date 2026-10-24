@@ -63,10 +63,16 @@ def _unescape(s: str) -> str:
 
 
 def _props(src: bytes) -> dict:
-    """Minimal .properties reader — retail files are latin-1, \\uXXXX escapes."""
+    """Minimal .properties reader, \\uXXXX escapes. The retail i18n.jar
+    files are UTF-8 (spell_names.py and card_names.py read them so too);
+    reading them as latin-1 turned every accent into mojibake ("Ã©")."""
+    try:
+        text = src.decode("utf-8")
+    except UnicodeDecodeError:
+        text = src.decode("latin-1")
     out = {}
     line = ""
-    for raw in src.decode("latin-1").splitlines():
+    for raw in text.splitlines():
         s = raw.rstrip("\r")
         if not s or s[0] in "#!":
             continue
