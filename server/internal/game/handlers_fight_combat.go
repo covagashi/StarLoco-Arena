@@ -861,8 +861,12 @@ func (d *Deps) checkFightEnd(f *Fight) {
 				}
 				// Ranked ladder: shift the coach's 1v1 Strength (+win / -loss). This
 				// moves its ladder position and drives the Level/Rank the client shows
-				// on the results screen from the 8300 strength map.
-				mem.Coach.Strength = domain.ApplyFightStrength(mem.Coach.Strength, won)
+				// on the results screen from the 8300 strength map. Evolution is the
+				// story mode, not the ranking: it keeps its stats but leaves Strength
+				// alone (owner, 2026-10-24, S20).
+				if !f.Evolution {
+					mem.Coach.Strength = domain.ApplyFightStrength(mem.Coach.Strength, won)
+				}
 				mem.Coach.Mu.Unlock()
 				if d.Store != nil {
 					_ = d.Store.Coaches.Save(mem.Coach)

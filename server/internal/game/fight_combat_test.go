@@ -137,3 +137,34 @@ func TestCheckFightEndDeclaresWinner(t *testing.T) {
 		t.Errorf("loser Strength = %d, want 1000 (clamped floor)", f.Teams[1].Coach().Strength)
 	}
 }
+
+// TestEvolutionFightLeavesStrength: Evolution is the story mode, so a won or
+// lost evolution fight records the stats but never moves the ranking (S20).
+func TestEvolutionFightLeavesStrength(t *testing.T) {
+	f := buildTestFight()
+	f.Evolution = true
+	f.setPhase(PhaseAction)
+	d := &Deps{Fights: NewFightManager(), World: NewRegistry(150), Log: testLogger()}
+	d.Fights.Create(f)
+	f.Teams[0].Coach().Strength = 1500
+	f.Teams[1].Coach().Strength = 1500
+	for _, ff := range f.allFighters() {
+		if ff.TeamID == 1 {
+			ff.HP = 0
+		}
+	}
+	d.checkFightEnd(f)
+
+	if f.Phase() != PhaseEnded {
+		t.Fatal("fight should be ended")
+	}
+	if f.Teams[0].Coach().StatWins != 1 || f.Teams[1].Coach().StatLosses != 1 {
+		t.Errorf("stats not recorded: wins=%d losses=%d",
+			f.Teams[0].Coach().StatWins, f.Teams[1].Coach().StatLosses)
+	}
+	for i, want := range []int{1500, 1500} {
+		if got := int(f.Teams[i].Coach().Strength); got != want {
+			t.Errorf("team %d Strength = %d, want %d (evolution must not move it)", i, got, want)
+		}
+	}
+}

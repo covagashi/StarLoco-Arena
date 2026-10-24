@@ -1,6 +1,6 @@
 # S20 — Lo que no funciona
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** 🟡 siguiente · **Depende de:** —
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** —
 
 > El número es el de creación; el orden lo da la tabla de
 > [`README.md`](./README.md).
@@ -31,23 +31,23 @@ diseño. Va primero porque no tiene sentido rediseñar un panel que no guarda.
 
 ## Tareas
 
-- [ ] **1. Guardar con señal.** Al guardar, el panel lo dice ("Guardado" en el
+- [x] **1. Guardar con señal.** Al guardar, el panel lo dice ("Guardado" en el
       botón, o un aviso que se va solo) y el botón queda desactivado hasta el
       siguiente cambio. El 6010 actualiza también las cartas en
       `State.roster`. Smoke: guardar, cerrar, reabrir y ver lo guardado.
-- [ ] **2. Mover/girar el PJ.** Preguntar al dueño qué botón era. Por
+- [x] **2. Mover/girar el PJ.** Preguntar al dueño qué botón era. Por
       defecto, arreglar los tres: el giro del lobby persiste (no lo pisa
       `_local_coach_model`), ◀ ▶ funcionan sin `actorDescriptorLibrary`, y
       "Girar" en combate explica cuándo está desactivado.
-- [ ] **3. Equipo del coach.** Elegir carta → "Poner" se activa → se equipa.
+- [x] **3. Equipo del coach.** Elegir carta → "Poner" se activa → se equipa.
       Confirmación también en "Llevar puesto". Smoke con la base de pruebas.
-- [ ] **4. Buscar rival como hoy.** Mientras busca: un cronómetro grande
+- [x] **4. Buscar rival como hoy.** Mientras busca: un cronómetro grande
       (0:12…), el modo que se busca, y "Cancelar" a tamaño de botón
       principal. Esc también cancela. El diseño fino va en S21.
 - [ ] **5. Leyendas, fuera** (dueño, 2026-10-24). Se quitan de la interfaz
       la pestaña, el botón "Convertir en leyenda" y los torneos de Leyendas.
       El servidor no se toca, porque es retail; solo deja de ofrecerse.
-- [ ] **6. Evolución no cuenta para la clasificación.** Es el modo historia
+- [x] **6. Evolución no cuenta para la clasificación.** Es el modo historia
       (dueño, 2026-10-24), así que deja de mover la fuerza en
       `handlers_fight_combat.go:857`. Test Go.
 - [ ] **7. 2vs2, escondido** (dueño, 2026-10-24: "para no tener problemas de
@@ -65,6 +65,30 @@ diseño. Va primero porque no tiene sentido rediseñar un panel que no guarda.
 | 2026-10-24 | Los modos se quedan así: **Evolución = modo historia**, **Élite = ranking**, **Torneos** igual; **2vs2 se esconde** (baja población) y **Leyendas se quita** | dueño |
 | 2026-10-24 | Evolución, como modo historia, **no cuenta para la clasificación** | se sigue de la anterior |
 | — | ¿Qué botones eran "mover el pj"? Por defecto, se arreglan los tres candidatos | pendiente |
+
+## Resultado (en curso)
+
+### Bloque A — 2026-10-24: 1, 2, 3, 4 y 6
+
+| # | Qué se hizo | Evidencia |
+|---|---|---|
+| 1 | "Guardar cambios" solo se activa si hay cambios, pasa a «Guardando…» y después a «✓ Guardado», y sale un aviso («Cambios de X guardados»). Si falla, un aviso y una línea en rojo. El 6010 actualiza también las cartas en `State.roster`. **De paso:** los avisos (`_toast`) estaban en la capa `$UI` (1), **debajo** de las ventanas (capa 10), así que con una ventana abierta no se veía ninguno. Ahora tienen su propia capa (20) y el estilo de la interfaz (18 px, antes 12) | `test/loadout_smoke.gd`: 6/6 (sin cambios → desactivado; con cambios → activo; «✓ Guardado»; aviso; roster con sus cartas; restaurado). La primera pasada pilló un `get_available_bytes` que no existe en `WireReader` |
+| 2 | **Causa:** `_rotate()` llamaba a `_sync()` antes de escribir la dirección, `_sync()` releía la vieja y se volvía a escribir esa. **« » no hacían nada.** Además, `_local_coach_model()` reponía siempre la 3. Ahora se escribe primero y se respeta la del modelo. El "Girar" del combate explica cuándo funciona (el texto anterior enseñaba el opcode) | `test/coach_turn_smoke.gd`: 4/4. Con el código anterior: `» : 3 → 3` (FAIL). Los ◀ ▶ de "Nuevo luchador" ya funcionaban: `2 → 3` |
+| 3 | Elegir la carta refresca el panel, así que "Poner" se activa | `screens_smoke.gd` ahora elige la carta en la tabla como un clic (antes escribía el borrador y refrescaba él mismo, por eso pasaba). Con el código anterior: `FAIL put — card 131 not offered`; con el arreglo, 11/11 |
+| 4 | Una tarjeta sobre las acciones mientras busca: «Buscando rival…», el modo, un cronómetro de 60 px y "Cancelar" de 280×56 como botón principal. Las acciones se ocultan. **Esc** también cancela si no hay ventanas abiertas | `screens_smoke.gd`: `card with a 280px Cancelar, clock '0:02', actions hidden=true`; `Esc during a search → 2303 → 2306` |
+| 6 | Los combates de Evolución guardan las estadísticas pero no mueven la fuerza | `TestEvolutionFightLeavesStrength`. Con el código anterior: `team 0 Strength = 1525, want 1500` |
+
+También: `go vet` y `go test ./...` limpios; `run_tests.sh --headless` 302/0;
+`native_panels.gd` 133 PASS.
+
+**Base de pruebas:** cada pasada de `screens_smoke` compra una esfera del
+Kanodo al luchador 1. Se deshicieron las tres de hoy (filas 12–14 de
+`fighter_spheres`, +37 de XP y cursor de vuelta a (31,1), la casilla de la
+esfera 15358) con el servidor parado. A `fight1` se le puso la contraseña
+`test123` para probar la creación.
+
+**Visto de paso, para S22:** los nombres de los hechizos salen en inglés
+("Pressure", "Jump") con la interfaz en español.
 
 ## Criterio de cierre
 

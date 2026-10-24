@@ -24,6 +24,7 @@ const State := preload("res://src/state.gd")
 const DebugLog := preload("res://src/util/debug_log.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
 const Elements := preload("res://src/gamedata/elements.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
@@ -855,14 +856,34 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				var spells := []
 				for i in spell_n / 4:
 					spells.append(int(payload.get_i32()))
+				# the stored cards come back too ([u16 slot][i32 card] each);
+				# keeping only the spells made a reopened editor show the old
+				# equipment, as if the save had failed (S20)
+				var cards := []
+				if payload.remaining() >= 2:
+					var card_n := payload.get_u16()
+					for i in card_n / 6:
+						var slot := payload.get_u16()
+						cards.append({"slot": slot, "id": int(payload.get_i32())})
+				var fname := ""
 				for f in State.roster:
 					if int(f.get("id", -1)) == fid:
 						f.spells = spells
+						f.cards = cards
+						fname = str(f.get("name", ""))
 				_log_line("[color=green]%s[/color]" % I18n.t(
 					"fighter.loadout_saved", {"n": spells.size()}))
+				if fid == _eq_fid:
+					_eq_save_state = "saved"
+					_toast(I18n.t("fe.saved_toast", {"name": fname}))
+					_push_fequip_model()
 			else:
 				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
 					{"code": res}))
+				if fid == _eq_fid:
+					_eq_save_state = "error"
+					_toast(I18n.t("fe.save_err", {"code": res}))
+					_push_fequip_model()
 		OP_SEARCH_RESULT:
 			# 23104 [i16 preset][u8 accepted] — the "Recherche en cours" ack
 			payload.get_i16()
@@ -2909,6 +2930,7 @@ const _EQ_PER_PAGE := 8
 var _eq_fid := -1
 var _eq_cards := {}          # slot int 0-4 -> card template id
 var _eq_spells: Array = []   # spell ids currently equipped
+var _eq_save_state := ""     # "" / "saving" / "saved" / "error" (S20: the panel says it)
 var _eq_type := 0            # selectedItemCardListType (slot filter)
 var _eq_page := 0
 
@@ -2924,6 +2946,7 @@ func _on_eq_edit_fighter(args: Array, w: GWidget) -> void:
 	if f == null:
 		return
 	_eq_fid = int(f.id)
+	_eq_save_state = ""
 	_eq_cards = {}
 	for c in f.get("cards", []):
 		_eq_cards[int(c.get("slot", 0))] = int(c.get("id", 0))
@@ -2993,6 +3016,11 @@ func _push_fequip_model() -> void:
 			int(f.get("skin", 0)), int(f.get("hair", 0)),
 			int(f.get("eye", 0))),
 		"spells": spells, "breedSpells": offers}
+	var dirty := _eq_is_dirty(f)
+	if dirty and _eq_save_state != "saving":
+		_eq_save_state = ""   # an edit after a save (or an error) starts over
+	ef["dirty"] = dirty
+	ef["saveState"] = _eq_save_state
 	for s in _EQ_FIELDS.size():
 		ef[_EQ_FIELDS[s]] = _equip_slot_item(int(_eq_cards.get(s, 0)))
 	model.set_value("teamManagement", ef, "editableFighter")
@@ -3008,6 +3036,24 @@ func _push_fequip_model() -> void:
 	model.set_value("teamManagement",
 		pool.slice(_eq_page * _EQ_PER_PAGE,
 			(_eq_page + 1) * _EQ_PER_PAGE), "selectedItemCardList")
+
+
+## The draft differs from what the server last confirmed for this fighter.
+func _eq_is_dirty(f: Dictionary) -> bool:
+	var stored_spells: Array = []
+	for sid in f.get("spells", []):
+		stored_spells.append(int(sid))
+	if stored_spells != _eq_spells.map(func(x): return int(x)):
+		return true
+	var stored := {}
+	for c in f.get("cards", []):
+		if int(c.get("id", 0)) != 0:
+			stored[int(c.get("slot", 0))] = int(c.get("id", 0))
+	var draft := {}
+	for slot in _eq_cards:
+		if int(_eq_cards[slot]) != 0:
+			draft[int(slot)] = int(_eq_cards[slot])
+	return stored != draft
 
 
 ## changeItemCardType(N) — pick which slot's card pool the strip lists.
@@ -3149,6 +3195,8 @@ func _on_eq_save(_a: Array, _w: GWidget) -> void:
 		wr.put_u16(int(s))
 		wr.put_i32(int(_eq_cards[s]))
 	Session.send(OP_FIGHTER_LOADOUT, wr.raw(), 2)
+	_eq_save_state = "saving"
+	_push_fequip_model()
 	DebugLog.add("loadout saved: %d spells, %d items" % [
 		_eq_spells.size(), _eq_cards.size()])
 	_gui.gui.model.set_value("coachManagement", {"currentSet": ""})
@@ -4757,6 +4805,16 @@ func _on_mail_send(_a: Array, _w: GWidget) -> void:
 
 ## localCoach model — shared by menuBarDialog / coachStatisticsDialog /
 ## coachCreationDialog. Stats come from the 2400/2401 rs_2 stat map.
+## Keep the way the player turned the coach in the lobby (« »): rebuilding
+## the model used to put it back to 3 (S20).
+func _local_coach_dir() -> int:
+	if _gui != null:
+		var cur: Variant = _gui.gui.model.get_value("localCoach")
+		if cur is Dictionary and cur.has("actorDirection"):
+			return int(cur.actorDirection) & 7
+	return 3
+
+
 func _local_coach_model() -> Dictionary:
 	var cs: Dictionary = State.coach_stats
 	var look: Dictionary = State.my_coach_look
@@ -4768,7 +4826,7 @@ func _local_coach_model() -> Dictionary:
 		"equipedEmotes": [],
 		"actorDescriptorLibrary": "coach_700%d" % int(look.get("sex", 0)),
 		"actorAnimation": "AnimStatique",
-		"actorDirection": 3,
+		"actorDirection": _local_coach_dir(),
 		"actorMaterial": Palettes.coach_tints(
 			int(look.get("skin", 0)), int(look.get("hair", 0))),
 		"standing": State.coach_standing,
@@ -4829,12 +4887,17 @@ func _log_line(s: String) -> void:
 ## Bottom-centre toast — retail's achievementDialog style: a small card that
 ## stacks upward and fades out after a few seconds.
 func _toast(text: String) -> void:
-	var box := $UI/ToastBox
+	# its own CanvasLayer above the dialogs (layer 10): under $UI a toast was
+	# hidden by whatever window had triggered it (S20)
+	var box := $Toasts/ToastBox
 	var card := PanelContainer.new()
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.PAPER, UiStyle.RIM_HI, 2, 12))
 	var lab := Label.new()
 	lab.text = text
 	lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lab.add_theme_font_size_override("font_size", 12)
+	lab.add_theme_font_size_override("font_size", 18)
+	lab.add_theme_color_override("font_color", UiStyle.INK)
 	card.add_child(lab)
 	box.add_child(card)
 	# remove_child first: queue_free alone keeps the node counted until the

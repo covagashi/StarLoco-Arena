@@ -53,7 +53,7 @@ func refresh() -> void:
 	label(right, I18n.t("ce.yours"), 20)
 	var owned: Array = d.get("owned", [])
 	var t := table(right, [I18n.t("inv.col_card"), I18n.t("ce.col_slot"), I18n.t("inv.col_qty")],
-		["name", "slotName", "qty"], owned, func(item): draft["put"] = int(item.id))
+		["name", "slotName", "qty"], owned, func(item): draft["put"] = int(item.id); schedule_refresh())
 	t.name = "Owned"
 	var put_id := int(draft.get("put", -1))
 	if not owned.any(func(c): return int(c.id) == put_id):

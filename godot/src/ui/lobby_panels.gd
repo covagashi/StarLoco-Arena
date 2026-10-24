@@ -1078,7 +1078,22 @@ func _equipment() -> void:
 		button(nav, I18n.t("ladder.prev"), func(): send("decreaseList"))
 		button(nav, I18n.t("ladder.next"), func(): send("increaseList"))
 		button(nav, I18n.t("fe.equip_card"), func(): send("addEquipment", [], selected), not selected.is_empty())
-	button(body, I18n.t("fe.save"), func(): send("saveEditableFighter"))
+	# The save says what happened (S20): enabled only with changes, then
+	# "Guardando…", then "✓ Guardado" until the next edit.
+	var dirty := bool(fighter.get("dirty", false))
+	var state := str(fighter.get("saveState", ""))
+	var save_text := I18n.t("fe.save")
+	if state == "saving":
+		save_text = I18n.t("fe.saving")
+	elif state == "saved" and not dirty:
+		save_text = I18n.t("fe.saved")
+	var save := button(body, save_text, func(): send("saveEditableFighter"),
+		dirty and state != "saving")
+	save.name = "Save"
+	UiStyle.primary(save, 20)
+	if state == "error":
+		label(body, I18n.t("fe.save_failed")).add_theme_color_override(
+			"font_color", Color("e07a5f"))
 
 
 func _guild_creation() -> void:

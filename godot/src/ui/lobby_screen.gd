@@ -53,6 +53,11 @@ var _actions: Array[Button] = []
 var _social_btn: Button
 var _cancel_search: Button
 var _searching := false
+var _search_panel: Panel      # covers the actions while a search runs (S20)
+var _search_mode: Label
+var _search_clock: Label
+var _search_started := 0      # Time.get_ticks_msec() when the search began
+var _last_action := ""        # which action started the search, for its name
 var _sky: Control
 var _rng := RandomNumberGenerator.new()
 
@@ -110,17 +115,38 @@ func _init() -> void:
 	for i in range(ACTIONS.size()):
 		var row: Array = ACTIONS[i]
 		var r := Rect2(400 + (i % 3) * 280, 210 if i < 3 else 352, 264, 126 if i < 3 else 92)
-		var b := _button(r, "", func(): action_requested.emit(str(row[1])), 24)
+		var b := _button(r, "", func():
+			_last_action = str(row[1])
+			action_requested.emit(str(row[1])), 24)
 		if str(row[1]) == "fight":
 			UiStyle.primary(b, 28)
 		_actions.append(b)
 	_subtitle = _label(Rect2(400, 456, 824, 30), "", 16)
-	# matchmaking in progress (S18): the subtitle says so and Cancelar stops
-	# it — before, only the hidden debug row could cancel a search
-	_cancel_search = _button(Rect2(1080, 452, 144, 38), "",
-		func(): action_requested.emit("cancel_search"), 16)
+	# matchmaking in progress: a card over the actions with the mode, a
+	# running clock and a full-size Cancelar (Esc too). S18 had only a small
+	# button over the subtitle; the owner could not find it (S20)
+	_search_panel = Panel.new()
+	_search_panel.position = Vector2(400, 200)
+	_search_panel.size = Vector2(824, 250)
+	_search_panel.add_theme_stylebox_override("panel",
+		UiStyle.box(UiStyle.PAPER, UiStyle.RIM_HI, 2, 16))
+	_search_panel.visible = false
+	_box.add_child(_search_panel)
+	var heading := _panel_label(Rect2(0, 22, 824, 40), "lobby.searching", 30)
+	heading.name = "SearchHeading"
+	_search_mode = _panel_label(Rect2(0, 64, 824, 26), "", 18)
+	_search_mode.add_theme_color_override("font_color", UiStyle.MUTED)
+	_search_clock = _panel_label(Rect2(0, 92, 824, 74), "0:00", 60)
+	_search_clock.name = "SearchClock"
+	_search_clock.add_theme_color_override("font_color", UiStyle.GOLD)
+	_cancel_search = Button.new()
+	_cancel_search.position = Vector2(272, 176)
+	_cancel_search.size = Vector2(280, 56)
+	_style_button(_cancel_search, 22)
+	UiStyle.primary(_cancel_search, 22)
+	_cancel_search.pressed.connect(func(): action_requested.emit("cancel_search"))
 	_cancel_search.name = "CancelSearch"
-	_cancel_search.visible = false
+	_search_panel.add_child(_cancel_search)
 	# Coach rotation: << turns the paper-doll one step anticlockwise, >> the
 	# other way. Purely cosmetic — the direction is a qc_0 index like in
 	# retail's coach-creation screen.
@@ -186,9 +212,43 @@ func bind_model(model, chat: Control) -> void:
 
 ## Matchmaking state: "Buscando rival…" + Cancelar while a search runs.
 func set_searching(on: bool) -> void:
+	if on and not _searching:
+		_search_started = Time.get_ticks_msec()
 	_searching = on
-	_cancel_search.visible = on
+	_search_panel.visible = on
+	for b in _actions:
+		b.visible = not on
 	_subtitle.text = _t("lobby.searching") if on else _t("lobby.subtitle")
+	_search_mode.text = _search_mode_text()
+	_tick_clock()
+	if on:
+		_cancel_search.grab_focus()
+
+
+func _search_mode_text() -> String:
+	for row in ACTIONS:
+		if str(row[1]) == _last_action:
+			return _t(str(row[0]))
+	return ""
+
+
+func _process(_dt: float) -> void:
+	if _searching:
+		_tick_clock()
+
+
+func _tick_clock() -> void:
+	var secs := maxi(0, (Time.get_ticks_msec() - _search_started) / 1000)
+	_search_clock.text = "%d:%02d" % [secs / 60, secs % 60]
+
+
+## Esc cancels a running search when no window is open (the dialog layer
+## takes Esc first to close its windows).
+func _unhandled_key_input(event: InputEvent) -> void:
+	if _searching and event.is_pressed() and not event.is_echo() \
+			and (event as InputEventKey).keycode == KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
+		action_requested.emit("cancel_search")
 
 
 func set_actions_ready(ready: bool) -> void:
@@ -230,12 +290,11 @@ func _sync() -> void:
 
 func _rotate(delta: int) -> void:
 	_dir = (_dir + delta) & 7
-	_look = ""
+	# write the model FIRST: _sync() reads actorDirection back, and calling it
+	# before the write put the old direction back, so « » did nothing (S20)
+	if _model != null and _model.get_value("localCoach") is Dictionary:
+		_model.set_value("localCoach", _dir, "actorDirection")
 	_sync()
-	if _model != null:
-		var coach: Variant = _model.get_value("localCoach")
-		if coach is Dictionary:
-			_model.set_value("localCoach", _dir, "actorDirection")
 	coach_rotated.emit(delta)
 
 
@@ -243,6 +302,8 @@ func _retranslate() -> void:
 	_title.text = _t("lobby.title")
 	_subtitle.text = _t("lobby.searching") if _searching else _t("lobby.subtitle")
 	_cancel_search.text = _t("lobby.cancel_search")
+	_search_panel.get_node("SearchHeading").text = _t("lobby.searching")
+	_search_mode.text = _search_mode_text()
 	_hint.text = _t("lobby.chat_hint")
 	for i in range(_actions.size()):
 		_actions[i].text = _t(str(ACTIONS[i][0]))
@@ -269,6 +330,21 @@ func _label(r: Rect2, text: String, font_size: int) -> Label:
 	label.add_theme_constant_override("outline_size", 6)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.add_child(label)
+	return label
+
+
+## A centred label inside the search card (not on _box).
+func _panel_label(r: Rect2, key: String, font_size: int) -> Label:
+	var label := Label.new()
+	label.position = r.position
+	label.size = r.size
+	label.text = _t(key) if key != "" else ""
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", _font)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_constant_override("outline_size", 6)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_search_panel.add_child(label)
 	return label
 
 

@@ -12,7 +12,11 @@ script = ExtResource("1")
 
 [node name="Chat" parent="UI" instance=ExtResource("3")]
 
-[node name="ToastBox" type="VBoxContainer" parent="UI"]
+[node name="Toasts" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="ToastBox" type="VBoxContainer" parent="Toasts"]
+mouse_filter = 2
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0

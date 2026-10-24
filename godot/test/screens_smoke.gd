@@ -11,8 +11,8 @@ extends "res://test/world_smoke.gd"
 ## 2. Kanodo (Equipo → Evolución → a fighter → "Esferas"): the board opens on
 ##    the fighter's spheres; picking a lit sphere enables "Comprar", which
 ##    sends 23009 and moves the fighter's cursor onto it.
-## 3. Matchmaking: "Aleatorio" shows "Buscando rival…" with Cancelar, which
-##    cancels the search (2303 → 2306).
+## 3. Matchmaking: "Aleatorio" shows the search card (mode, a running clock,
+##    a full-size Cancelar), which cancels the search (2303 → 2306); Esc too.
 ## Leaves the hat as it found it; the sphere purchase is undone in the db by
 ## the caller (see sprints/S18 for the snippet).
 
@@ -62,17 +62,40 @@ func _search_cancel() -> void:
 	_seen.clear()
 	lobby.action_requested.emit("quick")
 	await _wait(func(): return _seen.has(2304), 3.0)
-	await create_timer(0.4).timeout
+	await create_timer(1.6).timeout
 	var btn: Button = lobby.find_child("CancelSearch", true, false)
-	var shown: bool = btn != null and btn.visible and lobby._subtitle.text == "Buscando rival…"
+	var clock: Label = lobby.find_child("SearchClock", true, false)
+	var shown: bool = btn != null and btn.is_visible_in_tree() and btn.size.x >= 200 \
+		and lobby._subtitle.text == "Buscando rival…"
+	var ticking: bool = clock != null and clock.is_visible_in_tree() and clock.text != "0:00"
+	var hidden: bool = lobby._actions.all(func(b): return not b.visible)
 	await _shot("lobby-searching")
+	_record(2304, "search card", shown and ticking and hidden,
+		"card with a %s Cancelar, clock '%s', actions hidden=%s" % [
+			("%dpx" % int(btn.size.x)) if btn != null else "no", clock.text if clock != null else "—", str(hidden)])
 	_seen.clear()
 	if btn != null:
 		btn.pressed.emit()
 	await _wait(func(): return _seen.has(2306), 3.0)
 	await create_timer(0.4).timeout
-	_record(2303, "search", shown and _seen.has(2306) and not btn.visible,
+	_record(2303, "search", shown and _seen.has(2306) and not btn.is_visible_in_tree(),
 		"Aleatorio → 2304 → 'Buscando rival…' + Cancelar → 2303 → 2306, back to normal")
+	# Esc cancels too (S20), when no window is open
+	_seen.clear()
+	lobby.action_requested.emit("quick")
+	await _wait(func(): return _seen.has(2304), 3.0)
+	await create_timer(0.4).timeout
+	_seen.clear()
+	for pressed in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = KEY_ESCAPE
+		ev.pressed = pressed
+		Input.parse_input_event(ev)
+		await process_frame
+	await _wait(func(): return _seen.has(2306), 3.0)
+	await create_timer(0.4).timeout
+	_record(2303, "esc", _seen.has(2306) and not lobby._searching,
+		"Esc during a search → 2303 → 2306")
 
 
 func _menu(key: String, dialog: String):
@@ -126,8 +149,20 @@ func _equipment() -> void:
 
 
 func _wear(p, cid: int) -> bool:
-	p.draft["put"] = cid
-	p.schedule_refresh()
+	# Pick the card in the "Owned" table the way a click does (item_selected),
+	# not by writing the draft: S20 found "Poner" never woke up on a real click
+	# because only this smoke refreshed the panel.
+	var owned: Tree = p.find_child("Owned", true, false)
+	var row: TreeItem = null
+	if owned != null:
+		for it in owned.get_root().get_children():
+			var m: Variant = it.get_metadata(0)
+			if m is Dictionary and int(m.get("id", -1)) == cid:
+				row = it
+	if row == null:
+		_record(5200, "put", false, "card %d not in the Owned table" % cid)
+		return false
+	row.select(0)   # emits item_selected, like a click
 	await create_timer(0.3).timeout
 	var put: Button = p.find_child("Put", true, false)
 	if put == null or put.disabled:
