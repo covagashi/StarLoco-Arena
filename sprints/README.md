@@ -85,8 +85,8 @@ Linux y Windows).
 | [S14](./S14-async-pvp-ladder.md) | M4 | M | 🟢 cerrado (recompensas y decaimiento, a decidir) | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |
 | [S20](./S20-lo-que-no-funciona.md) | M6 | M | 🟢 cerrado | Lo que no funciona: guardar sin señal, girar el PJ, equipo del coach, cancelar búsqueda; fuera Leyendas y 2vs2 |
 | [S20B](./S20B-hub.md) | M6 | L | 🟢 cerrado | Modernizar el hub: el wireframe del lobby de 2026-10-05 (Devin), rehecho alrededor de Historia, Ranking (con fantasmas) y Torneos |
-| [S21](./S21-game-loop.md) | M6 | L | 🟡 abierto | Un game-loop de hoy: qué es cada modo, buscar rival con cronómetro, un solo fin de combate, ayuda útil y **monetización solo cosmética, sin p2w** |
-| [S22](./S22-paneles-modernos.md) | M6 | L | ⚪ esbozo | Los paneles originales con un toque moderno: equipo del luchador, inventario, logros con iconos, servicios |
+| [S21](./S21-game-loop.md) | M6 | L | 🟢 cerrado | Un game-loop de hoy: qué es cada modo, buscar rival con cronómetro, un solo fin de combate, ayuda útil y **monetización solo cosmética, sin p2w** |
+| [S22](./S22-paneles-modernos.md) | M6 | L | 🟡 siguiente | Los paneles originales con un toque moderno: equipo del luchador, inventario, logros con iconos, servicios |
 | [S23](./S23-npcs-con-cara.md) | M6 | M | ⚪ esbozo | Los NPC con retrato, Aldebrán presentado y los textos revisados (anexo con todos) |
 | [S24](./S24-combate-legible.md) | M6 | S | 🟢 cerrado | Un combate que se entiende: el letrero de la carta de evento dice qué hace |
 | [S15](./S15-client-packaging.md) | M5 | L | ⚪ esbozo | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
@@ -112,8 +112,9 @@ afectado trabaja con la opción marcada como *por defecto*.
 | Async PvP: recompensa por ganar a un ghost, decaimiento del Elo | S14 | sin recompensa en cartas, sin decaimiento (aplicado en S14) |
 | Modos: Evolución = historia, Élite = ranking, Torneos igual; 2vs2 escondido, Leyendas fuera | S20, S20B, S21 | **tomada** (dueño, 2026-10-24) |
 | ¿Fantasmas dentro del Ranking (relleno cuando no hay rival) o con entrada propia? | S20B | **tomada**: dentro del Ranking, dos escaleras (dueño, 2026-10-24); hecho en S20B |
-| ¿Historia = campaña PvE de desafíos y demonios (y se esconde la cola PvP de Evolución)? | S21 | **tomada**: sí (dueño, 2026-10-24) |
-| Monetización: solo cosméticos; ¿qué se hace con lo que hoy da ventaja? | S21 | mapa del p2w primero, después se decide |
+| ¿Historia = campaña PvE de desafíos y demonios (y se esconde la cola PvP de Evolución)? | S21 | **tomada**: sí (dueño, 2026-10-24); hecho en S21 |
+| Ranking: ¿Elo (ganar a uno más fuerte vale más) en vez de ±25 fijo? | S21/S22 | ±25 hasta que el dueño diga (cambia la escala de la clasificación) |
+| Monetización: solo cosméticos; ¿qué se hace con lo que hoy da ventaja? | S21 | **hecho el mapa** (S21 bloque D): Élite ya no toca a los luchadores, consumibles solo en Historia, sin drops en práctica; tienda futura solo con cosméticos (tipos 1, 25, 28 y arte propio) |
 | ¿Qué botones eran "mover el pj"? | S20 | se arreglan los tres candidatos |
 | ¿Qué añade el game-loop moderno que el retail no tiene (misiones diarias, primera victoria, temporadas)? | S21 | se apunta; sprint aparte si el dueño lo quiere |
 | ¿Cómo consigue el jugador los assets? (generador incluido en la release) | S15 | generador incluido |

@@ -1,6 +1,6 @@
 # S21 — Un game-loop de hoy: lobby, modos y fin de combate
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** S20
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟢 cerrado (2026-10-24) · **Depende de:** S20
 
 ## Origen
 
@@ -195,7 +195,7 @@ ni pagos):
 | ¿Historia es la campaña PvE de desafíos y demonios, y se esconde la cola PvP de Evolución? | **sí** (dueño, 2026-10-24) |
 | ¿Qué entra en el game-loop moderno que el retail no tiene (misiones diarias, recompensa por primera victoria, temporadas)? | se apunta en el BACKLOG; un sprint aparte si el dueño lo quiere |
 
-## Resultado (en curso)
+## Resultado
 
 ### Bloque A — un solo fin de combate (2026-10-24)
 
@@ -332,6 +332,11 @@ propio. Nunca tipo 24 (curas, resurrecciones, runas, pociones de XP), equipo
 ni tickets. Pagos, proveedor y legal, en S16.
 
 ## Criterio de cierre
+
+**Cerrado el 2026-10-24** sin la aprobación en la Ally ("sigue con los
+sprints y no abras el juego"). Lo que queda: el fantasma desde el equipo de
+Élite y rechazar luchadores de Historia en Ranking van a S22; Elo frente a
+±25 espera al dueño (README).
 
 Desde el lobby, cada modo tiene una sola entrada y dice qué es; el mapa del
 p2w está escrito y decidido, con el catálogo de cosméticos; buscar rival

@@ -31,6 +31,20 @@ retratos, iconos) puede ir **a color y grande**.
 | **Equipo del coach** (`coach_equip_panel.gd`) | no deja equipar (S20 #3) | el muñeco del coach con sus casillas, como el del luchador |
 | **Resto** (menú, estadísticas, clasificación, calendario, social, clan, opciones…) | S18 los pasó a piedra y oro | repaso por redundancias con S21: lo que se elimina, se elimina antes de rediseñarlo |
 
+## Heredado de S20–S24 (2026-10-24)
+
+- **Fantasmas desde el equipo de Élite** (S21, p2w): hoy el fantasma se
+  congela de `titularRoster`, que mete titulares de Historia con sus
+  esferas. Toca el editor de S13.
+- **Ranking solo con luchadores de Élite** (S21): el panel ya lo hace,
+  pero el servidor no rechaza un luchador de Historia en un equipo de
+  Élite.
+- **Los nombres de los hechizos salen en inglés** con la interfaz en
+  español ("Pressure", "Jump"; S20).
+- El panel Equipo se titula "Equipo y arena". Basta con "Equipo".
+- Repasar el HUD de combate de S17 con el criterio de S24: todo lo que
+  sale en pantalla dice qué significa.
+
 ## Tareas candidatas
 
 - [ ] Hoja de opciones por panel (como en S18):
