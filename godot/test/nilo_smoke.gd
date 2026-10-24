@@ -25,6 +25,10 @@ func _audit() -> void:
 	var p = _main._gui.dialogs.get("npcTalkDialog")
 	if not await _pick(p, "Soy nuevo"):
 		return
+	# S23: Nilo has a face
+	var face = p.find_child("Face", true, false)
+	var spr_ok: bool = face != null and not face.get_children().filter(func(c): return c.has_method("load_action")).is_empty()
+	_record(0, "face", spr_ok, "Nilo's portrait beside his words: %s" % str(spr_ok))
 	var tackle := _choice(p, "placaje") != null
 	var orient := _choice(p, "¿Importa hacia dónde mira mi luchador?") != null
 	var french := _choice(p, "kézaco") != null

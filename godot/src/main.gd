@@ -5755,6 +5755,17 @@ var _talk_seen := {}            # element id -> true once its intro scenario ran
 
 ## choices: [{label, kind, do}] — kind "reply" / "challenge" go in the list,
 ## "primary" / "secondary" in the action row.
+## Who is talking, as a face for the talk window (S23): {"anim": set dir,
+## "action": …} for the retail portraits (tools/asset-import/portraits.sh),
+## {"image": path} for a class portrait or a challenge's art. Each opener
+## sets it; closing the window clears it.
+var _talk_face := {}
+const FACE_NILO := {"anim": "anims/portrait_nilo", "action": "1_AnimStatique", "who": "talk.who.nilo"}
+const FACE_ALDEBRAN := {"anim": "anims/portrait_aldebran", "action": "1_AnimParle", "who": "talk.who.aldebran"}
+const FACE_DEMON1 := {"anim": "anims/portrait_demon1", "action": "0_AnimStatique", "who": "talk.who.demon1"}
+const FACE_DEMON3 := {"image": "gui/images/challenges/illustrations/29.png", "who": "talk.who.demon3"}
+
+
 func _talk_show(speaker: String, text: String, choices: Array, page := 0, pages := 0) -> void:
 	_talk_actions = []
 	var rows: Array = []
@@ -5762,7 +5773,7 @@ func _talk_show(speaker: String, text: String, choices: Array, page := 0, pages 
 		_talk_actions.append(c.do)
 		rows.append({"label": str(c.label), "kind": str(c.kind)})
 	_gui.gui.model.set_value("talk", {"name": speaker, "text": _talk_bbcode(text),
-		"choices": rows, "page": page, "pages": pages})
+		"choices": rows, "page": page, "pages": pages, "face": _talk_face})
 	if not _gui.is_open("npcTalkDialog"):
 		_gui.open("npcTalkDialog")
 
@@ -5773,6 +5784,7 @@ func _talk_choice(i: int) -> void:
 
 
 func _talk_close() -> void:
+	_talk_face = {}
 	_gui.close("npcTalkDialog")
 	_npc = {}
 
@@ -5807,6 +5819,7 @@ func _launch_challenge(chal: int, mode: int) -> void:
 		# S10: Baan's two lessons (scenarios 200, 201) before his fight
 		_baan_lesson_done = true
 		_talk_close()
+		_talk_face = FACE_NILO
 		var sc := Scenarios.script(200)
 		var pages: Array = sc.get("pages", []) + Scenarios.script(201).get("pages", [])
 		_talk_pages(I18n.t("talk.baan"), pages, func(): _launch_challenge(chal, mode))
@@ -5845,6 +5858,7 @@ func _talk_page() -> void:
 ## reply actions are the only wire traffic (26330 challenge / 22003 criterion).
 ## altGroup is picked when criterionId != -1 and its value is > 0.
 func _open_npc(e: Dictionary) -> void:
+	_talk_face = FACE_NILO   # S23: the only kind-15 talker is Nilo (Baan)
 	var fields := str(e.get("desc", "")).split(";")
 	var name_id := int(fields[0]) if fields.size() > 0 else -1
 	var crit := int(fields[1]) if fields.size() > 1 else -1
@@ -5911,6 +5925,7 @@ func _report_criterion(crit: int) -> void:
 ## uk_0 Challenge (kind 3): desc "nameId;speechId;challengeId;…" — one choice
 ## per challenge (cj_0's picker), each launching 26330 {id, 99}.
 func _open_challenge_picker(e: Dictionary) -> void:
+	_talk_face = FACE_DEMON3 if str(e.get("desc", "")).begins_with("144") else {}
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var choices: Array = []
 	for c in fields.slice(2):
@@ -5927,6 +5942,7 @@ func _open_challenge_picker(e: Dictionary) -> void:
 ## scenarioId == 0 the offer is gated on achievement 278 ("all four
 ## minute-demon challenges"); otherwise the refuse text and "OK".
 func _open_demon_challenge(e: Dictionary) -> void:
+	_talk_face = {}
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var speaker := NpcDialogs.npc_name(fields[0]) if fields.size() > 0 else ""
 	var task := int(fields[1]) if fields.size() > 1 else 0
@@ -5956,6 +5972,7 @@ func _demon_offer(fields: Array, speaker: String) -> void:
 ## monologue. Achievement 277 (all minute-demon challenges) picks the alt
 ## two-page set.
 func _open_demon1(e: Dictionary) -> void:
+	_talk_face = FACE_DEMON1
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var pages := fields.slice(4) if _ach_done(277) else fields.slice(1, 4)
 	_talk_pages(NpcDialogs.npc_name(fields[0]), pages, _talk_close)
@@ -5966,6 +5983,7 @@ func _open_demon1(e: Dictionary) -> void:
 ## picks t3 (needs 3 recruits, ach 276), t5 (evo challenges done, ach 284) or
 ## t4 + the challenges.
 func _open_demon3(e: Dictionary) -> void:
+	_talk_face = FACE_DEMON3
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var speaker := NpcDialogs.npc_name(fields[0])
 	var texts := fields.slice(1, 7)
@@ -5996,6 +6014,9 @@ const DEMON3_GATES := {30: 280, 31: 281}
 ## zs_1 Breed Master (kind 5): desc "nameId;textId;textId;breed;challengeId".
 ## Accept → 26330 {challengeId, 99}.
 func _open_breed_master(e: Dictionary) -> void:
+	var bf := _desc_fields(str(e.get("desc", "")))
+	_talk_face = {"image": "gui/images/breeds/fightTimeline/%d.png" % (int(bf[3]) * 10)} \
+		if bf.size() > 3 and bf[3] >= 1 and bf[3] <= 12 else {}
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var chal := int(fields[4]) if fields.size() > 4 else -1
 	var choices: Array = []
@@ -6059,6 +6080,7 @@ func _run_scenario(id: int) -> void:
 		_report_criterion(ach)
 	_elem_kind = ELEM_SCENARIO
 	var speaker := str(s.get("speaker", ""))
+	_talk_face = {"adamai": FACE_ALDEBRAN, "baan": FACE_NILO}.get(speaker, {})
 	_talk_pages(I18n.t("talk." + speaker) if speaker != "" else I18n.t("talk.tutorial"),
 		s.get("pages", []), func():
 		_talk_close()

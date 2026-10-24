@@ -1,6 +1,6 @@
 # S23 — Los NPC, con cara y con textos revisados
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** ⚪ esbozo · **Depende de:** S22 (cómo queda Servicios)
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** 🟢 cerrado (2026-10-24) · **Depende de:** S22 (cómo queda Servicios)
 
 ## Origen
 
@@ -60,7 +60,25 @@ Arte que **ya está** en Godot y sirve:
 - [ ] Decidir con el dueño si los textos de Nilo se acortan. Hay respuestas
       de ~350 palabras (fusión, grupo 82).
 
+## Resultado
+
+| Qué | Evidencia |
+|---|---|
+| **Retratos exportados** (`tools/asset-import/portraits.sh`, en el generador de assets): Nilo (`bob_interface`), el Demonio I (`demon1`), los cuatro gostofos y Aldebrán. El `.anm` de interfaz de Aldebrán (`gui.jar`, 2008) usa un formato que el parser no lee, así que se toma su actor del mapa (gfx 2500, `scripts/scenario/0.lua`), que tiene una animación hablando (`1_AnimParle`). Solo se guardan las acciones que se usan (Nilo 11 MB, Aldebrán 16 KB) | `ls godot/assets/anims/portrait_*` |
+| **Cara en cada conversación** (`talk_panel.gd`): la animación del retrato o una imagen a la izquierda del texto, en un marco, con una línea de quién es debajo. Nilo y Aldebrán animados, el Demonio I animado, el Demonio III con su ilustración, los maestros de clase con el retrato de su clase. La ventana pasa a 900×580 | `nilo_smoke` 5/5 (nueva comprobación "face"); capturas en `~/codigo/capturas/s23/` (Lía, Demonio III, Demonio I, Nilo, Aldebrán) |
+| **Aldebrán se presenta:** cara, nombre y «Un viajero entre dimensiones. Solo lo verás ahora.» | captura `intro.png`; `tutorial_smoke` 10/10 |
+| **Textos:** erratas ("acojedor", el doble espacio de «es  Aldebrán», «en falta de») y todo lo que hablaba de islas, zaaps, el mapa (M), F4, Maknala, los gostofos y los sobres con ogrinas. Afecta al Demonio III, al Demonio I, a los demonios de los minutos, a los monólogos de los logros y a los grupos 11, 12 y 44 de Nilo, en español e inglés. Ahora remiten a Servicios, Equipo, Historia y el Calendario (`npc_text_fix.gd`: `NAMES` y `FIX`) | `npc_text_fix_test.gd` (ningún texto corregido con "isla/zaap/Maknala/F4/clic en M/acojedor/en falta de"); headless 423/0; `talk_smoke` 8/8 |
+
+**Decisiones (delegadas):**
+
+- Los textos de Nilo **no se acortan**: siguen siendo largos, pero ahora son
+  ciertos. Si el dueño quiere acortarlos, el anexo de abajo es el sitio.
+- Los gostofos se exportan pero nadie los usa: no están en el lobby.
+
 ## Anexo: los textos de cada NPC (2026-10-24)
+
+*(Antes de las correcciones de S23; las corregidas están en
+`godot/src/gamedata/npc_text_fix.gd`.)*
 
 Sacados de `npcdialogs.json` (`locales.es`; la inglesa si falta), con los
 nombres de `npc_rename.gd` ya puestos. La lista de Servicios sale de

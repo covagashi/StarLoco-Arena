@@ -87,7 +87,7 @@ Linux y Windows).
 | [S20B](./S20B-hub.md) | M6 | L | 🟢 cerrado | Modernizar el hub: el wireframe del lobby de 2026-10-05 (Devin), rehecho alrededor de Historia, Ranking (con fantasmas) y Torneos |
 | [S21](./S21-game-loop.md) | M6 | L | 🟢 cerrado | Un game-loop de hoy: qué es cada modo, buscar rival con cronómetro, un solo fin de combate, ayuda útil y **monetización solo cosmética, sin p2w** |
 | [S22](./S22-paneles-modernos.md) | M6 | L | 🟢 cerrado | Los paneles originales con un toque moderno: equipo del luchador, inventario, logros con iconos, servicios |
-| [S23](./S23-npcs-con-cara.md) | M6 | M | 🟡 siguiente | Los NPC con retrato, Aldebrán presentado y los textos revisados (anexo con todos) |
+| [S23](./S23-npcs-con-cara.md) | M6 | M | 🟢 cerrado | Los NPC con retrato, Aldebrán presentado y los textos revisados (anexo con todos) |
 | [S24](./S24-combate-legible.md) | M6 | S | 🟢 cerrado | Un combate que se entiende: el letrero de la carta de evento dice qué hace |
 | [S15](./S15-client-packaging.md) | M5 | L | ⚪ esbozo | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
 | [S16](./S16-release-1.0.md) | M5 | M | ⚪ esbozo | Release pública 1.0: pipeline, instancia segura, docs, legal |

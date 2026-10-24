@@ -121,7 +121,9 @@ static func _renamed(v: Variant) -> Variant:
 ## content.29 text — used for NPC names AND the demon/Challenge speech bodies.
 static func npc_name(id: int) -> String:
 	_ensure()
-	return NpcRename.name_for(id, str(_tr("names", id, _names, "")))
+	var text := NpcTextFix.name_text(State.locale, id, str(_tr("names", id, _names, "")))
+	# the data has stray double spaces ("mi nombre es  Adamai")
+	return NpcRename.name_for(id, NpcRename.apply(text)).replace("  ", " ")
 
 
 ## content.30 challenge display name (the défi picker rows).

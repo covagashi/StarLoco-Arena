@@ -37,6 +37,10 @@ const FIX := {
 			"labels": {1: "¡Me apetece ir a la aventura, gracias!"}},
 		83: {"text": "El placaje es una habilidad que <b>tiene cada luchador</b>: le da la posibilidad de <b>bloquear el movimiento</b> de un adversario que pase a su lado y hacerle <b>perder el turno</b>.\\n\\nDepende de dos características de los luchadores: <b>la esquiva y el bloqueo</b>.\\nLa esquiva <b>reduce</b> tus posibilidades de que un adversario te bloquee.\\nEl bloqueo te da <b>más</b> posibilidades de bloquearlo tú.\\n\\nPara saber qué posibilidades tienes de esquivar un placaje en una casilla, <b>pon</b> el cursor en la casilla de delante del luchador que se va a mover: verás un número."},
 		84: {"labels": {1: "Gracias por todo, ¡hasta pronto!"}},
+		# S23: no website card packs, no islands, no gostofos, no zaaps
+		11: {"text": "Tu posición en la <b>clasificación</b> y tu colección de <b>cartas</b> serán tus objetivos principales.\n\nPara subir en las clasificaciones del Horamundo, encadena victorias en la arena contra otros jugadores y demuestra que eres el más fuerte.\n\nGanar combates también te dará <b>cartas</b> para tu grimorio. Además puedes conseguirlas en los <b>Card Masters</b> y en los <b>altares de fusión</b> (Servicios).\n\nDe momento, empieza por la <b>Historia</b> y ve acumulando victorias."},
+		12: {"text": "En el Horamundo hay tres formas de combatir.\n\nLa <b>Historia</b> es tu campaña: tus luchadores crecen combate a combate, pero se cansan, se hieren y pueden morir.\n\nEl <b>Ranking</b> iguala a todos los contrincantes y pide conocer bien el juego, así que no empieces por él. Si no hay rival en vivo, puedes pelear contra el fantasma de un jugador.\n\nLos <b>torneos</b> tienen sus propias reglas y dan fichas y <b>cartas</b> exclusivas."},
+		44: {"text": "Ve a ver al demonio I cuando hayas superado los desafíos del demonio III (Historia). Él podrá enseñarte tácticas útiles para tus próximos combates."},
 	},
 	"en": {
 		8: {"labels": {4: "Does it matter which way my fighter faces?",
@@ -75,6 +79,9 @@ const FIX := {
 			"labels": {0: "Good to know, thanks. I have more questions.", 1: "That's all this time, thanks!"}},
 		84: {"text": "The card <b>grimoire</b> lets you easily <b>browse</b> your cards and see which ones you're missing.\\nIt also lets you manage your coach's <b>equipment</b>!\\n\\nAnd there's more: it holds an <b>encyclopaedia</b> of every class and its spells, every summon, and every action card you can use in a fight!\\n\\nIn other words, it's <b>essential</b>!",
 			"labels": {0: "I still have a few little questions!", 1: "Thanks for everything, see you soon!"}},
+		11: {"text": "Your place in the <b>rankings</b> and your <b>card</b> collection are your two main objectives!\n\nTo climb the league tables of the Horamundo, win one fight after another in the arena against other players and prove you are the strongest.\n\nWinning matches also gives you <b>cards</b> for your grimoire. You can get more from the <b>Card Masters</b> and the <b>fusion altars</b> (Services).\n\nFor now, start with the <b>Story</b> and rack up some wins."},
+		12: {"text": "There are three ways to fight in the Horamundo.\n\nThe <b>Story</b> is your campaign: your fighters grow fight by fight, but they get tired, get hurt and can die.\n\n<b>Ranked</b> puts everyone on an equal footing and needs a good understanding of the game, so don't start there. If nobody is online, you can fight a player's ghost.\n\n<b>Tournaments</b> have their own rules and give tokens and exclusive <b>cards</b>."},
+		44: {"text": "Go and see Demon I once you have passed the Demon III's challenges (Story). He should be able to teach you a few techniques that might prove useful in combat."},
 	},
 }
 
@@ -94,3 +101,44 @@ static func apply(locale: String, id: int, g: Dictionary) -> Dictionary:
 		if int(i) < replies.size():
 			replies[int(i)]["next"] = int(fix.next[i])
 	return out
+
+
+## S23: the content.29 texts (scenario pages, demon speeches) that talk about
+## what the lobby no longer has — islands, zaaps, the map (M), F4, Maknala —
+## or carry a typo. locale -> text id -> the whole text.
+const NAMES := {
+	"es": {
+		147: "Hemos llegado al Horamundo y créeme, no es el lugar más acogedor que conozco.",
+		153: "Si quieres salir de aquí, debes superar los 3 desafíos que voy a proponerte. A menos que prefieras quedarte hasta el final de tus días, tú decides...\nPero antes, debes reclutar a tres guerreros. Si no hay guerreros, no hay desafíos, ¿de acuerdo? ¿Te ha quedado claro en tu cabeza de chorlito?",
+		167: "Bueno, ve a ver a los maestros de clase, ellos te ayudarán: los encontrarás en Servicios → Aprendizaje.\nSi eres muy perezoso, también puedes reclutar a tus guerreros desde Equipo → Historia → Crear luchador.",
+		196: "El demonio III pone a prueba a los jefes como tú. Si superas sus desafíos, te esperan los demonios de los minutos y, después, los grandes torneos.",
+		218: "Pero ya veremos eso más adelante. ¡Sigamos adelante!",
+		243: "Cada vez que quieras un combate del gran torneo, ve a la tarjeta Torneos del lobby. ¡Puedes hacerlo cuando quieras!",
+		250: "Hablaremos de ello más tarde. Cuando te sientas preparado, podrás lanzar un combate en el gran torneo.",
+		253: "Si consigues vencer a los cinco demonios de los minutos (Historia, capítulo 2), podrás irte con el pase al gran torneo en tus manos.",
+		255: "Mmm... bueno, has demostrado que eres digno de participar en el gran torneo. ¡Te daré el pase enseguida! Ya puedes inscribirte en los torneos del Calendario.",
+		268: "¿Qué, qué? ¿Realmente crees que puedes vencerme? El demonio I debe estar falto de guerreros para enviarme a mequetrefes como tú... Adelante, ¡muéstrame lo que sabes hacer!",
+		269: "¿Qué, qué? ¿Realmente crees que puedes vencerme? El demonio I debe estar falto de guerreros para enviarme a mequetrefes como tú... Adelante, ¡muéstrame lo que sabes hacer!",
+		270: "¿Qué, qué? ¿Realmente crees que puedes vencerme? El demonio I debe estar falto de guerreros para enviarme a mequetrefes como tú... Adelante, ¡muéstrame lo que sabes hacer!",
+		271: "¿Que qué? ¿Realmente crees que puedes vencerme? El demonio I debe estar falto de guerreros para enviarme a mequetrefes como tú... Adelante, ¡muéstrame lo que sabes hacer!",
+		273: "¡Bien hecho, pequeñín! Pareces listo para enfrentarte a los adversarios más tenaces: los demonios de los minutos te esperan (Historia, capítulo 2).\n¡Hasta pronto! Pasa a verme cuando quieras, tendré otros desafíos que proponerte.",
+		274: "No eres digno de enfrentarte a mí. Vence antes a los otros cuatro demonios de los minutos. Si regresas, me dignaré a concederte un duelo.",
+	},
+	"en": {
+		153: "If you want to get out of here, you're going to have to complete the 3 challenges I'm about to set you. Unless you'd rather be stuck here for the rest of your life, it's up to you...\nBut before that, you're going to have to recruit three fighters. No fighters, no challenges, understood? Have you got that through your thick skull?",
+		167: "Ok, go and see the class masters, they'll help you: you'll find them in Services → Learning.\nIf you're too lazy, you can always hire fighters from Team → Story → Create fighter.",
+		196: "Demon III sets tests for coaches like you. Pass them and the minute demons await you, then the great tournaments.",
+		218: "But we'll find out more about that later. Let's move on!",
+		243: "Each time you want a great tournament match, go to the Tournaments card in the lobby. You can do it whenever you like!",
+		250: "We'll talk about it again later. When you feel ready, you can launch a fight in the great tournament.",
+		253: "If you manage to beat the five minute demons (Story, chapter 2), you will leave with a pass to the great tournament!",
+		255: "Hmm... ok. You've proved yourself worthy of the great tournament. I'll let you in right away! You can now sign up for the tournaments in the Calendar.",
+		273: "Well done, kid! I think you're ready for some tougher opponents now: the minute demons are waiting for you (Story, chapter 2).\nBye, then! Come and see me whenever you like, I'll have some more challenges for you.",
+		274: "You're not worthy of confronting me. Defeat the other four minute demons first. If you manage it, I might agree to duel with you.",
+	},
+}
+
+
+## A content.29 text with this locale's fix, if any.
+static func name_text(locale: String, id: int, text: String) -> String:
+	return str(NAMES.get(locale, {}).get(id, text))

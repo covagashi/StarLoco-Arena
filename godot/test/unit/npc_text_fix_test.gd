@@ -30,3 +30,13 @@ func run(t) -> void:
 			var texts: Array = [str(fix.get("text", ""))] + fix.get("labels", {}).values()
 			for s in texts:
 				t.ok(french.search(str(s).to_lower()) == null, "%s %d: no French in '%s'" % [loc, id, str(s).left(40)])
+	# S23: the content.29 texts — no islands, zaaps, map key or F4 left in a
+	# fix, and the typos gone
+	var stale := RegEx.create_from_string("(?i)\\b(isla|islas|island|islands|zaap|maknala|f4)\\b|clic en m|m key|acojedor|en falta de")
+	for loc in ["es", "en"]:
+		for id in NpcTextFix.NAMES[loc]:
+			var txt := str(NpcTextFix.NAMES[loc][id])
+			t.ok(stale.search(txt) == null, "%s %d: nothing stale in '%s'" % [loc, id, txt.left(40)])
+	t.ok("acogedor" in NpcTextFix.name_text("es", 147, ""), "es 147: acogedor")
+	t.eq(NpcTextFix.name_text("fr", 147, "x"), "x", "a locale without fixes keeps the data")
+
