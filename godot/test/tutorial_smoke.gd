@@ -8,7 +8,8 @@ extends "res://test/totems_smoke.gd"
 ## 1. Adamai's intro (scenarios 0 + 1) on the very first lobby entry.
 ## 2. "Entrenamiento" with no fighters points at recruiting instead.
 ## 3. Ayuda → "Primeros pasos": the next step is achievement 275.
-## 4. Servicios → "Aprendizaje": Baan, the twelve class masters, Demon III.
+## 4. Servicios → "Aprendizaje": Nilo (retail's Baan), the twelve class masters
+##    (our names, npc_rename.gd), Demon III.
 ## 5. A class master's "Reclutar un guerrero" opens the creation with its class.
 ## 6. Baan's "I'm new" (219), then Demon III (210): after three recruits
 ##    only challenge 29 is offered.
@@ -195,7 +196,7 @@ func _baan() -> void:
 	await _wait(func(): return _main._gui.is_open("npcTalkDialog"), 3.0)
 	await create_timer(0.3).timeout
 	var t := _talk()
-	var ok_lesson := str(t.get("name", "")) == "Baan" and int(t.get("pages", 0)) == 10
+	var ok_lesson := str(t.get("name", "")) == "Nilo" and int(t.get("pages", 0)) == 10
 	await _shot("baan-lesson")
 	await _read_through()
 	await _wait(func(): return _seen.has(8000), 5.0)

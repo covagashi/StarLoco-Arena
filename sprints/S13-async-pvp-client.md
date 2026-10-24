@@ -1,6 +1,6 @@
 # S13 — Async PvP, fase 4: el cliente
 
-**Planificado:** 2026-10-16 · **Detallado, abierto y cerrado:** 2026-10-23 · **Hito:** M4 — Async PvP · **Tamaño:** L · **Estado:** 🟢 cerrado (falta el visto bueno del panel)
+**Planificado:** 2026-10-16 · **Detallado, abierto y cerrado:** 2026-10-23 · **Hito:** M4 — Async PvP · **Tamaño:** L · **Estado:** 🟢 cerrado (visto bueno del dueño, 2026-10-24)
 
 ## Objetivo
 

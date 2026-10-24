@@ -227,3 +227,46 @@ El servidor acepta 509 (crear clan) sin comprobar que el coach tenga la carta
 
 Cada servicio de la lista se usa de principio a fin contra un servidor real, con
 captura o prueba que lo demuestre, o queda descartado por escrito.
+
+## Nombres propios para Aprendizaje (2026-10-24)
+
+El dueño, al ver la lista de servicios: "¿qué es eso de aprendizaje? Cambia
+los nombres por si acaso". Aprendizaje son los personajes del tutorial
+retail que S10 trajo al lobby. Se les pusieron nombres propios, iguales en
+es/en/fr, en `godot/src/gamedata/npc_rename.gd`. `NpcDialogs` pasa por ahí
+todos los textos del contenido, así que el cambio llega a la lista, al
+título del diálogo y a cualquier línea que los nombre. También cambian los
+textos propios del cliente (`help.step_275`, `talk.*`).
+
+| Retail (es) | Ahora |
+|---|---|
+| Baan | Nilo |
+| Adamai (la intro) | Aldebrán |
+| Litio | Lía |
+| Estalad | Teodoro |
+| Gruñy | Rufo |
+| Edy Raiser | Elvio |
+| Gatiel | Mateo |
+| Pepítox | Tobías |
+| Dazil | Zoe |
+| Patapuf | Bombín |
+| Gus | Fermín |
+| Vidow | Nerea |
+| Roger | Aurelio |
+| Cikatrin | Saeta |
+
+El Demonio III conserva su título. Verificado: `npc_rename_test.gd`, la
+lista en vivo y `tutorial_smoke` 10/10 con una cuenta nueva.
+
+Lista completa de Servicios enseñada al dueño ese día:
+- Aprendizaje: los de arriba.
+- Card Master: 14 tiendas; las dos últimas salen como "Card Master 17/18"
+  porque los datos no traen su nombre.
+- Buzón.
+- Altar de fusión: 6 altares.
+- Fuegos artificiales.
+- Retos: Demonio III y Tofu de SuperBidi.
+- Retos de demonio: 6.
+- Demonios: Demonio I.
+
+**Falta que el dueño cierre S05.**

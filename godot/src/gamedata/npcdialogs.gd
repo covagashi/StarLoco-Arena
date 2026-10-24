@@ -20,6 +20,7 @@ extends RefCounted
 ## same text tables for es/fr, and a key missing there falls back to English.
 ## Behaviour (next/act/params, modes, achievements) is language-free.
 
+const NpcRename := preload("res://src/gamedata/npc_rename.gd")
 const PATH := "gamedata/npcdialogs.json"
 const State := preload("res://src/state.gd")
 
@@ -97,15 +98,29 @@ static func _ensure() -> void:
 ## The UI language's entry for `id` in `table`, else the English one.
 static func _tr(table: String, id: int, english: Dictionary, fallback: Variant) -> Variant:
 	var t: Dictionary = _dict(_dict(_loc.get(State.locale)).get(table))
-	if t.has(id):
-		return t[id]
-	return english.get(id, fallback)
+	var v: Variant = t[id] if t.has(id) else english.get(id, fallback)
+	return _renamed(v)
+
+
+## The tutorial characters carry our own names (npc_rename.gd): in a text,
+## and in every string of a dialog node.
+static func _renamed(v: Variant) -> Variant:
+	if v is String:
+		return NpcRename.apply(v)
+	if v is Dictionary:
+		var d: Dictionary = v.duplicate(true)
+		for k in d:
+			d[k] = _renamed(d[k])
+		return d
+	if v is Array:
+		return (v as Array).map(func(x): return _renamed(x))
+	return v
 
 
 ## content.29 text — used for NPC names AND the demon/Challenge speech bodies.
 static func npc_name(id: int) -> String:
 	_ensure()
-	return str(_tr("names", id, _names, ""))
+	return NpcRename.name_for(id, str(_tr("names", id, _names, "")))
 
 
 ## content.30 challenge display name (the défi picker rows).
