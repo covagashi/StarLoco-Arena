@@ -27,11 +27,16 @@ Chain (all verified against client/decompiled):
   draw order key (kC): zkey = ((y+131071) << 32) | ((x+131071) << 14) | intra
                         where intra = int(cts * 16) + 8191 (cts is a byte)
 
+  colour (S04/S07, client/analysis/MAP-LIGHT.md): each sprite carries "c",
+  the multiplier 2·tint × light the retail draws it with — the element's 0x02
+  tint and its maps/light/<world>.jar record — when it is not neutral.
+
 Usage: map_gfx.py <world_id> <out_dir>
   writes <out_dir>/<world>.json + <out_dir>/tex/<gfxId>.png atlases used.
 """
 import json
 import os
+import re
 import struct
 import sys
 import zipfile
@@ -89,10 +94,20 @@ def parse_gfx_jar(path):
                     n = d[off]; off += 1
                     for _e in range(n):
                         etype = d[off]; off += 1
-                        cto, aba, cts, _bpm, _cof, _aoq, _ctt, eid = \
+                        cto, aba, cts, _bpm, cof, _aoq, _ctt, eid = \
                             struct.unpack_from("<hbbib iBi".replace(" ", ""),
                                                d, off)
                         off += 18
+                        # colour bytes, in ScreenElement.a order: 0x01, then
+                        # the 0x02 tint (signed byte/255 + 0.5, 0.5 neutral),
+                        # 0x04, 0x08 alpha, then the 0x10 gradient pair
+                        tail = off
+                        if etype & 1:
+                            tail += 3
+                        tint = None
+                        if etype & 2:
+                            tint = [b / 255.0 + 0.5 for b in
+                                    struct.unpack_from("<bbb", d, tail)]
                         g = (3 if etype & 2 else 0) + (1 if etype & 8 else 0)
                         if etype & 0x10:
                             g *= 2
@@ -101,8 +116,60 @@ def parse_gfx_jar(path):
                         intra = (cts * 16 + 8191) & 0x3FFF
                         zkey = ((y + 131071) << 32) | ((x + 131071) << 14) | intra
                         out.append({"x": x, "y": y, "z": cto - aba,
-                                    "e": eid, "zkey": zkey})
+                                    "e": eid, "zkey": zkey, "layer": cof,
+                                    "tint": tint})
     return out
+
+
+SENTINEL = 0xFF808080
+
+
+def parse_light_jar(path):
+    """maps/light/<world>.jar -> {(x, y, layer): (r, g, b) multiplier}.
+
+    client/analysis/MAP-LIGHT.md §1: per record base' = base/255*2, day' =
+    day/255; at the default light factor f = 1 the colour is base' * day' * 2,
+    clamped to 0..2. Night terms are additive at f < 0 only, never in a fight.
+    """
+    out = {}
+    if not os.path.exists(path):
+        return out
+    z = zipfile.ZipFile(path)
+    for name in z.namelist():
+        if not re.fullmatch(r"-?\d+_-?\d+", name):
+            continue   # META-INF/ and the manifest ride in the jar too
+        d = z.read(name)
+        if len(d) < 6:
+            continue
+        _cx, _cy, n = struct.unpack_from("<hhH", d, 0)
+        off = 6
+        for _ in range(n):
+            key, _flag, base, day, _night = struct.unpack_from("<qBIII", d, off)
+            off += 21
+            x = ((key >> 48) & 0xFFFF) - 32768
+            y = ((key >> 32) & 0xFFFF) - 32768
+            layer = key & 0xFFFFFFFF
+            b = [((base >> s) & 0xFF) / 255.0 * 2 for s in (0, 8, 16)]
+            if day != SENTINEL:
+                dy = [((day >> s) & 0xFF) / 255.0 for s in (0, 8, 16)]
+                c = [min(max(b[i] * dy[i] * 2, 0.0), 2.0) for i in range(3)]
+            else:
+                c = b
+            out[(x, y, layer)] = c
+    return out
+
+
+def sprite_colour(e, light):
+    """The multiplier the retail draws this element with: texel x 2·tint x
+    light (bu_0 sets GL_COMBINE modulate with GL_RGB_SCALE 2; GeometryMesh
+    multiplies the vertex tint by the material = light colour). None when it
+    is within 1 % of neutral."""
+    tint = e["tint"] or [0.5, 0.5, 0.5]
+    lc = light.get((e["x"], e["y"], e["layer"]), [1.0, 1.0, 1.0])
+    m = [round(2 * tint[i] * lc[i], 3) for i in range(3)]
+    if all(abs(v - 1.0) < 0.01 for v in m):
+        return None
+    return m
 
 
 def export_world(world_id, out_dir):
@@ -112,6 +179,7 @@ def export_world(world_id, out_dir):
         print(f"no gfx jar for world {world_id}")
         return
     elems = parse_gfx_jar(gjar)
+    light = parse_light_jar(f"{ROOT}/maps/light/{world_id}.jar")
     used_gfx = {}
     sprites = []
     for e in elems:
@@ -123,14 +191,18 @@ def export_world(world_id, out_dir):
         frames = d.get("frames")
         uv = [frames[0]["u"], frames[0]["v"], d["fw"], d["fh"]] \
             if frames else None   # None → whole texture (zl_1.d)
-        sprites.append({
+        sprite = {
             "tex": gfx,
             "sx": (e["x"] - e["y"]) * 43.0 - d["ox"],
             "sy": (e["x"] + e["y"]) * 21.5 - e["z"] * 10.0 - d["oy"],
             "w": d["w"], "h": d["h"],
             "uv": uv,
             "z": e["zkey"],
-        })
+        }
+        c = sprite_colour(e, light)
+        if c is not None:
+            sprite["c"] = c   # retail colour multiplier (map_gfx.gd modulate)
+        sprites.append(sprite)
     os.makedirs(f"{out_dir}/tex", exist_ok=True)
     gz = zipfile.ZipFile(f"{ROOT}/gfx.jar")
     tex_meta = {}

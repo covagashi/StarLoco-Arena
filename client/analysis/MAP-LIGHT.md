@@ -123,7 +123,18 @@ shader and was not read**, so it is the part to confirm.
 
 ## 4. Open — to check against the live client
 
-- The final blend (is it texel × 2·tint × light?). Compare a retail
+- ~~The final blend (is it texel × 2·tint × light?).~~ **Confirmed in code
+  (2026-10-24):** `bu_0` sets the texture env to `GL_COMBINE` / `GL_MODULATE`
+  with `GL_RGB_SCALE = 2`; `GeometryMesh.a` sets each vertex to its colour ×
+  the material colour (+ additive); `DisplayedScreenElement` takes the vertex
+  colour as the layer colour (1) × the 0x02 tint, clamped to 0..1, and
+  `ahn_0.aUi` sets the material to the light record × the dynamic field
+  (`ko_1.c`), or the field alone. The dynamic lights come only from effects
+  and the Lua `addGlobalLight`/`addPointLight`, which none of the client's
+  675 Lua scripts call, so in a fight the field is neutral. Exported per
+  sprite by `map_gfx.py` ("c"). Not compared with a retail screenshot: the
+  client ships Windows natives only.
+- Original question, kept for the record: the final blend. Compare a retail
   screenshot of an arena that has light records (e.g. 59 or 45) with a render
   that applies it. `client/arena-mcp` can take the retail screenshot.
 - Matching the light keys to elements by (x, y, layer) on arenas 59/45/81

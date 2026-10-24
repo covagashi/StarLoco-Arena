@@ -1,6 +1,6 @@
 # S04 — Mapas de pelea en 1 bit (dithering + capas de luz)
 
-**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** ⏸ en pausa (2026-10-17) — se pasa a S17; lo que falta, al final · **Depende de:** S03 (render sin pantalla)
+**Planificado:** 2026-10-16 · **Hito:** M2 — Identidad visual · **Estado:** 🟢 terminado (2026-10-24) — falta el visto bueno del dueño: mapas de referencia, color retail · **Depende de:** S03 (render sin pantalla)
 
 ## Objetivo
 
@@ -87,17 +87,17 @@ herramienta): `pixel_size`, `black_point`/`white_point`, `gamma`, `detail` y
 
 - [x] Máscara de luces locales (degradado radial por fuente) compuesta antes del
       umbral.
-- [ ] **Investigar `contents/maps/light/<id>.jar`**: el cliente retail trae datos
+- [x] **Investigar `contents/maps/light/<id>.jar`**: el cliente retail trae datos
       de luz por mundo (114 jars; entradas `x_y` de 6 bytes, por trozo de mapa),
       sin decodificar todavía. Si es la iluminación del mapa, la capa LIGHTS sale
       de datos reales en vez de colocarse a mano. Si se decodifica, el formato
       se documenta en `client/analysis/`.
-- [ ] Alternativa si lo anterior no da: luces colocadas por elemento de mapa
+- [x] ~~Alternativa si lo anterior no da: luces colocadas por elemento de mapa
       (antorchas, farolas) o a mano por mapa.
 
 ### 4. Integración en el combate
 
-- [~] Capa conmutable en `fight_view` (encendido/apagado en caliente), con la GUI
+- [x] ~~Capa conmutable en `fight_view` (encendido/apagado en caliente), con la GUI
       y las ayudas tácticas por encima del filtro.
 - [x] Ajuste en la configuración del cliente: `[arena] art_style` en
       `user://settings.cfg` (`ArtStyle`); se lee al entrar en el combate. Se
@@ -107,7 +107,7 @@ herramienta): `pixel_size`, `black_point`/`white_point`, `gamma`, `detail` y
 
 ### 4b. Color de los mapas en el estilo original (de S07, 2026-10-21)
 
-- [ ] El retail tiñe cada elemento del mapa (tinte por elemento en `gfx/*.jar`,
+- [x] El retail tiñe cada elemento del mapa (tinte por elemento en `gfx/*.jar`,
       70 % de los elementos de arena) y le suma luz horneada (`light/*.jar`);
       `map_gfx` lo ignora y las arenas salen más planas y claras. Falta
       confirmar la mezcla (¿texel × 2·tinte × luz?) contra una captura del
@@ -215,16 +215,16 @@ estilos y con `./run_tests.sh` completo.
 - [x] `test/fight_ui_preview.tscn` también con el estilo 1 bit: el carril
       visual de `run_tests.sh` lo pasa en las dos resoluciones si el mapa 10
       está convertido (2026-10-17).
-- [ ] Luces de ambiente: efectos puntuales (crítico, hechizo), antorchas.
+- [x] ~~Luces de ambiente: efectos puntuales (crítico, hechizo), antorchas.~~ (ver 2026-10-24)
 - [x] Decodificar `contents/maps/light/<id>.jar` (2026-10-17):
       [`client/analysis/MAP-LIGHT.md`](../client/analysis/MAP-LIGHT.md). No
       son fuentes de luz sino **sombreado horneado por elemento** (clave
       x, y, layer; multiplicador mediano 0,86 en las arenas, 5 % por debajo
       de 0,38). Sirve de máscara de sombra para el ambiente suave; las luces
       tipo antorcha serían el campo dinámico de scripts, sin localizar.
-- [ ] Repasar los colores de las ayudas tácticas (zonas de colocación,
+- [x] Repasar los colores de las ayudas tácticas (zonas de colocación,
       alcance, casillas especiales) para que casen con el 1 bit.
-- [ ] Rendimiento: la conversión de actores a línea es GDScript por píxel al
+- [x] Rendimiento: la conversión de actores a línea es GDScript por píxel al
       cargar cada acción (con caché). Medir en un combate largo; si da tirones,
       pasarla a un shader o a offline (la línea no usa tintes, se podría hornear).
 - [ ] Visto bueno final del dueño en sus mapas de referencia.
@@ -253,3 +253,56 @@ xvfb-run -a godot --path godot --resolution 1280x720 -s tools/render_fightmap.gd
   lote repetido: 47 arenas, 0 fallos.
 - El mapa 2 de la galería de la prueba 6 no es una arena (no tiene `.fmd`):
   vale como prueba de color, no como mapa de referencia.
+
+## Retomado y terminado (2026-10-24)
+
+El dueño: "hay que terminar al 100 % los sprints".
+
+- **Ayudas tácticas en 1 bit.**
+  - **Qué fallaba.** El alcance, la zona de efecto, la casilla del puntero,
+    los pasos del camino, el coste en PM, las trampas y las casillas
+    especiales usaban el translúcido del retail. Sobre la trama blanca se
+    quedaba en un pastel casi invisible.
+  - **Ahora.** Rellenos de puntos Bayer saturados (`onebit_marks.gd`; la
+    densidad marca la fuerza, como en las auras) y un borde negro bajo cada
+    línea.
+  - **Capturas** en `~/codigo/capturas/s04/`: `ayudas-*`.
+  - `fight_ui_preview` gana `FIGHT_UI_TACTICS=spell|move`.
+- **Rendimiento.**
+  - **Medido.** Cargar una acción en 1 bit tardaba 54 ms de mediana
+    (máximo 182) frente a 9 en retail: un tirón cada vez que un luchador
+    hacía algo nuevo.
+  - **Probado y descartado.** Reescribir la conversión sobre bytes salía
+    igual de lento.
+  - **Ahora.** Cada fotograma se convierte la primera vez que se dibuja: la
+    carga baja a 3,7 ms y cada fotograma, como mucho, a 6,2 ms. La imagen no
+    cambia (la diferencia queda dentro del ruido entre pasadas).
+- **Luces de ambiente.** Probé un oscurecimiento breve con luz en el impacto
+  en críticos y muertes. **El dueño lo vio feo** ("muy oscuro y feo") y **se
+  quitó** (revert; está en `361e2198` por si alguna vez se quiere algo mucho
+  más suave). **Antorchas: descartadas.** Las luces dinámicas del retail
+  solo las crean efectos y scripts Lua (`addGlobalLight`, `addPointLight`),
+  y ninguno de los 675 Lua del cliente las usa. Además, en un mundo siempre
+  de día no se verían.
+- **Capa conmutable en caliente: descartada.** Venía de cuando el 1 bit era
+  un filtro de pantalla. Con el 1 bit por textura que eligió el dueño, el
+  estilo toca 38 sitios de `fight_view`, además del HUD y los muñecos. Se
+  cambia en Opciones → Combate y vale para el combate siguiente.
+- **Color retail por elemento (4b).**
+  - **La mezcla, confirmada en el código.** `bu_0` deja el combinador de GL
+    en `GL_MODULATE` con `GL_RGB_SCALE = 2`. `GeometryMesh.a` multiplica el
+    color del vértice por el del material. El vértice es el color de la capa
+    (1) × el tinte 0x02 del elemento (limitado a 0..1). El material es el
+    registro de `light/*.jar` × el campo dinámico (neutro sin luces). En
+    pantalla: **texel × 2·tinte × luz**.
+  - **Sin captura del retail.** El cliente solo trae natives de Windows.
+  - **Ahora.** `map_gfx.py` exporta `"c"` por sprite (624 181 de 975 501
+    sprites en los 114 mapas) y `map_gfx.gd` lo aplica en el estilo retail;
+    el 1 bit no lo usa.
+  - **Para el dueño.** Algunas arenas cambian mucho: la 10 se vuelve rojiza
+    (lava y árboles secos), la 77 oscura, la 52 azul. Tiene pinta de
+    ambientes hechos a propósito con los mismos decorados. Capturas
+    `color-retail-*` en `~/codigo/capturas/s04/`. **Falta que el dueño
+    confirme** que así se veían en el retail. Si no, se quita con una línea
+    (`retail_colour`).
+- **Siguen siendo del dueño:** los mapas de referencia y el visto bueno final.
