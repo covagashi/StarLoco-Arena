@@ -13,8 +13,7 @@ extends Node2D
 ## FIGHT_UI_PLACEMENT=1 (the placement phase instead of turn 7),
 ## FIGHT_UI_MAP=<arena> (default 10). FIGHT_UI_TACTICS=spell (Arel's spell 4
 ## armed, the pointer on a castable cell: reach, AoE, hover, plus a placed
-## trap), =move (the walk preview and its MP cost) or =flash (a 1-bit light
-## beat on Brune) — the tactical aids S04
+## trap) or =move (the walk preview and its MP cost) — the tactical aids S04
 ## re-tunes for the 1-bit style.
 
 const State := preload("res://src/state.gd")
@@ -76,10 +75,6 @@ func _ready() -> void:
 			fight._areas.append({"tpl": 2, "ctr": me + Vector3i(1, 2, 0),
 				"caster": 1, "aura": false, "left": 2, "turns": 2})
 			fight.queue_redraw()
-		"flash":
-			# S04 light beat on Brune's death, near its peak at the capture
-			get_tree().create_timer(0.85).timeout.connect(
-				func(): fight._light_beat("death", 2, Vector2i(-9999, -9999)))
 		"move":
 			# Arel is rooted in this staging: Cael walks
 			fight._on_turn_begin(3)
@@ -118,11 +113,6 @@ func _ready() -> void:
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(shot)
-	if OS.get_environment("FIGHT_UI_TACTICS") == "flash" and \
-			(fight._flash == null or fight._flash.darkness() <= 0.1):
-		push_error("S04: no 1-bit light beat on the death")
-		get_tree().quit(1)
-		return
 	State.fight_result = {"win_str": {7: "Arel"}, "won_cards": [1], "lost_cards": []}
 	fight._show_fight_result()
 	await get_tree().process_frame

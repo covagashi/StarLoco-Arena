@@ -16,7 +16,6 @@ const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
 const TeamAura := preload("res://src/fight/team_aura.gd")
 const OneBitMarks := preload("res://src/fight/onebit_marks.gd")
-const OneBitFlash := preload("res://src/fight/onebit_flash.gd")
 const FightHud := preload("res://src/fight/fight_hud.gd")
 const State := preload("res://src/state.gd")
 const Codec := preload("res://src/net/codec.gd")
@@ -88,7 +87,6 @@ var _dragging := false
 var _press_pos := Vector2.ZERO
 var _hover := Vector2i(-9999, -9999)   # hovered cell (our turn only)
 var _replay_bar: Control = null  # S11 transport, only while a replay plays
-var _flash: CanvasLayer = null   # S04 1-bit light beats (crit, death)
 
 
 func _ready() -> void:
@@ -147,9 +145,6 @@ func _ready() -> void:
 	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
 	_gfx.overlay_source = _depth_overlays   # ground marks in depth order
 	if _onebit:
-		_flash = OneBitFlash.new()
-		add_child(_flash)
-		move_child(_flash, $UI.get_index())   # over the world, under the HUD
 		_gfx.use_onebit(true)
 		AnmSprite.onebit_style = 3   # line art; reset in _exit_tree
 		# the void around the arena is ink, not Godot's grey
@@ -772,8 +767,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_face_toward(caster, aimed)
 			if miss or crit:
 				_zoom_punch(caster, aimed)
-			if crit:
-				_light_beat("crit", caster, aimed)
 			if not miss:
 				_play_cast(caster, sid)
 				_cast_sfx(caster, sid)
@@ -803,8 +796,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_face_toward(atk, waim)
 			if wmiss or wcrit:
 				_zoom_punch(atk, waim)
-			if wcrit:
-				_light_beat("crit", atk, waim)
 			if not wmiss:
 				# akg_2 hard-codes script 8000 (AnimPoings): the unarmed
 				# fist strike is AnimStatique03-219 in the fighter's set
@@ -838,8 +829,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				_face_toward(user, caim)
 			if cmiss or ccrit:
 				_zoom_punch(user, caim)
-			if ccrit:
-				_light_beat("crit", user, caim)
 			if not cmiss:
 				# Weapon cards run scripts 800x — the armed gesture family
 				# AnimStatique03-<fam>; non-weapon cards keep the generic
@@ -914,7 +903,6 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# fight.die: "[name] is dead."
 			var dname := str(State.fighters.get(dead, {}).get("name", ""))
 			_fight_log(I18n.t("fight.log_dead", {"name": dname}))
-			_light_beat("death", dead, Vector2i(-9999, -9999))
 			_kill_actor(dead)
 		OP_RUNNING_EFFECT:
 			_on_running_effect(Codec.decode(opcode, payload))
@@ -2628,18 +2616,6 @@ func _face_toward(fid: int, cell: Vector2i) -> void:
 ## re_0 crit/fumble camera work: the retail action zooms the fight camera to
 ## the attacker↔target midpoint at 1.4× for the action's run, then restores
 ## (afH || afI gate). Only cosmetic; the user pan/zoom stays as it was.
-## 1-bit only (S04): dim the world for an instant around the impact — the
-## aimed cell when there is one, else the fighter.
-func _light_beat(kind: String, fid: int, cell: Vector2i) -> void:
-	if _flash == null:
-		return
-	var at: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
-	var pos := _iso(at.x + 0.5, at.y + 0.5, at.z)
-	if cell.x > -999 and _cells.has(cell):
-		pos = _iso(cell.x + 0.5, cell.y + 0.5, int(_cells[cell].get("alt", 0)))
-	_flash.beat(kind, global_transform * (pos + Vector2(0, -30)), cam.zoom.x if cam else 1.0)
-
-
 func _zoom_punch(fid: int, cell: Vector2i) -> void:
 	if cam == null:
 		return
