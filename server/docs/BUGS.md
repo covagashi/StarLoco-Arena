@@ -13,6 +13,24 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-187 · The Godot client read every achievement criterion swapped (id ↔ value)
+
+- **Symptom:** Aldebrán's intro (S10) played on every login, not just the
+  first; the client's criteria looked like `{1: 229, 6: 170, 108: 207}` for a
+  coach whose `coach_stats` hold `229 = 1, 170 = 6, 207 = 108`.
+- **Root cause:** `main.gd` decoded the 2052 criteria blob with
+  `State.criteria[cb.get_u16()] = cb.get_u16()`. GDScript evaluates the right
+  side of an indexed assignment first, so the value was read as the key and
+  the id as the value. Every check on a criterion read the wrong one: the
+  intro (229), the achievements built on criteria, the tutorial triggers. The
+  server side was right (`handshake.buildCriteriaBlob`).
+- **Fix:** read the id into a local first (`main.gd`, 2052 handler).
+- **Verified:** `client-ui` — `test/criteria_smoke.gd`: criteria read as
+  `{34: 1, 170: 6, 207: 108, 210: 1, 219: 1, 221: 1, 229: 1}` and no intro;
+  before the fix, a probe on the same account printed `{1: 229, 6: 170,
+  108: 207, 229: 1}` with the talk window open. No other `d[read()] = read()`
+  in `godot/src` (grep).
+
 ### B-186 · The retail lobby showed every coach unranked until its first fight
 
 - **Symptom:** the retail client's lobby level, rank and "Fuerza : N (+d)" line

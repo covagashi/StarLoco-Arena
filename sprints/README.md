@@ -83,8 +83,8 @@ Linux y Windows).
 | [S12](./S12-async-pvp-server.md) | M4 | M | 🟢 cerrado | Async PvP fase 3: `ghost_teams` y opcodes |
 | [S13](./S13-async-pvp-client.md) | M4 | L | 🟢 cerrado | Async PvP fase 4: panel de ghosts y editor de reglas |
 | [S14](./S14-async-pvp-ladder.md) | M4 | M | 🟢 cerrado (recompensas y decaimiento, a decidir) | Async PvP fase 5: ghosts de relleno, ladder, recompensas, determinismo |
-| [S20](./S20-lo-que-no-funciona.md) | M6 | M | 🟡 siguiente | Lo que no funciona: guardar sin señal, girar el PJ, equipo del coach, cancelar búsqueda; fuera Leyendas y 2vs2 |
-| [S20B](./S20B-hub.md) | M6 | L | ⚪ esbozo | Modernizar el hub: el wireframe del lobby de 2026-10-05 (Devin), rehecho alrededor de Historia, Ranking (con fantasmas) y Torneos |
+| [S20](./S20-lo-que-no-funciona.md) | M6 | M | 🟢 cerrado | Lo que no funciona: guardar sin señal, girar el PJ, equipo del coach, cancelar búsqueda; fuera Leyendas y 2vs2 |
+| [S20B](./S20B-hub.md) | M6 | L | 🟡 abierto | Modernizar el hub: el wireframe del lobby de 2026-10-05 (Devin), rehecho alrededor de Historia, Ranking (con fantasmas) y Torneos |
 | [S21](./S21-game-loop.md) | M6 | L | ⚪ esbozo | Un game-loop de hoy: qué es cada modo, buscar rival con cronómetro, un solo fin de combate, ayuda útil y **monetización solo cosmética, sin p2w** |
 | [S22](./S22-paneles-modernos.md) | M6 | L | ⚪ esbozo | Los paneles originales con un toque moderno: equipo del luchador, inventario, logros con iconos, servicios |
 | [S23](./S23-npcs-con-cara.md) | M6 | M | ⚪ esbozo | Los NPC con retrato, Aldebrán presentado y los textos revisados (anexo con todos) |

@@ -1,6 +1,6 @@
 # S20 — Lo que no funciona
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** —
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** 🟢 cerrado (2026-10-24) · **Depende de:** —
 
 > El número es el de creación; el orden lo da la tabla de
 > [`README.md`](./README.md).
@@ -66,7 +66,7 @@ diseño. Va primero porque no tiene sentido rediseñar un panel que no guarda.
 | 2026-10-24 | Evolución, como modo historia, **no cuenta para la clasificación** | se sigue de la anterior |
 | — | ¿Qué botones eran "mover el pj"? Por defecto, se arreglan los tres candidatos | pendiente |
 
-## Resultado (en curso)
+## Resultado
 
 ### Bloque A — 2026-10-24: 1, 2, 3, 4 y 6
 
@@ -110,3 +110,7 @@ original. Decía: «La forma más común [de conseguir cartas] son los
 
 Cada fila de la tabla tiene su arreglo con un test (Go o smoke de Godot) o una
 decisión escrita, y el dueño prueba 1–4 en la Ally.
+
+**Cerrado sin esa prueba.** El dueño, 2026-10-24: "simplemente sigue con los
+sprints y no abras el juego". Queda cerrado con los smokes y las capturas de
+xvfb del Resultado.

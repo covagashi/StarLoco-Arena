@@ -1,6 +1,6 @@
 # S20B — Modernizar el hub (el lobby)
 
-**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** ⚪ esbozo · **Depende de:** S20 · **Lo usa:** S21 (qué va en cada puerta), S22 (paneles)
+**Planificado:** 2026-10-24 · **Hito:** M6 — Un juego de hoy · **Tamaño:** L · **Estado:** 🟡 abierto (2026-10-24) · **Depende de:** S20 · **Lo usa:** S21 (qué va en cada puerta), S22 (paneles)
 
 > "S20B" porque va justo detrás de S20 y antes de S21; el dueño lo pidió con
 > ese nombre.

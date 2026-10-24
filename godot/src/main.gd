@@ -701,7 +701,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var cb := WireReader.new(d.get("criteria_blob", PackedByteArray()))
 			State.criteria = {}
 			while cb.remaining() >= 4:
-				State.criteria[cb.get_u16()] = cb.get_u16()
+				# two statements: GDScript evaluates the right side of
+				# `d[a()] = b()` first, which swapped every id and value (S20B)
+				var crit := cb.get_u16()
+				State.criteria[crit] = cb.get_u16()
 			if not State.guild.is_empty():
 				DebugLog.add("guild: '%s' — rank %s, demon %d" % [
 					State.guild.get("guild", "?"),
