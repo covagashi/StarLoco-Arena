@@ -178,6 +178,28 @@ static func event_desc(id: int) -> String:
 	return d if d != "" else str(_tr("eventLore", id, _event_lore, ""))
 
 
+## What an event card does, on one line (S24): the description without its
+## "Efecto(s):" lead, its "Duración: 1 turno" line and the "(1 turno)" tags —
+## every round card lasts its round, the banner says so once.
+static func event_effect(id: int) -> String:
+	var d := event_desc(id).replace("\\n", "\n")
+	var parts := PackedStringArray()
+	for line in d.split("\n"):
+		var l := line.strip_edges()
+		var low := l.to_lower()
+		if l == "" or low.begins_with("duraci") or low.begins_with("duaci") \
+				or low.begins_with("duration") or low.begins_with("durée"):
+			continue
+		for lead in ["Efectos:", "Efecto:", "Effects:", "Effect:", "Effets :", "Effet :", "Effets:", "Effet:"]:
+			if l.begins_with(lead):
+				l = l.substr(lead.length()).strip_edges()
+		parts.append(l)
+	var out := ", ".join(parts)
+	for tag in [" (1 turno)", " (1 turn)", " (1 tour)"]:
+		out = out.replace(tag, "")
+	return out.trim_suffix(".")
+
+
 ## Client `aau_1.a` / `sj_1.c`: an achievement is complete when EVERY stat
 ## condition meets its threshold AND every required card is in the tome.
 ## `criteria` is State.criteria {statId: value}, `inventory` State.inventory

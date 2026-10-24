@@ -663,10 +663,13 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# retail's card popup.
 			var ev := int(d.get("f3", 0))
 			var evname := NpcDialogs.event_name(ev)
-			# the banner carries the round; the hint line names its event
-			info.text = evname
+			# S24: say what the card does, not only its name — the owner read
+			# "Dios Sram" over the board and could not know what it meant
+			var effect := _event_line(ev)
+			info.text = "%s: %s" % [evname, effect] if effect != "" else evname
 			_refresh_timeline()
 			_add_event_card(ev, evname)
+			_announce_event(evname, effect)
 			_age_buffs()
 			_age_areas()
 		OP_TURN_BEGIN:
@@ -1544,8 +1547,9 @@ func _add_event_card(ev: int, evname: String) -> void:
 	var face := _chat_surface()
 	card.add_theme_stylebox_override("panel", face)
 	var lab := Label.new()
+	lab.name = "Text"
 	lab.text = evname if not evname.is_empty() else "Event %d" % ev
-	lab.add_theme_font_size_override("font_size", 11)
+	lab.add_theme_font_size_override("font_size", 12)
 	card.add_child(lab)
 	# the retail card shows its effects on hover (fightEventCards, S07)
 	card.tooltip_text = NpcDialogs.event_desc(ev)
@@ -1556,7 +1560,21 @@ func _add_event_card(ev: int, evname: String) -> void:
 		var c := strip.get_child(i) as PanelContainer
 		if c != null:
 			c.modulate = Color(0.6, 0.6, 0.6, 1.0)   # older: dimmed, still opaque
+			var t := c.get_node_or_null("Text") as Label
+			if t != null and c != card:
+				t.text = t.text.get_slice(" · ", 0)   # older: the name only
 	card.modulate = Color(1.0, 0.95, 0.6, 1.0)
+	# this round's card carries what it does (S24)
+	var effect := _event_line(ev)
+	if effect != "":
+		lab.text += " · " + effect
+		lab.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		lab.clip_text = true
+		# clip_text drops the label's minimum width: give it the text's own,
+		# up to what the strip can hold (the tooltip keeps the rest)
+		var font := lab.get_theme_font("font")
+		var w := font.get_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 4.0
+		lab.custom_minimum_size.x = minf(w, 520.0)
 	# remove_child first: queue_free alone leaves the node counted until the
 	# end of the frame, and this loop spun forever on the 5th round card,
 	# freezing the client in every fight that lasted that long (S08)
@@ -1564,6 +1582,68 @@ func _add_event_card(ev: int, evname: String) -> void:
 		var old := strip.get_child(0)
 		strip.remove_child(old)
 		old.queue_free()
+
+
+## A god card (1–11, 27: retail's deck) only touches its own class; the
+## breed each one serves, to say when nobody in this fight is of it (S24).
+const GOD_BREED := {1: 8, 2: 4, 3: 11, 4: 7, 5: 10, 6: 2, 7: 9, 8: 3, 9: 5, 10: 6, 11: 1, 27: 12}
+
+
+## The card's effect line, plus "nobody here is a Sram" for a god card whose
+## class is not in the fight.
+func _event_line(ev: int) -> String:
+	var effect := NpcDialogs.event_effect(ev)
+	if GOD_BREED.has(ev):
+		var breed := int(GOD_BREED[ev])
+		var present := false
+		for fid in State.fighters:
+			if int(State.fighters[fid].get("breed", -1)) == breed:
+				present = true
+		if not present:
+			effect += " · " + I18n.t("fight.event.nobody", {"class": I18n.t("breed.%d" % breed)})
+	return effect
+
+
+## The round's card, big in the middle for two seconds, then the strip and
+## the hint line keep it (S24).
+func _announce_event(evname: String, effect: String) -> void:
+	if evname == "":
+		return
+	var old := $UI.get_node_or_null("EventAnnounce")
+	if old != null:
+		$UI.remove_child(old)
+		old.queue_free()
+	var box := VBoxContainer.new()
+	box.name = "EventAnnounce"
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	var vp := get_viewport().get_visible_rect().size
+	box.position = Vector2(vp.x * 0.1, vp.y * 0.26)
+	box.size = Vector2(vp.x * 0.8, 120)
+	$UI.add_child(box)
+	var font := FontFile.new()
+	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
+	for part in [[evname.to_upper(), 40, Color("e2bd6e")], [effect, 20, Color("f1e5c1")]]:
+		if str(part[0]) == "":
+			continue
+		var l := Label.new()
+		l.text = str(part[0])
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.add_theme_font_size_override("font_size", int(part[1]))
+		l.add_theme_color_override("font_color", part[2])
+		l.add_theme_constant_override("outline_size", 10)
+		l.add_theme_color_override("font_outline_color", Color(0.04, 0.03, 0.02))
+		if int(part[1]) == 40:
+			l.add_theme_font_override("font", font)
+		box.add_child(l)
+	box.modulate.a = 0.0
+	var tw := box.create_tween()
+	tw.tween_property(box, "modulate:a", 1.0, 0.2)
+	tw.tween_interval(1.8)
+	tw.tween_property(box, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(box.queue_free)
 
 
 ## --- Buff strip ------------------------------------------------------

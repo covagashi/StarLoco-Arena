@@ -319,6 +319,7 @@
   "panel.empty": "Aucun élément disponible",
   "fight.face": "Pivoter",
   "fight.face.tip": "Fais pivoter ton combattant. Seulement pendant le placement (avec un de tes combattants choisi) ou pendant ton tour.",
+  "fight.event.nobody": "personne dans ce combat n'est {class}",
   "fight.surrender": "Abandonner",
   "fight.surrender.tip": "Déclarer forfait (8151)",
   "fight.surrender.confirm": "Abandonner ? Le combat compte comme une défaite.",

@@ -319,6 +319,7 @@
   "panel.empty": "No hay elementos disponibles",
   "fight.face": "Girar",
   "fight.face.tip": "Gira a tu luchador. Solo durante la colocación (con un luchador tuyo elegido) o en tu turno.",
+  "fight.event.nobody": "nadie en este combate es {class}",
   "fight.surrender": "Rendirse",
   "fight.surrender.tip": "Abandonar el combate (8151)",
   "fight.surrender.confirm": "¿Rendirte? El combate contará como derrota.",
