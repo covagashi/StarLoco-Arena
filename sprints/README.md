@@ -54,7 +54,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | **M2 — Identidad visual** | HUD propio y pantallas propias (el 1 bit, abandonado) | S04, S17, S18, S07 |
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S19, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
-| **M6 — Un juego de hoy** | un game-loop actual: lo roto arreglado, una puerta por modo, paneles con respuesta, NPCs con cara y un combate que se explica. Va **antes** de M5 (dueño, 2026-10-24: "no está preparado para los últimos sprints") | S20, S20B, S21, S22, S23, S24, S26, S25 |
+| **M6 — Un juego de hoy** | un game-loop actual: lo roto arreglado, una puerta por modo, paneles con respuesta, NPCs con cara y un combate que se explica. Va **antes** de M5 (dueño, 2026-10-24: "no está preparado para los últimos sprints") | S20, S20B, S21, S22, S23, S24, S26, S25, S27 |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16 |
 
 
@@ -71,7 +71,7 @@ Linux y Windows).
 | [S03](./S03-base-linux.md) | M1 | S | 🟡 a la espera del dueño (CI) | Base en Linux headless: Godot, render con xvfb, tests portables, CI viva |
 | [S04](./S04-fight-maps-1bit.md) | M2 | M | ⛔ abandonado (dueño, 2026-10-24) | Mapas de pelea en 1 bit: quitado; se queda el color retail por elemento |
 | [S17](./S17-fight-hud.md) | M2 | M | 🟢 cerrado | HUD de combate estilo Krosmaster: la info del luchador en su carta, no sobre el mapa |
-| [S05](./S05-lobby-services.md) | M1 | M | 🟡 a la espera del dueño (cierre) | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
+| [S05](./S05-lobby-services.md) | M1 | M | 🟢 cerrado | Lo que se perdió con el hall: Card Master, Zaap, correo, cementerio, fusión, NPCs |
 | [S18](./S18-screens-redesign.md) | M2 | L | 🟢 cerrado | Todas las pantallas nuevas: login, creación, lobby, paneles y servicios (fuera de los diálogos retail) |
 | [S06](./S06-options-audio.md) | M1 | S | 🟢 cerrado | Opciones que no hacen nada, música y volúmenes |
 | [S07](./S07-gui-fidelity.md) | M2 | M | 🟢 cerrado | Lo que el retail tenía y aquí falta: nivel del coach, ficha del luchador, versus, colores |
@@ -92,6 +92,7 @@ Linux y Windows).
 | [S15](./S15-client-packaging.md) | M5 | L | 🟢 cerrado | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
 | [S26](./S26-retos-demonios-fichas.md) | M6 | M | 🟢 cerrado (torneos sin conexión y economía de cartas, aprobados → por planificar) | Fichas en torneos y retos, todos los retos en Historia, los Señores del Tiempo (nombres mayas), Demonio I narrador |
 | [S25](./S25-temporadas.md) | M6 | M | ⚪ esbozo | Temporadas: reinicio suave del Elo y pesetas para el top, para comprar cosméticos |
+| [S27](./S27-supermensajes.md) | M6 | M | ⚪ esbozo | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
 
 Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · ⏸ en pausa · 🟢 cerrado.

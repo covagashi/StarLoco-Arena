@@ -1,6 +1,6 @@
 # S05 — Lo que se perdió con el hall
 
-**Planificado:** 2026-10-16 · **Detallado:** 2026-10-17 · **Hito:** M1 — Jugable de punta a punta · **Tamaño:** M · **Estado:** 🟡 a la espera del dueño (cierre): las pantallas pasaron a S18
+**Planificado:** 2026-10-16 · **Detallado:** 2026-10-17 · **Hito:** M1 — Jugable de punta a punta · **Tamaño:** M · **Estado:** 🟢 cerrado (2026-10-25, repaso con el dueño)
 
 ## Objetivo
 
@@ -286,4 +286,8 @@ Lista completa de Servicios enseñada al dueño ese día:
   [S26](./S26-retos-demonios-fichas.md).
 - **Demonio I:** fuera de Servicios, narrador del capítulo 2 de Historia →
   hecho en S26.
-- Solo queda por confirmar si se quedan los **fuegos artificiales**.
+- **Fuegos artificiales: fuera** (dueño: "no tiene sentido; mejor crear
+  supermensajes como tiene Mobile Legends"). El botón sale de Servicios y
+  los textos de ayuda ya no los nombran; `world_smoke` 42/42. El servidor
+  no gastaba la carta ni miraba si la tenías. Los supermensajes van a
+  [S27](./S27-supermensajes.md).

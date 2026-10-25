@@ -3683,7 +3683,7 @@ const LOBBY_WORLDS := [23, 24, 25, 26, 27, 28, 37]
 ## the Team panel's fallen section, the tournament totem (13) the Calendar and
 ## the demon totem (11) the clan tab + the Ranking's demon tab (S18).
 const _CITY_ONE_PER_KIND := [2, 12]
-const _CITY_HIDDEN := [4, 8, 9, 10, 11, 13]   # 9 Demon I: Historia's narrator (S26)
+const _CITY_HIDDEN := [4, 8, 9, 10, 11, 12, 13]   # 9 Demon I: Historia's narrator; 12 fireworks: dropped (owner, S26)
 ## Display order of the kinds in the City panel: shops and mail first.
 const _CITY_ORDER := [1, 2, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
 ## S10: the tutorial island's people, brought to the lobby (no worlds, S05):
