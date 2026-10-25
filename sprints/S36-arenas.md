@@ -78,6 +78,28 @@ Proceso, por arena:
 Numeración: arena N es el N-ésimo mundo por id (arena 1 = mundo 5, arena 2
 = mundo 10, arena 3 = mundo 12…).
 
+### Arena 2 (mundo 10, otoño y lava), 2026-10-25
+
+El dueño confirmó todas las suposiciones de `mapa-arena2.png`; la 138 y la
+141 son la escarcha (la misma forma en verde).
+
+- Kit `godot/art/arena2/` con 19 piezas en tres looms:
+  - suelo: bloque de roca marrón (+ columna), losa verde, charco de lava;
+  - plantas: arbusto otoñal, arbusto alto, árbol otoñal, árbol sin hojas,
+    hojas caídas, hierba;
+  - piedra: columna de roca, rocas verdes, roca con lava, tótem, tótem alto,
+    piedras blancas;
+  - armas: armas en el suelo, espada, lanza y hoja clavadas.
+- Loom en las superficies grandes (roca, losa, lava, tótem), hechas con las
+  reglas de la skill; colores de paleta con 2–3 tonos en plantas y armas.
+- El follaje son hojas de arce de cinco lóbulos sobre un núcleo oscuro. La
+  primera versión eran bolas lisas, y la segunda parecía de estrellas.
+- Se reutiliza del kit de la arena 1: piedra tallada, piedrecitas, losa con
+  glifo, runa y farol. Además, el cordón de la escarcha en verde
+  (`grass_drift`, tres looms verdes).
+- `mapa-arena2.png`: las 52 piezas del mapa cubiertas (0 nuevas). Hoja del
+  kit: `kit-arena2.png`.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)

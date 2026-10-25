@@ -1,0 +1,319 @@
+{
+	"_doc": "Arena 2 (retail world 10: autumn and lava) kit for the map editor (S36), same schema as art/arena1/kit.json. Pieces the arena also uses from the arena 1 kit are listed in shared.",
+	"biome": "lava",
+	"arenas": [
+		10
+	],
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"crag": [
+			"tierra marrón",
+			"rojo de lava",
+			"gris ceniza"
+		],
+		"flag": [
+			"verde salvia",
+			"arenisca",
+			"pizarra"
+		],
+		"lava": [
+			"naranja dorado",
+			"amarillo incandescente",
+			"rojo profundo"
+		],
+		"leaf": [
+			"ocre",
+			"rojo",
+			"oliva"
+		],
+		"bark": [
+			"claro",
+			"marrón",
+			"gris"
+		],
+		"blade": [
+			"pardo",
+			"verde",
+			"paja"
+		],
+		"basalt": [
+			"verde",
+			"gris",
+			"marrón"
+		],
+		"totem": [
+			"arenisca con musgo",
+			"gris",
+			"piedra roja"
+		],
+		"pale": [
+			"blanco",
+			"gris",
+			"arena"
+		],
+		"steel": [
+			"acero",
+			"bronce",
+			"óxido"
+		]
+	},
+	"pieces": [
+		{
+			"name": "rock_block",
+			"label": "Bloque de roca marrón",
+			"kind": "tile",
+			"gfx": [
+				1244,
+				1240,
+				1243,
+				1242
+			],
+			"looms": "crag",
+			"top": 0.86,
+			"col": "crag_col"
+		},
+		{
+			"name": "flagstone",
+			"label": "Losa verde de piedra",
+			"kind": "tile",
+			"gfx": [
+				129,
+				130,
+				131
+			],
+			"looms": "flag",
+			"top": 0.13
+		},
+		{
+			"name": "lava_pool",
+			"label": "Charco de lava",
+			"kind": "tile",
+			"gfx": [
+				142,
+				143
+			],
+			"looms": "lava",
+			"top": 0.07
+		},
+		{
+			"name": "autumn_bush",
+			"label": "Arbusto otoñal",
+			"kind": "deco",
+			"gfx": [
+				1028,
+				1033,
+				1022,
+				1034,
+				1016
+			],
+			"looms": "leaf"
+		},
+		{
+			"name": "autumn_bush_tall",
+			"label": "Arbusto otoñal alto (seco)",
+			"kind": "deco",
+			"gfx": [
+				1035,
+				1021
+			],
+			"looms": "leaf"
+		},
+		{
+			"name": "autumn_tree",
+			"label": "Árbol otoñal",
+			"kind": "deco",
+			"gfx": [
+				1029
+			],
+			"looms": "leaf"
+		},
+		{
+			"name": "bare_tree",
+			"label": "Árbol sin hojas",
+			"kind": "deco",
+			"gfx": [
+				2559,
+				2558
+			],
+			"looms": "bark"
+		},
+		{
+			"name": "fallen_leaves",
+			"label": "Hojas caídas (arce)",
+			"kind": "flat",
+			"gfx": [
+				202,
+				203,
+				127,
+				201
+			],
+			"looms": "leaf"
+		},
+		{
+			"name": "spiky_grass",
+			"label": "Hierba",
+			"kind": "deco",
+			"gfx": [
+				246
+			],
+			"looms": "blade"
+		},
+		{
+			"name": "rock_column",
+			"label": "Columna de roca",
+			"kind": "deco",
+			"gfx": [
+				921
+			],
+			"looms": "crag"
+		},
+		{
+			"name": "basalt_rocks",
+			"label": "Rocas verdes",
+			"kind": "deco",
+			"gfx": [
+				137
+			],
+			"looms": "basalt"
+		},
+		{
+			"name": "lava_rock",
+			"label": "Roca con lava",
+			"kind": "deco",
+			"gfx": [
+				128
+			],
+			"looms": "flag"
+		},
+		{
+			"name": "totem",
+			"label": "Tótem de piedra",
+			"kind": "deco",
+			"gfx": [
+				274
+			],
+			"looms": "totem"
+		},
+		{
+			"name": "totem_tall",
+			"label": "Tótem de piedra alto",
+			"kind": "deco",
+			"gfx": [
+				275
+			],
+			"looms": "totem"
+		},
+		{
+			"name": "white_stones",
+			"label": "Piedras blancas",
+			"kind": "flat",
+			"gfx": [
+				611,
+				616
+			],
+			"looms": "pale"
+		},
+		{
+			"name": "weapons_ground",
+			"label": "Armas en el suelo",
+			"kind": "flat",
+			"gfx": [
+				1270,
+				1272
+			],
+			"looms": "steel"
+		},
+		{
+			"name": "sword_stuck",
+			"label": "Espada clavada",
+			"kind": "deco",
+			"gfx": [
+				1289
+			],
+			"looms": "steel"
+		},
+		{
+			"name": "spear_stuck",
+			"label": "Lanza clavada",
+			"kind": "deco",
+			"gfx": [
+				1294
+			],
+			"looms": "steel"
+		},
+		{
+			"name": "bone_blade_stuck",
+			"label": "Hoja de arma clavada",
+			"kind": "deco",
+			"gfx": [
+				2006
+			],
+			"looms": "steel"
+		}
+	],
+	"shared": [
+		{
+			"kit": "arena1",
+			"name": "stone_block",
+			"gfx": [
+				77,
+				79
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "pebbles",
+			"gfx": [
+				161,
+				162,
+				163
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "slab",
+			"gfx": [
+				496,
+				497
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "rune",
+			"gfx": [
+				506,
+				508,
+				511
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "lantern",
+			"gfx": [
+				1675,
+				1676
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "grass_drift",
+			"gfx": [
+				138,
+				141
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "grass_drift_small",
+			"gfx": [
+				139,
+				140
+			]
+		}
+	],
+	"minor": []
+}

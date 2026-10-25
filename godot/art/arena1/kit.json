@@ -51,6 +51,11 @@
 			"musgo verde",
 			"escarcha azul",
 			"oliva seco"
+		],
+		"grass": [
+			"verde oscuro",
+			"verde musgo",
+			"paja"
 		]
 	},
 	"pieces": [
@@ -114,6 +119,26 @@
 				174
 			],
 			"looms": "blocks"
+		},
+		{
+			"name": "grass_drift",
+			"label": "Cordón de hierba (la escarcha en verde)",
+			"kind": "deco",
+			"gfx": [
+				141,
+				138
+			],
+			"looms": "grass"
+		},
+		{
+			"name": "grass_drift_small",
+			"label": "Cordón de hierba pequeño",
+			"kind": "deco",
+			"gfx": [
+				139,
+				140
+			],
+			"looms": "grass"
 		},
 		{
 			"name": "leaves",

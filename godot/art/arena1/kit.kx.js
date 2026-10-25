@@ -69,6 +69,15 @@ model("frost_small", drift(0.62,
   [[-0.38, 0.07, 0.7], [-0.15, 0.09, 0.8], [0.08, 0.08, 0.7], [0.3, 0.06, 0.6]],
   [[-0.4, 0.1, 28, 0], [-0.22, 0.19, 18, 1], [-0.05, 0.14, 30, -1], [0.12, 0.17, 20, 0], [0.32, 0.09, 35, 1]]))
 looms("frost"); looms("frost_small")
+// the same drift in grass (138, 139, 140, 141): the owner's "lo mismo que la
+// escarcha", green; palette greens, three looms
+pal({ grassD: "#24361e", grassD_b: "#2e4a22", grassD_c: "#5a4a22",
+  grass: "#3e5a2e", grass_b: "#5a7a34", grass_c: "#8a7a3a" })
+for (const n of ["frost", "frost_small"]) {
+  model(n.replace("frost", "grass_drift"), { base: n, swap: { snow: "grassD", iceClear: "grass" } })
+  model(n.replace("frost", "grass_drift") + "_b", { base: n, swap: { snow: "grassD_b", iceClear: "grass_b" } })
+  model(n.replace("frost", "grass_drift") + "_c", { base: n, swap: { snow: "grassD_c", iceClear: "grass_c" } })
+}
 
 // --- snowy leaves (176): broad leaves fanned out of a snow drift -----------
 const leafShape = (w, h) => [0, 0, w * 0.55, h * 0.22, w * 0.5, h * 0.6, w * 0.22, h * 0.88, 0, h,
