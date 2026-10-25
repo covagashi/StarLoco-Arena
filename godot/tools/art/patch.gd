@@ -6,14 +6,15 @@ extends SceneTree
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot -s tools/art/patch.gd -- \
 ##       --tile=art/arena1/out/models/ice_block.glb --prop=art/arena1/out/models/tree.glb \
-##       --out=<png> [--n=6] [--size=700x460]
+##       --out=<png> [--n=6] [--size=700x460] \
+##       [--tile2=<glb> --top2=<walk surface, m>]   (a second tile on some cells)
 
 const PX := 43.0 * 1.41421356
 const TILE_TOP := 0.86   # walk surface of the block model
 ## cells that get the prop
 const PROP_CELLS := [Vector2i(1, 2), Vector2i(4, 1), Vector2i(3, 4)]
 
-var opts := {"tile": "", "prop": "", "out": "/tmp/patch.png", "n": "6", "size": "700x460"}
+var opts := {"tile": "", "tile2": "", "top2": str(TILE_TOP), "prop": "", "out": "/tmp/patch.png", "n": "6", "size": "700x460"}
 
 
 func _initialize() -> void:
@@ -29,14 +30,16 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var tile := _load(opts.tile)
+	var tile2 := _load(opts.tile2) if opts.tile2 != "" else null
 	var prop := _load(opts.prop) if opts.prop != "" else null
 	var n := int(opts.n)
 	var world := Node3D.new()
 	root.add_child(world)
 	for y in n:
 		for x in n:
-			var t: Node3D = tile.duplicate()
-			t.position = Vector3(x + 0.5, -TILE_TOP, y + 0.5)
+			var second: bool = tile2 != null and hash(Vector2i(x, y) * 131) % 5 < 2
+			var t: Node3D = (tile2 if second else tile).duplicate()
+			t.position = Vector3(x + 0.5, -(float(opts.top2) if second else TILE_TOP), y + 0.5)
 			world.add_child(t)
 			if prop and Vector2i(x, y) in PROP_CELLS:
 				var p: Node3D = prop.duplicate()

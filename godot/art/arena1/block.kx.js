@@ -62,3 +62,23 @@ model("ice_block",
   // the cap: one cushion of snow, rounding down to a lip over the body edge
   terrain(2 * CAP, 2 * CAP, { res: 48, height: 0.3, fn: cushion, mat: "snow", pos: [0, H - 0.12, 0] }),
   drips)
+
+// clear ice block (retail 154, also replaces 155 and 156): the same body as
+// ice_block without the snow, standing as tall as the snow-capped one, with
+// a lighter top bevelled in from the edge
+pal({
+  clear: { tex: "out/ice_clear", uv: 0.86, rough: 0.15 },
+  clearTop: { tex: "out/ice_clear_top", uv: 0.9, rough: 0.12 },
+})
+const HC = 0.84   // body height: the snow cap of ice_block peaks about here
+// a low rounded bevel over the top, like ice worn smooth (cushion's lip, no lumps)
+function bevel(x, z) {
+  const r = 0.1, a = HALF - r
+  const qx = Math.abs(x) - a, qz = Math.abs(z) - a
+  const dist = Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - r
+  const e = Math.min(1, Math.max(0, -dist / 0.09))
+  return e * e * (3 - 2 * e)
+}
+model("ice_clear",
+  prism(roundSquare(HALF, 0.07), HC, 0, "clear", 0.004),
+  terrain(2 * HALF, 2 * HALF, { res: 40, height: 0.05, fn: bevel, mat: "clearTop", pos: [0, HC - 0.005, 0] }))

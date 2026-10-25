@@ -227,3 +227,20 @@ menor que decide el dueño (nieve suelta, piedrecitas). Los modelos low-poly
 viejos de `props.kx.js` (pincho, cristal, farol, piedrecitas) se habían
 descartado ("AI slop"), así que no cuentan como hechos; el "cristal" además
 era en realidad hojas con nieve.
+
+### Pieza 1: bloque de hielo transparente (gfx 154; sustituye a 155 y 156)
+
+- `ice_clear` en `godot/art/arena1/block.kx.js`. Es el mismo cuerpo que
+  `ice_block`, pero sin nieve, de la misma altura y con un bisel suave
+  arriba. Pesa 3.276 triángulos.
+- Texturas loom `ice_clear` e `ice_clear_top` en `block.tx.js`: azul muy
+  claro, tres brillos largos en diagonal, grietas finas y la franja de la
+  base más oscura. La cara de arriba se tiñó más azul tras la primera prueba,
+  porque se confundía con la nieve.
+- `tools/art/patch.gd` admite ahora `--tile2/--top2`, para mezclar dos tiles
+  en el patch. Captura: `~/codigo/capturas/m7/arena1-hielo-transparente.png`.
+- Estado: a revisar por el dueño.
+
+Idea del dueño para las losas (doradas con greca y runas de suelo): glifos
+baybayin dibujados con una tipografía, a modo de "trampa". Se hará al llegar
+a esas piezas.
