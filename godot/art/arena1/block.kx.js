@@ -84,6 +84,10 @@ model("ice_clear",
   terrain(2 * HALF, 2 * HALF, { res: 40, height: 0.05, fn: bevel, mat: "iceClearTop", pos: [0, HC - 0.005, 0] }))
 
 // columns: the bare bodies, 1 m tall, stacked under a block down to the
-// arena's foot (build_arena.gd scales the last one)
-model("ice_col", prism(roundSquare(HALF, 0.07), 1, 0, "ice", 0.004))
-model("ice_clear_col", prism(roundSquare(HALF, 0.07), 1, 0, "iceClear", 0.004))
+// arena's foot; their textures have no top or foot band, so they stack
+pal({
+  iceCol: { tex: "out/ice_col", uv: 1, rough: 0.25 },
+  iceClearCol: { tex: "out/ice_clear_col", uv: 1, rough: 0.15 },
+})
+model("ice_col", prism(roundSquare(HALF, 0.07), 1, 0, "iceCol", 0.004))
+model("ice_clear_col", prism(roundSquare(HALF, 0.07), 1, 0, "iceClearCol", 0.004))

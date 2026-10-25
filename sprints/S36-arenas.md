@@ -1,6 +1,6 @@
 # S36 — Arenas: todos los assets primero, y un editor para que el dueño monte los mapas
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ⚪ planificado (se empieza en la próxima sesión)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B, bioma nieve hecho, a revisar)
 
 ## Por qué cambia el plan (dueño, 2026-10-25)
 
@@ -39,6 +39,20 @@ coloca en un editor.**
   bloque blanco teñido.
 - La arena 1 es el mundo retail 5. El arte vive en `godot/art/arena1/`.
 
+## Tres looms por pieza (dueño, 2026-10-25)
+
+> "Pasa los assets a kiln, y en la herramienta que tú hagas yo podré poner 3
+> diferentes tipos de loom."
+
+- Cada pieza se exporta en tres looms: `<nombre>` (a), `<nombre>_b` y
+  `<nombre>_c`.
+  - Es el mismo modelo kiln con todos los materiales de textura cambiados
+    (`base` + `swap`).
+  - Las texturas de cada loom son loom.
+- En el editor (fase C), al colocar una pieza se elige a, b o c.
+- Las variantes de color del retail (las familias del catálogo y el tinte
+  lila) pasan a ser looms.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
@@ -57,6 +71,39 @@ coloca en un editor.**
       (decisión por mapa, pero las 49 comunes se deciden una vez).
 
 ### B. Fabricar los assets y las texturas
+
+**Bioma nieve (arena 1), hecho el 2026-10-25, a revisar por el dueño.**
+Hoja: `~/codigo/capturas/m7/arena1-kit.png`. Retail a la izquierda y las
+tres looms a escala de juego a la derecha. Plan actualizado en
+`~/codigo/capturas/m7/arena1-plan.png`.
+
+- `godot/art/arena1/kit.json`: el manifiesto del kit, que leerá el editor.
+  Lleva 15 piezas con su tipo (`tile` / `deco` / `flat`), la altura donde se
+  pisa, la columna que va debajo, los gfx retail que sustituye y el nombre
+  de cada loom.
+- `kit.kx.js`: incluye `tree.kx.js` y `block.kx.js`. Son 17 modelos, cada
+  uno en tres looms:
+  - bloques (con nieve, transparente) y sus dos columnas;
+  - árbol, puente, escarcha y escarcha pequeña, hojas con nieve;
+  - pincho y pincho doble, farol, montón de nieve, nieve suelta,
+    piedrecitas;
+  - losa con glifo y runa de suelo.
+- Las texturas: `block.tx.js` y `kit.tx.js`.
+  - Los bloques se pasaron a funciones con tres looms (nieve, lila y
+    escarcha). La `a` es idéntica a la aprobada; se comprobó píxel a píxel.
+  - Las columnas llevan una textura sin franjas, para que se apilen.
+- Glifos baybayin: `glyphs.py` los dibuja con Noto Sans Tagalog
+  (`godot/art/fonts/`, OFL).
+  - Losas: ha, ba, ka (oro viejo, azul, rojo).
+  - Runas: la, ta, sa (ámbar, azul, rojo, con brillo).
+- `tools/art/kit_shots.gd` fotografía cada pieza y cada loom a escala de
+  juego.
+  - Los `tile` llevan su columna debajo; los `deco`, un bloque; los `flat`,
+    un bloque transparente.
+  - `kit_sheet.py` (fuera del repo) compone la hoja.
+- No hay pack único: kiln no resuelve en un pack los materiales cambiados
+  entre ficheros incluidos. El editor cargará `out/models/<nombre>.glb`.
+- Siguiente: los demás biomas, que se sacan de la lista maestra (fase A).
 
 - [ ] Por bioma: primero las texturas loom del bioma y después los modelos
       kiln (bloques, losas, columnas, decoración).

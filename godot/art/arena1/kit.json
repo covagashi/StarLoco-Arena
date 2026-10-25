@@ -1,0 +1,199 @@
+{
+	"_doc": "Arena 1 (snow biome) kit for the map editor (S36). Each piece is out/models/<name><loom>.glb, loom '' (a), '_b' or '_c'. kind: tile = a cell's ground block (top = its walk surface in the model, m; col = the column stacked under it), deco = stands on a cell, flat = lies on a cell's top. gfx: the retail pieces it replaces.",
+	"biome": "nieve",
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"blocks": [
+			"nieve (blanco/azul)",
+			"lila",
+			"escarcha (verde agua)"
+		],
+		"wood": [
+			"marrón",
+			"gris envejecido",
+			"oscura"
+		],
+		"slab": [
+			"oro viejo, glifo ha",
+			"oro, glifo azul ba",
+			"oro, glifo rojo ka"
+		],
+		"rune": [
+			"ámbar, glifo la",
+			"azul, glifo ta",
+			"rojo, glifo sa"
+		],
+		"leaves": [
+			"turquesa",
+			"verde pino",
+			"lila"
+		],
+		"pebbles": [
+			"gris frío",
+			"arenisca",
+			"pizarra"
+		]
+	},
+	"pieces": [
+		{
+			"name": "ice_block",
+			"label": "Bloque de hielo con nieve",
+			"kind": "tile",
+			"top": 0.86,
+			"col": "ice_col",
+			"gfx": [
+				153
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "ice_clear",
+			"label": "Bloque de hielo transparente",
+			"kind": "tile",
+			"top": 0.885,
+			"col": "ice_clear_col",
+			"gfx": [
+				154,
+				155,
+				156
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "bridge",
+			"label": "Puente de madera",
+			"kind": "tile",
+			"top": 0.22,
+			"col": "ice_col",
+			"gfx": [
+				167
+			],
+			"looms": "wood"
+		},
+		{
+			"name": "tree",
+			"label": "Árbol nevado",
+			"kind": "deco",
+			"gfx": [
+				175
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "frost",
+			"label": "Escarcha",
+			"kind": "deco",
+			"gfx": [
+				170,
+				141,
+				138
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "frost_small",
+			"label": "Escarcha pequeña",
+			"kind": "deco",
+			"gfx": [
+				174,
+				139,
+				140
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "leaves",
+			"label": "Hojas con nieve",
+			"kind": "deco",
+			"gfx": [
+				176
+			],
+			"looms": "leaves"
+		},
+		{
+			"name": "spike",
+			"label": "Pincho de hielo",
+			"kind": "deco",
+			"gfx": [
+				157
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "spike_double",
+			"label": "Pincho de hielo doble",
+			"kind": "deco",
+			"gfx": [
+				159
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "lantern",
+			"label": "Poste farol",
+			"kind": "deco",
+			"gfx": [
+				1675,
+				1676
+			],
+			"looms": "wood",
+			"mirror": true
+		},
+		{
+			"name": "mound",
+			"label": "Montón de nieve",
+			"kind": "deco",
+			"gfx": [
+				505
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "loose_snow",
+			"label": "Nieve suelta",
+			"kind": "deco",
+			"gfx": [
+				503,
+				504
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "pebbles",
+			"label": "Piedrecitas",
+			"kind": "deco",
+			"gfx": [
+				161,
+				163
+			],
+			"looms": "pebbles"
+		},
+		{
+			"name": "slab",
+			"label": "Losa con glifo baybayin",
+			"kind": "flat",
+			"gfx": [
+				470,
+				496,
+				497
+			],
+			"looms": "slab"
+		},
+		{
+			"name": "rune",
+			"label": "Runa de suelo",
+			"kind": "flat",
+			"gfx": [
+				507,
+				508,
+				509,
+				510
+			],
+			"looms": "rune"
+		}
+	]
+}
