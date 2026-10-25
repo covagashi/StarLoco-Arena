@@ -3722,8 +3722,11 @@ func _city_label(kind: int, e: Dictionary) -> String:
 					return cm
 			if f.size() > 1:
 				var set_name := _set_name_for(int(f[1]))
-				return "%s · %s" % [base, set_name] if set_name != "" \
-					else "%s %s" % [base, f[1]]
+				if set_name != "":
+					return "%s · %s" % [base, set_name]
+				# Lists 17 and 18 are no card set: both sell the server's priced
+				# stock, the only cards tokens buy. One label merges them (S05).
+				return I18n.t("city.token_shop")
 		3, 5, 6, 7, 9, 15:   # first field is the speaker's name id
 			var n := NpcDialogs.npc_name(int(f[0])) if f.size() > 0 else ""
 			if n != "":

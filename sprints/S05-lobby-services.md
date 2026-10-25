@@ -270,3 +270,18 @@ Lista completa de Servicios enseñada al dueño ese día:
 - Demonios: Demonio I.
 
 **Falta que el dueño cierre S05.**
+
+## Repaso con el dueño (2026-10-25)
+
+- **Buzón y altares de fusión:** OK.
+- **"Card Master 17/18" → Bazar de fichas.** Las listas 17 y 18 de Totem
+  Arena no son ningún set: las dos venden lo mismo (las 143 cartas con
+  precio, la única tienda donde las fichas compran algo). Ahora tienen la
+  misma etiqueta, "Bazar de fichas" (en/fr: Token Bazaar / Bazar des
+  jetons), y el panel las junta en un solo botón. `city.desc.1` ya no dice
+  que los Card Master de set venden con fichas: solo cambian cartas.
+  Verificado: `world_smoke` 44 comprobaciones, 0 fallos ("Bazar de fichas —
+  5401 + cardMasterDialog").
+- **Retos de demonio:** renombrarlos con algo precolombino (pendiente de
+  elegir los nombres con el dueño).
+- **Demonio I:** dejarlo como papel menor o quitarlo (pendiente).
