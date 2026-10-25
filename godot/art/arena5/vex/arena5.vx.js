@@ -72,6 +72,23 @@ function snowCap() {
   ]
 }
 
+// ---------------------------------------------------------------- loom fills
+// a loom texture tiled over a box and clipped inside a shape, multiplied over
+// the vex shading: the detail inside the forms (bark plates, snow, ice planes)
+const TEX = (n) => `../out/${n}/${n}_albedo.png`
+function texIn(mask, name, [x0, y0, x1, y1], tile, opacity = 0.7, tall = 1) {
+  // columns `tile` wide, each `tall` tiles high and started at its own height,
+  // so the texture's own breaks never line up into a grid
+  const tiles = []
+  const th = tile * tall
+  for (let x = x0, c = 0; x < x1; x += tile, c++)
+    for (let y = y0 - ((c * 0.37) % 1) * th; y < y1; y += th)
+      tiles.push(image(TEX(name), x, y, { w: tile, h: th, opacity, blend: "multiply" }))
+  return clip(mask, ...tiles)
+}
+// the same shape again, line only, back on top of its fill
+const lineOf = (pts, smooth, c, w) => blob(pts, { smooth, fill: "none", ink: ink(c, w) })
+
 // ---------------------------------------------------------------- ice spike
 // big planes: a lit face almost white, a lilac shadow face, a darker lens in
 // the middle; small shards at the foot, snow lumps caught on its edges
@@ -85,6 +102,8 @@ sprite("ice_spike", { w: 64, h: 130, scale: 4 },
     blob([35, 36, 42, 58, 46, 86, 50, 118, 38, 118, 37, 80, 33, 50], { smooth: 0.25, fill: "l1", opacity: 0.9 }),
     blob([30, 58, 36, 70, 37, 96, 31, 106, 27, 86], { smooth: 0.5, fill: "l0", opacity: 0.45 }),
     blob([31, 64, 34, 72, 34, 90, 31, 96, 29, 84], { smooth: 0.5, fill: "l1", opacity: 0.6 })),
+  texIn(blob(MAIN, { smooth: 0.18, fill: "l2" }), "ice_lilac", [10, 6, 54, 120], 44, 0.4, 3),
+  lineOf(MAIN, 0.18, "l0", 1.2),
   blob([42, 118, 45, 98, 52, 86, 55, 104, 53, 118], { smooth: 0.2, fill: "l2", shade: lit({ c: "l1", depth: 0.35, rim: "l3" }), ink: ink("l0", 1) }),
   // a glint at the tip
   circle(32, 9, 2.3, { fill: "l3", glow: { r: 4, color: "l3" } }),
@@ -111,10 +130,14 @@ sprite("snow_tree", { w: 124, h: 132, scale: 4 },
   twig([38, 52, 26, 45, 15, 41, 6, 34], 2.4), twig([24, 45, 20, 36, 22, 28], 1.4),
   twig([55, 35, 61, 22, 64, 10], 2.2), twig([61, 22, 68, 17, 74, 18], 1.3),
   bark(BACK),
+  texIn(blob(BACK, { smooth: 0.45, fill: "t2" }), "bark_paint", [20, 28, 70, 116], 50, 0.85, 1.8),
   planes(BACK, [37, 46, 44, 38, 46, 88, 40, 106, 35, 90], [56, 38, 61, 46, 63, 96, 58, 106, 55, 70]),
+  lineOf(BACK, 0.45, "t0", 1.3),
   twig([66, 68, 70, 54, 70, 40], 2), twig([70, 52, 76, 46], 1.2),
   bark(FRONT),
+  texIn(blob(FRONT, { smooth: 0.45, fill: "t2" }), "bark_paint", [40, 64, 106, 120], 66, 0.85, 1),
   planes(FRONT, [58, 86, 66, 73, 71, 75, 64, 112, 56, 114], [84, 72, 91, 80, 92, 112, 85, 114, 82, 90]),
+  lineOf(FRONT, 0.45, "t0", 1.3),
   twig([82, 70, 87, 57, 88, 44], 2.2), twig([91, 84, 102, 81, 113, 76], 2), twig([102, 81, 106, 88], 1.2),
   // snow
   clumpD(47, 29, 12, 9), clumpD(73, 63, 15, 12), clumpD(35, 74, 7, 5.5),
@@ -131,7 +154,9 @@ function clumpD(x, y, r, hang) {
     pts.push(x + Math.cos(a) * r * (1 + 0.06 * Math.sin(a * 5 + y)), y + Math.sin(a) * r * 0.8 + drip * hang)
   }
   return [blob(pts, { smooth: 0.85, fill: "s2", shade: lit({ c: "s1", depth: 0.35, rim: "s3", brush: 0.15 }), ink: ink("s0", 1) }),
-    clip(blob(pts, { smooth: 0.85, fill: "s2" }), ellipse(x - r * 0.3, y - r * 0.35, r * 0.45, r * 0.3, { fill: "s3", opacity: 0.85, blur: r * 0.15 }))]
+    texIn(blob(pts, { smooth: 0.85, fill: "s2" }), "snow_paint", [x - r, y - r, x + r, y + r + hang], r * 1.6, 0.5),
+    clip(blob(pts, { smooth: 0.85, fill: "s2" }), ellipse(x - r * 0.3, y - r * 0.35, r * 0.45, r * 0.3, { fill: "s3", opacity: 0.85, blur: r * 0.15 })),
+    lineOf(pts, 0.85, "s0", 1)]
 }
 // snow and ice skirt at the foot: an icy blue rim showing under ragged snow
 function skirt(x, y, r) {
