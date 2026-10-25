@@ -19,8 +19,12 @@ const FLOOR_DEPTH := 1.2               # how far the slab runs under the lowest 
 const TOP := {"t_snow": 0.82, "t_lilac": 0.82, "t_ice": 0.83, "t_stone": 0.58,
 	"t_gold": 0.8}
 
+## Props read small next to 86-px cells at kiln's 1 m = 1 cell; the retail
+## spikes and trees stand about two cells tall.
+const PROP_SCALE := {"p_spike": 1.5, "p_tree": 1.45, "p_crystal": 1.35, "p_lantern": 1.1}
+
 var opts := {"map": "5", "pack": "art/arena5/out/arena5_tiles.glb",
-	"out": "/tmp/arena.png", "size": "1280x720", "zoom": "0.85"}
+	"props": "art/arena5/out/arena5_props.glb", "out": "/tmp/arena.png", "size": "1280x720", "zoom": "0.85"}
 
 
 func _initialize() -> void:
@@ -43,10 +47,17 @@ func _run() -> void:
 		push_error("map %d has no arena topology" % map_id)
 		quit(1)
 		return
-	var kit := _load_pack(ProjectSettings.globalize_path("res://" + opts.pack))
-	if kit.is_empty():
+	var kit := _load_pack(ProjectSettings.globalize_path("res://" + opts.pack),
+		["t_snow", "t_lilac", "t_ice", "t_stone", "t_gold", "t_col"])
+	var props := _load_pack(ProjectSettings.globalize_path("res://" + opts.props),
+		["p_spike", "p_tree", "p_crystal", "p_lantern", "p_pebbles"])
+	if kit.is_empty() or props.is_empty():
 		quit(1)
 		return
+	var spawn := {}
+	for t in ["team0", "team1"]:
+		for c in fmd.get(t, []):
+			spawn[Vector2i(c.x, c.y)] = true
 	var coach := {}
 	for c in fmd.get("coach", []):
 		coach[Vector2i(c.x, c.y)] = true
@@ -89,6 +100,15 @@ func _run() -> void:
 			col.scale = Vector3(1, h, 1)
 			world.add_child(col)
 			y -= h
+		var prop := _prop_for(p, c, alt, coach, spawn)
+		if prop != "":
+			var pr: Node3D = props[prop].duplicate()
+			var hsh := hash(p * 7349)
+			pr.position = Vector3(p.x + 0.5, top, p.y + 0.5)
+			pr.rotation.y = (hsh % 360) * PI / 180.0
+			pr.scale = Vector3.ONE * PROP_SCALE.get(prop, 1.0) * (0.9 + (hsh % 30) / 100.0)
+			world.add_child(pr)
+			counts[prop] = counts.get(prop, 0) + 1
 		lo = lo.min(Vector3(p.x, floor_y, p.y))
 		hi = hi.max(Vector3(p.x + 1, top, p.y + 1))
 		n += 1
@@ -130,6 +150,27 @@ func _run() -> void:
 	quit(0)
 
 
+## Decoration for a cell: obstacles get a prop picked by how tall the
+## topology says it is (that height is the retail prop's); a few plain
+## floor cells get walk-over pebbles. Spawns and pedestals stay clear.
+func _prop_for(p: Vector2i, c: Dictionary, floor_alt: int, coach: Dictionary,
+		spawn: Dictionary) -> String:
+	if coach.has(p) or spawn.has(p):
+		return ""
+	if c.ground:
+		return "p_pebbles" if hash(p * 3571) % 100 < 7 else ""
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			if coach.has(p + Vector2i(dx, dy)):
+				return "p_lantern"
+	var d: int = c.alt - floor_alt
+	if d >= 9:
+		return "p_spike"
+	if d >= 5:
+		return "p_tree"
+	return "p_crystal"
+
+
 ## Altitude of the lowest walkable neighbour (the floor an obstacle stands on).
 func _floor_near(cells: Dictionary, p: Vector2i, fallback: int) -> int:
 	var best := fallback
@@ -159,7 +200,7 @@ func _pick(p: Vector2i, alt: int, alt_min: int, coach: Dictionary,
 	return "t_snow"
 
 
-func _load_pack(path: String) -> Dictionary:
+func _load_pack(path: String, need: Array) -> Dictionary:
 	var doc := GLTFDocument.new()
 	var st := GLTFState.new()
 	var err := doc.append_from_file(path, st)
@@ -170,6 +211,10 @@ func _load_pack(path: String) -> Dictionary:
 	var kit := {}
 	for c in scene.get_children():
 		kit[String(c.name)] = c
+		# kiln's lights arrive with glTF's huge range: keep them a local glow
+		for l in c.find_children("*", "OmniLight3D", true, false):
+			(l as OmniLight3D).omni_range = 1.6
+			(l as OmniLight3D).light_energy = 0.8
 		# painted look: no specular glints; --unshaded shows the bare albedo
 		for mi in c.find_children("*", "MeshInstance3D", true, false) + ([c] if c is MeshInstance3D else []):
 			for i in mi.mesh.get_surface_count():
@@ -177,7 +222,7 @@ func _load_pack(path: String) -> Dictionary:
 				m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 				if opts.has("unshaded"):
 					m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	for k in ["t_snow", "t_lilac", "t_ice", "t_stone", "t_gold", "t_col"]:
+	for k in need:
 		if not kit.has(k):
 			push_error("pack has no %s (has %s)" % [k, kit.keys()])
 			return {}
