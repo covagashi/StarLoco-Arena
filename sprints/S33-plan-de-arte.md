@@ -180,3 +180,19 @@ que es lo que usará el catálogo.
 
 Pendiente para cada mapa: las piezas de "textura" o adorno menor (piedrecitas,
 hojitas, nieve suelta) se deciden mapa a mapa.
+
+### Catálogo de familias (2026-10-25)
+
+`~/codigo/m7-referencias/catalog.py` (fuera del repo, como `arena_sheet.py`)
+→ `~/codigo/capturas/m7/catalogo/`: `familias-01…08.png`, `comunes.png` y
+`catalog.json`. Junta los gfx de las 47 arenas, quita los de
+`gfx_rules.json` y agrupa los que tienen la misma silueta y el mismo dibujo
+interior (luminancia de alta frecuencia) con otro color o volteados.
+
+- 1.141 gfx vivos → 68 familias (179 gfx) y 962 piezas sueltas.
+- 49 piezas salen en 8 arenas o más (`comunes.png`), para decidirlas una sola vez.
+- La base de cada familia (marco dorado) es la más usada.
+- Calibrado con la escarcha que señaló el dueño: 138↔170 y 140↔174 caen
+  juntas. Las losas lisas de color no se mezclan con las pintadas.
+
+Pendiente: el dueño revisa las familias (ok / separar / juntar).
