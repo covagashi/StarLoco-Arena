@@ -164,3 +164,19 @@ Reglas que salen de esto:
 - Orden acordado: primero el dueño repasa todas las fichas y dice qué no se
   usa; después se hace el catálogo de familias (mismo gfx / misma forma con
   otro color) y el dueño lo confirma.
+
+### Lista por gfx (dueño, 2026-10-25)
+
+Los gfx son únicos, así que la referencia es el gfx y no el número de la
+ficha. Copia legible por máquina en `~/codigo/m7-referencias/gfx_rules.json`,
+que es lo que usará el catálogo.
+
+| Regla | gfx |
+|---|---|
+| fuera, no es un asset | 123 (bloque negro de sombra), 1781 (vacía) |
+| fuera, es VFX | 74, 75, 76, 462, 463, 907, 908, 1253, 1342, 1583, 1587, 1646, 1665, 2037, 2043, 2044, 2045, 2046, 2047, 2048, 2049, 2050, 2051, 2385, 2450, 2451, 2489, 2964, 3487 |
+| se sustituye por 154 | 155, 156 |
+| se queda por ahora | la sangre de la arena 041 |
+
+Pendiente para cada mapa: las piezas de "textura" o adorno menor (piedrecitas,
+hojitas, nieve suelta) se deciden mapa a mapa.
