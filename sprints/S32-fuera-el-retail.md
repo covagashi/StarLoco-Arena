@@ -37,10 +37,11 @@ que llegue el arte nuevo. Por eso:
 
 ## Por decidir (dueño)
 
-- **Los datos del juego también son del retail**: cartas, hechizos, efectos,
-  topología de las 47 arenas, textos (`server/data-dist/`, `client/decompiled/`,
-  `client/compiled/`). ¿Se rehacen también (diseño propio de cartas y
-  hechizos) o solo el arte y el sonido? Cambia el tamaño de M7 por completo.
+- ~~¿Los datos del juego también se rehacen?~~ **Decidido (dueño,
+  2026-10-25): primero el arte (M7), después las cartas (S40) y después los
+  textos (S41).** Hasta entonces `server/data-dist/` (cartas, hechizos,
+  efectos, topología de arenas) se queda como está, y los textos retail
+  siguen saliendo de sus tablas.
 - ¿Se borra `client/` (retail compilado y decompilado) del disco y del repo?
 
 ## Criterio de cierre

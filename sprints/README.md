@@ -55,7 +55,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S19, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
 | **M6 — Un juego de hoy** | un game-loop actual: lo roto arreglado, una puerta por modo, paneles con respuesta, NPCs con cara y un combate que se explica. Va **antes** de M5 (dueño, 2026-10-24: "no está preparado para los últimos sprints") | S20, S20B, S21, S22, S23, S24, S26, S28, S25, S29, S27 |
-| **M7 — Arte propio** | nada del retail: arte, efectos y sonido propios con un pipeline nuevo y muchas menos animaciones (dueño, 2026-10-25). Va antes de S16, que esperaba justo a cambiar los assets | S32–S39 |
+| **M7 — Arte propio** | nada del retail: arte, efectos y sonido propios con un pipeline nuevo y muchas menos animaciones (dueño, 2026-10-25). Va antes de S16, que esperaba justo a cambiar los assets | S32–S41 (arte, luego cartas, luego textos) |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16, S30 |
 
 
@@ -104,6 +104,8 @@ Linux y Windows).
 | [S37](./S37-vfx.md) | M7 | M | ⚪ esbozo | Librería de VFX por elemento y forma; cada hechizo, por datos |
 | [S38](./S38-cartas-e-iconos.md) | M7 | L | ⚪ esbozo | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
 | [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |
+| [S40](./S40-cartas-propias.md) | M7 | L | ⚪ esbozo (tras el arte) | Cartas propias: diseño y datos fuera del retail |
+| [S41](./S41-textos-propios.md) | M7 | M | ⚪ esbozo (tras las cartas) | Textos propios en es/en/fr |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
 | [S31](./S31-assets-sin-usar.md) | M5 | M | 🟢 cerrado | Fuera los assets sin usar: 435 de 823 MB; quedan 47 mapas, 38 muñecos y 2.395 animaciones; etapa `prune` en el generador |
 | [S30](./S30-tienda.md) | M5 | L | ⚪ esbozo (después de S16) | Tienda: cosméticos con pesetas y compras con dinero real, sin pagar para ganar |
