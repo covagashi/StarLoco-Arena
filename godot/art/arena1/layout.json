@@ -1,0 +1,35 @@
+{
+	"_doc": "Arena 1 = retail world 5. Which of our models stands in for each kept retail gfx when tools/art/build_arena.gd lays the arena out like the retail map. tiles: [model, walk-surface height in the model (m), column model under it, optional 'stand-in' = an old piece waiting for its own model]. props: retail decoration gfx -> our model; gfx not listed are not made yet and are left out.",
+	"map": 5,
+	"tiles": {
+		"153": [
+			"ice_block",
+			0.86,
+			"ice_col"
+		],
+		"154": [
+			"ice_clear",
+			0.885,
+			"ice_clear_col"
+		],
+		"155": [
+			"ice_clear",
+			0.885,
+			"ice_clear_col"
+		],
+		"156": [
+			"ice_clear",
+			0.885,
+			"ice_clear_col"
+		],
+		"167": [
+			"t_stone",
+			0.58,
+			"ice_col",
+			"stand-in"
+		]
+	},
+	"props": {
+		"175": "tree"
+	}
+}

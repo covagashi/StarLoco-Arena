@@ -67,8 +67,8 @@ model("ice_block",
 // ice_block without the snow, standing as tall as the snow-capped one, with
 // a lighter top bevelled in from the edge
 pal({
-  clear: { tex: "out/ice_clear", uv: 0.86, rough: 0.15 },
-  clearTop: { tex: "out/ice_clear_top", uv: 0.9, rough: 0.12 },
+  iceClear: { tex: "out/ice_clear", uv: 0.86, rough: 0.15 },
+  iceClearTop: { tex: "out/ice_clear_top", uv: 0.9, rough: 0.12 },
 })
 const HC = 0.84   // body height: the snow cap of ice_block peaks about here
 // a low rounded bevel over the top, like ice worn smooth (cushion's lip, no lumps)
@@ -80,5 +80,10 @@ function bevel(x, z) {
   return e * e * (3 - 2 * e)
 }
 model("ice_clear",
-  prism(roundSquare(HALF, 0.07), HC, 0, "clear", 0.004),
-  terrain(2 * HALF, 2 * HALF, { res: 40, height: 0.05, fn: bevel, mat: "clearTop", pos: [0, HC - 0.005, 0] }))
+  prism(roundSquare(HALF, 0.07), HC, 0, "iceClear", 0.004),
+  terrain(2 * HALF, 2 * HALF, { res: 40, height: 0.05, fn: bevel, mat: "iceClearTop", pos: [0, HC - 0.005, 0] }))
+
+// columns: the bare bodies, 1 m tall, stacked under a block down to the
+// arena's foot (build_arena.gd scales the last one)
+model("ice_col", prism(roundSquare(HALF, 0.07), 1, 0, "ice", 0.004))
+model("ice_clear_col", prism(roundSquare(HALF, 0.07), 1, 0, "iceClear", 0.004))
