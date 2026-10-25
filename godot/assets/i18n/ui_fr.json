@@ -1134,7 +1134,7 @@
   "cal.replay_loading": "Téléchargement du combat…",
   "tourn.needs_ghost": "Ce tournoi se joue avec ton dernier fantôme : crée-en un dans Classé → Contre un fantôme.",
   "season.line": "Saison {n} · se termine dans {days} jours · le top 50 gagne des pesetas",
-  "season.result": "Saison {season} terminée : {rank}e en {ladder} · +{pesetas} pesetas",
+  "season.result": "Saison {season} terminée : {rank}e en {ladder} · +{pesetas} pesetas (gardées pour la boutique qui arrive avec la 1.0)",
   "season.ladder_1": "Classement",
   "season.ladder_2": "Fantômes",
   "cur.pesetas": "pesetas",

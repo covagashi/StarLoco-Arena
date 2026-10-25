@@ -64,5 +64,6 @@ S14 dejó abiertas (dueño, 2026-10-25).
 
 ## Pendiente
 
-- Algo en que gastar las pesetas: la tienda de cosméticos (ver "compras
-  dentro del juego", la propuesta al dueño del 2026-10-25).
+- Algo en que gastar las pesetas: la tienda, en [S30](./S30-tienda.md),
+  después de S16 (dueño, 2026-10-25). Hasta entonces se guardan, y el
+  aviso de fin de temporada lo dice.

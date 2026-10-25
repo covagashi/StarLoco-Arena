@@ -1134,7 +1134,7 @@
   "cal.replay_loading": "Descargando el combate…",
   "tourn.needs_ghost": "Este torneo se juega con tu último fantasma: crea uno en Ranking → Contra un fantasma.",
   "season.line": "Temporada {n} · termina en {days} días · el top 50 gana pesetas",
-  "season.result": "Temporada {season} terminada: {rank}.º en {ladder} · +{pesetas} pesetas",
+  "season.result": "Temporada {season} terminada: {rank}.º en {ladder} · +{pesetas} pesetas (se guardan para la tienda que llega con la 1.0)",
   "season.ladder_1": "Ranking",
   "season.ladder_2": "Fantasmas",
   "cur.pesetas": "pesetas",

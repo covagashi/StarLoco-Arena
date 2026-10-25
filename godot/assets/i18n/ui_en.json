@@ -1134,7 +1134,7 @@
   "cal.replay_loading": "Downloading the fight…",
   "tourn.needs_ghost": "This tournament is played with your latest ghost: create one in Ranked → Fight a ghost.",
   "season.line": "Season {n} · ends in {days} days · the top 50 win pesetas",
-  "season.result": "Season {season} over: #{rank} in {ladder} · +{pesetas} pesetas",
+  "season.result": "Season {season} over: #{rank} in {ladder} · +{pesetas} pesetas (kept for the shop that comes with 1.0)",
   "season.ladder_1": "Ranked",
   "season.ladder_2": "Ghosts",
   "cur.pesetas": "pesetas",

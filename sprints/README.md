@@ -55,7 +55,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S19, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
 | **M6 — Un juego de hoy** | un game-loop actual: lo roto arreglado, una puerta por modo, paneles con respuesta, NPCs con cara y un combate que se explica. Va **antes** de M5 (dueño, 2026-10-24: "no está preparado para los últimos sprints") | S20, S20B, S21, S22, S23, S24, S26, S28, S25, S29, S27 |
-| **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16 |
+| **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16, S30 |
 
 
 Si se quiere gente probando antes de la 1.0, el sitio natural para una **beta
@@ -96,6 +96,7 @@ Linux y Windows).
 | [S29](./S29-torneos-sin-conexion.md) | M6 | L | 🟢 cerrado | Torneos sin conexión: el servidor juega el cuadro IA contra IA con el último fantasma de cada uno y graba cada combate |
 | [S27](./S27-supermensajes.md) | M6 | M | ⛔ descartado (dueño, 2026-10-25) | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
+| [S30](./S30-tienda.md) | M5 | L | ⚪ esbozo (después de S16) | Tienda: cosméticos con pesetas y compras con dinero real, sin pagar para ganar |
 
 Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · ⏸ en pausa · 🟢 cerrado.
 La tabla va en **orden de ejecución**; el número de un sprint es el de su
