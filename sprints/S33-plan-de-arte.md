@@ -196,3 +196,17 @@ interior (luminancia de alta frecuencia) con otro color o volteados.
   juntas. Las losas lisas de color no se mezclan con las pintadas.
 
 Pendiente: el dueño revisa las familias (ok / separar / juntar).
+
+**Revisión del dueño (2026-10-25):** las familias valen salvo lo que comente.
+Ya está aplicado en `gfx_rules.json` (`family_merge`, `family_split`) y el
+catálogo se ha regenerado. Ahora son 64 familias y 177 gfx en familias.
+
+| Antes | Nota | Ahora |
+|---|---|---|
+| F1 + F2 (cubos de hierba 317/316 y 315/516/580/517) | lo mismo, con una textura mínima | una familia (F1) |
+| F3 (hierba 1815/1199/1355) | solo cambia la simetría | ok |
+| F4 (losas de piedra) | iguales, salvo 97 y 91, que llevan una hoja pintada | 97 y 91 pasan a sueltas |
+| F5 (losas planas de color), F6, F8 | iguales | ok |
+| F7 + F9 (267/1532 y 263/1526) | iguales | una familia |
+| F13 = F18 (515/576 y 3333–3336) | iguales | una familia |
+| F32 = F22 (2270/2272 y 2277–2279) | iguales | una familia |
