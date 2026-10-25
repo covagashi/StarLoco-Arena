@@ -1,6 +1,6 @@
 # S33 — Plan de arte: estilo, técnica y prototipo vertical
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🟡 esperando al dueño (elegir técnica)
 
 ## Objetivo
 
@@ -30,17 +30,84 @@ usa. Unas **10 por esqueleto**, no por clase ni por dirección: frente a las
 
 ## Tareas
 
-- [ ] Hoja de estilo (art bible): paleta, proporciones, lectura en la vista
-      isométrica, piedra y oro de la UI (S18) como punto de partida.
+- [x] Hoja de estilo (art bible), borrador abajo; paleta en
+      `godot/proto/s33/palette.gd`.
 - [ ] Elegir técnica de personajes: 3D en Godot / 3D a sprites / cutout 2D.
-      Probar las tres con el mismo luchador y decidir con capturas.
+      **Probadas las tres con el mismo luchador** (abajo); falta que el dueño
+      elija.
 - [ ] Prototipo vertical: 1 luchador (rig + 10 animaciones), 1 arena, 1
       hechizo con VFX por elemento, en un combate real contra la IA.
-- [ ] Medir: peso en disco, rendimiento en la Ally, tiempo de producción
-      por personaje.
+- [x] Medir: peso en disco y coste por fotograma (abajo). El rendimiento con
+      la GPU de la Ally queda para el prototipo vertical, con la técnica
+      elegida (sin abrir ventanas en la pantalla del dueño).
 - [ ] Escribir el pipeline elegido (S34).
 
 ## Criterio de cierre
 
 El dueño elige técnica y estilo sobre el prototipo jugando; queda escrito el
 número de animaciones por personaje y la lista de VFX base.
+
+## Hoja de estilo (borrador, 2026-10-25)
+
+- **Proporciones:** cabezón (cabeza + sombrero ≈ 45 % de la altura), cuerpo
+  corto y miembros gruesos; ~70 px de alto a tamaño de juego sobre celdas de
+  86×43, como hoy.
+- **Contorno** marrón oscuro (`#2a1d14`), nunca negro; **dos tonos** por
+  material (luz desde arriba a la izquierda) y un brillo de borde fino.
+- **Paleta:** cuerpos cálidos y poco saturados con un acento fuerte por
+  personaje (sombrero rojizo del prototipo); el dorado de la UI (`#e2bd6e`)
+  se repite en bufanda y remates; las arenas en la piedra de UiStyle con
+  musgo y grietas.
+- **Equipo por anillo:** azul/rojo bajo los pies; la ropa no lleva el color
+  del equipo (dueño: sin colores de luchador).
+- **Lectura de la espalda:** cada clase lleva un detalle trasero (aquí, la
+  cola de la bufanda) para distinguir NE/NW de SE/SW de un vistazo.
+- **Elementos:** un par de colores por elemento (núcleo y borde), compartido
+  por VFX, gema del arma y la interfaz: fuego naranja, agua azul, tierra
+  ocre/verde (trozos, sin brillo aditivo), aire blanco/turquesa en remolino,
+  neutro violeta en anillo.
+
+## Prototipo (2026-10-25)
+
+`godot/proto/s33/`: el mismo luchador con las tres técnicas sobre una arena
+de piedra propia, con **una sola pose procedural** (`pose.gd`: reposo,
+andar, lanzar, golpe, morir) que leen el rig 3D y el recorte 2D por igual:
+la apuesta de "una animación por esqueleto, no por clase ni dirección". El
+golpe es procedural (retroceso, aplastado, destello blanco); la muerte
+también. Los hechizos son VFX en tiempo real por elemento (`vfx.gd`):
+proyectil con estela, estallido y anillo en el suelo.
+
+Todo es arte de prueba hecho con primitivas (no hay Blender ni Krita en la
+Ally): sirve para elegir técnica, no es el aspecto final.
+
+```
+xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot --fixed-fps 30 \
+    -s proto/s33/capture.gd -- --out=<dir> --video --measure
+python3 -I godot/proto/s33/make_sheet.py <dir> ~/codigo/capturas/s33/s33-tecnicas.png
+```
+
+**Para el dueño:** `~/codigo/capturas/s33/s33-tecnicas.png` (hoja: tres
+columnas, siete estados, VFX y números) y `s33-tecnicas.mp4` (10 s, las
+tres a la vez: reposo, andar, cinco hechizos uno por elemento, muerte).
+
+| Medida | A — 3D en vivo | B — 3D → sprites | C — Recorte 2D |
+|---|---|---|---|
+| Peso por clase | glTF, est. 0,1–0,3 MB | **medido:** 415 KB con 5 anims × 5 dir. (295 PNG) → ~0,8 MB con 10; 12 clases ≈ 10 MB | ~15 piezas × 2 vistas, est. 0,2–0,5 MB |
+| Coste, 12 luchadores (llvmpipe, solo relativo) | 52 ms/frame (un viewport por luchador; uno compartido y la GPU lo bajan mucho) | prototipo en vivo 19 ms; el real reproduce PNG: como C o menos | 10 ms/frame |
+| Direcciones | 8 gratis (girar el modelo) | 5 horneadas + 3 espejo, gratis al hornear | 2 dibujadas + espejo |
+| Zoom / cámara | nítido a cualquier escala | pixelado (se ve en los 3x) | nítido |
+| Equipo y ropa | se cambia sin redibujar | rehornear | piezas nuevas por vista |
+
+Hoy, las animaciones retail ocupan 239 MB en 4.245 PNG.
+
+**Recomendación (opinión, decide el dueño): A.** Es la que mejor encaja
+con lo que pidió: pocas animaciones compartidas, ocho direcciones y equipo
+sin redibujar, VFX en tiempo real y una cámara que puede acercarse (reels,
+remates). El coste por luchador se resuelve con un único viewport 3D para
+todos los actores. B es la alternativa si quiere aspecto pixel y el
+mínimo coste en la Ally; C, si prefiere un estilo de papel recortado y
+dibujar a mano.
+
+**Siguiente, cuando elija:** el prototipo vertical (un combate real contra
+la IA con esa técnica dentro de `fight_view`) y escribir el pipeline (S34).
+
