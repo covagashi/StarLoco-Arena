@@ -162,12 +162,6 @@ model("rock_col", box(0.96, 1, 0.96, { mat: "boulder", jitter: 0.03, seed: 7 }))
 for (const n of ["stone_block", "rock_block", "ice_pillar", "moss_floor", "bridge_end", "stone_col", "rock_col"]) looms(n)
 
 // --- more decoration -----------------------------------------------------------
-// snowy mushrooms (160): two pale stems leaning apart, snow heaped on the caps
-const shroom = (x, z, h, r, lean, turn) => tf({ pos: [x, 0, z], rot: [0, turn, lean] },
-  lathe([0.06, 0, 0.045, h * 0.5, 0.05, h * 0.9, 0.0, h], { mat: "stem", sides: 7, jitter: 0.004 }),
-  sphere(r, { mat: "snow", detail: 3, pos: [0, h, 0], scale: [1, 0.55, 1] }),
-  sphere(r * 0.25, { mat: "snow", detail: 2, pos: [r * 0.8, h - r * 0.35, 0.02], scale: [0.8, 1.6, 0.8] }))
-model("mushrooms", shroom(-0.14, 0, 0.42, 0.17, 8, 0), shroom(0.16, 0.04, 0.55, 0.21, -10, 40), shroom(0.02, -0.15, 0.28, 0.11, 4, 90))
 // ice crystals (158): tall clear crystals, snow on their tips and foot
 const crystal = (x, z, h, r, lean, turn) => tf({ pos: [x, 0, z], rot: [lean, turn, 0] },
   lathe([r, 0, r, h * 0.78, 0, h], { mat: "iceClear", sides: 6, jitter: 0.008 }),
@@ -181,6 +175,12 @@ model("stone_gate",
   box(0.8, 0.22, 0.32, { mat: "boulder", pos: [0, 0.6, 0], rot: [0, 0, 3], jitter: 0.025 }),
   box(0.84, 0.05, 0.34, { mat: "iron", pos: [0, 0.7, 0] }),
   Array.from({ length: 7 }, (_, i) => cone(0.025, 0.08, { mat: "iron", sides: 4, pos: [-0.36 + i * 0.12, 0.75, 0.17], rot: [70, 0, 0] })))
+// the same gate under snow (160): heaped on the lintel, spilling over its ends
+model("stone_gate_snow", stamp("stone_gate"),
+  sphere(0.26, { mat: "snow", detail: 3, pos: [-0.12, 0.78, 0], scale: [1.5, 0.5, 0.75] }),
+  sphere(0.22, { mat: "snow", detail: 3, pos: [0.2, 0.79, 0.02], scale: [1.4, 0.5, 0.75] }),
+  sym("x", sphere(0.09, { mat: "snow", detail: 2, pos: [0.41, 0.66, 0.05], scale: [0.8, 1.4, 0.8] })),
+  sym("x", sphere(0.17, { mat: "snow", detail: 2, pos: [0.26, 0.02, 0.04], scale: [1.3, 0.35, 1.2] })))
 // snowy rocks (2584 tall, 2592 low; 2586 small)
 model("rock_tall",
   lathe([0.34, 0, 0.32, 0.3, 0.25, 0.6, 0.14, 0.86, 0.04, 0.95, 0, 0.96], { mat: "boulder", sides: 7, jitter: 0.045, seed: 5 }),
@@ -191,7 +191,7 @@ model("rock_low",
   rock(0.34, { mat: "boulder", seed: 9, pos: [0, 0.18, 0], scale: [1.3, 0.75, 1] }),
   sphere(0.34, { mat: "snow", detail: 3, pos: [0.04, 0.34, 0], scale: [1.15, 0.5, 0.95] }),
   sphere(0.38, { mat: "snow", detail: 2, pos: [0, 0, 0], scale: [1.4, 0.15, 1.2] }))
-for (const n of ["mushrooms", "ice_crystals", "stone_gate", "rock_tall", "rock_low"]) looms(n)
+for (const n of ["ice_crystals", "stone_gate", "stone_gate_snow", "rock_tall", "rock_low"]) looms(n)
 
 // no pack: the editor loads each piece from out/models/<name>.glb (kit.json
 // lists them); a pack can't resolve the swapped materials across includes

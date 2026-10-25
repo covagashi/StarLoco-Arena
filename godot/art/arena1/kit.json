@@ -51,11 +51,6 @@
 			"musgo verde",
 			"escarcha azul",
 			"oliva seco"
-		],
-		"shroom": [
-			"blanco (pie claro)",
-			"lila (pie rojizo)",
-			"escarcha (pie gris violeta)"
 		]
 	},
 	"pieces": [
@@ -277,15 +272,6 @@
 			"looms": "wood"
 		},
 		{
-			"name": "mushrooms",
-			"label": "Setas nevadas",
-			"kind": "deco",
-			"gfx": [
-				160
-			],
-			"looms": "shroom"
-		},
-		{
 			"name": "ice_crystals",
 			"label": "Cristales de hielo",
 			"kind": "deco",
@@ -300,6 +286,15 @@
 			"kind": "deco",
 			"gfx": [
 				166
+			],
+			"looms": "boulder"
+		},
+		{
+			"name": "stone_gate_snow",
+			"label": "Puerta de piedra nevada",
+			"kind": "deco",
+			"gfx": [
+				160
 			],
 			"looms": "boulder"
 		},

@@ -112,19 +112,28 @@ for (const k of "abc") {
 // --- cut stone (77, 78, 79, 109): big cracked blocks -------------------------
 //   a sandstone   b grey granite   c blue slate
 skins({
-  a: { s0: "#6f6540", s1: "#a69a68", s2: "#c6bb88", s3: "#e0d7aa" },
+  a: { s0: "#5a5032", s1: "#8f8358", s2: "#ada170", s3: "#cfc391" },
   b: { s0: "#4a4a4c", s1: "#7d7d80", s2: "#a2a2a4", s3: "#c8c8c8" },
   c: { s0: "#2e3a4a", s1: "#4f6075", s2: "#6f8399", s3: "#9cb0c4" },
 })
-const slabs = tiles({ rows: 2, cols: 2, gap: 0.012, bevel: 0.04, vary: 0.25, seed: 91 }).as("slabs")
-const cracks = ridged({ scale: 3, octaves: 2, seed: 92 }).threshold(0.93, 0.02).as("cracks")
-const stoneN = noise({ scale: 6, octaves: 4, seed: 93 }).as("stoneN")
+// height first: two courses of cut blocks, chipped corners, fine grain;
+// joints and cracks low, dark and rough; worn edges light; frost in hollows
+const slabs = bricks({ rows: 2, cols: 2, gap: 0.012, bevel: 0.03, wobble: 0.15, seed: 91 }).as("slabs")
+const sGrain = noise({ scale: 22, octaves: 4, seed: 94 })
+const sMid = noise({ scale: 6, octaves: 4, seed: 93 }).warp(noise({ scale: 3, seed: 95 }), 0.05).as("stoneMid")
+const cracks = ridged({ scale: 4, octaves: 3, seed: 92 }).threshold(0.9, 0.04).mul(noise({ scale: 3, seed: 96 }).threshold(0.45, 0.2)).as("cracks")
+const chips = ridged({ scale: 10, octaves: 2, seed: 97 }).threshold(0.88, 0.05).mul(slabs.dist.invert().threshold(0.6, 0.2)).as("chips")
+const stoneH = slabs.mul(slabs.id.levels(0, 1, 0.85, 1)).mul(0.75).add(sMid.mul(0.15)).add(sGrain.mul(0.06)).sub(cracks.mul(0.2)).sub(chips.mul(0.15)).as("stoneH")
+const stoneDirt = stoneH.cavity(0.008, 14).max(slabs.mask.invert().mul(0.6)).max(cracks).as("stoneDirt")
+const stoneWear = stoneH.convex(0.008, 10).mul(noise({ scale: 9, seed: 98 }).threshold(0.4, 0.3)).as("stoneWear")
 for (const k of "abc") {
   const c = (n) => n + k
-  material("stone" + SUF[k], { size: 256, depth: 0.03, ao: 0.7 }, {
-    height: slabs.mul(0.7).add(stoneN.mul(0.3)).sub(cracks.mul(0.3)),
-    color: ramp(slabs.id.mix(stoneN, 0.5), [c("s1"), c("s2"), c("s3")]).mix(c("s0"), slabs.mask.invert().max(cracks).mul(0.75)),
-    rough: 0.85,
+  material("stone" + SUF[k], { size: 512, depth: 0.03, ao: 0.7 }, {
+    height: stoneH,
+    color: ramp(slabs.id.mix(sMid, 0.4), [c("s1"), c("s2"), c("s3")])
+      .hsv({ h: slabs.id.levels(0, 1, -6, 6) })
+      .mix(c("s0"), stoneDirt.mul(0.7)).mix(c("s3"), stoneWear.mul(0.5)),
+    rough: sGrain.levels(0, 1, 0.7, 0.9).mix(0.95, stoneDirt).mix(0.55, stoneWear),
   })
 }
 
@@ -135,32 +144,46 @@ skins({
   b: { b0: "#3c3a38", b1: "#6a6560", b2: "#8f8984", b3: "#b3aea6" },
   c: { b0: "#16171b", b1: "#2e3036", b2: "#474a52", b3: "#666a73" },
 })
-const facets = cells({ scale: 3, seed: 101 }).as("facets")
-const boulN = noise({ scale: 5, octaves: 4, seed: 102 }).as("boulN")
+// boulder: big faceted planes (cells edges as ridges), medium warped noise,
+// fine grain; grime in the hollows, light on the ridges, lichen facing up
+const bc = cells({ scale: 3, jitter: 0.9, seed: 101 })
+const planes = bc.edge.smooth(0.02, 0.35).as("planes")
+const bMid = noise({ scale: 5, octaves: 4, seed: 102 }).warp(noise({ scale: 2, seed: 103 }), 0.08).as("boulMid")
+const bFine = noise({ scale: 26, octaves: 3, seed: 104 })
+const boulH = planes.mul(bc.id.levels(0, 1, 0.8, 1)).mul(0.7).add(bMid.mul(0.22)).add(bFine.mul(0.06)).as("boulH")
+const boulDirt = boulH.cavity(0.01, 12).as("boulDirt")
+const boulEdge = boulH.convex(0.01, 10).as("boulEdge")
 for (const k of "abc") {
   const c = (n) => n + k
-  material("boulder" + SUF[k], { size: 256, depth: 0.03, ao: 0.7 }, {
-    height: facets.mul(0.6).add(boulN.mul(0.4)),
-    color: ramp(facets.id.mix(boulN, 0.4), [c("b1"), c("b2"), c("b3")]).mix(c("b0"), cracks.mul(0.7)),
-    rough: 0.85,
+  material("boulder" + SUF[k], { size: 512, depth: 0.035, ao: 0.7 }, {
+    height: boulH,
+    color: ramp(bc.id.mix(bMid, 0.5), [c("b1"), c("b2"), c("b3")]).hsv({ h: bc.id.levels(0, 1, -5, 5) })
+      .mix(c("b0"), boulDirt.mul(0.65)).mix(c("b3"), boulEdge.mul(0.45)),
+    rough: bFine.levels(0, 1, 0.72, 0.9).mix(0.95, boulDirt).mix(0.6, boulEdge),
   })
 }
 
 // --- moss floor (623): flat green stone, wet moss in the joints --------------
 //   a moss green   b frosted blue   c dry olive
 skins({
-  a: { m0: "#14301f", m1: "#2c5a3a", m2: "#467d55", m3: "#7fb08a" },
-  b: { m0: "#1a2c3a", m1: "#35566e", m2: "#55809a", m3: "#9cc2d4" },
-  c: { m0: "#2c2a14", m1: "#55522a", m2: "#7b7740", m3: "#aaa66c" },
+  a: { m0: "#1f2a24", m1: "#2c5a36", m2: "#467f48", m3: "#86b06a", f1: "#5d655f", f2: "#8a918a" },
+  b: { m0: "#1c2833", m1: "#4f7f9a", m2: "#7fb0c8", m3: "#d4ecf4", f1: "#4f5866", f2: "#7d8796" },
+  c: { m0: "#2a2618", m1: "#6a6a2a", m2: "#94913f", m3: "#c8c27a", f1: "#6a6052", f2: "#968a76" },
 })
-const mossC = tiles({ rows: 2, cols: 2, gap: 0.015, bevel: 0.05, vary: 0.3, seed: 111 }).as("mossC")
-const mottle = noise({ scale: 5, octaves: 4, seed: 113 }).as("mottle")
+// moss floor: four worn flagstones, moss growing out of the joints and
+// patchy over the stone (noise-masked), damp darker hollows
+const mossC = tiles({ rows: 2, cols: 2, gap: 0.016, bevel: 0.04, vary: 0.25, seed: 111 }).as("mossC")
+const mMid = noise({ scale: 5, octaves: 4, seed: 113 }).warp(noise({ scale: 3, seed: 114 }), 0.06).as("mossMid")
+const mFine = noise({ scale: 28, octaves: 3, seed: 115 })
+const mossH = mossC.mul(0.7).add(mMid.mul(0.2)).add(mFine.mul(0.06)).as("mossH")
+const mossGrow = mossC.mask.invert().blur(0.04).mul(1.6).add(mMid.sub(0.5).mul(2.2)).add(0.15).threshold(0.4, 0.14).as("mossGrow")
 for (const k of "abc") {
   const c = (n) => n + k
-  material("moss" + SUF[k], { size: 256, depth: 0.02, ao: 0.6 }, {
-    height: mossC.mul(0.7).add(noise({ scale: 9, octaves: 3, seed: 112 }).mul(0.3)),
-    color: ramp(mottle, [c("m1"), c("m2"), c("m3")]).mix(c("m0"), mossC.mask.invert().mul(0.5)),
-    rough: 0.7,
+  material("moss" + SUF[k], { size: 512, depth: 0.025, ao: 0.6 }, {
+    height: mossH.add(mossGrow.mul(0.08)),
+    color: ramp(mossC.id.mix(mMid, 0.5), [c("f1"), c("f2")]).mix(ramp(mFine.mix(mMid, 0.5), [c("m1"), c("m2"), c("m3")]), mossGrow)
+      .mix(c("m0"), mossH.cavity(0.008, 14).mul(0.6)),
+    rough: mFine.levels(0, 1, 0.6, 0.8).mix(0.9, mossGrow),
   })
 }
 
