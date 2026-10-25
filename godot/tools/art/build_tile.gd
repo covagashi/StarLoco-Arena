@@ -7,11 +7,11 @@ extends SceneTree
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
 ##       -s tools/art/build_tile.gd -- --glb=art/arena5/out/models/ice_block_deco.glb \
-##       --out=<png> [--close=4]
+##       --out=<png> [--close=4] [--cy=0.55 (frame centre height, m)] [--px=200 (frame at 1x)]
 
 const PX := 43.0 * 1.41421356
 
-var opts := {"glb": "", "out": "/tmp/tile.png", "close": "4"}
+var opts := {"glb": "", "out": "/tmp/tile.png", "close": "4", "cy": "0.55", "px": "200"}
 
 
 func _initialize() -> void:
@@ -34,8 +34,9 @@ func _run() -> void:
 			[model] if model is MeshInstance3D else []):
 		_dress(mi)
 	var close := float(opts.close)
-	var small := await _shoot(model.duplicate(), 1.0, Vector2i(200, 200))
-	var big := await _shoot(model, close, Vector2i(roundi(200 * close), roundi(200 * close)))
+	var px := int(opts.px)   # frame side at 1x, in game pixels
+	var small := await _shoot(model.duplicate(), 1.0, Vector2i(px, px))
+	var big := await _shoot(model, close, Vector2i(roundi(px * close), roundi(px * close)))
 	var out := Image.create(small.get_width() + big.get_width() + 30, big.get_height(), false, Image.FORMAT_RGBA8)
 	out.fill(Color("4d4d4d"))
 	out.blit_rect(small, Rect2i(Vector2i.ZERO, small.get_size()), Vector2i(10, big.get_height() - small.get_height() - 10))
@@ -73,7 +74,7 @@ func _shoot(model: Node3D, zoom: float, size: Vector2i) -> Image:
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	cam.size = size.y / (PX * zoom)
 	cam.rotation_degrees = Vector3(-30, 45, 0)
-	cam.position = Vector3(0, 0.55, 0) + cam.transform.basis.z * 20.0
+	cam.position = Vector3(0, float(opts.cy), 0) + cam.transform.basis.z * 20.0
 	vp.add_child(cam)
 	cam.make_current()
 	for i in 3:
