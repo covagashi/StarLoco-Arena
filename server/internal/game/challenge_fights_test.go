@@ -301,9 +301,10 @@ func TestBuildChallengeTeamIsAIReady(t *testing.T) {
 	if team.Coach() == nil || team.Coach().ID != challengeCoachID {
 		t.Errorf("challenge team coach = %+v, want synthetic id %d", team.Coach(), challengeCoachID)
 	}
-	// The opponent coach carries the demon's own name; each fighter is named by
+	// The opponent coach carries the demon's own name (Chikchan since S26:
+	// the 12th-minute demon); each fighter is named by
 	// its breed so the fight is legible.
-	if team.Coach().Name != "Démon de la 12ème minute" {
+	if team.Coach().Name != "Chikchan" {
 		t.Errorf("challenge 33 coach name = %q, want the 12th-minute demon's name", team.Coach().Name)
 	}
 	for i, ff := range team.Fighters {
@@ -359,6 +360,21 @@ func TestBuildChallengeTeamIsAIReady(t *testing.T) {
 			if a.WireID == b.WireID {
 				t.Errorf("wire id %d shared between challenge 33 and 32", a.WireID)
 			}
+		}
+	}
+}
+
+// TestTrialChallengesFieldTheirOwnTeams (S26): the twelve challenges brought
+// into Historia chapters 4 and 5 field their authored teams, not the mirror
+// fallback, and every one is a story challenge.
+func TestTrialChallengesFieldTheirOwnTeams(t *testing.T) {
+	for id, want := range trialChallengeBreeds {
+		got := challengeOpponentBreeds(id, 1)
+		if len(got) != len(want) {
+			t.Errorf("challenge %d fields %v, want %v", id, got, want)
+		}
+		if !isStoryChallenge(id) {
+			t.Errorf("challenge %d is not in a Historia chapter", id)
 		}
 	}
 }

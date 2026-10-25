@@ -430,19 +430,36 @@ const starterTokens int32 = 1000
 // earns for winning a fight.
 const fightWinReward int32 = 50
 
-// awardFightWin credits the win reward to a coach and, if the coach is online,
-// pushes the updated wallet (4001) so the shop balance reflects it live. Errors
-// are logged, never propagated — a reward must not break fight teardown. Safe
-// to call from the fight-actor goroutine (only touches the store + a Send).
+// challengeTokenReward is what a challenge that names no reward card pays on
+// its first clear (owner, 2026-10-25: "aunque no tengan recompensa, que den
+// ese dinero"). Two ranked wins' worth; a repeat clear pays nothing.
+const challengeTokenReward int32 = 100
+
+// tournamentWinTokens is what winning a tournament pays, on top of the
+// definition's reward card when it names one. The client's help text has
+// always said tournaments give tokens; until S26 none did.
+const tournamentWinTokens int32 = 500
+
+// awardFightWin credits the win reward to a coach. Safe to call from the
+// fight-actor goroutine (see creditTokens).
 func (d *Deps) awardFightWin(coachID uint, sess *Session) {
-	if d.Store == nil {
+	d.creditTokens(coachID, sess, fightWinReward, "fight win")
+}
+
+// creditTokens pays n primary-currency tokens to a coach and, if the coach is
+// online, pushes the updated wallet (4001) so the shop balance reflects it
+// live. Errors are logged, never propagated — a reward must not break fight
+// teardown. Safe to call from the fight-actor goroutine (only touches the
+// store + a Send).
+func (d *Deps) creditTokens(coachID uint, sess *Session, n int32, why string) {
+	if d.Store == nil || n <= 0 {
 		return
 	}
-	if err := d.Store.Coaches.CreditCurrency(coachID, primaryCurrency, fightWinReward); err != nil {
-		d.Log.Warn("award fight win", "coach", coachID, "err", err)
+	if err := d.Store.Coaches.CreditCurrency(coachID, primaryCurrency, n); err != nil {
+		d.Log.Warn("credit tokens", "coach", coachID, "why", why, "err", err)
 		return
 	}
-	d.Log.Info("awarded fight win tokens", "coach", coachID, "tokens", fightWinReward)
+	d.Log.Info("credited tokens", "coach", coachID, "why", why, "tokens", n)
 	if sess == nil {
 		return
 	}

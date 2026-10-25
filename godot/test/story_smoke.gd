@@ -38,7 +38,9 @@ func _audit() -> void:
 	var next := Story.next_challenge(won)
 	var rows := 0
 	var locked := 0
+	var total := 0
 	for ch in Story.CHAPTERS:
+		total += ch.challenges.size()
 		for c in ch.challenges:
 			var b: Button = p.find_child("Story%d" % int(c), true, false)
 			if b != null:
@@ -47,9 +49,9 @@ func _audit() -> void:
 					locked += 1
 	var pick: Label = p.find_child("StoryPick", true, false)
 	var stake: Label = p.find_child("Stake", true, false)
-	_record(60021, "campaign", rows == 14 and pick != null and pick.text == NpcDialogs_name(next)
+	_record(60021, "campaign", rows == total and pick != null and pick.text == NpcDialogs_name(next)
 		and stake.text == i18n.t("story.stake_first") and locked > 0,
-		"won %s, 14 rows (%d locked), next '%s'" % [str(won), locked, pick.text if pick != null else "—"])
+		"won %s, %d/%d rows (%d locked), next '%s'" % [str(won), rows, total, locked, pick.text if pick != null else "—"])
 	# 2. a won one, if any
 	if not won.is_empty():
 		p.find_child("Story%d" % int(won[0]), true, false).pressed.emit()

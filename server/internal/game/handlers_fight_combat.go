@@ -1070,10 +1070,11 @@ func winnerSession(f *Fight, coachID uint) *Session {
 	return nil
 }
 
-// awardTournamentPrize grants the definition's reward card to the coach that
-// reached the winner slot.
+// awardTournamentPrize pays the coach that reached the winner slot:
+// tournamentWinTokens always, plus the definition's reward card when it names
+// one.
 //
-// The prize lives in the CLIENT's own data (a type-1000 aub record, field
+// The card lives in the CLIENT's own data (a type-1000 aub record, field
 // aHi(), bound to the GUI field "tournamentRewards") and is never sent over the
 // wire - the tournament panel renders it straight from data.bdat. So the client
 // has been advertising a prize for every tournament built on a definition that
@@ -1081,24 +1082,26 @@ func winnerSession(f *Fight, coachID uint) *Session {
 // the 22 shipped ones do, but both are free to enter and therefore both pass the
 // web console's "no entry ticket" filter and can be picked by an operator.
 func (d *Deps) awardTournamentPrize(tid int64, coachID uint, sess *Session) {
-	if d.Store == nil || d.TournamentDefs == nil {
+	if d.Store == nil {
 		return
 	}
 	t, err := d.Store.Tournaments.GetByWireID(tid)
 	if err != nil || t == nil {
 		return
 	}
-	def := d.TournamentDefs.Get(int16(t.DefID))
-	if def == nil || def.RewardCard == 0 {
-		return // most tournaments advertise no prize
+	var card int32
+	if d.TournamentDefs != nil {
+		if def := d.TournamentDefs.Get(int16(t.DefID)); def != nil {
+			card = def.RewardCard
+		}
 	}
 	// Same dangling-reference guard the challenge rewards use: a definition that
 	// names a card the game does not ship would otherwise leave an inventory row
-	// the client cannot render.
-	if d.Cards != nil && d.Cards.Get(def.RewardCard) == nil {
-		d.Log.Warn("tournament reward names an unknown card; skipping",
-			"tournament", tid, "def", t.DefID, "card", def.RewardCard)
-		return
+	// the client cannot render. Without a card catalogue no card is paid at all.
+	if card != 0 && (d.Cards == nil || d.Cards.Get(card) == nil) {
+		d.Log.Warn("tournament reward names an unknown card; skipping it",
+			"tournament", tid, "def", t.DefID, "card", card)
+		card = 0
 	}
 	// SECURITY: pay at most once, ever.
 	//
@@ -1109,7 +1112,7 @@ func (d *Deps) awardTournamentPrize(tid int64, coachID uint, sess *Session) {
 	// copy of the reward card. IsRegistered is never cleared on winning either.
 	//
 	// ClaimTournamentPrize puts the guard in the UPDATE's WHERE clause, so two
-	// concurrent claims cannot both succeed.
+	// concurrent claims cannot both succeed. The tokens ride on the same claim.
 	claimed, err := d.Store.Tournaments.ClaimTournamentPrize(coachID, tid)
 	if err != nil {
 		d.Log.Warn("claim tournament prize", "coach", coachID, "tournament", tid, "err", err)
@@ -1120,15 +1123,19 @@ func (d *Deps) awardTournamentPrize(tid int64, coachID uint, sess *Session) {
 			"coach", coachID, "tournament", tid)
 		return
 	}
+	d.creditTokens(coachID, sess, tournamentWinTokens, "tournament win")
+	if card == 0 {
+		return // most tournaments advertise no card
+	}
 
-	grants := []store.GrantCard{{TemplateID: def.RewardCard, Quantity: 1}}
+	grants := []store.GrantCard{{TemplateID: card, Quantity: 1}}
 	if err := d.Store.Coaches.GrantCards(coachID, grants); err != nil {
 		d.Log.Warn("award tournament prize", "coach", coachID,
-			"tournament", tid, "card", def.RewardCard, "err", err)
+			"tournament", tid, "card", card, "err", err)
 		return
 	}
 	d.Log.Info("tournament prize awarded", "coach", coachID,
-		"tournament", tid, "def", t.DefID, "card", def.RewardCard)
+		"tournament", tid, "def", t.DefID, "card", card)
 	if sess == nil {
 		return // won while offline; the card is in the inventory at next login
 	}
@@ -1143,7 +1150,6 @@ func (d *Deps) awardTournamentPrize(tid int64, coachID uint, sess *Session) {
 		d.Log.Warn("push inventory after tournament prize", "coach", coachID, "err", err)
 	}
 }
-
 
 // fightPaysDrops (S21): no drop draw in practice — the training dummy, ghosts
 // and a replayed challenge paid a card per win, so cards could be farmed with

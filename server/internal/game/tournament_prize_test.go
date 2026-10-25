@@ -90,10 +90,10 @@ func TestTournamentPrizeIsTheDefinitionsCard(t *testing.T) {
 	}
 }
 
-// TestTournamentWithNoPrizePaysNothing: 20 of the 22 definitions advertise no
-// prize, so the common case must grant nothing at all rather than defaulting to
-// some card.
-func TestTournamentWithNoPrizePaysNothing(t *testing.T) {
+// TestTournamentWithNoPrizePaysNoCard: 20 of the 22 definitions advertise no
+// prize card, so the common case must grant no card at all rather than
+// defaulting to some card. It still pays the tokens (TestTournamentWinPaysTokens).
+func TestTournamentWithNoPrizePaysNoCard(t *testing.T) {
 	// Definition 1 has no reward card - it is also one of the three the server
 	// actually offers today.
 	d, coachID, tid := tournamentPrizeDeps(t, 1)
@@ -248,5 +248,36 @@ func TestByeIsNotGivenWhileAnOpponentIsStillComing(t *testing.T) {
 	}
 	if got := m.BracketSlots(7)[4]; got != 0 {
 		t.Errorf("slot 4 = coach %d before the other semi-final was played", got)
+	}
+}
+
+// tokenBalance is the coach's primary-currency (Card Master token) balance.
+func tokenBalance(t *testing.T, d *Deps, coachID uint) int32 {
+	t.Helper()
+	c, err := d.Store.Coaches.Get(coachID)
+	if err != nil {
+		t.Fatalf("get coach: %v", err)
+	}
+	for _, w := range c.Wallet {
+		if w.CurrencyType == primaryCurrency {
+			return w.Amount
+		}
+	}
+	return 0
+}
+
+// TestTournamentWinPaysTokens (S26): the help text says tournaments give
+// tokens, so every win pays tournamentWinTokens, with or without a card, and
+// only once per tournament.
+func TestTournamentWinPaysTokens(t *testing.T) {
+	for _, defID := range []uint16{1, 11} { // no card / card 26
+		d, coachID, tid := tournamentPrizeDeps(t, defID)
+		before := tokenBalance(t, d, coachID)
+		for i := 0; i < 3; i++ { // the repeats are the 28611 spam case
+			d.awardTournamentPrize(tid, coachID, nil)
+		}
+		if got := tokenBalance(t, d, coachID); got != before+tournamentWinTokens {
+			t.Errorf("def %d: tokens %d -> %d, want +%d once", defID, before, got, tournamentWinTokens)
+		}
 	}
 }

@@ -808,10 +808,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if wfid == _eq_fid:
 				_push_fequip_model()
 		OP_STORY:
+			var was: Array = _story_won.duplicate()
 			_story_won = []
 			for i in payload.get_u16():
 				_story_won.append(int(payload.get_i32()))
 			_push_story_model()
+			_story_after_talk(was)
 		OP_GHOST_LADDER:
 			var l := {"elo": payload.get_i32(), "rank": payload.get_i32(),
 				"fights": payload.get_i32(), "wins": payload.get_i32(), "rows": []}
@@ -3681,7 +3683,7 @@ const LOBBY_WORLDS := [23, 24, 25, 26, 27, 28, 37]
 ## the Team panel's fallen section, the tournament totem (13) the Calendar and
 ## the demon totem (11) the clan tab + the Ranking's demon tab (S18).
 const _CITY_ONE_PER_KIND := [2, 12]
-const _CITY_HIDDEN := [4, 8, 10, 11, 13]
+const _CITY_HIDDEN := [4, 8, 9, 10, 11, 13]   # 9 Demon I: Historia's narrator (S26)
 ## Display order of the kinds in the City panel: shops and mail first.
 const _CITY_ORDER := [1, 2, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
 ## S10: the tutorial island's people, brought to the lobby (no worlds, S05):
@@ -5129,6 +5131,9 @@ func _show_lobby_screen() -> void:
 	_lobby_screen.set_actions_ready(_lobby_ready)
 	_push_hub_model()
 	$UI/Chat.show()
+	if _story_launched != 0 and _story_loaded:
+		_story_launched = 0   # back from a Historia fight: refresh its wins
+		Session.send(OP_STORY_REQUEST, PackedByteArray(), 2)
 
 
 func _make_native_lobby_panel(panel_name: String) -> Control:
@@ -5548,6 +5553,8 @@ func _set_searching(on: bool) -> void:
 ## --- Historia (S21): the campaign panel ---------------------------------
 var _story_won: Array = []          # campaign challenge ids won (60021)
 var _story_intro_seen := {}         # challenge id -> its demon intro played
+var _story_launched := 0            # the Historia challenge last played
+var _story_loaded := false          # a 60021 arrived: _story_won is real
 
 
 func _open_story() -> void:
@@ -5570,6 +5577,13 @@ func _push_story_model() -> void:
 ## lobby), Nilo's lessons before his (in _launch_challenge), then the fight.
 func _story_play(chal: int) -> void:
 	_gui.close("storyDialog")
+	_story_launched = chal
+	var before: Array = Story.TALK_BEFORE.get(chal, [])
+	if not before.is_empty() and not _story_intro_seen.has(chal) and not _story_won.has(chal):
+		_story_intro_seen[chal] = true
+		_talk_face = FACE_DEMON1
+		_talk_pages(NpcDialogs.npc_name(Story.NARRATOR), before, func(): _launch_challenge(chal, 99))
+		return
 	var task := int(Story.INTROS.get(chal, 0))
 	if task != 0 and not _story_intro_seen.has(chal):
 		_story_intro_seen[chal] = true
@@ -5578,6 +5592,22 @@ func _story_play(chal: int) -> void:
 			_talk_pages(NpcDialogs.challenge_name(chal), intro.pages, func(): _launch_challenge(chal, 99))
 			return
 	_launch_challenge(chal, 99)
+
+
+## S26: Demon I's closing line, the first time a 60021 shows the chapter's
+## boss won (`was` is the list before it). After a Historia fight the lobby
+## asks for the list again (_show_lobby_screen), so it plays on return.
+func _story_after_talk(was: Array) -> void:
+	var loaded := _story_loaded
+	_story_loaded = true
+	if not loaded:
+		return
+	for chal in Story.TALK_AFTER:
+		if _story_won.has(int(chal)) and not was.has(int(chal)):
+			_report_criterion(Story.TALK_AFTER_CRITERION)
+			_talk_face = FACE_DEMON1
+			_talk_pages(NpcDialogs.npc_name(Story.NARRATOR), Story.TALK_AFTER[chal], _talk_close)
+			return
 
 
 ## The hub cards' live lines (S20B): how many Story starters, the Elite

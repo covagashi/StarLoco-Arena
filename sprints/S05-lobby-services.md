@@ -282,6 +282,8 @@ Lista completa de Servicios enseñada al dueño ese día:
   que los Card Master de set venden con fichas: solo cambian cartas.
   Verificado: `world_smoke` 44 comprobaciones, 0 fallos ("Bazar de fichas —
   5401 + cardMasterDialog").
-- **Retos de demonio:** renombrarlos con algo precolombino (pendiente de
-  elegir los nombres con el dueño).
-- **Demonio I:** dejarlo como papel menor o quitarlo (pendiente).
+- **Retos de demonio:** nombres mayas (opción A del dueño) → hecho en
+  [S26](./S26-retos-demonios-fichas.md).
+- **Demonio I:** fuera de Servicios, narrador del capítulo 2 de Historia →
+  hecho en S26.
+- Solo queda por confirmar si se quedan los **fuegos artificiales**.

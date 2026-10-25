@@ -367,3 +367,27 @@ func TestDanglingRewardCardIsNotGranted(t *testing.T) {
 		}
 	}
 }
+
+// TestCardlessChallengePaysTokensOnce (S26): a challenge that names no reward
+// card pays challengeTokenReward on its first clear and nothing on a repeat;
+// one that pays cards pays no tokens.
+func TestCardlessChallengePaysTokensOnce(t *testing.T) {
+	d, coachID := challengeRewardDeps(t)
+	if ch := d.ChallengeDefs.Get(38); ch == nil || len(ch.RewardCards) != 0 {
+		t.Fatal("challenge 38 should exist and name no reward card")
+	}
+	before := tokenBalance(t, d, coachID)
+	winChallenge(t, d, coachID, 38)
+	if got := tokenBalance(t, d, coachID); got != before+challengeTokenReward {
+		t.Fatalf("first clear of 38: tokens %d -> %d, want +%d", before, got, challengeTokenReward)
+	}
+	winChallenge(t, d, coachID, 38)
+	if got := tokenBalance(t, d, coachID); got != before+challengeTokenReward {
+		t.Errorf("repeat clear of 38 paid tokens again: %d", got)
+	}
+	mid := tokenBalance(t, d, coachID)
+	winChallenge(t, d, coachID, 33) // pays cards 186 and 189
+	if got := tokenBalance(t, d, coachID); got != mid {
+		t.Errorf("a card-paying challenge also paid tokens: %d -> %d", mid, got)
+	}
+}

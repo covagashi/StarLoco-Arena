@@ -154,12 +154,30 @@ var breedMasterChallenge = map[int32]uint8{
 // gated boss (challenge 33, "Démon de la 12ème minute", which the client only
 // offers once the other four are beaten) fields the largest team.
 var demonChallengeBreeds = map[int32][]uint8{
-	34: {8, 11},        // 58ème minute — bruisers (Iop, Sacrier)
+	34: {8, 11},        // Imix, 58th minute — bruisers (Iop, Sacrier)
 	35: {9, 5},         // 52ème minute — ranged (Cra, Xelor)
 	36: {4, 7},         // 46ème minute — Sram + Eniripsa
 	32: {2, 10, 6},     // 25ème minute — summoners (Osamodas, Sadida, Ecaflip)
 	33: {8, 11, 5, 12}, // 12ème minute — the gated boss
 	45: {1, 3},         // 37ème seconde (world 23) — Feca, Enutrof
+}
+
+// trialChallengeBreeds are the twelve challenges no element ever spawned (they
+// lived on islands this lobby dropped), brought into Historia as chapters 4
+// and 5 in S26. Themed on each challenge's name, growing towards the last.
+var trialChallengeBreeds = map[int32][]uint8{
+	6:  {1, 8, 7},     // Positioning, Strength and Medicine — Feca, Iop, Eniripsa
+	9:  {11, 4},       // Bomberdoll — Sacrier, Sram
+	11: {8, 9},        // The Mega Crackler — Iop, Cra
+	15: {5, 6, 10},    // Xelorite Space-Time Paradox — Xelor, Ecaflip, Sadida
+	37: {4, 10},       // Time: Poison — Sram, Sadida
+	38: {8, 11, 12},   // Time: Violence — Iop, Sacrier, Pandawa
+	39: {9, 5},        // Time: Death Bridge — Cra, Xelor
+	40: {6, 3},        // Time: Cawotte — Ecaflip, Enutrof
+	41: {12, 2},       // Time: Lake — Pandawa, Osamodas
+	42: {4, 9, 5},     // Time: Foggy Quay — Sram, Cra, Xelor
+	43: {7, 1, 12},    // Time: Altruism — Eniripsa, Feca, Pandawa
+	44: {8, 11, 9, 4}, // Time: 5 Seconds — the last one
 }
 
 // defaultChallengeBreeds is the fallback for a challenge that is real (present
@@ -176,6 +194,9 @@ func challengeOpponentBreeds(challengeID int32, mirror int) []uint8 {
 		return []uint8{breed}
 	}
 	if breeds, ok := demonChallengeBreeds[challengeID]; ok {
+		return breeds
+	}
+	if breeds, ok := trialChallengeBreeds[challengeID]; ok {
 		return breeds
 	}
 	if mirror < 1 {
@@ -206,16 +227,17 @@ func fighterBreedName(breedID uint8) string {
 }
 
 // demonChallengeName is the opponent-coach name shown in the fight UI for each
-// demon challenge, recovered from the DemonChallenge element descriptors
-// (content.29.<f0>). The five minute demons live on Totem Arena / world 79; the
-// 37th-second demon is world 23's Barnaby.
+// demon challenge. Since S26 (owner, 2026-10-25) the time demons carry Maya
+// day signs (tzolk'in) in the order they are fought, one name in every
+// language; the client renames them the same way (godot npc_rename.gd). The
+// retail names were "Démon de la 58ème minute" … and "… 37ème seconde".
 var demonChallengeName = map[int32]string{
-	34: "Démon de la 58ème minute",
-	35: "Démon de la 52ème minute",
-	36: "Démon de la 46ème minute",
-	32: "Démon de la 25ème minute",
-	33: "Démon de la 12ème minute",
-	45: "Démon de la 37ème seconde",
+	34: "Imix",     // 58th minute
+	35: "Ik'",      // 52nd minute
+	36: "Ak'bal",   // 46th minute
+	32: "K'an",     // 25th minute
+	33: "Chikchan", // 12th minute, the gated boss
+	45: "Kimi",     // 37th second (Barnaby)
 }
 
 // challengeOpponentName labels the opponent coach shown in the fight UI: the
@@ -277,7 +299,12 @@ func (d *Deps) recordChallengeVictory(coachID uint, sess *Session, challengeID i
 			"coach", coachID, "challenge", challengeID)
 		return nil
 	}
-	return d.awardChallengeRewards(coachID, sess, challengeID)
+	granted := d.awardChallengeRewards(coachID, sess, challengeID)
+	if len(granted) == 0 {
+		// No card to pay: the first clear pays tokens instead (S26).
+		d.creditTokens(coachID, sess, challengeTokenReward, "challenge first clear")
+	}
+	return granted
 }
 
 // challengeAlreadyDone reports whether this coach has cleared the challenge

@@ -17,9 +17,11 @@ import (
 // (godot/src/gamedata/story.gd); TestStoryChallengesMatchClient keeps the
 // two lists equal.
 var storyChapters = [][]int32{
-	{46, 29, 30, 31},     // Aprendizaje: Nilo's lesson, the Demon III's three
-	{34, 35, 36, 32, 33}, // the minute demons, 58 → 12
-	{45, 3, 13, 16, 14},  // Bernabé, the Hell's Tofus, the Demon III's tricks
+	{46, 29, 30, 31},                 // Aprendizaje: Nilo's lesson, the Demon III's three
+	{34, 35, 36, 32, 33},             // the Lords of Time (Maya day signs), 58th → 12th minute
+	{45, 3, 13, 16, 14},              // Bernabé, the Hell's Tofus, the Demon III's tricks
+	{6, 9, 11, 15},                   // S26: the trials no element ever offered
+	{37, 38, 39, 40, 41, 42, 43, 44}, // S26: the eight time challenges
 }
 
 func isStoryChallenge(id int32) bool {
@@ -95,7 +97,6 @@ func handleStoryRequest(s *Session, _ *protocol.C2SFrame) error {
 	}
 	return s.Send(frame)
 }
-
 
 // wearableCards is entitledEquip's rule as a list: every fighter card for an
 // Elite fighter, the sphere-unlocked pools for a Historia one.
