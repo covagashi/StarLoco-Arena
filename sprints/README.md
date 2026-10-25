@@ -90,7 +90,7 @@ Linux y Windows).
 | [S23](./S23-npcs-con-cara.md) | M6 | M | 🟢 cerrado | Los NPC con retrato, Aldebrán presentado y los textos revisados (anexo con todos) |
 | [S24](./S24-combate-legible.md) | M6 | S | 🟢 cerrado | Un combate que se entiende: el letrero de la carta de evento dice qué hace |
 | [S15](./S15-client-packaging.md) | M5 | L | 🟢 cerrado | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
-| [S26](./S26-retos-demonios-fichas.md) | M6 | M | 🟢 cerrado (dos propuestas por hablar) | Fichas en torneos y retos, todos los retos en Historia, los Señores del Tiempo (nombres mayas), Demonio I narrador |
+| [S26](./S26-retos-demonios-fichas.md) | M6 | M | 🟢 cerrado (torneos sin conexión y economía de cartas, aprobados → por planificar) | Fichas en torneos y retos, todos los retos en Historia, los Señores del Tiempo (nombres mayas), Demonio I narrador |
 | [S25](./S25-temporadas.md) | M6 | M | ⚪ esbozo | Temporadas: reinicio suave del Elo y pesetas para el top, para comprar cosméticos |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
 

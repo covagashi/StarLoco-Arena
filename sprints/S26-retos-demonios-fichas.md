@@ -1,6 +1,6 @@
 # S26 — Retos, demonios y fichas
 
-**Planificado, abierto y cerrado:** 2026-10-25 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** 🟢 cerrado (dos propuestas para hablar con el dueño, abajo)
+**Planificado, abierto y cerrado:** 2026-10-25 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** 🟢 cerrado (las dos propuestas, aprobadas por el dueño el 2026-10-25: van a un sprint propio)
 
 ## Objetivo
 
@@ -29,7 +29,7 @@ Suites: `go test ./...` en verde; `run_tests.sh --headless` (429 checks, 0
 fallos); `native_panels` 138 PASS en xvfb; `world_smoke` 43/43;
 `story_smoke` 4/4; `narrator_smoke` 5/5.
 
-## Para hablar con el dueño
+## Propuestas (aprobadas por el dueño, 2026-10-25: "1 ok, 2 ok")
 
 ### Torneos sin conexión: que juegue la IA
 
