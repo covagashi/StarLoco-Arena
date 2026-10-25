@@ -47,18 +47,22 @@ model("bridge",
     { mat: "iron", pos: [-0.48 + PW * (i + 0.5), 0.22, 0.38] }))))
 looms("bridge")
 
-// --- frost (170) and small frost (174): a low tuft of flat ice shards -------
-const shard = (h, r, x, z, lean, turn, mat = "iceClear") =>
-  cone(r, h, { mat, sides: 4, pos: [x, 0, z], rot: [lean, turn, 0], scale: [1, 1, 0.45], jitter: 0.01 })
-model("frost", { scale: 2.0 },
-  sphere(0.07, { mat: "snow", detail: 2, scale: [1.6, 0.4, 1.2] }),
-  shard(0.34, 0.06, 0, 0, 8, 0), shard(0.26, 0.05, 0.12, 0.04, 28, 40), shard(0.22, 0.05, -0.13, 0.03, -26, -30),
-  shard(0.18, 0.04, 0.05, 0.12, 30, 100), shard(0.2, 0.045, -0.06, -0.1, -30, 200), shard(0.15, 0.04, 0.2, -0.06, 40, 70),
-  shard(0.14, 0.035, -0.22, -0.02, -42, -60))
-model("frost_small", { scale: 2.0 },
-  sphere(0.05, { mat: "snow", detail: 2, scale: [1.5, 0.4, 1.2] }),
-  shard(0.2, 0.04, 0, 0, 10, 0), shard(0.15, 0.035, 0.08, 0.02, 32, 50), shard(0.13, 0.035, -0.08, 0.02, -30, -40),
-  shard(0.11, 0.03, 0.02, -0.08, -34, 160))
+// --- frost (170) and small frost (174): a line of drifted snow along one
+// axis of the cell, its crest whipped into sharp peaks by the wind ----------
+// ridge: lumps along x; peaks: [x, height, lean (deg, along the line), side]
+const drift = (len, lumps, peaks) => [
+  lumps.map(([x, r, h], i) => sphere(r, { mat: "snow", detail: 2, pos: [x * len, 0, ((i * 5) % 3 - 1) * 0.015],
+    scale: [1.5, h, 0.8] })),
+  peaks.map(([x, h, lean, side], i) => cone(0.03 + h * 0.07, h * 1.7, { mat: "snow", sides: 4,
+    pos: [x * len, 0.02, side * 0.03], rot: [side * 14, (i * 37) % 90, -lean], scale: [1, 1, 0.55], jitter: 0.006 })),
+]
+model("frost", drift(0.9,
+  [[-0.42, 0.09, 0.7], [-0.25, 0.11, 0.8], [-0.08, 0.1, 0.7], [0.1, 0.09, 0.65], [0.28, 0.08, 0.6], [0.44, 0.06, 0.55]],
+  [[-0.45, 0.13, 25, 0], [-0.32, 0.24, 18, 1], [-0.22, 0.18, 30, -1], [-0.1, 0.27, 15, 0], [0.02, 0.15, 35, 1],
+   [0.14, 0.2, 22, -1], [0.27, 0.12, 30, 0], [0.38, 0.16, 20, 1], [0.48, 0.08, 40, -1]]))
+model("frost_small", drift(0.62,
+  [[-0.38, 0.07, 0.7], [-0.15, 0.09, 0.8], [0.08, 0.08, 0.7], [0.3, 0.06, 0.6]],
+  [[-0.4, 0.1, 28, 0], [-0.22, 0.19, 18, 1], [-0.05, 0.14, 30, -1], [0.12, 0.17, 20, 0], [0.32, 0.09, 35, 1]]))
 looms("frost"); looms("frost_small")
 
 // --- snowy leaves (176): broad leaves fanned out of a snow drift -----------

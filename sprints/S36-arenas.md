@@ -104,6 +104,9 @@ tres looms a escala de juego a la derecha. Plan actualizado en
   - `kit_sheet.py` (fuera del repo) compone la hoja.
 - No hay pack único: kiln no resuelve en un pack los materiales cambiados
   entre ficheros incluidos. El editor cargará `out/models/<nombre>.glb`.
+- Escarcha (170 y 174), corrección del dueño: "es una línea de nieve
+  acumulada". Se rehízo como un cordón de nieve a lo largo de un eje de la
+  casilla, con crestas afiladas por el viento.
 - Siguiente: los demás biomas, que se sacan de la lista maestra (fase A).
 
 - [ ] Por bioma: primero las texturas loom del bioma y después los modelos
