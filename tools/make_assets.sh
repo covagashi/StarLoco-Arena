@@ -36,6 +36,10 @@
 #   pack      anm_pack.py → one atlas.png (+ atlas_m.png) per anim action
 #             instead of one PNG per frame: ~17x fewer files and ~4x less
 #             disk; AnmSprite reads either layout (skip it to keep frames)
+#   prune     prune_unused.py --delete: drops what the client never loads —
+#             non-arena maps, unplayed anim actions and sets, retail XML,
+#             unreached fx/sounds (~435 MB of 823, sprints/S31). Skip it to
+#             keep the whole export (e.g. to work on the deprecated hall)
 #
 # Needs: bash, python3 (+ Pillow for the gui stage), Go (gamedata stage).
 # Re-running is safe: every stage rewrites its own outputs in place, and an
@@ -43,7 +47,7 @@
 # never leaves a half set behind.
 set -euo pipefail
 
-STAGES=(gamedata fx gui musics mapgfx anims sounds pack)
+STAGES=(gamedata fx gui musics mapgfx anims sounds pack prune)
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 AI="$HERE/asset-import"
@@ -338,6 +342,11 @@ do_sounds() {
 # ---- pack ------------------------------------------------------------------
 do_pack() {
 	"$PY" "$AI/anm_pack.py" "$OUT/anims" | tail -1
+}
+
+# ---- prune -----------------------------------------------------------------
+do_prune() {
+	"$PY" "$AI/prune_unused.py" "$OUT" "$DATA_DIST" --delete | tail -2
 }
 
 echo "make_assets: $C -> $OUT"

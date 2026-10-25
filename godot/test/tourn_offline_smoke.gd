@@ -22,6 +22,7 @@ const ReplayFile := preload("res://src/net/replay_file.gd")
 var main
 var failures := 0
 var tid := -1
+var _lang_before := ""
 
 
 func _initialize() -> void:
@@ -57,6 +58,7 @@ func run() -> void:
 		if a.begins_with("--tid="):
 			tid = int(a.get_slice("=", 1))
 	var i18n: Node = root.get_node("I18n")
+	_lang_before = i18n.lang
 	i18n.set_locale("es")
 	main = load("res://src/main.tscn").instantiate()
 	root.add_child(main)
@@ -123,5 +125,7 @@ func _be_i64(v: int) -> PackedByteArray:
 
 
 func _end() -> void:
+	if _lang_before != "":
+		root.get_node("I18n").set_locale(_lang_before)   # set_locale persists it
 	print("[offline] %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)

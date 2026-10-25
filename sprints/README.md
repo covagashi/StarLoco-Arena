@@ -96,6 +96,7 @@ Linux y Windows).
 | [S29](./S29-torneos-sin-conexion.md) | M6 | L | 🟢 cerrado | Torneos sin conexión: el servidor juega el cuadro IA contra IA con el último fantasma de cada uno y graba cada combate |
 | [S27](./S27-supermensajes.md) | M6 | M | ⛔ descartado (dueño, 2026-10-25) | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
+| [S31](./S31-assets-sin-usar.md) | M5 | M | 🟢 cerrado | Fuera los assets sin usar: 435 de 823 MB; quedan 47 mapas, 38 muñecos y 2.395 animaciones; etapa `prune` en el generador |
 | [S30](./S30-tienda.md) | M5 | L | ⚪ esbozo (después de S16) | Tienda: cosméticos con pesetas y compras con dinero real, sin pagar para ganar |
 
 Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · ⏸ en pausa · 🟢 cerrado.

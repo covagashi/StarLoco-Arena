@@ -36,6 +36,11 @@ var _area_seen := false
 var _cd_seen := false
 
 
+## The checks compare English labels ("+3 AP"); the player's own language is
+## put back by _finish.
+var _lang_before := ""
+
+
 func _init() -> void:
 	client = ArenaClient.new()
 	root.add_child(client)
@@ -54,6 +59,9 @@ func _init() -> void:
 
 
 func _send_login() -> void:
+	var i18n := root.get_node("I18n")
+	_lang_before = i18n.lang
+	i18n.set_locale("en")
 	var version := WireWriter.new()
 	version.put_u8(0x02)
 	version.put_u16(70)
@@ -191,7 +199,8 @@ func _on_placement() -> void:
 func _check_ai_names(d: Dictionary) -> void:
 	var AiNames = load("res://src/gamedata/ai_names.gd")
 	var GameText = load("res://src/gamedata/game_text.gd")
-	var want_demon: String = GameText.content(29, 262, "Démon de la 58ème minute")
+	# S26: the time demons carry Maya names, the same in every language
+	var want_demon: String = load("res://src/gamedata/npcdialogs.gd").npc_name(262)
 	var demon := ""
 	for c in d.get("coaches", []):
 		if AiNames.is_ai_coach(int(c.id)):
@@ -407,7 +416,8 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 		_event_desc_ok = tip != "" and tip == NpcDialogs.event_desc(14) \
 				and "(1 " in tip and not "\\" in tip
 		print("[smoke] EVENT CARD tooltip '%s'" % tip.replace("\n", " / "))
-		if nc == 0 or last_txt != NpcDialogs.event_name(14):
+		# S24: the newest card reads "name · what it does"
+		if nc == 0 or not last_txt.begins_with(NpcDialogs.event_name(14)):
 			push_error("event card strip: expected '%s', got n=%d '%s'" % [
 				NpcDialogs.event_name(14), nc, last_txt])
 		# Tackle + ouch — fabricate 4506 ([i32][i32][i64 tackled][i64
@@ -769,5 +779,7 @@ func _finish(code: int, msg: String) -> void:
 	if finished:
 		return
 	finished = true
+	if _lang_before != "":
+		root.get_node("I18n").set_locale(_lang_before)   # set_locale persists it
 	print("[smoke] %s" % msg)
 	quit(code)
