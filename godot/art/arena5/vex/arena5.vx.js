@@ -8,9 +8,9 @@ pal({
   // snow
   s0: "#5f79a6", s1: "#a9bdd9", s2: "#e3ecf6", s3: "#ffffff",
   // lilac ice (the spike)
-  l0: "#55548c", l1: "#8b8ac2", l2: "#c4c3ec", l3: "#f4f3ff",
+  l0: "#6e6aa6", l1: "#a9a6d6", l2: "#dcd9f3", l3: "#f8f7ff",
   // bark (pale, grey-green)
-  t0: "#5d5b46", t1: "#8f8d6f", t2: "#bdbb9b", t3: "#e2e0c6",
+  t0: "#5e5a43", t1: "#8e896a", t2: "#c2bc98", t3: "#e4dfc2",
 })
 ramps("c0 c1 c2 c3", "s0 s1 s2 s3", "l0 l1 l2 l3", "t0 t1 t2 t3")
 
@@ -73,44 +73,72 @@ function snowCap() {
 }
 
 // ---------------------------------------------------------------- ice spike
-// a tall lilac shard with softer shards around it, inner planes painted in
-sprite("ice_spike", { w: 48, h: 110, scale: 4 },
-  ellipse(24, 102, 20, 5, { fill: "#14305e33", blur: 2.5 }),
-  blob([10, 98, 7, 80, 12, 74, 15, 88, 18, 98], { smooth: 0.3, fill: "l1", shade: lit({ depth: 0.4 }), ink: ink("l0", 1) }),
-  blob([30, 98, 33, 70, 38, 62, 40, 78, 38, 98], { smooth: 0.3, fill: "l1", shade: lit({ depth: 0.4 }), ink: ink("l0", 1) }),
-  // the main shard: narrow tip, a kink half way, wide foot
-  blob([24, 8, 26, 20, 30, 44, 33, 62, 35, 80, 36, 98, 12, 98, 13, 82, 17, 60, 18, 46, 21, 24], { smooth: 0.28, fill: "l2", shade: lit({ depth: 0.42, rim: "l3", brush: 0.3 }), ink: ink("l0", 1.2) }),
-  clip(blob([24, 8, 26, 20, 30, 44, 33, 62, 35, 80, 36, 98, 12, 98, 13, 82, 17, 60, 18, 46, 21, 24], { smooth: 0.28, fill: "l2" }),
-    blob([25, 30, 29, 46, 31, 70, 27, 86, 24, 64], { smooth: 0.5, fill: "l1", opacity: 0.7 }),
-    blob([20, 52, 24, 58, 23, 84, 17, 92, 16, 74], { smooth: 0.5, fill: "l3", opacity: 0.55, blur: 0.8 }),
-    blob([28, 76, 33, 84, 32, 96, 27, 96], { smooth: 0.5, fill: "l0", opacity: 0.35 })),
-  circle(24, 9, 2.2, { fill: "l3", glow: { r: 4, color: "l3" } }),
-  // snow at the foot
-  blob([2, 100, 8, 93, 16, 95, 24, 91, 32, 95, 41, 93, 46, 100, 36, 104, 12, 104], { smooth: 0.8, fill: "s2", shade: lit({ c: "s1", rim: "s3", depth: 0.4 }), ink: ink("s0", 1.1) }),
+// big planes: a lit face almost white, a lilac shadow face, a darker lens in
+// the middle; small shards at the foot, snow lumps caught on its edges
+const MAIN = [32, 8, 36, 30, 42, 58, 46, 86, 50, 118, 14, 118, 18, 90, 22, 62, 27, 34]
+sprite("ice_spike", { w: 64, h: 130, scale: 4 },
+  ellipse(32, 122, 26, 6, { fill: "#14305e33", blur: 2.5 }),
+  blob([12, 118, 9, 98, 15, 84, 21, 100, 24, 118], { smooth: 0.2, fill: "l1", shade: lit({ c: "l0", depth: 0.4 }), ink: ink("l0", 1) }),
+  blob(MAIN, { smooth: 0.18, fill: "l2", shade: lit({ c: "l1", depth: 0.3, rim: "l3", brush: 0.15 }), ink: ink("l0", 1.2) }),
+  clip(blob(MAIN, { smooth: 0.18, fill: "l2" }),
+    blob([27, 34, 32, 10, 33, 42, 28, 80, 20, 106, 17, 92, 22, 62], { smooth: 0.25, fill: "l3", opacity: 0.95 }),
+    blob([35, 36, 42, 58, 46, 86, 50, 118, 38, 118, 37, 80, 33, 50], { smooth: 0.25, fill: "l1", opacity: 0.9 }),
+    blob([30, 58, 36, 70, 37, 96, 31, 106, 27, 86], { smooth: 0.5, fill: "l0", opacity: 0.45 }),
+    blob([31, 64, 34, 72, 34, 90, 31, 96, 29, 84], { smooth: 0.5, fill: "l1", opacity: 0.6 })),
+  blob([42, 118, 45, 98, 52, 86, 55, 104, 53, 118], { smooth: 0.2, fill: "l2", shade: lit({ c: "l1", depth: 0.35, rim: "l3" }), ink: ink("l0", 1) }),
+  // a glint at the tip
+  circle(32, 9, 2.3, { fill: "l3", glow: { r: 4, color: "l3" } }),
+  skirt(32, 121, 27),
 )
 
 // ---------------------------------------------------------------- snowy tree
-// a stout, crooked pale trunk, short thick limbs, big snow clumps on the ends
-const clump = (x, y, r) => blob([x - r, y + r * 0.2, x - r * 0.7, y - r * 0.6, x - r * 0.1, y - r * 0.85, x + r * 0.6, y - r * 0.7,
-  x + r, y, x + r * 0.5, y + r * 0.55, x + r * 0.1, y + r * 0.85, x - r * 0.5, y + r * 0.5], { smooth: 0.9, fill: "s2", shade: lit({ c: "s1", rim: "s3", depth: 0.3, brush: 0.2 }), ink: ink("s0", 1) })
-const limb = (pts) => blob(pts, { smooth: 0.55, fill: "t2", shade: lit({ depth: 0.45, rim: "t3" }), ink: ink("t0", 1.1) })
+// a broad old stump in two masses split by vertical planes, thin gnarled
+// limbs climbing out of the top, big round snow clumps that drip over the
+// edges, a skirt of snow and ice at the foot
+const BACK = [22, 114, 28, 104, 31, 86, 33, 62, 36, 40, 45, 31, 57, 31, 62, 42, 64, 70, 66, 100, 68, 114]
+const FRONT = [42, 118, 49, 108, 51, 94, 56, 78, 66, 67, 82, 66, 90, 76, 93, 94, 96, 108, 104, 118]
+const bark = (pts) => blob(pts, { smooth: 0.45, fill: "t2", shade: lit({ c: "t1", depth: 0.42, rim: "t3", brush: 0.4 }), ink: ink("t0", 1.3) })
+const planes = (mask, lightPts, darkPts) => clip(blob(mask, { smooth: 0.45, fill: "t2" }),
+  blob(lightPts, { smooth: 0.4, fill: "t3", opacity: 0.55 }), blob(darkPts, { smooth: 0.4, fill: "t0", opacity: 0.35 }))
+// a gnarled limb: dark body, a lighter top line; tapering
+const twig = (pts, w) => [curve(pts, { ink: { c: "t0", w: w * 1.6 + 1.4, taper: 0.45, wobble: 0.5 } }),
+  curve(pts, { ink: { c: "t1", w: w * 1.3, taper: 0.45, wobble: 0.4 } }),
+  curve(pts.map((v, i) => v - 0.7), { ink: { c: "t3", w: w * 0.45, taper: 0.5, wobble: 0.3 } })]
 
-sprite("snow_tree", { w: 80, h: 100, scale: 4 },
-  ellipse(40, 93, 26, 6, { fill: "#14305e33", blur: 2.5 }),
-  // limbs behind the trunk
-  limb([30, 44, 18, 34, 10, 24, 13, 21, 22, 30, 33, 37]),
-  limb([46, 40, 52, 26, 56, 16, 60, 18, 57, 30, 50, 44]),
-  // trunk
-  blob([22, 92, 25, 76, 27, 60, 25, 44, 24, 30, 30, 18, 38, 18, 41, 30, 44, 46, 47, 62, 52, 78, 58, 92],
-    { smooth: 0.55, fill: "t2", shade: lit({ depth: 0.5, rim: "t3", brush: 0.45 }), ink: ink("t0", 1.4) }),
-  // bark strokes
-  curve([34, 84, 33, 72, 35, 60], { ink: { c: "t1", w: 0.9, taper: 0.5 } }),
-  curve([40, 52, 39, 42, 41, 34], { ink: { c: "t1", w: 0.8, taper: 0.5 } }),
-  // limbs in front
-  limb([44, 62, 56, 56, 66, 50, 70, 53, 60, 60, 47, 68]),
-  limb([28, 66, 18, 60, 12, 62, 13, 58, 20, 55, 30, 59]),
-  // snow: on the broken top, the limb ends and the forks
-  clump(34, 18, 9), clump(11, 21, 5.5), clump(58, 15, 5.5), clump(70, 51, 5), clump(12, 58, 4.5), clump(46, 41, 6),
-  // snow and ice at the foot
-  blob([10, 94, 16, 86, 26, 88, 40, 84, 54, 88, 66, 86, 72, 94, 58, 99, 22, 99], { smooth: 0.8, fill: "s2", shade: lit({ c: "s1", rim: "s3", depth: 0.4 }), ink: ink("s0", 1.1) }),
+sprite("snow_tree", { w: 124, h: 132, scale: 4 },
+  ellipse(62, 121, 46, 8, { fill: "#14305e33", blur: 3 }),
+  // limbs behind the stump
+  twig([38, 52, 26, 45, 15, 41, 6, 34], 2.4), twig([24, 45, 20, 36, 22, 28], 1.4),
+  twig([55, 35, 61, 22, 64, 10], 2.2), twig([61, 22, 68, 17, 74, 18], 1.3),
+  bark(BACK),
+  planes(BACK, [37, 46, 44, 38, 46, 88, 40, 106, 35, 90], [56, 38, 61, 46, 63, 96, 58, 106, 55, 70]),
+  twig([66, 68, 70, 54, 70, 40], 2), twig([70, 52, 76, 46], 1.2),
+  bark(FRONT),
+  planes(FRONT, [58, 86, 66, 73, 71, 75, 64, 112, 56, 114], [84, 72, 91, 80, 92, 112, 85, 114, 82, 90]),
+  twig([82, 70, 87, 57, 88, 44], 2.2), twig([91, 84, 102, 81, 113, 76], 2), twig([102, 81, 106, 88], 1.2),
+  // snow
+  clumpD(47, 29, 12, 9), clumpD(73, 63, 15, 12), clumpD(35, 74, 7, 5.5),
+  clumpD(64, 8, 5.5, 5), clumpD(88, 41, 5.5, 5), clumpD(114, 74, 5, 4.5), clumpD(6, 32, 4.6, 4.2),
+  skirt(62, 118, 46),
 )
+
+// a round snow clump whose lower edge drips: [x, y] centre, radius, how far it hangs
+function clumpD(x, y, r, hang) {
+  const pts = []
+  for (let i = 0; i < 28; i++) {
+    const a = (i / 28) * Math.PI * 2, below = Math.max(0, Math.sin(a))
+    const drip = below * (0.2 + 0.5 * Math.max(0, Math.sin(a * 4 + x)) ** 2)
+    pts.push(x + Math.cos(a) * r * (1 + 0.06 * Math.sin(a * 5 + y)), y + Math.sin(a) * r * 0.8 + drip * hang)
+  }
+  return [blob(pts, { smooth: 0.85, fill: "s2", shade: lit({ c: "s1", depth: 0.35, rim: "s3", brush: 0.15 }), ink: ink("s0", 1) }),
+    clip(blob(pts, { smooth: 0.85, fill: "s2" }), ellipse(x - r * 0.3, y - r * 0.35, r * 0.45, r * 0.3, { fill: "s3", opacity: 0.85, blur: r * 0.15 }))]
+}
+// snow and ice skirt at the foot: an icy blue rim showing under ragged snow
+function skirt(x, y, r) {
+  const ragged = (k, dy) => Array.from({ length: 22 }, (_, i) => {
+    const a = (i / 22) * Math.PI * 2, rr = r * (1 + 0.1 * Math.sin(a * 5 + k))
+    return [x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.17 + dy + (Math.sin(a) > 0 ? 1.5 * Math.abs(Math.sin(a * 5 + k)) : -1.2 * Math.abs(Math.sin(a * 3 + k)))]
+  }).flat()
+  return [blob(ragged(2, 2.5), { smooth: 0.6, fill: "c2", shade: lit({ c: "c1", depth: 0.5 }), ink: ink("c0", 1) }),
+    blob(ragged(5, 0), { smooth: 0.7, fill: "s2", shade: lit({ c: "s1", depth: 0.3, rim: "s3" }), ink: ink("s0", 1.1) })]
+}
