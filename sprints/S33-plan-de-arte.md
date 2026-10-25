@@ -111,3 +111,21 @@ dibujar a mano.
 **Siguiente, cuando elija:** el prototipo vertical (un combate real contra
 la IA con esa técnica dentro de `fight_view`) y escribir el pipeline (S34).
 
+## Después del prototipo: arena 5 (2026-10-25)
+
+Registro de toques artísticos (dueño → cambio → fichero):
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "usa estas skills (loom, pxl, kiln, reel)… el tipo ankalike ya me gusta… mapa 1… primero tiles, mapas, muñecos, animaciones/efectos y por último la iluminación" | skills instaladas; el mapa 1 no es arena, se elige la 5 (Entrenamiento); acabado pintado suave | `godot/art/arena5/` |
+| "la forma de la nieve es muy sólida… pasan el corte" | tiles loom + kiln aprobados | `tiles.tx.js`, `tiles.kx.js` |
+| decoración low-poly: "suspendido", "AI slop" | se descarta; se prueba un bloque solo | — |
+| "quiero pintado" | bloque vectorial SVG | `paint/ice_block.mjs` |
+| "demasiado rígido… ¿qué dice vex?" | vex instalada; bloque, pincho y árbol en vex | `vex/arena5.vx.js` |
+| "pilla el asset real… pásalo por la skill" | trazado vex del pincho y el árbol retail, solo como referencia, fuera del repo | `~/codigo/m7-referencias/` |
+| "hazlo con kiln… solo el árbol y el bloque" | árbol kiln (tocón facetado, corteza loom, gorros de nieve) | `tree.kx.js`, `block.kx.js` |
+| "me quedo con kiln… en el mapa hay demasiada iluminación" | **decidido: kiln para tiles y decoración**; la luz se corrige en el paso de iluminación | `tools/art/patch.gd` |
+
+**Decisión de técnica (dueño, 2026-10-25): kiln (3D real con texturas loom).**
+Queda por decidir si en el juego va en 3D vivo o horneado a 2D.
+
