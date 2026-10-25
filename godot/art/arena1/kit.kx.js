@@ -81,11 +81,11 @@ looms("leaves")
 
 // --- ice spike (157) and double spike (159) ---------------------------------
 model("spike",
-  sphere(0.3, { mat: "snow", detail: 2, scale: [1.2, 0.35, 1.1] }),
-  cone(0.17, 1.75, { mat: "iceClear", sides: 5, jitter: 0.02 }),
-  cone(0.09, 0.6, { mat: "iceClear", sides: 5, pos: [0.14, 0, 0.06], rot: [10, 30, -18], jitter: 0.02 }),
-  cone(0.07, 0.4, { mat: "iceClear", sides: 5, pos: [-0.12, 0, -0.05], rot: [-12, 60, 20], jitter: 0.02 }),
-  sphere(0.11, { mat: "snow", detail: 2, pos: [0.02, 0.1, 0.12], scale: [1.3, 0.6, 1] }))
+  sphere(0.36, { mat: "snow", detail: 2, scale: [1.2, 0.35, 1.1] }),
+  cone(0.29, 1.75, { mat: "iceClear", sides: 6, jitter: 0.025 }),
+  cone(0.14, 0.65, { mat: "iceClear", sides: 5, pos: [0.2, 0, 0.08], rot: [10, 30, -18], jitter: 0.02 }),
+  cone(0.11, 0.45, { mat: "iceClear", sides: 5, pos: [-0.18, 0, -0.07], rot: [-12, 60, 20], jitter: 0.02 }),
+  sphere(0.14, { mat: "snow", detail: 2, pos: [0.02, 0.1, 0.2], scale: [1.3, 0.6, 1] }))
 model("spike_double",
   sphere(0.32, { mat: "snow", detail: 2, scale: [1.3, 0.35, 1.1] }),
   cone(0.15, 1.5, { mat: "iceClear", sides: 5, pos: [-0.06, 0, 0], rot: [0, 0, 9], jitter: 0.02 }),

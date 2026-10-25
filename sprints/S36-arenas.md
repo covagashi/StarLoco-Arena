@@ -107,6 +107,9 @@ tres looms a escala de juego a la derecha. Plan actualizado en
 - Escarcha (170 y 174), corrección del dueño: "es una línea de nieve
   acumulada". Se rehízo como un cordón de nieve a lo largo de un eje de la
   casilla, con crestas afiladas por el viento.
+- Pincho de hielo (157), dueño: "hazlo más grueso". La base pasa de 0,17 a
+  0,29 m de radio, con 6 caras; los dos trozos laterales y la nieve del
+  pie también crecen.
 - Siguiente: los demás biomas, que se sacan de la lista maestra (fase A).
 
 - [ ] Por bioma: primero las texturas loom del bioma y después los modelos
