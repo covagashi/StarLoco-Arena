@@ -142,3 +142,21 @@ elegir las piezas de cada arena en la sesión limpia.
 | 005 | #6 (gfx 176) | no son cristales azules: son **hojas con nieve encima** | renombrar |
 | 005 | #14 (gfx 156) | hielo con bola de nieve | **descartar**; en su sitio va #2 (bloque de hielo transparente, gfx 154) |
 | 005 | #20 (gfx 123) | bloque negro: solo está para dar efecto (sombra) | **quitar**, no es un asset |
+| 010 | #13 (gfx 1665) | rayo de luz desde el cielo | **VFX**, no es pieza de mapa |
+| 010 | #22 (gfx 1342) | efecto de luz, como #13 | **VFX** |
+| 010 | #6 (gfx 123) | el mismo bloque negro de la 005 #20; se parece al efecto VFX | **no se usa** |
+| 010 | #26, #27 (gfx 202, 203) | hojas de árbol tipo arce (Canadá) | renombrar |
+| 010 | #32 (gfx 1016) | arbusto | renombrar |
+| 010 | #33 (gfx 1029) | árbol | renombrar |
+| 010 | #38 (gfx 2559) | árbol sin hojas | renombrar |
+| 010 | #39 (gfx 128) | roca con lava | renombrar |
+| 010 | #44 (gfx 246) | hierba (grass) | renombrar |
+| 010 | #36, #37 (gfx 1675, 1676) | el mismo asset que la 005 #18, #19 (postes farol) | uno solo para las dos arenas |
+| 010 | #23 (gfx 140) | la misma forma que la 005 #4 (gfx 170), pero gris verdoso en vez de blanco | variante de color, pendiente de decidir cómo |
+
+Reglas que salen de esto:
+- gfx 123 (bloque negro) no es un asset en ninguna arena.
+- Los rayos de luz van a VFX, no a la decoración.
+- Hay muchas piezas que repiten forma con otro color; el dueño pregunta si
+  basta con una y cambiar el color (ver la respuesta en la conversación del
+  2026-10-25).
