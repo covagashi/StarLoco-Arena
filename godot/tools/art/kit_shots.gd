@@ -2,8 +2,8 @@ extends SceneTree
 
 ## M7: photograph every piece of an arena kit (art/<arena>/kit.json) in its
 ## three looms, the way the game shows it (orthographic 2:1, 86-px cells,
-## zoomed by --zoom): tiles with a column under them, decoration standing
-## on a plain block. One PNG per piece and loom, for a review sheet.
+## zoomed by --zoom), each piece on its own. One PNG per piece and loom, for
+## a review sheet.
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
 ##       -s tools/art/kit_shots.gd -- --kit=art/arena1/kit.json --out=<dir> [--zoom=1.6]
@@ -28,9 +28,6 @@ func _run() -> void:
 	var kit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://" + opts.kit))
 	var dir: String = String(opts.kit).get_base_dir()
 	DirAccess.make_dir_recursive_absolute(opts.out)
-	var tops := {}
-	for p: Dictionary in kit.pieces:
-		tops[p.name] = p.get("top", 0.0)
 	for p: Dictionary in kit.pieces:
 		for loom: String in kit.looms:
 			var root3 := Node3D.new()
@@ -41,17 +38,7 @@ func _run() -> void:
 			root3.add_child(piece)
 			if p.kind == "tile":
 				piece.position.y = -p.top
-				# the column keeps the block loom only when the piece's looms are the blocks'
-				var col := _model(dir, p.col + (loom if p.looms == "blocks" else ""))
-				col.position.y = -p.top - 1.0
-				root3.add_child(col)
-			else:
-				# on a plain block, so it reads in place; flat pieces on a flat top
-				var under := "ice_clear" if p.kind == "flat" else "ice_block"
-				var blk := _model(dir, under)
-				blk.position.y = -tops[under]
-				root3.add_child(blk)
-			var img := await _shoot(root3, 0.45 if p.kind == "deco" else 0.0)
+			var img := await _shoot(root3, 0.45 if p.kind == "deco" else -0.4 if p.kind == "tile" else 0.05)
 			img.save_png("%s/%s%s.png" % [opts.out, p.name, loom])
 	print("[kit] %d pieces x %d looms -> %s" % [kit.pieces.size(), kit.looms.size(), opts.out])
 	quit(0)

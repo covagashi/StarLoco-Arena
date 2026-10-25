@@ -1,5 +1,5 @@
 {
-	"_doc": "Arena 1 (snow biome) kit for the map editor (S36). Each piece is out/models/<name><loom>.glb, loom '' (a), '_b' or '_c'. kind: tile = a cell's ground block (top = its walk surface in the model, m; col = the column stacked under it), deco = stands on a cell, flat = lies on a cell's top. gfx: the retail pieces it replaces.",
+	"_doc": "Arena 1 (snow biome) kit for the map editor (S36). Each piece is out/models/<name><loom>.glb, loom '' (a), '_b' or '_c'. kind: tile = a cell's ground block (top = its walk surface in the model, m; col = the column stacked under it, if any), deco = stands on a cell, flat = lies on a cell's top. gfx: the retail pieces it replaces.",
 	"biome": "nieve",
 	"looms": {
 		"": "a",
@@ -68,7 +68,6 @@
 			"label": "Puente de madera",
 			"kind": "tile",
 			"top": 0.22,
-			"col": "ice_col",
 			"gfx": [
 				167
 			],

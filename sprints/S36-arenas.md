@@ -98,8 +98,9 @@ tres looms a escala de juego a la derecha. Plan actualizado en
   - Runas: la, ta, sa (ámbar, azul, rojo, con brillo).
 - `tools/art/kit_shots.gd` fotografía cada pieza y cada loom a escala de
   juego.
-  - Los `tile` llevan su columna debajo; los `deco`, un bloque; los `flat`,
-    un bloque transparente.
+  - Cada pieza sale sola. El dueño (2026-10-25): "no entiendo por qué el
+    puente o la escarcha necesitan un bloque". El bloque de debajo solo
+    confundía, y el puente ya no lleva columna en `kit.json`.
   - `kit_sheet.py` (fuera del repo) compone la hoja.
 - No hay pack único: kiln no resuelve en un pack los materiales cambiados
   entre ficheros incluidos. El editor cargará `out/models/<nombre>.glb`.
