@@ -142,7 +142,8 @@ func handleTournamentListRequest(s *Session, _ *protocol.C2SFrame) error {
 // card's id, possibly negated (the client's second card pile), and the server
 // takes one. The server trusts the session identity and ignores the
 // client-supplied coach id. Reply is 28608 dy_0: [i64 tournamentId][i8 errorCode]
-// where 0 = accepted (2 = full, any other = refused).
+// where 0 = accepted (2 = full, 3 = an offline tournament and no ghost to
+// field, S29; any other = refused).
 func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
 	if s.Coach == nil {
 		return nil
@@ -169,6 +170,9 @@ func handleTournamentRegister(s *Session, f *protocol.C2SFrame) error {
 	case s.deps.Tournaments == nil:
 	case s.deps.Tournaments.IsRegistered(s.Coach.ID, tid):
 		// Already in: accepted again, and no second ticket taken.
+	case s.deps.tournamentOffline(t) && !s.hasGhost():
+		// S29: an offline tournament fields the coach's latest ghost.
+		code = regNeedsGhost
 	default:
 		if card := s.deps.tournamentInscriptionCard(t); card != 0 {
 			if cardID != card && cardID != -card {

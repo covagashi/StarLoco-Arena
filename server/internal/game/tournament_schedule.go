@@ -71,6 +71,19 @@ func (d *Deps) TickTournaments() {
 
 func (d *Deps) tickTournament(t *domain.Tournament, now time.Time) {
 	tid := t.WireID()
+	if d.tournamentOffline(t) {
+		// S29: no search periods to open or close. Once the draw is fixed
+		// the server plays the whole bracket, and the winner is paid below.
+		if now.Before(t.SearchPeriodStart) {
+			return
+		}
+		d.playOfflineTournament(t)
+		winner := d.Tournaments.BracketSlots(tid)[bracketWinnerSlot]
+		if winner != 0 || !now.Before(t.LastPeriodEnd()) {
+			d.finishTournament(t, winner, now)
+		}
+		return
+	}
 	closed := t.ClosedPeriodsAt(now)
 	mk := d.Tournaments.periodMarks(tid, closed)
 

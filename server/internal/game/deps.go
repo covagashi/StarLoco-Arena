@@ -81,6 +81,9 @@ type Deps struct {
 	TournamentClock func() time.Time
 	// SeasonClock is the season scheduler's clock (seasons.go); nil = now.
 	SeasonClock func() time.Time
+	// OfflineTournaments: classic tournaments are played by the server
+	// (tournament_offline.go). cmd/server sets it from the config (default on).
+	OfflineTournaments bool
 	// TeamUps holds pending 2v2 invitations and the duos they form.
 	TeamUps *teamUps
 	// WebBaseURL is the portal address announced to Godot clients that ask
@@ -133,6 +136,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerClientConfigHandlers(r, d)
 	registerStoryHandlers(r, d)
 	registerSeasonHandlers(r, d)
+	registerOfflineTournamentHandlers(r, d)
 	registerGhostHandlers(r, d)
 }
 

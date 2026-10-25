@@ -124,7 +124,8 @@ func challengeDoneStat(challengeID int32) int16 {
 // Note this is NOT the same test as "has no Session" — a real coach that
 // disconnected mid-fight also has no session, and must still be paid if it wins.
 func isSyntheticCoach(coachID uint) bool {
-	return coachID == sparringCoachID || coachID == challengeCoachID || coachID == ghostCoachID
+	return coachID == sparringCoachID || coachID == challengeCoachID || coachID == ghostCoachID ||
+		coachID == offlineCoachID || coachID == recorderCoachID
 }
 
 // breedMasterChallenge maps the twelve BreedMaster "test this breed" challenges

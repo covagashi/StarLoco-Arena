@@ -15,6 +15,7 @@ extends Control
 ##   8   InvalidVersion  [u8 2][u16 70] — server keeps socket open; we close it.
 
 const ReplayPlayer := preload("res://src/fight/replay_player.gd")
+const ReplayFile := preload("res://src/net/replay_file.gd")
 const Codec := preload("res://src/net/codec.gd")
 const Overrides := preload("res://src/net/codec_overrides.gd")
 const WireReader := preload("res://src/net/wire_reader.gd")
@@ -55,6 +56,10 @@ const OP_STORY_REQUEST := 60020        # C2S empty (S21)
 const OP_STORY := 60021                # S2C [u16 n]{i32 challengeId} — the campaign challenges won
 const OP_SEASON_REQUEST := 60030       # C2S empty (S25)
 const OP_SEASON := 60031               # S2C [u16 number][i64 endsAt][u8 n]{u16 season, u8 ladder, i32 rank, i32 pesetas}
+const OP_TOURN_MATCHES_REQ := 60032    # C2S [i64 tid] (S29)
+const OP_TOURN_MATCHES := 60033        # S2C [i64 tid][u8 n]{i32 slot, str8 winner, str8 loser, i32 rounds}
+const OP_TOURN_REPLAY_REQ := 60034     # C2S [i64 tid][i32 slot]
+const OP_TOURN_REPLAY_CHUNK := 60035   # S2C [i64 tid][i32 slot][u16 index][u16 count][bytes]
 const OP_FIGHTER_EQUIP_REQUEST := 60022  # C2S [i64 fighterId] (S22)
 const OP_FIGHTER_EQUIP := 60023          # S2C [i64 fighterId][u16 n]{i32 cardId} — what it may wear
 const OP_GHOST_LADDER := 60017         # S2C [i32 elo][i32 rank][i32 fights][i32 wins][u16 n]{str, i32×3, u8}
@@ -794,6 +799,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				var v := payload.get_str("u16", "utf8")
 				if k == "web_base_url":
 					State.web_base_url = _web_base_url(v)
+				elif k == "offline_tournaments":
+					State.offline_tournaments = v == "1"
 			DebugLog.add("client config: web_base_url=%s" % State.web_base_url)
 		OP_GHOST_LIST:
 			var list := []
@@ -810,6 +817,17 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_eq_wearable[wfid] = wear
 			if wfid == _eq_fid:
 				_push_fequip_model()
+		OP_TOURN_MATCHES:
+			var mtid := payload.get_i64()
+			var rows: Array = []
+			for i in payload.get_u8():
+				rows.append({"slot": payload.get_i32(), "winner": payload.get_str("u8", "utf8"),
+					"loser": payload.get_str("u8", "utf8"), "rounds": payload.get_i32()})
+			_tourn_matches = {"tid": mtid, "rows": rows}
+			_refresh_calendar()
+		OP_TOURN_REPLAY_CHUNK:
+			_on_tourn_replay_chunk(payload.get_i64(), payload.get_i32(), payload.get_u16(),
+				payload.get_u16(), payload.get_rest())
 		OP_SEASON:
 			var season := {"number": payload.get_u16(), "ends": payload.get_i64(), "results": []}
 			for i in payload.get_u8():
@@ -1249,7 +1267,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var tid := int(d.tournament_id)
 			var msg := I18n.t("tourn.registered") if int(d.code) == 0 \
 				else (I18n.t("tourn.full") if int(d.code) == 2
-					else I18n.t("tourn.reg_refused", {"code": int(d.code)}))
+					else (I18n.t("tourn.needs_ghost") if int(d.code) == 3
+						else I18n.t("tourn.reg_refused", {"code": int(d.code)})))
 			if int(d.code) == 0:
 				_registered_tids[tid] = true
 			_log_line(I18n.t("tourn.msg", {"tid": tid, "msg": msg}))
@@ -4023,7 +4042,7 @@ func _push_calendar_model() -> void:
 			"tournamentEventFilter": true,
 			"maintenanceEventFilter": true,
 			"broadcastEventFilter": true},
-		"bracket": _tourn_bracket, "status": _tourn_status,
+		"bracket": _tourn_bracket, "status": _tourn_status, "matches": _tourn_matches,
 		# the player tournament form needs the "Création de Tournoi" card
 		"creationCards": int(State.inventory.get(807, 0)),
 		"year": year, "month": month})
@@ -4081,6 +4100,7 @@ func _tourn_event_model(e: Dictionary, row: Dictionary) -> Dictionary:
 		"searching": _tourn_search_tid == tid,
 		# details (S09)
 		"kind": TournamentDefs.kind(def),
+		"offline": State.offline_tournaments and TournamentDefs.kind(def) == TournamentDefs.CLASSIC,
 		"rules": TournamentDefs.rules(def),
 		"periods": periods,
 		"regUntil": _local_hm(int(reg[0][1])) if not reg.is_empty() else "",
@@ -4148,6 +4168,39 @@ var _tourn_search_pending := -1  # the tournament the last 28611 was for
 func _refresh_calendar() -> void:
 	if _gui.is_open("calendarDialog"):
 		_push_calendar_model()
+
+
+## S29: an offline tournament's recorded fixtures (60033) and the one being
+## downloaded (60035 chunks).
+var _tourn_matches := {}
+var _tourn_replay := {}
+
+
+func _on_tourn_replay_chunk(tid: int, slot: int, index: int, count: int, data: PackedByteArray) -> void:
+	if int(_tourn_replay.get("tid", -1)) != tid or int(_tourn_replay.get("slot", -1)) != slot:
+		return
+	_tourn_replay.chunks[index] = data
+	if _tourn_replay.chunks.size() < count:
+		return
+	var gz := PackedByteArray()
+	for i in count:
+		gz.append_array(_tourn_replay.chunks.get(i, PackedByteArray()))
+	_tourn_replay = {}
+	var replay := ReplayFile.parse(gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP))
+	if replay.is_empty():
+		_tourn_status = {"tid": tid, "text": I18n.t("replay.err_file"), "ok": false}
+		_refresh_calendar()
+		return
+	# kept with the other replays, so it can be watched again from there
+	var head: Dictionary = replay.header
+	var path := ReplayFile.DIR.path_join(ReplayFile.file_name(int(head.get("recorded_at", 0)),
+		", ".join(head.get("left", [])), ", ".join(head.get("right", []))))
+	ReplayFile.write(path, head, replay.frames)
+	_tourn_status = {}
+	_gui.close("calendarDialog")
+	var err := ReplayPlayer.play(get_tree(), path)
+	if err != "":
+		_log_line("[color=red]%s[/color]" % I18n.t(err))
 
 
 ## 28649 [i64 tid][i32 page][str32 name] — only an entrant gets the seats.
@@ -5374,6 +5427,20 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeTournTree":
 			_tourn_tree(int(args[0]))
+			return
+		"nativeTournMatches":
+			var mw := WireWriter.new()
+			mw.put_i64(int(args[0]))
+			Session.send(OP_TOURN_MATCHES_REQ, mw.raw(), 2)
+			return
+		"nativeTournReplay":
+			var rw := WireWriter.new()
+			rw.put_i64(int(args[0]))
+			rw.put_i32(int(args[1]))
+			_tourn_replay = {"tid": int(args[0]), "slot": int(args[1]), "chunks": {}}
+			_tourn_status = {"tid": int(args[0]), "text": I18n.t("cal.replay_loading"), "ok": true}
+			_refresh_calendar()
+			Session.send(OP_TOURN_REPLAY_REQ, rw.raw(), 2)
 			return
 		"nativeTournSearch":
 			_tourn_search(int(args[0]))

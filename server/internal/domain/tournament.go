@@ -289,3 +289,22 @@ const TournamentKindPrivate uint8 = 1
 // Official reports whether the tournament was set up from the console rather
 // than created by a player.
 func (t *Tournament) Official() bool { return t != nil && t.CreatorCoachID == 0 }
+
+// TournamentMatch is one fixture the server played on its own (S29: the
+// offline tournaments). Slot is where the winner landed; Replay is the
+// gzipped SLRP recording the Godot client plays (godot/src/net/replay_file.gd).
+type TournamentMatch struct {
+	ID               uint   `gorm:"primaryKey"`
+	TournamentWireID int64  `gorm:"uniqueIndex:idx_tournament_match;not null"`
+	Slot             int32  `gorm:"uniqueIndex:idx_tournament_match;not null"`
+	WinnerCoachID    uint   `gorm:"not null"`
+	LoserCoachID     uint   `gorm:"not null"`
+	WinnerName       string `gorm:"size:64;not null"`
+	LoserName        string `gorm:"size:64;not null"`
+	Seed             int64  `gorm:"not null"`
+	Rounds           int32  `gorm:"not null"`
+	Replay           []byte
+}
+
+// TableName pins the table name.
+func (TournamentMatch) TableName() string { return "tournament_matches" }

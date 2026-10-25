@@ -591,6 +591,8 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 	if bool(event.get("searching", false)):
 		state = I18n.t("cal.searching")
 	parent.add_child(UiStyle.caption(state))
+	if bool(event.get("offline", false)):
+		label(parent, I18n.t("cal.offline")).name = "Offline%d" % tid
 	var bar := row(parent)
 	if not registered:
 		var ticketed := int(event.get("entryCard", 0)) != 0
@@ -601,16 +603,31 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 	else:
 		button(bar, I18n.t("cal.bracket"), func(): send("nativeTournTree", [tid])).name = "Bracket%d" % tid
 		var searching := bool(event.get("searching", false))
-		if searching or bool(event.get("searchOpen", false)):
+		if bool(event.get("offline", false)):
+			pass   # S29: no search, the server plays it (see the note below)
+		elif searching or bool(event.get("searchOpen", false)):
 			button(bar, I18n.t("cal.search_cancel") if searching else I18n.t("cal.search"),
 				func(): send("nativeTournSearch", [tid])).name = "Search%d" % tid
 		else:
 			label(bar, I18n.t("cal.search_closed"))
+	if bool(event.get("offline", false)):
+		# S29: the server plays it; anyone can watch the fixtures once played
+		button(bar, I18n.t("cal.matches"), func(): send("nativeTournMatches", [tid])).name = "Matches%d" % tid
 	if int(status.get("tid", -2)) == tid:
 		var line := label(parent, str(status.get("text", "")))
 		line.name = "TournStatus%d" % tid
 		if not bool(status.get("ok", true)):
 			line.add_theme_color_override("font_color", UiStyle.MUTED)
+	var matches: Dictionary = data("calendar.matches", {})
+	if int(matches.get("tid", -2)) == tid:
+		var rows: Array = matches.get("rows", [])
+		if rows.is_empty():
+			label(parent, I18n.t("cal.matches_none")).name = "MatchesNone%d" % tid
+		for m in rows:
+			var line := row(parent)
+			label(line, I18n.t("cal.match_row", {"winner": m.winner, "loser": m.loser,
+				"rounds": int(m.rounds)}))
+			button(line, I18n.t("cal.watch"), func(): send("nativeTournReplay", [tid, int(m.slot)])).name = "Watch%d_%d" % [tid, int(m.slot)]
 	if int(bracket.get("tid", -2)) == tid:
 		var slots: Dictionary = bracket.get("slots", {})
 		if slots.is_empty():

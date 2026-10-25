@@ -414,3 +414,35 @@ func (r *TournamentRepo) PointsAndRank(coachID uint, from, to time.Time) (int32,
 	}
 	return 0, 0, nil
 }
+
+// SaveMatch stores a fixture the server played (S29), replacing an earlier
+// one for the same slot.
+func (r *TournamentRepo) SaveMatch(m *domain.TournamentMatch) error {
+	if err := r.db.Where("tournament_wire_id = ? AND slot = ?", m.TournamentWireID, m.Slot).
+		Delete(&domain.TournamentMatch{}).Error; err != nil {
+		return err
+	}
+	return r.db.Create(m).Error
+}
+
+// Matches lists a tournament's played fixtures without their recordings,
+// first round first.
+func (r *TournamentRepo) Matches(tid int64) ([]domain.TournamentMatch, error) {
+	var out []domain.TournamentMatch
+	err := r.db.Omit("replay").Where("tournament_wire_id = ?", tid).
+		Order("slot DESC").Find(&out).Error
+	return out, err
+}
+
+// Match loads one played fixture with its recording (nil when there is none).
+func (r *TournamentRepo) Match(tid int64, slot int32) (*domain.TournamentMatch, error) {
+	var m domain.TournamentMatch
+	err := r.db.Where("tournament_wire_id = ? AND slot = ?", tid, slot).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}

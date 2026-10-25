@@ -312,6 +312,14 @@ world:
   match_band: 300
   match_band_growth: 150
 
+  # Classic tournaments play themselves: each entrant fields its latest ghost
+  # (a saved team with its rules) and, when registration closes, the server
+  # plays the whole bracket AI against AI and records every fixture as a
+  # replay. Set false to keep live fixtures, where both entrants must be
+  # online in a search period. Evolution and graveyard tournaments are always
+  # live.
+  offline_tournaments: true
+
 
 # -----------------------------------------------------------------------------
 #  Logging & diagnostics

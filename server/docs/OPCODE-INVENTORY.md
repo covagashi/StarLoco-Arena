@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 361 |
-| **C2S handled (H)** | 122 |
-| **S2C emitted (E)** | 162 |
+| Rows in the master table | 365 |
+| **C2S handled (H)** | 124 |
+| **S2C emitted (E)** | 164 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -550,6 +550,10 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60023 | S2C | E | Godot extension (no retail class) | the fighter cards it may wear - `[i64 fighterId][u16 n] n×{[i32 cardId]}`: all for an Elite fighter, the sphere-unlocked pools for a Historia one (`entitledEquip`'s rule) |
 | 60030 | C2S | H | Godot extension (no retail class) | `handleSeasonRequest` (S25) - empty; answered by 60031 |
 | 60031 | S2C | E | Godot extension (no retail class) | the open season and the caller's unseen results - `[u16 number][i64 endsAtUnix][u8 n] n×{[u16 season][u8 ladder 1 Ranking, 2 ghosts][i32 rank][i32 pesetas]}`; sending it marks them seen |
+| 60032 | C2S | H | Godot extension (no retail class) | `handleTournMatchesRequest` (S29) - `[i64 tid]`; answered by 60033 |
+| 60033 | S2C | E | Godot extension (no retail class) | the fixtures the server played offline - `[i64 tid][u8 n] n×{[i32 slot][str winner][str loser][i32 rounds]}` (u8-length UTF-8) |
+| 60034 | C2S | H | Godot extension (no retail class) | `handleTournReplayRequest` (S29) - `[i64 tid][i32 slot]`; answered by 60035 × count |
+| 60035 | S2C | E | Godot extension (no retail class) | one chunk of a fixture's recording (gzipped SLRP) - `[i64 tid][i32 slot][u16 index][u16 count][bytes]` |
 
 ---
 

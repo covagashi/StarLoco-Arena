@@ -419,6 +419,7 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 		Tournaments: tm,
 		Log:         log,
 	}
+	deps.OfflineTournaments = cfg.World.OfflineTournamentsEnabled() // S29
 	deps.UseGameData(data)
 	return deps, loc
 }

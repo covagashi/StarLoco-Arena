@@ -760,3 +760,33 @@ func buildTournamentList(coachID uint, tm *TournamentManager, ts []domain.Tourna
 	}
 	return protocol.EncodeS2C(protocol.OpTournamentList, w.Bytes())
 }
+
+// Fixture is one contested pairing of a bracket: the coaches in slot (even)
+// and slot+1, playing for slot/2.
+type Fixture struct {
+	Slot int32
+	A, B uint
+}
+
+// PendingFixtures lists the fixtures whose two sides are known and whose
+// parent slot is still empty, deepest round first (S29: what the offline
+// runner plays next).
+func (m *TournamentManager) PendingFixtures(tid int64) []Fixture {
+	first := m.firstRoundSlots(tid)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	slots := m.bracketSlotsLocked(tid, first)
+	var out []Fixture
+	for slot := int32(bracketSlots) - 2; slot >= 2; slot -= 2 {
+		a, okA := slots[slot]
+		b, okB := slots[slot^1]
+		if !okA || !okB {
+			continue
+		}
+		if _, decided := slots[slot/2]; decided {
+			continue
+		}
+		out = append(out, Fixture{Slot: slot, A: a, B: b})
+	}
+	return out
+}

@@ -14,6 +14,8 @@ import (
 // Keys today: "web_base_url" — the portal's public address, e.g.
 // "https://arena.example.com", which the client's bug reporter POSTs to
 // ("/{lang}/bug-report"). Absent when the portal is disabled.
+// "offline_tournaments" = "1" when classic tournaments play themselves
+// (S29); absent otherwise.
 func registerClientConfigHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpClientConfigRequest, handleClientConfigRequest)
 }
@@ -24,10 +26,17 @@ func handleClientConfigRequest(s *Session, _ *protocol.C2SFrame) error {
 	if s.deps.WebBaseURL != "" {
 		keys++
 	}
+	if s.deps.OfflineTournaments {
+		keys++
+	}
 	w.U8(uint8(keys))
 	if s.deps.WebBaseURL != "" {
 		w.StringU8("web_base_url")
 		w.StringU16(s.deps.WebBaseURL)
+	}
+	if s.deps.OfflineTournaments {
+		w.StringU8("offline_tournaments")
+		w.StringU16("1")
 	}
 	frame, err := protocol.EncodeS2C(protocol.OpClientConfig, w.Bytes())
 	if err != nil {

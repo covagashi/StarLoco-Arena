@@ -250,6 +250,16 @@ type WorldConfig struct {
 	// MatchBandGrowth is how much MatchBand widens per second of waiting. 0
 	// makes the band fixed, which on a quiet server can mean never matching.
 	MatchBandGrowth int `yaml:"match_band_growth"`
+	// OfflineTournaments makes the server play classic tournaments on its own
+	// (S29): each entrant fields its latest ghost and the whole bracket is
+	// played AI against AI when registration closes. Default true; false keeps
+	// the live fixtures, where both entrants must be online in a search period.
+	OfflineTournaments *bool `yaml:"offline_tournaments"`
+}
+
+// OfflineTournamentsEnabled reports whether classic tournaments play offline.
+func (w WorldConfig) OfflineTournamentsEnabled() bool {
+	return w.OfflineTournaments == nil || *w.OfflineTournaments
 }
 
 // DBConfig selects and configures the database backend.

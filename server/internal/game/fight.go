@@ -414,6 +414,9 @@ type Fight struct {
 	// ghost is set on a fight against a ghost team (ghost.go): it records the
 	// fight's seed and outcome when it ends.
 	ghost *ghostFightInfo
+	// offline marks a fight the server plays alone, with nobody watching live
+	// (S29, tournament_offline.go): checkFightEnd only records its winner.
+	offline *offlineFight
 	// decisions is the per-turn decision log: one row per action a fighter takes
 	// (see fightlog.go). Capped at maxFightDecisions. turnActions counts the
 	// actions the CURRENT turn's fighter has taken so a turn that ends without

@@ -150,3 +150,17 @@ func (r *GhostRepo) FightsByCoach(coachID uint) ([]domain.GhostFight, error) {
 	err := r.db.Where("coach_id = ?", coachID).Order("id DESC").Find(&out).Error
 	return out, err
 }
+
+// LatestByCoach is the ghost a coach saved last (nil when it has none): the
+// team an offline tournament fields for it (S29).
+func (r *GhostRepo) LatestByCoach(coachID uint) (*domain.GhostTeam, error) {
+	var g domain.GhostTeam
+	err := r.db.Where("coach_id = ?", coachID).Order("id DESC").First(&g).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &g, nil
+}

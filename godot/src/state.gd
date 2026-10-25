@@ -105,6 +105,9 @@ static var net: Node = null
 ## Server-announced portal address (opcode 60001, key web_base_url) — the bug
 ## reporter POSTs to "<base>/<lang>/bug-report". "" = portal not announced.
 static var web_base_url := ""
+## Server-announced (60001 key offline_tournaments, S29): classic tournaments
+## are played by the server with each entrant's latest ghost.
+static var offline_tournaments := false
 
 ## Active UI locale ("es"/"en"/"fr") — set by the I18n autoload at boot and on
 ## every language switch; chat/bug-report payloads read it for user[lang].

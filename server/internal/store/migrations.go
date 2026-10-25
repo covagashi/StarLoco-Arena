@@ -87,6 +87,7 @@ func baselineModels() []any {
 		&domain.GhostRating{},
 		&domain.Season{},
 		&domain.SeasonResult{},
+		&domain.TournamentMatch{},
 	}
 }
 
@@ -262,6 +263,15 @@ var migrations = []migration{
 		Name:    "seasons",
 		Up: func(tx *gorm.DB) error {
 			return tx.AutoMigrate(&domain.Season{}, &domain.SeasonResult{})
+		},
+	},
+	{
+		// Offline tournaments (S29): the fixtures the server played, with
+		// their recordings.
+		Version: 18,
+		Name:    "tournament_matches",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.TournamentMatch{})
 		},
 	},
 }

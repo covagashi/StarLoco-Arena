@@ -815,6 +815,14 @@ func (d *Deps) checkFightEnd(f *Fight) {
 		}
 	}
 
+	// An offline fixture (S29) has no real coach in it: record the winner,
+	// close the recording and stop. None of the stats, rewards and saves
+	// below may run on its synthetic coaches.
+	if f.offline != nil {
+		f.endOffline(winnerTeam)
+		return
+	}
+
 	// Persist win/loss stats + update the ranked ladder strength for each real
 	// coach, THEN declare the winner (so END_FIGHT carries the NEW strengths).
 	// Hold the coach lock while mutating so a concurrent session-side save (on

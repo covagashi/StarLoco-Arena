@@ -45,6 +45,37 @@ static func write(path: String, header: Dictionary, frames: Array) -> Error:
 	return OK
 
 
+## Parse a whole replay from memory (S29: a tournament fixture the server
+## recorded arrives as bytes, already gunzipped): same result as read().
+static func parse(raw: PackedByteArray) -> Dictionary:
+	if raw.size() < 9 or raw.slice(0, 4).get_string_from_ascii() != MAGIC:
+		return {}
+	var at := 5
+	var hlen := _be32(raw, at)
+	at += 4
+	if at + hlen > raw.size():
+		return {}
+	var head: Variant = JSON.parse_string(raw.slice(at, at + hlen).get_string_from_utf8())
+	if not head is Dictionary:
+		return {}
+	at += hlen
+	var frames := []
+	while at + 10 <= raw.size():
+		var t := _be32(raw, at)
+		var op := (raw[at + 4] << 8) | raw[at + 5]
+		var n := _be32(raw, at + 6)
+		at += 10
+		if at + n > raw.size():
+			break
+		frames.append({"t": t, "op": op, "raw": raw.slice(at, at + n)})
+		at += n
+	return {"header": head, "frames": frames}
+
+
+static func _be32(raw: PackedByteArray, at: int) -> int:
+	return (raw[at] << 24) | (raw[at + 1] << 16) | (raw[at + 2] << 8) | raw[at + 3]
+
+
 ## Read the header only (the replay list) — {} when the file isn't a replay.
 static func read_header(path: String) -> Dictionary:
 	var f := _open(path)

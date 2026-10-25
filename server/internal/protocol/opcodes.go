@@ -629,6 +629,16 @@ const (
 	// [u16 number][i64 endsAtUnix][u8 n]{[u16 season][u8 ladder][i32 rank][i32 pesetas]}
 	OpSeasonRequest = 60030 // C2S: empty
 	OpSeason        = 60031 // S2C
+
+	// Offline tournaments (S29, game/tournament_offline.go) — Godot only: the
+	// fixtures the server played and their recordings (gzipped SLRP, sent in
+	// chunks because a frame holds at most 64 KiB).
+	// 60032 [i64 tid] → 60033 [i64 tid][u8 n]{[i32 slot][str winner][str loser][i32 rounds]} (u8-length UTF-8)
+	// 60034 [i64 tid][i32 slot] → 60035 [i64 tid][i32 slot][u16 index][u16 count][bytes] × count
+	OpTournMatchesRequest = 60032 // C2S
+	OpTournMatches        = 60033 // S2C
+	OpTournReplayRequest  = 60034 // C2S
+	OpTournReplayChunk    = 60035 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).
