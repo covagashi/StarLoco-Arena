@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 359 |
-| **C2S handled (H)** | 121 |
-| **S2C emitted (E)** | 161 |
+| Rows in the master table | 361 |
+| **C2S handled (H)** | 122 |
+| **S2C emitted (E)** | 162 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -548,6 +548,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60021 | S2C | E | Godot extension (no retail class) | Historia - `[u16 n] n×{[i32 challengeId]}`, the campaign challenges (`storyChapters`) this coach has won (`statChallengeDoneBase + id`) |
 | 60022 | C2S | H | Godot extension (no retail class) | `handleFighterEquipRequest` (S22) - `[i64 fighterId]`; answered by 60023 |
 | 60023 | S2C | E | Godot extension (no retail class) | the fighter cards it may wear - `[i64 fighterId][u16 n] n×{[i32 cardId]}`: all for an Elite fighter, the sphere-unlocked pools for a Historia one (`entitledEquip`'s rule) |
+| 60030 | C2S | H | Godot extension (no retail class) | `handleSeasonRequest` (S25) - empty; answered by 60031 |
+| 60031 | S2C | E | Godot extension (no retail class) | the open season and the caller's unseen results - `[u16 number][i64 endsAtUnix][u8 n] n×{[u16 season][u8 ladder 1 Ranking, 2 ghosts][i32 rank][i32 pesetas]}`; sending it marks them seen |
 
 ---
 

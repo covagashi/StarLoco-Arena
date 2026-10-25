@@ -473,9 +473,20 @@ func _inventory() -> void:
 		I18n.t("inv.value_n", {"n": int(selected.get("value", 0))})])
 
 
+## S25: "Temporada N · termina en D días · el top 50 gana pesetas".
+func _season_line() -> void:
+	var s: Dictionary = data("season", {})
+	if int(s.get("number", 0)) <= 0:
+		return
+	var days := maxi(0, ceili((int(s.get("ends", 0)) - Time.get_unix_time_from_system()) / 86400.0))
+	label(body, I18n.t("season.line", {"n": int(s.number), "days": days})).name = "Season"
+
+
 func _ladder() -> void:
 	# tabs as buttons, your row marked, "Mi puesto" first among the pager
 	# (the S18 sketch, tools/mock_screens.py ranking)
+	if tab == 0:
+		_season_line()
 	tabs(body, [I18n.t("ladder.tab_1v1"), I18n.t("ladder.tab_boss"), I18n.t("ladder.tab_2v2"), I18n.t("ladder.tab_clans"), I18n.t("ladder.tab_tourn"), I18n.t("ladder.tab_pro"), I18n.t("ladder.tab_demon")], func(i): send("nativeLadderTab", [i]))
 	var fields := [["position", "coachName", "totalVictories", "totalDefeats"], ["position", "creatorCoachName", "reputation", "totalVictories"], ["position", "teamName", "totalVictories", "totalDefeats"], ["position", "name", "bossName", "strength"], ["position", "name", "points"], ["position", "coachName", "guildName", "rating"], ["position", "demonName", "guildName", "quarterlyReputationPoints"]]
 	var headings := [
@@ -897,6 +908,7 @@ func _ghost_ladder() -> void:
 	if l.is_empty():
 		label(body, I18n.t("ghost.loading"))
 		return
+	_season_line()
 	var rank := int(l.get("rank", 0))
 	label(body, I18n.t("ghost.my_rating", {"elo": l.get("elo", 1000),
 		"rank": rank if rank > 0 else "—", "fights": l.get("fights", 0),

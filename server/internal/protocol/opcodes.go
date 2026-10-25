@@ -623,6 +623,12 @@ const (
 	// every fighter card. [i64 fighterId] → [i64 fighterId][u16 n]{[i32 cardId]}
 	OpFighterEquipRequest = 60022 // C2S
 	OpFighterEquip        = 60023 // S2C
+
+	// Ladder seasons (S25, game/seasons.go) — Godot only: the open season and
+	// the caller's results not yet shown (sending them marks them seen).
+	// [u16 number][i64 endsAtUnix][u8 n]{[u16 season][u8 ladder][i32 rank][i32 pesetas]}
+	OpSeasonRequest = 60030 // C2S: empty
+	OpSeason        = 60031 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

@@ -671,6 +671,10 @@ func (r *CoachRepo) DeleteCoach(coachID uint) error {
 			Delete(&domain.CoachTomeCard{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("coach_id = ?", coachID).
+			Delete(&domain.SeasonResult{}).Error; err != nil {
+			return err
+		}
 
 		// Social edges in BOTH directions (owner-side and target-side).
 		if err := tx.Where("owner_id = ? OR friend_id = ?", coachID, coachID).

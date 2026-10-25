@@ -85,6 +85,8 @@ func baselineModels() []any {
 		&domain.GhostTeam{},
 		&domain.GhostFight{},
 		&domain.GhostRating{},
+		&domain.Season{},
+		&domain.SeasonResult{},
 	}
 }
 
@@ -252,6 +254,14 @@ var migrations = []migration{
 		Name:    "ghost_ratings",
 		Up: func(tx *gorm.DB) error {
 			return tx.AutoMigrate(&domain.GhostRating{})
+		},
+	},
+	{
+		// Ladder seasons (S25): the seasons and each one's paid places.
+		Version: 17,
+		Name:    "seasons",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.Season{}, &domain.SeasonResult{})
 		},
 	},
 }

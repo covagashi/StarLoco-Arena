@@ -204,6 +204,7 @@ func run(configPath, dataOverride string) error {
 	// Scheduled tournaments open and close their search periods and finish on
 	// the clock, whether or not anyone is looking.
 	go deps.RunTournamentScheduler(ctx)
+	go deps.RunSeasonScheduler(ctx)
 
 	if err := srv.Serve(ctx, gameLn); err != nil {
 		return fmt.Errorf("game server stopped: %w", err)

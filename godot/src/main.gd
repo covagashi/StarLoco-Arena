@@ -53,6 +53,8 @@ const OP_GHOST_DELETE := 60015         # C2S [i64 ghost]
 const OP_GHOST_LADDER_REQ := 60016     # C2S empty
 const OP_STORY_REQUEST := 60020        # C2S empty (S21)
 const OP_STORY := 60021                # S2C [u16 n]{i32 challengeId} — the campaign challenges won
+const OP_SEASON_REQUEST := 60030       # C2S empty (S25)
+const OP_SEASON := 60031               # S2C [u16 number][i64 endsAt][u8 n]{u16 season, u8 ladder, i32 rank, i32 pesetas}
 const OP_FIGHTER_EQUIP_REQUEST := 60022  # C2S [i64 fighterId] (S22)
 const OP_FIGHTER_EQUIP := 60023          # S2C [i64 fighterId][u16 n]{i32 cardId} — what it may wear
 const OP_GHOST_LADDER := 60017         # S2C [i32 elo][i32 rank][i32 fights][i32 wins][u16 n]{str, i32×3, u8}
@@ -744,6 +746,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# 28601 on arrival: our entries, the open search periods (28630)
 			# and an unfinished tournament's carry-over question (28618)
 			Session.send(OP_TOURN_LIST, PackedByteArray(), 2)
+			Session.send(OP_SEASON_REQUEST, PackedByteArray(), 2)   # S25
 			# Post-fight re-entry: the debrief was decoded on 8300 — pop the
 			# result panel now that the island is up.
 			if not State.fight_result.is_empty():
@@ -807,6 +810,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			_eq_wearable[wfid] = wear
 			if wfid == _eq_fid:
 				_push_fequip_model()
+		OP_SEASON:
+			var season := {"number": payload.get_u16(), "ends": payload.get_i64(), "results": []}
+			for i in payload.get_u8():
+				season.results.append({"season": payload.get_u16(), "ladder": payload.get_u8(),
+					"rank": payload.get_i32(), "pesetas": payload.get_i32()})
+			_on_season(season)
 		OP_STORY:
 			var was: Array = _story_won.duplicate()
 			_story_won = []
@@ -5608,6 +5617,18 @@ func _story_after_talk(was: Array) -> void:
 			_talk_face = FACE_DEMON1
 			_talk_pages(NpcDialogs.npc_name(Story.NARRATOR), Story.TALK_AFTER[chal], _talk_close)
 			return
+
+
+## S25: the season (60031) — its number and end for the Ranking panels, and
+## a toast for each result of a closed season not yet shown.
+func _on_season(season: Dictionary) -> void:
+	_gui.gui.model.set_value("season", {"number": int(season.number), "ends": int(season.ends)})
+	for r in season.results:
+		var text := I18n.t("season.result", {"season": int(r.season),
+			"ladder": I18n.t("season.ladder_%d" % clampi(int(r.ladder), 1, 2)),
+			"rank": int(r.rank), "pesetas": int(r.pesetas)})
+		_log_line("[color=yellow]%s[/color]" % text)
+		_toast(text)
 
 
 ## The hub cards' live lines (S20B): how many Story starters, the Elite

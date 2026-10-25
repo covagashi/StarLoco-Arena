@@ -40,6 +40,8 @@ type Store struct {
 	BugReports *BugReportRepo
 	// Ghosts are the async-PvP ghost teams and the fights against them (S12).
 	Ghosts *GhostRepo
+	// Seasons are the ladder seasons and their results (S25).
+	Seasons *SeasonRepo
 }
 
 // Open connects to a SQLite database at path (dev convenience / tests) and
@@ -131,6 +133,7 @@ func OpenConfig(c Config) (*Store, error) {
 	s.Guilds = &GuildRepo{db: gdb}
 	s.BugReports = &BugReportRepo{db: gdb}
 	s.Ghosts = &GhostRepo{db: gdb}
+	s.Seasons = &SeasonRepo{db: gdb}
 
 	// A fresh database starts with the line-up that used to be compiled in, so
 	// a new install behaves as before and an admin has something to edit.

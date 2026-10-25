@@ -89,7 +89,8 @@ func _amount(parent: Node, type: int, amount: int, font_size: int) -> void:
 	l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	var tex: Texture2D = _token(type)
 	if tex == null:
-		l.text += " t%d" % type
+		# pesetas (type 10, S25) are ours: the retail client has no icon for them
+		l.text += " " + (I18n.t("cur.pesetas") if type == 10 else "t%d" % type)
 		return
 	var icon := TextureRect.new()
 	icon.texture = tex

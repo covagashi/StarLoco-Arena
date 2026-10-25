@@ -79,6 +79,8 @@ type Deps struct {
 	// TournamentClock is the scheduler's clock (tournament_schedule.go); nil
 	// means time.Now. Tests set it to walk an edition through its periods.
 	TournamentClock func() time.Time
+	// SeasonClock is the season scheduler's clock (seasons.go); nil = now.
+	SeasonClock func() time.Time
 	// TeamUps holds pending 2v2 invitations and the duos they form.
 	TeamUps *teamUps
 	// WebBaseURL is the portal address announced to Godot clients that ask
@@ -130,6 +132,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerTeamUpHandlers(r, d)
 	registerClientConfigHandlers(r, d)
 	registerStoryHandlers(r, d)
+	registerSeasonHandlers(r, d)
 	registerGhostHandlers(r, d)
 }
 
