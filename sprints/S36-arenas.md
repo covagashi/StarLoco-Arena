@@ -1,6 +1,6 @@
 # S36 — Arenas: todos los assets primero, y un editor para que el dueño monte los mapas
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B, bioma nieve hecho, a revisar)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B: bioma nieve aprobado)
 
 ## Por qué cambia el plan (dueño, 2026-10-25)
 
@@ -72,7 +72,7 @@ coloca en un editor.**
 
 ### B. Fabricar los assets y las texturas
 
-**Bioma nieve (arena 1), hecho el 2026-10-25, a revisar por el dueño.**
+**Bioma nieve (arena 1): aprobado por el dueño el 2026-10-25 ("perfecto, ya se ve todo bien").**
 Hoja: `~/codigo/capturas/m7/arena1-kit.png`. Retail a la izquierda y las
 tres looms a escala de juego a la derecha. Plan actualizado en
 `~/codigo/capturas/m7/arena1-plan.png`.
