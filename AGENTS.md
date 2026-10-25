@@ -4,6 +4,13 @@ Guidance for AI agents (and humans) contributing to the **DofusArena 2.70**
 line. Read this before making changes. For the human-facing overview see
 [`README.md`](./README.md).
 
+> **2026-10-25 — the retail client is gone.** The owner removed `client/`
+> (compiled, decompiled, analysis and the RE tooling) and stopped all use of
+> the retail client: own art, then own cards, then own texts (milestone M7,
+> `sprints/S32`–`S41`). Every mention of `client/…` below is historical until
+> S32 rewrites these docs; the wire format is now fixed by the server's own
+> code and tests (`server/internal/protocol`, `server/docs/OPCODE-INVENTORY.md`).
+
 ## What this project is
 
 A preservation + reverse-engineering project for **DofusArena 2.70** (the

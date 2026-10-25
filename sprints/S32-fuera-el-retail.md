@@ -42,7 +42,15 @@ que llegue el arte nuevo. Por eso:
   textos (S41).** Hasta entonces `server/data-dist/` (cartas, hechizos,
   efectos, topología de arenas) se queda como está, y los textos retail
   siguen saliendo de sus tablas.
-- ¿Se borra `client/` (retail compilado y decompilado) del disco y del repo?
+- ~~¿Se borra `client/`?~~ **Hecho (dueño: "sí", 2026-10-25):** borrado del
+  disco y del repo (5.101 ficheros con seguimiento y los 265 MB del retail
+  compilado). Nada del código dependía de él para compilar ni para las
+  pruebas; solo comentarios. Dejan de funcionar el visor de arte del studio
+  (abría los `.jar` del retail) y `tools/proto-gen` (los opcodes que generó
+  ya están en el repo). Sigue en el historial de git: reescribirlo es otra
+  decisión. **Pendiente en este sprint:** reescribir README, AGENTS.md,
+  CONTRIBUTING.md y DISCLAIMER.md, que lo describen (AGENTS.md lleva ya un
+  aviso arriba).
 
 ## Criterio de cierre
 
