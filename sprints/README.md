@@ -100,7 +100,7 @@ Linux y Windows).
 | [S33](./S33-plan-de-arte.md) | M7 | M | 🟡 esperando al dueño | Plan de arte: estilo, técnica (3D/cutout, VFX en tiempo real, animación procedural) y prototipo vertical |
 | [S34](./S34-pipeline-de-assets.md) | M7 | M | ⚪ esbozo | Pipeline nuevo: de la fuente al juego en un comando, licencias, comprobaciones |
 | [S35](./S35-personajes.md) | M7 | L | ⚪ esbozo | Personajes: 24 luchadores, 9 invocaciones, 2 coaches; ~10 animaciones por esqueleto |
-| [S36](./S36-arenas.md) | M7 | L | ⚪ esbozo | Arenas con un kit modular por bioma sobre la topología de combate |
+| [S36](./S36-arenas.md) | M7 | L | ⚪ planificado | Arenas: primero todos los assets y texturas (kiln + loom), luego un editor donde el dueño coloca los assets sobre la forma de cada arena |
 | [S37](./S37-vfx.md) | M7 | M | ⚪ esbozo | Librería de VFX por elemento y forma; cada hechizo, por datos |
 | [S38](./S38-cartas-e-iconos.md) | M7 | L | ⚪ esbozo | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
 | [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |

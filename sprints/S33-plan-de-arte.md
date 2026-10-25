@@ -244,3 +244,10 @@ era en realidad hojas con nieve.
 Idea del dueño para las losas (doradas con greca y runas de suelo): glifos
 baybayin dibujados con una tipografía, a modo de "trampa". Se hará al llegar
 a esas piezas.
+
+### Cierre del día (2026-10-25)
+
+Se intentó montar la arena 1 entera colocando las piezas automáticamente
+desde los sprites retail, y la colocación salió mal. El dueño cambia el plan:
+primero todos los assets y texturas, y después un editor para que él coloque
+las piezas sobre la forma de cada arena. Queda en **S36**.
