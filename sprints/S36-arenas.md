@@ -53,6 +53,31 @@ coloca en un editor.**
 - Las variantes de color del retail (las familias del catálogo y el tinte
   lila) pasan a ser looms.
 
+## Mapa por mapa (dueño, 2026-10-25)
+
+> "Vamos mapa por mapa rellenando los assets; recuerda reutilizar lo que ya
+> tenemos."
+
+Se descarta hacer los seis biomas de golpe con agentes: modelaban a partir
+de lo que creían que era cada dibujo retail y se equivocaban (la 160 era la
+puerta 166 con nieve, no unas setas). Sus carpetas (`godot/art/{lava,
+pradera,ruinas,playa,fortaleza,cueva}/`) quedan sin subir y sin revisar.
+
+Proceso, por arena:
+1. `map_sheet.py <mundo> <arena>` (fuera del repo) genera
+   `~/codigo/capturas/m7/mapa-arenaN.png`. Lleva las piezas retail del mapa
+   ya cribadas, numeradas por uso, cada una con lo que es:
+   - el nombre que dio el dueño, o mi suposición marcada con "¿?";
+   - si ya la tenemos (por gfx, o por familia: misma forma con otro loom),
+     junto a nuestra pieza; si no, NUEVO.
+2. El dueño corrige qué es cada pieza. Sus nombres se guardan en
+   `names.json` y mandan sobre los míos.
+3. Se modelan solo las piezas nuevas, siguiendo las skills kiln y loom, y
+   se enseñan.
+
+Numeración: arena N es el N-ésimo mundo por id (arena 1 = mundo 5, arena 2
+= mundo 10, arena 3 = mundo 12…).
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)

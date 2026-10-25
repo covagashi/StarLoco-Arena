@@ -102,9 +102,7 @@
 			"label": "Escarcha",
 			"kind": "deco",
 			"gfx": [
-				170,
-				141,
-				138
+				170
 			],
 			"looms": "blocks"
 		},
@@ -113,9 +111,7 @@
 			"label": "Escarcha pequeña",
 			"kind": "deco",
 			"gfx": [
-				174,
-				139,
-				140
+				174
 			],
 			"looms": "blocks"
 		},
