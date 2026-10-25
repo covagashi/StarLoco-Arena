@@ -466,7 +466,6 @@ func buildSparringTeam(side uint8, anchor Pos) *FightTeam {
 	return &FightTeam{ID: side, Members: []*FightMember{{Coach: coach}}, Fighters: []*FightFighter{ff}}
 }
 
-
 // rosterHasHistoria reports whether any of a coach's fighters in ids is a
 // Historia (evolution) fighter — refused in Ranking (S22).
 func (d *Deps) rosterHasHistoria(coachID uint, ids []int64) bool {

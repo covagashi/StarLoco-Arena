@@ -201,7 +201,6 @@ func TestRankedRefusesHistoriaFighters(t *testing.T) {
 	}
 }
 
-
 // TestPracticeLaunchIsNeverStory (S15): the lobby's Entrenamiento plays
 // challenge 34 — the first fight of chapter 2 — with the practice marker
 // (98), and that never counts as Historia.
