@@ -1,0 +1,10 @@
+{
+	"_doc": "M7 biomes (S36): which retail arenas (world ids) belong to which biome, and the folder holding the biome's kit (kit.json). Grouped by eye from the 47 arena thumbnails on 2026-10-25. Arena 1 = world 5.",
+	"nieve": {"kit": "arena1", "worlds": [5, 12, 15, 72]},
+	"lava": {"kit": "lava", "worlds": [10, 39, 55, 67, 68, 75]},
+	"pradera": {"kit": "pradera", "worlds": [21, 36, 42, 47, 48, 50, 51, 53, 58, 65, 81, 110]},
+	"ruinas": {"kit": "ruinas", "worlds": [54, 56, 64, 66, 69, 70, 71, 73]},
+	"playa": {"kit": "playa", "worlds": [45, 49, 59]},
+	"fortaleza": {"kit": "fortaleza", "worlds": [40, 41, 46, 60, 74, 76, 77, 82]},
+	"cueva": {"kit": "cueva", "worlds": [38, 44, 52, 61, 83, 84]}
+}

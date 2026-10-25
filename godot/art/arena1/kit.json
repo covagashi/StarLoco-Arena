@@ -1,5 +1,5 @@
 {
-	"_doc": "Arena 1 (snow biome) kit for the map editor (S36). Each piece is out/models/<name><loom>.glb, loom '' (a), '_b' or '_c'. kind: tile = a cell's ground block (top = its walk surface in the model, m; col = the column stacked under it, if any), deco = stands on a cell, flat = lies on a cell's top. gfx: the retail pieces it replaces.",
+	"_doc": "Arena 1 (snow biome) kit for the map editor (S36). Each piece is out/models/<name><loom>.glb, loom '' (a), '_b' or '_c'. kind: tile = a cell's ground block (top = its walk surface in the model, m; col = the column stacked under it, if any), deco = stands on a cell, flat = lies on a cell's top. gfx: the retail pieces it replaces. shared: pieces another kit already has; minor: retail gfx left unmodelled (owner decides per map).",
 	"biome": "nieve",
 	"looms": {
 		"": "a",
@@ -36,6 +36,26 @@
 			"gris frío",
 			"arenisca",
 			"pizarra"
+		],
+		"stone": [
+			"arenisca",
+			"granito gris",
+			"pizarra azul"
+		],
+		"boulder": [
+			"arenisca cálida",
+			"gris",
+			"basalto oscuro"
+		],
+		"moss": [
+			"musgo verde",
+			"escarcha azul",
+			"oliva seco"
+		],
+		"shroom": [
+			"blanco (pie claro)",
+			"lila (pie rojizo)",
+			"escarcha (pie gris violeta)"
 		]
 	},
 	"pieces": [
@@ -167,7 +187,8 @@
 			"kind": "deco",
 			"gfx": [
 				161,
-				163
+				163,
+				162
 			],
 			"looms": "pebbles"
 		},
@@ -190,9 +211,129 @@
 				507,
 				508,
 				509,
-				510
+				510,
+				511,
+				506,
+				512,
+				513
 			],
 			"looms": "rune"
+		},
+		{
+			"name": "stone_block",
+			"label": "Bloque de piedra tallada",
+			"kind": "tile",
+			"top": 0.86,
+			"col": "stone_col",
+			"gfx": [
+				77,
+				78,
+				79,
+				109
+			],
+			"looms": "stone"
+		},
+		{
+			"name": "rock_block",
+			"label": "Bloque de piedra tosca",
+			"kind": "tile",
+			"top": 0.86,
+			"col": "rock_col",
+			"gfx": [
+				104,
+				105
+			],
+			"looms": "boulder"
+		},
+		{
+			"name": "ice_pillar",
+			"label": "Columna alta de hielo",
+			"kind": "tile",
+			"top": 1.88,
+			"col": "ice_col",
+			"gfx": [
+				152
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "moss_floor",
+			"label": "Losa de musgo",
+			"kind": "tile",
+			"top": 0.12,
+			"gfx": [
+				623
+			],
+			"looms": "moss"
+		},
+		{
+			"name": "bridge_end",
+			"label": "Final de puente (con herrajes)",
+			"kind": "tile",
+			"top": 0.22,
+			"gfx": [
+				168
+			],
+			"looms": "wood"
+		},
+		{
+			"name": "mushrooms",
+			"label": "Setas nevadas",
+			"kind": "deco",
+			"gfx": [
+				160
+			],
+			"looms": "shroom"
+		},
+		{
+			"name": "ice_crystals",
+			"label": "Cristales de hielo",
+			"kind": "deco",
+			"gfx": [
+				158
+			],
+			"looms": "blocks"
+		},
+		{
+			"name": "stone_gate",
+			"label": "Puerta de piedra con herrajes",
+			"kind": "deco",
+			"gfx": [
+				166
+			],
+			"looms": "boulder"
+		},
+		{
+			"name": "rock_tall",
+			"label": "Roca alta nevada",
+			"kind": "deco",
+			"gfx": [
+				2584
+			],
+			"looms": "boulder"
+		},
+		{
+			"name": "rock_low",
+			"label": "Roca baja nevada",
+			"kind": "deco",
+			"gfx": [
+				2592,
+				2586
+			],
+			"looms": "boulder"
 		}
+	],
+	"shared": [],
+	"minor": [
+		150,
+		2587,
+		2588,
+		2387
+	],
+	"arenas": [
+		5,
+		12,
+		15,
+		72
 	]
 }

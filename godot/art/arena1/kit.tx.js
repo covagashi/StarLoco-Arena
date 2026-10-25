@@ -108,3 +108,75 @@ for (const k of "abc") {
     rough: 0.85,
   })
 }
+
+// --- cut stone (77, 78, 79, 109): big cracked blocks -------------------------
+//   a sandstone   b grey granite   c blue slate
+skins({
+  a: { s0: "#6f6540", s1: "#a69a68", s2: "#c6bb88", s3: "#e0d7aa" },
+  b: { s0: "#4a4a4c", s1: "#7d7d80", s2: "#a2a2a4", s3: "#c8c8c8" },
+  c: { s0: "#2e3a4a", s1: "#4f6075", s2: "#6f8399", s3: "#9cb0c4" },
+})
+const slabs = tiles({ rows: 2, cols: 2, gap: 0.012, bevel: 0.04, vary: 0.25, seed: 91 }).as("slabs")
+const cracks = ridged({ scale: 3, octaves: 2, seed: 92 }).threshold(0.93, 0.02).as("cracks")
+const stoneN = noise({ scale: 6, octaves: 4, seed: 93 }).as("stoneN")
+for (const k of "abc") {
+  const c = (n) => n + k
+  material("stone" + SUF[k], { size: 256, depth: 0.03, ao: 0.7 }, {
+    height: slabs.mul(0.7).add(stoneN.mul(0.3)).sub(cracks.mul(0.3)),
+    color: ramp(slabs.id.mix(stoneN, 0.5), [c("s1"), c("s2"), c("s3")]).mix(c("s0"), slabs.mask.invert().max(cracks).mul(0.75)),
+    rough: 0.85,
+  })
+}
+
+// --- boulders (104, 105, 2584, 2592, 166) -------------------------------------
+//   a warm sandstone   b grey   c dark basalt
+skins({
+  a: { b0: "#5e4a2a", b1: "#9c7a44", b2: "#c49a5a", b3: "#e0bf80" },
+  b: { b0: "#3c3a38", b1: "#6a6560", b2: "#8f8984", b3: "#b3aea6" },
+  c: { b0: "#16171b", b1: "#2e3036", b2: "#474a52", b3: "#666a73" },
+})
+const facets = cells({ scale: 3, seed: 101 }).as("facets")
+const boulN = noise({ scale: 5, octaves: 4, seed: 102 }).as("boulN")
+for (const k of "abc") {
+  const c = (n) => n + k
+  material("boulder" + SUF[k], { size: 256, depth: 0.03, ao: 0.7 }, {
+    height: facets.mul(0.6).add(boulN.mul(0.4)),
+    color: ramp(facets.id.mix(boulN, 0.4), [c("b1"), c("b2"), c("b3")]).mix(c("b0"), cracks.mul(0.7)),
+    rough: 0.85,
+  })
+}
+
+// --- moss floor (623): flat green stone, wet moss in the joints --------------
+//   a moss green   b frosted blue   c dry olive
+skins({
+  a: { m0: "#14301f", m1: "#2c5a3a", m2: "#467d55", m3: "#7fb08a" },
+  b: { m0: "#1a2c3a", m1: "#35566e", m2: "#55809a", m3: "#9cc2d4" },
+  c: { m0: "#2c2a14", m1: "#55522a", m2: "#7b7740", m3: "#aaa66c" },
+})
+const mossC = tiles({ rows: 2, cols: 2, gap: 0.015, bevel: 0.05, vary: 0.3, seed: 111 }).as("mossC")
+const mottle = noise({ scale: 5, octaves: 4, seed: 113 }).as("mottle")
+for (const k of "abc") {
+  const c = (n) => n + k
+  material("moss" + SUF[k], { size: 256, depth: 0.02, ao: 0.6 }, {
+    height: mossC.mul(0.7).add(noise({ scale: 9, octaves: 3, seed: 112 }).mul(0.3)),
+    color: ramp(mottle, [c("m1"), c("m2"), c("m3")]).mix(c("m0"), mossC.mask.invert().mul(0.5)),
+    rough: 0.7,
+  })
+}
+
+// --- mushroom stems (160) ------------------------------------------------------
+//   a pale bone   b red-brown   c grey-violet
+skins({
+  a: { t0: "#8f8466", t1: "#c9bea0", t2: "#e8dfc4" },
+  b: { t0: "#5a2e22", t1: "#9a5a40", t2: "#c88a68" },
+  c: { t0: "#4a4256", t1: "#7d7390", t2: "#ada3c0" },
+})
+const fib = noise({ scale: [1, 8], octaves: 3, seed: 121 }).as("fib")
+for (const k of "abc") {
+  const c = (n) => n + k
+  material("stem" + SUF[k], { size: 256, depth: 0.015, ao: 0.4 }, {
+    height: fib,
+    color: ramp(fib, [c("t0"), c("t1"), c("t2")]),
+    rough: 0.8,
+  })
+}

@@ -3,7 +3,8 @@ extends RefCounted
 ## M7: how our kiln GLBs are dressed for the game's look (shared by the
 ## tools/art renders).
 
-## Snow: smooth normals; ice: rim light; everything: no specular glints.
+## Snow and other soft caps (materials named snow* or soft*): smooth normals;
+## ice: rim light; everything: no specular glints.
 static func dress(mi: MeshInstance3D) -> void:
 	var src: Mesh = mi.mesh
 	var mesh := ArrayMesh.new()
@@ -11,7 +12,7 @@ static func dress(mi: MeshInstance3D) -> void:
 		var arrays := src.surface_get_arrays(s)
 		var mat := src.surface_get_material(s) as BaseMaterial3D
 		var mname := mat.resource_name if mat else ""
-		if mname.begins_with("snow"):
+		if mname.begins_with("snow") or mname.begins_with("soft"):
 			arrays[Mesh.ARRAY_NORMAL] = smooth(arrays[Mesh.ARRAY_VERTEX], arrays[Mesh.ARRAY_NORMAL],
 				arrays[Mesh.ARRAY_INDEX])
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)

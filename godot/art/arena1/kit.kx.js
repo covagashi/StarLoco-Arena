@@ -17,6 +17,10 @@ pal(Object.fromEntries(["", "_b", "_c"].flatMap((s) => [
   ["rune" + s, { tex: "out/rune" + s, uv: 1, rough: 0.6 }],
   ["leaf" + s, { tex: "out/leaf" + s, uv: 0.5, rough: 0.55 }],
   ["pebble" + s, { tex: "out/pebble" + s, uv: 0.4, rough: 0.85 }],
+  ["stone" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85 }],
+  ["boulder" + s, { tex: "out/boulder" + s, uv: 0.7, rough: 0.85 }],
+  ["moss" + s, { tex: "out/moss" + s, uv: 1, rough: 0.7 }],
+  ["stem" + s, { tex: "out/stem" + s, uv: 0.4, rough: 0.8 }],
 ])))
 pal({
   iron: { color: "#3a3633", rough: 0.6, metal: 0.4 },
@@ -25,7 +29,8 @@ pal({
   glow_c: { color: "#ffb3a6", emit: "#ff7a5c", glow: 3 },
 })
 // the b and c looms of a piece: the same model, every skinned material swapped
-const SKINNED = ["ice", "snow", "iceClear", "iceClearTop", "iceCol", "iceClearCol", "wood", "slab", "rune", "leaf", "pebble", "glow"]
+const SKINNED = ["ice", "snow", "iceClear", "iceClearTop", "iceCol", "iceClearCol", "wood", "slab", "rune", "leaf", "pebble", "glow",
+  "stone", "boulder", "moss", "stem"]
 function looms(name) {
   for (const s of Object.values(SFX))
     model(name + s, { base: name, swap: Object.fromEntries(SKINNED.map((m) => [m, m + s])) })
@@ -130,6 +135,63 @@ model("pebbles", { scale: 1.7 },
   rock(0.045, { mat: "pebble", seed: 11, pos: [0.02, 0.02, -0.12] }),
   sphere(0.06, { mat: "snow", detail: 2, pos: [0, 0.09, 0], scale: [1.2, 0.4, 1.2] }))
 looms("mound"); looms("loose_snow"); looms("pebbles")
+
+// --- more ground: from arenas 12, 15 and 72 ----------------------------------
+// cut stone block (77, 78, 79, 109): a cracked cube, flat top
+model("stone_block", prism(roundSquare(HALF, 0.05), 0.86, 0, "stone", 0.006))
+// rough stone block (104, 105): a cell of stacked chunky stones
+model("rock_block",
+  box(0.96, 0.5, 0.96, { mat: "boulder", jitter: 0.03, seed: 1 }),
+  box(0.55, 0.32, 0.6, { mat: "boulder", pos: [-0.2, 0.48, -0.17], rot: [0, 8, 0], jitter: 0.04, seed: 2 }),
+  box(0.5, 0.3, 0.55, { mat: "boulder", pos: [0.22, 0.47, 0.05], rot: [0, -12, 0], jitter: 0.04, seed: 3 }),
+  box(0.45, 0.26, 0.4, { mat: "boulder", pos: [-0.12, 0.46, 0.28], rot: [0, 20, 0], jitter: 0.04, seed: 4 }))
+// tall ice pillar (152): two cells high, the hero block's snow cap on top
+model("ice_pillar",
+  prism(roundSquare(HALF, 0.07), 1.7, 0, "iceCol", 0.004),
+  terrain(2 * CAP, 2 * CAP, { res: 48, height: 0.3, fn: cushion, mat: "snow", pos: [0, 1.7 - 0.12, 0] }),
+  tf({ pos: [0, 0.95, 0] }, drips))
+// moss floor (623): a thin flagstone at floor level
+model("moss_floor", prism(roundSquare(0.49, 0.03), 0.12, 0, "moss", 0.004))
+// bridge end (168): the bridge with two iron cleats at one end
+model("bridge_end", stamp("bridge"),
+  sym("z", box(0.14, 0.08, 0.1, { mat: "iron", pos: [-0.36, 0.22, 0.3] })),
+  sym("z", box(0.05, 0.05, 0.05, { mat: "iron", pos: [-0.36, 0.3, 0.3] })))
+// their columns: 1 m bodies to stack under them
+model("stone_col", prism(roundSquare(HALF, 0.05), 1, 0, "stone", 0.006))
+model("rock_col", box(0.96, 1, 0.96, { mat: "boulder", jitter: 0.03, seed: 7 }))
+for (const n of ["stone_block", "rock_block", "ice_pillar", "moss_floor", "bridge_end", "stone_col", "rock_col"]) looms(n)
+
+// --- more decoration -----------------------------------------------------------
+// snowy mushrooms (160): two pale stems leaning apart, snow heaped on the caps
+const shroom = (x, z, h, r, lean, turn) => tf({ pos: [x, 0, z], rot: [0, turn, lean] },
+  lathe([0.06, 0, 0.045, h * 0.5, 0.05, h * 0.9, 0.0, h], { mat: "stem", sides: 7, jitter: 0.004 }),
+  sphere(r, { mat: "snow", detail: 3, pos: [0, h, 0], scale: [1, 0.55, 1] }),
+  sphere(r * 0.25, { mat: "snow", detail: 2, pos: [r * 0.8, h - r * 0.35, 0.02], scale: [0.8, 1.6, 0.8] }))
+model("mushrooms", shroom(-0.14, 0, 0.42, 0.17, 8, 0), shroom(0.16, 0.04, 0.55, 0.21, -10, 40), shroom(0.02, -0.15, 0.28, 0.11, 4, 90))
+// ice crystals (158): tall clear crystals, snow on their tips and foot
+const crystal = (x, z, h, r, lean, turn) => tf({ pos: [x, 0, z], rot: [lean, turn, 0] },
+  lathe([r, 0, r, h * 0.78, 0, h], { mat: "iceClear", sides: 6, jitter: 0.008 }),
+  sphere(r * 0.7, { mat: "snow", detail: 2, pos: [0, h * 0.86, 0], scale: [1, 0.7, 1] }))
+model("ice_crystals", sphere(0.26, { mat: "snow", detail: 2, scale: [1.3, 0.3, 1.1] }),
+  crystal(0, 0, 1.25, 0.12, 4, 0), crystal(0.15, 0.06, 0.85, 0.09, 0, 18), crystal(-0.16, 0.04, 0.95, 0.1, -10, 40),
+  crystal(0.04, -0.15, 0.6, 0.08, -18, 0), crystal(-0.06, 0.17, 0.5, 0.07, 22, 60))
+// stone gate (166): two dark posts and a lintel bound with a spiked iron band
+model("stone_gate",
+  sym("x", box(0.2, 0.62, 0.26, { mat: "boulder", pos: [0.26, 0, 0], jitter: 0.02 })),
+  box(0.8, 0.22, 0.32, { mat: "boulder", pos: [0, 0.6, 0], rot: [0, 0, 3], jitter: 0.025 }),
+  box(0.84, 0.05, 0.34, { mat: "iron", pos: [0, 0.7, 0] }),
+  Array.from({ length: 7 }, (_, i) => cone(0.025, 0.08, { mat: "iron", sides: 4, pos: [-0.36 + i * 0.12, 0.75, 0.17], rot: [70, 0, 0] })))
+// snowy rocks (2584 tall, 2592 low; 2586 small)
+model("rock_tall",
+  lathe([0.34, 0, 0.32, 0.3, 0.25, 0.6, 0.14, 0.86, 0.04, 0.95, 0, 0.96], { mat: "boulder", sides: 7, jitter: 0.045, seed: 5 }),
+  sphere(0.13, { mat: "snow", detail: 2, pos: [0.0, 0.88, 0.0], scale: [1.2, 0.5, 1.1] }),
+  sphere(0.1, { mat: "snow", detail: 2, pos: [0.2, 0.5, 0.12], scale: [1, 0.45, 0.9] }),
+  sphere(0.3, { mat: "snow", detail: 2, scale: [1.3, 0.2, 1.2] }))
+model("rock_low",
+  rock(0.34, { mat: "boulder", seed: 9, pos: [0, 0.18, 0], scale: [1.3, 0.75, 1] }),
+  sphere(0.34, { mat: "snow", detail: 3, pos: [0.04, 0.34, 0], scale: [1.15, 0.5, 0.95] }),
+  sphere(0.38, { mat: "snow", detail: 2, pos: [0, 0, 0], scale: [1.4, 0.15, 1.2] }))
+for (const n of ["mushrooms", "ice_crystals", "stone_gate", "rock_tall", "rock_low"]) looms(n)
 
 // no pack: the editor loads each piece from out/models/<name>.glb (kit.json
 // lists them); a pack can't resolve the swapped materials across includes
