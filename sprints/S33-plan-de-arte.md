@@ -129,3 +129,16 @@ Registro de toques artísticos (dueño → cambio → fichero):
 **Decisión de técnica (dueño, 2026-10-25): kiln (3D real con texturas loom).**
 Queda por decidir si en el juego va en 3D vivo o horneado a 2D.
 
+
+## Correcciones del dueño a las fichas de piezas (2026-10-25)
+
+Notas sobre `~/codigo/capturas/m7/arenas/arena-NNN.png`: qué es cada pieza
+en realidad, qué se descarta y qué la sustituye. Sirven de referencia para
+elegir las piezas de cada arena en la sesión limpia.
+
+| Arena | Pieza | Nota del dueño | Acción |
+|---|---|---|---|
+| 005 | #3 (gfx 167) | no es una losa oscura: es un **puente de madera** | renombrar |
+| 005 | #6 (gfx 176) | no son cristales azules: son **hojas con nieve encima** | renombrar |
+| 005 | #14 (gfx 156) | hielo con bola de nieve | **descartar**; en su sitio va #2 (bloque de hielo transparente, gfx 154) |
+| 005 | #20 (gfx 123) | bloque negro: solo está para dar efecto (sombra) | **quitar**, no es un asset |
