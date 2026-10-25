@@ -1,6 +1,10 @@
 # S16 — Release pública 1.0
 
-**Planificado:** 2026-10-16 · **Hito:** M5 — Release 1.0 · **Tamaño:** M · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-16 · **Hito:** M5 — Release 1.0 · **Tamaño:** M · **Estado:** ⏸ en pausa
+
+> **Aplazado por completo (dueño, 2026-10-25):** no se toca nada de este sprint
+> hasta que se cambien los assets. Al volver, revisar el esbozo entero: el
+> cambio de assets puede mover el empaquetado, el generador y la parte legal.
 
 ## Heredado de S15 (2026-10-25)
 
