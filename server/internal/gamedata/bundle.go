@@ -58,6 +58,7 @@ func LoadBundle(loc Location, log *slog.Logger) *Bundle {
 	}
 	b.Cards, err = st.LoadCards()
 	warn("card", err)
+	ApplyCardMasterPrices(b.Cards) // S28: the Card Master sets cost tokens
 	b.Spells, err = st.LoadSpells()
 	warn("spell", err)
 	b.FighterCards, err = st.LoadFighterCards()

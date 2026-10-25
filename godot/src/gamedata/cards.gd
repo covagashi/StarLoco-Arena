@@ -14,6 +14,16 @@ const State := preload("res://src/state.gd")
 static var _by_id := {}       # card id int -> Dictionary
 static var _loaded := false
 
+## S28 card economy (owner, 2026-10-25): the twelve Card Master sets had no
+## token price (retail sold them for real money); each card of them with no
+## positive price costs max(TOKEN_PRICE_MIN, value / TOKEN_PRICE_DIVISOR)
+## tokens. Same rule as server/internal/gamedata/token_prices.go
+## (TestTokenPriceMatchesClient keeps the numbers equal).
+const CARD_MASTER_SET_FIRST := 5
+const CARD_MASTER_SET_LAST := 16
+const TOKEN_PRICE_DIVISOR := 100
+const TOKEN_PRICE_MIN := 10
+
 
 static func _ensure() -> void:
 	if _loaded:
@@ -23,7 +33,26 @@ static func _ensure() -> void:
 	if data == null:
 		return
 	for cid in data:
-		_by_id[int(cid)] = data[cid]
+		var c: Dictionary = data[cid]
+		_by_id[int(cid)] = c
+		_apply_token_price(c)
+
+
+static func is_card_master_set(set_id: int) -> bool:
+	return set_id >= CARD_MASTER_SET_FIRST and set_id <= CARD_MASTER_SET_LAST
+
+
+static func derived_token_price(value: int) -> int:
+	return maxi(TOKEN_PRICE_MIN, value / TOKEN_PRICE_DIVISOR)
+
+
+static func _apply_token_price(c: Dictionary) -> void:
+	if not is_card_master_set(int(c.get("set", 0))) or int(c.get("value", 0)) <= 0:
+		return
+	for t in c.get("price", {}):
+		if int(c.price[t]) > 0:
+			return
+	c["price"] = {"1": derived_token_price(int(c.value))}
 
 
 static func meta(id: int) -> Dictionary:

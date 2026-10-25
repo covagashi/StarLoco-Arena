@@ -129,3 +129,47 @@ func TestShopBuyRefusesUnpricedCardOnTheWire(t *testing.T) {
 		t.Errorf("wallet = %d, want 400", got)
 	}
 }
+
+// TestCardMasterSetCardBuysWithTokens (S28): a Card Master set card that the
+// data leaves unpriced costs value/100 tokens once the runtime prices are
+// applied, through 5450 itself; the Token Bazaar's fallback stock does not
+// take it over.
+func TestCardMasterSetCardBuysWithTokens(t *testing.T) {
+	st, err := storetest.Open(t, filepath.Join(t.TempDir(), "shop28.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	acc, _ := st.Accounts.CreateAccount("shop28", "pw", false)
+	coach, _ := st.Coaches.Create(acc.ID, "Buyer28", 0, 0, 0)
+	if err := st.Coaches.CreditCurrency(coach.ID, 1, 500); err != nil {
+		t.Fatalf("credit: %v", err)
+	}
+	cards := gamedata.NewCards(
+		&gamedata.CoachCard{ID: 40, CardSet: 5, Value: 7400, Price: map[uint8]int32{1: 0}},
+		&gamedata.CoachCard{ID: 41, CardSet: 36, Value: 500, Price: map[uint8]int32{1: 80}},
+	)
+	gamedata.ApplyCardMasterPrices(cards)
+	d := &Deps{Store: st, Cards: cards, Log: testLogger()}
+	s := &Session{log: testLogger(), deps: d, out: make(chan []byte, writeQueueSize),
+		quit: make(chan struct{}), Coach: coach}
+
+	p := protocol.NewWriter().I32(5).U16(1).I32(40).Bytes()
+	if err := handleShopBuy(s, &protocol.C2SFrame{Payload: p}); err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	if n := cardCount(t, st, coach.ID, 40); n != 1 {
+		t.Errorf("set card: %d copies, want 1", n)
+	}
+	var w domain.CoachCurrency
+	if err := st.DB().Where("coach_id = ? AND currency_type = ?", coach.ID, 1).First(&w).Error; err != nil {
+		t.Fatalf("wallet: %v", err)
+	}
+	if w.Amount != 500-74 {
+		t.Errorf("wallet = %d, want %d", w.Amount, 500-74)
+	}
+	bazaar := cardMasterStock(cards, 17)
+	if len(bazaar) != 1 || bazaar[0] != 41 {
+		t.Errorf("Token Bazaar stock = %v, want only the card the data prices [41]", bazaar)
+	}
+}

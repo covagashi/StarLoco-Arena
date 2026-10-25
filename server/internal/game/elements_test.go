@@ -194,9 +194,10 @@ func TestBuildShopCatalogStampsShopID(t *testing.T) {
 func TestCardMasterStockIsItsCardSet(t *testing.T) {
 	cards := gamedata.NewCards(
 		&gamedata.CoachCard{ID: 16, CardSet: 5, Price: map[uint8]int32{0: 1}},
-		&gamedata.CoachCard{ID: 17, CardSet: 5},                                // in-set, unpriced: still stocked
-		&gamedata.CoachCard{ID: 105, CardSet: 6, Price: map[uint8]int32{0: 1}}, // other set
-		&gamedata.CoachCard{ID: 51, CardSet: 7, Price: map[uint8]int32{1: 0}},  // all-zero price
+		&gamedata.CoachCard{ID: 17, CardSet: 5},                                 // in-set, unpriced: still stocked
+		&gamedata.CoachCard{ID: 105, CardSet: 6, Price: map[uint8]int32{0: 1}},  // other set
+		&gamedata.CoachCard{ID: 51, CardSet: 7, Price: map[uint8]int32{1: 0}},   // all-zero price
+		&gamedata.CoachCard{ID: 300, CardSet: 36, Price: map[uint8]int32{1: 9}}, // priced, no Card Master set
 	)
 
 	got := cardMasterStock(cards, 5)
@@ -216,9 +217,10 @@ func TestCardMasterStockIsItsCardSet(t *testing.T) {
 	}
 
 	// Unknown/empty set falls back to every PURCHASABLE card so the shop stays
-	// usable; an all-zero price map (card 51) is not one.
+	// usable; an all-zero price map (card 51) is not one, and since S28 the
+	// Card Master sets' cards (16, 105) stay with their own Card Masters.
 	got = cardMasterStock(cards, 999)
-	if len(got) != 2 || got[0] != 16 || got[1] != 105 {
-		t.Errorf("stock(unknown set) = %v, want the priced cards [16 105]", got)
+	if len(got) != 1 || got[0] != 300 {
+		t.Errorf("stock(unknown set) = %v, want the priced non-set card [300]", got)
 	}
 }

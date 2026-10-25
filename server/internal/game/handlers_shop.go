@@ -240,7 +240,10 @@ func cardMasterStock(cards *gamedata.Cards, cardListID int32) []int32 {
 	priced := cards.Priced()
 	out := priced[:0:0]
 	for _, id := range priced {
-		if cardIsPurchasable(cards.Get(id)) {
+		card := cards.Get(id)
+		// S28: the Card Master sets cost tokens now, but they stay with their
+		// own Card Masters; the Token Bazaar keeps the stock it always had.
+		if cardIsPurchasable(card) && !gamedata.IsCardMasterSet(card.CardSet) {
 			out = append(out, id)
 		}
 	}
