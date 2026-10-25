@@ -55,6 +55,7 @@ semanas): es **un tema con criterio de cierre**. El tamaño (S/M/L) es orientati
 | **M3 — Paridad de contenido** | servidor sin deuda conocida, torneos completos, tutorial, replays | S08, S19, S09, S10, S11 |
 | **M4 — Async PvP** | ghosts: crear, combatir y ladder | S12, S13, S14 |
 | **M6 — Un juego de hoy** | un game-loop actual: lo roto arreglado, una puerta por modo, paneles con respuesta, NPCs con cara y un combate que se explica. Va **antes** de M5 (dueño, 2026-10-24: "no está preparado para los últimos sprints") | S20, S20B, S21, S22, S23, S24, S26, S28, S25, S29, S27 |
+| **M7 — Arte propio** | nada del retail: arte, efectos y sonido propios con un pipeline nuevo y muchas menos animaciones (dueño, 2026-10-25). Va antes de S16, que esperaba justo a cambiar los assets | S32–S39 |
 | **M5 — Release 1.0** | cliente empaquetado para 3 plataformas e instancia pública | S15, S16, S30 |
 
 
@@ -95,6 +96,14 @@ Linux y Windows).
 | [S25](./S25-temporadas.md) | M6 | M | 🟢 cerrado | Temporadas: reinicio suave del Elo y pesetas para el top, para comprar cosméticos |
 | [S29](./S29-torneos-sin-conexion.md) | M6 | L | 🟢 cerrado | Torneos sin conexión: el servidor juega el cuadro IA contra IA con el último fantasma de cada uno y graba cada combate |
 | [S27](./S27-supermensajes.md) | M6 | M | ⛔ descartado (dueño, 2026-10-25) | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
+| [S32](./S32-fuera-el-retail.md) | M7 | M | ⚪ esbozo | Fuera la extracción del retail (herramientas, dumps, lectores); decidir si los datos del juego también se rehacen |
+| [S33](./S33-plan-de-arte.md) | M7 | M | ⚪ esbozo | Plan de arte: estilo, técnica (3D/cutout, VFX en tiempo real, animación procedural) y prototipo vertical |
+| [S34](./S34-pipeline-de-assets.md) | M7 | M | ⚪ esbozo | Pipeline nuevo: de la fuente al juego en un comando, licencias, comprobaciones |
+| [S35](./S35-personajes.md) | M7 | L | ⚪ esbozo | Personajes: 24 luchadores, 9 invocaciones, 2 coaches; ~10 animaciones por esqueleto |
+| [S36](./S36-arenas.md) | M7 | L | ⚪ esbozo | Arenas con un kit modular por bioma sobre la topología de combate |
+| [S37](./S37-vfx.md) | M7 | M | ⚪ esbozo | Librería de VFX por elemento y forma; cada hechizo, por datos |
+| [S38](./S38-cartas-e-iconos.md) | M7 | L | ⚪ esbozo | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
+| [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
 | [S31](./S31-assets-sin-usar.md) | M5 | M | 🟢 cerrado | Fuera los assets sin usar: 435 de 823 MB; quedan 47 mapas, 38 muñecos y 2.395 animaciones; etapa `prune` en el generador |
 | [S30](./S30-tienda.md) | M5 | L | ⚪ esbozo (después de S16) | Tienda: cosméticos con pesetas y compras con dinero real, sin pagar para ganar |
