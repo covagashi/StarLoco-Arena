@@ -1,6 +1,6 @@
 # S15 — Empaquetado del cliente
 
-**Planificado:** 2026-10-16 · **Hito:** M5 — Release 1.0 · **Tamaño:** L · **Estado:** 🟡 abierto (2026-10-24, tras M6)
+**Planificado:** 2026-10-16 · **Hito:** M5 — Release 1.0 · **Tamaño:** L · **Estado:** 🟢 cerrado (2026-10-25; lo que necesita otra máquina o al dueño pasa a S16)
 
 ## Objetivo
 
@@ -22,10 +22,10 @@ generar sus assets sin saber qué es Python.
 ## Tareas candidatas
 
 - [x] Presets de Linux y Windows (bloque B). macOS: firma y notarización piden una cuenta de Apple, **decide el dueño**.
-- [ ] **Generador de assets para el jugador:** un solo comando (o un binario Go)
+- [x] **Generador de assets para el jugador** (`tools/make_assets.sh`, bloque A): un solo comando (o un binario Go)
       que, dada la carpeta de su cliente retail, genere `assets/` completo. Esto
       sirve también para la regeneración en desarrollo.
-- [ ] **Peso:** `anims/` son 312.121 PNG sueltos (2,9 GB). Empaquetar cada
+- [x] **Peso** (bloque C y etapa `pack`): `anims/` eran 312.121 PNG sueltos (2,9 GB). Empaquetar cada
       animación como spritesheet o atlas, como ya se hace en `mapgfx`.
 - [x] Averiguar por qué el build de macOS duplica el tamaño de los assets → ficheros `.import` (abajo).
 - [ ] Job de CI que exporte las tres plataformas (sin assets).
@@ -55,7 +55,7 @@ El dueño: "sigue con los sprints". Orden por lo que desbloquea:
 | 2026-10-24 | El ejecutable se llama **PippopArena** (`.x86_64`, `.exe`) y el producto, "Pippop Arena": es el nombre que el dueño quiere que vean los jugadores | delegada |
 | 2026-10-24 | `assets/` sigue suelta junto al ejecutable, como en macOS: no son recursos de Godot | heredada |
 
-## Resultado (en curso)
+## Resultado
 
 ### Bloque B — exportar en Linux y Windows (2026-10-24)
 
@@ -100,8 +100,7 @@ El dueño: "sigue con los sprints". Orden por lo que desbloquea:
 - **Evidencia:** `test/unit/anm_pack_test.gd` (las dos disposiciones dan
   los mismos píxeles, offsets y tamaños, con y sin tintes); headless
   429/0.
-- **Pendiente:** empaquetar el árbol entero cuando el generador lo incluya
-  como etapa.
+- **Hecho en el árbol entero:** etapa `pack` del generador (abajo).
 
 ### El pie de las ventanas (2026-10-24)
 
@@ -122,6 +121,41 @@ Además, el `anims/` de aquel build era una exportación más antigua y pesada:
 2,9 GB frente a 1,7 GB hoy.
 
 Regla para empaquetar: copiar `assets/` **sin `*.import`**.
+
+### Bloque A — el generador, y el árbol entero regenerado (2026-10-25)
+
+- `tools/make_assets.sh <retail_game_dir> <out> [--only/--skip/--sets/--jobs/--resume]`.
+  Etapas: gamedata, fx, gui, musics, mapgfx, anims, sounds y **pack**.
+  - Comprobado etapa a etapa contra el árbol antiguo: idéntico byte a byte,
+    o con los mismos píxeles cuando el PNG se recodifica.
+  - Arregla por el camino 424 textos de la interfaz en mojibake
+    (`gui_extract.py` leía el jar como latin-1) y las máscaras de tinte,
+    que ahora siguen la transparencia.
+- **Regeneración completa en la Ally:** 22 min con `--jobs 3`. Pasa de
+  2,0 GB / 329.499 ficheros a **823 MB / 25.828**.
+  - Sustituye a las carpetas generadas de `godot/assets/`; las versionadas
+    (`i18n/`, `ui/`) no se tocan.
+  - Lo antiguo queda en `~/codigo/assets-backup-2026-10-25`.
+- **Batería completa con los assets nuevos**, todo en verde:
+  - headless 429/0 y visual;
+  - `native_panels` 138 PASS y `native_lobby` 28 PASS;
+  - smokes: hub, story, loadout, report, event, nilo, talk, achievements,
+    inventory, coach_turn, modes, help, criteria, world (45), tutorial
+    (cuenta nueva) y fight.
+  - El ejecutable de Linux exportado entra y juega un combate (captura
+    `export_fight_atlas.png`).
+- Para un jugador, el generador pide Go (por los `dump*`) y Pillow. Que
+  baste con el binario del servidor queda para S16.
+
+## Cierre (2026-10-25)
+
+Lo que el criterio pide y no se puede hacer en la Ally pasa a **S16**:
+
+- probar el `.exe` en un Windows real;
+- firma y notarización de macOS (cuenta de Apple, **decide el dueño**);
+- el job de CI que exporte (S03: límites del GitHub del dueño);
+- el cliente dentro de la release junto al servidor;
+- que el generador no pida Go ni Pillow.
 
 ## Criterio de cierre
 

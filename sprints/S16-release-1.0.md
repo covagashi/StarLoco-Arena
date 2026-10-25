@@ -2,6 +2,16 @@
 
 **Planificado:** 2026-10-16 · **Hito:** M5 — Release 1.0 · **Tamaño:** M · **Estado:** ⚪ esbozo
 
+## Heredado de S15 (2026-10-25)
+
+- Probar `dist/windows/PippopArena.exe` en un Windows real.
+- macOS: firma y notarización (cuenta de Apple, decide el dueño).
+- Job de CI que exporte las tres plataformas sin assets (S03).
+- El cliente en la release junto al servidor (GoReleaser).
+- `make_assets.sh` sin Go ni Pillow: los `dump*` dentro del binario del
+  servidor o un binario propio; la etapa gui con el lector PNG de la
+  librería estándar.
+
 ## Objetivo
 
 Publicar la 1.0: cliente y servidor en una release, una instancia pública
