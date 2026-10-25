@@ -1,5 +1,5 @@
-// Arena 5 decoration fills (loom): painted textures the vex shapes clip
-// inside, for the detail the flat shapes lack. Same ramps as arena5.vx.js.
+// Arena 1 decoration fills (loom): painted textures the vex shapes clip
+// inside, for the detail the flat shapes lack. Same ramps as arena1.vx.js.
 pal({
   t0: "#5e5a43", t1: "#8e896a", t2: "#c2bc98", t3: "#e4dfc2",
   s0: "#5f79a6", s1: "#a9bdd9", s2: "#e3ecf6", s3: "#ffffff",

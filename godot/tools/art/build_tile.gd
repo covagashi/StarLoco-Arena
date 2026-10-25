@@ -6,7 +6,7 @@ extends SceneTree
 ## rim highlight. Writes a strip: game size (1x) next to a close-up.
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
-##       -s tools/art/build_tile.gd -- --glb=art/arena5/out/models/ice_block_deco.glb \
+##       -s tools/art/build_tile.gd -- --glb=art/arena1/out/models/ice_block_deco.glb \
 ##       --out=<png> [--close=4] [--cy=0.55 (frame centre height, m)] [--px=200 (frame at 1x)]
 
 const PX := 43.0 * 1.41421356

@@ -6,7 +6,7 @@ extends SceneTree
 ## altitude unit — so it can sit 1:1 under fight_view later.
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
-##       -s tools/art/build_map.gd -- --map=5 --pack=art/arena5/out/arena5_tiles.glb \
+##       -s tools/art/build_map.gd -- --map=5 (arena 1 = retail world 5) --pack=art/arena1/out/arena1_tiles.glb \
 ##       --out=<png> [--size=1280x720] [--zoom=1]
 
 const Topology := preload("res://src/maps/topology.gd")
@@ -23,8 +23,8 @@ const TOP := {"t_snow": 0.82, "t_lilac": 0.82, "t_ice": 0.83, "t_stone": 0.58,
 ## spikes and trees stand about two cells tall.
 const PROP_SCALE := {"p_spike": 1.5, "p_tree": 1.45, "p_crystal": 1.35, "p_lantern": 1.1}
 
-var opts := {"map": "5", "pack": "art/arena5/out/arena5_tiles.glb",
-	"props": "art/arena5/out/arena5_props.glb", "out": "/tmp/arena.png", "size": "1280x720", "zoom": "0.85"}
+var opts := {"map": "5", "pack": "art/arena1/out/arena1_tiles.glb",
+	"props": "art/arena1/out/arena1_props.glb", "out": "/tmp/arena.png", "size": "1280x720", "zoom": "0.85"}
 
 
 func _initialize() -> void:

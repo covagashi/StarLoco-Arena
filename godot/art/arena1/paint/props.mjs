@@ -1,10 +1,10 @@
-// Painted decoration for arena 5 (vector, same hand as ice_block.mjs): light
+// Painted decoration for arena 1 (vector, same hand as ice_block.mjs): light
 // from the upper left, 2–3 painted tones per shape, a white catch-light, the
 // dark-blue/brown outline. Each prop is drawn around its feet at (0, 0) and
 // written as <name>_4x.png / _1x.png with the feet at the bottom centre
 // (FOOT px above the bottom edge, at 4x).
 //
-//   node godot/art/arena5/paint/props.mjs <out_dir>
+//   node godot/art/arena1/paint/props.mjs <out_dir>
 import { writeFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";

@@ -1,4 +1,4 @@
-// Arena 5 (Entrenamiento) — decoration props, painted low-poly: few big
+// Arena 1 (Entrenamiento, retail world 5) — decoration props, painted low-poly: few big
 // shapes, 2–3 tones each, a little jitter so nothing looks machined.
 pal({
   iceL: "#e3f6ff", ice: "#a9daf2", iceD: "#69a9d3",
@@ -57,4 +57,4 @@ model("p_pebbles",
   rock(0.05, { mat: "stone", seed: 8, pos: [-0.1, 0.02, 0.09] }),
   sphere(0.07, { mat: "snow", detail: 1, pos: [0, 0.09, 0], scale: [1.2, 0.4, 1.2] }))
 
-pack("arena5_props", ["p_spike", "p_tree", "p_crystal", "p_lantern", "p_pebbles"])
+pack("arena1_props", ["p_spike", "p_tree", "p_crystal", "p_lantern", "p_pebbles"])

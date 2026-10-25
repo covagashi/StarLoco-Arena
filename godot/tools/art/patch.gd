@@ -5,7 +5,7 @@ extends SceneTree
 ## prop on a few. For judging assets at map size, not zoomed in.
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot -s tools/art/patch.gd -- \
-##       --tile=art/arena5/out/models/ice_block.glb --prop=art/arena5/out/models/tree.glb \
+##       --tile=art/arena1/out/models/ice_block.glb --prop=art/arena1/out/models/tree.glb \
 ##       --out=<png> [--n=6] [--size=700x460]
 
 const PX := 43.0 * 1.41421356

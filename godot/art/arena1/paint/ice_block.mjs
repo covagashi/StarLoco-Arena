@@ -2,7 +2,7 @@
 // (86 px wide, 2:1 top), rasterised with resvg. No 3D, no lights: every
 // shadow and highlight is painted. loom textures fill the faces softly.
 //
-//   node godot/art/arena5/paint/ice_block.mjs <out_dir>
+//   node godot/art/arena1/paint/ice_block.mjs <out_dir>
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";

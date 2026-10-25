@@ -1,4 +1,4 @@
-// Arena 5 (Entrenamiento), painted with vex: soft organic shapes, painted
+// Arena 1 (Entrenamiento, retail world 5), painted with vex: soft organic shapes, painted
 // form shadows from one light, a thin line in each material's own dark tone
 // (never black), like the retail art. Units = game pixels: a cell is 86 wide,
 // its top diamond 43 tall. Exported at 4x.

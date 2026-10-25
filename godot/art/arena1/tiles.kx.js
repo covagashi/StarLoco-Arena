@@ -1,4 +1,4 @@
-// Arena 5 (Entrenamiento) — tile blocks, 1 m = one cell. Body of ice, a
+// Arena 1 (Entrenamiento, retail world 5) — tile blocks, 1 m = one cell. Body of ice, a
 // cap per tile type; the snow caps overhang a little with soft lumps along
 // the edge, the painted Ankama-like silhouette.
 pal({
@@ -28,4 +28,4 @@ model("t_gold", box(1, H, 1, "ice"), box(1.02, 0.1, 1.02, { mat: "gold", pos: [0
 // plain ice column, stacked under a tile down to the arena floor
 model("t_col", box(1, 1, 1, "ice"))
 
-pack("arena5_tiles", ["t_snow", "t_lilac", "t_ice", "t_stone", "t_gold", "t_col"])
+pack("arena1_tiles", ["t_snow", "t_lilac", "t_ice", "t_stone", "t_gold", "t_col"])

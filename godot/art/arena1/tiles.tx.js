@@ -1,4 +1,4 @@
-// Arena 5 (Entrenamiento) — tile textures, painted Ankama-like look:
+// Arena 1 (Entrenamiento, retail world 5) — tile textures, painted Ankama-like look:
 // clean ramps, soft lumps, little fine noise. Tops tile at one cell.
 pal({
   snowD: "#b9c9dc", snow: "#e6eef7", snowL: "#fbfdff",

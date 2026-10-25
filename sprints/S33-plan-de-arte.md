@@ -210,3 +210,20 @@ catálogo se ha regenerado. Ahora son 64 familias y 177 gfx en familias.
 | F7 + F9 (267/1532 y 263/1526) | iguales | una familia |
 | F13 = F18 (515/576 y 3333–3336) | iguales | una familia |
 | F32 = F22 (2270/2272 y 2277–2279) | iguales | una familia |
+
+## Arena 1 (2026-10-25)
+
+El dueño: "hagamos la arena 1, según el código es arena-005; renómbralo a
+arena-1". La arena 1 es el mundo retail 5 (Entrenamiento). El id 5 se queda
+en los datos del servidor y del mapa; lo que se renombra es el arte:
+`godot/art/arena5` → `godot/art/arena1` (packs `arena1_tiles` /
+`arena1_props`, `vex/arena1.vx.js`, y las rutas por defecto de
+`tools/art/*.gd`).
+
+Lista de piezas tras la criba: `~/codigo/m7-referencias/arena1_plan.json`
+→ `~/codigo/capturas/m7/arena1-plan.png` (`plan_sheet.py`). 16 piezas:
+2 hechas (bloque de hielo con nieve, árbol), 12 por hacer y 2 de adorno
+menor que decide el dueño (nieve suelta, piedrecitas). Los modelos low-poly
+viejos de `props.kx.js` (pincho, cristal, farol, piedrecitas) se habían
+descartado ("AI slop"), así que no cuentan como hechos; el "cristal" además
+era en realidad hojas con nieve.
