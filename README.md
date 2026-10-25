@@ -56,7 +56,7 @@ off with `update_check: enabled: false` in `config.yaml`.
 |---|---|---|
 | 🖥️ **Server** | The Go program the game client connects to. Accounts, chat, matchmaking, teams, full fights. | ✅ Yes — `server/` |
 | 🗃️ **Server game data** | `data.bdat` / `indexes.bdat` + maps: the card/spell/arena records the *server's own logic* needs to run a fight. | ✅ Yes — `server/data-dist/` (~2.5 MB) |
-| 🕹️ **Godot client** | The game client players use (login, lobby, fights). | ✅ Yes — `godot/` (code; its art is being redone, see above) |
+| 🕹️ **Godot client** | The game client players use (login, lobby, fights). Proprietary, all rights reserved. | ✅ Yes — `godot/` (code; its art is being redone, see above) |
 
 > ⚖️ **Server game data.** `server/data-dist/` is a small,
 > deliberately curated subset of records — no art, audio, or executable code —
@@ -305,9 +305,11 @@ the work going. ☕
 
 ## License & legal
 
-- The **original work** in this repository (the Go server under `server/`, the
-  Godot client code under `godot/`, and this project's docs) is released under
+- The **Go server** under `server/` and this project's docs are released under
   the [MIT License](./LICENSE).
+- The **Godot client** under `godot/` is **proprietary — © 2026 Daviaan, all
+  rights reserved** (see [`godot/LICENSE`](./godot/LICENSE)). It is not
+  MIT-licensed; you may not copy, modify or distribute it without permission.
 - This repository is an **independent, non-commercial** preservation and
   interoperability project and is **not affiliated with Ankama**.
   **DofusArena**, **Dofus**, and all related assets are the property of

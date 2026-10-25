@@ -9,7 +9,9 @@ constraints), read [`AGENTS.md`](./AGENTS.md).
 This branch (`v2.70`) started as a rewrite of **DofusArena 2.70** (the Feb-2012
 retail build, rev 72909). The actively developed components are the **Go
 server** in [`server/`](./server) and the **Godot client** in
-[`godot/`](./godot).
+[`godot/`](./godot). The Godot client is **proprietary (all rights reserved,
+see [`godot/LICENSE`](./godot/LICENSE))**: contributions to it are accepted
+only by arrangement with its copyright holder.
 
 > The 2006-era **2.04b** line lives on the **`v2.04`** branch. Contributions for
 > that line belong there, not here.

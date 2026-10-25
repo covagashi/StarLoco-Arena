@@ -34,7 +34,7 @@ own code and tests (`server/internal/protocol`,
 |---|---|---|
 | `server/` | **The Go 1.26 server — the primary active project.** Module `github.com/StarLoco/arena-2.70` | Yes — primary work happens here |
 | `server/docs/` | **Start at `STATUS.md`** (current state, open items, invariants), then `DATA-COVERAGE.md` / `BUGS.md` | Yes, keep in sync with code |
-| `godot/` | The Godot 4 client (login → coach creation → native lobby → native combat). `godot/assets/` is git-ignored on purpose; tests via `godot/run_tests.sh` | Yes — active work |
+| `godot/` | **Proprietary** (all rights reserved, `godot/LICENSE`; not MIT). The Godot 4 client (login → coach creation → native lobby → native combat). `godot/assets/` is git-ignored on purpose; tests via `godot/run_tests.sh` | Yes — active work |
 | `sprints/` | **The roadmap**: `BACKLOG.md` (live work queue) + one `SNN-*.md` per sprint with its evidence | Yes, keep in sync with the work |
 | `devlog/` | The agent's per-session log — what was asked, done, found, and left unverified | Yes — add an entry per session |
 | `server/COVERAGE.md` | Per-opcode implemented / wire-audited / tested matrix | Yes, keep current |

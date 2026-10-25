@@ -97,10 +97,18 @@ los assets que hay; los docs no mandan a nadie a extraer nada.
   el de Godot. Queda como "contrato": un mensaje solo cambia a la vez en
   servidor y cliente, con sus pruebas, en el mismo commit. No abre la puerta
   a cambiar el protocolo; solo deja de citar un cliente que no existe.
-- **El cliente Godot figura como obra original (MIT)** en README, DISCLAIMER
-  y NOTICE, junto al servidor, excluido `godot/assets/`. Antes no aparecía en
-  ninguna de las dos listas. **A revisar por el dueño** si prefiere otra
-  licencia para el cliente.
+- ~~El cliente Godot como MIT~~ **Decidido (dueño, 2026-10-25): "el cliente
+  mío sí que sea copyright".** `godot/LICENSE` nuevo: © 2026 Daviaan, todos
+  los derechos reservados; el MIT de la raíz cubre solo el servidor y los
+  docs. README, DISCLAIMER, NOTICE, CONTRIBUTING y AGENTS lo dicen. Los
+  commits anteriores en el fork público no llevaban esta aclaración.
+- **Mapas (dueño, 2026-10-25):** "si hace falta algo del cliente para ver los
+  mapas, lo mantenemos hasta que tengamos todo nuestro". Comprobado: el juego
+  dibuja los mapas con `godot/assets/mapgfx/` (en disco) y `map_gfx.gd`, y
+  el studio lee las topologías de `server/data-dist/maps/tplg`; nada de eso
+  se ha tocado. Se queda hasta que S36 (arenas) lo sustituya. Lo único que
+  ya no va es el arte de mapa del studio, que leía los `.jar` de
+  `client/compiled/` (borrado antes de S32).
 - `.gitignore` conserva las entradas de `godot/assets/*` y del antiguo
   `.make_assets/`: los equipos que aún tienen la exportación no deben
   subirla por error.

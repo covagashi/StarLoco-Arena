@@ -14,9 +14,10 @@ trademarks are the property of their respective owners.
 ## What is original vs. third-party
 
 - **Original work (MIT-licensed):** the Go server under `server/` (excluding
-  the data described below), the Godot client code under `godot/` (excluding
-  the git-ignored `godot/assets/` described below), and this project's
-  documentation.
+  the data described below) and this project's documentation.
+- **Original work (proprietary, all rights reserved — © 2026 Daviaan):** the
+  Godot client under `godot/` (excluding the git-ignored `godot/assets/`
+  described below). Not MIT-licensed; see `godot/LICENSE`.
 - **Third-party / copyrighted material reproduced here (NOT licensed by this
   project — © Ankama Games):**
   - `server/data-dist/` (`data.bdat`, `indexes.bdat`, `maps/` — the latter

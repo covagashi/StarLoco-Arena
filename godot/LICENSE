@@ -1,0 +1,13 @@
+Copyright (c) 2026 Daviaan. All rights reserved.
+
+The Godot client in this directory (godot/: its code, scenes, scripts, tools,
+tests and the project's own art and texts) is proprietary. It is NOT covered
+by the MIT License in the repository root, which applies to the Go server
+under server/ only.
+
+No permission is granted to copy, modify, distribute, sublicense or sell any
+part of it, in source or compiled form, without the copyright holder's prior
+written permission. Viewing it in this repository grants no licence.
+
+The git-ignored godot/assets/ content converted from the retail client is
+not part of this work and is not distributed (see ../DISCLAIMER.md).
