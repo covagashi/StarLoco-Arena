@@ -1,7 +1,7 @@
 extends RefCounted
 const GameText := preload("res://src/gamedata/game_text.gd")
 
-## Spell tables exported by tools/asset-import/spell_names.py into
+## Spell tables exported by the old importer's spell_names.py into
 ## assets/gamedata/spells.json — {breed: [{id,name,ap,min,max,value}]}.
 ## Names are the client's own content.3.<id> strings.
 
@@ -26,7 +26,7 @@ static func _ensure() -> void:
 		_by_breed[int(breed)] = arr
 		for s in arr:
 			_by_id[int(s.id)] = s
-	# script-driven cast/impact sfx (tools/asset-import/spell_sounds.py):
+	# script-driven cast/impact sfx (the old importer's spell_sounds.py):
 	# the Lua cast script's Sound.playSound ids with their invoke() delays.
 	var sfx: Variant = AssetPaths.read_json("gamedata/spell_sfx.json")
 	if sfx is Dictionary:

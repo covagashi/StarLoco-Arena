@@ -1,9 +1,9 @@
 StarLoco-Arena — DofusArena 2.70
 Copyright (c) 2026 StarLoco
 
-This product includes original software (the Go server under server/, the tools
-under tools/, and project documentation) licensed under the MIT License — see
-LICENSE.
+This product includes original software (the Go server under server/, the Godot
+client code under godot/, and project documentation) licensed under the MIT
+License — see LICENSE.
 
 It ALSO reproduces third-party and copyrighted material for preservation and
 interoperability purposes. That material is NOT covered by this project's MIT
@@ -13,10 +13,7 @@ attribution aid, not a grant of rights. See DISCLAIMER.md.
 ===============================================================================
 Copyrighted game material — © Ankama Games
 ===============================================================================
-  REPRODUCED IN THIS REPOSITORY (interoperability / study reference only):
-  - Decompiled DofusArena 2.70 client source ............. client/decompiled/
-  - Deobfuscation mappings derived from it ............... client/deobf-lab/mappings/
-  - Protocol / data-format analysis derived from it ...... client/analysis/
+  REPRODUCED IN THIS REPOSITORY:
   - Server game data: the card/spell/arena records and the
     overworld element layouts the server's own logic needs
     (~3 MB; no art, audio, or executable code — the map
@@ -25,43 +22,21 @@ Copyrighted game material — © Ankama Games
                                                               (data.bdat, indexes.bdat,
                                                                maps/{fight,tplg,env}/)
 
+  REMOVED FROM THE TREE ON 2026-10-25 (sprint S32), STILL IN GIT HISTORY:
+  - Decompiled DofusArena 2.70 client source ............. client/decompiled/
+  - Deobfuscation mappings derived from it ............... client/deobf-lab/mappings/
+  - Protocol / data-format analysis derived from it ...... client/analysis/
+
   NOT DISTRIBUTED OR LINKED ANYWHERE BY THIS PROJECT (git-ignored; the
   repository, git clone and release archives do not contain it, and nothing
   this project controls links to a copy - not the release notes, not
-  README.md, not the web portal. Players supply their own lawfully obtained
-  copy. See DISCLAIMER.md):
-  - DofusArena 2.70 retail client and launcher ........... client/compiled/
-  - A local scratch copy of your own client's data ....... server/data/
+  README.md, not the web portal. See DISCLAIMER.md):
+  - The DofusArena 2.70 retail client and launcher
+  - Art/audio/text converted from it, where still on disk .. godot/assets/
+  - A local scratch copy of game data ..................... server/data/
 
   "DofusArena", "Dofus", and all related assets are trademarks and/or
   copyrighted works of Ankama Games. All rights reserved by Ankama.
-
-===============================================================================
-Bundled Java Runtime — © Oracle Corporation / Sun Microsystems
-===============================================================================
-  - The retail client ships its own Oracle/Sun JRE .... client/compiled/jre/
-    It is NOT distributed here (git-ignored).
-
-  Distributed by Ankama under the Oracle Binary Code License Agreement for the
-  Java SE Platform. Java is a registered trademark of Oracle and/or its
-  affiliates.
-
-===============================================================================
-Third-party libraries bundled inside the client
-===============================================================================
-  The retail client and its decompiled sources embed a number of third-party
-  Java libraries, each governed by its own license, including (non-exhaustive):
-
-  - JOGL / JOAL (Java bindings for OpenGL/OpenAL) ......... BSD
-  - GNU Trove (primitive collections) .................... LGPL
-  - Apache Commons / Log4j ............................... Apache-2.0
-  - JDOM (XML) .......................................... JDOM License (BSD-style)
-  - FengGUI (GUI toolkit) ............................... BSD/LGPL
-  - LuaJava (Kepler Project) ............................ MIT
-  - JOrbis (Ogg Vorbis) ................................. LGPL
-  - Xuggler (FFmpeg bindings) ........................... LGPL/GPL
-
-  Refer to each library's upstream project for authoritative license terms.
 
 ===============================================================================
 Go module dependencies (server/)
@@ -75,13 +50,3 @@ Go module dependencies (server/)
   - golang.org/x/crypto, x/image, x/text ................. BSD-3-Clause
 
   See server/go.mod and server/go.sum for the authoritative, complete list.
-
-===============================================================================
-Reverse-engineering tooling
-===============================================================================
-  - CFR (Class File Reader) decompiler ................... tools/cfr.jar
-    © Lee Benfield — used to produce the decompiled reference sources.
-
-  - The deobfuscation pipeline under client/deobf-lab/ drives third-party tools
-    (SpecialSource, tiny-remapper, Vineflower). Their jars are NOT committed;
-    the scripts download them on demand. Each retains its own license.

@@ -5,9 +5,10 @@ extends RefCounted
 ## into a path this build can actually open.
 ##
 ## Why it exists: everything under assets/ except ui/ and i18n/ is produced
-## by tools/asset-import from a lawfully-owned retail client and is
-## git-ignored on purpose (AGENTS.md — no Ankama bytes in the repo). Those
-## files are read RAW, with Image.load_from_file / FileAccess /
+## by the old retail importer from a lawfully-owned retail client and is
+## git-ignored on purpose (AGENTS.md — no Ankama bytes in the repo). The
+## importer itself is gone (S32): what is on disk stays until M7's own art
+## replaces it, sprint by sprint. Those files are read RAW, with Image.load_from_file / FileAccess /
 ## FontFile.load_dynamic_font, not through ResourceLoader. In the editor
 ## res:// is a real directory on disk, so a hardcoded "res://assets/…"
 ## works; from an exported binary res:// is the .pck and loose files that
@@ -124,7 +125,7 @@ static func read_text(rel: String) -> String:
 
 
 ## Parsed JSON, or `default` when the file is missing OR malformed — the
-## asset-import output is regenerated often, so a truncated table must not
+## old retail importer output is regenerated often, so a truncated table must not
 ## take the client down.
 static func read_json(rel: String, default: Variant = null) -> Variant:
 	var txt := read_text(rel)

@@ -5879,7 +5879,7 @@ var _talk_seen := {}            # element id -> true once its intro scenario ran
 ## choices: [{label, kind, do}] — kind "reply" / "challenge" go in the list,
 ## "primary" / "secondary" in the action row.
 ## Who is talking, as a face for the talk window (S23): {"anim": set dir,
-## "action": …} for the retail portraits (tools/asset-import/portraits.sh),
+## "action": …} for the retail portraits (the old importer's portraits.sh),
 ## {"image": path} for a class portrait or a challenge's art. Each opener
 ## sets it; closing the window clears it.
 var _talk_face := {}

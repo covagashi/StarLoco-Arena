@@ -1,6 +1,6 @@
 extends RefCounted
 ## S15: AnmSprite reads a packed action (one atlas.png + `r` rects, from
-## tools/asset-import/anm_pack.py) exactly like the loose f*.png frames it
+## the old importer's anm_pack.py) exactly like the loose f*.png frames it
 ## replaces — same pixels, offsets and sizes, and the tint masks too.
 
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")

@@ -2,7 +2,7 @@ extends RefCounted
 const GameText := preload("res://src/gamedata/game_text.gd")
 
 ## Card template table exported by server/cmd/dumpcards + merged with retail
-## names by tools/asset-import/card_names.py into assets/gamedata/cards.json —
+## names by the old importer's card_names.py into assets/gamedata/cards.json —
 ## {"<id>": {name, type, set, value, price: {"<ctype>": amt}, unique, tradable}}.
 ## Names are the client's own content.23.<id> strings.
 
@@ -125,7 +125,7 @@ static func _lab_ensure() -> void:
 			_labs[int(k)] = data[k]
 
 
-## --- card set names (content.25, tools/asset-import/card_names.py) ----------
+## --- card set names (content.25, the old importer's card_names.py) ----------
 const SETS_PATH := "gamedata/cardsets.json"
 
 static var _sets := {}   # lang -> {set id int: name}

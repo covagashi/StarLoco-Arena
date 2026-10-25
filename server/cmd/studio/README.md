@@ -1,3 +1,10 @@
+> **2026-10-25 — partly dead.** This was `tools/README.md`, moved here in
+> sprint S32 when `tools/` was removed. Everything below that reads the
+> retail client's `.jar`s (jar browser, sprites, `.sba` player, map art) stopped
+> working when `client/` was deleted; the data tables over `server/data-dist/`
+> still work. Paths like `go-server/` are from an older layout (today:
+> `server/`).
+
 # DofusArena2-06 Data & Asset Studio (`tools/`)
 
 A cross-platform (Linux / macOS / Windows) desktop GUI for **browsing, visualizing,

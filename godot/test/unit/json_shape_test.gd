@@ -4,7 +4,7 @@ extends RefCounted
 ## to the caller's declared default instead of aborting the caller.
 ##
 ## Not hypothetical. assets/gamedata/*.json, the per-action meta.json files
-## and the map atlases are all tools/asset-import output, so an interrupted
+## and the map atlases are all old retail importer output, so an interrupted
 ## importer run leaves a half-written file on disk. GDScript turns that into
 ## a hard stop: `var d: Dictionary = <Nil>` raises "Trying to assign value of
 ## type 'Nil' to a variable of type 'Dictionary'" and ABORTS the rest of the

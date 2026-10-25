@@ -3,7 +3,7 @@ extends RefCounted
 ## through (B-173).
 ##
 ## The hazard it exists for: everything under assets/ except ui/ and i18n/ is
-## tools/asset-import output, git-ignored, and read RAW (Image.load_from_file,
+## old retail importer output, git-ignored, and read RAW (Image.load_from_file,
 ## FileAccess, FontFile.load_dynamic_font) rather than as a Godot resource. A
 ## hardcoded "res://assets/…" works in the editor and silently reads nothing
 ## from an exported .pck, so release builds resolve against an `assets/`

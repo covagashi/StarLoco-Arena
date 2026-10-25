@@ -1,25 +1,26 @@
 # AGENTS.md — working in this repository
 
-Guidance for AI agents (and humans) contributing to the **DofusArena 2.70**
-line. Read this before making changes. For the human-facing overview see
+Guidance for AI agents (and humans) contributing to this repository. Read
+this before making changes. For the human-facing overview see
 [`README.md`](./README.md).
-
-> **2026-10-25 — the retail client is gone.** The owner removed `client/`
-> (compiled, decompiled, analysis and the RE tooling) and stopped all use of
-> the retail client: own art, then own cards, then own texts (milestone M7,
-> `sprints/S32`–`S41`). Every mention of `client/…` below is historical until
-> S32 rewrites these docs; the wire format is now fixed by the server's own
-> code and tests (`server/internal/protocol`, `server/docs/OPCODE-INVENTORY.md`).
 
 ## What this project is
 
-A preservation + reverse-engineering project for **DofusArena 2.70** (the
-Feb-2012 retail build, rev 72909): a decompiled client used as the protocol
-reference, plus a **from-scratch Go server** that is wire-compatible with it.
+A **from-scratch Go server** plus a **from-scratch Godot 4 client** for a
+tactical card-arena game that started as a rewrite of **DofusArena 2.70** (the
+Feb-2012 retail build, rev 72909). Players see it as **Pippop Arena**.
 
-The client is fixed and cannot be changed, so the server must match it
-byte-for-byte. The decompiled client under `client/` is the source of truth for
-every opcode, field order and data layout.
+> **2026-10-25 — nothing retail any more.** The owner removed the retail
+> client (`client/`: compiled, decompiled, analysis and RE tooling) and the
+> code that extracted assets from it (`tools/`, sprint S32), and stopped
+> all use of it: own art, then own cards, then own texts (milestone M7,
+> `sprints/S32`–`S41`). Both trees are in git history only. Do not bring
+> back retail files, extraction scripts or decompiled code.
+
+The wire format came from the retail client and is now fixed by the server's
+own code and tests (`server/internal/protocol`,
+`server/docs/OPCODE-INVENTORY.md`) and by the Godot client that speaks it
+(`godot/src/net/`).
 
 > The 2006-era **2.04b** line (a separate client + Go server) lives on the
 > **`v2.04`** branch of this repository. Comments in this codebase that say
@@ -38,13 +39,9 @@ every opcode, field order and data layout.
 | `devlog/` | The agent's per-session log — what was asked, done, found, and left unverified | Yes — add an entry per session |
 | `server/COVERAGE.md` | Per-opcode implemented / wire-audited / tested matrix | Yes, keep current |
 | `server/data-dist/` | The redistributable server-data subset (`data.bdat` + `indexes.bdat`, maps) — ships in git and in releases | Occasionally, deliberately (see constraint 4) |
-| `server/data/` | Local scratch copy for pointing a dev build at your own client instead | No — **git-ignored**, local input only |
-| `client/decompiled/` | Decompiled (obfuscated) 2.70 client source — the protocol reference | No — read for provenance |
-| `client/analysis/` | Protocol + data-format write-ups (`PROTOCOL*.md`, `DATA-FORMAT.md`, `opcode_map.csv`) | Yes, when you learn something new |
-| `client/compiled/` | The runnable retail client (launcher, `core.jar`, assets, bundled JRE) | No — **git-ignored**, ~436 MB, local only. Never committed here, but linked from the release notes/README/web portal to a maintainer-hosted mirror (see constraint 5) |
-| `client/arena-mcp/`, `client/control-agent/` | RE tooling: an MCP server + a Java agent that drive the live client for testing | Occasionally |
-| `client/deobf-lab/` | Deobfuscation pipeline (mappings + scripts); its `build/` and `decompiled/` outputs are ignored | Occasionally |
-| `tools/` | RE reference snippets + `cfr.jar` (Java decompiler) | Occasionally |
+| `server/data/` | Local scratch copy of game data for a dev build | No — **git-ignored**, local input only |
+| `server/cmd/dump*` | Export `server/data-dist/` tables as JSON for `godot/assets/gamedata/` | Occasionally (until S40/S41 replace the data) |
+| `server/cmd/studio` | Wails desktop data editor; its retail-asset viewer died with `client/` (see its `README.md`) | Rarely |
 | `docs/` | Game wiki (rules, breeds, spells, mechanics), console commands, `QUICKSTART.md` (ships inside releases) | Occasionally |
 | `.github/workflows/` | `ci.yml` (build/test on Linux+Windows), `release.yml` (release-please → GoReleaser) | Occasionally |
 | `.goreleaser.yaml` | How the downloadable binaries are cross-compiled and packaged | Occasionally |
@@ -54,7 +51,7 @@ every opcode, field order and data layout.
 1. **Do not move `server/data/`.** The server resolves it from
    `server/configs/*.yaml` (`data_dir: "data"`, relative to the `server/`
    working directory). It is **git-ignored** — a local scratch copy for
-   pointing a dev build at your own client. Tests that need it must **skip**,
+   pointing a dev build at another copy of the game data. Tests that need it must **skip**,
    not fail, when it is absent.
 2. **The Go module path is `github.com/StarLoco/arena-2.70`** (in
    `server/go.mod`) even though the folder is just `server/`. This is
@@ -64,13 +61,14 @@ every opcode, field order and data layout.
    present so `go build ./...` works without first building the frontend. Do not
    delete it.
 4. **This branch does not use Git LFS.** Everything committed is source, docs or
-   small tooling assets. The heavy, copyrighted material (`client/compiled/`,
-   `server/data/`) is excluded by `.gitignore` and must stay that way — never
-   `git add -f` it.
+   small tooling assets. Copyrighted material (`server/data/`, the converted
+   retail art under `godot/assets/`) is excluded by `.gitignore` and must stay
+   that way — never `git add -f` it.
    **`server/data-dist/` is the one deliberate exception**: a small (~2.5 MB)
    maintainer-curated subset of card/spell/arena *records* (no art, audio, or
    executable code), committed on purpose so the server and its releases work
-   without every operator sourcing a client first. It is edited only via an
+   without every operator sourcing the data first. It stays until S40 (own
+   cards) replaces it. It is edited only via an
    explicit maintainer decision (StarLoco), not by force-adding whatever
    happens to be in a local `server/data/`. Keep `DISCLAIMER.md` and `NOTICE`
    in sync with whatever it contains.
@@ -90,9 +88,10 @@ every opcode, field order and data layout.
    still exists, so an operator with a lawful copy can opt in under their own
    name — that is the only path this project supports.
    `TestNoClientDownloadLinkByDefault` pins the default.
-6. **The wire protocol is sacred.** The retail client cannot be changed, so
-   server output must match the decompiled reference in `client/decompiled/` and
-   the specs in `client/analysis/`. Never "improve" the wire format.
+6. **The wire protocol is a contract.** The server and the Godot client must
+   agree byte-for-byte. Change a message only in both at once, with the
+   server's protocol tests and `godot/src/net/generated/` updated in the same
+   commit — never one side alone.
 
 ## Build / test / run (from `server/`)
 
@@ -111,9 +110,9 @@ go run ./cmd/seedaccount --login test --password test123
   `internal/config/config.template.yaml`) and `arena.db` (SQLite, WAL) in
   `server/` — both git-ignored. It also finds the committed
   `server/data-dist/` automatically, so fights work with no further setup.
-- The retail client already ships pointed at `127.0.0.1:5555`
-  (`client/compiled/game/config.properties` → `proxyAddresses_1`), so it
-  connects with no change.
+- The Godot client (`godot --path godot`) offers `127.0.0.1:5555` on its
+  login screen, so it connects with no change. Its own tests:
+  `godot/run_tests.sh`.
 - End-to-end tests live in `server/test/e2e/` and drive a real server over a
   real socket. `realdata_test.go` boots it on the committed `data-dist/`; the
   rest use no game data or a hand-built catalogue.
@@ -158,18 +157,15 @@ Two constraints worth knowing before editing the workflows:
 
 ## Testing against the live client
 
-`client/arena-mcp/` exposes an MCP server that boots the retail client with
-`client/control-agent/control-agent.jar` injected as a `-javaagent`, then drives
-it with synthetic input and returns screenshots + logs. See
-[`server/docs/CLIENT-TESTING.md`](./server/docs/CLIENT-TESTING.md).
-
-This requires the git-ignored `client/compiled/` tree to be present locally.
-A live GUI run remains the final validation step — unit and E2E tests are not a
-substitute for it.
+The end-to-end check is the Godot client against a real server: the
+`godot/test/*_smoke.gd` scripts log in, fight and drive the lobby over a real
+socket (see `godot/README.md`). They need art that a fresh clone does not have
+until M7 lands, and skip without it. Unit and E2E tests are not a substitute
+for a live run.
 
 ## Conventions
 
-- **Go**: standard `gofmt`; keep the byte-exact wire protocol.
+- **Go**: standard `gofmt`; keep the wire protocol in step with the Godot client.
 - **Tests**: prefer table/real-data tests; real-data tests **skip** (not fail)
   when `server/data` is absent. Keep that behavior.
 - **Docs**: keep [`server/docs/STATUS.md`](./server/docs/STATUS.md) current — it

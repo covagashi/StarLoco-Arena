@@ -96,7 +96,7 @@ Linux y Windows).
 | [S25](./S25-temporadas.md) | M6 | M | 🟢 cerrado | Temporadas: reinicio suave del Elo y pesetas para el top, para comprar cosméticos |
 | [S29](./S29-torneos-sin-conexion.md) | M6 | L | 🟢 cerrado | Torneos sin conexión: el servidor juega el cuadro IA contra IA con el último fantasma de cada uno y graba cada combate |
 | [S27](./S27-supermensajes.md) | M6 | M | ⛔ descartado (dueño, 2026-10-25) | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
-| [S32](./S32-fuera-el-retail.md) | M7 | M | ⚪ esbozo | Fuera la extracción del retail (herramientas, dumps, lectores); decidir si los datos del juego también se rehacen |
+| [S32](./S32-fuera-el-retail.md) | M7 | M | 🟢 cerrado | Fuera la extracción del retail: `tools/` borrado, docs reescritos; los `dump*` se quedan hasta S40 (leen `data-dist`) |
 | [S33](./S33-plan-de-arte.md) | M7 | M | ⚪ esbozo | Plan de arte: estilo, técnica (3D/cutout, VFX en tiempo real, animación procedural) y prototipo vertical |
 | [S34](./S34-pipeline-de-assets.md) | M7 | M | ⚪ esbozo | Pipeline nuevo: de la fuente al juego en un comando, licencias, comprobaciones |
 | [S35](./S35-personajes.md) | M7 | L | ⚪ esbozo | Personajes: 24 luchadores, 9 invocaciones, 2 coaches; ~10 animaciones por esqueleto |

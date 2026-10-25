@@ -69,7 +69,7 @@ qué el visual no puede correr en CI).
       1 %) en vez de una Resurrection (33 200, 100 %): lotería barata. Arreglo propuesto:
       exigir también tipo 24 en el servidor, con test. Visto el 2026-10-20.
 
-- [ ] **Nombres de cartas solo en inglés.** `tools/asset-import/card_names.py` lee
+- [x] (2026-10-25: obsoleto — el importador se borró en S32; los textos propios llegan en S41) **Nombres de cartas solo en inglés.** `tools/asset-import/card_names.py` lee
       `content.23` de `texts_en` aunque el `i18n.jar` trae es/fr ("Weerdtrot Jacket" en
       una interfaz en español). Mismo arreglo que los textos de NPC (`locales`), visto el
       2026-10-20.
@@ -176,24 +176,11 @@ Cerrado 2026-10-03/04: decoder `.xps` 364/364 (`0x5001`), `spell_fx.json` 116 sp
 keyframed (`Deformer`/`LinearForce`), `DirectionFollower`, auditoría de texturas
 (0 faltantes en spells), `81.xps` = dato muerto de retail. Commits `682e8ba5` y posteriores.
 
-**Regenerar assets** tras tocar importadores (artefactos en `godot/assets/gamedata/` y
-`godot/assets/fx/`, gitignored):
+**Regenerar assets:** ya no se puede — `tools/asset-import` y el cliente retail se
+borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
+`godot/assets/` sigue hasta que el arte propio de M7 lo sustituya.
 
-```bash
-cd server && go run ./cmd/dumpspells ../server/data-dist /tmp/spells_raw.json
-cd ..
-python3 tools/asset-import/xps_dump.py \
-  client/compiled/game/contents/sfx.jar \
-  godot/assets/gamedata/xps godot/assets/fx \
-  godot/assets/gamedata/xps_index.json
-python3 tools/asset-import/spell_sounds.py /tmp/spells_raw.json \
-  client/compiled/game/contents/data.jar client/compiled/game/contents/sounds.jar \
-  godot/assets/gamedata/spell_sfx.json godot/assets/sounds \
-  godot/assets/gamedata/anm_scripts.json godot/assets/gamedata/spell_fx.json
-python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
-```
-
-- [ ] **Validación MCP vs cliente retail — estaba bloqueada en macOS arm64**
+- [x] (2026-10-25: obsoleto — sin cliente retail desde S32) **Validación MCP vs cliente retail — estaba bloqueada en macOS arm64**
       (verificado 2026-10-03): `client/compiled` local carece de `lib/`+natives; el display
       exige JOGL 1.x (`GLCanvas`, sin natives arm64). Caminos: Windows real/VM ARM con el
       bundle win32, o shim `javax.media.opengl`→JogAmp 2.x (trabajo grande).
@@ -207,8 +194,9 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 - Matar Godot tras probar: `pkill -f "Contents/MacOS/Godot --path \."` — el argv real no
   lleva la ruta. Para los dos sistemas: `pkill -f "^[^ ]*[Gg]odot[^ /]* --path \."`, el mismo patrón
   que usa `run_tests.sh`, anclado al inicio para no matar a una shell cuyo texto lo contenga.
-- Solo `godot/` se toca para GUI; protocolo sagrado; XMLs retail no se editan (se arregla
-  el intérprete).
+- Solo `godot/` se toca para GUI; el protocolo cambia a la vez en servidor y cliente, nunca
+  en uno solo; XMLs retail no se editan (se arregla el intérprete) hasta que los panels
+  nativos los sustituyan.
 
 ## 8. Tooling y CI
 
@@ -223,7 +211,7 @@ python3 tools/asset-import/test_xps.py   # esperado: 364/364 full, 1 legacy
 - [ ] Studio: `GetMapGfx` / `GetMapSprites` / `GetMapRender` (Go) no tienen
       consumidor en el frontend desde que knip borró sus envoltorios TS (S02).
       Conectarlos a una vista o borrarlos.
-- [ ] (Opcional) `tools/proto-gen/gen_messages.py` es un generador de código, no
+- [x] (2026-10-25: obsoleto — `tools/proto-gen` se borró en S32; `generated/` se edita a mano) (Opcional) `tools/proto-gen/gen_messages.py` es un generador de código, no
       una tarea de datos: según la regla "CLI = Go" iría en `server/cmd/`.
 - [ ] (Pregunta) ¿Seguir soportando MySQL y Postgres o quedarse solo con SQLite?
       Hoy hay tres drivers, tres configs y tres compose en `server/deploy/`.

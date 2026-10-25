@@ -2,7 +2,7 @@ extends RefCounted
 
 ## NPC dialog table: record 1500 (client `atF` reply rows) exported by
 ## server/cmd/dumpnpcdialogs and resolved against i18n tables 29/59/60 by
-## tools/asset-import/npc_dialogs.py into assets/gamedata/npcdialogs.json:
+## the old importer's npc_dialogs.py into assets/gamedata/npcdialogs.json:
 ##
 ##   {"names":  {"<nameId>": "Baan"},
 ##    "groups": {"<groupId>": {"text": "…",   # content.59 speech

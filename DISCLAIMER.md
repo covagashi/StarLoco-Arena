@@ -5,25 +5,20 @@
 This project is an **independent, non-commercial** effort for the preservation,
 study, and interoperability of **DofusArena 2**, a discontinued game. It is
 **not affiliated with, authorized, endorsed by, or in any way officially
-connected to Ankama Games**, Oracle, or any of their subsidiaries or affiliates.
+connected to Ankama Games** or any of its subsidiaries or affiliates.
 
 **DofusArena**, **Dofus**, and all related names, logos, artwork, sounds, and
-game data are trademarks or copyrighted works of **Ankama Games**. **Java** and
-the bundled Java Runtime Environment are the property of **Oracle Corporation**
-(formerly Sun Microsystems). All other trademarks are the property of their
-respective owners.
+game data are trademarks or copyrighted works of **Ankama Games**. All other
+trademarks are the property of their respective owners.
 
 ## What is original vs. third-party
 
 - **Original work (MIT-licensed):** the Go server under `server/` (excluding
-  the data described below), the utilities under `tools/`, the RE tooling
-  under `client/arena-mcp/`, `client/control-agent/` and
-  `client/deobf-lab/scripts/`, and this project's documentation.
+  the data described below), the Godot client code under `godot/` (excluding
+  the git-ignored `godot/assets/` described below), and this project's
+  documentation.
 - **Third-party / copyrighted material reproduced here (NOT licensed by this
   project — © Ankama Games):**
-  - `client/decompiled/` — decompiled client code, reproduced only as an
-    interoperability and study reference, together with the mappings and
-    analysis derived from it (`client/deobf-lab/mappings/`, `client/analysis/`).
   - `server/data-dist/` (`data.bdat`, `indexes.bdat`, `maps/` — the latter
     holding `fight/`, `tplg/` and `env/`) — the card, spell, arena and
     **overworld-layout records** the server's own logic needs to run a fight and
@@ -32,13 +27,19 @@ respective owners.
     they display). This is a small (~3 MB), deliberate subset the maintainer has
     chosen to include so the server runs without requiring every operator to
     separately source a client. It ships in every downloadable release and in
-    `git clone`.
+    `git clone`. The project's own cards are to replace it (sprint S40).
+- **Removed from the tree, still in git history** (© Ankama Games): until
+  2026-10-25 this repository also carried decompiled client code with the
+  mappings and analysis derived from it (`client/decompiled/`,
+  `client/deobf-lab/mappings/`, `client/analysis/`). Sprint S32 removed them
+  together with the reverse-engineering tooling and the asset-extraction
+  scripts (`tools/`). They are no longer in the current tree or in any future
+  release, but past commits still contain them; a takedown request (below)
+  covers history too.
 - **Not distributed by this project** (© Ankama Games):
-  - `client/compiled/` — the full retail game client (launcher, `core.jar`,
-    art, audio, ~436 MB) and its bundled Oracle/Sun JRE. It is not in this
-    repository's source tree, not in `git clone`, not in any release archive,
-    and not linked from the README or the release notes. It stays git-ignored
-    (see `AGENTS.md` constraint 4).
+  - The retail game client. It is not in this repository, not in `git clone`,
+    not in any release archive, and not linked from the README or the release
+    notes.
 
     **`web.client_download_url` defaults to empty**, so the software as
     published links to no copy of the client anywhere. An individual operator
@@ -51,18 +52,22 @@ respective owners.
     well, so every operator who unzipped a release and ran it republished that
     link from their own portal without ever choosing to. The link itself was a
     defensible individual choice; making it everyone's default was not.
+  - `godot/assets/` (except `ui/` and `i18n/`) — art, audio and text tables
+    converted from a retail client by the removed importer, on the machines
+    that still have them. Git-ignored and never committed or released; the
+    project's own art replaces it (milestone M7).
   - `server/data/` — a git-ignored scratch folder for pointing a local build
-    at your own client copy instead of the bundled `server/data-dist/`.
+    at another copy of the game data instead of the bundled `server/data-dist/`.
 
 See [`NOTICE`](./NOTICE) for third-party attributions and [`LICENSE`](./LICENSE)
 for the scope of the MIT license.
 
 ## Purpose
 
-The decompiled references exist solely to allow the original client to be
-studied and to validate that the from-scratch server is wire-compatible with it.
-No attempt is made to circumvent any live commercial service — the game and its
-official servers are discontinued.
+The decompiled references that used to live here existed solely to study the
+original client and validate that the from-scratch server was wire-compatible
+with it. No attempt is made to circumvent any live commercial service — the
+game and its official servers are discontinued.
 
 ## No warranty
 

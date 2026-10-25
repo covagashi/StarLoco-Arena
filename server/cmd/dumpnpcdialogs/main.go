@@ -13,7 +13,7 @@
 //
 // Clicking a reply runs its action then navigates to nextId (ao_2 case 17001).
 //
-// The merger (tools/asset-import/npc_dialogs.py) resolves text ids against
+// The merger (the old importer's npc_dialogs.py) resolves text ids against
 // i18n tables 29/59/60 into the shipped npcdialogs.json.
 //
 // Usage: go run ./cmd/dumpnpcdialogs <data-dir> <out.json>

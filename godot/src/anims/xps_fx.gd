@@ -9,7 +9,7 @@ extends Node2D
 ## angular_velocity, keyframed LinearForce origin-pull → radial_accel,
 ## DirectionFollower → projectile body rotation tracking the
 ## instantaneous screen-space velocity); sub-emitters and lights remain
-## omitted — see tools/asset-import/xps_dump.py for the decode matrix.
+## omitted — see the old importer's xps_dump.py for the decode matrix.
 ##
 ## Also covers the script Particle.addTweenParticleSystem projectile: a burst
 ## riding the retail avw_0 ballistic arc (v0 = sqrt(g*dist/sin 2a), flight

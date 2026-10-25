@@ -62,24 +62,24 @@ to `arena-server` - nothing to do here. The startup message confirms it:
                 from /path/to/arena-server/data
 ```
 
-Playing with your own instead (e.g. after a client update)? Point `--data` at
-your DofusArena folder (the one with `DofusArena.exe` in it), or set `data_dir`
-in `config.yaml` to the same path - either replaces the bundled copy.
+Using another copy instead? Point `--data` at a folder holding `data.bdat`,
+`indexes.bdat` and `maps/`, or set `data_dir` in `config.yaml` to the same
+path - either replaces the bundled copy.
 
 Note that this is the **server's own data** (card/spell/arena records), not the
 playable game - see the next step for that.
 
 ## 4. Connect with the game client
 
-Don't have the client installed yet? The web portal from step 2 has a
-download link near the top of the page.
+The game client is the Godot client in the project repository (`godot/`):
+start it and pick or type your server on the login screen - `127.0.0.1:5555`
+on the same computer, or the server machine's address (e.g.
+`192.168.1.20:5555`) from another one - then log in with the account you
+registered.
 
-1. Open `game/config.properties` in your DofusArena client folder.
-2. Find `proxyAddresses_1` and set it to your server:
-   - same computer: `proxyAddresses_1=127.0.0.1:5555,127.0.0.1:5555`
-   - another computer: `proxyAddresses_1=192.168.1.20:5555,192.168.1.20:5555`
-     (use the server machine's address)
-3. Start `DofusArena.exe` and log in with the account you registered.
+> The client is getting its own art (2026-10-25: the retail art and the
+> tools that converted it were removed). Until that lands there is no
+> playable client download; the server itself works as described here.
 
 Your coach is created inside the game the first time you connect.
 

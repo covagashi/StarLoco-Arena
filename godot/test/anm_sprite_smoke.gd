@@ -14,7 +14,7 @@ const SET := "res://assets/anims/coach_7000"
 
 func _init() -> void:
 	if not DirAccess.dir_exists_absolute(SET):
-		print("[skip] %s absent — run tools/asset-import export first" % SET)
+		print("[skip] %s absent — needs the old retail export on disk" % SET)
 		quit(0)
 		return
 	var spr := AnmSprite.new()

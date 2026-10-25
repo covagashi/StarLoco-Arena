@@ -1,7 +1,7 @@
 // dumpcards dumps every coach-card template into a JSON table for the Godot
 // client's shop/inventory UI: {"<id>": {"type","set","value","price":{t:amt}}},
 // plus the resurrection, fusion and firework fields the client uses.
-// Card display names come from i18n content.23 (merged by card_names.py).
+// Card display names come from i18n content.23 (merged by the old importer's card_names.py).
 //
 // Usage: go run ./cmd/dumpcards <data-dir> <cards.json> [fusionlabs.json]
 package main

@@ -119,8 +119,9 @@ constraint on converted retail art — see AGENTS.md / sprints/BACKLOG.md),
 so a fresh checkout never has it, and the windowed previews (coach_7000
 anims + appSkin atlases) can't run without it.
 
-Regenerate it with the asset-import pipeline — see the commands in
-sprints/BACKLOG.md §6.
+The retail importer was removed in S32 (sprints/S32-fuera-el-retail.md):
+this lane only runs on a checkout that still has the old export on disk,
+until the M7 art replaces it.
 EOF
 }
 

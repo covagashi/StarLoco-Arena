@@ -4,7 +4,7 @@ extends "res://test/world_smoke.gd"
 ##
 ##   godot --path godot -s test/audio_smoke.gd
 ##
-## Needs assets/musics/ (tools/asset-import/musics.py). Under xvfb or
+## Needs assets/musics/ (the old importer's musics.py). Under xvfb or
 ## --headless Godot still runs its audio mixer (dummy driver), so a player
 ## reports .playing like it would with speakers.
 ##  1. The lobby plays "island" (retail: track 1 outside a fight).

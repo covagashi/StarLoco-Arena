@@ -1,5 +1,10 @@
 # Client testing — notes
 
+> **Historical (2026-10-25).** The retail client, `client/arena-mcp/` and
+> `client/control-agent/` were removed in sprint S32 (git history only).
+> Live testing is now the Godot client's smoke scripts — see
+> [`godot/README.md`](../../godot/README.md).
+
 ## Validating in-fight frames without a rendering client
 
 **This document previously said in-fight frames could not be live-validated.

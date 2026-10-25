@@ -5,6 +5,11 @@ detail; this is state.
 
 **Updated:** 2026-09-02
 
+> **2026-10-25 — the retail client and its extraction tools are gone**
+> (`client/` and `tools/`, sprint S32; git history only). Mentions of
+> `client/…`, `tools/asset-import` or a "live retail client" below are
+> historical. The live roadmap is `sprints/`.
+
 > **Security:** a full hostile-client audit plus a client-enforced-rule sweep and
 > **fully remediated** (`BUGS.md` B-145 … B-160). That included two remote
 > full-server crashes reachable in three packets, four unbounded card-minting

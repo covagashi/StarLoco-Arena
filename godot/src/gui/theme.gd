@@ -3,7 +3,7 @@ extends RefCounted
 ## XULOR2 theme loader — parses assets/gui/xml/theme/default.xml.
 ## Every path in here is a LOGICAL asset name ("gui/images/foo.png")
 ## resolved through AssetPaths at the point of the read: the retail GUI
-## tree is asset-import output and is read raw (XMLParser / Image), so it
+## tree is old retail importer output and is read raw (XMLParser / Image), so it
 ## cannot rely on res:// existing in an exported build.
 ## Resource registries: textures/pixmaps/pixmap_borders/pixmap_backgrounds/
 ## colors/fonts/cursors, plus per-widget theme elements keyed "typeStyle"

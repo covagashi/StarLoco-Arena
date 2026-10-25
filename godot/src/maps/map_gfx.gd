@@ -1,6 +1,6 @@
 extends Node2D
 
-## Painted map-art layer, fed by tools/asset-import/map_gfx.py output:
+## Painted map-art layer, fed by the old importer's map_gfx.py output:
 ##   <asset root>/mapgfx/<world>.json  {tex:{id:{w,h}}, sprites:[{tex,sx,sy,w,h,uv,z}]}
 ##   <asset root>/mapgfx/tex/<gfx>.png
 ## Both are read raw through AssetPaths (import output, not resources).
@@ -17,7 +17,7 @@ var _ready_ok := false
 ## {id: {k: Callable -> int zkey, d: Callable(CanvasItem)}}.
 var _dynamic := {}
 var debug := OS.has_environment("MAPGFX_DEBUG")
-## Asset folder the art comes from (tools/asset-import/map_gfx.py).
+## Asset folder the art comes from (the old importer's map_gfx.py).
 var source_dir := "mapgfx"
 
 

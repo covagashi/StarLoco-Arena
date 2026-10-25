@@ -6,32 +6,29 @@ constraints), read [`AGENTS.md`](./AGENTS.md).
 
 ## Scope of contributions
 
-This branch (`v2.70`) targets the **DofusArena 2.70** line (the Feb-2012 retail
-build, rev 72909). The primary actively developed component is the **Go server**
-in [`server/`](./server). Most contributions belong there.
+This branch (`v2.70`) started as a rewrite of **DofusArena 2.70** (the Feb-2012
+retail build, rev 72909). The actively developed components are the **Go
+server** in [`server/`](./server) and the **Godot client** in
+[`godot/`](./godot).
 
 > The 2006-era **2.04b** line lives on the **`v2.04`** branch. Contributions for
 > that line belong there, not here.
 
-The other directories are reference material:
+The retail client, its decompiled sources, the reverse-engineering tooling
+and the asset-extraction scripts were removed on 2026-10-25 (sprint S32); they
+are in git history only. The project is moving to its own art, cards and texts
+(milestone M7, [`sprints/`](./sprints)).
 
-- `client/decompiled/` — decompiled (obfuscated) 2.70 client, read-only reference.
-- `client/analysis/` — protocol and data-format write-ups derived from it.
-- `client/arena-mcp/`, `client/control-agent/`, `client/deobf-lab/` — RE tooling.
-- `client/compiled/` — the retail client. **Not committed** (git-ignored); you
-  supply it locally. The release notes, README and web portal link to a
-  maintainer-hosted mirror as a convenience — a separate, deliberate decision
-  from what this repository commits (see `AGENTS.md` constraint 5).
-- `server/data/` — a git-ignored scratch copy of your own client's data, for
-  local development.
+- `server/data/` — a git-ignored scratch copy of game data, for local
+  development.
 - `server/data-dist/` — the small, deliberately-curated data subset that *is*
   committed and ships in releases (see `AGENTS.md` constraint 4). Changes to it
   are a maintainer decision, not a routine contribution.
 
-Please **do not** add newly decompiled third-party code without a clear
-provenance note, and do not commit copyrighted assets that aren't already part
-of the preservation set (`server/data-dist/` and `client/decompiled/` are the
-two deliberate exceptions, already covered by `DISCLAIMER.md`).
+Please **do not** add decompiled third-party code, retail files or scripts
+that extract from the retail client, and do not commit copyrighted assets.
+`server/data-dist/` is the one deliberate exception, covered by
+`DISCLAIMER.md`, until the project's own cards replace it (S40).
 
 ## Getting set up
 
@@ -51,10 +48,9 @@ No Git LFS is needed — a plain `git clone` gets everything that is tracked.
 ## Coding conventions
 
 - **Go:** standard `gofmt`; keep changes focused and idiomatic.
-- **Wire protocol is sacred.** The retail client is fixed and cannot change, so
-  server output must remain byte-exact against the decompiled reference in
-  `client/decompiled/` and the specs in `client/analysis/`. Never "improve" the
-  wire format.
+- **The wire protocol is a contract** between the server and the Godot
+  client: change a message only in both at once, in the same commit, with the
+  protocol tests updated.
 - **Do not move `server/data/`** — `server/configs/*.yaml` resolves it as
   `data_dir: "data"`, relative to the `server/` working directory.
   See [`AGENTS.md`](./AGENTS.md) for the exact constraints.

@@ -10,7 +10,7 @@ extends Node
 ## fight (aog_1 world entry, RO fight end), track 2 "fight" during one
 ## (aog_1 / tu_1 fight start). Track 0 "loading" ships but is never asked
 ## for. The retail cross-fades between them; so does this, on two players.
-## The oggs come from the player's own client (tools/asset-import/musics.py,
+## The oggs come from the player's own client (the old importer's musics.py,
 ## assets/musics/); with none imported the game is simply silent.
 ##
 ## Volumes live in gamePreferences under the retail optionsDialog keys

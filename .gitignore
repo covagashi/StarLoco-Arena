@@ -99,7 +99,7 @@ __pycache__/
 # commit it (it is machine-local and huge).
 /godot/.godot/
 /godot/export/
-# Converted retail art (tools/asset-import output) — derived from
+# Converted retail art (old retail importer output) — derived from
 # client/compiled/, same no-redistribution rule applies.
 # Contents only: each folder's .gdignore IS tracked, so Godot never tries to
 # import this art (it is read raw through AssetPaths, and there are ~312k PNG
@@ -121,7 +121,7 @@ __pycache__/
 !/godot/assets/mapgfx_1bit/.gdignore
 /godot/assets/musics/*
 !/godot/assets/musics/.gdignore
-# tools/make_assets.sh's logs and anims --resume stamps
+# the old make_assets.sh logs (removed in S32; kept ignored for checkouts that still have them)
 /godot/assets/.make_assets/
 # Agent worktrees: a full second checkout of this repo, created by Claude Code
 # for isolated work. Never committable. Project-level .claude/settings.json is
