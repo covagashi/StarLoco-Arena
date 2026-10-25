@@ -144,6 +144,7 @@ elegir las piezas de cada arena en la sesión limpia.
 | 005 | #20 (gfx 123) | bloque negro: solo está para dar efecto (sombra) | **quitar**, no es un asset |
 | 010 | #13 (gfx 1665) | rayo de luz desde el cielo | **VFX**, no es pieza de mapa |
 | 010 | #22 (gfx 1342) | efecto de luz, como #13 | **VFX** |
+| 010 | #35 (gfx 1253) | efecto | **VFX** |
 | 010 | #6 (gfx 123) | el mismo bloque negro de la 005 #20; se parece al efecto VFX | **no se usa** |
 | 010 | #26, #27 (gfx 202, 203) | hojas de árbol tipo arce (Canadá) | renombrar |
 | 010 | #32 (gfx 1016) | arbusto | renombrar |
@@ -160,3 +161,6 @@ Reglas que salen de esto:
 - Hay muchas piezas que repiten forma con otro color; el dueño pregunta si
   basta con una y cambiar el color (ver la respuesta en la conversación del
   2026-10-25).
+- Orden acordado: primero el dueño repasa todas las fichas y dice qué no se
+  usa; después se hace el catálogo de familias (mismo gfx / misma forma con
+  otro color) y el dueño lo confirma.
