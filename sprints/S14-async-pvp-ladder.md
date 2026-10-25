@@ -1,6 +1,6 @@
 # S14 — Async PvP, fase 5: relleno, ladder y recompensas
 
-**Planificado:** 2026-10-16 · **Detallado, abierto y cerrado:** 2026-10-23 · **Hito:** M4 — Async PvP · **Tamaño:** M · **Estado:** 🟢 cerrado (dos decisiones siguen abiertas para el dueño)
+**Planificado:** 2026-10-16 · **Detallado, abierto y cerrado:** 2026-10-23 · **Hito:** M4 — Async PvP · **Tamaño:** M · **Estado:** 🟢 cerrado (las dos decisiones abiertas, tomadas el 2026-10-25 → S25)
 
 ## Objetivo
 
@@ -11,6 +11,16 @@ aunque haya pocos jugadores conectados, que es justo el caso de un revival.
 
 - ¿Qué se gana al vencer a un ghost? Por defecto, nada en cartas: solo ladder.
 - ¿El Elo de un ghost decae con el tiempo?
+
+## Decisiones del dueño (2026-10-25)
+
+- **Recompensa:** temporadas. Al final de cada una, los del top ganan
+  **pesetas**, una moneda para comprar cosméticos. Ganar a un ghost sigue
+  sin dar cartas.
+- **Decaimiento:** no hay decaimiento continuo. Al empezar cada temporada se
+  hace un **reinicio suave** que acerca a todos a la media.
+
+Las dos piden temporadas en el servidor → [S25](./S25-temporadas.md).
 
 ## Decisiones (delegadas: "continúa", 2026-10-23)
 
