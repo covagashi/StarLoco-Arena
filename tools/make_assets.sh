@@ -33,6 +33,9 @@
 #             portraits.sh → anims/portrait_*/ (the long one: ~40 min)
 #   sounds    sounds.py → sounds/<id>.ogg for every id the tables and the
 #             anim sets name (run after gamedata and anims)
+#   pack      anm_pack.py → one atlas.png (+ atlas_m.png) per anim action
+#             instead of one PNG per frame: ~17x fewer files and ~4x less
+#             disk; AnmSprite reads either layout (skip it to keep frames)
 #
 # Needs: bash, python3 (+ Pillow for the gui stage), Go (gamedata stage).
 # Re-running is safe: every stage rewrites its own outputs in place, and an
@@ -40,7 +43,7 @@
 # never leaves a half set behind.
 set -euo pipefail
 
-STAGES=(gamedata fx gui musics mapgfx anims sounds)
+STAGES=(gamedata fx gui musics mapgfx anims sounds pack)
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 AI="$HERE/asset-import"
@@ -330,6 +333,11 @@ do_anims() {
 do_sounds() {
 	gdignore sounds
 	"$PY" "$AI/sounds.py" "$C/sounds.jar" "$OUT" "$C/animations.jar"
+}
+
+# ---- pack ------------------------------------------------------------------
+do_pack() {
+	"$PY" "$AI/anm_pack.py" "$OUT/anims" | tail -1
 }
 
 echo "make_assets: $C -> $OUT"
