@@ -1,6 +1,6 @@
 # S27 — Supermensajes
 
-**Planificado:** 2026-10-25 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-25 · **Hito:** M6 — Un juego de hoy · **Tamaño:** M · **Estado:** ⛔ descartado (dueño, 2026-10-25: "no hagas eso de los supermensajes")
 
 ## Objetivo
 

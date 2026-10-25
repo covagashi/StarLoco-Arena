@@ -92,7 +92,7 @@ Linux y Windows).
 | [S15](./S15-client-packaging.md) | M5 | L | 🟢 cerrado | Empaquetado del cliente: 3 plataformas, generador de assets, peso |
 | [S26](./S26-retos-demonios-fichas.md) | M6 | M | 🟢 cerrado (torneos sin conexión y economía de cartas, aprobados → por planificar) | Fichas en torneos y retos, todos los retos en Historia, los Señores del Tiempo (nombres mayas), Demonio I narrador |
 | [S25](./S25-temporadas.md) | M6 | M | ⚪ esbozo | Temporadas: reinicio suave del Elo y pesetas para el top, para comprar cosméticos |
-| [S27](./S27-supermensajes.md) | M6 | M | ⚪ esbozo | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
+| [S27](./S27-supermensajes.md) | M6 | M | ⛔ descartado (dueño, 2026-10-25) | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
 
 Estados: ⚪ esbozo / ⚪ detallado (planificado) · 🟡 siguiente o abierto · ⏸ en pausa · 🟢 cerrado.
