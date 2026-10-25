@@ -25,4 +25,7 @@ model("t_ice", box(1, H + 0.1, 1, "ice"), box(1.0, 0.03, 1.0, { mat: "iceTop", p
 model("t_stone", box(1, H - 0.2, 1, "ice"), box(1.0, 0.08, 1.0, { mat: "stone", pos: [0, H - 0.2, 0] }))
 model("t_gold", box(1, H, 1, "ice"), box(1.02, 0.1, 1.02, { mat: "gold", pos: [0, H, 0] }))
 
-pack("arena5_tiles", ["t_snow", "t_lilac", "t_ice", "t_stone", "t_gold"])
+// plain ice column, stacked under a tile down to the arena floor
+model("t_col", box(1, 1, 1, "ice"))
+
+pack("arena5_tiles", ["t_snow", "t_lilac", "t_ice", "t_stone", "t_gold", "t_col"])
