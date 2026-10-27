@@ -172,11 +172,18 @@ cada vez, empezando por la más usada.
     a otra.
   - Hojas: `arena5-hierba.png` (la pieza) y `arena5-hierba-prado.png`
     (6×6 a escala real del juego).
-  - Pendiente del dueño: en el retail cada casilla es un cojín con su
-    borde y se nota la cuadrícula; el nuestro se lee como un prado
-    continuo. Y en el mapa la hierba también va sobre piedra gris: decidir
-    si hace falta una capa de hierba suelta para poner encima de otros
-    bloques.
+  - Dueño (2026-10-27): la cuadrícula se tiene que ver, cada casilla como
+    el bloque suelto y no como un prado continuo. La hierba sube en cúpula
+    desde un borde bajo, con hierba más oscura al pie (`grassRim`) y los
+    bultos del borde en un verde medio (`grassMid`). Se probó un borde ancho
+    (tablero de cojines, demasiado) y sin borde (prado, se pierde); queda una
+    línea fina, como en el retail. Hoja: `arena5-hierba-prado.png`.
+  - Dueño: sí a la hierba sobre otros bloques. Pieza nueva `grass_cap`
+    (tipo `cap` en `kit.json`: va encima del bloque de otra pieza, y = 0 es
+    su cara de arriba, el borde de tierra cuelga por sus lados). El bloque y
+    la capa comparten la misma parte de arriba (`grassTop`). Hoja:
+    `arena5-hierba-sobre-piedra.png` (con un bloque gris de prueba, no se
+    sube).
 
 ## Fases
 
