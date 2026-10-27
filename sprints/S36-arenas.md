@@ -155,6 +155,29 @@ El dueño confirmó todas las suposiciones de `mapa-arena2.png`; la 138 y la
   la casa; 214, 215 y 216, ladrillos sueltos de decoración.
 - Hoja de los cambios: `cambios-nieve-1.png` … `-3.png`.
 
+### Arena 5 (mundo 21, pradera), 2026-10-27
+
+Kit nuevo en `godot/art/arena5/` (texturas `kit.tx.js`, modelos `kit.kx.js`,
+manifiesto `kit.json` con lo que reutiliza de las arenas 1 y 2). Una pieza
+cada vez, empezando por la más usada.
+
+- Bloque de hierba (315, 316, 317; el dueño: "es el mismo bloque").
+  - Cuerpo de tierra con estratos ondulados (textura loom `soil`: arena
+    ocre, tierra oscura, arcilla roja), un borde ondulado de tierra oscura
+    bajo la hierba, un cojín de hierba encima (textura loom `grass`: manto
+    denso de briznas, sin tierra a la vista) y, en cada lado, bultos de
+    hierba que asoman por el borde con briznas colgando.
+  - Looms: verde fresco (el retail), verde prado, seco dorado.
+  - Columna `soil_col` de 1 m para apilar debajo; los estratos siguen de una
+    a otra.
+  - Hojas: `arena5-hierba.png` (la pieza) y `arena5-hierba-prado.png`
+    (6×6 a escala real del juego).
+  - Pendiente del dueño: en el retail cada casilla es un cojín con su
+    borde y se nota la cuadrícula; el nuestro se lee como un prado
+    continuo. Y en el mapa la hierba también va sobre piedra gris: decidir
+    si hace falta una capa de hierba suelta para poner encima de otros
+    bloques.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)

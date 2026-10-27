@@ -1,0 +1,114 @@
+{
+	"_doc": "Arena 5 (retail world 21: meadow, ruins of a house) kit for the map editor (S36), same schema as art/arena1/kit.json. Pieces the arena also uses from the arena 1 and 2 kits are listed in shared.",
+	"biome": "pradera",
+	"arenas": [
+		21
+	],
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"grass": [
+			"verde fresco",
+			"verde prado",
+			"seco, dorado"
+		]
+	},
+	"shared": [
+		{
+			"kit": "arena1",
+			"name": "rock_block",
+			"gfx": [
+				105,
+				104
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "stone_block",
+			"gfx": [
+				77,
+				79,
+				78
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "slab",
+			"gfx": [
+				497
+			]
+		},
+		{
+			"kit": "arena2",
+			"name": "fallen_leaves",
+			"gfx": [
+				203,
+				201,
+				202,
+				127
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "pebbles",
+			"gfx": [
+				163,
+				161
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "bridge_end",
+			"gfx": [
+				168
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "rune",
+			"gfx": [
+				506,
+				507,
+				510,
+				512,
+				508,
+				509,
+				511
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "grate",
+			"gfx": [
+				513
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "lantern",
+			"gfx": [
+				1675,
+				1676
+			]
+		}
+	],
+	"minor": [],
+	"pieces": [
+		{
+			"name": "grass_block",
+			"label": "Bloque de hierba",
+			"kind": "tile",
+			"gfx": [
+				317,
+				316,
+				315
+			],
+			"looms": "grass",
+			"top": 0.86,
+			"col": "soil_col"
+		}
+	]
+}
