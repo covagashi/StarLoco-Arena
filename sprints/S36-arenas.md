@@ -106,7 +106,7 @@ El dueño confirmó todas las suposiciones de `mapa-arena2.png`; la 138 y la
   ceja clara, mandíbula saliente en el corto, cuernos de carnero en el alto
   y hierba en cada junta. Las cabezas son cinco prismas apilados con las
   tapas metidas (`pillow`), que a escala de juego leen como redondeadas.
-  Hoja: `totems-arena2.png`.
+  Hoja: `totems-arena2.png`. Dueño (2026-10-27): "ya quedan mejor".
 - Las hojas ya no son una tira larga (dueño, 2026-10-27: "no hagas una
   imagen infinita, pierde demasiada calidad"). `kit_sheet.py` saca páginas
   que caben en la pantalla de la Ally (`kit-arena2-1.png` … `-10.png`), y
