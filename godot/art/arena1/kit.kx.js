@@ -22,6 +22,22 @@ pal(Object.fromEntries(["", "_b", "_c"].flatMap((s) => [
   ["moss" + s, { tex: "out/moss" + s, uv: 1, rough: 0.7 }],
   ["stem" + s, { tex: "out/stem" + s, uv: 0.4, rough: 0.8 }],
 ])))
+// dead tree bark (150): the tree's painted bark, tinted per loom
+pal({
+  deadBark: { tex: "out/bark_paint", uv: 0.45, color: "#d8d0b0", rough: 0.9 },
+  deadBark_b: { tex: "out/bark_paint", uv: 0.45, color: "#a8a8a4", rough: 0.9 },
+  deadBark_c: { tex: "out/bark_paint", uv: 0.45, color: "#7a6450", rough: 0.9 },
+  deadBarkD: { tex: "out/bark_paint", uv: 0.45, color: "#8a7e60", rough: 0.9 },
+  deadBarkD_b: { tex: "out/bark_paint", uv: 0.45, color: "#646462", rough: 0.9 },
+  deadBarkD_c: { tex: "out/bark_paint", uv: 0.45, color: "#46362a", rough: 0.9 },
+  // metal grate (513): plate, rim and the dark under the holes
+  grate: { color: "#9a9a96", rough: 0.45, metal: 0.6 }, grate_b: { color: "#8a6a4a", rough: 0.6, metal: 0.4 },
+  grate_c: { color: "#a88a4a", rough: 0.4, metal: 0.6 },
+  grateRim: { color: "#8a4a26", rough: 0.75, metal: 0.3 }, grateRim_b: { color: "#5a3a26", rough: 0.8, metal: 0.3 },
+  grateRim_c: { color: "#6a5030", rough: 0.6, metal: 0.4 },
+  pit: { color: "#141210", rough: 1 },
+  rope: { color: "#b8a070", rough: 0.95 },
+})
 pal({
   iron: { color: "#3a3633", rough: 0.6, metal: 0.4 },
   glow: { color: "#ffd98a", emit: "#ffc65a", glow: 3 },
@@ -30,7 +46,7 @@ pal({
 })
 // the b and c looms of a piece: the same model, every skinned material swapped
 const SKINNED = ["ice", "snow", "iceClear", "iceClearTop", "iceCol", "iceClearCol", "wood", "slab", "rune", "leaf", "pebble", "glow",
-  "stone", "boulder", "moss", "stem"]
+  "stone", "boulder", "moss", "stem", "deadBark", "deadBarkD", "grate", "grateRim"]
 function looms(name) {
   for (const s of Object.values(SFX))
     model(name + s, { base: name, swap: Object.fromEntries(SKINNED.map((m) => [m, m + s])) })
@@ -134,15 +150,18 @@ model("mound", { scale: 1.15 },
   sphere(0.3, { mat: "snow", detail: 3, scale: [1.3, 0.45, 1.1] }),
   sphere(0.2, { mat: "snow", detail: 3, pos: [0.25, 0, 0.1], scale: [1.2, 0.5, 1] }),
   sphere(0.16, { mat: "snow", detail: 3, pos: [-0.24, 0, -0.08], scale: [1.2, 0.55, 1] }))
-model("loose_snow", { scale: 1.7 },
-  [[0, 0, 0.09], [0.16, 0.06, 0.06], [-0.13, 0.1, 0.05], [0.05, -0.15, 0.045]].map(([x, z, r]) =>
-    sphere(r, { mat: "snow", detail: 2, pos: [x, 0, z], scale: [1.3, 0.55, 1.2] })))
-model("pebbles", { scale: 1.7 },
-  rock(0.08, { mat: "pebble", seed: 2, pos: [0, 0.03, 0] }),
-  rock(0.06, { mat: "pebble", seed: 5, pos: [0.13, 0.02, 0.06] }),
-  rock(0.05, { mat: "pebble", seed: 8, pos: [-0.11, 0.02, 0.08] }),
-  rock(0.045, { mat: "pebble", seed: 11, pos: [0.02, 0.02, -0.12] }),
-  sphere(0.06, { mat: "snow", detail: 2, pos: [0, 0.09, 0], scale: [1.2, 0.4, 1.2] }))
+// loose snow (503, 504): a few small lumps, well apart over the cell
+model("loose_snow",
+  [[-0.24, -0.06, 0.09], [0.28, 0.04, 0.075], [0.02, 0.3, 0.06], [-0.04, -0.32, 0.05]].map(([x, z, r], i) => [
+    sphere(r, { mat: "snow", detail: 2, pos: [x, 0, z], scale: [1.3, 0.55, 1.2] }),
+    sphere(r * 0.45, { mat: "snow", detail: 1, pos: [x + r * 1.4, 0, z + r * (i % 2 ? 0.8 : -0.9)], scale: [1.2, 0.5, 1.1] })]))
+// pebbles (161, 162, 163): flat stones scattered over the cell, each with a
+// little cap of snow
+model("pebbles",
+  [[0, 0, 0.12, 2], [0.27, 0.1, 0.095, 5], [-0.25, 0.14, 0.09, 8], [0.05, -0.27, 0.08, 11], [-0.08, 0.33, 0.07, 14],
+   [0.34, -0.2, 0.065, 17], [-0.32, -0.18, 0.07, 20], [0.2, 0.33, 0.055, 23]].map(([x, z, r, sd]) => [
+    rock(r, { mat: "pebble", seed: sd, pos: [x, r * 0.35, z], scale: [1.3, 0.6, 1.1] }),
+    sphere(r * 0.62, { mat: "snow", detail: 2, pos: [x, r * 0.7, z], scale: [1.3, 0.38, 1.2] })]))
 looms("mound"); looms("loose_snow"); looms("pebbles")
 
 // --- more ground: from arenas 12, 15 and 72 ----------------------------------
@@ -178,18 +197,50 @@ const crystal = (x, z, h, r, lean, turn) => tf({ pos: [x, 0, z], rot: [lean, tur
 model("ice_crystals", sphere(0.26, { mat: "snow", detail: 2, scale: [1.3, 0.3, 1.1] }),
   crystal(0, 0, 1.25, 0.12, 4, 0), crystal(0.15, 0.06, 0.85, 0.09, 0, 18), crystal(-0.16, 0.04, 0.95, 0.1, -10, 40),
   crystal(0.04, -0.15, 0.6, 0.08, -18, 0), crystal(-0.06, 0.17, 0.5, 0.07, 22, 60))
-// stone gate (166): two dark posts and a lintel bound with a spiked iron band
-model("stone_gate",
-  sym("x", box(0.2, 0.62, 0.26, { mat: "boulder", pos: [0.26, 0, 0], jitter: 0.02 })),
-  box(0.8, 0.22, 0.32, { mat: "boulder", pos: [0, 0.6, 0], rot: [0, 0, 3], jitter: 0.025 }),
-  box(0.84, 0.05, 0.34, { mat: "iron", pos: [0, 0.7, 0] }),
-  Array.from({ length: 7 }, (_, i) => cone(0.025, 0.08, { mat: "iron", sides: 4, pos: [-0.36 + i * 0.12, 0.75, 0.17], rot: [70, 0, 0] })))
-// the same gate under snow (160): heaped on the lintel, spilling over its ends
-model("stone_gate_snow", stamp("stone_gate"),
-  sphere(0.26, { mat: "snow", detail: 3, pos: [-0.12, 0.78, 0], scale: [1.5, 0.5, 0.75] }),
-  sphere(0.22, { mat: "snow", detail: 3, pos: [0.2, 0.79, 0.02], scale: [1.4, 0.5, 0.75] }),
-  sym("x", sphere(0.09, { mat: "snow", detail: 2, pos: [0.41, 0.66, 0.05], scale: [0.8, 1.4, 0.8] })),
-  sym("x", sphere(0.17, { mat: "snow", detail: 2, pos: [0.26, 0.02, 0.04], scale: [1.3, 0.35, 1.2] })))
+// fence piece (166): two square wooden posts and a beam across their tops,
+// the joints lashed with rope (owner: "dos palos de madera con uno arriba,
+// como si fuera el trozo de una valla")
+const lash = (x) => tube(Array.from({ length: 13 }, (_, i) => {
+  const t = i / 12, a = t * Math.PI * 4
+  return [x + Math.cos(a) * 0.108, 0.45 + t * 0.15, Math.sin(a) * 0.108]
+}).flat(), 0.014, { mat: "rope", sides: 5 })
+model("fence_piece",
+  sym("x", box(0.16, 0.72, 0.16, { mat: "wood", pos: [0.27, 0, 0], rot: [0, 4, 0], jitter: 0.012, seed: 1 })),
+  box(0.86, 0.15, 0.17, { mat: "wood", pos: [0, 0.63, 0.0], rot: [0, 0, 3], jitter: 0.012, seed: 2 }),
+  lash(0.27), lash(-0.27))
+// the same fence piece under snow (160): heaped on the beam, a little at the feet
+model("fence_piece_snow", stamp("fence_piece"),
+  sphere(0.24, { mat: "snow", detail: 3, pos: [-0.14, 0.8, 0], scale: [1.5, 0.5, 0.75] }),
+  sphere(0.2, { mat: "snow", detail: 3, pos: [0.22, 0.81, 0.01], scale: [1.4, 0.5, 0.75] }),
+  sym("x", sphere(0.15, { mat: "snow", detail: 2, pos: [0.27, 0.02, 0.03], scale: [1.3, 0.35, 1.2] })))
+// metal grate (513), the classic trap: a plate with a 3×3 grid of holes,
+// a rusty frame round it
+model("grate",
+  box(0.8, 0.012, 0.8, { mat: "pit" }),
+  [-1, 0, 1].flatMap((i) => [-1, 0, 1].map((j) => cyl(0.08, 0.034, { mat: "pit", sides: 10, pos: [i * 0.22, 0, j * 0.22] }))),
+  // the plate around the holes: bars between them, so the holes stay open
+  [-0.33, -0.11, 0.11, 0.33].map((v) => [box(0.66, 0.03, 0.06, { mat: "grate", pos: [0, 0.006, v] }),
+    box(0.06, 0.03, 0.66, { mat: "grate", pos: [v, 0.006, 0] })]),
+  [-1, 0, 1].flatMap((i) => [-1, 0, 1].map((j) => torus(0.09, 0.022, { mat: "grate", sides: 6, rings: 12, pos: [i * 0.22, 0.03, j * 0.22] }))),
+  sym("z", box(0.84, 0.05, 0.06, { mat: "grateRim", pos: [0, 0, 0.39], jitter: 0.004 })),
+  sym("x", box(0.06, 0.05, 0.72, { mat: "grateRim", pos: [0.39, 0, 0], jitter: 0.004 })))
+// dead tree (150): a pale split trunk, no leaves, gnarled bare limbs
+// clawing out of its broken top
+model("dead_tree",
+  lathe([0.36, 0, 0.25, 0.1, 0.18, 0.45, 0.15, 0.9, 0.13, 1.12, 0, 1.18],
+    { mat: "deadBark", sides: 7, pos: [0, 0, 0], rot: [0, 0, -3], jitter: 0.03, seed: 4 }),
+  // the split: two slabs of trunk peeling outward
+  lathe([0.12, 0, 0.1, 0.4, 0.06, 0.75, 0, 0.82], { mat: "deadBark", sides: 5, pos: [0.13, 0.35, 0.05], rot: [0, 0, -16], jitter: 0.02, seed: 6 }),
+  lathe([0.1, 0, 0.08, 0.35, 0.04, 0.6, 0, 0.66], { mat: "deadBarkD", sides: 5, pos: [-0.12, 0.45, -0.04], rot: [8, 0, 18], jitter: 0.02, seed: 7 }),
+  [[0.3, 0, 0.05, 30], [-0.28, 0, 0.1, -40], [0.05, 0, 0.32, 80], [-0.1, 0, -0.28, 200]].map(([x, y, z, ry]) =>
+    cone(0.09, 0.34, { mat: "deadBarkD", sides: 5, pos: [x * 0.8, 0.02, z * 0.8], rot: [0, ry, -74], jitter: 0.015 })),
+  limb([0.05, 1.0, 0, 0.3, 1.2, 0.05, 0.42, 1.42, 0.14, 0.62, 1.55, 0.12, 0.72, 1.72, 0.05], 0.08, 0.025, "deadBarkD"),
+  limb([0.42, 1.42, 0.14, 0.58, 1.38, 0.3, 0.7, 1.5, 0.4], 0.035, 0.016, "deadBarkD"),
+  limb([-0.03, 1.05, 0, -0.25, 1.25, -0.05, -0.42, 1.32, 0.06, -0.58, 1.52, 0.04, -0.66, 1.7, -0.04], 0.075, 0.022, "deadBarkD"),
+  limb([-0.42, 1.32, 0.06, -0.6, 1.28, -0.1, -0.74, 1.36, -0.16], 0.032, 0.014, "deadBarkD"),
+  limb([0.0, 1.1, 0.02, 0.06, 1.42, -0.08, -0.02, 1.72, -0.14, 0.08, 1.9, -0.12], 0.065, 0.02, "deadBarkD"),
+  limb([0.12, 0.72, 0.08, 0.4, 0.86, 0.14, 0.6, 1.02, 0.08, 0.7, 1.18, 0.12], 0.055, 0.018, "deadBarkD"),
+  limb([-0.12, 0.9, -0.03, -0.4, 0.96, -0.18, -0.5, 1.12, -0.3], 0.05, 0.016, "deadBarkD"))
 // snowy rocks (2584 tall, 2592 low; 2586 small)
 model("rock_tall",
   lathe([0.34, 0, 0.32, 0.3, 0.25, 0.6, 0.14, 0.86, 0.04, 0.95, 0, 0.96], { mat: "boulder", sides: 7, jitter: 0.045, seed: 5 }),
@@ -200,7 +251,7 @@ model("rock_low",
   rock(0.34, { mat: "boulder", seed: 9, pos: [0, 0.18, 0], scale: [1.3, 0.75, 1] }),
   sphere(0.34, { mat: "snow", detail: 3, pos: [0.04, 0.34, 0], scale: [1.15, 0.5, 0.95] }),
   sphere(0.38, { mat: "snow", detail: 2, pos: [0, 0, 0], scale: [1.4, 0.15, 1.2] }))
-for (const n of ["ice_crystals", "stone_gate", "stone_gate_snow", "rock_tall", "rock_low"]) looms(n)
+for (const n of ["ice_crystals", "fence_piece", "fence_piece_snow", "grate", "dead_tree", "rock_tall", "rock_low"]) looms(n)
 
 // no pack: the editor loads each piece from out/models/<name>.glb (kit.json
 // lists them); a pack can't resolve the swapped materials across includes

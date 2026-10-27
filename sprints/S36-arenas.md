@@ -130,6 +130,31 @@ El dueño confirmó todas las suposiciones de `mapa-arena2.png`; la 138 y la
 - Siguiente: el dueño corrige los nombres de la 150 y de la arena 5; luego
   se modelan, una pieza cada vez.
 
+### Correcciones del dueño a las arenas 3–5, 2026-10-27
+
+- Nombres guardados en `names.json` (mandan sobre los míos). El resto de
+  suposiciones de la arena 5 las dio por buenas.
+- Kit de nieve (`godot/art/arena1/`), rehecho o nuevo:
+  - Nieve suelta (504): bolas pequeñas y bien separadas por la casilla.
+  - Piedrecitas (163): ocho piedras planas repartidas, cada una con su
+    gorro de nieve, más grandes que antes.
+  - La 166 no es una puerta de piedra: "dos palos de madera con uno arriba,
+    como si fuera el trozo de una valla". `stone_gate` pasa a
+    `fence_piece` (dos postes cuadrados, travesaño y cuerda en las juntas),
+    con los looms de madera; la 160 es la misma con nieve
+    (`fence_piece_snow`).
+  - La 513 no es una runa: es una rejilla metálica, la trampa típica. Pieza
+    nueva `grate` (placa con 3×3 agujeros y marco), looms acero/óxido/bronce.
+  - La 150 es un árbol seco sin hojas: pieza nueva `dead_tree` (tronco
+    pálido abierto, ramas retorcidas), looms de corteza pálida/gris/oscura.
+- Con eso la arena 4 queda cubierta del todo.
+- Arena 5, nombres del dueño: 315, 316 y 317 son el mismo bloque de hierba;
+  1199 y 1355, hierba de esquina; 1754 hierba mediana y 1755 más pequeña;
+  179 y 181, la pared del edificio con canal de madera para el agua (dos
+  alturas), que va con el tejado 178; 193, 194, 195, 197 y 223, paredes de
+  la casa; 214, 215 y 216, ladrillos sueltos de decoración.
+- Hoja de los cambios: `cambios-nieve-1.png` … `-3.png`.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)

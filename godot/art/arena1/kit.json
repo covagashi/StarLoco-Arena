@@ -56,6 +56,16 @@
 			"verde oscuro",
 			"verde musgo",
 			"paja"
+		],
+		"grate": [
+			"acero, marco oxidado",
+			"óxido",
+			"bronce"
+		],
+		"bark": [
+			"corteza pálida",
+			"gris",
+			"oscura"
 		]
 	},
 	"pieces": [
@@ -230,8 +240,7 @@
 				510,
 				511,
 				506,
-				512,
-				513
+				512
 			],
 			"looms": "rune"
 		},
@@ -302,22 +311,40 @@
 			"looms": "blocks"
 		},
 		{
-			"name": "stone_gate",
-			"label": "Puerta de piedra con herrajes",
+			"name": "fence_piece",
+			"label": "Trozo de valla de madera",
 			"kind": "deco",
 			"gfx": [
 				166
 			],
-			"looms": "boulder"
+			"looms": "wood"
 		},
 		{
-			"name": "stone_gate_snow",
-			"label": "Puerta de piedra nevada",
+			"name": "fence_piece_snow",
+			"label": "Trozo de valla de madera nevado",
 			"kind": "deco",
 			"gfx": [
 				160
 			],
-			"looms": "boulder"
+			"looms": "wood"
+		},
+		{
+			"name": "grate",
+			"label": "Rejilla metálica (trampa)",
+			"kind": "flat",
+			"gfx": [
+				513
+			],
+			"looms": "grate"
+		},
+		{
+			"name": "dead_tree",
+			"label": "Árbol seco",
+			"kind": "deco",
+			"gfx": [
+				150
+			],
+			"looms": "bark"
 		},
 		{
 			"name": "rock_tall",
