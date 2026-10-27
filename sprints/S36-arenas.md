@@ -99,6 +99,18 @@ El dueño confirmó todas las suposiciones de `mapa-arena2.png`; la 138 y la
   (`grass_drift`, tres looms verdes).
 - `mapa-arena2.png`: las 52 piezas del mapa cubiertas (0 nuevas). Hoja del
   kit: `kit-arena2.png`.
+- Tótems rehechos (dueño, 2026-10-27: "cambia solo los tótems"). Eran
+  cajitas de medio metro con cuatro marcas; ahora son cabezas redondeadas de
+  casi una casilla, apiladas sobre cuellos oscuros, con las espirales en
+  relieve claro en las dos caras que ve la cámara, ojos oscuros bajo una
+  ceja clara, mandíbula saliente en el corto, cuernos de carnero en el alto
+  y hierba en cada junta. Las cabezas son cinco prismas apilados con las
+  tapas metidas (`pillow`), que a escala de juego leen como redondeadas.
+  Hoja: `totems-arena2.png`.
+- Las hojas ya no son una tira larga (dueño, 2026-10-27: "no hagas una
+  imagen infinita, pierde demasiada calidad"). `kit_sheet.py` saca páginas
+  que caben en la pantalla de la Ally (`kit-arena2-1.png` … `-10.png`), y
+  `kit_shots.gd` no aleja la cámara en las piezas altas: la foto crece.
 
 ## Fases
 

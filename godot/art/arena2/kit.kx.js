@@ -19,6 +19,7 @@ const PAL = {
   blade: ["#3e3416", "#2c3a1a", "#5a4a26"], bladeL: ["#8a7a3a", "#5e7a34", "#b09a58"],
   basalt: ["#4e6656", "#5a5a5e", "#5e4a3a"], basaltL: ["#7a9a80", "#86868a", "#8a7058"], basaltD: ["#2e3e34", "#38383c", "#3a2c22"],
   pale: ["#d8d2b8", "#c8ccd0", "#d8c0a0"], paleD: ["#a8a088", "#9a9ea4", "#a88c6c"], tuft: ["#7a9a3a", "#5a8a4a", "#9a9a3a"],
+  tuftL: ["#b4cc52", "#8ec070", "#c8c848"], carve: ["#e6dcae", "#dcdcdc", "#e8c09a"],
   steel: ["#9aa0a8", "#b08a4a", "#8a5a3a"], steelD: ["#5a6068", "#6a4a22", "#4a2a1a"],
   grip: ["#5a3a22", "#3a2a2a", "#6a4a2a"], bone: ["#e4dcc0", "#d0c8a8", "#c8c0b0"], boneD: ["#a8a088", "#988e70", "#8a8478"],
 }
@@ -135,19 +136,72 @@ model("lava_rock",
   extrude([-0.12, 0, 0.12, 0, 0.1, -0.7, 0.14, -1.15, -0.14, -1.15, -0.1, -0.7], 0.06,
     { mat: "lava", pos: [0.12, 0.67, 0.42], jitter: 0.004 }),
   sphere(0.1, { mat: "lava", detail: 1, pos: [0.12, 0.66, 0.38], scale: [1.4, 0.4, 1] }))
-// totems (274: two heads, 275: three, horned): carved stone, moss on top
-const head = (y, h, w, s) => [
-  prismUp(roundSquare(w, 0.08), h, y, "totem", 0.01),
-  sym("x", box(0.08, 0.06, 0.03, { mat: "basaltD", pos: [w * 0.4, y + h * 0.6, w + 0.005] })),
-  torus(0.07, 0.018, { mat: "totem", pos: [0, y + h * 0.28, w + 0.01], rot: [90, 0, 0] }),
-  box(w * 1.5, 0.05, 0.03, { mat: "totem", pos: [0, y + h * 0.45, w + 0.01], seed: s }),
+// totems (274: two heads, 275: three, the top one horned): rounded carved
+// heads stacked on dark necks, about a cell wide. Pale spirals stand proud of
+// the faces the camera sees (+x, +z); the eyes are dark sockets under a pale
+// brow; grass grows out of every joint.
+// a pillow block: five stacked prisms, the caps inset (rounded edges)
+const pillow = (w, h, y, r, s) => [[0.1, 0.11], [0.14, 0.04], [0.5, 0], [0.14, 0.04], [0.1, 0.11]].reduce(
+  (acc, [f, inset]) => (acc.items.push(prismUp(roundSquare(w - inset * w / 0.4, r), h * f + 0.012, y + acc.y - 0.006, "totem", 0.008)), acc.y += h * f, acc),
+  { items: [], y: 0 }).items
+// an S spiral, drawn with a tube in the XY plane, 0.14 m tall; `a` is the arm
+const spiralPath = (sz) => {
+  const arm = (cx, cy, sgn) => Array.from({ length: 9 }, (_, i) => {
+    const t = i / 8, ang = sgn * (-Math.PI / 2 + t * Math.PI * 1.6), r = sz * (0.5 - 0.33 * t)
+    return [cx + Math.cos(ang) * r * sgn, cy + Math.sin(ang) * r, 0]
+  })
+  const top = arm(0, sz * 0.5, 1), bot = arm(0, -sz * 0.5, -1)
+  return [...bot.reverse(), [0, 0, 0], ...top].flat()
+}
+const spiral = (sz, pos, rot, s) => tube(spiralPath(sz), sz * 0.11, { mat: "carve", sides: 5, pos, rot, jitter: 0.003, seed: s })
+// the two faces the camera sees: +z (rot 0) and +x (rot y 90)
+const onZ = (w, x, y) => [[x, y, w + 0.015], [0, 0, 0]]
+const onX = (w, z, y) => [[w + 0.015, y, z], [0, 90, 0]]
+const eyes = (w, y, gap) => [
+  sym("x", box(0.14, 0.12, 0.03, { mat: "carve", pos: [gap, y, w + 0.005] }),
+    box(0.09, 0.07, 0.025, { mat: "basaltD", pos: [gap, y + 0.02, w + 0.03] })),
+  box(gap * 2 + 0.2, 0.05, 0.035, { mat: "carve", pos: [0, y + 0.13, w + 0.005] }),   // brow
+  box(0.06, 0.12, 0.03, { mat: "carve", pos: [0, y - 0.1, w + 0.005] }),               // nose
 ]
-const mossTop = (y, w) => [cone(0.05, 0.22, { mat: "tuft", sides: 3, pos: [-w * 0.3, y, 0], rot: [0, 0, 15] }),
-  cone(0.05, 0.3, { mat: "tuft", sides: 3, pos: [w * 0.2, y, 0.05], rot: [10, 0, -12] }),
-  cone(0.04, 0.18, { mat: "tuft", sides: 3, pos: [0, y, -w * 0.3], rot: [-15, 0, 0] })]
-model("totem", head(0, 0.75, 0.32, 1), head(0.72, 0.65, 0.27, 2), mossTop(1.37, 0.27))
-model("totem_tall", head(0, 0.7, 0.3, 3), head(0.68, 0.62, 0.26, 4), head(1.28, 0.55, 0.23, 5),
-  sym("x", cone(0.06, 0.22, { mat: "totem", sides: 5, pos: [0.22, 1.7, 0], rot: [0, 0, -50] })), mossTop(1.83, 0.23))
+const neck = (y, w) => cyl(w * 0.8, 0.09, { mat: "basaltD", sides: 8, pos: [0, y, 0] })
+const grass = (x, y, z, n, s) => Array.from({ length: n }, (_, i) => {
+  const a = (i * 137.5 + s * 40) % 360, h = 0.22 + ((i * 7 + s) % 4) * 0.05
+  return tf({ pos: [x, y, z], rot: [0, a, 0] }, cone(0.03, h, { mat: i % 2 ? "tuft" : "tuftL", sides: 3, pos: [0.06, 0, 0], rot: [0, 0, -(22 + (i * 11) % 25)], scale: [1, 1, 0.5] }))
+})
+// a cell-wide head: spirals on both seen faces
+const carvedHead = (y, h, w, s) => [
+  pillow(w, h, y, 0.12, s),
+  spiral(0.26, ...onZ(w, -w * 0.4, y + h * 0.5), s), spiral(0.2, ...onZ(w, w * 0.42, y + h * 0.42), s + 1),
+  spiral(0.26, ...onX(w, w * 0.35, y + h * 0.5), s + 2), spiral(0.2, ...onX(w, -w * 0.42, y + h * 0.42), s + 3),
+]
+// a face head: eyes on +z, a spiral on +x
+const faceHead = (y, h, w, s) => [
+  pillow(w, h, y, 0.11, s), eyes(w, y + h * 0.58, w * 0.42),
+  spiral(0.24, ...onX(w, 0, y + h * 0.5), s + 4),
+]
+model("totem",
+  carvedHead(0, 1.0, 0.47, 1), neck(0.97, 0.3),
+  faceHead(1.03, 0.85, 0.38, 2),
+  box(0.46, 0.12, 0.3, { mat: "totem", pos: [0, 1.05, 0.42], jitter: 0.01, seed: 3 }),      // the jutting jaw
+  grass(-0.1, 1.86, 0.05, 7, 1), grass(0.32, 1.0, 0.3, 4, 2), grass(-0.4, 1.0, 0.15, 3, 3),
+  grass(0.35, 0, 0.42, 4, 4), grass(-0.45, 0, -0.1, 3, 5), grass(0.1, 0, 0.5, 3, 6))
+// the ram head on top: a big pillow, heavy brow, thick horns hugging its
+// sides and curling forward and down
+const horn = (sgn, x, y) => {
+  const pts = Array.from({ length: 11 }, (_, i) => {
+    const a = Math.PI * (0.55 - i * 0.18), r = 0.25 - i * 0.011
+    return [sgn * (x + 0.06 + i * 0.004), y + Math.sin(a) * r, Math.cos(a) * r]
+  })
+  return [tube(pts.flat(), 0.07, { mat: "carve", sides: 6, jitter: 0.004 }),
+    cone(0.07, 0.15, { mat: "carve", sides: 6, pos: pts[10], rot: [-105, 0, 0] })]
+}
+model("totem_tall",
+  carvedHead(0, 0.95, 0.46, 11), neck(0.92, 0.3),
+  faceHead(0.98, 0.8, 0.38, 12), neck(1.75, 0.28),
+  pillow(0.43, 0.9, 1.81, 0.16, 13), eyes(0.43, 1.81 + 0.9 * 0.5, 0.17),
+  horn(1, 0.43, 2.44), horn(-1, 0.43, 2.44),
+  grass(0.05, 2.71, -0.05, 6, 7), grass(0.3, 1.78, 0.25, 4, 8), grass(-0.38, 0.95, 0.2, 4, 9),
+  grass(0.4, 0.95, -0.1, 3, 10), grass(0.3, 0, 0.42, 4, 11), grass(-0.45, 0, 0.0, 3, 12))
 // white stones (611, 616): a few pale flat fragments, grass between them
 const frag = (x, z, s, a, m) => extrude([0, 0.12, 0.11, 0.05, 0.08, -0.1, -0.06, -0.12, -0.12, 0.02], 0.04,
   { mat: m, pos: [x, 0.02, z], rot: [-90, 0, a], scale: s, jitter: 0.004 })

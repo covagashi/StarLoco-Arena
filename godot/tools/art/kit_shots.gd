@@ -3,7 +3,7 @@ extends SceneTree
 ## M7: photograph every piece of an arena kit (art/<arena>/kit.json) in its
 ## three looms, the way the game shows it (orthographic 2:1, 86-px cells,
 ## zoomed by --zoom), each piece on its own. One PNG per piece and loom, for
-## a review sheet.
+## a review sheet. The zoom never changes: a tall piece gets a taller shot.
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
 ##       -s tools/art/kit_shots.gd -- --kit=art/arena1/kit.json --out=<dir> [--zoom=1.6]
@@ -38,7 +38,10 @@ func _run() -> void:
 			root3.add_child(piece)
 			if p.kind == "tile":
 				piece.position.y = -p.top
-			var img := await _shoot(root3, 0.45 if p.kind == "deco" else -0.4 if p.kind == "tile" else 0.05)
+			# frame the piece: centre on its box; the shot grows with the piece
+			var bb := _bounds(root3)
+			var need := int(ceil((bb.size.y * 0.866 + maxf(bb.size.x, bb.size.z) * 0.6 + 0.4) * PX * float(opts.zoom)))
+			var img := await _shoot(root3, bb.get_center().y, Vector2i(SIZE.x, maxi(SIZE.y, need)))
 			img.save_png("%s/%s%s.png" % [opts.out, p.name, loom])
 	print("[kit] %d pieces x %d looms -> %s" % [kit.pieces.size(), kit.looms.size(), opts.out])
 	quit(0)
@@ -63,9 +66,26 @@ func _model(dir: String, name: String) -> Node3D:
 	return (_cache[name] as Node3D).duplicate()
 
 
-func _shoot(model: Node3D, cy: float) -> Image:
+## The piece's box in its own space (meshes only).
+func _bounds(n: Node3D) -> AABB:
+	var bb := AABB()
+	var first := true
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var t := Transform3D.IDENTITY
+		var cur: Node = m
+		while cur != null and cur != n:
+			t = (cur as Node3D).transform * t
+			cur = cur.get_parent()
+		var b: AABB = t * m.get_aabb()
+		bb = b if first else bb.merge(b)
+		first = false
+	return bb
+
+
+func _shoot(model: Node3D, cy: float, size: Vector2i) -> Image:
 	var vp := SubViewport.new()
-	vp.size = SIZE
+	vp.size = size
 	vp.msaa_3d = Viewport.MSAA_4X
 	vp.own_world_3d = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -89,7 +109,7 @@ func _shoot(model: Node3D, cy: float) -> Image:
 	var cam := Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
-	cam.size = SIZE.y / (PX * float(opts.zoom))
+	cam.size = size.y / (PX * float(opts.zoom))
 	cam.rotation_degrees = Vector3(-30, 45, 0)
 	cam.position = Vector3(0, cy, 0) + cam.transform.basis.z * 20.0
 	vp.add_child(cam)
