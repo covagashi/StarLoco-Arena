@@ -112,6 +112,24 @@ El dueño confirmó todas las suposiciones de `mapa-arena2.png`; la 138 y la
   que caben en la pantalla de la Ally (`kit-arena2-1.png` … `-10.png`), y
   `kit_shots.gd` no aleja la cámara en las piezas altas: la foto crece.
 
+### Arenas 3, 4 y 5, 2026-10-27
+
+- Las hojas de mapa ya no son tiras largas. `map_sheet.py` saca páginas que
+  caben en la pantalla de la Ally: la primera es el mapa recortado a su
+  bloque principal, y las siguientes llevan las piezas en dos columnas, con
+  el sprite retail y nuestra foto casi a tamaño real.
+- Arena 3 (mundo 12, nieve): 32 piezas, todas cubiertas por el kit de la
+  arena 1. No hay nada que modelar. Hoja: `mapa-arena3-1.png` … `-5.png`.
+- Arena 4 (mundo 15, nieve): 29 piezas, 1 nueva, la 150 (mi suposición:
+  tronco seco nevado). Hoja: `mapa-arena4-1.png` … `-5.png`.
+- Arena 5 (mundo 21, pradera): 74 piezas, 51 nuevas. Todas llevan mi
+  suposición con "¿?" en `names.json` para que el dueño las corrija. Hoja:
+  `mapa-arena5-1.png` … `-11.png`.
+  - La 461 (nube de luz) parece VFX: si el dueño lo confirma, va a
+    `gfx_rules.json` y a S37.
+- Siguiente: el dueño corrige los nombres de la 150 y de la arena 5; luego
+  se modelan, una pieza cada vez.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
