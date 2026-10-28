@@ -647,6 +647,33 @@ cada vez, empezando por la más usada.
   - Hojas: `arena6-plantas-1.png`, `-2.png` y `arena6-plantas-montadas.png`
     (matas y plantas en la hierba y al pie del pilar y los montones; el
     montaje es de prueba).
+  - Dueño (2026-10-28): "todo ok".
+- Engranajes y tuercas de piedra (1994, 2003, 2002, 2053), 2026-10-28.
+  - Vistos en el mapa: la 1994 es una rueda dentada grande, de pie en el
+    hueco del muro delante de la puerta baja (1870). La 2003 es una
+    columna de tres engranajes pequeños colgada de la cara de un andamio,
+    junto a la caja de tablas. La 2002 es un engranaje suelto en el suelo
+    (en el mapa queda tapado). La 2053 es un montón de tuercas hexagonales
+    junto a las rocas.
+  - Dientes cuadrados, como los dibuja el retail. Rueda grande: una llanta
+    de 32 bloques, 16 dientes, cuatro radios en cruz y un cubo abombado,
+    algo echada hacia atrás, de cara a +z (1,7 m con los dientes).
+    Engranaje pequeño: un disco de 12 caras con seis dientes y una tuerca
+    por cubo. La columna son tres de ellos de cara a +x, engranados (cada
+    uno girado medio diente, en zigzag). Tuercas: prismas hexagonales con
+    el agujero como un disco oscuro, en cúpula (seis tumbadas, cuatro
+    apoyadas encima, dos casi de pie arriba).
+  - Piedra: las pequeñas usan la piedra de los sillares (`stone` y
+    `stoneShade`); la rueda, `stoneCog`, gris oliva hecha con el granito
+    teñido, porque la arenisca crema teñida salía amarilla.
+  - Primeras versiones: la rueda un 25 % pequeña, amarilla, con la llanta,
+    los dientes y los radios finos; el montón de tuercas pequeño y plano,
+    con los agujeros como manchas; el engranaje suelto tumbado del todo y
+    la columna con engranajes pequeños.
+  - Hojas: `arena6-engranajes-1.png`, `-2.png` y
+    `arena6-engranajes-montados.png` (la rueda delante de la puerta baja,
+    la columna sobre la caja de tablas junto al andamio, el engranaje y las
+    tuercas en los adoquines; el montaje es de prueba).
 
 ## Fases
 

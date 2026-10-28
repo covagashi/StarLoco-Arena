@@ -16,6 +16,9 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   // the dark frame round the door window (1872): the same wood, stained
   ["boardDark" + s, { tex: "out/board" + s, uv: 0.8, rough: 0.8, color: ["#c08858", "#8a7a6a", "#8a6650"][LOOMS.indexOf(s)] }],
   ["flagCrack" + s, { tex: "out/flagCrack" + s, uv: 1, rough: 0.8 }],
+  // the big cog wheel (1994): a grey-olive stone (the grey granite, warmed),
+  // a darker granite, the red sandstone darker
+  ["stoneCog" + s, { tex: "out/stone" + ["_b", "_b", "_c"][LOOMS.indexOf(s)], uv: 0.9, rough: 0.8, color: ["#d4ccac", "#b4b8bc", "#c8a494"][LOOMS.indexOf(s)] }],
   // the same stone a shade darker: every other loose rock, so neighbours part
   ["stoneShade" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
   // the moss-washed stones of the mossy cap (1472): the mossy stone, greener
@@ -42,10 +45,12 @@ const PAL = {
   herbD: ["#3e6a10", "#24501c", "#5a6a14"], herb: ["#76a81a", "#3e8a2e", "#8a9a24"], herbL: ["#b0d63a", "#78b44a", "#bcc444"],
   bloom: ["#d8302c", "#8a4ac8", "#e8782a"], bloomD: ["#981c1c", "#5a2a8a", "#a84a14"], stem: ["#4a3a1c", "#3a3420", "#4a3218"],
   pebble: ["#b4a678", "#9a9a94", "#b08a6e"],
+  // the hole through a stone nut or gear hub
+  hole: ["#3a3424", "#2c2e30", "#3a2620"],
   petal: ["#f4f2ea", "#f4e8a8", "#f0b8c8"], petalD: ["#c8c4b8", "#d0c070", "#c88098"], heart: ["#e8c030", "#d08a20", "#f0d050"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", "flag", "flagCrack", "board", "boardV", "boardDark", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "stoneCog", "cliff", "flag", "flagCrack", "board", "boardV", "boardDark", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -552,3 +557,51 @@ const bloom = (x, y, z) => tf({ pos: [x, y, z], rot: [0, 45, 0] }, tf({ rot: [55
   sphere(0.022, { mat: "heart", detail: 1, pos: [0, 0.02, 0] })))
 model("herb_flower", herbPlant(321), tf({ pos: [-0.22, 0, -0.12], scale: 0.8, rot: [0, 120, 0] }, herbPlant(327, 5)), bloom(0.1, 0.2, 0.22))
 for (const n of ["strap_grass", "strap_grass_tall", "herb", "herb_flower"]) looms(n)
+
+// --- stone gears and nuts (1994, 2003, 2002, 2053) --------------------------
+// cut stone machinery left in the ruins: a big cog wheel standing in a gap of
+// the wall (1994), a column of small meshing gears hung on a scaffold (2003),
+// a small gear lying on the ground (2002) and a heap of hex nuts (2053).
+// Blocky square teeth, as the retail draws them.
+// a hex nut lying on its face, w across the flats, t thick, the hole a dark
+// disc a hair proud of each face
+const nut = (w, t, mat = "stone") => [
+  cyl(w / Math.sqrt(3), t, { mat, sides: 6, rot: [0, 30, 0] }),
+  cyl(w * 0.23, t + 0.004, { mat: "hole", sides: 8, pos: [0, -0.002, 0] })]
+// a small gear lying flat: a 12-sided disc of radius r, t thick, with n
+// square teeth and a hex nut for a hub
+const smallGear = (r, t, n, seed, mat = "stone") => [
+  cyl(r, t, { mat, sides: 12, jitter: 0.004, seed }),
+  Array.from({ length: n }, (_, i) => tf({ rot: [0, i * 360 / n, 0] },
+    box(r * 0.5, t * 0.92, r * 0.42, { mat: i % 2 ? mat : "stoneShade", pos: [r + r * 0.12, t * 0.04, 0], jitter: 0.004, seed: seed + i }))),
+  tf({ pos: [0, t - 0.005, 0] }, nut(r * 0.85, t * 0.6, "stoneShade"))]
+// small gear (2002): lying on the ground, propped on one tooth, its face
+// tipped up towards the camera
+model("gear_small", tf({ pos: [0, 0.1, 0], rot: [0, 45, 0] }, tf({ rot: [28, 15, 0] }, smallGear(0.22, 0.12, 6, 331))))
+// gear column (2003): three small gears facing +x, one above the other and
+// meshing (each turned half a tooth, zigzagging in z), hung at the -x side
+// of the cell on the face of what stands there
+model("gear_column",
+  [[0.27, 0.04], [0.64, -0.1], [1.0, 0.05]].map(([y, z], i) => tf({ pos: [-0.3 + (i % 2) * 0.03, y, z], rot: [0, 0, -90] },
+    tf({ rot: [0, i * 30, 0] }, smallGear(0.2, 0.13, 6, 341 + i * 10)))))
+// nut heap (2053): a dome of hex nuts: a ring of six lying flat, four
+// leaning on them, two near upright on top
+const NUTS = [
+  ...Array.from({ length: 6 }, (_, i) => [Math.cos(i * 1.047 + 0.3) * 0.27, 0, Math.sin(i * 1.047 + 0.3) * 0.25, 8, i * 37]),
+  ...Array.from({ length: 4 }, (_, i) => [Math.cos(i * 1.571 + 0.9) * 0.13, 0.09, Math.sin(i * 1.571 + 0.9) * 0.12, 36, i * 90 + 70]),
+  [0.02, 0.2, -0.04, 58, 30], [-0.05, 0.18, 0.08, 50, 160]]
+model("nut_heap", { scale: 1.3 }, NUTS.map(([x, y, z, tilt, a], i) => tf({ pos: [x, y, z], rot: [0, a, 0] },
+  tf({ rot: [tilt, 0, 0] }, nut(0.21 + rnd(i, 111, 351) * 0.04, 0.15, i % 3 ? "stone" : "stoneShade")))))
+// cog wheel (1994): a big wheel standing upright facing +z: a rim of 32
+// blocks, 16 square teeth, a cross of four spokes and a domed hub; leans
+// back a little against what is behind it
+const COG = 0.7, COGT = 0.15
+model("cog_wheel", tf({ pos: [0, COG + 0.07, 0], rot: [-6, 0, 0] },
+  Array.from({ length: 32 }, (_, i) => tf({ rot: [0, 0, i * 360 / 32] },
+    box(2 * Math.PI * COG / 32 + 0.02, 0.17, COGT, { mat: "stoneCog", pos: [0, COG - 0.17, -COGT / 2], jitter: 0.003, seed: 361 + i }))),
+  Array.from({ length: 16 }, (_, i) => tf({ rot: [0, 0, i * 360 / 16 + 5.6] },
+    box(0.15, 0.16, COGT * 0.9, { mat: "stoneCog", pos: [0, COG - 0.01, -COGT * 0.45], jitter: 0.004, seed: 401 + i }))),
+  [0, 90].map((a) => tf({ rot: [0, 0, a] }, box(0.13, 2 * COG - 0.24, COGT * 0.7, { mat: "stoneCog", pos: [0, -COG + 0.12, -COGT * 0.35] }))),
+  cyl(0.14, COGT + 0.03, { mat: "stoneCog", sides: 10, rot: [90, 0, 0], pos: [0, 0, -COGT / 2 - 0.015] }),
+  sphere(0.11, { mat: "bolt", detail: 1, pos: [0, 0, 0.04], scale: [1, 1, 0.8] })))
+for (const n of ["gear_small", "gear_column", "nut_heap", "cog_wheel"]) looms(n)

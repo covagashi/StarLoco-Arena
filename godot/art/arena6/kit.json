@@ -406,6 +406,45 @@
    ],
    "looms": "herb",
    "note": "at the foot of stones; its dry stems trail towards +x +z"
+  },
+  {
+   "name": "cog_wheel",
+   "label": "Rueda dentada grande",
+   "kind": "deco",
+   "gfx": [
+    1994
+   ],
+   "looms": "stone",
+   "note": "upright, facing +z, centred in its cell: stands in a gap of the wall, leaning back on what is behind it (the low door 1870)"
+  },
+  {
+   "name": "gear_column",
+   "label": "Columna de engranajes",
+   "kind": "deco",
+   "gfx": [
+    2003
+   ],
+   "looms": "stone",
+   "note": "faces +x, hung at the -x side of its cell on the face of a scaffold or block"
+  },
+  {
+   "name": "gear_small",
+   "label": "Engranaje pequeño",
+   "kind": "deco",
+   "gfx": [
+    2002
+   ],
+   "looms": "stone",
+   "note": "lying on the ground"
+  },
+  {
+   "name": "nut_heap",
+   "label": "Montón de tuercas",
+   "kind": "deco",
+   "gfx": [
+    2053
+   ],
+   "looms": "stone"
   }
  ]
 }
