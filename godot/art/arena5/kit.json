@@ -1,5 +1,5 @@
 {
-	"_doc": "Arena 5 (retail world 21: meadow, ruins of a house) kit for the map editor (S36), same schema as art/arena1/kit.json. Pieces the arena also uses from the arena 1 and 2 kits are listed in shared. kind cap = lies over another block's top: y = 0 is that top, the lip hangs over its sides; top = the walk surface above that top (m).",
+	"_doc": "Arena 5 (retail world 21: meadow, ruins of a house) kit for the map editor (S36), same schema as art/arena1/kit.json. Pieces the arena also uses from the arena 1 and 2 kits are listed in shared. kind cap = lies over another block's top: y = 0 is that top, the lip hangs over its sides; top = the walk surface above that top (m). kind side = hangs down one side of a block from its rim (y = 0 is the rim, the +z side; the editor turns it to the side wanted); rim = where a tile's side meets its top (m).",
 	"biome": "pradera",
 	"arenas": [
 		21
@@ -113,7 +113,8 @@
 			],
 			"looms": "grass",
 			"top": 0.9,
-			"col": "soil_col"
+			"col": "soil_col",
+			"rim": 0.76
 		},
 		{
 			"name": "grass_cap",
@@ -136,7 +137,18 @@
 			],
 			"looms": "soil",
 			"top": 0.85,
-			"col": "soil_col"
+			"col": "soil_col",
+			"rim": 0.85
+		},
+		{
+			"name": "grass_edge",
+			"label": "Hierba de esquina (cuelga por un lado)",
+			"kind": "side",
+			"gfx": [
+				1199,
+				1355
+			],
+			"looms": "grass"
 		}
 	]
 }

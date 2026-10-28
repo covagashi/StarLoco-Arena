@@ -82,3 +82,27 @@ model("dirt_block",
   prismUp(roundSquare(CELL_HALF + 0.002, 0.075), 0.1, 0.72, "earth", 0.006),
   prismUp(roundSquare(CELL_HALF - 0.03, 0.12), 0.04, 0.81, "earth", 0.004))
 looms("dirt_block")
+
+// --- corner grass (1199, 1355; the owner: "hierba de esquina", decoration) --
+// the grass hanging down a block's open side, where the map ends or drops: a
+// curtain over one side of the cell (+z here; the editor turns it, 1355 is
+// 1199 on the other face). y = 0 is the block's top. Three layers of jagged
+// blades, the long dark ones behind, short light ones in front, a soft roll
+// of grass along the rim, the bottom flaring out a little.
+// one layer: a strip across the side, its lower edge cut into blade tips
+function curtain(len, tips, seed) {
+  const pts = [0.5, 0.05, -0.5, 0.05]
+  for (let i = 0; i <= tips; i++) {
+    const x = -0.5 + i / tips, r = ((i * 37 + seed * 13) % 11) / 10
+    pts.push(x, -len * (0.55 + 0.45 * r), x + 0.5 / tips, -len * (0.25 + 0.15 * (1 - r)))
+  }
+  pts.pop(); pts.pop()
+  return pts
+}
+model("grass_edge", { pivot: "origin" },
+  extrude(curtain(0.42, 11, 1), 0.02, { mat: "bladeD", pos: [0, 0, 0.49], rot: [-8, 0, 0], jitter: 0.008, seed: 1 }),
+  extrude(curtain(0.3, 13, 2), 0.02, { mat: "blade", pos: [0, 0, 0.515], rot: [-11, 0, 0], jitter: 0.008, seed: 2 }),
+  extrude(curtain(0.17, 15, 3), 0.02, { mat: "bladeL", pos: [0, 0, 0.535], rot: [-14, 0, 0], jitter: 0.006, seed: 3 }),
+  Array.from({ length: 8 }, (_, i) => sphere(0.07 + (i % 3) * 0.01, { mat: "grassMid", detail: 1,
+    pos: [-0.44 + i * 0.125, 0.03, 0.5], scale: [1.2, 0.6, 0.7], jitter: 0.01, seed: i })))
+looms("grass_edge")

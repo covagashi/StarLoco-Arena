@@ -196,6 +196,18 @@ cada vez, empezando por la más usada.
     ve gris bajo la hierba: ese gris es el tinte del editor, no un loom.
   - Hojas: `arena5-tierra.png` y `arena5-tierra-prado.png` (mezclado con
     hierba, a escala real).
+- Hierba de esquina (1199, 1355), 2026-10-28.
+  - En el mapa retail es la hierba que cuelga por el lado de un bloque
+    donde el mapa acaba o baja: la 1199 por la cara izquierda y la 1355 por
+    la derecha, la misma pieza girada. Sale 65 veces, siempre en bordes.
+  - `grass_edge`: una cortina sobre un lado de la casilla, en tres capas de
+    briznas recortadas (las largas oscuras detrás, las cortas claras
+    delante), un rollo de hierba en el borde y el pie algo abierto.
+  - Tipo nuevo `side` en `kit.json`: cuelga del borde de un bloque (y = 0
+    es el borde, el lado +z; el editor la gira). Cada bloque lleva `rim`,
+    la altura de ese borde (hierba 0,76, tierra 0,85).
+  - Hojas: `arena5-esquina.png` y `arena5-esquina-prado.png` (colgando por
+    los dos lados de un trozo de 6×6, a escala real).
 
 ## Fases
 
