@@ -6,13 +6,13 @@ extends SceneTree
 ## a review sheet. The zoom never changes: a tall piece gets a taller shot.
 ##
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
-##       -s tools/art/kit_shots.gd -- --kit=art/arena1/kit.json --out=<dir> [--zoom=1.6]
+##       -s tools/art/kit_shots.gd -- --kit=art/arena1/kit.json --out=<dir> [--zoom=1.6] [--w=300]
 
 const Dress := preload("res://tools/art/dress.gd")
 const PX := 43.0 * 1.41421356
 const SIZE := Vector2i(300, 340)
 
-var opts := {"kit": "art/arena1/kit.json", "out": "/tmp/kit", "zoom": "1.6"}
+var opts := {"kit": "art/arena1/kit.json", "out": "/tmp/kit", "zoom": "1.6", "w": str(SIZE.x)}
 var _cache := {}
 
 
@@ -41,7 +41,7 @@ func _run() -> void:
 			# frame the piece: centre on its box; the shot grows with the piece
 			var bb := _bounds(root3)
 			var need := int(ceil((bb.size.y * 0.866 + maxf(bb.size.x, bb.size.z) * 0.6 + 0.4) * PX * float(opts.zoom)))
-			var img := await _shoot(root3, bb.get_center().y, Vector2i(SIZE.x, maxi(SIZE.y, need)))
+			var img := await _shoot(root3, bb.get_center().y, Vector2i(int(opts.w), maxi(SIZE.y, need)))
 			img.save_png("%s/%s%s.png" % [opts.out, p.name, loom])
 	print("[kit] %d pieces x %d looms -> %s" % [kit.pieces.size(), kit.looms.size(), opts.out])
 	quit(0)

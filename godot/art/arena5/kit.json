@@ -19,6 +19,16 @@
 			"arena ocre",
 			"tierra oscura",
 			"arcilla roja"
+		],
+		"plaster": [
+			"revoque crema",
+			"blanco grisáceo",
+			"ocre"
+		],
+		"roof": [
+			"teja verde",
+			"teja roja",
+			"pizarra"
 		]
 	},
 	"shared": [
@@ -167,6 +177,35 @@
 				1755
 			],
 			"looms": "grass"
+		},
+		{
+			"name": "wall_low",
+			"label": "Pared de la casa con canal de madera (baja)",
+			"kind": "tile",
+			"gfx": [
+				179
+			],
+			"looms": "plaster",
+			"top": 2.62
+		},
+		{
+			"name": "wall_high",
+			"label": "Pared de la casa con canal de madera (alta)",
+			"kind": "tile",
+			"gfx": [
+				181
+			],
+			"looms": "plaster",
+			"top": 4.52
+		},
+		{
+			"name": "roof",
+			"label": "Tejado de tejas",
+			"kind": "deco",
+			"gfx": [
+				178
+			],
+			"looms": "roof"
 		}
 	]
 }

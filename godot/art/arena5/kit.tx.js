@@ -93,3 +93,57 @@ skins({
     })
   }
 }
+
+// --- plaster: the house walls (179, 181) -------------------------------------
+// lime plaster over stone: broad soft patches where it was re-plastered (big
+// warped cells, each its own tone), worn hollows, a few fine cracks, grime
+// and a little moss low down is the model's job (a separate band)
+//   a cream (retail)   b white-grey (the map's tint)   c warm ochre
+skins({
+  a: { p0: "#6e6444", p1: "#bfb486", p2: "#ddd3a6", p3: "#f0e8c4" },
+  b: { p0: "#5a6070", p1: "#b4bac4", p2: "#d4d8de", p3: "#eef0f2" },
+  c: { p0: "#7a5430", p1: "#c49a5e", p2: "#dcb67c", p3: "#eed09c" },
+})
+{
+  // soft blotches, no hard edges (warped noise in two bands of tone)
+  const blot = noise({ scale: 3, octaves: 3, seed: 531 }).warp(noise({ scale: 2, seed: 537 }), 0.15)
+  const patches = blot.threshold(0.5, 0.06).as("patches")
+  const mid = noise({ scale: 6, octaves: 4, seed: 532 }).warp(noise({ scale: 2, seed: 533 }), 0.1).as("plMid")
+  const fine = noise({ scale: 44, octaves: 3, seed: 534 })
+  const crack = ridged({ scale: 3, octaves: 3, seed: 535 }).threshold(0.965, 0.01).mul(noise({ scale: 3, seed: 536 }).threshold(0.65, 0.1)).as("plCrack")
+  const h = patches.mul(0.12).add(mid.mul(0.6)).add(fine.mul(0.1)).sub(crack.mul(0.1)).as("plH")
+  const hollow = h.cavity(0.012, 10).as("plHollow")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("plaster" + SUF[k], { size: 512, depth: 0.015, ao: 0.5 }, {
+      height: h,
+      color: ramp(patches.mul(0.6).add(mid.mul(0.4)), [col("p1"), col("p2"), col("p3")]).mix(col("p0"), crack.mul(0.5).max(hollow.mul(0.3))),
+      rough: fine.levels(0, 1, 0.82, 0.95),
+    })
+  }
+}
+
+// --- timber: the beams and the water channel on the walls --------------------
+// long grain along the beam (stretched warped noise), rings, a few dark
+// knots, weathered pale on the raised grain
+//   a olive tan (retail)   b weathered grey   c dark brown
+skins({
+  a: { t0: "#3a3018", t1: "#6e5e34", t2: "#958250", t3: "#bba870" },
+  b: { t0: "#2e2c28", t1: "#5e5a52", t2: "#837e74", t3: "#a8a296" },
+  c: { t0: "#1e140c", t1: "#45301e", t2: "#5e432a", t3: "#7e5e3e" },
+})
+{
+  const grain = noise({ scale: [2, 30], octaves: 4, seed: 541 }).warp(noise({ scale: 3, seed: 542 }), 0.05).as("tGrain")
+  const rings = waves({ count: 6, dir: "h", warp: 0.6, scale: 3, seed: 543 }).as("tRings")
+  const fine = noise({ scale: 40, octaves: 2, seed: 544 })
+  const knots = dots({ scale: 4, radius: 0.08, jitter: 1, seed: 545 }).mul(noise({ scale: 2, seed: 546 }).threshold(0.6, 0.1)).as("tKnots")
+  const h = grain.mul(0.6).add(rings.mul(0.25)).add(fine.mul(0.08)).sub(knots.mul(0.3)).as("tH")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("timber" + SUF[k], { size: 256, depth: 0.02, ao: 0.5 }, {
+      height: h,
+      color: ramp(grain.mix(rings, 0.3), [col("t1"), col("t2"), col("t3")]).mix(col("t0"), knots.mul(0.8).max(h.cavity(0.01, 8).mul(0.4))),
+      rough: fine.levels(0, 1, 0.75, 0.9),
+    })
+  }
+}

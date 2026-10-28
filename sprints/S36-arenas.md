@@ -220,6 +220,25 @@ cada vez, empezando por la más usada.
     la decoración a la altura de cada bloque.
   - Hojas: `arena5-hierbas.png`, `arena5-grass_tuft-prado.png` y
     `arena5-grass_tuft_small-prado.png` (sobre hierba, a escala real).
+- La casa: pared con canal de madera (179 baja, 181 alta; el dueño: la
+  misma pared en dos alturas) y tejado (178), 2026-10-28. El dueño: "lo
+  estás haciendo bien".
+  - Pared de una casilla, de revoque, de unos 2,6 m (`wall_low`) y 4,5 m
+    (`wall_high`) desde el pie del bloque, como en el retail. Arriba, dos
+    maderas en los lados que ve la cámara: en +z una viga sobre dos
+    ménsulas, en +x el canal para el agua (un perfil en U, algo más alto) y
+    una tabla que remata el resto.
+  - Tejado: una tabla inclinada hacia +z con tres hileras de tejas curvas
+    al tresbolillo; cada hilera de arriba monta sobre la de abajo.
+  - Texturas loom nuevas: `plaster` (manchas suaves de revoque, sin bordes;
+    la primera versión parecía enlosado) y `timber` (veta larga, anillos,
+    nudos; la primera tenía bandas oscuras cruzadas). Looms de la pared:
+    revoque crema, blanco grisáceo (el tinte del mapa), ocre. Del tejado:
+    teja verde, teja roja, pizarra.
+  - `kit_shots.gd` acepta `--w` para fotos más anchas.
+  - Hojas: `arena5-casa-1.png`, `arena5-casa-2.png` y
+    `arena5-casa-montada.png` (un tramo montado como en el mapa, con hierba
+    y tierra delante; el montaje es de prueba y no se sube).
 
 ## Fases
 

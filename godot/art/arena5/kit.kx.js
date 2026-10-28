@@ -11,6 +11,8 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["soil" + s, { tex: "out/soil" + s, uv: 1, rough: 0.85 }],
   // the same grass, shaded darker: the rim of each cell, so the grid reads
   ["grassRim" + s, { tex: "out/grass" + s, uv: 1.1, rough: 0.85, color: "#9ca482" }],
+  ["plaster" + s, { tex: "out/plaster" + s, uv: 1.6, rough: 0.9 }],
+  ["timber" + s, { tex: "out/timber" + s, uv: 0.8, rough: 0.85 }],
   // packed dark earth, no strata (the dirt block's top face and band)
   ["earth" + s, { tex: "out/earth" + s, uv: 1, rough: 0.9 }],
   ["grassMid" + s, { tex: "out/grass" + s, uv: 1.1, rough: 0.85, color: "#c2c8a8" }],
@@ -19,9 +21,11 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
 const PAL = {
   bladeD: ["#4a6410", "#24481e", "#6a5a1e"], blade: ["#7c9e16", "#3e7a2c", "#988a30"], bladeL: ["#b6d232", "#76ac48", "#cfc05a"],
   soilD: ["#5a4220", "#3a2c1c", "#5e2a18"],
+  // roof tiles: green glazed (retail), terracotta, slate
+  roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["grass", "grassRim", "grassMid", "soil", "earth", ...Object.keys(PAL)]
+const SKINNED = ["grass", "grassRim", "grassMid", "soil", "earth", "plaster", "timber", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // --- grass block (315, 316, 317; the owner: the same block) -----------------
@@ -135,3 +139,35 @@ function blades(n, area, hMin, hMax, seed, lying = 0) {
 model("grass_tuft", { scale: [1.2, 1.5, 1.2] }, blades(42, [0.6, 0.45], 0.14, 0.27, 1))
 model("grass_tuft_small", { scale: [1.2, 1.6, 1.2] }, blades(26, [0.7, 0.5], 0.07, 0.16, 2, 6))
 for (const n of ["grass_tuft", "grass_tuft_small"]) looms(n)
+
+// --- house walls (179 low, 181 high; the owner: the same wall, two heights)
+// and the roof (178) -------------------------------------------------------
+// a cell of lime-plastered wall; on top, two timbers along the two sides the
+// camera sees: on +z a beam on two corbels, on +x the wooden water channel
+// (a U trough, a little higher), a board capping the rest. The roof sits on
+// them. Retail heights: 179 about 2.6 m, 181 about 4.5 m, from the block's
+// foot like every tile.
+function wall(H) {
+  const U = [-0.11, 0, 0.11, 0, 0.11, 0.17, 0.07, 0.17, 0.07, 0.045, -0.07, 0.045, -0.07, 0.17, -0.11, 0.17]
+  return [
+    prismUp(roundSquare(0.495, 0.012), H, 0, "plaster", 0.006),
+    box(0.9, 0.05, 0.9, { mat: "timber", pos: [-0.02, H, -0.02] }),
+    box(1.06, 0.16, 0.2, { mat: "timber", pos: [0, H, 0.44], jitter: 0.004, seed: 1 }),
+    [-0.22, 0.2].map((x, i) => box(0.13, 0.15, 0.2, { mat: "timber", pos: [x, H - 0.15, 0.53], jitter: 0.004, seed: 2 + i })),
+    extrude(U, 1.06, { mat: "timber", pos: [0.46, H + 0.02, 0], jitter: 0.003 }),
+  ]
+}
+model("wall_low", wall(2.45))
+model("wall_high", wall(4.35))
+// roof (178): a board tilted down toward +z, rows of curved tiles laid on it
+// staggered, each overlapping the one below
+const tileArc = Array.from({ length: 7 }, (_, i) => [Math.cos(Math.PI * i / 6) * 0.095, Math.sin(Math.PI * i / 6) * 0.06]).flat()
+  .concat(Array.from({ length: 7 }, (_, i) => [Math.cos(Math.PI * (6 - i) / 6) * 0.07, Math.sin(Math.PI * (6 - i) / 6) * 0.04]).flat())
+model("roof",
+  tf({ rot: [24, 0, 0], pos: [0, 0.25, 0] },
+    box(1.08, 0.04, 1.12, { mat: "timber", pos: [0, -0.04, 0] }),
+    [0, 1, 2].flatMap((row) => Array.from({ length: 6 }, (_, c) => {
+      const x = -0.45 + c * 0.18 + (row % 2) * 0.09, m = (c + row) % 3 === 0 ? "roofL" : (c + row) % 3 === 1 ? "roof" : "roofD"
+      return x > 0.5 ? null : extrude(tileArc, 0.44, { mat: m, pos: [x, (2 - row) * 0.014, -0.34 + row * 0.34], jitter: 0.004, seed: row * 6 + c })
+    }))))
+for (const n of ["wall_low", "wall_high", "roof"]) looms(n)
