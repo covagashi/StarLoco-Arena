@@ -147,3 +147,27 @@ skins({
     })
   }
 }
+
+// --- cobble: the paving stones set in the white slabs (183, 184) -------------
+// worn smooth river stone: soft mottling, a few dark pits, fine speckle, the
+// edges a little darker where dirt lodges (the model rounds the stones)
+//   a sage grey (retail)   b blue slate   c warm brown
+skins({
+  a: { c0: "#4e5444", c1: "#8a9078", c2: "#a6ab92", c3: "#c2c6ae" },
+  b: { c0: "#3a4250", c1: "#6e7a8c", c2: "#8a96a6", c3: "#a8b2c0" },
+  c: { c0: "#4a3626", c1: "#8a6a4c", c2: "#a6845e", c3: "#c2a07a" },
+})
+{
+  const mid = noise({ scale: 4, octaves: 4, seed: 551 }).warp(noise({ scale: 2, seed: 552 }), 0.08).as("cobMid")
+  const speck = noise({ scale: 60, octaves: 2, seed: 553 }).threshold(0.68, 0.05).as("cobSpeck")
+  const pits = dots({ scale: 12, radius: 0.08, jitter: 1, seed: 554 }).mul(noise({ scale: 3, seed: 555 }).threshold(0.6, 0.1)).as("cobPits")
+  const h = mid.mul(0.8).add(noise({ scale: 24, octaves: 2, seed: 556 }).mul(0.1)).sub(pits.mul(0.25)).as("cobH")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("cobble" + SUF[k], { size: 256, depth: 0.012, ao: 0.4 }, {
+      height: h,
+      color: ramp(mid, [col("c1"), col("c2"), col("c3")]).mix(col("c0"), pits.mul(0.7).max(speck.mul(0.25))),
+      rough: mid.levels(0, 1, 0.55, 0.75).mix(0.9, pits),
+    })
+  }
+}

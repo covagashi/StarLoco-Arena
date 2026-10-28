@@ -12,6 +12,7 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   // the same grass, shaded darker: the rim of each cell, so the grid reads
   ["grassRim" + s, { tex: "out/grass" + s, uv: 1.1, rough: 0.85, color: "#9ca482" }],
   ["plaster" + s, { tex: "out/plaster" + s, uv: 1.6, rough: 0.9 }],
+  ["cobble" + s, { tex: "out/cobble" + s, uv: 0.5, rough: 0.7 }],
   ["timber" + s, { tex: "out/timber" + s, uv: 0.8, rough: 0.85 }],
   // packed dark earth, no strata (the dirt block's top face and band)
   ["earth" + s, { tex: "out/earth" + s, uv: 1, rough: 0.9 }],
@@ -24,11 +25,13 @@ const PAL = {
   // ivy on the low walls: autumn orange (retail), deep red, green
   ivyD: ["#a83c10", "#6a1414", "#2e5a1e"], ivy: ["#e0661c", "#a02a1e", "#4a8a2c"], ivyL: ["#f4a03a", "#d0503a", "#7ab040"],
   vine: ["#a8926e", "#7a6250", "#8e7e5c"], vineD: ["#6e5a40", "#4a382c", "#5a4e38"], iron: ["#2e2a26", "#2e2a26", "#2e2a26"],
+  // the mortar of the cobble slabs: white (retail), grey, sand
+  mortar: ["#e8e6dc", "#b4b8bc", "#d8c8a4"], mortarD: ["#b8b6a6", "#868a90", "#a8987a"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["grass", "grassRim", "grassMid", "soil", "earth", "plaster", "timber", ...Object.keys(PAL)]
+const SKINNED = ["grass", "grassRim", "grassMid", "soil", "earth", "plaster", "timber", "cobble", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // --- grass block (315, 316, 317; the owner: the same block) -----------------
@@ -271,3 +274,39 @@ model("low_wall_end",
   extrude([-0.42, 0, 0.42, 0, 0.18, 1.0, 0.05, 1.32, -0.05, 1.3], 0.34, { mat: "plaster", jitter: 0.015, seed: 6 }),
   tf({ pos: [0, 0, 0.2] }, blades(8, [0.8, 0.05], 0.06, 0.14, 71, 2)))
 for (const n of ["low_wall", "low_wall_ivy", "low_wall_ivy_broken", "low_wall_mark", "low_wall_end"]) looms(n)
+
+// --- cobble slabs (183, 184: the same slab, two layouts) ---------------------
+// a skin of white mortar laid over a block's top, its edge sagging over the
+// sides in a few drips, seven rounded paving stones set in it. A cap like
+// the grass cap: y = 0 is the block's top.
+// a rounded rectangle outline (XY), w × d, corner radius r
+const rrect = (w, d, r, seg = 3) => {
+  const pts = [], cs = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+  cs.forEach(([sx, sy], c) => {
+    for (let i = 0; i <= seg; i++) {
+      const a = (c * 90 + (i / seg) * 90) * Math.PI / 180
+      pts.push(sx * (w / 2 - r) + Math.cos(a) * r, sy * (d / 2 - r) + Math.sin(a) * r)
+    }
+  })
+  return pts
+}
+// stones: [x, z, w, d] in the cell
+function cobbleSlab(stones, seed) {
+  return [
+    prismUp(roundSquare(0.5, 0.05), 0.05, -0.01, "mortar", 0.004),
+    // the sagging edge: a thin wavy skirt hanging over the sides, a few drips
+    prismUp(roundSquare(0.51, 0.06, 6, 0.02, seed), 0.07, -0.07, "mortarD", 0.006),
+    [[0.5, -0.2], [0.5, 0.25], [-0.15, 0.5], [0.3, 0.5]].map(([x, z], i) =>
+      sphere(0.035, { mat: "mortarD", detail: 1, pos: [x * 1.005, -0.06, z * 1.005], scale: [1, 1.6, 1] })),
+    stones.map(([x, z, w0, d0], i) => [w0 * 1.14, d0 * 1.14, x, z]).map(([w, d, x, z], i) => tf({ pos: [x, 0.03, z], rot: [0, ((i * 37 + seed * 11) % 9) - 4, 0] },
+      prismUp(rrect(w, d, Math.min(w, d) * 0.4, 4), 0.03, 0, "cobble", 0.004),
+      sphere(0.5, { mat: "cobble", detail: 2, pos: [0, 0.028, 0], scale: [w * 0.95, 0.03, d * 0.95] }))),
+  ]
+}
+model("cobble_cap", { pivot: "origin" }, cobbleSlab([
+  [-0.22, -0.28, 0.3, 0.2], [0.15, -0.3, 0.32, 0.18], [-0.32, 0.02, 0.22, 0.26], [0.0, 0.0, 0.34, 0.2],
+  [0.32, 0.02, 0.2, 0.24], [-0.12, 0.3, 0.4, 0.2], [0.28, 0.3, 0.26, 0.2]], 1))
+model("cobble_cap_alt", { pivot: "origin" }, cobbleSlab([
+  [-0.3, -0.27, 0.22, 0.22], [0.08, -0.28, 0.42, 0.2], [-0.22, 0.0, 0.38, 0.22], [0.2, 0.02, 0.26, 0.22],
+  [-0.3, 0.3, 0.22, 0.2], [0.02, 0.3, 0.24, 0.2], [0.3, 0.29, 0.22, 0.24]], 2))
+for (const n of ["cobble_cap", "cobble_cap_alt"]) looms(n)

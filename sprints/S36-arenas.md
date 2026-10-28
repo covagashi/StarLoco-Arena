@@ -261,6 +261,19 @@ cada vez, empezando por la más usada.
   - Hojas: `arena5-murete-1.png` … `-3.png` y
     `arena5-murete-montado.png` (una fila sobre hierba; el montaje es de
     prueba y no se sube).
+- Losas de adoquines blancos (183, 184: la misma losa con dos
+  disposiciones), 2026-10-28.
+  - En el mapa van encima de bloques, a lo largo del pie de la casa. Son una
+    capa (tipo `cap`, como la de hierba): mortero blanco sobre la cara de
+    arriba del bloque, con el borde caído por los lados en unas gotas, y
+    siete adoquines redondeados encastrados.
+  - Textura loom nueva `cobble`: piedra de río gastada, manchas suaves,
+    algún poro, motas finas. Looms: mortero blanco con piedra salvia (el
+    retail), mortero gris con pizarra azul, mortero arena con piedra parda.
+  - Primera versión: adoquines con un escalón y gotas como pinchos; las
+    piedras, algo pequeñas para la losa.
+  - Hojas: `arena5-losas.png` y `arena5-losas-montadas.png` (una fila sobre
+    bloques de tierra junto a la hierba; el montaje es de prueba).
 
 ## Fases
 

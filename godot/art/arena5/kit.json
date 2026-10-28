@@ -29,6 +29,11 @@
 			"teja verde",
 			"teja roja",
 			"pizarra"
+		],
+		"cobble": [
+			"mortero blanco, piedra salvia",
+			"mortero gris, pizarra azul",
+			"mortero arena, piedra parda"
 		]
 	},
 	"shared": [
@@ -255,6 +260,26 @@
 				223
 			],
 			"looms": "plaster"
+		},
+		{
+			"name": "cobble_cap",
+			"label": "Losa de adoquines blancos",
+			"kind": "cap",
+			"gfx": [
+				183
+			],
+			"looms": "cobble",
+			"top": 0.06
+		},
+		{
+			"name": "cobble_cap_alt",
+			"label": "Losa de adoquines blancos (otra disposición)",
+			"kind": "cap",
+			"gfx": [
+				184
+			],
+			"looms": "cobble",
+			"top": 0.06
 		}
 	]
 }
