@@ -54,6 +54,16 @@
 			"verde lima",
 			"oliva otoñal",
 			"verde verano"
+		],
+		"flower": [
+			"amarillo",
+			"blanco",
+			"rojo"
+		],
+		"pink": [
+			"rosa",
+			"lila",
+			"blanco"
 		]
 	},
 	"shared": [
@@ -364,6 +374,33 @@
 				2556
 			],
 			"looms": "tree"
+		},
+		{
+			"name": "flowers",
+			"label": "Flores naranjas",
+			"kind": "deco",
+			"gfx": [
+				481
+			],
+			"looms": "flower"
+		},
+		{
+			"name": "flower_single",
+			"label": "Flor naranja",
+			"kind": "deco",
+			"gfx": [
+				482
+			],
+			"looms": "flower"
+		},
+		{
+			"name": "petals",
+			"label": "Florecitas rosas en el suelo",
+			"kind": "flat",
+			"gfx": [
+				126
+			],
+			"looms": "pink"
 		}
 	]
 }

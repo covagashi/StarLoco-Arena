@@ -319,6 +319,21 @@ cada vez, empezando por la más usada.
     Hojas de 20 puntos para dejarlos entre 4 000 y 7 700 triángulos.
   - Hojas: `arena5-arboles-1.png`, `-2.png` y `arena5-arboles-montados.png` (sobre
     hierba con la valla y una mata; el montaje es de prueba).
+  - Dueño: "perfecto, veo que has pillado bien el punto".
+- Flores (481 dos, 482 una) y florecitas rosas en el suelo (126),
+  2026-10-28.
+  - Flor de copa sobre un tallo corto: siete pétalos grandes abiertos, un
+    anillo interior más derecho y claro, y el centro naranja. Entre briznas
+    de un verde oliva apagado (las del bloque de hierba son lima y aquí
+    desentonaban); `blades()` acepta ahora sus colores.
+  - Florecitas rosas: cinco pétalos en copa baja con el centro blanco,
+    esparcidas por la casilla, de varios tamaños (tipo `flat`).
+  - Looms: flores amarillo (el retail), blanco, rojo; florecitas rosa (el
+    retail), lila, blanco.
+  - Primera versión: cabezas la mitad de grandes y altas, briznas lima
+    tapando la flor, y las florecitas planas y pequeñas.
+  - Hojas: `arena5-flores-1.png`, `-2.png` y `arena5-flores-montadas.png`
+    (sobre hierba junto al árbol joven; el montaje es de prueba).
 
 ## Fases
 

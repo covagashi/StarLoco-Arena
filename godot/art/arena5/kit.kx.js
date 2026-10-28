@@ -38,6 +38,13 @@ const PAL = {
   treeD: ["#3a5214", "#4a3a12", "#1e3a1a"], tree: ["#6e8a22", "#8a6a1e", "#3a6a2a"], treeL: ["#a8c234", "#c0a03a", "#6a9a3e"],
   treeX: ["#5a7a1a", "#9a4a1a", "#2e5222"],
   barkL: ["#d8c890", "#c8bca0", "#a08a6a"], bark: ["#a89660", "#8e8270", "#6e5a42"], barkD: ["#6e6038", "#5a5246", "#42342a"],
+  // cup flowers (481, 482): yellow-orange (retail), white, red; and the small
+  // ground flowers (126): pink (retail), lilac, white
+  flowerD: ["#c8641a", "#b8b8a8", "#8a1a1a"], flower: ["#f0a020", "#ecece4", "#c8302a"], flowerL: ["#fcd04a", "#ffffff", "#e8604a"],
+  flowerC: ["#e07a10", "#e8c030", "#f0c030"],
+  // their leaves: a dull olive, not the lime of the grass block
+  stalkD: ["#34401a", "#2e3e1e", "#34401a"], stalk: ["#56682a", "#4a6230", "#56682a"], stalkL: ["#74863a", "#668040", "#74863a"],
+  pinkD: ["#b83a6a", "#7a4ab0", "#a8b8d0"], pink: ["#e86a9a", "#a874d8", "#dce6f4"], pinkC: ["#fff4e8", "#fff4e8", "#f0d050"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -138,7 +145,8 @@ const bend = (h, y) => 0.09 * (y / h) * (y / h)
 const bladeBase = (h) => [-0.016, 0, 0.016, 0, 0.03 + bend(h, h * 0.32), h * 0.32, -0.026 + bend(h, h * 0.32), h * 0.32]
 const bladeTip = (h) => [-0.026 + bend(h, h * 0.3), h * 0.3, 0.03 + bend(h, h * 0.3), h * 0.3, 0.026 + bend(h, h * 0.6), h * 0.6,
   bend(h, h) + 0.004, h, -0.012 + bend(h, h * 0.65), h * 0.65]
-function blades(n, area, hMin, hMax, seed, lying = 0) {
+// mats: [base, tip, light tip] (default the grass block's blades)
+function blades(n, area, hMin, hMax, seed, lying = 0, mats = ["bladeD", "blade", "bladeL"]) {
   const out = []
   for (let i = 0; i < n; i++) {
     const r = (k) => ((Math.sin((i + 1) * 12.9898 * k + seed * 78.233) * 43758.5453) % 1 + 1) % 1
@@ -147,9 +155,9 @@ function blades(n, area, hMin, hMax, seed, lying = 0) {
     const x = (c[0] + (r(1) - 0.5) * 0.3) * area[0] / 0.6, z = (c[1] + (r(2) - 0.5) * 0.25) * area[1] / 0.45
     const h = hMin + r(3) * (hMax - hMin), down = i < lying
     const lean = down ? 70 + r(4) * 15 : 5 + r(4) * 40, turn = r(5) * 360
-    const tip = z > 0.05 ? "bladeL" : r(6) > 0.5 ? "bladeL" : "blade"
+    const tip = z > 0.05 ? mats[2] : r(6) > 0.5 ? mats[2] : mats[1]
     out.push(tf({ pos: [x, 0, z], rot: [0, turn, 0] }, tf({ rot: [lean, 0, 0] },
-      extrude(bladeBase(h), 0.006, { mat: "bladeD" }), extrude(bladeTip(h), 0.006, { mat: tip, pos: [0, 0, 0.001] }))))
+      extrude(bladeBase(h), 0.006, { mat: mats[0] }), extrude(bladeTip(h), 0.006, { mat: tip, pos: [0, 0, 0.001] }))))
   }
   return out
 }
@@ -446,3 +454,35 @@ model("leaf_tree_young", { scale: 0.85 },
   branch([[0.08, 1.05, 0], [0.45, 1.3, 0.1], [0.58, 1.45, 0.1]], 0.022), branch([[0.08, 1.15, 0], [-0.3, 1.45, -0.05]], 0.022),
   clump(0.1, 1.8, 0, 0.4, 21), clump(0.6, 1.5, 0.1, 0.3, 22), clump(-0.32, 1.6, -0.05, 0.3, 23), clump(0.15, 2.12, -0.05, 0.26, 24))
 for (const n of ["leaf_tree", "leaf_tree_fork", "leaf_tree_young"]) looms(n)
+
+// --- flowers (481: two cup flowers, 482: one) and small ground flowers (126) --
+// a petal: a rounded spoon shape, base at the origin, pointing up +y
+const petal = [0, 0, 0.022, 0.02, 0.03, 0.05, 0.022, 0.075, 0, 0.082, -0.022, 0.075, -0.03, 0.05, -0.022, 0.02]
+// a cup flower on a short stem: big ruffled outer petals, an upright inner
+// ring, a dark orange centre
+function cupFlower(x, z, h, size, seed, open = 55) {
+  const out = [tube([x, 0, z, x + 0.01, h * 0.6, z, x, h, z], 0.008, { mat: "stalkD", sides: 4 })]
+  for (let i = 0; i < 7; i++) {
+    const a = i * 360 / 7 + seed * 13, m = i % 3 === 0 ? "flowerD" : i % 3 === 1 ? "flower" : "flowerL"
+    out.push(tf({ pos: [x, h, z], rot: [0, a, 0] }, extrude(petal, 0.006, { mat: m, rot: [open + (i % 2) * 12, 0, 0], scale: size })))
+  }
+  for (let i = 0; i < 5; i++)
+    out.push(tf({ pos: [x, h + 0.005, z], rot: [0, i * 72 + 36 + seed * 13, 0] }, extrude(petal, 0.006, { mat: "flowerL", rot: [25, 0, 0], scale: size * 0.7 })))
+  out.push(sphere(0.02 * size, { mat: "flowerC", detail: 1, pos: [x, h + 0.025 * size, z] }))
+  return out
+}
+const OLIVE = ["stalkD", "stalk", "stalkL"]
+model("flowers",
+  cupFlower(-0.1, 0.08, 0.09, 2.2, 1), cupFlower(0.16, 0.16, 0.05, 1.5, 2, 60),
+  tf({ pos: [0.04, 0, -0.1] }, blades(10, [0.45, 0.3], 0.14, 0.26, 81, 0, OLIVE)))
+model("flower_single", cupFlower(-0.04, 0.1, 0.08, 1.8, 3), tf({ pos: [0.04, 0, -0.08] }, blades(8, [0.35, 0.25], 0.14, 0.26, 82, 0, OLIVE)))
+// small ground flowers (126): five petals in a shallow cup, a big white
+// centre, scattered over the cell, a few smaller ones
+const smallFlower = (x, z, size, seed) => [
+  [0, 1, 2, 3, 4].map((i) => tf({ pos: [x, 0.012, z], rot: [0, i * 72 + seed * 17, 0] },
+    extrude(petal, 0.005, { mat: i % 2 ? "pink" : "pinkD", rot: [62, 0, 0], scale: size }))),
+  sphere(0.022 * size, { mat: "pinkC", detail: 1, pos: [x, 0.03 * size, z], scale: [1, 0.6, 1] })]
+model("petals",
+  [[-0.3, -0.1, 1.6], [-0.12, -0.28, 1.2], [0.05, -0.05, 1.7], [0.27, -0.22, 1.1], [0.33, 0.08, 1.4],
+   [-0.22, 0.16, 1.1], [0.0, 0.24, 0.9], [0.2, 0.32, 1.2], [-0.4, 0.32, 0.8], [0.42, 0.34, 0.8]].map(([x, z, k], i) => smallFlower(x, z, k, i)))
+for (const n of ["flowers", "flower_single", "petals"]) looms(n)
