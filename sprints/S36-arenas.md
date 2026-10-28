@@ -420,26 +420,28 @@ cada vez, empezando por la más usada.
     parecían adoquines, y todo algo pequeño para la casilla.
   - Hojas: `arena5-empedrado.png` y `arena5-empedrado-montado.png` (sobre
     hierba y tierra; el montaje es de prueba).
-- Chimenea (228), bloque del canal (169) y ventana (210), 2026-10-28.
-  - Corrección de tres nombres míos, vistos en el mapa: la 228 no es un
-    pilar pequeño, es una chimenea sobre el tejado; la 169 no es un yunque,
-    es un bloque de piedra oscura con dos grapas de hierro hundido en el
-    canal; la 210 no está en el suelo, es una ventana en la pared alta.
-    Quedan en `names.json` como suposiciones.
+- Chimenea (228), final de puente sobre poste (169) y ventana (210),
+  2026-10-28.
+  - Corrección de nombres míos, vistos en el mapa: la 228 no es un pilar
+    pequeño, es una chimenea sobre el tejado; la 210 no está en el suelo,
+    es una ventana en la pared alta (las dos quedan en `names.json` como
+    suposiciones). La 169 no es un yunque.
   - Chimenea: fuste de revoque, una banda de madera y un remate cuadrado
     de piedra con el hueco del humo. Va sobre el tejado (`on: roof`). Looms
     del revoque.
-  - Bloque del canal: un pedestal oscuro y estrecho, dos losas gruesas a lo
-    largo del canal con una ranura entre ellas y el bisel delante, y detrás
-    un saliente con las dos grapas claras remachadas. Tipo `tile`, cara a
-    0,7 m. Looms: pizarra gris (el retail), basalto, piedra parda.
+  - La 169, dueño (2026-10-28): "no es piedra, es madera con la junta al
+    final; creo que ya había otro asset igual". Es la 168, el final de
+    puente del kit de nieve, apoyado en un poste. Primero la hice como un
+    bloque de piedra oscura nuevo (`canal_block`), que se quita. Ahora es
+    `bridge_end_post` en `godot/art/arena1/` (el mismo final de puente con
+    un poste cuadrado de madera de 0,6 m que baja al canal, looms de la
+    madera), y la arena 5 lo reutiliza.
   - Ventana: marco de tablas, hueco oscuro con una planta dentro. Tipo
     nuevo `wall` en `kit.json`: cuelga de la cara de una pared (z = 0 es la
     cara). Looms de la madera de vigas.
-  - Primeras versiones: el bloque con las losas finas sobre un pedestal
-    igual de ancho y luego girado (las grapas quedaban en un lado); la
-    ventana estrecha, con el hueco asomando por encima del marco.
-  - Hojas: `arena5-chimenea-bloque-ventana.png` y
+  - Primera versión de la ventana: estrecha, con el hueco asomando por
+    encima del marco.
+  - Hojas: `arena5-chimenea-ventana.png`, `arena5-puente-poste.png` y
     `arena5-chimenea-bloque-ventana-montados.png` (en la casa; el montaje
     es de prueba).
 - Con esto, las 74 piezas de la arena 5 quedan cubiertas: las nuevas en

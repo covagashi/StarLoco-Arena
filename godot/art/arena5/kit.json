@@ -79,11 +79,6 @@
 			"piedra crema",
 			"gris",
 			"terracota"
-		],
-		"dark": [
-			"pizarra gris",
-			"basalto",
-			"piedra parda"
 		]
 	},
 	"shared": [
@@ -162,6 +157,13 @@
 			"gfx": [
 				1675,
 				1676
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "bridge_end_post",
+			"gfx": [
+				169
 			]
 		}
 	],
@@ -533,16 +535,6 @@
 			"looms": "plaster",
 			"on": "roof",
 			"note": "y = 0 is the roof board"
-		},
-		{
-			"name": "canal_block",
-			"label": "Bloque de piedra con grapas (en el canal)",
-			"kind": "tile",
-			"gfx": [
-				169
-			],
-			"looms": "dark",
-			"top": 0.7
 		},
 		{
 			"name": "wall_window",

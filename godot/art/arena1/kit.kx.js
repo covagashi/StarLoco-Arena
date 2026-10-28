@@ -184,6 +184,12 @@ model("moss_floor", prism(roundSquare(0.49, 0.03), 0.12, 0, "moss", 0.004))
 model("bridge_end", stamp("bridge"),
   sym("z", box(0.14, 0.08, 0.1, { mat: "iron", pos: [-0.36, 0.22, 0.3] })),
   sym("z", box(0.05, 0.05, 0.05, { mat: "iron", pos: [-0.36, 0.3, 0.3] })))
+// the bridge end on its post (169): a square timber post under the middle
+// of the end, sunk into the water channel; the deck stays at y 0..0.22
+model("bridge_end_post", { pivot: "origin" }, stamp("bridge_end"),
+  box(0.34, 0.6, 0.36, { mat: "wood", pos: [-0.12, -0.6, 0], jitter: 0.008, seed: 3 }),
+  box(0.4, 0.05, 0.42, { mat: "wood", pos: [-0.12, -0.04, 0], jitter: 0.004, seed: 4 }))
+looms("bridge_end_post")
 // their columns: 1 m bodies to stack under them
 model("stone_col", prism(roundSquare(HALF, 0.05), 1, 0, "stone", 0.006))
 model("rock_col", box(0.96, 1, 0.96, { mat: "boulder", jitter: 0.03, seed: 7 }))

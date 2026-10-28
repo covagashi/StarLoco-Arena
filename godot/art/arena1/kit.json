@@ -302,6 +302,17 @@
 			"looms": "wood"
 		},
 		{
+			"name": "bridge_end_post",
+			"label": "Final de puente sobre poste",
+			"kind": "tile",
+			"top": 0.22,
+			"gfx": [
+				169
+			],
+			"looms": "wood",
+			"note": "the post hangs 0.6 m below y = 0, into the water channel"
+		},
+		{
 			"name": "ice_crystals",
 			"label": "Cristales de hielo",
 			"kind": "deco",
