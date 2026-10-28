@@ -44,3 +44,32 @@ skins({
     })
   }
 }
+
+// --- cliff rock: the island's sides under the edge cells (1798-1804) -------
+// long vertical strata: stretched warped noise in bands, the ledges lighter
+// where a band stands proud, dark seams between them, fine grit
+//   a ochre sandstone (retail)   b grey slate   c dark umber
+skins({
+  a: { c0: "#4e4430", c1: "#6e6346", c2: "#8c8058", c3: "#b3a46a" },
+  b: { c0: "#2c2e32", c1: "#55585e", c2: "#7a7d82", c3: "#a4a6a8" },
+  c: { c0: "#2e1e16", c1: "#5a3c2a", c2: "#7e5a40", c3: "#a68262" },
+})
+{
+  const strata = noise({ scale: [3, 1], octaves: 3, seed: 621 }).warp(noise({ scale: 3, seed: 622 }), 0.08).as("strata")
+  const seams = noise({ scale: [6, 1], octaves: 2, seed: 623 }).warp(noise({ scale: 4, seed: 624 }), 0.05)
+    .levels(0.22, 0.32, 1, 0).clamp(0, 1).as("seams")
+  const mid = noise({ scale: [8, 4], octaves: 3, seed: 625 })
+  const fine = noise({ scale: 60, octaves: 2, seed: 626 })
+  const h = strata.mul(0.45).add(mid.mul(0.3)).add(fine.mul(0.03)).sub(seams.mul(0.3)).as("cliffH")
+  const ledge = h.convex(0.01, 10).as("cliffLedge")
+  const dirt = h.cavity(0.01, 10)
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("cliff" + SUF[k], { size: 512, depth: 0.03, ao: 0.6 }, {
+      height: h,
+      color: ramp(strata.mix(mid, 0.5).levels(0.25, 0.75, 0, 1), [col("c1"), col("c2"), col("c2"), col("c3")])
+        .mix(col("c0"), seams.mul(0.4)).mix(col("c0"), dirt.mul(0.25)).mix(col("c3"), ledge.mul(0.3)),
+      rough: fine.levels(0, 1, 0.8, 0.92),
+    })
+  }
+}

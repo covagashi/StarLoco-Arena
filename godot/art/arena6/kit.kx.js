@@ -9,6 +9,7 @@ const LOOMS = ["", "_b", "_c"]
 pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["stone" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85 }],
   ["stoneMoss" + s, { tex: "out/stoneMoss" + s, uv: 0.9, rough: 0.9 }],
+  ["cliff" + s, { tex: "out/cliff" + s, uv: 2.2, rough: 0.9 }],
   // the moss-washed stones of the mossy cap (1472): the mossy stone, greener
   ["stoneGreen" + s, { tex: "out/stoneMoss" + s, uv: 0.9, rough: 0.9, color: ["#c4cc98", "#a8bca0", "#c8c496"][LOOMS.indexOf(s)] }],
 ])))
@@ -21,7 +22,7 @@ const PAL = {
   petal: ["#f4f2ea", "#f4e8a8", "#f0b8c8"], petalD: ["#c8c4b8", "#d0c070", "#c88098"], heart: ["#e8c030", "#d08a20", "#f0d050"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneMoss", "stoneGreen", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneMoss", "stoneGreen", "cliff", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -179,3 +180,80 @@ model("mossy_cap",
   flower(-0.1, 0.69, 0.12, 0.13, 57), flower(0.17, 0.68, -0.15, 0.12, 58), flower(-0.32, 0.38, 0.36, 0.1, 59),
   flower(0.36, 0.37, 0.3, 0.11, 60))
 looms("mossy_cap")
+
+// --- cliff rock under the island's edge cells (1798, 1799, 1802, 1803, 1804)
+// kind cliff: hangs under an edge cell in place of its block; the origin is
+// the cell centre at the block's top (the cap lies on it), the rock goes down
+// from there. A square head fills the cell under the cap; below it a bundle
+// of long faceted shards of different lengths, each narrowing to a point, the
+// ones on the seen faces (+x, +z) standing out a little with lit ledges.
+// a shard: a five-sided crystal hanging from y = top, len long, radius r,
+// full width down to about half its length, then narrowing to its tip;
+// squash flattens it in z
+function shard(x, z, top, len, r, { seed = 1, rot = 0, squash = 1, mat = "cliff" } = {}) {
+  return tf({ pos: [x, top - len, z], rot: [0, rot, 0], scale: [1, 1, squash] },
+    lathe([0, 0, r * 0.45, len * 0.14, r * 0.85, len * 0.34, r, len * 0.52, r * 1.02, len, 0, len],
+      { mat, sides: 5, jitter: Math.min(0.03, r * 0.08), seed }))
+}
+// the head: a cell-sized rock block just under the cap
+// (a little narrower at its foot, where the shards take over)
+const cliffHead = (h, seed) => [
+  prismUp(roundSquare(0.45, 0.12, 4, 0.03, seed), h * 0.6, -h * 0.6, "cliff", 0.02),
+  prismUp(roundSquare(0.4, 0.14, 4, 0.06, seed + 1), h * 0.4, -h, "cliff", 0.03)]
+// a bundle of shards from a list [x, z, top, len, r], each turned its own way
+const shards = (list, seed) => list.map(([x, z, top, len, r], i) =>
+  shard(x, z, top, len, r, { seed: seed + i, rot: rnd(i, 41, seed) * 72 }))
+
+// flat plates standing out of the two seen faces: vertical strips, each its
+// own length, their tops catching the light. [along, top, len, r] per plate;
+// along runs over the face (-0.4..0.4)
+const plates = (zFace, xFace, seed) => [
+  ...zFace.map(([a, top, len, r], i) => shard(a, 0.44, top, len, r, { seed: seed + i, rot: rnd(i, 51, seed) * 20 - 10, squash: 0.45 })),
+  ...xFace.map(([a, top, len, r], i) => tf({ rot: [0, 90, 0] },
+    shard(-a, 0.44, top, len, r, { seed: seed + 10 + i, rot: rnd(i, 52, seed) * 20 - 10, squash: 0.45 })))]
+
+// cliff column (1803): about 2.75 m under the block top; three broad shards
+// fill the cell, a long one on the seen corner, a short one on each face
+model("cliff_col", { pivot: "origin" },
+  cliffHead(1.0, 1),
+  shards([[0.08, 0.08, -0.05, 2.75, 0.42], [-0.14, 0.14, -0.1, 1.7, 0.34], [0.15, -0.14, -0.1, 1.6, 0.34],
+    [-0.15, -0.15, -0.1, 1.4, 0.34]], 61),
+  plates([[-0.18, -0.8, 1.0, 0.24]], [[0.12, -0.3, 1.3, 0.24]], 65))
+// cliff column with boulders (1802): the same, rounded boulders wedged at
+// the top of its +z face
+model("cliff_col_knobs", { pivot: "origin" },
+  cliffHead(1.0, 2),
+  shards([[0.1, 0.06, -0.05, 2.6, 0.42], [-0.15, 0.14, -0.1, 1.6, 0.34], [0.15, -0.15, -0.1, 1.7, 0.34],
+    [-0.15, -0.15, -0.1, 1.4, 0.34]], 71),
+  plates([[0.2, -0.6, 1.0, 0.22]], [[-0.18, -0.25, 1.3, 0.24]], 75),
+  rock(0.2, { mat: "cliff", pos: [-0.24, -0.28, 0.44], rough: 0.12, squash: 0.8, seed: 72 }),
+  rock(0.15, { mat: "cliff", pos: [-0.4, -0.55, 0.4], rough: 0.12, squash: 0.8, seed: 73 }),
+  rock(0.13, { mat: "cliff", pos: [0.02, -0.18, 0.5], rough: 0.12, squash: 0.8, seed: 74 }))
+// cliff tip (1798): the island's lowest point, at its front corner: a long
+// spine standing out of the corner, reaching about 3.3 m, a shorter pillar
+// beside it, the column behind
+model("cliff_tip", { pivot: "origin" },
+  cliffHead(1.0, 3),
+  shards([[0.0, 0.0, -0.05, 2.3, 0.42], [-0.16, 0.16, -0.1, 1.7, 0.34], [0.16, -0.16, -0.1, 1.7, 0.34]], 81),
+  shard(0.3, 0.3, -0.1, 3.25, 0.3, { seed: 85, rot: 20 }),
+  shard(0.12, 0.4, -0.2, 2.75, 0.22, { seed: 86, rot: 45, squash: 0.7 }),
+  plates([[-0.22, -0.8, 1.0, 0.22]], [[-0.22, -0.4, 1.2, 0.22]], 88))
+// a rock face hanging on the +z face of a column (z = 0.47 is the face): a
+// row of flattened shards side by side, their tops at y = 0, their lengths
+// running from lenL at -x to lenR at +x, so the bottom slants in points.
+// w wide along x
+function rockFace(w, n, lenL, lenR, r, seed) {
+  return Array.from({ length: n }, (_, i) => {
+    const f = n > 1 ? i / (n - 1) : 0.5
+    const len = lenL + (lenR - lenL) * f + (rnd(i, 71, seed) - 0.5) * 0.25
+    return shard(-w / 2 + r * 0.8 + f * (w - r * 1.6), 0.47, -(rnd(i, 72, seed) * 0.12), len, r,
+      { seed: seed + i, rot: rnd(i, 73, seed) * 30 - 15, squash: 0.5 })
+  })
+}
+// cliff face (1804): a rock face on the +x face, the whole cell wide,
+// longest at its +z end (about 2.5 m), short at its -z end
+model("cliff_slant", { pivot: "origin" }, tf({ rot: [0, 90, 0] }, rockFace(1.0, 4, 2.5, 1.1, 0.3, 91)))
+// cliff shard (1799): a narrow rock face, half a cell wide, on the +z face,
+// to break a long run of columns
+model("cliff_shard", { pivot: "origin" }, tf({ pos: [0.2, 0, 0] }, rockFace(0.5, 2, 2.3, 1.7, 0.2, 101)))
+for (const n of ["cliff_col", "cliff_col_knobs", "cliff_tip", "cliff_slant", "cliff_shard"]) looms(n)

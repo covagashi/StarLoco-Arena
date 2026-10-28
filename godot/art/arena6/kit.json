@@ -1,5 +1,5 @@
 {
- "_doc": "Arena 6 (retail world 36: a floating meadow, ruins and scaffolds) kit for the map editor (S36), same schema as art/arena5/kit.json. Pieces the arena also uses from the arena 1, 2 and 5 kits are listed in shared. on: block = stacked on top of another block (y = 0 is where it rests on it).",
+ "_doc": "Arena 6 (retail world 36: a floating meadow, ruins and scaffolds) kit for the map editor (S36), same schema as art/arena5/kit.json. Pieces the arena also uses from the arena 1, 2 and 5 kits are listed in shared. on: block = stacked on top of another block (y = 0 is where it rests on it). kind cliff = hangs under an edge cell of the island in place of its block: origin = the cell centre at the block's top (the cap lies on it), the rock goes down from there; +x and +z are the faces seen.",
  "biome": "pradera",
  "arenas": [
   36
@@ -14,6 +14,11 @@
    "arenisca crema",
    "granito gris",
    "arenisca roja"
+  ],
+  "cliff": [
+   "arenisca ocre",
+   "pizarra gris",
+   "roca parda oscura"
   ]
  },
  "shared": [
@@ -112,6 +117,56 @@
    "looms": "stone",
    "on": "block",
    "note": "stacked on the ashlar block (1381): y = 0 rests on its top"
+  },
+  {
+   "name": "cliff_col",
+   "label": "Columna del acantilado",
+   "kind": "cliff",
+   "gfx": [
+    1803
+   ],
+   "looms": "cliff",
+   "note": "about 2.75 m under the block top"
+  },
+  {
+   "name": "cliff_col_knobs",
+   "label": "Columna del acantilado con bolos",
+   "kind": "cliff",
+   "gfx": [
+    1802
+   ],
+   "looms": "cliff",
+   "note": "the boulders are on its +z face"
+  },
+  {
+   "name": "cliff_tip",
+   "label": "Punta del acantilado (esquina delantera)",
+   "kind": "cliff",
+   "gfx": [
+    1798
+   ],
+   "looms": "cliff",
+   "note": "the island's lowest point, about 3.3 m; its spine is on the +x+z corner"
+  },
+  {
+   "name": "cliff_slant",
+   "label": "Placa del acantilado (cara)",
+   "kind": "cliff",
+   "gfx": [
+    1804
+   ],
+   "looms": "cliff",
+   "note": "a plate on the column's +x face, longest at its +z end"
+  },
+  {
+   "name": "cliff_shard",
+   "label": "Placa estrecha del acantilado",
+   "kind": "cliff",
+   "gfx": [
+    1799
+   ],
+   "looms": "cliff",
+   "note": "half a cell wide, on the +z face, to break a long run of columns"
   }
  ]
 }

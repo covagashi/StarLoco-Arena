@@ -485,6 +485,36 @@ cada vez, empezando por la más usada.
   - Hojas: `arena6-piedras-1.png`, `-2.png` y `arena6-piedras-montadas.png`
     (muro de sillares con remates, pilar y montones sobre adoquines y
     hierba; el montaje es de prueba).
+  - Dueño: "lo estás haciendo bien".
+- Rocas del acantilado (1803, 1802, 1798, 1804, 1799), 2026-10-28.
+  - Vistas en el mapa: son la cara de la isla bajo las casillas del borde.
+    Cada casilla del borde lleva una columna de roca colgada, del ancho de
+    la casilla, que se afila hasta una punta. La 1803 y la 1802 (con bolos
+    arriba) son las columnas; la 1798 es la punta de la esquina delantera,
+    la más larga (3,3 m). La 1804 y la 1799 no son columnas: son placas de
+    roca pegadas a una cara (la 1804 ancha en la cara +x, la 1799 estrecha
+    en la +z), para romper una fila de columnas.
+  - Tipo nuevo `cliff` en `kit.json`: va bajo una casilla del borde en
+    lugar de su bloque. El origen es el centro de la casilla a la altura de
+    la parte de arriba del bloque (la losa o la hierba va encima) y la roca
+    baja desde ahí. Se ven sus caras +x y +z.
+  - Columna: una cabeza del tamaño de la casilla bajo la losa y, debajo,
+    lascas gordas de cinco caras que mantienen el ancho hasta la mitad y
+    se afilan. La de la esquina es la más larga, así que cada columna acaba
+    en una sola punta. Dos placas verticales salen de las caras vistas, con
+    el borde de arriba iluminado.
+  - Textura loom nueva `cliff`: vetas verticales anchas, juntas oscuras,
+    salientes más claros. Looms: arenisca ocre (el retail), pizarra gris,
+    roca parda oscura.
+  - Primeras versiones: un bloque con carámbanos finos debajo; luego, en
+    el montaje, un peine de pinchos (cada columna acababa en cuatro o cinco
+    puntas) y las columnas fundidas en una pared; la 1804 y la 1799 hechas
+    como columnas y después como tablas planas.
+  - Hojas: `arena6-acantilado-1.png` … `-3.png`,
+    `arena6-acantilado-montado.png` (una isla de 6 × 6 con columnas en los
+    dos bordes vistos, la punta en la esquina, dos placas y una placa
+    estrecha) y `arena6-acantilado-vs-retail.png` (el borde del retail al
+    lado del montaje; el montaje es de prueba).
 
 ## Fases
 
