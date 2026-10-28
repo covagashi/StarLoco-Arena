@@ -696,7 +696,44 @@ cada vez, empezando por la más usada.
 - El borde delantero del mapa (1482, 1645 y algunas 1426) está pintado en
   silueta negra: es el marco del primer plano, no otro objeto. La 2038
   parece niebla (VFX).
-- Pendiente del dueño: corregir los nombres antes de modelar.
+- Nombres del dueño (2026-10-28), guardados en `names.json`:
+  - La 1445 es una reja de metal, como una valla; la 1417, la parte de
+    arriba de un muro, rematada en ^.
+  - Las ocho losas pardas (263, 266, 267, 268, 1526, 1527, 1532, 1533) son
+    la misma: una losa de tierra, como el bloque de hierba pero de tierra.
+  - La 1482 y la 1645 son la misma losa de piedra, como la de la casa de la
+    arena 5.
+  - La 2038 es niebla: va a VFX (`gfx_rules.json`). Hojas grises y polvo
+    (2453-2456), lápidas, cruces (gótica de hierro, de piedra, de
+    Santiago), una lápida de madera, una casita de piedra, tierra recién
+    removida (2497, 2498), partes de muro (2210, 2215, 2222, 2227, 2228,
+    2256), un bloque con un agujero (2499), huesos, cráneos, esqueletos y
+    sangre.
+  - Muchas lápidas y huesos son únicos, pero el dueño me deja agruparlos o
+    hacerlos parecidos.
+- Muro y reja (1417, 1445), 2026-10-28. Kit nuevo en `godot/art/arena7/`.
+  Las piedras usan las texturas loom de la arena 6 (`../arena6/out/`), así
+  que el kit de la arena 6 se construye antes.
+  - Vistos en el mapa: la 1417 va encima de un bloque, en fila por los dos
+    bordes del fondo, y la reja de lanzas va encima de cada remate.
+    Además, la reja rodea las tumbas por el patio, teñida de azul.
+  - Remate del muro (`wall_top`, `on: block`): dos hiladas de sillares,
+    tres por cara, con las juntas cruzadas y una piedra de cada dos un tono
+    más oscura, bajo una albardilla gruesa de losa agrietada (la textura
+    `flagCrack` de la arena 6), a dos aguas a lo largo de x, en dos losas.
+    Looms: arenisca crema (el retail sin teñir), granito gris, arenisca
+    roja.
+  - Reja (`iron_railing`): tres lanzas de barra cuadrada con la punta
+    afilada y el pie abierto, algo torcidas, y un travesaño inclinado que
+    sobresale por los lados. Va a lo largo de x, centrada en la casilla.
+    Looms: hierro gris (el retail sin teñir; el mapa lo tiñe de azul
+    oscuro), hierro oxidado, hierro con verdín.
+  - Primeras versiones: el remate bajo y plano, con dos piedras por hilada
+    tapadas por el vuelo de la albardilla; la reja de barras finas y en
+    negro azulado (ese color es el tinte del mapa).
+  - Hojas: `arena7-muro-reja.png` y `arena7-muro-reja-montado.png` (el
+    muro con su reja por los dos bordes del fondo sobre bloques de tierra,
+    y una tumba rodeada de reja en el patio; el montaje es de prueba).
 
 ## Fases
 

@@ -1,0 +1,49 @@
+{
+ "_doc": "Arena 7 (retail world 38: a graveyard) kit for the map editor (S36), same schema as art/arena6/kit.json. The stone surfaces reuse the arena 6 loom textures. Pieces the arena also uses from the other kits are listed in shared. on: block = stacked on top of another block (y = 0 is where it rests on it).",
+ "biome": "cementerio",
+ "arenas": [
+  38
+ ],
+ "looms": {
+  "": "a",
+  "_b": "b",
+  "_c": "c"
+ },
+ "loom_names": {
+  "stone": [
+   "arenisca crema",
+   "granito gris",
+   "arenisca roja"
+  ],
+  "iron": [
+   "hierro gris",
+   "hierro oxidado",
+   "hierro con verdín"
+  ]
+ },
+ "shared": [],
+ "minor": [],
+ "pieces": [
+  {
+   "name": "wall_top",
+   "label": "Remate del muro (a dos aguas)",
+   "kind": "deco",
+   "gfx": [
+    1417
+   ],
+   "looms": "stone",
+   "on": "block",
+   "note": "the ridge runs along x; turn it to follow the wall"
+  },
+  {
+   "name": "iron_railing",
+   "label": "Reja de hierro",
+   "kind": "deco",
+   "gfx": [
+    1445
+   ],
+   "looms": "iron",
+   "note": "three spikes in a row along x, centred in the cell; on the wall tops or round the graves"
+  }
+ ]
+}
