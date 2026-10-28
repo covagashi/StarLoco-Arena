@@ -902,7 +902,7 @@ cada vez, empezando por la más usada.
   - Primeras versiones: el túmulo plano, pálido y luego rojo oscuro, con
     las flores diminutas; el sarcófago de paredes finas; la roca crema y
     estrecha.
-  - Hojas: `arena7-casita-tumbas-1.png`, `-2.png`.
+  - Hojas: `arena7-casita-tumbas-1.png` … `-3.png`.
 - Con esto la arena 7 queda cubierta: `mapa-arena7` da 87 piezas, 0
   nuevas (la 2038, niebla, va a VFX).
 
