@@ -83,12 +83,17 @@ archivo-arenas/
 - Las herramientas viven dentro del archivo (`archivo-arenas/herramientas/`),
   para que se pueda copiar a otra máquina y siga funcionando.
 
-### 3. Dos copias
+### 3. Dos copias (dueño, 2026-10-28)
 
 - La de trabajo: `~/codigo/archivo-arenas/` en la Ally.
-- Una copia en `oracle-1`, la máquina de pruebas, nunca en `oracle-2`
-  (producción). Va en un `.tar.zst` con su `sha256`.
-- Por decidir (dueño): ¿también en la Samba? *Por defecto, no.*
+- El backup: en el **RAID de la homelab** (Debian). Va el archivo entero en
+  un `.tar.zst` con su `sha256`, y además los originales tal cual: los
+  `.jar` de `server/data-dist/maps/` y `godot/assets/mapgfx/`. Así, si algo
+  del archivo saliera mal, siempre se puede volver a sacar.
+- La Ally no puede entrar por SSH en la homelab (solo al revés). Por eso la
+  copia la trae la homelab con `rsync` desde `davian@ally`, o el dueño
+  autoriza la clave de la Ally en la homelab.
+- No va a `oracle-1` ni a la Samba.
 
 ### 4. Prueba de que basta
 
@@ -108,5 +113,5 @@ archivo-arenas/
 
 Con el archivo solo, sin `godot/assets/`, sin `server/data-dist/maps/` y sin
 nada del cliente antiguo, se puede sacar la hoja de cualquiera de las 47
-arenas, poner nombres y saber qué piezas faltan. Hay dos copias y el README
+arenas, poner nombres y saber qué piezas faltan. El backup está en el RAID de la homelab y el README
 del archivo explica cómo seguir.
