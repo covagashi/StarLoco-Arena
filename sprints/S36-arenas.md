@@ -755,6 +755,22 @@ cada vez, empezando por la más usada.
   - Hojas: `arena7-losa-tierra.png` y `arena7-losa-tierra-montada.png` (el
     suelo de losas giradas con alguna capa de hierba, y el muro con la reja
     detrás; el montaje es de prueba).
+  - Dueño (2026-10-28): "todo ok". Para enseñárselo no hace falta montaje.
+- Losa de piedra (1482, 1645), 2026-10-28.
+  - El dueño: "como la de la casa de la otra arena". La casa de la arena 5
+    es de revoque crema con manchas, como la cara de arriba de la 1482, así
+    que la losa usa esa textura (`../arena5/out/plaster`), con sus looms:
+    revoque crema, blanco grisáceo, ocre. La 1645 es la misma losa (dueño),
+    así que es un solo modelo (`stone_slab`, tipo `cap`).
+  - En el mapa va a lo largo de los bordes delanteros (allí pintada en
+    silueta negra).
+  - Una losa gruesa (0,28 m) de canto redondeado. Los lados son más oscuros
+    y algo irregulares, el pie va agrisado por la humedad y la cara de
+    arriba se abomba un poco. La textura va tintada a un arena apagado y a
+    escala menor, para que las manchas salgan como motas.
+  - Primeras versiones: fina y muy clara, con la cara de arriba en
+    escalones como una tarta; luego amarilla y con manchas grandes.
+  - Hoja: `arena7-losa-piedra.png` (sin montaje, como pidió el dueño).
 
 ## Fases
 

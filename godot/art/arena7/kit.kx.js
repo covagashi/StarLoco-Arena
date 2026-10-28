@@ -1,7 +1,8 @@
 // Arena 7 (retail world 38: a graveyard) — the pieces it doesn't share with
 // the other kits, each in three looms: <name> (a), <name>_b, <name>_c. The
-// stone surfaces reuse the arena 6 loom textures (build arena6/kit.tx.js
-// first); iron and bone use palette colours. Retail gfx in brackets.
+// stone surfaces reuse the arena 6 and arena 5 loom textures (build their
+// kit.tx.js first); iron and bone use palette colours. Retail gfx in
+// brackets.
 include("../common/shapes.kx.js")
 
 const LOOMS = ["", "_b", "_c"]
@@ -9,6 +10,11 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["stone" + s, { tex: "../arena6/out/stone" + s, uv: 0.9, rough: 0.85 }],
   ["stoneShade" + s, { tex: "../arena6/out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
   ["flagCrack" + s, { tex: "../arena6/out/flagCrack" + s, uv: 1, rough: 0.8 }],
+  // the stone slab (1482, 1645): the plaster stone of the arena 5 house, worn
+  // to a duller sand; its sides darker, its foot greyed by damp
+  ["plaster" + s, { tex: "../arena5/out/plaster" + s, uv: 0.7, rough: 0.9, color: "#c8c4ae" }],
+  ["plasterSide" + s, { tex: "../arena5/out/plaster" + s, uv: 0.7, rough: 0.92, color: "#aea486" }],
+  ["plasterFoot" + s, { tex: "../arena5/out/plaster" + s, uv: 1.6, rough: 0.95, color: "#8a8a72" }],
   // the earth slabs (kit.tx.js): every other plate a shade darker, the lip
   // and the hanging clods darker still
   ["dirt" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.9 }],
@@ -22,7 +28,7 @@ const PAL = {
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneShade", "flagCrack", "dirt", "dirtShade", "dirtD", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneShade", "flagCrack", "plaster", "plasterSide", "plasterFoot", "dirt", "dirtShade", "dirtD", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -135,3 +141,14 @@ model("dirt_cap", { pivot: "origin" },
   PLATES.map((p, i) => plate(p, i)),
   [0, 90, 180, 270].map((a, k) => tf({ rot: [0, a, 0] }, clods(171 + k * 9))))
 looms("dirt_cap")
+
+// --- stone slab (1482, 1645; the owner: the same slab) ----------------------
+// a thick slab of the arena 5 house's stone lying on another block's top
+// (y = 0): darker lumpy sides with a rounded rim, the top swelling a little,
+// the foot greyed by damp
+model("stone_slab", { pivot: "origin" },
+  prismUp(roundSquare(CELL_HALF + 0.01, 0.06, 4, 0.012, 2), 0.06, 0, "plasterFoot", 0.008),
+  prismUp(roundSquare(CELL_HALF + 0.006, 0.07, 4, 0.012, 3), 0.18, 0.055, "plasterSide", 0.01),
+  prismUp(roundSquare(CELL_HALF - 0.012, 0.09, 4, 0.006, 5), 0.035, 0.23, "plaster", 0.008),
+  prismUp(roundSquare(CELL_HALF - 0.05, 0.12), 0.015, 0.262, "plaster", 0.005))
+looms("stone_slab")

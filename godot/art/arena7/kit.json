@@ -24,6 +24,11 @@
    "tierra parda",
    "tierra gris parda",
    "arcilla roja oscura"
+  ],
+  "plaster": [
+   "revoque crema",
+   "blanco grisáceo",
+   "ocre"
   ]
  },
  "shared": [],
@@ -67,6 +72,18 @@
    "looms": "dirt",
    "top": 0.08,
    "note": "the floor of the graveyard; the eight retail drawings only move the cracks"
+  },
+  {
+   "name": "stone_slab",
+   "label": "Losa de piedra (sobre otro bloque)",
+   "kind": "cap",
+   "gfx": [
+    1482,
+    1645
+   ],
+   "looms": "plaster",
+   "top": 0.28,
+   "note": "the stone of the arena 5 house; in the retail map it runs along the front edges"
   }
  ]
 }
