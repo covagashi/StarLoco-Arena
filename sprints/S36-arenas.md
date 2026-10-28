@@ -448,6 +448,17 @@ cada vez, empezando por la más usada.
   `godot/art/arena5/`, las demás reutilizadas de las arenas 1 y 2, los
   ladrillos 214/215/216 omitidos y la nube 461 a VFX.
 
+### Arena 6 (mundo 36, pradera con ruinas y andamios), 2026-10-28
+
+- `mapa-arena6-1.png` … `-8.png`: 54 piezas, 10 ya en el kit (losas de
+  adoquines, bloque de hierba, matas de musgo…), 44 nuevas, todas con mi
+  suposición marcada con "¿?" en `names.json`.
+- Lo que parece haber: bloques y pilares de piedras apiladas con musgo,
+  rocas, las rocas del acantilado bajo la isla, losas de arenisca para el
+  suelo, andamios y vallas de madera rota, puertas de tablas, plantas y
+  helechos, y unos engranajes y tuercas de piedra con una rueda dentada.
+- Pendiente del dueño: corregir los nombres antes de modelar.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
