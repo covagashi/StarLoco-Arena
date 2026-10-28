@@ -958,6 +958,31 @@ cada vez, empezando por la más usada.
   - Un escudo redondo (2019), un hacha clavada (2016), una argolla (2020)
     y un poste con sangre (2443).
 
+- Nombres del dueño para la arena 9 (2026-10-28):
+  - 1829, 1839 y 1840 son la losa de piedra de la arena 7 (`same` → 1482).
+  - 1420 es el remate de muro en ^ de la arena 7 (`same` → 1417).
+  - Grupos nuevos: «alcantarilla» (1570: un cuadrado y dos barras de
+    metal), «roquitas» (1413, 1428, 1559, 2168, 2169, 2174, 2200),
+    «trozo de roca» (1637), «antorcha» (1538: apagada, clavada a la
+    roca), «escudo» (2019), «hacha» (2016), «látigo» (2020, recogido),
+    «losa rota» (2170, 2171) y «sangre de pared» (2443).
+  - Quedan 16 nuevas.
+
+### Arena 10 (mundo 41, cocina del carnicero), 2026-10-28
+
+- `mapa-arena10-1.png` … `-11.png`: 76 piezas, 14 ya en los kits y 62
+  nuevas, con mi suposición marcada con "¿?".
+- Lo que parece haber:
+  - Suelo de baldosas claras (2736, 203 usos).
+  - Bloques de piedra parda en el borde (984, 985).
+  - Una alfombra roja con bordes, esquinas y un trozo que cuelga por el
+    borde del mapa (2458, 2459, 2461, 2465, 2470–2472).
+  - Mesas con mantel de cuadros, jaulas de madera, cajas y cestas con
+    carne, una tina de sopa y un asador.
+  - Mucha comida y utensilios de carnicero, todos de un solo uso.
+  - La 2763 parece un personaje pintado (un carnicero sentado). Pregunto
+    si se quita.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
