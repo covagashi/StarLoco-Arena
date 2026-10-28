@@ -106,3 +106,32 @@ model("grass_edge", { pivot: "origin" },
   Array.from({ length: 8 }, (_, i) => sphere(0.07 + (i % 3) * 0.01, { mat: "grassMid", detail: 1,
     pos: [-0.44 + i * 0.125, 0.03, 0.5], scale: [1.2, 0.6, 0.7], jitter: 0.01, seed: i })))
 looms("grass_edge")
+
+// --- medium grass (1754) and small grass (1755) ------------------------------
+// clumps of short, broad, curved blades spread over the cell; each blade a
+// dark base and a light curved tip (two pieces), the lighter ones in front.
+// 1755 is lower and sparser, a few blades lying down.
+// a blade, h tall, in XY: base piece and tip piece, the tip curling over
+// broad in the middle, bending to one side as it rises (x drifts with y²)
+const bend = (h, y) => 0.09 * (y / h) * (y / h)
+const bladeBase = (h) => [-0.016, 0, 0.016, 0, 0.03 + bend(h, h * 0.32), h * 0.32, -0.026 + bend(h, h * 0.32), h * 0.32]
+const bladeTip = (h) => [-0.026 + bend(h, h * 0.3), h * 0.3, 0.03 + bend(h, h * 0.3), h * 0.3, 0.026 + bend(h, h * 0.6), h * 0.6,
+  bend(h, h) + 0.004, h, -0.012 + bend(h, h * 0.65), h * 0.65]
+function blades(n, area, hMin, hMax, seed, lying = 0) {
+  const out = []
+  for (let i = 0; i < n; i++) {
+    const r = (k) => ((Math.sin((i + 1) * 12.9898 * k + seed * 78.233) * 43758.5453) % 1 + 1) % 1
+    // bunched: three clump centres, blades scattered round them
+    const c = [[-0.18, -0.05], [0.12, 0.08], [0.02, -0.18]][i % 3]
+    const x = (c[0] + (r(1) - 0.5) * 0.3) * area[0] / 0.6, z = (c[1] + (r(2) - 0.5) * 0.25) * area[1] / 0.45
+    const h = hMin + r(3) * (hMax - hMin), down = i < lying
+    const lean = down ? 70 + r(4) * 15 : 5 + r(4) * 40, turn = r(5) * 360
+    const tip = z > 0.05 ? "bladeL" : r(6) > 0.5 ? "bladeL" : "blade"
+    out.push(tf({ pos: [x, 0, z], rot: [0, turn, 0] }, tf({ rot: [lean, 0, 0] },
+      extrude(bladeBase(h), 0.006, { mat: "bladeD" }), extrude(bladeTip(h), 0.006, { mat: tip, pos: [0, 0, 0.001] }))))
+  }
+  return out
+}
+model("grass_tuft", { scale: [1.2, 1.5, 1.2] }, blades(42, [0.6, 0.45], 0.14, 0.27, 1))
+model("grass_tuft_small", { scale: [1.2, 1.6, 1.2] }, blades(26, [0.7, 0.5], 0.07, 0.16, 2, 6))
+for (const n of ["grass_tuft", "grass_tuft_small"]) looms(n)

@@ -112,7 +112,7 @@
 				315
 			],
 			"looms": "grass",
-			"top": 0.9,
+			"top": 0.93,
 			"col": "soil_col",
 			"rim": 0.76
 		},
@@ -147,6 +147,24 @@
 			"gfx": [
 				1199,
 				1355
+			],
+			"looms": "grass"
+		},
+		{
+			"name": "grass_tuft",
+			"label": "Hierba mediana",
+			"kind": "deco",
+			"gfx": [
+				1754
+			],
+			"looms": "grass"
+		},
+		{
+			"name": "grass_tuft_small",
+			"label": "Hierba pequeña",
+			"kind": "deco",
+			"gfx": [
+				1755
 			],
 			"looms": "grass"
 		}

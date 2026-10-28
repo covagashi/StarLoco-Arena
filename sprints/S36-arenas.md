@@ -208,6 +208,18 @@ cada vez, empezando por la más usada.
     la altura de ese borde (hierba 0,76, tierra 0,85).
   - Hojas: `arena5-esquina.png` y `arena5-esquina-prado.png` (colgando por
     los dos lados de un trozo de 6×6, a escala real).
+- Hierba mediana (1754) y pequeña (1755), 2026-10-28.
+  - Matas de briznas cortas, anchas y curvadas, repartidas por la casilla
+    en tres grupos. Cada brizna tiene la base oscura y la punta clara que se
+    dobla, en dos piezas; las de delante, más claras. La pequeña es más baja
+    y rala, con algunas briznas tumbadas.
+  - Primera versión: briznas rectas como palitos, y la mitad de grandes que
+    en el retail.
+  - El bloque de hierba pasa a `top` 0,93 (la cúpula llega a 0,94; a 0,86
+    la decoración quedaba enterrada). `patch.gd` acepta `--top` para poner
+    la decoración a la altura de cada bloque.
+  - Hojas: `arena5-hierbas.png`, `arena5-grass_tuft-prado.png` y
+    `arena5-grass_tuft_small-prado.png` (sobre hierba, a escala real).
 
 ## Fases
 
