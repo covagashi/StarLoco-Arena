@@ -12,6 +12,9 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["cliff" + s, { tex: "out/cliff" + s, uv: 2.2, rough: 0.9 }],
   ["flag" + s, { tex: "out/flag" + s, uv: 1, rough: 0.8 }],
   ["board" + s, { tex: "out/board" + s, uv: 0.8, rough: 0.8 }],
+  ["boardV" + s, { tex: "out/boardV" + s, uv: 0.8, rough: 0.8 }],
+  // the dark frame round the door window (1872): the same wood, stained
+  ["boardDark" + s, { tex: "out/board" + s, uv: 0.8, rough: 0.8, color: ["#c08858", "#8a7a6a", "#8a6650"][LOOMS.indexOf(s)] }],
   ["flagCrack" + s, { tex: "out/flagCrack" + s, uv: 1, rough: 0.8 }],
   // the same stone a shade darker: every other loose rock, so neighbours part
   ["stoneShade" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
@@ -26,12 +29,14 @@ const PAL = {
   // yellow, pink; a yellow heart
   // the iron bolts of the scaffolds and fences
   bolt: ["#8a8c8a", "#8a8c8a", "#6e6a64"], boltD: ["#4a4c4c", "#4a4c4c", "#3a3632"],
+  // the brass hinges of the plank box (1263, 1866): brass, old bronze, brass
+  brass: ["#e0aa2a", "#b08a48", "#d8a232"], brassD: ["#a07012", "#7a5a2a", "#9a6a14"],
   // the pale worn rim under the sandstone slabs (17-20, 455-457)
   flagRim: ["#e4dcb8", "#d4d6d4", "#e8cdb8"],
   petal: ["#f4f2ea", "#f4e8a8", "#f0b8c8"], petalD: ["#c8c4b8", "#d0c070", "#c88098"], heart: ["#e8c030", "#d08a20", "#f0d050"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", "flag", "flagCrack", "board", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", "flag", "flagCrack", "board", "boardV", "boardDark", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -384,3 +389,79 @@ model("boards_nailed", { scale: 1.3 },
     rail(0, 0.86, 0, 0.66, 18, 0.24, 0.06), rail(0.02, 0.6, 0.02, 0.6, -4, 0.26, 0.06), rail(-0.02, 0.32, 0, 0.64, 10, 0.24, 0.06),
     tf({ pos: [0.04, 0.48, 0.05], rot: [90, 0, 0] }, cyl(0.06, 0.12, { mat: "bolt", sides: 10 }), cyl(0.04, 0.13, { mat: "boltD", sides: 10 }))))
 for (const n of ["cage_low", "cage_low_broken", "scaffold", "scaffold_tall", "cage_piece", "boards_nailed"]) looms(n)
+
+// --- plank doors and the plank box (1869, 1870, 1872, 1263, 1866) -----------
+// doors of upright planks held by two cross boards, set in a gap of the ruin
+// walls; the box is a cell-sized chest of the same doors, hinged at its front
+// corner. Upright planks use boardV (grain along v).
+// a round iron knob on a little plate, on the +z face at (x, y, z)
+const knob = (x, y, z) => tf({ pos: [x, y, z], rot: [90, 0, 0] },
+  cyl(0.06, 0.015, { mat: "boltD", sides: 8 }),
+  cyl(0.022, 0.07, { mat: "boltD", sides: 6 }), cyl(0.075, 0.05, { mat: "bolt", sides: 10, pos: [0, 0.06, 0] }))
+// a thick cross board along x, its top edge centred at (x, y) on the z
+// plane, turned a degrees (+ lifts its +x end); no bolts, unlike the cages
+const cross = (x, y, z, len, a, w, t = 0.09, mat = "board") => tf({ pos: [x, y, z], rot: [0, 0, a] },
+  box(len, w, t, { mat, pos: [0, -w, -t / 2], jitter: 0.006 }))
+// a door panel along x on the z = 0 plane, w wide and h tall, facing +z:
+// n thick upright planks with ragged ends and thin gaps, a wide top board
+// and a foot board crossing them (well proud of the planks, ends past the
+// edges). gap: [plank, y0, y1] leaves a plank out between y0 and y1 (a
+// broken door); hole: [cx, cy, size] cuts a window the planks stop at;
+// knobAt: the knob's [x, y] (null: none); mid: [x, y, len] a short board;
+// over: how far the cross boards run past the edges, cw: their widths, at:
+// the heights of their top edges (default: the top and the foot), shift:
+// moves them along x (to run past one edge more than the other)
+function door(w, h, seed, { n = 4, gap = null, hole = null, knobAt = [-w / 2 + 0.13, h * 0.5], mid = null, over = 0.14, cw = [0.22, 0.18], at = [h, cw[1] + 0.02], shift = 0 } = {}) {
+  const out = [], pw = w / n, t = 0.07
+  for (let i = 0; i < n; i++) {
+    const x = -w / 2 + pw * (i + 0.5), y0 = rnd(i, 91, seed) * 0.04, y1 = h - 0.03 - rnd(i, 92, seed) * 0.06
+    // spans of this plank: cut by the broken gap and the window
+    let spans = [[y0, y1]]
+    const cut = (a, b) => { spans = spans.flatMap(([s0, s1]) => [[s0, Math.min(s1, a)], [Math.max(s0, b), s1]]).filter(([s0, s1]) => s1 - s0 > 0.05) }
+    if (gap && gap[0] === i) cut(gap[1], gap[2])
+    if (hole && Math.abs(x - hole[0]) < hole[2] / 2) cut(hole[1] - hole[2] / 2, hole[1] + hole[2] / 2)
+    for (const [s0, s1] of spans)
+      out.push(box(pw - 0.018, s1 - s0, t, { mat: "boardV", pos: [x, s0, -t / 2], rot: [0, 0, (rnd(i, 93, seed) - 0.5) * 2], jitter: 0.005, seed: seed + i }))
+  }
+  // cross boards: wide at the top, narrower at the foot, a little askew
+  out.push(cross(shift + (rnd(1, 94, seed) - 0.5) * 0.04, at[0], 0.075, w + over, (rnd(1, 95, seed) - 0.5) * 6, cw[0]))
+  out.push(cross(shift + (rnd(2, 94, seed) - 0.5) * 0.04, at[1], 0.075, w + over * 0.7, (rnd(2, 95, seed) - 0.5) * 6, cw[1]))
+  if (mid) out.push(cross(mid[0], mid[1], 0.065, mid[2], -4, 0.15, 0.07))
+  if (knobAt) out.push(knob(knobAt[0], knobAt[1], 0))
+  return out
+}
+// plank door (1869): tall, the right-hand plank broken out at mid height,
+// a stub of it left sticking out at the side
+model("plank_door", door(0.96, 1.36, 201, { gap: [3, 0.45, 0.9], knobAt: [-0.32, 0.66] }),
+  tf({ pos: [0.5, 0.72, 0.02], rot: [0, -20, -8] }, box(0.2, 0.16, 0.06, { mat: "board", jitter: 0.006 })))
+// low plank door (1870): shorter, the knob high, a plank split at the foot
+model("plank_door_low", door(0.94, 1.2, 205, { gap: [3, 0.25, 0.75], knobAt: [-0.34, 0.92] }))
+// door with a window (1872): a square hole framed by four thick dark boards,
+// the two across overhanging the door; a brace seen through it
+model("plank_door_window",
+  door(0.94, 1.12, 209, { hole: [0.02, 0.6, 0.44], knobAt: [-0.36, 0.94] }),
+  tf({ pos: [0.02, 0.6, 0] },
+    cross(0, 0.36, 0.11, 0.84, -4, 0.15, 0.08, "boardDark"),
+    cross(0.02, -0.2, 0.11, 0.8, 3, 0.15, 0.08, "boardDark"),
+    [-1, 1].map((sx) => box(0.12, 0.6, 0.07, { mat: "boardDark", pos: [sx * 0.27, -0.33, 0.08], jitter: 0.006 }))),
+  tf({ pos: [0.02, 0.6, -0.05], rot: [0, 0, 40] }, box(0.6, 0.1, 0.03, { mat: "board", pos: [0, -0.05, 0] })))
+// a brass hinge wrapping the box's front corner at height y, riding on the
+// cross boards: a round knuckle on the corner and a lobed leaf on each face, a rivet per leaf
+const hinge = (y, c) => tf({ pos: [c, y, c] },
+  cyl(0.05, 0.16, { mat: "brassD", sides: 8, pos: [0, -0.08, 0] }),
+  extrude(rrect(0.22, 0.15, 0.07), 0.02, { mat: "brass", pos: [-0.12, 0, 0] }),
+  extrude(rrect(0.22, 0.15, 0.07), 0.02, { mat: "brass", pos: [0, 0, -0.12], rot: [0, 90, 0] }),
+  [[-0.17, 0, 0.015], [0.015, 0, -0.17]].map(([x, yy, z], i) =>
+    tf({ pos: [x, yy, z], rot: i ? [0, 0, 90] : [90, 0, 0] }, cyl(0.02, 0.014, { mat: "boltD", sides: 6 }))))
+// plank box (1263, 1866): a chest filling the cell, taller than wide, a
+// door on each side, the two seen doors hinged together at the front
+// corner; a lid of two thick blocks with a dark split between them (things
+// stack on it: 1263 wears a rubble heap). The +z door's boards are at its
+// top and foot, the +x door's lower down, so the lid shows above them
+const BOX = 0.86, BOXH = 1.3
+model("plank_box",
+  [0, 90, 180, 270].map((r, i) => tf({ rot: [0, r, 0] }, tf({ pos: [0, 0, BOX / 2] },
+    door(BOX, BOXH, 221 + i * 4, { n: 3, over: i < 2 ? 0.26 : 0.04, shift: [-0.12, 0.12, 0, 0][i], cw: [0.27, 0.24], at: i % 2 ? [BOXH * 0.72, BOXH * 0.32] : undefined, knobAt: i === 0 ? [-0.26, 0.52] : null, mid: i === 0 ? [0.2, 0.8, 0.42] : null })))),
+  [-1, 1].map((sx, i) => box(BOX / 2 - 0.014, 0.22, BOX - 0.02, { mat: "board", pos: [sx * (BOX / 4 + 0.004), BOXH - 0.23 - i * 0.02, 0], jitter: 0.008, seed: 231 + i })),
+  hinge(BOXH * 0.62, BOX / 2 + 0.08), hinge(BOXH * 0.17, BOX / 2 + 0.08))
+for (const n of ["plank_door", "plank_door_low", "plank_door_window", "plank_box"]) looms(n)

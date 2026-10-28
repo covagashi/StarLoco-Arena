@@ -585,6 +585,41 @@ cada vez, empezando por la más usada.
   - Hojas: `arena6-andamios-1.png` … y `arena6-andamios-montados.png`
     (andamios, vallas y tablas contra el muro del fondo; el montaje es de
     prueba).
+- Puertas de tablas (1869, 1870, 1872) y caja de tablas (1263, 1866),
+  2026-10-28.
+  - Vistas en el mapa: las puertas son hojas sueltas metidas en un hueco
+    del muro de sillares, entre bloques, junto a los andamios (la 1870
+    queda detrás de la rueda dentada). La 1263 y la 1866 no son una
+    esquina: son una caja de tablas que llena la casilla, con una puerta en
+    cada cara; la 1263 lleva un montón de piedras encima y la 1866 la
+    rueda dentada delante.
+  - Puerta: tablas verticales gruesas con los extremos desiguales, un
+    travesaño ancho arriba y otro al pie, gruesos y sin pernos, que salen
+    por los lados, y un pomo de hierro grande. La 1869 es alta y le falta
+    un trozo de la tabla derecha (queda un pico fuera); la 1870, más baja,
+    con el pomo arriba y la tabla rota al pie. La 1872 lleva una ventana
+    cuadrada con un marco de cuatro tablas gruesas de madera teñida y un
+    travesaño que se ve por dentro. Van de cara a +z, centradas en su
+    casilla.
+  - Caja: cuatro puertas de tres tablas. Las dos que se ven están unidas
+    en la esquina delantera por dos bisagras de latón montadas sobre los
+    travesaños. En la cara +z los travesaños van arriba y al pie, con una
+    tabla corta en medio; en la +x van más abajo, así que asoma la tapa:
+    dos tacos gruesos con una raja entre ellos. Los travesaños salen por
+    el lado de fuera de cada cara, no por la esquina.
+  - Textura loom nueva `boardV`: la misma madera con la veta en vertical
+    (la proyección por caras pone la u en horizontal, y las tablas de pie
+    salían con la veta atravesada). `boardDark` es la madera teñida del
+    marco de la ventana.
+  - Primeras versiones: travesaños finos con pernos (parecía una valla) y
+    el pomo flotando delante de la puerta; el marco de la ventana marrón
+    chocolate; la caja baja y cuadrada como un cajón, con las bisagras
+    hacia fuera y luego tapadas por los travesaños, la tapa hundida y las
+    tablas de las caras de atrás asomando por los lados.
+  - Hojas: `arena6-puertas-1.png`, `-2.png` y
+    `arena6-puertas-montadas.png` (muro de sillares sobre losas con las
+    tres puertas en sus huecos, la caja con el montón encima, el andamio y
+    el pilar; el montaje es de prueba).
 
 ## Fases
 

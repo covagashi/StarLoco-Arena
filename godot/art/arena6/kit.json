@@ -317,6 +317,47 @@
    ],
    "looms": "board",
    "note": "at the +z edge of its cell, leaning on what stands next to it"
+  },
+  {
+   "name": "plank_door",
+   "label": "Puerta de tablas",
+   "kind": "deco",
+   "gfx": [
+    1869
+   ],
+   "looms": "board",
+   "note": "facing +z, centred in its cell: set in a gap of the ruin wall"
+  },
+  {
+   "name": "plank_door_low",
+   "label": "Puerta de tablas baja",
+   "kind": "deco",
+   "gfx": [
+    1870
+   ],
+   "looms": "board",
+   "note": "facing +z, centred in its cell"
+  },
+  {
+   "name": "plank_door_window",
+   "label": "Puerta de tablas con ventana",
+   "kind": "deco",
+   "gfx": [
+    1872
+   ],
+   "looms": "board",
+   "note": "facing +z, centred in its cell"
+  },
+  {
+   "name": "plank_box",
+   "label": "Caja de tablas con bisagras",
+   "kind": "deco",
+   "gfx": [
+    1263,
+    1866
+   ],
+   "looms": "board",
+   "note": "fills its cell; things stack on its lid (1263 wears a rubble heap)"
   }
  ]
 }

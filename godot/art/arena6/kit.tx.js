@@ -120,13 +120,17 @@ skins({
   const knots = dots({ scale: 5, radius: 0.05, jitter: 1, seed: 665 }).mul(noise({ scale: 3, seed: 666 }).threshold(0.6, 0.1)).as("knots")
   const blot = noise({ scale: 3, octaves: 2, seed: 667 })
   const h = grain.mul(0.6).add(blot.mul(0.2)).sub(split.mul(0.4)).sub(knots.mul(0.3)).as("boardH")
-  for (const k of "abc") {
-    const col = (n) => n + k
-    material("board" + SUF[k], { size: 512, depth: 0.015, ao: 0.5 }, {
-      height: h,
-      color: ramp(grain.mix(blot, 0.4), [col("w1"), col("w2"), col("w2"), col("w3")])
-        .mix(col("w0"), split.mul(0.8)).mix(col("w0"), knots.mul(0.7)),
-      rough: grain.levels(0, 1, 0.7, 0.85),
-    })
-  }
+  // boardV: the same wood with the grain running along v, for the upright
+  // planks of the doors and the plank box (1263, 1866, 1869, 1870, 1872):
+  // box projection lays u along a face's horizontal
+  for (const [name, r] of [["board", (f) => f], ["boardV", (f) => f.rotate(90)]])
+    for (const k of "abc") {
+      const col = (n) => n + k
+      material(name + SUF[k], { size: 512, depth: 0.015, ao: 0.5 }, {
+        height: r(h),
+        color: ramp(r(grain.mix(blot, 0.4)), [col("w1"), col("w2"), col("w2"), col("w3")])
+          .mix(col("w0"), r(split).mul(0.8)).mix(col("w0"), r(knots).mul(0.7)),
+        rough: r(grain.levels(0, 1, 0.7, 0.85)),
+      })
+    }
 }
