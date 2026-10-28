@@ -1009,6 +1009,31 @@ cada vez, empezando por la más usada.
     tierra seca (2313–2316).
   - Unas pocas ruinas de piedra con musgo (2323, 2324, 2326, 2329).
 
+- Nombres del dueño para la arena 11 (2026-10-28):
+  - 1751–1753 y 2784: hierba como la `grass_tuft`, pero de hoja más fina
+    y larga (grupo «hierba fina»).
+  - Grupos «planta» (11 gfx), «planta mediana» (2145–2147, 2777), «raíz
+    con pinchos» (2599, 2601, 2602, 2604, 2605), «hojas secas» (2600,
+    2771, 2779), «tótem de roca» (2323, 2326, 2329).
+  - 2313–2316 se suman a «losa rota», con las de la arena 9.
+  - 2781–2783, "plantita negra, creo que ya la tenemos": les pongo la
+    planta muerta 1706 (`same`), a confirmar al modelar.
+  - 1601, calavera empalada; 2159, planta seca; 2324, roca con pintura.
+  - Quedan 38 nuevas.
+
+### Arena 12 (mundo 44, pantano), 2026-10-28
+
+- `mapa-arena12-1.png` … `-8.png`: 54 piezas, 5 ya en los kits y 49
+  nuevas, con mi suposición marcada con "¿?".
+- Lo que parece haber:
+  - Un bloque de barro amarillo (619, 219 usos) y losas de barro, lisas o
+    con hierba oscura (1501, 2654–2657, 2659, 2660, 2692).
+  - Tocones con setas planas en el borde (2678–2683).
+  - Lenteja de agua (2662–2667), juncos de penacho blanco (2668–2670),
+    tallos enroscados del pantano (2618–2625) y cañas rotas (2673–2676).
+  - Pasarelas de tablas (1204, 1206, 1296) y postes con cuerda (1207,
+    1297).
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
