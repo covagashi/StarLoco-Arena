@@ -816,6 +816,11 @@ cada vez, empezando por la más usada.
     entera (kiln pone la base de cada modelo en y = 0, así que no se
     hundía) y con un montón de tierra que parecía un tronco.
   - Hojas: `arena7-lapidas-1.png` … `-7.png`.
+  - Dueño (2026-10-28) sobre la 2493: "simplemente recorta la lápida, que
+    se vea solo la punta". Ahora es la lápida en arco de la 2492 cortada
+    a ras de suelo (`clipAbove` recorta el contorno), con su marco y el
+    panel hundido, casi derecha, y una mata al lado. Hoja:
+    `arena7-lapida-enterrada.png`.
 
 ## Fases
 

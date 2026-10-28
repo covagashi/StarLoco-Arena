@@ -354,17 +354,28 @@ model("headstone_horns",
     [-1, 1].map((k) => cone(0.07, 0.26, { mat: "stone", sides: 5, pos: [k * 0.2, 0.5, 0], rot: [0, 0, -k * 10] })),
     box(0.4, 0.035, 0.02, { mat: "hole", pos: [0, 0.38, 0.1] }),
     [-1, 1].map((k) => sphere(0.025, { mat: "hole", detail: 1, pos: [k * 0.11, 0.3, 0.1], scale: [1, 1, 0.4] }))))
-// sunken headstone (2493): only the top of a rounded stone shows, the rest
-// in the ground: a dome cut off at the ground line, tipped back, mossy, a
-// tuft at its side
-const domePts = (r, c, seg = 10) => {
-  // the arc of a circle of radius r centred c below the ground line, above it
-  const a0 = Math.asin(c / r), pts = []
-  for (let i = 0; i <= seg; i++) { const a = a0 + (i / seg) * (Math.PI - 2 * a0); pts.push(Math.cos(a) * r, Math.sin(a) * r - c) }
-  return pts
+// sunken headstone (2493): the owner: "just cut the headstone so only its
+// tip shows". The arched headstone (2492) cut at the ground line, its frame
+// and sunk panel kept, a tuft at its side
+// keep the part of an outline (XY) above y = c, moved down to y = 0
+function clipAbove(pts, c) {
+  const out = [], n = pts.length / 2
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = [pts[2 * i], pts[2 * i + 1]], [x1, y1] = [pts[(2 * i + 2) % pts.length], pts[(2 * i + 3) % pts.length]]
+    if (y0 >= c) out.push(x0, y0 - c)
+    if ((y0 >= c) !== (y1 >= c)) out.push(x0 + (x1 - x0) * (c - y0) / (y1 - y0), 0)
+  }
+  return out
 }
+const SUNK = 0.5
+// the 2492 frame: a ∩ band (the outer arch, then the inner one backwards)
+// round the sunk panel
+const sunkInner = archPts(0.48, 0.66)
+const sunkBand = [...archPts(0.72, 0.78), ...sunkInner.reduceRight((o, _, k) => (k % 2 ? o : o.concat(sunkInner[k], sunkInner[k + 1])), [])]
 model("headstone_sunk",
-  tf({ rot: [-28, 0, 8] }, extrude(domePts(0.32, 0.06), 0.18, { mat: "stoneMoss", jitter: 0.006, seed: 301 })),
-  tuft(-0.28, 0.05, 4, 0.18, 9))
+  tf({ rot: [-4, 0, 5] },
+    extrude(clipAbove(sunkBand, SUNK), 0.26, { mat: "stone", jitter: 0.006, seed: 301 }),
+    extrude(clipAbove(sunkInner, SUNK), 0.16, { mat: "stoneShade", pos: [0, 0, -0.05], jitter: 0.004, seed: 302 })),
+  tuft(-0.32, 0.1, 4, 0.14, 9))
 for (const n of ["headstone_skull", "iron_cross", "stone_cross", "cross_santiago", "headstone_boards", "headstone_tall", "headstone_figure",
   "candle_shrine", "cross_skull", "headstone_wood", "tomb_iron_cross", "headstone_horns", "headstone_sunk"]) looms(n)
