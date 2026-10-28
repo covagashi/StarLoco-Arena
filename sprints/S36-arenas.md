@@ -620,6 +620,7 @@ cada vez, empezando por la más usada.
     `arena6-puertas-montadas.png` (muro de sillares sobre losas con las
     tres puertas en sus huecos, la caja con el montón encima, el andamio y
     el pilar; el montaje es de prueba).
+  - Dueño (2026-10-28): "todo ok".
 
 ## Fases
 
