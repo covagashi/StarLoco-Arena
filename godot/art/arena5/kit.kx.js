@@ -21,6 +21,9 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
 const PAL = {
   bladeD: ["#4a6410", "#24481e", "#6a5a1e"], blade: ["#7c9e16", "#3e7a2c", "#988a30"], bladeL: ["#b6d232", "#76ac48", "#cfc05a"],
   soilD: ["#5a4220", "#3a2c1c", "#5e2a18"],
+  // ivy on the low walls: autumn orange (retail), deep red, green
+  ivyD: ["#a83c10", "#6a1414", "#2e5a1e"], ivy: ["#e0661c", "#a02a1e", "#4a8a2c"], ivyL: ["#f4a03a", "#d0503a", "#7ab040"],
+  vine: ["#6a5236", "#4e3a2a", "#5a4a30"], iron: ["#2e2a26", "#2e2a26", "#2e2a26"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -171,3 +174,63 @@ model("roof",
       return x > 0.5 ? null : extrude(tileArc, 0.44, { mat: m, pos: [x, (2 - row) * 0.014, -0.34 + row * 0.34], jitter: 0.004, seed: row * 6 + c })
     }))))
 for (const n of ["wall_low", "wall_high", "roof"]) looms(n)
+
+// --- low house walls (193 plain, 194 broken with ivy, 195 ivy, 197 iron mark,
+// 223 the wedge at its end; the owner: walls of the house) -------------------
+// a ruined garden wall: one cell long (x), half a cell thick, about 1.3 m
+// tall, its top worn round, a skirt of grass at its foot. Same plaster as the
+// house (the owner: the texture is enough, the decoration bricks 214/215/216
+// are left out).
+// the wall's side profile (z, y), top corners rounded, extruded along x
+const lwProfile = (h, t = 0.23, r = 0.17) => {
+  const pts = [-t, 0, t, 0]
+  // up the +z side, round the corner to the top, across, down the -z side
+  for (let i = 4; i >= 0; i--) { const a = (i / 4) * Math.PI / 2; pts.push(t - r + Math.sin(a) * r, h - r + Math.cos(a) * r) }
+  for (let i = 4; i >= 0; i--) { const a = (i / 4) * Math.PI / 2; pts.push(-t + r - Math.cos(a) * r, h - r + Math.sin(a) * r) }
+  return pts
+}
+const lwBody = (h, len = 0.98, seed = 1) => tf({ rot: [0, 90, 0] }, extrude(lwProfile(h), len, { mat: "plaster", jitter: 0.012, seed }))
+// grass along the foot of both faces the camera sees
+const lwSkirt = (seed) => [
+  tf({ pos: [0, 0, 0.25] }, blades(14, [0.95, 0.06], 0.08, 0.17, seed, 3)),
+  tf({ pos: [0, 0, -0.25] }, blades(10, [0.95, 0.06], 0.06, 0.13, seed + 7, 3))]
+// ivy: a climbing stem with leaves (three-lobed) off it, on the +z face
+// a broad leaf of three round lobes (r(θ) over 24 points), stalk at the origin
+const ivyLeaf = Array.from({ length: 24 }, (_, i) => {
+  const t = (i / 24) * Math.PI * 2, lobe = Math.pow(Math.abs(Math.cos(1.5 * (t - Math.PI / 2))), 0.7)
+  const r = 0.05 * (0.62 + 0.38 * lobe) * (1 - 0.45 * Math.max(0, -Math.sin(t)))
+  return [Math.cos(t) * r, Math.sin(t) * r + 0.035]
+}).flat()
+function ivyOn(pts, n, seed, z = 0.245) {
+  const out = [tube(pts.flatMap(([x, y]) => [x, y, z + 0.01]), 0.012, { mat: "vine", sides: 4 })]
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n, k = Math.min(pts.length - 2, Math.floor(t * (pts.length - 1)))
+    const f = t * (pts.length - 1) - k, x = pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, y = pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f
+    const side = i % 2 ? 1 : -1, m = (i + seed) % 3 === 0 ? "ivyL" : (i + seed) % 3 === 1 ? "ivy" : "ivyD"
+    out.push(extrude(ivyLeaf, 0.008, { mat: m, pos: [x + side * 0.04, y, z + 0.02 + (i % 3) * 0.008], rot: [-15, 0, side * (30 + (i * 23) % 50)], scale: 1.5 + ((i * 7 + seed) % 4) * 0.2 }))
+  }
+  return out
+}
+model("low_wall", lwBody(1.2, 0.98, 1), lwSkirt(31))
+model("low_wall_ivy", lwBody(1.28, 0.98, 2), lwSkirt(41),
+  ivyOn([[-0.2, 0], [-0.22, 0.25], [-0.14, 0.5], [-0.2, 0.75], [-0.1, 0.95]], 12, 1),
+  ivyOn([[-0.18, 0.4], [-0.02, 0.5], [0.08, 0.66]], 5, 4))
+// broken: the top bitten off at one end, ivy over it and onto the top
+model("low_wall_ivy_broken",
+  tf({ rot: [0, 90, 0] }, extrude(lwProfile(1.3), 0.6, { mat: "plaster", pos: [0, 0, -0.19], jitter: 0.012, seed: 3 }),
+    extrude(lwProfile(1.08), 0.4, { mat: "plaster", pos: [0, 0, 0.3], jitter: 0.02, seed: 4 })),
+  lwSkirt(51),
+  ivyOn([[-0.32, 0], [-0.3, 0.3], [-0.38, 0.6], [-0.3, 0.9], [-0.18, 1.12]], 14, 2),
+  ivyOn([[-0.3, 1.0], [-0.05, 1.18], [0.12, 1.05], [0.3, 1.02]], 9, 3))
+// the iron mark: a recess in the +z face, a dark bar with cross pieces in it
+model("low_wall_mark", lwBody(1.25, 0.98, 5), lwSkirt(61),
+  box(0.2, 0.48, 0.02, { mat: "iron", pos: [-0.1, 0.39, 0.232] }),
+  box(0.17, 0.44, 0.03, { mat: "plaster", pos: [-0.1, 0.41, 0.24], jitter: 0.003 }),
+  box(0.035, 0.34, 0.03, { mat: "iron", pos: [-0.1, 0.46, 0.26] }),
+  [0.47, 0.77].map((y) => box(0.1, 0.03, 0.03, { mat: "iron", pos: [-0.1, y, 0.26] })),
+  sphere(0.025, { mat: "iron", detail: 1, pos: [-0.1, 0.83, 0.26] }))
+// the wedge at the wall's end (223): a fin of plaster tapering to a point
+model("low_wall_end",
+  extrude([-0.42, 0, 0.42, 0, 0.18, 1.0, 0.05, 1.32, -0.05, 1.3], 0.34, { mat: "plaster", jitter: 0.015, seed: 6 }),
+  tf({ pos: [0, 0, 0.2] }, blades(8, [0.8, 0.05], 0.06, 0.14, 71, 2)))
+for (const n of ["low_wall", "low_wall_ivy", "low_wall_ivy_broken", "low_wall_mark", "low_wall_end"]) looms(n)

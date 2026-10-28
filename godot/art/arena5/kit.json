@@ -21,9 +21,9 @@
 			"arcilla roja"
 		],
 		"plaster": [
-			"revoque crema",
-			"blanco grisáceo",
-			"ocre"
+			"revoque crema, hiedra naranja",
+			"blanco grisáceo, hiedra roja",
+			"ocre, hiedra verde"
 		],
 		"roof": [
 			"teja verde",
@@ -110,7 +110,11 @@
 			]
 		}
 	],
-	"minor": [],
+	"minor": [
+		214,
+		215,
+		216
+	],
 	"pieces": [
 		{
 			"name": "grass_block",
@@ -206,6 +210,51 @@
 				178
 			],
 			"looms": "roof"
+		},
+		{
+			"name": "low_wall",
+			"label": "Murete de la casa",
+			"kind": "deco",
+			"gfx": [
+				193
+			],
+			"looms": "plaster"
+		},
+		{
+			"name": "low_wall_ivy",
+			"label": "Murete con hiedra",
+			"kind": "deco",
+			"gfx": [
+				195
+			],
+			"looms": "plaster"
+		},
+		{
+			"name": "low_wall_ivy_broken",
+			"label": "Murete roto con hiedra",
+			"kind": "deco",
+			"gfx": [
+				194
+			],
+			"looms": "plaster"
+		},
+		{
+			"name": "low_wall_mark",
+			"label": "Murete con marca de hierro",
+			"kind": "deco",
+			"gfx": [
+				197
+			],
+			"looms": "plaster"
+		},
+		{
+			"name": "low_wall_end",
+			"label": "Remate del murete (cuña)",
+			"kind": "deco",
+			"gfx": [
+				223
+			],
+			"looms": "plaster"
 		}
 	]
 }

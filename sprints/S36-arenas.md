@@ -239,6 +239,23 @@ cada vez, empezando por la más usada.
   - Hojas: `arena5-casa-1.png`, `arena5-casa-2.png` y
     `arena5-casa-montada.png` (un tramo montado como en el mapa, con hierba
     y tierra delante; el montaje es de prueba y no se sube).
+  - Dueño: "perfecto, lo has pillado bien".
+- Ladrillos de decoración (214, 215, 216): se omiten. Dueño (2026-10-28):
+  "con la textura que has puesto a la pared, podrías omitir los ladrillos
+  de decoración, ya que la textura queda bien". Van en `minor` del
+  `kit.json` y anotados en `names.json`.
+- Murete de la casa (193 liso, 195 con hiedra, 194 roto con hiedra, 197
+  con marca de hierro, 223 el remate en cuña), 2026-10-28.
+  - Un murete en ruinas de una casilla de largo, medio metro de grueso y
+    unos 1,3 m de alto, con la parte de arriba redondeada (un perfil
+    extruido) y hierba al pie. El mismo revoque que la casa.
+  - Hiedra: un tallo con hojas anchas de tres lóbulos (la primera versión
+    parecían estrellas); en el roto sigue el borde partido. La marca de
+    hierro va en un panel con borde oscuro (el hueco no se veía).
+  - Looms: los del revoque, con la hiedra naranja, roja o verde.
+  - Hojas: `arena5-murete-1.png`, `arena5-murete-2.png` y
+    `arena5-murete-montado.png` (una fila sobre hierba; el montaje es de
+    prueba y no se sube).
 
 ## Fases
 
