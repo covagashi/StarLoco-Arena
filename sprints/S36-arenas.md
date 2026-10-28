@@ -274,6 +274,22 @@ cada vez, empezando por la más usada.
     piedras, algo pequeñas para la losa.
   - Hojas: `arena5-losas.png` y `arena5-losas-montadas.png` (una fila sobre
     bloques de tierra junto a la hierba; el montaje es de prueba).
+- Valla de madera rota (199: un poste y su travesaño; 200: dos postes y el
+  travesaño), 2026-10-28.
+  - Postes de tronco cortados en plano, con astillas en el borde de arriba,
+    tablillas partidas al pie, musgo en la mitad de abajo con un par de
+    regueros, y grietas en la corteza. Travesaño de tronco torcido.
+  - La valla corre a lo largo de z. La 199 se encadena: su travesaño llega
+    al poste de la 199 de la casilla siguiente (z − 1); el origen de la
+    pieza es fijo para que encajen. La última de una fila deja el travesaño
+    suelto, como una valla rota.
+  - Colores de paleta (la textura de viga tiene la veta horizontal y en un
+    poste quedaría atravesada). Looms: madera clara (el retail), gris,
+    oscura.
+  - Primera versión: postes finos para la escala del juego y musgo
+    demasiado chillón.
+  - Hojas: `arena5-valla.png` y `arena5-valla-montada.png` (una fila sobre
+    hierba; el montaje es de prueba).
 
 ## Fases
 

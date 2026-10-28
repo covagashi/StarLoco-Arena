@@ -34,6 +34,11 @@
 			"mortero blanco, piedra salvia",
 			"mortero gris, pizarra azul",
 			"mortero arena, piedra parda"
+		],
+		"log": [
+			"madera clara",
+			"gris",
+			"oscura"
 		]
 	},
 	"shared": [
@@ -280,6 +285,25 @@
 			],
 			"looms": "cobble",
 			"top": 0.06
+		},
+		{
+			"name": "fence",
+			"label": "Valla de madera rota (poste y travesaño)",
+			"kind": "deco",
+			"gfx": [
+				199
+			],
+			"looms": "log",
+			"note": "runs along z; its rail reaches the post of the fence in the next cell (z - 1)"
+		},
+		{
+			"name": "fence_pair",
+			"label": "Valla de madera rota (dos postes)",
+			"kind": "deco",
+			"gfx": [
+				200
+			],
+			"looms": "log"
 		}
 	]
 }

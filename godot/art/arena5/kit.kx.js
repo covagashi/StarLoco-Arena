@@ -27,6 +27,9 @@ const PAL = {
   vine: ["#a8926e", "#7a6250", "#8e7e5c"], vineD: ["#6e5a40", "#4a382c", "#5a4e38"], iron: ["#2e2a26", "#2e2a26", "#2e2a26"],
   // the mortar of the cobble slabs: white (retail), grey, sand
   mortar: ["#e8e6dc", "#b4b8bc", "#d8c8a4"], mortarD: ["#b8b6a6", "#868a90", "#a8987a"],
+  // fence logs: weathered tan (retail), grey, dark; moss on their feet
+  logL: ["#e2cf9a", "#c4c2bc", "#8a6e50"], log: ["#b49a64", "#8e8c86", "#5e4632"], logD: ["#7a6640", "#5c5a56", "#3a2a1e"],
+  moss: ["#94a82e", "#5e8a3a", "#7e8a34"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -310,3 +313,34 @@ model("cobble_cap_alt", { pivot: "origin" }, cobbleSlab([
   [-0.3, -0.27, 0.22, 0.22], [0.08, -0.28, 0.42, 0.2], [-0.22, 0.0, 0.38, 0.22], [0.2, 0.02, 0.26, 0.22],
   [-0.3, 0.3, 0.22, 0.2], [0.02, 0.3, 0.24, 0.2], [0.3, 0.29, 0.22, 0.24]], 2))
 for (const n of ["cobble_cap", "cobble_cap_alt"]) looms(n)
+
+// --- broken wooden fence (199: a post and its rail, 200: two posts and a
+// rail) ---------------------------------------------------------------------
+// rustic log posts, cut flat on top with a few splinters round the rim,
+// split slats at the foot, moss up the lower half; a crooked log rail. The
+// fence runs along z (199 chains: its rail reaches the post of the 199 in
+// the next cell, at z - 1).
+function post(x, z, h, seed) {
+  const r = 0.11
+  return [
+    lathe([r * 1.08, 0, r, h * 0.5, r * 0.95, h], { mat: "log", sides: 7, pos: [x, 0, z], jitter: 0.006, seed }),
+    lathe([r * 1.16, 0, r * 1.08, h * 0.42, 0, h * 0.42], { mat: "moss", sides: 7, pos: [x, 0, z], jitter: 0.008, seed: seed + 1 }),
+    cyl(r * 0.88, 0.012, { mat: "logL", sides: 7, pos: [x, h, z] }),
+    // moss creeping up in two streaks, and dark splits in the bark
+    [[30, 0.62], [75, 0.5]].map(([a, k], i) => tf({ pos: [x, 0, z], rot: [0, a + seed * 9, 0] },
+      box(0.035, h * k, 0.01, { mat: "moss", pos: [r * 1.0, 0, 0], rot: [0, 90, 0] }))),
+    [10, 55, 100].map((a, i) => tf({ pos: [x, 0, z], rot: [0, a + seed * 17, 0] },
+      box(0.008, h * (0.35 + (i % 2) * 0.2), 0.006, { mat: "logD", pos: [r * 1.0, h * 0.45, 0], rot: [0, 90, 0] }))),
+    // splinters round the top rim
+    [40, 160, 280].map((a, i) => tf({ pos: [x, h, z], rot: [0, a + seed * 13, 0] },
+      box(0.025, 0.05 + (i % 2) * 0.03, 0.012, { mat: "logD", pos: [r * 0.85, 0, 0], rot: [0, 0, -8] }))),
+    // split slats leaning out at the foot
+    [20, 130, 230, 320].map((a, i) => tf({ pos: [x, 0, z], rot: [0, a + seed * 7, 0] },
+      box(0.04, 0.12 + (i % 3) * 0.04, 0.02, { mat: i % 2 ? "log" : "logL", pos: [r + 0.02, 0, 0], rot: [0, 0, -14] }))),
+  ]
+}
+const rail = (a, b, seed) => tube([...a, (a[0] + b[0]) / 2 + 0.01, (a[1] + b[1]) / 2 - 0.02, (a[2] + b[2]) / 2, ...b], 0.035,
+  { mat: "log", sides: 6, jitter: 0.004, seed })
+model("fence", { pivot: "origin" }, post(0, 0.25, 0.62, 1), rail([0, 0.46, 0.2], [0, 0.36, -0.72], 2))
+model("fence_pair", { pivot: "origin" }, post(0, 0.32, 0.5, 3), post(0, -0.32, 0.72, 5), rail([0, 0.36, 0.28], [0, 0.48, -0.28], 4))
+for (const n of ["fence", "fence_pair"]) looms(n)
