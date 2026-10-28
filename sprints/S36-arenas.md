@@ -859,6 +859,28 @@ cada vez, empezando por la más usada.
     (solo se veía la nuca), demasiado blancas y pequeñas; la sangre
     pequeña y demasiado roja.
   - Hojas: `arena7-huesos-sangre-1.png` … `-6.png`.
+  - Dueño (2026-10-28): "ok".
+- Partes de muro (2210, 2215, 2222, 2227, 2228, 2256), 2026-10-28.
+  - Vistas en el mapa: las seis juntas forman el túmulo de piedra que se
+    alza en el centro del cementerio. Son bloques de casilla entera con
+    la cara de arriba enlosada; las del borde del túmulo tienen un lado
+    inclinado.
+  - Tres modelos (el editor los gira; la pendiente va en +z):
+    - `crypt_block` (2215, 2228): lados de piedras grandes y redondeadas
+      en dos hiladas, con las juntas cruzadas, y arriba cuatro losas
+      agrietadas;
+    - `crypt_block_slope` (2227, 2222, 2256): el lado +z inclinado 30° y
+      cubierto de piedras; los demás lados son el núcleo liso, como los
+      dibuja el retail, para que se lea el perfil;
+    - `crypt_block_smooth` (2210): un solo bloque de losa agrietada con el
+      lado inclinado.
+  - Piedra y losa agrietada de la arena 6; looms: arenisca crema, granito
+    gris, arenisca roja.
+  - Primeras versiones: muchas piedras pequeñas (parecían ladrillos), la
+    pendiente casi invisible y luego una rampa; en el bloque inclinado,
+    las piedras de los lados cortadas a trozos y las de la pendiente
+    hundidas en el núcleo.
+  - Hoja: `arena7-cripta.png`.
 
 ## Fases
 

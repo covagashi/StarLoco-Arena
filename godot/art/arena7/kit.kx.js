@@ -562,3 +562,59 @@ model("blood_splat", { pivot: "origin", scale: 1.5 },
     tf({ rot: [-90, 0, 0] }, extrude([0.06, -0.03, 0.3 + rnd(i, 314, 433) * 0.16, 0, 0.06, 0.03], 0.004, { mat: i % 3 ? "bloodD" : "blood" })))),
   [[0.36, 0.1, 0.025], [-0.3, 0.26, 0.02], [0.1, -0.38, 0.02], [-0.36, -0.2, 0.015]].map(([x, z, r], i) => blob(x, z, r, 440 + i, "bloodD")))
 for (const n of ["blood_pool", "blood_drops", "blood_splat"]) looms(n)
+
+// --- crypt blocks: the parts of the raised stone tomb in the middle of the
+// graveyard (2215, 2228; 2227, 2222, 2256; 2210) ------------------------------
+// the owner: "parts of a wall". Seen on the map they are the cells of one
+// raised mound of fitted stones: full-cell blocks, the top paved with
+// cracked flagstones, the sides big rounded stones in two courses; the cells
+// on the mound's edge slope back on one side. One model per kind, the editor
+// turns them: the slope is on +z
+const CB = 0.47, CBH = 0.74, SLOPE = 30
+// the core: a prism along x whose +z side slopes back by SLOPE degrees when
+// bevel is set (its side profile in (z, y), extruded along x)
+function cryptCore(bevel, mat, inset = 0.1) {
+  const zb = CB - inset, zt = bevel ? zb - CBH * Math.tan(SLOPE * Math.PI / 180) : zb
+  // outline X maps to -z once turned 90 degrees about y
+  return extrude([-zb, 0, zb, 0, zb, CBH, -zt, CBH], 2 * (CB - inset), { mat, rot: [0, 90, 0], jitter: 0.008, seed: 341 })
+}
+// the face stones of the +z side: two courses of big rounded stones, joints
+// staggered; leaning back by SLOPE when bevel is set. On a side face of a
+// sloping block (cut = +1 or -1: which end of the face is the block's +z),
+// each course stops short of the slope
+const slopeZ = (y) => CB - y * Math.tan(SLOPE * Math.PI / 180)
+function cryptFace(seed, bevel, cut = 0) {
+  const rows = [[0, 0.42, [-0.47, 0.0, 0.47]], [0.42, 0.3, [-0.47, -0.16, 0.24, 0.47]]]
+  const out = rows.flatMap(([y, h, cuts], r) => cuts.slice(1).map((b, i) => {
+    let a = cuts[i]
+    const zMax = slopeZ(y + h) - 0.02
+    if (cut > 0) b = Math.min(b, zMax)
+    if (cut < 0) a = Math.max(a, -zMax)
+    if (b - a < 0.2) return []
+    return stone((a + b) / 2, y, -0.11, b - a - 0.014, h - 0.014, 0.22, { seed: seed + r * 5 + i, mat: (r + i + seed) % 2 ? "stone" : "stoneShade", rot: (rnd(i, 331, seed + r) - 0.5) * 3, round: 0.42 })
+  }))
+  return tf({ pos: [0, 0, CB], rot: [bevel ? -SLOPE : 0, 0, 0] }, out)
+}
+// the top: cracked flagstones fitted together, over the core's top (to
+// zMax on the +z side)
+function cryptTop(zMax, seed) {
+  const R = [[-0.47, -0.47, 0.02, 0.04], [0.02, -0.47, 0.47, -0.06], [-0.47, 0.04, -0.06, 1], [-0.06, -0.06, 0.47, 1]]
+  return R.map(([x0, z0, x1, z1], i) => {
+    const zz1 = Math.min(z1, zMax), zz0 = Math.min(z0, zMax - 0.1)
+    return stone((x0 + x1) / 2, CBH - 0.04, (zz0 + zz1) / 2, x1 - x0 - 0.016, 0.1, zz1 - zz0 - 0.016, { seed: seed + i, mat: "flagCrack", rot: (rnd(i, 332, seed) - 0.5) * 3, round: 0.3 })
+  })
+}
+const cryptBlock = (bevel, seed) => [
+  cryptCore(bevel, "stoneShade"),
+  [0, 90, 180, 270].map((a, k) => tf({ rot: [0, a, 0] }, cryptFace(seed + k * 11, bevel && k === 0, bevel ? [0, -1, 0, 1][k] : 0))),
+  cryptTop(bevel ? slopeZ(CBH) : CB, seed + 50),
+]
+// crypt block (2215, 2228): upright stone sides
+model("crypt_block", cryptBlock(false, 351))
+// crypt block with a sloping side (2227, 2222, 2256): its +z side leans back
+// and is faced with big stones; the other sides are the plain dressed core
+// (the retail draws them plain), so the slope's profile reads clearly
+model("crypt_block_slope", cryptCore(true, "stoneShade", 0.14), cryptFace(361, true), cryptTop(slopeZ(CBH), 411))
+// smooth crypt block (2210): one dressed stone, cracked, the +z side sloping
+model("crypt_block_smooth", cryptCore(true, "flagCrack", 0.0))
+for (const n of ["crypt_block", "crypt_block_slope", "crypt_block_smooth"]) looms(n)

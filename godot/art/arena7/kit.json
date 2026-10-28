@@ -419,6 +419,39 @@
     2446
    ],
    "looms": "blood"
+  },
+  {
+   "name": "crypt_block",
+   "label": "Bloque de la cripta",
+   "kind": "deco",
+   "gfx": [
+    2215,
+    2228
+   ],
+   "looms": "stone",
+   "note": "a full cell block; the raised tomb in the middle of the map"
+  },
+  {
+   "name": "crypt_block_slope",
+   "label": "Bloque de la cripta con un lado inclinado",
+   "kind": "deco",
+   "gfx": [
+    2227,
+    2222,
+    2256
+   ],
+   "looms": "stone",
+   "note": "its +z side slopes back: turn it to the mound's edge"
+  },
+  {
+   "name": "crypt_block_smooth",
+   "label": "Bloque liso de la cripta",
+   "kind": "deco",
+   "gfx": [
+    2210
+   ],
+   "looms": "stone",
+   "note": "its +z side slopes back"
   }
  ]
 }
