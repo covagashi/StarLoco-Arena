@@ -24,6 +24,11 @@
    "arenisca oliva clara",
    "gris",
    "arenisca rosa"
+  ],
+  "board": [
+   "pino miel",
+   "gris envejecida",
+   "nogal oscuro"
   ]
  },
  "shared": [
@@ -252,6 +257,66 @@
    ],
    "looms": "flag",
    "top": 0.075
+  },
+  {
+   "name": "cage_low",
+   "label": "Valla rota (jaula de un piso)",
+   "kind": "deco",
+   "gfx": [
+    1864
+   ],
+   "looms": "board"
+  },
+  {
+   "name": "cage_low_broken",
+   "label": "Valla rota, más rota",
+   "kind": "deco",
+   "gfx": [
+    1863,
+    1865
+   ],
+   "looms": "board"
+  },
+  {
+   "name": "scaffold",
+   "label": "Andamio de madera",
+   "kind": "deco",
+   "gfx": [
+    1875,
+    1876
+   ],
+   "looms": "board",
+   "note": "three storeys"
+  },
+  {
+   "name": "scaffold_tall",
+   "label": "Andamio alto de madera",
+   "kind": "deco",
+   "gfx": [
+    1999,
+    2000
+   ],
+   "looms": "board",
+   "note": "seven storeys"
+  },
+  {
+   "name": "cage_piece",
+   "label": "Trozo de valla",
+   "kind": "deco",
+   "gfx": [
+    1867
+   ],
+   "looms": "board"
+  },
+  {
+   "name": "boards_nailed",
+   "label": "Tablas clavadas con un tubo",
+   "kind": "deco",
+   "gfx": [
+    1871
+   ],
+   "looms": "board",
+   "note": "at the +z edge of its cell, leaning on what stands next to it"
   }
  ]
 }

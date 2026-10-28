@@ -102,3 +102,31 @@ skins({
       height: h.sub(crack.mul(0.25)), color: color.mix(col("f0"), crack.mul(0.85)).mix("#2a2618", crack.mul(0.4)), rough })
   }
 }
+
+// --- boards: the planks of the scaffolds and fences (1863-1876, 1999, 2000) --
+// weathered sawn wood, the grain running along u (box-projected boards lie
+// along x or z, so the grain follows them): long warped streaks, a few dark
+// splits and knots, the raised grain a little lighter
+//   a honey pine (retail)   b silver-grey weathered   c dark walnut
+skins({
+  a: { w0: "#463a1e", w1: "#6e6036", w2: "#887848", w3: "#a6955e" },
+  b: { w0: "#3e3c38", w1: "#6a6660", w2: "#86827a", w3: "#a6a298" },
+  c: { w0: "#2a1a10", w1: "#4e3420", w2: "#644630", w3: "#7e5c40" },
+})
+{
+  const grain = noise({ scale: [2, 24], octaves: 2, seed: 661 }).warp(noise({ scale: [3, 6], seed: 662 }), 0.04).as("grain")
+  const split = noise({ scale: [3, 20], octaves: 1, seed: 663 }).threshold(0.88, 0.03)
+    .mul(noise({ scale: [4, 2], seed: 664 }).threshold(0.55, 0.1)).as("split")
+  const knots = dots({ scale: 5, radius: 0.05, jitter: 1, seed: 665 }).mul(noise({ scale: 3, seed: 666 }).threshold(0.6, 0.1)).as("knots")
+  const blot = noise({ scale: 3, octaves: 2, seed: 667 })
+  const h = grain.mul(0.6).add(blot.mul(0.2)).sub(split.mul(0.4)).sub(knots.mul(0.3)).as("boardH")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("board" + SUF[k], { size: 512, depth: 0.015, ao: 0.5 }, {
+      height: h,
+      color: ramp(grain.mix(blot, 0.4), [col("w1"), col("w2"), col("w2"), col("w3")])
+        .mix(col("w0"), split.mul(0.8)).mix(col("w0"), knots.mul(0.7)),
+      rough: grain.levels(0, 1, 0.7, 0.85),
+    })
+  }
+}

@@ -11,6 +11,7 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["stoneMoss" + s, { tex: "out/stoneMoss" + s, uv: 0.9, rough: 0.9 }],
   ["cliff" + s, { tex: "out/cliff" + s, uv: 2.2, rough: 0.9 }],
   ["flag" + s, { tex: "out/flag" + s, uv: 1, rough: 0.8 }],
+  ["board" + s, { tex: "out/board" + s, uv: 0.8, rough: 0.8 }],
   ["flagCrack" + s, { tex: "out/flagCrack" + s, uv: 1, rough: 0.8 }],
   // the same stone a shade darker: every other loose rock, so neighbours part
   ["stoneShade" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
@@ -23,12 +24,14 @@ const PAL = {
   mossD: ["#5e6a12", "#24441c", "#5a5216"], moss: ["#94a41c", "#3e6e2a", "#8a8226"], mossL: ["#c4d038", "#6a9a3e", "#b8ac44"],
   // the small white flowers on the mossy cap (1472): white (retail), pale
   // yellow, pink; a yellow heart
+  // the iron bolts of the scaffolds and fences
+  bolt: ["#8a8c8a", "#8a8c8a", "#6e6a64"], boltD: ["#4a4c4c", "#4a4c4c", "#3a3632"],
   // the pale worn rim under the sandstone slabs (17-20, 455-457)
   flagRim: ["#e4dcb8", "#d4d6d4", "#e8cdb8"],
   petal: ["#f4f2ea", "#f4e8a8", "#f0b8c8"], petalD: ["#c8c4b8", "#d0c070", "#c88098"], heart: ["#e8c030", "#d08a20", "#f0d050"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", "flag", "flagCrack", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", "flag", "flagCrack", "board", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -311,3 +314,73 @@ function sandSlab(mat, seed) {
 model("sand_slab", { pivot: "origin" }, sandSlab("flag", 151))
 model("sand_slab_cracked", { pivot: "origin" }, sandSlab("flagCrack", 155))
 for (const n of ["sand_slab", "sand_slab_cracked"]) looms(n)
+
+// --- timber cages: the scaffolds and broken fences (1863-1865, 1875, 1876,
+// 1999, 2000) and loose boards (1867, 1871) ---------------------------------
+// one family: a cage of nailed boards filling a cell, empty inside (the dark
+// shape in the middle of the retail sprites is the shadow inside the cage,
+// owner 2026-10-28: the light makes it here). A flat board at each corner, rails along each
+// side (their ends running past the corners, an iron bolt at each end), a
+// wide board a storey on every side, zigzagging up. One storey is the broken
+// fence, three the scaffold, seven the tall scaffold.
+const CE = 0.37, STOREY = 0.4
+const bolt = (x, y, z) => tf({ pos: [x, y, z], rot: [90, 0, 0] },
+  cyl(0.03, 0.035, { mat: "bolt", sides: 6 }), cyl(0.018, 0.045, { mat: "boltD", sides: 6 }))
+// a board lying along x, centred on (x, y) of a face plane at z, turned by a
+// degrees in that plane (+ lifts its +x end)
+const rail = (x, y, z, len, a, w = 0.1, t = 0.035) => tf({ pos: [x, y, z], rot: [0, 0, a] },
+  box(len, w, t, { mat: "board", pos: [0, -w / 2, 0], jitter: 0.004 }),
+  bolt(len / 2 - 0.05, 0, t / 2), bolt(-len / 2 + 0.05, 0, t / 2))
+// one side of the cage, built along x on the +z face: a wide board per
+// storey, near its top, tilted the other way each storey (a zigzag up the
+// side), its ends running past the corners. skip leaves boards out (by
+// storey); hang adds a fallen board hanging from one bolt
+function cageSide(n, seed, { skip = [], hang = null, low = false } = {}) {
+  const out = [], z = CE + 0.05
+  // the low fence has a second board near the ground
+  if (low) out.push(rail((rnd(9, 81, seed) - 0.5) * 0.06, 0.2, z, 0.92 + rnd(9, 82, seed) * 0.08, (rnd(9, 83, seed) - 0.5) * 8, 0.17, 0.05))
+  for (let k = 0; k < n; k++) {
+    if (skip.includes(k)) continue
+    const tilt = ((k + seed) % 2 ? 1 : -1) * (10 + rnd(k, 83, seed) * 12)
+    out.push(rail((rnd(k, 81, seed) - 0.5) * 0.08, k * STOREY + STOREY * 0.72, z + (k % 2) * 0.02,
+      1.12 + rnd(k, 82, seed) * 0.16, tilt, 0.21, 0.05))
+  }
+  if (hang) out.push(rail(hang[0], hang[1], z + 0.05, 0.75, hang[2], 0.19, 0.05))
+  return out
+}
+// the corner boards, flat, all facing the camera's way (+x +z); h tall
+const cornerPosts = (h, seed) => [[1, 1], [-1, 1], [1, -1], [-1, -1]].map(([sx, sz], i) =>
+  tf({ pos: [sx * (CE + 0.1), 0, sz * (CE + 0.1)], rot: [0, 45, (rnd(i, 85, seed) - 0.5) * 4] },
+    box(0.16, h + rnd(i, 86, seed) * 0.1, 0.05, { mat: "board", jitter: 0.005 })))
+// sides: [rot, options] for the four faces (+z 0, +x 90, -z 180, -x 270)
+function cage(n, seed, opts = {}) {
+  const h = n * STOREY + 0.06
+  return [
+    cornerPosts(h, seed),
+    [0, 90, 180, 270].map((r, i) => tf({ rot: [0, r, 0] },
+      cageSide(n, seed + i, { low: opts.low, ...(opts[r] || {}) }))),
+  ]
+}
+// broken fence (1864): one storey, whole
+model("cage_low", cage(1, 171, { low: true }))
+// broken fence, more broken (1863, 1865): a rail missing at the back, a top
+// rail fallen and hanging from one bolt on the +z face
+model("cage_low_broken", cage(1, 175, { 0: { skip: [0], hang: [0.1, 0.3, -24] }, 270: { skip: [0] } }))
+// scaffold (1875, 1876): three storeys
+model("scaffold", cage(3, 181, { 180: { skip: [1] } }))
+// tall scaffold (1999, 2000): seven storeys
+model("scaffold_tall", cage(7, 191, { 270: { skip: [2] }, 180: { skip: [4] } }))
+// loose cage piece (1867): a corner board with a rail still bolted to it,
+// broken off and left standing
+model("cage_piece",
+  tf({ pos: [-0.18, 0, 0.3], rot: [0, 0, 5] }, box(0.15, 0.6, 0.05, { mat: "board", jitter: 0.005 })),
+  tf({ pos: [0.2, 0, 0.32], rot: [0, 0, -4] }, box(0.14, 0.48, 0.05, { mat: "board", jitter: 0.005 })),
+  rail(0.0, 0.5, 0.36, 0.62, -8, 0.15, 0.05), rail(0.02, 0.22, 0.36, 0.56, 6, 0.13, 0.05))
+// nailed boards (1871): three planks nailed across the face of a pillar,
+// leaning on it, the middle one pierced by an iron pipe; stands at the +z
+// edge of its cell
+model("boards_nailed", { scale: 1.3 },
+  tf({ pos: [0, 0, 0.3], rot: [-8, 0, 0] },
+    rail(0, 0.86, 0, 0.66, 18, 0.24, 0.06), rail(0.02, 0.6, 0.02, 0.6, -4, 0.26, 0.06), rail(-0.02, 0.32, 0, 0.64, 10, 0.24, 0.06),
+    tf({ pos: [0.04, 0.48, 0.05], rot: [90, 0, 0] }, cyl(0.06, 0.12, { mat: "bolt", sides: 10 }), cyl(0.04, 0.13, { mat: "boltD", sides: 10 }))))
+for (const n of ["cage_low", "cage_low_broken", "scaffold", "scaffold_tall", "cage_piece", "boards_nailed"]) looms(n)

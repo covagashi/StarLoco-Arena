@@ -558,6 +558,33 @@ cada vez, empezando por la más usada.
   - Hojas: `arena6-losas.png` y `arena6-losas-musgo-montados.png` (la
     fila de losas bajo el muro, el pilar y el montón, musgo en los
     adoquines y la hierba; el montaje es de prueba).
+- Andamios y vallas rotas (1863, 1864, 1865, 1875, 1876, 1999, 2000) y
+  tablas sueltas (1867, 1871), 2026-10-28.
+  - Vistos en el mapa: todos son la misma jaula de tablas clavadas que
+    llena una casilla, con distinto número de pisos. Las vallas rotas son
+    de un piso, los andamios de tres y los altos de siete. Están contra
+    los muros del fondo, entre pilares y bloques de sillares.
+  - Dueño (2026-10-28): "la parte de negro es la sombra". La pieza oscura
+    del centro de cada sprite no es un poste embreado, como la modelé
+    primero: es la sombra dentro de la jaula. Se quitó el poste; la luz ya
+    oscurece el interior y las tablas del fondo.
+  - Una tabla plana en cada esquina (todas de cara a la cámara) y, en cada
+    lado, una tabla ancha por piso, inclinada al revés en cada piso (zigzag
+    hacia arriba), con los extremos pasando de las esquinas y un perno de
+    hierro en cada uno. La valla baja lleva otra tabla cerca del suelo; la
+    rota pierde dos tablas y una cuelga de un perno.
+  - Trozo de valla (1867): dos tablas de esquina con dos travesaños.
+    Tablas clavadas (1871): tres tablones clavados a la cara de un pilar,
+    el del medio atravesado por un tubo de hierro.
+  - Textura loom nueva `board`: madera aserrada gastada, vetas a lo largo,
+    alguna raja y nudo. Looms: pino miel (el retail, más oliva), gris
+    envejecida, nogal oscuro.
+  - Primeras versiones: el poste negro del centro; travesaños finos con
+    riostras en X (parecía una torre metálica); jaulas de dos y cuatro
+    pisos, más bajas que el retail; madera demasiado amarilla.
+  - Hojas: `arena6-andamios-1.png` … y `arena6-andamios-montados.png`
+    (andamios, vallas y tablas contra el muro del fondo; el montaje es de
+    prueba).
 
 ## Fases
 
