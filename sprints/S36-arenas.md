@@ -317,7 +317,7 @@ cada vez, empezando por la más usada.
   - Primera versión: un 25 % más altos que el retail, la copa una bola
     compacta y muy clara, el tronco grueso y las raíces como pinchos.
     Hojas de 20 puntos para dejarlos entre 4 000 y 7 700 triángulos.
-  - Hojas: `arena5-arboles-1.png` … y `arena5-arboles-montados.png` (sobre
+  - Hojas: `arena5-arboles-1.png`, `-2.png` y `arena5-arboles-montados.png` (sobre
     hierba con la valla y una mata; el montaje es de prueba).
 
 ## Fases
