@@ -499,6 +499,24 @@
 			],
 			"looms": "slab",
 			"note": "its band meets the middle of its -x edge: turn that edge toward the knot; 468 is 467 mirrored"
+		},
+		{
+			"name": "paving_broken",
+			"label": "Losas rotas con hierba",
+			"kind": "flat",
+			"gfx": [
+				15
+			],
+			"looms": "slab"
+		},
+		{
+			"name": "stone_strips",
+			"label": "Tiras de piedra con hierba",
+			"kind": "flat",
+			"gfx": [
+				16
+			],
+			"looms": "slab"
 		}
 	]
 }

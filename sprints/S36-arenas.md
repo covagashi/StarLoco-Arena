@@ -405,6 +405,21 @@ cada vez, empezando por la más usada.
   - Hojas: `arena5-losas-grabadas.png` y
     `arena5-losas-grabadas-montadas.png` (la plazuela de cinco casillas
     sobre hierba; el montaje es de prueba).
+- Losas rotas (15) y tiras de piedra (16), 2026-10-28.
+  - Corrección de un nombre mío: la 16 no son tablones de madera, son tiras
+    de piedra del mismo color que las losas rotas. En el mapa las dos van
+    juntas, en el borde de la hierba junto al canal.
+  - Losas rotas: siete trozos planos de piedra, algo ladeados, cada uno con
+    la cara de arriba gastada y más clara; dos tiras finas en el borde del
+    fondo (lo que queda del bordillo) y brotes de hierba entre los trozos.
+  - Tiras: tres tiras largas de una pieza, algo curvadas en planta, una al
+    lado de otra, con una tira fina al fondo y brotes entre ellas.
+  - La misma piedra que las losas grabadas (sus looms: piedra crema, gris,
+    terracota); los brotes usan el oliva del musgo.
+  - Primeras versiones: piedra demasiado clara, tiras hechas de trozos que
+    parecían adoquines, y todo algo pequeño para la casilla.
+  - Hojas: `arena5-empedrado.png` y `arena5-empedrado-montado.png` (sobre
+    hierba y tierra; el montaje es de prueba).
 
 ## Fases
 

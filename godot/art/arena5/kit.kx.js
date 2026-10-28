@@ -632,3 +632,36 @@ model("slab_arm", { pivot: "origin" }, slabBase(5),
   [0, 1, 2].map((i) => band(-0.36 + i * 0.075, -0.42, -0.36 + i * 0.075, -0.3)),
   box(0.06, RELIEF, 0.06, { mat: "slabL", pos: [0.36, SLAB_T, 0.36] }))
 for (const n of ["slab_knot", "slab_arm"]) looms(n)
+
+// --- broken paving (15) and stone strips (16) --------------------------------
+// both lie flat on a cell, in the engraved slabs' stone, sprouts coming up
+// between the pieces
+// a flat worn fragment: a rounded rectangle, a little tilted, a lighter
+// worn face on top
+const frag2 = (x, z, w, d, rot, seed) => tf({ pos: [x, 0, z], rot: [((seed * 7) % 5) - 2, rot, ((seed * 11) % 5) - 2] },
+  prismUp(rrect(w, d, Math.min(w, d) * 0.3, 3), 0.03, 0, "slabD", 0.004),
+  // the worn face, only where the fragment is wide enough to carry one
+  Math.min(w, d) > 0.08 ? prismUp(rrect(w - 0.04, d - 0.04, (Math.min(w, d) - 0.04) * 0.3, 3), 0.008, 0.026, "slab", 0.002) : null)
+const sproutAt = (x, z, seed) => tf({ pos: [x, 0, z] }, blades(4, [0.08, 0.06], 0.1, 0.17, seed, 0, PADS))
+model("paving_broken", { scale: [1.12, 1, 1.12] },
+  frag2(-0.2, -0.24, 0.24, 0.16, 8, 1), frag2(0.12, -0.28, 0.18, 0.14, -12, 2), frag2(0.3, -0.05, 0.3, 0.18, 5, 3),
+  frag2(-0.05, 0.02, 0.2, 0.15, -4, 4), frag2(-0.3, 0.12, 0.18, 0.2, 14, 5), frag2(0.06, 0.28, 0.32, 0.18, -6, 6),
+  frag2(0.34, 0.26, 0.14, 0.12, 20, 7),
+  // thin strips along the far edges, what is left of the kerb
+  frag2(-0.38, -0.42, 0.3, 0.05, 6, 8), frag2(0.2, -0.45, 0.36, 0.05, -3, 9),
+  sproutAt(-0.12, -0.12, 121), sproutAt(0.2, 0.1, 122), sproutAt(-0.25, 0.32, 123), sproutAt(0.32, -0.3, 124))
+// three long strips bowed a little in plan, laid side by side, each one
+// piece: an arc-shaped outline, rounded at the ends, a worn face on top
+function stripOutline(len, w, bow) {
+  const C = Array.from({ length: 9 }, (_, i) => { const t = i / 8 - 0.5; return [t * len, bow * (1 - 4 * t * t), -8 * bow * t] })
+  const side = (k) => C.map(([x, z, dz]) => { const l = Math.hypot(1, dz); return [x - k * dz / l * w / 2, z + k / l * w / 2] })
+  return [...side(1), ...side(-1).reverse()].flat()
+}
+const strip = (z, len, w, bow, seed) => tf({ pos: [0, 0, z] },
+  prismUp(stripOutline(len, w, bow), 0.032, 0, "slabD", 0.004),
+  prismUp(stripOutline(len - 0.05, w - 0.045, bow), 0.008, 0.028, "slab", 0.002))
+model("stone_strips",
+  strip(-0.26, 0.86, 0.22, 0.03, 1), strip(0.0, 0.92, 0.23, 0.035, 2), strip(0.26, 0.82, 0.22, 0.03, 3),
+  frag2(0.05, -0.43, 0.5, 0.05, 4, 4),
+  sproutAt(-0.22, -0.12, 131), sproutAt(0.12, 0.12, 132), sproutAt(0.3, -0.12, 133))
+for (const n of ["paving_broken", "stone_strips"]) looms(n)
