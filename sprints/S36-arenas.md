@@ -903,6 +903,7 @@ cada vez, empezando por la más usada.
     las flores diminutas; el sarcófago de paredes finas; la roca crema y
     estrecha.
   - Hojas: `arena7-casita-tumbas-1.png` … `-3.png`.
+  - Dueño (2026-10-28): "ok".
 - Con esto la arena 7 queda cubierta: `mapa-arena7` da 87 piezas, 0
   nuevas (la 2038, niebla, va a VFX).
 
