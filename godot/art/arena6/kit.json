@@ -1,0 +1,117 @@
+{
+ "_doc": "Arena 6 (retail world 36: a floating meadow, ruins and scaffolds) kit for the map editor (S36), same schema as art/arena5/kit.json. Pieces the arena also uses from the arena 1, 2 and 5 kits are listed in shared. on: block = stacked on top of another block (y = 0 is where it rests on it).",
+ "biome": "pradera",
+ "arenas": [
+  36
+ ],
+ "looms": {
+  "": "a",
+  "_b": "b",
+  "_c": "c"
+ },
+ "loom_names": {
+  "stone": [
+   "arenisca crema",
+   "granito gris",
+   "arenisca roja"
+  ]
+ },
+ "shared": [
+  {
+   "kit": "arena5",
+   "name": "cobble_cap",
+   "gfx": [
+    183
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "cobble_cap_alt",
+   "gfx": [
+    184
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_cap",
+   "gfx": [
+    315,
+    316,
+    317
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "moss_pads",
+   "gfx": [
+    1682
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "moss_patch",
+   "gfx": [
+    1683,
+    1681
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_tuft",
+   "gfx": [
+    1754
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_tuft_small",
+   "gfx": [
+    1755
+   ]
+  }
+ ],
+ "minor": [],
+ "pieces": [
+  {
+   "name": "ashlar_block",
+   "label": "Bloque de sillares con musgo",
+   "kind": "deco",
+   "gfx": [
+    1381
+   ],
+   "looms": "stone",
+   "note": "0.78 m tall; set in rows as the ruined walls; the mossy cap (1472) stacks on it"
+  },
+  {
+   "name": "rubble_heap",
+   "label": "Montón de piedras apiladas",
+   "kind": "deco",
+   "gfx": [
+    1565
+   ],
+   "looms": "stone",
+   "note": "about 0.6 m; at the foot of walls and pillars, also alone on the grass"
+  },
+  {
+   "name": "stone_pillar",
+   "label": "Pilar de piedras (ruina)",
+   "kind": "deco",
+   "gfx": [
+    1650
+   ],
+   "looms": "stone",
+   "note": "about 1.65 m"
+  },
+  {
+   "name": "mossy_cap",
+   "label": "Remate de piedras con musgo y flores",
+   "kind": "deco",
+   "gfx": [
+    1472
+   ],
+   "looms": "stone",
+   "on": "block",
+   "note": "stacked on the ashlar block (1381): y = 0 rests on its top"
+  }
+ ]
+}

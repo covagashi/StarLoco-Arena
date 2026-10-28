@@ -458,6 +458,33 @@ cada vez, empezando por la más usada.
   suelo, andamios y vallas de madera rota, puertas de tablas, plantas y
   helechos, y unos engranajes y tuercas de piedra con una rueda dentada.
 - Pendiente del dueño: corregir los nombres antes de modelar.
+- Bloques de piedra (1381, 1565, 1650, 1472), 2026-10-28. Kit nuevo en
+  `godot/art/arena6/`.
+  - Vistos en el mapa: la 1381 son los muros de la ruina, bloques de
+    sillares en fila; la 1472 no va en el suelo, va apilada encima de un
+    1381 (remate de piedras con musgo y flores blancas, `on: block`); la
+    1565 es un montón tan alto como el bloque (no bajo, como supuse); la
+    1650 es un pilar de casi dos casillas, algo más ancho que la casilla.
+  - Textura loom nueva `stone`: arenisca gastada con manchas, picaduras y
+    alguna grieta fina; `stoneMoss`, la misma con musgo que sale de los
+    huecos. Looms: arenisca crema (el retail), granito gris, arenisca roja.
+  - Cada piedra es un bloque con todas las aristas redondeadas (la unión de
+    tres extrusiones redondeadas), para que se lea como piedra gastada.
+  - Sillares: tres hiladas, la de en medio de dos piedras largas y las otras
+    de 2 × 2, con las juntas fuera del centro. Montón, pilar y remate salen
+    de un generador de hiladas irregulares (`rubble`): cada hilada en su
+    rejilla, piedras que sobresalen o se meten, algo giradas, piedrecitas
+    sueltas arriba. El remate usa la piedra con musgo más verde y lleva
+    cuatro florecitas.
+  - Musgo: manchas planas de borde rasgado sobre las caras y en las juntas,
+    no bolas.
+  - Primeras versiones: piedras como losas finas (bisel de dos escalones
+    casi invisible), demasiadas juntas, musgo en bolas verdes, el montón y
+    el remate bajos, el pilar estrecho y hecho de hiladas finas como
+    ladrillos.
+  - Hojas: `arena6-piedras-1.png`, `-2.png` y `arena6-piedras-montadas.png`
+    (muro de sillares con remates, pilar y montones sobre adoquines y
+    hierba; el montaje es de prueba).
 
 ## Fases
 
