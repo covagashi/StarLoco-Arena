@@ -19,6 +19,11 @@
    "arenisca ocre",
    "pizarra gris",
    "roca parda oscura"
+  ],
+  "flag": [
+   "arenisca oliva clara",
+   "gris",
+   "arenisca rosa"
   ]
  },
  "shared": [
@@ -72,6 +77,20 @@
    "name": "grass_tuft_small",
    "gfx": [
     1755
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "moss_tall",
+   "gfx": [
+    1678
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "moss_pads",
+   "gfx": [
+    1679
    ]
   }
  ],
@@ -207,6 +226,32 @@
    ],
    "looms": "stone",
    "note": "about 0.55 m"
+  },
+  {
+   "name": "sand_slab",
+   "label": "Losa de arenisca",
+   "kind": "cap",
+   "gfx": [
+    17,
+    20,
+    456,
+    457
+   ],
+   "looms": "flag",
+   "top": 0.075,
+   "note": "the border row under the back walls"
+  },
+  {
+   "name": "sand_slab_cracked",
+   "label": "Losa de arenisca agrietada",
+   "kind": "cap",
+   "gfx": [
+    18,
+    19,
+    455
+   ],
+   "looms": "flag",
+   "top": 0.075
   }
  ]
 }

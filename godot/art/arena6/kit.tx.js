@@ -73,3 +73,32 @@ skins({
     })
   }
 }
+
+// --- flagstone: the sandstone slabs of the back border (17-20, 455-457) -----
+// crazy paving seen from above: about nine irregular flags a metre, each its
+// own tone, shallow soft grooves between them, faint blotches; the cracked
+// version adds two or three dark hairline cracks running across flags
+//   a pale olive sandstone (retail)   b grey   c pink sandstone
+skins({
+  a: { f0: "#58543a", f1: "#827c56", f2: "#9a9368", f3: "#b2aa7c" },
+  b: { f0: "#4a4c4e", f1: "#74777a", f2: "#8c8f90", f3: "#a6a8a8" },
+  c: { f0: "#5e4438", f1: "#8a6a58", f2: "#a2806c", f3: "#b89884" },
+})
+{
+  const flags = cells({ scale: 3, jitter: 0.9, seed: 641 })
+  const groove = flags.edge.threshold(0.05, 0.05).invert().blur(0.004).as("groove")
+  const blot = noise({ scale: 4, octaves: 3, seed: 642 }).as("flagBlot")
+  const fine = noise({ scale: 50, octaves: 2, seed: 643 })
+  const h = flags.edge.levels(0, 0.3, 0.6, 1).clamp(0, 1).mul(0.6).add(blot.mul(0.25)).add(fine.mul(0.04)).sub(groove.mul(0.3)).as("flagH")
+  const crack = ridged({ scale: 2, octaves: 1, seed: 644 }).warp(noise({ scale: 6, seed: 646 }), 0.02).threshold(0.985, 0.006)
+    .mul(noise({ scale: 2, seed: 645 }).threshold(0.45, 0.1)).blur(0.0015).as("crack")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    const color = ramp(flags.id.mix(blot, 0.3), [col("f1"), col("f2"), col("f3")])
+      .mix(col("f0"), groove.mul(0.45)).mix(col("f3"), h.convex(0.01, 8).mul(0.3))
+    const rough = fine.levels(0, 1, 0.75, 0.88)
+    material("flag" + SUF[k], { size: 512, depth: 0.012, ao: 0.5 }, { height: h, color, rough })
+    material("flagCrack" + SUF[k], { size: 512, depth: 0.012, ao: 0.5 }, {
+      height: h.sub(crack.mul(0.25)), color: color.mix(col("f0"), crack.mul(0.85)).mix("#2a2618", crack.mul(0.4)), rough })
+  }
+}

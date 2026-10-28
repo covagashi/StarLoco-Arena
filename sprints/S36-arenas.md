@@ -536,6 +536,28 @@ cada vez, empezando por la más usada.
   - Hojas: `arena6-rocas-1.png`, `-2.png` y `arena6-rocas-montadas.png`
     (al pie del muro de sillares y del pilar, en la hierba y junto al
     acantilado; el montaje es de prueba).
+- Musgo (1678, 1679) y losas de arenisca (17, 18, 19, 20, 455, 456, 457),
+  2026-10-28.
+  - Musgo: comparado al lado de las piezas de la arena 5, el 1678 es el
+    mismo motivo que el 1680 (`moss_tall`) y el 1679 que el 1682
+    (`moss_pads`). No se modelan: van a `shared` en `kit.json`. Hoja
+    `arena6-musgo-vs-arena5.png`.
+  - Losas: en el mapa no se ven porque quedan bajo los muros; quitando la
+    decoración, son la fila del borde del fondo. Siete retail que solo
+    cambian el dibujo de las grietas: dos modelos, losa lisa (17, 20,
+    456, 457) y losa agrietada (18, 19, 455). Tipo `cap`, como la losa de
+    adoquines.
+  - Una losa gruesa de arenisca con el canto redondeado sobre un borde
+    pálido gastado y la cara algo abombada. Textura loom nueva `flag`:
+    enlosado irregular de unas nueve piezas por casilla, cada una de su
+    tono, con juntas suaves; `flagCrack` añade grietas largas oscuras.
+    Looms: arenisca oliva clara (el retail), gris, arenisca rosa.
+  - Primeras versiones: las grietas salían como rayitas cortas y luego
+    como manchas gruesas; la losa demasiado clara y amarilla, plana, con
+    un escalón duro en el borde, y fina.
+  - Hojas: `arena6-losas-1.png` y `arena6-losas-musgo-montados.png` (la
+    fila de losas bajo el muro, el pilar y el montón, musgo en los
+    adoquines y la hierba; el montaje es de prueba).
 
 ## Fases
 

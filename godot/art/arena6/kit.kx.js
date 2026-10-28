@@ -10,6 +10,8 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["stone" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85 }],
   ["stoneMoss" + s, { tex: "out/stoneMoss" + s, uv: 0.9, rough: 0.9 }],
   ["cliff" + s, { tex: "out/cliff" + s, uv: 2.2, rough: 0.9 }],
+  ["flag" + s, { tex: "out/flag" + s, uv: 1, rough: 0.8 }],
+  ["flagCrack" + s, { tex: "out/flagCrack" + s, uv: 1, rough: 0.8 }],
   // the same stone a shade darker: every other loose rock, so neighbours part
   ["stoneShade" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
   // the moss-washed stones of the mossy cap (1472): the mossy stone, greener
@@ -21,10 +23,12 @@ const PAL = {
   mossD: ["#5e6a12", "#24441c", "#5a5216"], moss: ["#94a41c", "#3e6e2a", "#8a8226"], mossL: ["#c4d038", "#6a9a3e", "#b8ac44"],
   // the small white flowers on the mossy cap (1472): white (retail), pale
   // yellow, pink; a yellow heart
+  // the pale worn rim under the sandstone slabs (17-20, 455-457)
+  flagRim: ["#e4dcb8", "#d4d6d4", "#e8cdb8"],
   petal: ["#f4f2ea", "#f4e8a8", "#f0b8c8"], petalD: ["#c8c4b8", "#d0c070", "#c88098"], heart: ["#e8c030", "#d08a20", "#f0d050"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", "flag", "flagCrack", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -292,3 +296,18 @@ model("rock_blocks",
   chunks([[-0.18, 0.04, 0.56, 0.58, 0.7, 6, 4], [0.27, -0.04, 0.42, 0.52, 0.62, -8, -5]], 141),
   tf({ pos: [-0.1, 0, 0.36], rot: [24, 4, 0] }, chunk([0, 0, 0.42, 0.42, 0.18, 0, 0], 144)))
 for (const n of ["rock_heap", "rock_pair", "rock_mound", "rock_blocks"]) looms(n)
+
+// --- sandstone slabs (17, 20, 456, 457 plain; 18, 19, 455 cracked) -----------
+// the border row under the back walls: a thick slab of pale sandstone laid on
+// a block's top (kind cap: y = 0 is that top), its face a crazy paving of
+// flags (the flag loom), its edge rounded over a pale worn rim
+function sandSlab(mat, seed) {
+  return [
+    prismUp(roundSquare(0.505, 0.08, 4, 0.012, seed), 0.03, -0.08, "flagRim", 0.004),
+    prismUp(roundSquare(0.5, 0.08, 4, 0.012, seed + 1), 0.1, -0.055, mat, 0.004),
+    // the face bulges a little from the rounded rim, like a cushion
+    terrain(0.98, 0.98, { res: 24, height: 0.035, fn: cushionFn(0.49, 0.1, 0.09, 0.15, seed), mat, pos: [0, 0.04, 0] })]
+}
+model("sand_slab", { pivot: "origin" }, sandSlab("flag", 151))
+model("sand_slab_cracked", { pivot: "origin" }, sandSlab("flagCrack", 155))
+for (const n of ["sand_slab", "sand_slab_cracked"]) looms(n)
