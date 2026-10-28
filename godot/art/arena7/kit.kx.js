@@ -60,8 +60,6 @@ const PAL = {
   bloodD: ["#2e1612", "#1e1c1e", "#22361a"], blood: ["#4c1a12", "#34303a", "#3e6a20"], bloodL: ["#b03a1a", "#5a5262", "#7ab030"],
   // the stake through the skeleton (2245)
   stake: ["#6a3e22", "#5a4e44", "#3e2a1c"],
-  // flat moss stains (2449): olive (retail), deep green, dry olive
-  mossDamp: ["#34361e", "#1e2a1a", "#3a3420"], mossD: ["#3e4a14", "#1e3a18", "#4a4416"], moss: ["#7a8a1e", "#3e6a28", "#8a7e26"], mossL: ["#a8b030", "#6a9a3e", "#b0a440"],
   // the candle in the niche (1503): wax, and its flame (glows)
   wax: ["#f0e2a0", "#ecebe2", "#e8c88a"],
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
@@ -680,9 +678,4 @@ model("rock_standing",
   stone(0, 0, 0, 0.5, 0.62, 0.42, { seed: 541, tilt: -6, round: 0.42, mat: "rockGrey" }),
   tuft(-0.22, 0.12, 5, 0.12, 11), tuft(0.2, 0.16, 4, 0.1, 12),
   [[-0.12, 0.22], [0.02, 0.24], [0.14, 0.2], [-0.24, 0.0]].map(([x, z], i) => rock(0.05, { mat: "dirtD", seed: 551 + i, pos: [x, 0.025, z + 0.04], scale: [1, 0.7, 1] })))
-// moss stain (2449): flat olive moss blotches over a dark damp patch
-model("moss_stain", { pivot: "origin" },
-  blob(0, 0, 0.2, 561, "mossDamp"),
-  [[-0.08, 0.0, 0.1, "moss"], [0.18, 0.04, 0.09, "mossL"], [-0.24, 0.08, 0.04, "mossL"], [0.02, -0.16, 0.05, "moss"],
-   [-0.04, 0.2, 0.05, "mossL"], [0.22, 0.2, 0.04, "mossD"], [0.06, 0.1, 0.06, "mossD"]].map(([x, z, r, m], i) => blob(x * 1.5, z * 1.5, r, 570 + i, m, 0.008)))
-for (const n of ["rock_standing", "moss_stain"]) looms(n)
+looms("rock_standing")

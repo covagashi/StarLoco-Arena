@@ -70,18 +70,21 @@
    "icor negro",
    "limo verde"
   ],
-  "moss": [
-   "musgo oliva",
-   "verde oscuro",
-   "oliva seco"
-  ],
   "rockGrey": [
    "granito gris",
    "gris oscuro",
    "arenisca roja"
   ]
  },
- "shared": [],
+ "shared": [
+  {
+   "kit": "arena5",
+   "name": "moss_pads",
+   "gfx": [
+    2449
+   ]
+  }
+ ],
  "minor": [],
  "pieces": [
   {
@@ -510,15 +513,6 @@
     1579
    ],
    "looms": "rockGrey"
-  },
-  {
-   "name": "moss_stain",
-   "label": "Manchas de musgo",
-   "kind": "flat",
-   "gfx": [
-    2449
-   ],
-   "looms": "moss"
   }
  ]
 }

@@ -896,12 +896,13 @@ cada vez, empezando por la más usada.
   - Roca de pie (1579, el dueño: "roca"): una piedra gris redondeada, de
     pie y algo ladeada, con matas y piedrecitas pardas al pie. Looms:
     granito gris (el retail), gris oscuro, arenisca roja.
-  - Manchas de musgo (2449, sin nombre del dueño; parecía musgo): manchas
-    planas de musgo oliva sobre una mancha húmeda oscura, tipo `flat`.
+  - Musgo (2449): el dueño, al verlo modelado aparte como mancha plana:
+    "ya teníamos musgo". Usa las matas de musgo de la arena 5
+    (`moss_pads`, en `shared`); el modelo propio se quitó.
   - Primeras versiones: el túmulo plano, pálido y luego rojo oscuro, con
     las flores diminutas; el sarcófago de paredes finas; la roca crema y
-    estrecha; el musgo sobre una mancha roja (el color de la sangre).
-  - Hojas: `arena7-casita-tumbas-1.png` … `-3.png`.
+    estrecha.
+  - Hojas: `arena7-casita-tumbas-1.png`, `-2.png`.
 - Con esto la arena 7 queda cubierta: `mapa-arena7` da 87 piezas, 0
   nuevas (la 2038, niebla, va a VFX).
 
