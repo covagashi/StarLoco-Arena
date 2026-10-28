@@ -49,6 +49,11 @@
 			"madera olivo",
 			"gris envejecida",
 			"marrón oscura"
+		],
+		"tree": [
+			"verde lima",
+			"oliva otoñal",
+			"verde verano"
 		]
 	},
 	"shared": [
@@ -332,6 +337,33 @@
 				220
 			],
 			"looms": "timber"
+		},
+		{
+			"name": "leaf_tree",
+			"label": "Árbol de hoja verde",
+			"kind": "deco",
+			"gfx": [
+				2548
+			],
+			"looms": "tree"
+		},
+		{
+			"name": "leaf_tree_fork",
+			"label": "Árbol de hoja verde (tronco en Y)",
+			"kind": "deco",
+			"gfx": [
+				2550
+			],
+			"looms": "tree"
+		},
+		{
+			"name": "leaf_tree_young",
+			"label": "Árbol de hoja verde (joven)",
+			"kind": "deco",
+			"gfx": [
+				2556
+			],
+			"looms": "tree"
 		}
 	]
 }

@@ -33,6 +33,11 @@ const PAL = {
   moss: ["#94a82e", "#5e8a3a", "#7e8a34"],
   // iron hoops and nails
   hoop: ["#9a9c98", "#8a8e92", "#6e6a64"], hoopD: ["#4a4c4a", "#3e4246", "#34302c"],
+  // the green trees: leaves (lime green, the retail 2556 / olive autumn, the
+  // retail 2548 / deep summer green) and a pale twisting bark
+  treeD: ["#3a5214", "#4a3a12", "#1e3a1a"], tree: ["#6e8a22", "#8a6a1e", "#3a6a2a"], treeL: ["#a8c234", "#c0a03a", "#6a9a3e"],
+  treeX: ["#5a7a1a", "#9a4a1a", "#2e5222"],
+  barkL: ["#d8c890", "#c8bca0", "#a08a6a"], bark: ["#a89660", "#8e8270", "#6e5a42"], barkD: ["#6e6038", "#5a5246", "#42342a"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -382,3 +387,62 @@ model("crate",
     sphere(0.014, { mat: "hoopD", detail: 0, pos: [x, y, CR + 0.002] }),
     sphere(0.014, { mat: "hoopD", detail: 0, pos: [CR + 0.002, y, x] })]))
 for (const n of ["barrel", "crate"]) looms(n)
+
+// --- green trees (2548, 2550, 2556) --------------------------------------------
+// a slender pale trunk with a slight twist, flaring into roots, under an open
+// crown of big maple leaves: a dark core in clumps, leaves fanned over it,
+// the light ones on top, a few odd-coloured ones mixed in
+const mapleLeaf = Array.from({ length: 20 }, (_, i) => {
+  const t = (i / 20) * Math.PI * 2, lobe = Math.pow(Math.abs(Math.cos(2.5 * (t - Math.PI / 2))), 1.4)
+  const r = 0.1 * (0.55 + 0.45 * lobe) * (1 - 0.4 * Math.max(0, -Math.sin(t)))
+  return [Math.cos(t) * r, Math.sin(t) * r + 0.03]
+}).flat()
+// one clump of the crown: a small dark core, n big leaves fanned out round
+// it with gaps between them, the light ones only on top
+function clump(x, y, z, r, seed) {
+  const out = [sphere(r * 0.5, { mat: "treeD", detail: 1, pos: [x, y, z], jitter: r * 0.1, seed })]
+  const n = Math.round(6 + r * 16)
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n, yy = 1 - 1.6 * t, rr = Math.sqrt(Math.max(0, 1 - yy * yy)), a = i * 137.5 + seed * 41
+    const nx = Math.cos(a * Math.PI / 180) * rr, nz = Math.sin(a * Math.PI / 180) * rr
+    const m = (i * 7 + seed) % 6 === 0 ? "treeX" : yy > 0.45 ? "treeL" : yy > -0.2 ? "tree" : "treeD"
+    out.push(tf({ pos: [x + nx * r * 0.95, y + yy * r * 0.7, z + nz * r * 0.95], rot: [0, -a + 90, 0] },
+      extrude(mapleLeaf, 0.012, { mat: m, rot: [-(yy * 60) + 25, 0, (i * 53) % 360], scale: 1.4 + ((i * 5 + seed) % 4) * 0.2 })))
+  }
+  return out
+}
+// a trunk along points, tapering, with root flares at its foot
+function trunk(pts, r0, r1, seed) {
+  const out = [], n = pts.length - 1
+  for (let i = 0; i < n; i++) {
+    const r = r0 + (r1 - r0) * (i / Math.max(1, n - 1))
+    out.push(tube([...pts[i], ...pts[i + 1]], r, { mat: i % 2 ? "bark" : "barkL", sides: 7, jitter: 0.006, seed: seed + i }))
+    if (i < n - 1) out.push(sphere(r, { mat: "bark", detail: 1, pos: pts[i + 1] }))
+  }
+  // streaks of dark bark winding up the trunk
+  out.push(tube(pts.slice(0, 3).map(([x, y, z], i) => [x + r0 * 0.98 * Math.cos(i * 1.2), y, z + r0 * 0.98 * Math.sin(i * 1.2)]).flat(), r0 * 0.18, { mat: "barkD", sides: 4 }))
+  out.push(lathe([r0 * 1.6, 0, r0 * 1.15, 0.08, r0, 0.2], { mat: "bark", sides: 7, jitter: 0.01, seed }))
+  out.push(blades(9, [0.35, 0.3], 0.06, 0.14, seed + 30, 2))
+  return out
+}
+const branch = (pts, r) => tube(pts.flat(), r, { mat: "bark", sides: 5 })
+// 2548: a tall straight tree, a broad round crown from half its height
+model("leaf_tree", { scale: 0.85 },
+  trunk([[0, 0, 0], [0.04, 0.55, 0.02], [-0.02, 1.1, 0], [0.02, 1.5, -0.02]], 0.1, 0.05, 1),
+  branch([[0.02, 1.2, 0], [0.45, 1.55, 0.1]], 0.035), branch([[0, 1.3, 0], [-0.45, 1.6, -0.05]], 0.035),
+  clump(0, 2.0, 0, 0.5, 1), clump(0.55, 1.65, 0.15, 0.45, 2), clump(-0.55, 1.7, 0.05, 0.45, 3),
+  clump(0.15, 2.3, -0.1, 0.38, 4), clump(-0.2, 1.45, -0.4, 0.35, 5), clump(0.25, 1.4, 0.45, 0.32, 6),
+  clump(-0.4, 2.15, 0.1, 0.3, 7))
+// 2550: the trunk splits in a Y half way up, a wide crown over both arms
+model("leaf_tree_fork", { scale: 0.85 },
+  trunk([[0, 0, 0], [0.02, 0.45, 0], [0, 0.85, 0]], 0.11, 0.09, 2),
+  trunk([[0, 0.82, 0], [-0.3, 1.3, 0.05], [-0.48, 1.65, 0]], 0.075, 0.045, 3).slice(0, 3),
+  trunk([[0, 0.82, 0], [0.26, 1.25, -0.02], [0.42, 1.6, -0.05]], 0.075, 0.045, 4).slice(0, 3),
+  clump(-0.5, 1.9, 0, 0.48, 11), clump(0.48, 1.85, -0.05, 0.48, 12), clump(0, 2.25, 0, 0.42, 13),
+  clump(0.8, 1.6, 0.2, 0.3, 14), clump(-0.82, 1.65, 0.2, 0.28, 15), clump(0, 1.7, 0.4, 0.32, 16))
+// 2556: a young tree, slim trunk leaning a little, a smaller open crown
+model("leaf_tree_young", { scale: 0.85 },
+  trunk([[0, 0, 0], [0.05, 0.55, 0], [0.1, 1.1, 0.02], [0.08, 1.45, 0]], 0.07, 0.04, 5),
+  branch([[0.08, 1.05, 0], [0.45, 1.3, 0.1], [0.58, 1.45, 0.1]], 0.022), branch([[0.08, 1.15, 0], [-0.3, 1.45, -0.05]], 0.022),
+  clump(0.1, 1.8, 0, 0.4, 21), clump(0.6, 1.5, 0.1, 0.3, 22), clump(-0.32, 1.6, -0.05, 0.3, 23), clump(0.15, 2.12, -0.05, 0.26, 24))
+for (const n of ["leaf_tree", "leaf_tree_fork", "leaf_tree_young"]) looms(n)

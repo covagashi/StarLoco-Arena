@@ -305,6 +305,20 @@ cada vez, empezando por la más usada.
     entarimado) y la caja alta, con los paneles lisos.
   - Hojas: `arena5-barril-caja.png` y `arena5-barril-caja-montados.png`
     (junto a la pared de la casa; el montaje es de prueba).
+- Árboles de hoja verde (2548 recto, 2550 con el tronco en Y, 2556 joven),
+  2026-10-28.
+  - Tronco claro y esbelto, algo retorcido, con un reguero de corteza
+    oscura, el pie ensanchado y una mata de hierba. Copa abierta de hojas
+    grandes de arce: núcleos oscuros pequeños con las hojas en abanico
+    alrededor, dejando huecos; las claras solo arriba y alguna de otro
+    color mezclada.
+  - Looms: verde lima (el retail 2556), oliva otoñal (el 2548 del mapa va
+    teñido así), verde verano.
+  - Primera versión: un 25 % más altos que el retail, la copa una bola
+    compacta y muy clara, el tronco grueso y las raíces como pinchos.
+    Hojas de 20 puntos para dejarlos entre 4 000 y 7 700 triángulos.
+  - Hojas: `arena5-arboles-1.png` … y `arena5-arboles-montados.png` (sobre
+    hierba con la valla y una mata; el montaje es de prueba).
 
 ## Fases
 
