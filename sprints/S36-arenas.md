@@ -1034,6 +1034,32 @@ cada vez, empezando por la más usada.
   - Pasarelas de tablas (1204, 1206, 1296) y postes con cuerda (1207,
     1297).
 
+- Nombres del dueño para la arena 12 (2026-10-28):
+  - 619, cuadrado de tierra; 2661, mancha o líquido; 2649, lianas; 790,
+    pala.
+  - Losas: «losa de tierra» (2654–2656, 2692) y «losa de barro» (1501,
+    2657, 2659, 2660).
+  - «planta de setas» (los tocones 2678–2682), «plantita» (2683, 2684,
+    2686), «líquido verde» (8 gfx: lenteja de agua y zarcillos),
+    «tablas» (pasarelas 1204, 1206, 1296 y sus soportes 1207, 1297),
+    «enredadera» (2618, 2619, 2621, 2624, 2625), «tronquito» cortado con
+    barro y burbujas (2673–2676), «burbuja de barro» (2671, 2672), «flor
+    blanca» (2668–2670).
+
+### Arena 13 (mundo 45, playa), 2026-10-28
+
+- `mapa-arena13-1.png` … `-11.png`: 78 piezas, 4 ya cubiertas y 74
+  nuevas, con mi suposición marcada con "¿?".
+- Lo que parece haber:
+  - Casillas de arena que pasan a agua verde (13 gfx, 2388–2399, 2403).
+    Parecen solo el color del suelo. Pregunto si son tinte o modelo.
+  - Palmeras (2695–2697), corales rojos en charcos (2431, 2442, 2863,
+    2864) y plantas tropicales con flores (2345–2347).
+  - Vallas de postes y travesaños (2726–2733) y tablas de barco clavadas
+    en la arena (2526–2529).
+  - Un columpio en cinco piezas (2802–2806), tumbonas, toallas, un baúl,
+    cañas de pescar, figuras de arena, conchas, cocos y peces.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
