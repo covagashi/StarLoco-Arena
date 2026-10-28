@@ -37,7 +37,7 @@ const PAL = {
   // grey, rusty brown
   flake: ["#5e544e", "#7a7874", "#7a5238"], flakeD: ["#3e3632", "#55534f", "#55361f"], flakeL: ["#6e645c", "#8c8a86", "#8a6042"],
   // bone (the skull reliefs; later the bones): ivory, grey-white, yellowed
-  bone: ["#e6dcc0", "#d8d8d2", "#e4cf98"], boneD: ["#a89c80", "#9a9a94", "#a89060"],
+  bone: ["#d8cfae", "#cfcfc8", "#dcc690"], boneD: ["#a2967a", "#94948e", "#a28a5c"],
   // eye sockets, carved lines, the dark of a niche
   hole: ["#2e2a24", "#2a2a2c", "#2e221c"],
   // grass tufts at the foot of the stones
@@ -51,6 +51,11 @@ const PAL = {
   stalkD: ["#4a5a14", "#3e5a1c", "#5a5a18"], stalk: ["#86a024", "#5a8a2c", "#9a9428"], stalkL: ["#c0cc3c", "#8ab44a", "#c8c04a"],
   // daisies among the 522 poppies: white petals, yellow hearts
   daisy: ["#f4f2ea", "#f4e8a8", "#f0c8d8"], daisyC: ["#f0c030", "#e8a020", "#f0d050"],
+  // blood on the floor: dark dried red, its wet middle brighter (retail);
+  // black ichor; green slime
+  bloodD: ["#2e1612", "#1e1c1e", "#22361a"], blood: ["#4c1a12", "#34303a", "#3e6a20"], bloodL: ["#b03a1a", "#5a5262", "#7ab030"],
+  // the stake through the skeleton (2245)
+  stake: ["#6a3e22", "#5a4e44", "#3e2a1c"],
   // the candle in the niche (1503): wax, and its flame (glows)
   wax: ["#f0e2a0", "#ecebe2", "#e8c88a"],
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
@@ -440,3 +445,120 @@ model("flower_patch",
   [[-0.1, 0.08, 0.12], [0.12, 0.02, 0.15], [-0.26, 0.2, 0.09], [0.08, -0.26, 0.1], [0.3, 0.0, 0.08], [-0.2, -0.24, 0.1], [0.2, 0.3, 0.11]].map(([x, z, h], i) => daisy(x, z, h, 261 + i)),
   leaves(30, 0.66, 271), leaves(10, 0.4, 281))
 for (const n of ["dead_plant", "poppies", "flower_patch"]) looms(n)
+
+// --- bones and blood (1451, 2457, 1476, 1484, 1458, 1664, 1571, 2265, 2267,
+// 2264, 2266, 2268, 2766, 2244, 2247, 2245; 2447, 1655, 2446) -------------
+// the many retail bone drawings grouped (the owner left that to me), all
+// built from a few parts in bone colour
+// a skull lying at (x, y, z), s wide, its face turned a about y from +z and
+// tipped up t (positive looks up); a = 45 faces the camera:
+// a round cranium, the brow and cheeks, two dark sockets, a nose, a row of
+// teeth and the jaw
+const skull3 = (x, y, z, s, a = 45, t = 35, seed = 1) => tf({ pos: [x, y + s * 0.42, z], rot: [0, a, 0] }, tf({ rot: [-t, 0, (rnd(1, 301, seed) - 0.5) * 16] },
+  sphere(s * 0.5, { mat: "bone", detail: 1, scale: [1, 0.86, 1.02], jitter: s * 0.02, seed }),
+  [-1, 1].map((k) => sphere(s * 0.15, { mat: "hole", detail: 1, pos: [k * s * 0.2, -s * 0.05, s * 0.4], scale: [1, 1.1, 0.5] })),
+  cone(s * 0.06, s * 0.1, { mat: "hole", sides: 3, pos: [0, -s * 0.24, s * 0.46], rot: [0, 0, 180] }),
+  box(s * 0.5, s * 0.16, s * 0.3, { mat: "boneD", pos: [0, -s * 0.48, s * 0.24] }),
+  [-1.5, -0.5, 0.5, 1.5].map((k) => box(s * 0.09, s * 0.1, s * 0.05, { mat: "bone", pos: [k * s * 0.11, -s * 0.38, s * 0.4] }))))
+// a long bone from (x0, z0) to (x1, z1), lying at height y (or raised at its
+// far end by lift): a shaft and two knuckled ends
+function bone3(x0, z0, x1, z1, y = 0.025, r = 0.022, lift = 0) {
+  const len = Math.hypot(x1 - x0, z1 - z0), a = Math.atan2(-(z1 - z0), x1 - x0) * 180 / Math.PI
+  const tilt = Math.atan2(lift, len) * 180 / Math.PI
+  return tf({ pos: [x0, y, z0], rot: [0, a, 0] }, tf({ rot: [0, 0, tilt] },
+    cyl(r, len, { mat: "bone", sides: 6, rot: [0, 0, -90] }),
+    [0, len].map((u) => [-1, 1].map((k) => sphere(r * 1.45, { mat: u ? "bone" : "boneD", detail: 1, pos: [u, 0, k * r * 0.9] })))))
+}
+// a few dark clods of earth round the bones
+const clodsAt = (pts, seed) => pts.map(([x, z, r], i) => rock(r, { mat: "dirtD", seed: seed + i, pos: [x, r * 0.3, z], scale: [1, 0.45, 1] }))
+// a vertebra / a lump of pelvis
+const vertebra = (x, y, z, s, a = 0) => tf({ pos: [x, y, z], rot: [0, a, 0] },
+  box(s, s * 0.6, s * 0.7, { mat: "bone", jitter: s * 0.06 }), box(s * 0.3, s * 0.5, s * 1.3, { mat: "boneD", pos: [0, s * 0.2, 0] }))
+const pelvis = (x, z, s, a = 0) => tf({ pos: [x, 0, z], rot: [0, a, 0] },
+  sphere(s * 0.5, { mat: "bone", detail: 1, pos: [-s * 0.3, s * 0.2, 0], scale: [1, 0.55, 0.8] }),
+  sphere(s * 0.5, { mat: "bone", detail: 1, pos: [s * 0.3, s * 0.2, 0], scale: [1, 0.55, 0.8] }),
+  sphere(s * 0.18, { mat: "hole", detail: 1, pos: [0, s * 0.24, s * 0.2], scale: [1, 0.6, 0.6] }))
+
+// skulls (1451, 2457): four skulls lying about, two bones crossed among them
+model("skulls",
+  skull3(-0.28, 0, 0.04, 0.3, 25, 40, 1), skull3(0.04, 0, -0.2, 0.3, 60, 30, 2), skull3(0.3, 0, 0.1, 0.28, 50, 45, 3), skull3(-0.02, 0, 0.28, 0.28, 35, 30, 4),
+  bone3(-0.18, -0.24, 0.14, 0.1), bone3(-0.14, 0.12, 0.2, -0.16, 0.03))
+// skull pile (1476, 1484): a heap of skulls two deep, bones sticking out
+model("skull_pile",
+  [[-0.26, -0.1, 0, 20], [0.0, -0.22, 0, -10], [0.25, -0.08, 0, 30], [-0.18, 0.18, 0, -40], [0.12, 0.2, 0, 10], [0.34, 0.2, 0, -20],
+   [-0.08, -0.02, 0.12, 0], [0.16, 0.0, 0.12, 25], [0.02, 0.12, 0.24, -15]].map(([x, z, y, a], i) => skull3(x * 1.15, y * 1.2, z * 1.15, 0.27, 45 + a * 0.6, 30 + (i % 3) * 8, 11 + i)),
+  bone3(-0.36, 0.02, -0.12, -0.26, 0.1, 0.022, 0.2), bone3(0.3, -0.24, 0.42, 0.0, 0.08, 0.022, 0.18), bone3(-0.1, 0.32, 0.2, 0.32, 0.05), bone3(0.06, -0.08, 0.18, -0.3, 0.2, 0.02, 0.15))
+// skulls in the earth (1458, 1664): two skulls on scattered clods, a bone
+// standing up beside them
+model("skulls_dirt",
+  skull3(-0.06, 0, 0.04, 0.3, 35, 35, 21), skull3(0.16, 0.0, -0.12, 0.28, 60, 30, 22),
+  bone3(0.2, 0.08, 0.26, -0.02, 0.03, 0.022, 0.28), bone3(-0.26, -0.12, -0.04, -0.2),
+  clodsAt([[-0.28, 0.12, 0.05], [-0.1, 0.24, 0.04], [0.12, 0.2, 0.05], [0.3, 0.1, 0.035], [-0.3, -0.16, 0.04], [0.02, -0.26, 0.035], [0.26, -0.2, 0.04]], 31))
+// a skull and a hand (1571): a skull on the earth, the bones of a hand
+// reaching up out of it a little way off
+const hand = (x, z) => tf({ pos: [x, 0, z] },
+  bone3(0, 0, 0.02, 0, 0.02, 0.02, 0.22),
+  [-1, 0, 1].map((k) => tf({ pos: [0.02, 0.22, k * 0.025], rot: [k * 12, 0, -8] }, cyl(0.009, 0.08, { mat: "bone", sides: 4 }))))
+model("skull_hand",
+  skull3(-0.1, 0, 0.02, 0.3, 40, 35, 41), tf({ pos: [0.3, 0, -0.1], scale: 1.4 }, hand(0, 0)),
+  clodsAt([[-0.32, 0.1, 0.04], [-0.12, 0.24, 0.035], [0.08, 0.18, 0.04], [0.22, 0.02, 0.035], [-0.28, -0.14, 0.03], [0.34, -0.16, 0.035]], 51))
+// scattered bones (2265, 2267): long bones crossed, a lump of pelvis, ribs
+const rib = (x, z, a, len) => tf({ pos: [x, 0.02, z], rot: [0, a, 0] },
+  tube([0, 0, 0, len * 0.4, 0.06, 0.02, len, 0.02, 0.04], 0.014, { mat: "bone", sides: 5 }))
+model("bones", { scale: 1.3 },
+  pelvis(-0.04, 0.0, 0.26, 20), bone3(-0.36, 0.12, 0.0, 0.2), bone3(0.08, -0.14, 0.4, 0.06), bone3(0.14, 0.18, 0.36, 0.28),
+  rib(-0.3, -0.14, 30, 0.26), rib(-0.2, -0.22, 10, 0.24))
+// bones with a skull (2264, 2266, 2268): a skull beside a lump of pelvis and
+// a couple of long bones
+model("bones_skull",
+  skull3(-0.2, 0, 0.06, 0.3, 40, 35, 61), pelvis(0.16, -0.04, 0.3, -15),
+  bone3(-0.42, -0.06, -0.2, -0.2), bone3(0.06, 0.2, 0.38, 0.18), vertebra(0.36, 0.0, -0.18, 0.07, 20))
+// bone fence (2766): three bones stuck upright in a row, the third a long
+// curved rib
+model("bone_fence", { scale: 1.25 },
+  [-0.12, 0.0].map((x, i) => tf({ pos: [x, 0, 0], rot: [0, 0, i ? 6 : -4] },
+    cyl(0.022, 0.14 + i * 0.04, { mat: "bone", sides: 6 }), [-1, 1].map((k) => sphere(0.03, { mat: "bone", detail: 1, pos: [k * 0.02, 0.15 + i * 0.04, 0] })))),
+  tube([0.12, 0, 0, 0.14, 0.18, 0, 0.12, 0.34, 0, 0.06, 0.44, 0], 0.016, { mat: "boneD", sides: 5 }))
+// a skeleton lying on its back, head towards -x, limbs splayed: skull,
+// spine, four pairs of ribs arching up, pelvis, two-part arms and legs
+function skeleton(seed) {
+  const limb = (x0, z0, x1, z1, x2, z2) => [bone3(x0, z0, x1, z1, 0.02, 0.018), bone3(x1, z1, x2, z2, 0.02, 0.016)]
+  return [
+    skull3(-0.52, 0, 0.02, 0.32, 30, 55, seed),
+    Array.from({ length: 6 }, (_, i) => vertebra(-0.32 + i * 0.065, 0.02, 0, 0.05)),
+    [0, 1, 2, 3].map((i) => [-1, 1].map((k) => tf({ pos: [-0.3 + i * 0.07, 0.02, 0], rot: [0, 0, 0] },
+      tube([0, 0, 0, 0, 0.07, k * 0.07, 0, 0.04, k * 0.13], 0.012, { mat: "bone", sides: 4 })))),
+    pelvis(0.06, 0, 0.2, 90),
+    limb(-0.3, 0.06, -0.12, 0.3, 0.1, 0.36), limb(-0.3, -0.06, -0.06, -0.26, 0.12, -0.4),
+    limb(0.1, 0.06, 0.3, 0.2, 0.52, 0.18), limb(0.1, -0.06, 0.32, -0.12, 0.48, -0.32),
+  ]
+}
+// skeleton (2244, 2247)
+model("skeleton", skeleton(71))
+// skeleton with a stake (2245): a pointed wooden stake driven through its
+// chest, standing up
+model("skeleton_stake", skeleton(81),
+  tf({ pos: [-0.22, 0, 0], rot: [0, 0, 8] }, cyl(0.035, 0.38, { mat: "stake", sides: 6 }), cone(0.035, 0.08, { mat: "stake", sides: 6, pos: [0, 0.38, 0] })))
+for (const n of ["skulls", "skull_pile", "skulls_dirt", "skull_hand", "bones", "bones_skull", "bone_fence", "skeleton", "skeleton_stake"]) looms(n)
+
+// blood: flat splashes a hair above the floor (y = 0 is its top). A blob: a
+// wobbly round outline, the dark edge under a brighter wet middle
+const blobPts = (r, seed, n = 12) => Array.from({ length: n }, (_, i) => {
+  const a = (i / n) * Math.PI * 2, rr = r * (0.75 + rnd(i, 311, seed) * 0.4)
+  return [Math.cos(a) * rr * 1.2, Math.sin(a) * rr]
+}).flat()
+const blob = (x, z, r, seed, mat = "blood", y = 0.004) => tf({ pos: [x, y, z], rot: [-90, rnd(0, 312, seed) * 360, 0] }, extrude(blobPts(r, seed), 0.004, { mat }))
+// blood pool (2447): a wide dark stain, a wet red middle and bright spots
+model("blood_pool", { pivot: "origin", scale: 1.4 },
+  blob(0, 0, 0.26, 401, "bloodD"), blob(0.02, 0.02, 0.15, 402, "blood", 0.007), blob(-0.04, 0.0, 0.08, 403, "bloodL", 0.01),
+  [[0.24, -0.16, 0.04], [-0.26, 0.14, 0.035], [0.2, 0.2, 0.03], [-0.18, -0.2, 0.03]].map(([x, z, r], i) => blob(x, z, r, 410 + i, i % 2 ? "bloodL" : "blood")))
+// blood drops (1655): a scatter of dark drops
+model("blood_drops", { pivot: "origin", scale: 1.6 },
+  [[0, 0, 0.06], [0.14, 0.05, 0.04], [-0.12, 0.08, 0.035], [0.06, -0.12, 0.03], [-0.16, -0.08, 0.025], [0.2, -0.06, 0.02], [-0.02, 0.16, 0.02]].map(([x, z, r], i) => blob(x, z, r, 420 + i, i % 3 ? "bloodD" : "blood")))
+// blood splatter (2446): a dark splash thrown out in long streaks
+model("blood_splat", { pivot: "origin", scale: 1.5 },
+  blob(0, 0, 0.12, 431, "bloodD"), blob(0.02, 0, 0.06, 432, "blood", 0.007),
+  Array.from({ length: 9 }, (_, i) => tf({ pos: [0, 0.004, 0], rot: [0, i * 40 + rnd(i, 313, 433) * 20, 0] },
+    tf({ rot: [-90, 0, 0] }, extrude([0.06, -0.03, 0.3 + rnd(i, 314, 433) * 0.16, 0, 0.06, 0.03], 0.004, { mat: i % 3 ? "bloodD" : "blood" })))),
+  [[0.36, 0.1, 0.025], [-0.3, 0.26, 0.02], [0.1, -0.38, 0.02], [-0.36, -0.2, 0.015]].map(([x, z, r], i) => blob(x, z, r, 440 + i, "bloodD")))
+for (const n of ["blood_pool", "blood_drops", "blood_splat"]) looms(n)

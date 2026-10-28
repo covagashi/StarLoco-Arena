@@ -59,6 +59,16 @@
    "amapolas rojas",
    "blancas",
    "naranjas"
+  ],
+  "bone": [
+   "hueso marfil",
+   "hueso gris",
+   "hueso amarillento"
+  ],
+  "blood": [
+   "sangre roja",
+   "icor negro",
+   "limo verde"
   ]
  },
  "shared": [],
@@ -294,6 +304,121 @@
     522
    ],
    "looms": "poppy"
+  },
+  {
+   "name": "skulls",
+   "label": "Calaveras",
+   "kind": "deco",
+   "gfx": [
+    1451,
+    2457
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "skull_pile",
+   "label": "Montón de calaveras",
+   "kind": "deco",
+   "gfx": [
+    1476,
+    1484
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "skulls_dirt",
+   "label": "Calaveras en la tierra",
+   "kind": "deco",
+   "gfx": [
+    1458,
+    1664
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "skull_hand",
+   "label": "Calavera y una mano",
+   "kind": "deco",
+   "gfx": [
+    1571
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "bones",
+   "label": "Huesos sueltos",
+   "kind": "deco",
+   "gfx": [
+    2265,
+    2267
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "bones_skull",
+   "label": "Huesos con calavera",
+   "kind": "deco",
+   "gfx": [
+    2264,
+    2266,
+    2268
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "bone_fence",
+   "label": "Tres huesos como una valla",
+   "kind": "deco",
+   "gfx": [
+    2766
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "skeleton",
+   "label": "Esqueleto",
+   "kind": "deco",
+   "gfx": [
+    2244,
+    2247
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "skeleton_stake",
+   "label": "Esqueleto con una estaca",
+   "kind": "deco",
+   "gfx": [
+    2245
+   ],
+   "looms": "bone"
+  },
+  {
+   "name": "blood_pool",
+   "label": "Charco de sangre",
+   "kind": "flat",
+   "gfx": [
+    2447
+   ],
+   "looms": "blood"
+  },
+  {
+   "name": "blood_drops",
+   "label": "Gotas de sangre",
+   "kind": "flat",
+   "gfx": [
+    1655
+   ],
+   "looms": "blood"
+  },
+  {
+   "name": "blood_splat",
+   "label": "Salpicadura de sangre",
+   "kind": "flat",
+   "gfx": [
+    2446
+   ],
+   "looms": "blood"
   }
  ]
 }

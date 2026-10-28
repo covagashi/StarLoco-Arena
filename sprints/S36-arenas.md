@@ -838,6 +838,27 @@ cada vez, empezando por la más usada.
     estrechas; las amapolas grandes y apiñadas en el centro; la mata del
     522 con pocas hojas.
   - Hojas: `arena7-plantas-1.png`, `-2.png`.
+  - Dueño (2026-10-28): "ok".
+- Huesos y sangre, 2026-10-28. Con la libertad del dueño para agrupar,
+  los 19 dibujos retail quedan en 12 modelos:
+  - calaveras sueltas (1451, 2457); montón de calaveras (1476, 1484);
+    calaveras en la tierra (1458, 1664); calavera y una mano que sale del
+    suelo (1571); huesos sueltos (2265, 2267); huesos con calavera (2264,
+    2266, 2268); tres huesos de pie como una valla (2766); esqueleto
+    tumbado (2244, 2247); esqueleto atravesado por una estaca (2245);
+  - charco de sangre (2447), gotas (1655) y salpicadura (2446), tipo
+    `flat`.
+  - Partes comunes: la calavera (cráneo, cuencas, nariz, dientes y
+    mandíbula, mirando a la cámara y algo hacia arriba), el hueso largo con
+    sus nudillos, la vértebra, la pelvis y los terrones de tierra. La
+    sangre son manchas de borde irregular, con el centro húmedo más
+    claro.
+  - Looms: hueso marfil (el retail), gris, amarillento; sangre roja (el
+    retail), icor negro, limo verde.
+  - Primeras versiones: las calaveras mirando a los lados o al cielo
+    (solo se veía la nuca), demasiado blancas y pequeñas; la sangre
+    pequeña y demasiado roja.
+  - Hojas: `arena7-huesos-sangre-1.png` … `-6.png`.
 
 ## Fases
 
