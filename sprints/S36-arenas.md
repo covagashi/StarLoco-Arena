@@ -784,6 +784,38 @@ cada vez, empezando por la más usada.
   - Primeras versiones: copos la mitad de grandes que en el retail,
     amontonados en grupos y demasiado claros.
   - Hoja: `arena7-hojas-polvo.png`.
+  - Dueño (2026-10-28): "ok".
+- Lápidas y cruces (2492, 2495, 2496, 2494, 1423, 1426, 1416, 1503, 1464,
+  2500, 247, 1419, 2493), 2026-10-28.
+  - Cada una es un modelo propio, pero hecho con unas pocas partes comunes:
+    - un marco en arco (o cuadrado de esquinas redondas) alrededor de un
+      panel hundido;
+    - una calavera en relieve (cráneo, mandíbula, cuencas y nariz);
+    - matas de hierba al pie y bases escalonadas.
+    Todas miran a +z (la cara que el retail dibuja a la izquierda).
+  - Lápida en arco con calavera (2492). Cruz gótica de hierro, algo doblada
+    (2495), de barras de cuentas con tres bolas en cada brazo. Cruz alta de
+    piedra (2496). Cruz de Santiago (2494), con lóbulos redondos en los
+    brazos, ladeada. Lápida con tres tablas en el marco (1423). Lápida alta
+    en arco con panel rojizo, musgo en la clave y una tablilla de piedra al
+    pie (1426). Lápida con una figura en relieve (1416). Nicho con una vela
+    encendida sobre dos escalones (1503; la llama brilla). Cruz de rueda
+    con calavera y una tablilla de madera colgada (1464). Lápida de madera
+    teñida de oliva con calavera y hueso (2500). Bloque grueso con un
+    sombrero de piedra y una cruz de anillos de hierro detrás (247). Lápida
+    con cuernos, ceja y ojos tallados, con una losa delante (1419). Lápida
+    enterrada, de la que solo asoma el casquete (2493).
+  - Piedra de la arena 6 (crema, con musgo, y un rojizo para los paneles) y
+    su madera. Looms: arenisca crema, granito gris, arenisca roja; el hierro
+    y la madera, sus propios looms.
+  - Primeras versiones: la lápida del 2492 estrecha y con la calavera
+    pequeña; la cruz de hierro fina y lisa; la de Santiago fina; las tablas
+    del 1423 ocultas tras el panel; la figura del 1416 sin relieve; el nicho
+    del 1503 pequeño y negro; la cabeza de la cruz del 1464 pequeña; la
+    lápida de madera fina; el sombrero del 247 plano; la lápida enterrada
+    entera (kiln pone la base de cada modelo en y = 0, así que no se
+    hundía) y con un montón de tierra que parecía un tronco.
+  - Hojas: `arena7-lapidas-1.png` … `-7.png`.
 
 ## Fases
 

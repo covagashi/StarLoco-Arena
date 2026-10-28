@@ -34,6 +34,21 @@
    "gris pardo",
    "gris ceniza",
    "pardo óxido"
+  ],
+  "tomb": [
+   "arenisca crema",
+   "granito gris",
+   "arenisca roja"
+  ],
+  "board": [
+   "pino miel",
+   "gris envejecida",
+   "nogal oscuro"
+  ],
+  "boardOlive": [
+   "madera teñida de oliva",
+   "gris envejecida verdosa",
+   "nogal oscuro"
   ]
  },
  "shared": [],
@@ -111,6 +126,136 @@
    ],
    "looms": "flake",
    "note": "flat flakes on the floor"
+  },
+  {
+   "name": "headstone_skull",
+   "label": "Lápida en arco con calavera",
+   "kind": "deco",
+   "gfx": [
+    2492
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "iron_cross",
+   "label": "Cruz gótica de hierro (doblada)",
+   "kind": "deco",
+   "gfx": [
+    2495
+   ],
+   "looms": "iron",
+   "note": "faces +z"
+  },
+  {
+   "name": "stone_cross",
+   "label": "Cruz de piedra",
+   "kind": "deco",
+   "gfx": [
+    2496
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "cross_santiago",
+   "label": "Cruz de Santiago de piedra",
+   "kind": "deco",
+   "gfx": [
+    2494
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "headstone_boards",
+   "label": "Lápida con tablas",
+   "kind": "deco",
+   "gfx": [
+    1423
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "headstone_tall",
+   "label": "Lápida alta en arco",
+   "kind": "deco",
+   "gfx": [
+    1426
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "headstone_figure",
+   "label": "Lápida con figura",
+   "kind": "deco",
+   "gfx": [
+    1416
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "candle_shrine",
+   "label": "Lápida con vela",
+   "kind": "deco",
+   "gfx": [
+    1503
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "cross_skull",
+   "label": "Cruz con calavera y tablilla",
+   "kind": "deco",
+   "gfx": [
+    1464
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "headstone_wood",
+   "label": "Lápida de madera",
+   "kind": "deco",
+   "gfx": [
+    2500
+   ],
+   "looms": "boardOlive",
+   "note": "faces +z"
+  },
+  {
+   "name": "tomb_iron_cross",
+   "label": "Lápida gruesa con cruz de hierro",
+   "kind": "deco",
+   "gfx": [
+    247
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "headstone_horns",
+   "label": "Lápida con cuernos",
+   "kind": "deco",
+   "gfx": [
+    1419
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
+  },
+  {
+   "name": "headstone_sunk",
+   "label": "Lápida enterrada",
+   "kind": "deco",
+   "gfx": [
+    2493
+   ],
+   "looms": "tomb",
+   "note": "faces +z"
   }
  ]
 }

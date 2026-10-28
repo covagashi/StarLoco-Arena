@@ -15,6 +15,14 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["plaster" + s, { tex: "../arena5/out/plaster" + s, uv: 0.7, rough: 0.9, color: "#c8c4ae" }],
   ["plasterSide" + s, { tex: "../arena5/out/plaster" + s, uv: 0.7, rough: 0.92, color: "#aea486" }],
   ["plasterFoot" + s, { tex: "../arena5/out/plaster" + s, uv: 1.6, rough: 0.95, color: "#8a8a72" }],
+  // tombstones: the arena 6 mossy stone; the recessed panels a red-brown
+  // stone; planks in the arena 6 board wood (upright grain: boardV), the
+  // wooden headstone (2500) stained olive
+  ["stoneMoss" + s, { tex: "../arena6/out/stoneMoss" + s, uv: 0.9, rough: 0.9 }],
+  ["panel" + s, { tex: "../arena6/out/stone" + s, uv: 0.9, rough: 0.85, color: "#c49c86" }],
+  ["board" + s, { tex: "../arena6/out/board" + s, uv: 0.8, rough: 0.8 }],
+  ["boardV" + s, { tex: "../arena6/out/boardV" + s, uv: 0.8, rough: 0.8 }],
+  ["boardOlive" + s, { tex: "../arena6/out/boardV" + s, uv: 0.8, rough: 0.8, color: "#c8d094" }],
   // the earth slabs (kit.tx.js): every other plate a shade darker, the lip
   // and the hanging clods darker still
   ["dirt" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.9 }],
@@ -28,10 +36,20 @@ const PAL = {
   // grey dead leaves and dust flakes on the floor: grey-brown (retail), ash
   // grey, rusty brown
   flake: ["#5e544e", "#7a7874", "#7a5238"], flakeD: ["#3e3632", "#55534f", "#55361f"], flakeL: ["#6e645c", "#8c8a86", "#8a6042"],
+  // bone (the skull reliefs; later the bones): ivory, grey-white, yellowed
+  bone: ["#e6dcc0", "#d8d8d2", "#e4cf98"], boneD: ["#a89c80", "#9a9a94", "#a89060"],
+  // eye sockets, carved lines, the dark of a niche
+  hole: ["#2e2a24", "#2a2a2c", "#2e221c"],
+  // grass tufts at the foot of the stones
+  bladeD: ["#5a7414", "#2e5a1e", "#6a6418"], blade: ["#94b024", "#4e8a2c", "#a29a2a"], bladeL: ["#c4d83c", "#7ab446", "#ccc04a"],
+  // the candle in the niche (1503): wax, and its flame (glows)
+  wax: ["#f0e2a0", "#ecebe2", "#e8c88a"],
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneShade", "flagCrack", "plaster", "plasterSide", "plasterFoot", "dirt", "dirtShade", "dirtD", ...Object.keys(PAL)]
+// the candle flame glows the same in every loom
+pal({ flame: { color: "#ffd24a", emit: "#ffb830", glow: 4 } })
+const SKINNED = ["stone", "stoneShade", "flagCrack", "plaster", "plasterSide", "plasterFoot", "stoneMoss", "panel", "board", "boardV", "boardOlive", "dirt", "dirtShade", "dirtD", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -186,3 +204,167 @@ const flakes = (n, w, d, r0, r1, seed) => {
 model("dead_leaves", { pivot: "origin" }, flakes(12, 0.78, 0.6, 0.06, 0.11, 181))
 model("dead_leaves_few", { pivot: "origin" }, flakes(5, 0.48, 0.36, 0.055, 0.12, 191))
 for (const n of ["dead_leaves", "dead_leaves_few"]) looms(n)
+
+// --- tombstones and crosses (2492, 2495, 2496, 2494, 1423, 1426, 1416, 1503,
+// 1464, 2500, 247, 1419, 2493) -----------------------------------------------
+// each one its own, built from a few shared parts. They face +z (the face the
+// retail draws on the left) and stand at the cell centre unless noted.
+// an arch outline (XY), w wide, h tall to the crown, sitting on y = 0
+const archPts = (w, h, seg = 8) => {
+  const r = w / 2, pts = [r, 0, r, h - r]
+  for (let i = 1; i < seg; i++) { const a = (i / seg) * Math.PI; pts.push(Math.cos(a) * r, h - r + Math.sin(a) * r) }
+  pts.push(-r, h - r, -r, 0)
+  return pts
+}
+// an arched frame (a ∩ band, b wide) round a recessed panel: the band is d
+// deep, the panel sits `sink` behind its face. top: "arch" or a rounded square
+function framed(w, h, b, d, { mat = "stone", panel = "panel", sink = 0.04, square = 0, seed = 1 } = {}) {
+  const outer = square ? rrect(w, h, square).map((v, i) => (i % 2 ? v + h / 2 : v)) : archPts(w, h)
+  const inner = square ? rrect(w - 2 * b, h - b, square * 0.6).map((v, i) => (i % 2 ? v + (h - b) / 2 : v)) : archPts(w - 2 * b, h - b)
+  // the band: the outer outline down one side, the inner one back up
+  const band = square
+    ? [...archBand(w, h, b, square)]
+    : [...outer, ...inner.reduceRight((o, _, k) => (k % 2 ? o : o.concat(inner[k], inner[k + 1])), [])]
+  return [
+    extrude(band, d, { mat, jitter: 0.006, seed }),
+    extrude(inner, d - 2 * sink, { mat: panel, pos: [0, 0, -sink], jitter: 0.004, seed: seed + 1 }),
+  ]
+}
+// the ∩ band of a square-topped frame with rounded corners r
+function archBand(w, h, b, r) {
+  const W = w / 2, I = W - b, out = [W, 0, W, h - r]
+  for (let i = 1; i < 4; i++) { const a = (i / 4) * Math.PI / 2; out.push(W - r + Math.cos(a) * r, h - r + Math.sin(a) * r) }
+  out.push(-W + r, h)
+  for (let i = 1; i < 4; i++) { const a = Math.PI / 2 + (i / 4) * Math.PI / 2; out.push(-W + r + Math.cos(a) * r, h - r + Math.sin(a) * r) }
+  out.push(-W, 0, -I, 0, -I, h - b - r * 0.6, -I + r * 0.6, h - b, I - r * 0.6, h - b, I, h - b - r * 0.6, I, 0)
+  return out
+}
+// a skull in relief on a +z face at (x, y, z), s across: cranium, jaw, two
+// dark sockets and a nose
+const skull = (x, y, z, s, mat = "stoneShade") => tf({ pos: [x, y, z] },
+  sphere(s * 0.5, { mat, detail: 1, scale: [1, 0.95, 0.35] }),
+  box(s * 0.56, s * 0.3, s * 0.16, { mat, pos: [0, -s * 0.55, 0] }),
+  [-1, 1].map((k) => sphere(s * 0.15, { mat: "hole", detail: 1, pos: [k * s * 0.2, -s * 0.06, s * 0.16], scale: [1, 1, 0.4] })),
+  cone(s * 0.07, s * 0.12, { mat: "hole", sides: 3, pos: [0, -s * 0.3, s * 0.16], rot: [0, 0, 180] }))
+// a tuft of grass blades at (x, z)
+const tuft = (x, z, n, h, seed) => Array.from({ length: n }, (_, i) =>
+  tf({ pos: [x, 0, z], rot: [0, (i * 137.5 + seed * 40) % 360, 0] },
+    cone(0.025, h * (0.7 + rnd(i, 201, seed) * 0.5), { mat: i % 3 ? "blade" : "bladeL", sides: 3, rot: [18 + rnd(i, 202, seed) * 25, 0, 0], scale: [1, 1, 0.4] })))
+// a stepped base: (w, d) per step from the ground up, h each
+const steps = (sizes, h, mat = "stone") => sizes.map(([w, d], i) =>
+  box(w, h, d, { mat: i % 2 ? "stoneShade" : mat, pos: [0, i * h, 0], jitter: 0.005, seed: 211 + i }))
+
+// arched headstone with a skull (2492): a thick sandstone arch, the skull
+// carved on its sunk panel, grass at the corners
+model("headstone_skull",
+  framed(0.72, 0.78, 0.12, 0.26, { panel: "stoneShade", sink: 0.05, seed: 221 }),
+  skull(0, 0.4, 0.04, 0.32),
+  box(0.76, 0.07, 0.29, { mat: "stoneMoss", jitter: 0.004 }),
+  tuft(-0.3, 0.12, 5, 0.14, 1), tuft(0.31, 0.1, 4, 0.12, 2))
+// gothic iron cross (2495), a little bent: bars of wrought beads, each arm
+// ending in three knobs, the whole leaning over
+const trefoil = (x, y, a) => tf({ pos: [x, y, 0], rot: [0, 0, a] },
+  sphere(0.045, { mat: "ironD", detail: 1, pos: [0, 0.04, 0] }), sphere(0.038, { mat: "ironD", detail: 1, pos: [-0.04, 0, 0] }), sphere(0.038, { mat: "ironD", detail: 1, pos: [0.04, 0, 0] }))
+// a bar of wrought iron beads from (x0, y0) to (x1, y1)
+const beads = (x0, y0, x1, y1, n) => Array.from({ length: n }, (_, i) => {
+  const t = (i + 0.5) / n
+  return sphere(0.034, { mat: i % 2 ? "ironD" : "iron", detail: 1, pos: [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 0], scale: [1, 1.2, 1] })
+})
+model("iron_cross", tf({ rot: [-6, 0, 22] },
+  box(0.045, 0.6, 0.045, { mat: "ironD" }), beads(0, 0.04, 0, 0.6, 9), trefoil(0, 0.63, 0),
+  tf({ pos: [0, 0.4, 0], rot: [0, 0, 6] }, box(0.38, 0.045, 0.045, { mat: "ironD" }), beads(-0.19, 0, 0.19, 0, 6), trefoil(0.21, 0, -90), trefoil(-0.21, 0, 90)),
+  cone(0.06, 0.06, { mat: "ironD", sides: 4 })))
+// tall stone cross (2496): a plain square shaft and arms, moss at its foot
+model("stone_cross",
+  box(0.11, 1.25, 0.1, { mat: "stone", jitter: 0.006 }),
+  box(0.48, 0.11, 0.1, { mat: "stone", pos: [0.02, 0.86, 0], jitter: 0.006 }),
+  box(0.14, 0.08, 0.13, { mat: "stoneMoss", jitter: 0.006 }))
+// cross of Santiago (2494): small stone cross, arms ending in round lobes,
+// the foot a long blade, leaning
+const lobe = (x, y) => cyl(0.09, 0.11, { mat: "stone", sides: 8, rot: [90, 0, 0], pos: [x, y, -0.055] })
+model("cross_santiago", tf({ rot: [-8, 0, -14] },
+  box(0.11, 0.62, 0.11, { mat: "stone", jitter: 0.005 }),
+  box(0.36, 0.11, 0.11, { mat: "stone", pos: [0, 0.4, 0], jitter: 0.005 }),
+  lobe(0.19, 0.455), lobe(-0.19, 0.455), lobe(0, 0.66),
+  box(0.1, 0.05, 0.1, { mat: "stoneMoss" })))
+// headstone with boards (1423): a rough frame, square-topped, round
+// three boards set in it
+model("headstone_boards",
+  framed(0.62, 0.86, 0.13, 0.26, { square: 0.14, panel: "panel", sink: 0.05, seed: 231 }),
+  [0.08, 0.3, 0.52].map((y, i) => box(0.42, 0.17, 0.04, { mat: "board", pos: [0, y, 0.05], rot: [0, 0, [2, -3, 1][i]], jitter: 0.004 })))
+// tall arched headstone (1426): a heavy arch round a cracked red-brown
+// panel, moss on its crown, a little stone tablet leaning at its foot
+model("headstone_tall",
+  framed(0.72, 1.24, 0.14, 0.3, { panel: "panel", sink: 0.06, seed: 241 }),
+  tf({ pos: [0, 1.16, 0] }, box(0.36, 0.06, 0.26, { mat: "stoneMoss", jitter: 0.008 })),
+  tf({ pos: [0, 0, 0.3], rot: [-62, 0, 0] }, box(0.34, 0.2, 0.03, { mat: "stoneShade", jitter: 0.004 })))
+// headstone with a figure (1416): an upright slab, a praying figure carved
+// on it (head, shoulders, robe), grass at its foot
+model("headstone_figure",
+  box(0.5, 0.82, 0.18, { mat: "stone", jitter: 0.008, seed: 251 }),
+  tf({ pos: [0, 0, 0.09] },
+    sphere(0.1, { mat: "plaster", detail: 1, pos: [0, 0.6, 0], scale: [1, 1.15, 0.6] }),
+    cone(0.18, 0.4, { mat: "plaster", sides: 6, pos: [0, 0.14, 0], scale: [1, 1, 0.4] }),
+    box(0.24, 0.06, 0.06, { mat: "plaster", pos: [0, 0.36, 0.03], rot: [0, 0, 8] })),
+  tuft(-0.24, 0.1, 5, 0.13, 3), tuft(0.25, 0.12, 5, 0.15, 4))
+// candle shrine (1503): a mossy niche on two steps, a lit candle inside
+// standing out against its pale back
+model("candle_shrine",
+  steps([[0.7, 0.62], [0.58, 0.5]], 0.09),
+  tf({ pos: [0, 0.18, 0] },
+    framed(0.5, 0.62, 0.07, 0.4, { mat: "stoneMoss", panel: "stoneShade", sink: 0.14, square: 0.08, seed: 261 }),
+    box(0.56, 0.07, 0.44, { mat: "stone", pos: [0, 0.6, 0], jitter: 0.006 }),
+    tf({ pos: [0, 0, 0.06] }, cyl(0.055, 0.15, { mat: "wax", sides: 8 }), cone(0.045, 0.12, { mat: "flame", sides: 6, pos: [0, 0.16, 0] }))))
+// cross with a skull (1464): a wheel cross on a shaft over two steps, the
+// skull carved on the wheel, a wooden RIP board hanging askew on the shaft
+model("cross_skull",
+  steps([[0.46, 0.4], [0.34, 0.3]], 0.09),
+  box(0.16, 0.86, 0.13, { mat: "stone", pos: [0, 0.18, 0], jitter: 0.006 }),
+  tf({ pos: [0, 1.0, 0], scale: 1.35 },
+    cyl(0.2, 0.14, { mat: "stone", sides: 12, rot: [90, 0, 0], pos: [0, 0, -0.07] }),
+    box(0.62, 0.16, 0.13, { mat: "stone", pos: [0, -0.08, 0], jitter: 0.006 }),
+    box(0.16, 0.32, 0.13, { mat: "stone", pos: [0, 0, 0], jitter: 0.006 }),
+    skull(0, 0.02, 0.08, 0.22)),
+  tf({ pos: [0, 0.5, 0.1], rot: [0, 0, 28] }, box(0.46, 0.17, 0.04, { mat: "board", jitter: 0.004 })))
+// wooden headstone (2500): two thick olive-stained upright planks with
+// rounded tops, a skull and a bone nailed on, grass all round
+model("headstone_wood",
+  [[-0.16, 0.86], [0.16, 0.8]].map(([x, h], i) => extrude(archPts(0.32, h, 4), 0.13, { mat: "boardOlive", pos: [x, 0, 0], rot: [0, 0, i ? -2 : 2], jitter: 0.005, seed: 271 + i })),
+  skull(0, 0.5, 0.1, 0.26, "bone"),
+  tf({ pos: [0, 0.4, 0.1], rot: [0, 0, -8] }, cyl(0.03, 0.62, { mat: "bone", sides: 6, rot: [0, 0, 90], pos: [0.31, 0, 0] }),
+    [-1, 1].map((k) => sphere(0.045, { mat: "bone", detail: 1, pos: [k * 0.31, 0, 0] }))),
+  tuft(-0.24, 0.12, 6, 0.2, 5), tuft(0.2, 0.15, 6, 0.24, 6), tuft(0.0, 0.2, 5, 0.16, 7), tuft(-0.3, -0.1, 4, 0.18, 8))
+// thick tomb with an iron cross (247): a stone block under a heavy rounded
+// cap that overhangs it, a wrought-iron cross of rings standing behind
+const ring = (x, y, r) => torus(r, 0.012, { mat: "iron", pos: [x, y, 0], rot: [90, 0, 0] })
+model("tomb_iron_cross",
+  box(0.6, 0.5, 0.56, { mat: "stone", jitter: 0.008, seed: 281 }),
+  [-0.15, 0.15].map((x) => box(0.05, 0.34, 0.02, { mat: "hole", pos: [x, 0.06, 0.28] })),
+  tf({ pos: [0, 0.46, 0] }, prismUp(rrect(0.88, 0.82, 0.22), 0.16, 0, "stoneShade", 0.012), prismUp(rrect(0.8, 0.74, 0.24), 0.08, 0.15, "stoneShade", 0.01),
+    prismUp(rrect(0.62, 0.56, 0.22), 0.04, 0.22, "stoneShade", 0.008)),
+  tf({ pos: [-0.12, 0.7, -0.26] },
+    box(0.035, 1.0, 0.035, { mat: "ironD" }),
+    ring(0, 0.66, 0.1), ring(-0.2, 0.52, 0.1), ring(0.2, 0.52, 0.1), ring(0, 0.52, 0.07), ring(0, 0.94, 0.09)))
+// headstone with horns (1419): a low slab lying in front, the stone behind
+// it crowned with two horns, a brow and two eyes carved on its face
+model("headstone_horns",
+  box(0.7, 0.12, 0.42, { mat: "stoneShade", pos: [0, 0, 0.1], jitter: 0.008 }),
+  tf({ pos: [0, 0, -0.14] },
+    box(0.56, 0.52, 0.2, { mat: "stone", jitter: 0.01, seed: 291 }),
+    [-1, 1].map((k) => cone(0.07, 0.26, { mat: "stone", sides: 5, pos: [k * 0.2, 0.5, 0], rot: [0, 0, -k * 10] })),
+    box(0.4, 0.035, 0.02, { mat: "hole", pos: [0, 0.38, 0.1] }),
+    [-1, 1].map((k) => sphere(0.025, { mat: "hole", detail: 1, pos: [k * 0.11, 0.3, 0.1], scale: [1, 1, 0.4] }))))
+// sunken headstone (2493): only the top of a rounded stone shows, the rest
+// in the ground: a dome cut off at the ground line, tipped back, mossy, a
+// tuft at its side
+const domePts = (r, c, seg = 10) => {
+  // the arc of a circle of radius r centred c below the ground line, above it
+  const a0 = Math.asin(c / r), pts = []
+  for (let i = 0; i <= seg; i++) { const a = a0 + (i / seg) * (Math.PI - 2 * a0); pts.push(Math.cos(a) * r, Math.sin(a) * r - c) }
+  return pts
+}
+model("headstone_sunk",
+  tf({ rot: [-28, 0, 8] }, extrude(domePts(0.32, 0.06), 0.18, { mat: "stoneMoss", jitter: 0.006, seed: 301 })),
+  tuft(-0.28, 0.05, 4, 0.18, 9))
+for (const n of ["headstone_skull", "iron_cross", "stone_cross", "cross_santiago", "headstone_boards", "headstone_tall", "headstone_figure",
+  "candle_shrine", "cross_skull", "headstone_wood", "tomb_iron_cross", "headstone_horns", "headstone_sunk"]) looms(n)
