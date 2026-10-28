@@ -12,7 +12,12 @@
 - La 1.0 lleva **12 arenas**, de la 1 a la 12 (mundos 5, 10, 12, 15, 21,
   36, 38, 39, 40, 41, 42 y 44). Todas tienen ya los nombres del dueño.
 - Las otras **35** (de la 13 a la 47, mundos 45…110) no se modelan ahora.
-  Se guardan para inventariarlas más adelante.
+  Cada una se guarda montada (el mapa entero) y desgranada (sus piezas
+  sueltas y dónde va cada una). Se irán añadiendo al juego más adelante,
+  por ejemplo en eventos o temporadas, una a una, con su inventario, sus
+  assets y su `layout`.
+- Hoy montar un mapa necesita lo que se sacó del cliente antiguo. Después
+  de S42, el archivo basta.
 - La arena 13 (mundo 45, playa) ya tiene hojas y mis suposiciones, pero no
   los nombres del dueño. Se archiva tal cual.
 
@@ -50,9 +55,10 @@ archivo-arenas/
     gfx_rules.json     drop, vfx, replace…
     catalog.json       familias del catálogo
     kits.json          qué gfx cubre ya cada kit nuestro (de los kit.json)
-  gfx/<gfx>.png        cada sprite retail que sale en alguna arena
   arena-NN/
-    mapa.json          los sprites del mapa: gfx, posición, tamaño, tinte, celda
+    mapa.png           el mapa montado entero, como se ve en el juego
+    piezas/<gfx>.png   el mapa desgranado: cada pieza suelta, una vez
+    mapa.json          dónde va cada pieza: gfx, posición, tamaño, tinte, celda
     forma.json         casillas, altura, suelo o bloqueo, salidas por equipo,
                        pedestales de coach y casillas especiales
     hojas/             las páginas ya generadas (mapa-arenaNN-*.png)
