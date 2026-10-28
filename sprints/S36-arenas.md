@@ -555,7 +555,7 @@ cada vez, empezando por la más usada.
   - Primeras versiones: las grietas salían como rayitas cortas y luego
     como manchas gruesas; la losa demasiado clara y amarilla, plana, con
     un escalón duro en el borde, y fina.
-  - Hojas: `arena6-losas-1.png` y `arena6-losas-musgo-montados.png` (la
+  - Hojas: `arena6-losas.png` y `arena6-losas-musgo-montados.png` (la
     fila de losas bajo el muro, el pilar y el montón, musgo en los
     adoquines y la hierba; el montaje es de prueba).
 
