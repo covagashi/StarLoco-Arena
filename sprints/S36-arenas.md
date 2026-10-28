@@ -334,6 +334,27 @@ cada vez, empezando por la más usada.
     tapando la flor, y las florecitas planas y pequeñas.
   - Hojas: `arena5-flores-1.png`, `-2.png` y `arena5-flores-montadas.png`
     (sobre hierba junto al árbol joven; el montaje es de prueba).
+- Arbotante (225) y buhardilla (226, 227), 2026-10-28.
+  - Corrección de un nombre mío: la 226 y la 227 no son la entrada de una
+    cripta. En el mapa están encima del tejado: son una buhardilla, una
+    ventana de piedra con barrotes, y la 227 es la 226 reflejada. Queda en
+    `names.json` como suposición, para que el dueño la confirme.
+  - Arbotante: una banda curva de piedra, de sección cuadrada, que sube
+    desde el suelo y se inclina hacia la pared que apuntala (−x), con unos
+    cascotes y hierba al pie. Unos 2,3 m, como el retail junto a la pared
+    alta.
+  - Buhardilla: va sobre el tejado (`on: roof`, y = 0 es la tabla del
+    tejado). Dos postes algo inclinados hacia dentro, un dintel grueso,
+    ventana oscura con una cruz de barrotes, y una mejilla de piedra que
+    baja hasta las tejas.
+  - El mismo revoque que la casa. Los nombres de looms se separan: el
+    revoque solo (`plaster`) y con hiedra (`plaster_ivy`, los muretes que
+    la llevan).
+  - Primeras versiones: el arbotante fino como una vara; la buhardilla
+    parecía una casita con tejado a dos aguas.
+  - Hojas: `arena5-arbotante-buhardilla.png` y
+    `arena5-arbotante-buhardilla-montados.png` (contra la pared de la casa;
+    el montaje es de prueba).
 
 ## Fases
 

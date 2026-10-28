@@ -21,9 +21,9 @@
 			"arcilla roja"
 		],
 		"plaster": [
-			"revoque crema, hiedra naranja",
-			"blanco grisáceo, hiedra roja",
-			"ocre, hiedra verde"
+			"revoque crema",
+			"blanco grisáceo",
+			"ocre"
 		],
 		"roof": [
 			"teja verde",
@@ -64,6 +64,11 @@
 			"rosa",
 			"lila",
 			"blanco"
+		],
+		"plaster_ivy": [
+			"revoque crema, hiedra naranja",
+			"blanco grisáceo, hiedra roja",
+			"ocre, hiedra verde"
 		]
 	},
 	"shared": [
@@ -262,7 +267,7 @@
 			"gfx": [
 				195
 			],
-			"looms": "plaster"
+			"looms": "plaster_ivy"
 		},
 		{
 			"name": "low_wall_ivy_broken",
@@ -271,7 +276,7 @@
 			"gfx": [
 				194
 			],
-			"looms": "plaster"
+			"looms": "plaster_ivy"
 		},
 		{
 			"name": "low_wall_mark",
@@ -401,6 +406,28 @@
 				126
 			],
 			"looms": "pink"
+		},
+		{
+			"name": "buttress",
+			"label": "Arbotante de piedra (curvo)",
+			"kind": "deco",
+			"gfx": [
+				225
+			],
+			"looms": "plaster",
+			"note": "leans toward -x: place it with the wall on that side"
+		},
+		{
+			"name": "dormer",
+			"label": "Buhardilla (ventana en el tejado)",
+			"kind": "deco",
+			"gfx": [
+				226,
+				227
+			],
+			"looms": "plaster",
+			"on": "roof",
+			"note": "y = 0 is the roof board, the roof falls toward +z; 227 is 226 mirrored"
 		}
 	]
 }

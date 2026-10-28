@@ -45,6 +45,8 @@ const PAL = {
   // their leaves: a dull olive, not the lime of the grass block
   stalkD: ["#34401a", "#2e3e1e", "#34401a"], stalk: ["#56682a", "#4a6230", "#56682a"], stalkL: ["#74863a", "#668040", "#74863a"],
   pinkD: ["#b83a6a", "#7a4ab0", "#a8b8d0"], pink: ["#e86a9a", "#a874d8", "#dce6f4"], pinkC: ["#fff4e8", "#fff4e8", "#f0d050"],
+  // window bars (the dormer): green (retail), dark iron, brown wood
+  bar: ["#4e7a2a", "#3a3a3a", "#5a3a22"], hole: ["#141810", "#141414", "#181210"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -486,3 +488,34 @@ model("petals",
   [[-0.3, -0.1, 1.6], [-0.12, -0.28, 1.2], [0.05, -0.05, 1.7], [0.27, -0.22, 1.1], [0.33, 0.08, 1.4],
    [-0.22, 0.16, 1.1], [0.0, 0.24, 0.9], [0.2, 0.32, 1.2], [-0.4, 0.32, 0.8], [0.42, 0.34, 0.8]].map(([x, z, k], i) => smallFlower(x, z, k, i)))
 for (const n of ["flowers", "flower_single", "petals"]) looms(n)
+
+// --- flying buttress (225) and dormer window (226, 227) ------------------------
+// the buttress: a curved band of plaster stone, square in section, rising
+// from the ground and leaning over toward the wall it props (-x here), its
+// top cut flat where it meets the wall; a few chunks at its foot
+const bandPts = (() => {
+  const outer = [], inner = []
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10, x = 0.3 - 0.75 * t * t, y = 2.25 * t, w = 0.22 - 0.05 * t
+    const dx = -1.5 * t * 0.75, dy = 2.25, l = Math.hypot(dx, dy), nx = dy / l, ny = -dx / l
+    outer.push([x + nx * w, y + ny * w]); inner.push([x - nx * w, y - ny * w])
+  }
+  return [...outer, ...inner.reverse()].map(([x, y]) => [x, Math.max(0, y)]).flat()
+})()
+model("buttress",
+  extrude(bandPts, 0.36, { mat: "plaster", jitter: 0.008, seed: 3 }),
+  rock(0.08, { mat: "plaster", pos: [0.45, 0.04, 0.15], seed: 4 }), rock(0.05, { mat: "plaster", pos: [0.15, 0.03, 0.22], seed: 5 }),
+  tf({ pos: [0.3, 0, 0.18] }, blades(6, [0.3, 0.12], 0.06, 0.13, 91, 2)))
+// the dormer: sits on a roof (y = 0 is the roof board, the roof falls toward
+// +z): two stone posts and a lintel framing a dark window with a cross of
+// bars, a sloping stone cheek down its open side, a pitched cap of stone
+model("dormer", { pivot: "origin" },
+  box(0.46, 0.44, 0.06, { mat: "hole", pos: [0, 0.02, 0.16] }),
+  tf({ pos: [0, 0.24, 0.2], rot: [0, 0, 12] }, box(0.03, 0.42, 0.03, { mat: "bar", pos: [0, -0.21, 0] }), box(0.4, 0.03, 0.03, { mat: "bar" })),
+  // posts leaning in a little, a heavy flat lintel across them
+  sym("x", box(0.14, 0.52, 0.28, { mat: "plaster", pos: [0.29, 0, 0.1], rot: [0, 0, 6], jitter: 0.01, seed: 1 })),
+  box(0.74, 0.16, 0.34, { mat: "plaster", pos: [0, 0.5, 0.1], rot: [-6, 0, 2], jitter: 0.012, seed: 2 }),
+  // the cheek: a wedge of stone running back down to the roof on one side
+  wedge(0.14, 0.56, 0.55, { mat: "plaster", pos: [-0.3, 0, -0.3], rot: [0, 180, 0], jitter: 0.01, seed: 4 }),
+  box(0.56, 0.5, 0.4, { mat: "plaster", pos: [0, 0, -0.12], jitter: 0.008, seed: 5 }))
+for (const n of ["buttress", "dormer"]) looms(n)
