@@ -167,6 +167,46 @@
    ],
    "looms": "cliff",
    "note": "half a cell wide, on the +z face, to break a long run of columns"
+  },
+  {
+   "name": "rock_heap",
+   "label": "Montón de rocas",
+   "kind": "deco",
+   "gfx": [
+    1834
+   ],
+   "looms": "stone",
+   "note": "about 0.45 m"
+  },
+  {
+   "name": "rock_pair",
+   "label": "Dos rocas sueltas",
+   "kind": "deco",
+   "gfx": [
+    1835
+   ],
+   "looms": "stone",
+   "note": "low, about 0.3 m"
+  },
+  {
+   "name": "rock_mound",
+   "label": "Roca grande de lajas",
+   "kind": "deco",
+   "gfx": [
+    1833
+   ],
+   "looms": "stone",
+   "note": "about 0.55 m"
+  },
+  {
+   "name": "rock_blocks",
+   "label": "Dos bloques de roca",
+   "kind": "deco",
+   "gfx": [
+    1836
+   ],
+   "looms": "stone",
+   "note": "about 0.55 m"
   }
  ]
 }

@@ -515,6 +515,27 @@ cada vez, empezando por la más usada.
     dos bordes vistos, la punta en la esquina, dos placas y una placa
     estrecha) y `arena6-acantilado-vs-retail.png` (el borde del retail al
     lado del montaje; el montaje es de prueba).
+- Rocas sueltas (1834, 1835, 1833, 1836), 2026-10-28.
+  - En el mapa: trozos claros y angulosos de la misma arenisca, apoyados
+    al pie de los muros y pilares, y sueltos sobre la hierba y los
+    adoquines.
+  - Cada trozo es un bloque de seis caras con el borde de arriba y el pie
+    achaflanados y los vértices movidos, así que ninguna cara queda en
+    escuadra: tapa plana, canto inclinado iluminado. Uno de cada dos lleva
+    la piedra un tono más oscura (`stoneShade`), para que los trozos
+    vecinos se separen.
+  - Montón (1834): seis trozos revueltos. Dos rocas (1835): un par por un
+    lado y una ladeada por el otro, bajas. Roca de lajas (1833): una
+    cúpula baja de lajas de canto apoyadas en un núcleo. Dos bloques
+    (1836): dos trozos grandes partidos por una grieta y una laja apoyada
+    delante.
+  - Looms de la piedra: arenisca crema, granito gris, arenisca roja.
+  - Primeras versiones: piedras redondeadas como dados; luego icosaedros
+    que parecían gemas; la 1833 salió como una campana estrecha y la 1835
+    alta y estrecha.
+  - Hojas: `arena6-rocas-1.png`, `-2.png` y `arena6-rocas-montadas.png`
+    (al pie del muro de sillares y del pilar, en la hierba y junto al
+    acantilado; el montaje es de prueba).
 
 ## Fases
 

@@ -10,6 +10,8 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["stone" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85 }],
   ["stoneMoss" + s, { tex: "out/stoneMoss" + s, uv: 0.9, rough: 0.9 }],
   ["cliff" + s, { tex: "out/cliff" + s, uv: 2.2, rough: 0.9 }],
+  // the same stone a shade darker: every other loose rock, so neighbours part
+  ["stoneShade" + s, { tex: "out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
   // the moss-washed stones of the mossy cap (1472): the mossy stone, greener
   ["stoneGreen" + s, { tex: "out/stoneMoss" + s, uv: 0.9, rough: 0.9, color: ["#c4cc98", "#a8bca0", "#c8c496"][LOOMS.indexOf(s)] }],
 ])))
@@ -22,7 +24,7 @@ const PAL = {
   petal: ["#f4f2ea", "#f4e8a8", "#f0b8c8"], petalD: ["#c8c4b8", "#d0c070", "#c88098"], heart: ["#e8c030", "#d08a20", "#f0d050"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneMoss", "stoneGreen", "cliff", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneMoss", "stoneGreen", "stoneShade", "cliff", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -257,3 +259,36 @@ model("cliff_slant", { pivot: "origin" }, tf({ rot: [0, 90, 0] }, rockFace(1.0, 
 // to break a long run of columns
 model("cliff_shard", { pivot: "origin" }, tf({ pos: [0.2, 0, 0] }, rockFace(0.5, 2, 2.3, 1.7, 0.2, 101)))
 for (const n of ["cliff_col", "cliff_col_knobs", "cliff_tip", "cliff_slant", "cliff_shard"]) looms(n)
+
+// --- loose rocks (1834, 1835, 1833, 1836) ------------------------------------
+// pale angular chunks of the same sandstone, lying on the ground at the foot
+// of walls and pillars and alone on the grass: blocks with softened edges,
+// each tilted its own way, a flat lit top and a few cracks (the stone loom).
+// a chunk: a six-sided block, its top rim and foot chamfered, every corner
+// pushed about so no two faces are square; stretched to w × h × d, tilted,
+// its base sunk a little in the ground. [x, z, w, h, d, rot, tilt]
+const chunk = ([x, z, w, h, d, rot, tilt = 0], seed) => tf({ pos: [x, -0.04, z], rot: [tilt, rot, tilt * 0.5], scale: [w, h + 0.04, d] },
+  lathe([0, 0, 0.44, 0, 0.5, 0.18, 0.5, 0.66, 0.4, 0.92, 0.3, 1, 0, 1], { mat: seed % 2 ? "stoneShade" : "stone", sides: 6, jitter: 0.06, seed }))
+const chunks = (list, seed) => list.map((c, i) => chunk(c, seed + i))
+// rock heap (1834): six chunks tumbled together, about 0.45 m
+model("rock_heap",
+  chunks([[-0.22, -0.1, 0.42, 0.4, 0.4, 12, 8], [0.08, -0.26, 0.4, 0.42, 0.36, -20, -10], [0.26, 0.04, 0.36, 0.38, 0.42, 35, 12],
+    [-0.04, 0.2, 0.4, 0.34, 0.36, -8, 18], [0.26, 0.32, 0.3, 0.26, 0.28, 50, -14], [-0.3, 0.3, 0.28, 0.24, 0.28, 25, 10]], 111))
+// two rocks (1835): a pair of chunks on the -x +z side, a single tilted one
+// on the +x -z side, low (about 0.3 m) and spread across the cell
+model("rock_pair",
+  chunks([[-0.2, 0.2, 0.56, 0.24, 0.5, 10, 5], [0.02, 0.36, 0.36, 0.18, 0.32, -15, -6], [0.26, -0.22, 0.5, 0.22, 0.44, 30, 16]], 121))
+// rock mound (1833): a dome of big slabs leaning in on each other round a
+// low core, about 0.55 m
+model("rock_mound",
+  chunk([0, 0, 0.6, 0.36, 0.6, 10, 0], 130),
+  [[0.36, 0.04, 0.24, 0.42, 0.56, 90, 10], [0.02, 0.38, 0.56, 0.4, 0.24, 0, 12], [-0.36, 0.06, 0.24, 0.38, 0.5, 90, -10],
+    [0.04, -0.36, 0.54, 0.42, 0.24, 0, -10], [0.34, 0.36, 0.34, 0.32, 0.22, 45, 14], [-0.32, -0.32, 0.32, 0.32, 0.22, 45, -12]].map(([x, z, w, h, d, rot, tilt], i) =>
+    // each slab tipped in toward the middle
+    tf({ pos: [x, 0, z], rot: rot === 90 ? [0, 0, tilt] : [-tilt, rot, 0] }, chunk([0, 0, w, h, d, 0, 0], 132 + i))))
+// two big blocks (1836): a pair of big chunks side by side, split by a deep
+// crack, a slab leaning on the front of the left one; about 0.55 m
+model("rock_blocks",
+  chunks([[-0.18, 0.04, 0.56, 0.58, 0.7, 6, 4], [0.27, -0.04, 0.42, 0.52, 0.62, -8, -5]], 141),
+  tf({ pos: [-0.1, 0, 0.36], rot: [24, 4, 0] }, chunk([0, 0, 0.42, 0.42, 0.18, 0, 0], 144)))
+for (const n of ["rock_heap", "rock_pair", "rock_mound", "rock_blocks"]) looms(n)
