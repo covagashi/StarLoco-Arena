@@ -734,6 +734,27 @@ cada vez, empezando por la más usada.
   - Hojas: `arena7-muro-reja.png` y `arena7-muro-reja-montado.png` (el
     muro con su reja por los dos bordes del fondo sobre bloques de tierra,
     y una tumba rodeada de reja en el patio; el montaje es de prueba).
+  - Dueño (2026-10-28): "perfecto, lo has pillado bien".
+- Losa de tierra (263, 266, 267, 268, 1526, 1527, 1532, 1533), 2026-10-28.
+  - Es el suelo del cementerio (en el mapa va teñida de gris azulado). El
+    dueño: "como el bloque de hierba, pero de tierra". Los ocho dibujos
+    retail solo cambian las grietas, así que es un solo modelo
+    (`dirt_cap`, tipo `cap`), y girándola las grietas no se repiten.
+  - Cuatro placas de tierra apelmazada separadas por grietas que
+    serpentean (cada borde quebrado por la mitad). Cada placa se abomba en
+    cuatro escalones para leerse como un cojín, y una de cada dos va un
+    tono más oscura y algo ladeada. Debajo, un reborde ondulado oscuro y
+    terrones rotos que cuelgan a ras de los cuatro lados del bloque.
+  - Textura loom nueva `dirt` (`arena7/kit.tx.js`): tierra seca pisada,
+    manchas anchas, grumos, grano fino, alguna piedrecita y grietas finas,
+    polvo claro en los bultos. Looms: tierra parda (el retail), tierra
+    gris parda, arcilla roja oscura.
+  - Primeras versiones: los terrones como dientes de sierra hacia fuera;
+    el color anaranjado; las placas planas como tablones, con grietas
+    rectas, y el reborde fino; la textura con piedrecitas como remaches.
+  - Hojas: `arena7-losa-tierra.png` y `arena7-losa-tierra-montada.png` (el
+    suelo de losas giradas con alguna capa de hierba, y el muro con la reja
+    detrás; el montaje es de prueba).
 
 ## Fases
 

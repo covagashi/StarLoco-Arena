@@ -1,5 +1,5 @@
 {
- "_doc": "Arena 7 (retail world 38: a graveyard) kit for the map editor (S36), same schema as art/arena6/kit.json. The stone surfaces reuse the arena 6 loom textures. Pieces the arena also uses from the other kits are listed in shared. on: block = stacked on top of another block (y = 0 is where it rests on it).",
+ "_doc": "Arena 7 (retail world 38: a graveyard) kit for the map editor (S36), same schema as art/arena6/kit.json. The stone surfaces reuse the arena 6 loom textures. Pieces the arena also uses from the other kits are listed in shared.  kind cap = lies over another block's top: y = 0 is that top, the lip hangs over its sides; top = the walk surface above that top (m). on: block = stacked on top of another block (y = 0 is where it rests on it).",
  "biome": "cementerio",
  "arenas": [
   38
@@ -19,6 +19,11 @@
    "hierro gris",
    "hierro oxidado",
    "hierro con verdín"
+  ],
+  "dirt": [
+   "tierra parda",
+   "tierra gris parda",
+   "arcilla roja oscura"
   ]
  },
  "shared": [],
@@ -44,6 +49,24 @@
    ],
    "looms": "iron",
    "note": "three spikes in a row along x, centred in the cell; on the wall tops or round the graves"
+  },
+  {
+   "name": "dirt_cap",
+   "label": "Losa de tierra (sobre otro bloque)",
+   "kind": "cap",
+   "gfx": [
+    1533,
+    267,
+    266,
+    268,
+    1527,
+    263,
+    1526,
+    1532
+   ],
+   "looms": "dirt",
+   "top": 0.08,
+   "note": "the floor of the graveyard; the eight retail drawings only move the cracks"
   }
  ]
 }

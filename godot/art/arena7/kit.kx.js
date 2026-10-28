@@ -9,6 +9,11 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["stone" + s, { tex: "../arena6/out/stone" + s, uv: 0.9, rough: 0.85 }],
   ["stoneShade" + s, { tex: "../arena6/out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
   ["flagCrack" + s, { tex: "../arena6/out/flagCrack" + s, uv: 1, rough: 0.8 }],
+  // the earth slabs (kit.tx.js): every other plate a shade darker, the lip
+  // and the hanging clods darker still
+  ["dirt" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.9 }],
+  ["dirtShade" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.9, color: "#e2d8c6" }],
+  ["dirtD" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.95, color: "#84765f" }],
 ])))
 // palette looms: [a, b, c] per key
 const PAL = {
@@ -17,7 +22,7 @@ const PAL = {
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["stone", "stoneShade", "flagCrack", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneShade", "flagCrack", "dirt", "dirtShade", "dirtD", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -85,3 +90,48 @@ model("iron_railing",
   [[-0.3, 1.32, -2.5], [0.0, 1.16, 1.5], [0.3, 1.38, 3]].map(([x, h, l], i) => spike(x, h, l, 151 + i)),
   tf({ pos: [0.02, 0.42, 0.045], rot: [0, 0, -12] }, box(0.98, 0.05, 0.04, { mat: "iron", jitter: 0.004 })))
 for (const n of ["wall_top", "iron_railing"]) looms(n)
+
+// --- earth slab (263, 266, 267, 268, 1526, 1527, 1532, 1533) ------------------
+// the floor of the graveyard; the owner: "like the grass cap, but earth". It
+// lies on another block's top (y = 0): packed earth split by cracks into four
+// plates (their edges broken so the cracks wander), each domed in four steps
+// so it reads like a cushion, every other one a shade darker and a little
+// tilted; under them a dark wavy lip and clods of earth hanging over the
+// block's four sides. The eight retail drawings only move
+// the cracks: one model
+const PLATES = [
+  [[-0.47, -0.47], [0.06, -0.47], [0.03, -0.2], [-0.47, -0.12]],
+  [[-0.47, -0.12], [0.03, -0.2], [0.0, 0.02], [-0.01, 0.22], [-0.04, 0.47], [-0.47, 0.47]],
+  [[0.06, -0.47], [0.47, -0.47], [0.47, 0.18], [-0.01, 0.22], [0.0, 0.02], [0.03, -0.2]],
+  [[-0.01, 0.22], [0.47, 0.18], [0.47, 0.47], [-0.04, 0.47]],
+]
+// pull every corner of a plate towards its centre by d (the crack between
+// plates is twice that)
+const shrink = (poly, d) => {
+  const cx = poly.reduce((a, p) => a + p[0], 0) / poly.length, cz = poly.reduce((a, p) => a + p[1], 0) / poly.length
+  return poly.flatMap(([x, z]) => { const l = Math.hypot(x - cx, z - cz); return [x - (x - cx) / l * d, z - (z - cz) / l * d] })
+}
+// break each edge of a plate at its middle, nudged in or out, so the
+// cracks wander
+const wobble = (poly, seed) => poly.flatMap((p, i) => {
+  const q = poly[(i + 1) % poly.length], n = 0.025 * (rnd(i, 169, seed) - 0.5) * 2
+  const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2, l = Math.hypot(q[0] - p[0], q[1] - p[1])
+  const edge = Math.abs(mx) > 0.46 || Math.abs(mz) > 0.46
+  return [p, [mx + (edge ? 0 : -(q[1] - p[1]) / l * n), mz + (edge ? 0 : (q[0] - p[0]) / l * n)]]
+})
+const plate = (poly, i) => tf({ pos: [0, (i % 2) * 0.01, 0], rot: [(rnd(i, 161, 7) - 0.5) * 2.5, 0, (rnd(i, 162, 7) - 0.5) * 2.5] },
+  [[0.016, 0.04, 0], [0.032, 0.03, 0.037], [0.056, 0.022, 0.064], [0.09, 0.014, 0.083]].map(([d, h, y], k) =>
+    prismUp(shrink(wobble(poly, 181 + i), d), h, y, i % 2 ? "dirtShade" : "dirt", 0.007)))
+// the clods along the +z side (turned for the others): broken chunks of
+// earth hanging flush with the block's side from under the rim, each a
+// little askew and its own length
+const clods = (seed) => Array.from({ length: 6 }, (_, i) => {
+  const x = -0.4 + i * 0.16 + (rnd(i, 163, seed) - 0.5) * 0.04, len = 0.14 + rnd(i, 164, seed) * 0.1
+  return tf({ pos: [x, 0.01, 0.455], rot: [(rnd(i, 165, seed) - 0.5) * 10, (rnd(i, 166, seed) - 0.5) * 14, (rnd(i, 168, seed) - 0.5) * 16] },
+    box(0.15 + rnd(i, 167, seed) * 0.04, len, 0.07, { mat: "dirtD", pos: [0, -len, 0], jitter: 0.012, seed: seed + i }))
+})
+model("dirt_cap", { pivot: "origin" },
+  prismUp(roundSquare(CELL_HALF + 0.012, 0.06, 6, 0.03, 4), 0.14, -0.13, "dirtD", 0.008),
+  PLATES.map((p, i) => plate(p, i)),
+  [0, 90, 180, 270].map((a, k) => tf({ rot: [0, a, 0] }, clods(171 + k * 9))))
+looms("dirt_cap")
