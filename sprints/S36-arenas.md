@@ -2,6 +2,16 @@
 
 **Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B: bioma nieve aprobado)
 
+**Alcance (dueño, 2026-10-28): 12 arenas, de la 1 a la 12** (mundos 5, 10,
+12, 15, 21, 36, 38, 39, 40, 41, 42 y 44). El inventario se para aquí: "ya me
+he cansado de inventariar". Las otras 35 (de la 13 a la 47; la 13 tiene
+hojas y suposiciones, pero no nombres) se guardan en PNG y JSON en el
+archivo de [S42](./S42-archivo-de-arenas.md), para retomarlas sin el
+cliente antiguo. Lo que queda aquí:
+- modelar las arenas 8–12 por grupos (`group` y `same` en `names.json`);
+- el editor (fase C);
+- los `layout` del dueño en el juego (fase D).
+
 ## Por qué cambia el plan (dueño, 2026-10-25)
 
 > "Ni siquiera arena-plan-1 está actualizado. Creo que será mejor si primero
@@ -1046,7 +1056,10 @@ cada vez, empezando por la más usada.
     barro y burbujas (2673–2676), «burbuja de barro» (2671, 2672), «flor
     blanca» (2668–2670).
 
-### Arena 13 (mundo 45, playa), 2026-10-28
+### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
+
+- El dueño para el inventario en la arena 12. Esta queda en el archivo de
+  S42, con mis suposiciones y sin sus nombres.
 
 - `mapa-arena13-1.png` … `-11.png`: 78 piezas, 4 ya cubiertas y 74
   nuevas, con mi suposición marcada con "¿?".
@@ -1171,5 +1184,7 @@ tres looms a escala de juego a la derecha. Plan actualizado en
 
 ## Criterio de cierre
 
-Todas las arenas que el servidor sienta tienen un `layout` hecho por el
-dueño con nuestros assets, y `MapGfx` retail ya no se usa.
+Las 12 arenas tienen un `layout` hecho por el dueño con nuestros assets, el
+servidor sortea solo entre ellas y `MapGfx` retail ya no se usa. La forma
+propia de las arenas y el borrado del retail van en
+[S43](./S43-sin-cliente-antiguo.md).
