@@ -69,6 +69,11 @@
 			"revoque crema, hiedra naranja",
 			"blanco grisáceo, hiedra roja",
 			"ocre, hiedra verde"
+		],
+		"pad": [
+			"oliva claro",
+			"verde intenso",
+			"paja seca"
 		]
 	},
 	"shared": [
@@ -428,6 +433,46 @@
 			"looms": "plaster",
 			"on": "roof",
 			"note": "y = 0 is the roof board, the roof falls toward +z; 227 is 226 mirrored"
+		},
+		{
+			"name": "moss_pads",
+			"label": "Matas de musgo",
+			"kind": "flat",
+			"gfx": [
+				1682,
+				334
+			],
+			"looms": "pad"
+		},
+		{
+			"name": "moss_patch",
+			"label": "Mancha de musgo alargada",
+			"kind": "flat",
+			"gfx": [
+				1683,
+				1681
+			],
+			"looms": "pad"
+		},
+		{
+			"name": "moss_tall",
+			"label": "Mata de musgo con briznas altas",
+			"kind": "deco",
+			"gfx": [
+				1680
+			],
+			"looms": "pad"
+		},
+		{
+			"name": "sprouts",
+			"label": "Brotes de hierba",
+			"kind": "deco",
+			"gfx": [
+				331,
+				333,
+				613
+			],
+			"looms": "pad"
 		}
 	]
 }

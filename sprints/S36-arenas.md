@@ -365,6 +365,24 @@ cada vez, empezando por la más usada.
   - Hojas: `arena5-arbotante-buhardilla.png` y
     `arena5-arbotante-buhardilla-montados.png` (contra la pared de la casa;
     el montaje es de prueba).
+- Matas de musgo (1682 y 334; 1683 y 1681; 1680) y brotes de hierba (331,
+  333, 613), 2026-10-28.
+  - Varias son el mismo motivo con otra disposición, así que son cuatro
+    modelos. Almohadillas bajas y abultadas de musgo (una mancha aplastada
+    con bultos en el borde y la parte de arriba más clara) con puntas de
+    briznas diminutas asomando por debajo del borde. Tres almohadillas
+    (`moss_pads`), una mancha alargada (`moss_patch`), una con briznas
+    altas detrás (`moss_tall`). Brotes: grupitos de briznas anchas y curvas,
+    oscuras al pie y claras en la punta, repartidas por la casilla.
+  - En el mapa el musgo crece sobre las losas de piedra y en los bordes de
+    la hierba; los brotes, sobre la hierba.
+  - Colores de paleta en oliva suave. Looms: oliva claro (el retail), verde
+    intenso, paja seca.
+  - Primeras versiones: los flecos apuntaban hacia arriba como pinchos; con
+    la textura de hierba salían oscuras y recargadas; luego, demasiado
+    claras y pequeñas; los brotes, escasos y diminutos.
+  - Hojas: `arena5-musgo-1.png`, `-2.png` y `arena5-musgo-montado.png`
+    (sobre losas de adoquines y hierba; el montaje es de prueba).
 
 ## Fases
 

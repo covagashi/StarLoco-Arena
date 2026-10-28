@@ -13,6 +13,7 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["grassRim" + s, { tex: "out/grass" + s, uv: 1.1, rough: 0.85, color: "#9ca482" }],
   ["plaster" + s, { tex: "out/plaster" + s, uv: 1.6, rough: 0.9 }],
   ["cobble" + s, { tex: "out/cobble" + s, uv: 0.5, rough: 0.7 }],
+
   ["staves" + s, { tex: "out/staves" + s, uv: 1.3, rough: 0.7 }],
   ["timber" + s, { tex: "out/timber" + s, uv: 0.8, rough: 0.85 }],
   // packed dark earth, no strata (the dirt block's top face and band)
@@ -47,6 +48,9 @@ const PAL = {
   pinkD: ["#b83a6a", "#7a4ab0", "#a8b8d0"], pink: ["#e86a9a", "#a874d8", "#dce6f4"], pinkC: ["#fff4e8", "#fff4e8", "#f0d050"],
   // window bars (the dormer): green (retail), dark iron, brown wood
   bar: ["#4e7a2a", "#3a3a3a", "#5a3a22"], hole: ["#141810", "#141414", "#181210"],
+  // moss pads and sprouts (1680-1683, 334, 331, 333, 613): soft olive-yellow
+  // (retail), deep green, dry straw
+  padD: ["#5a681a", "#2a4a22", "#6e5c22"], pad: ["#7e8e22", "#3e6e2e", "#948034"], padL: ["#9cac2c", "#5e923c", "#b4a24e"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -538,3 +542,36 @@ model("dormer", { pivot: "origin" },
   wedge(0.14, 0.56, 0.55, { mat: "plaster", pos: [-0.3, 0, -0.3], rot: [0, 180, 0], jitter: 0.01, seed: 4 }),
   box(0.56, 0.5, 0.4, { mat: "plaster", pos: [0, 0, -0.12], jitter: 0.008, seed: 5 }))
 for (const n of ["buttress", "dormer"]) looms(n)
+
+// --- moss pads (1682, 334; 1681, 1683; 1680) and sprouts (331, 333, 613) -----
+// a pad: a low lumpy cushion of moss (a flattened blob and a few smaller
+// lumps round its rim, light on top), short blades fringing its edge. They
+// grow on stone slabs and along the grass edges.
+const PADS = ["padD", "pad", "padL"]
+function mossPad(x, z, rx, rz, rot, seed) {
+  const out = [tf({ pos: [x, 0, z], rot: [0, rot, 0] },
+    sphere(0.5, { mat: "pad", detail: 2, scale: [rx * 2, 0.045, rz * 2], jitter: 0.01, seed }),
+    sphere(0.5, { mat: "padL", detail: 2, pos: [-rx * 0.15, 0.012, -rz * 0.1], scale: [rx * 1.5, 0.04, rz * 1.4], jitter: 0.008, seed: seed + 1 }),
+    [0, 1, 2, 3, 4].map((i) => {
+      const a = (i / 5) * Math.PI * 2 + seed
+      return sphere(0.5, { mat: i % 2 ? "padD" : "pad", detail: 1, pos: [Math.cos(a) * rx * 0.75, 0, Math.sin(a) * rz * 0.75],
+        scale: [rx * 0.8, 0.035, rz * 0.8], jitter: 0.008, seed: seed + 2 + i })
+    }))]
+  // the fringe: tiny dark blade tips poking out from under the rim
+  const n = Math.round(4 + (rx + rz) * 12)
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + seed * 0.7, h = 0.035 + ((i * 7 + seed) % 3) * 0.012
+    const px = x + Math.cos(a) * rx * 0.95, pz = z + Math.sin(a) * rz * 0.95
+    out.push(tf({ pos: [px, 0.004, pz], rot: [0, -a * 180 / Math.PI + 90, 0] },
+      extrude([-0.014, 0, 0.014, 0, 0, h], 0.004, { mat: "padD", rot: [82, 0, 0] })))
+  }
+  return out
+}
+model("moss_pads", { scale: 1.3 }, mossPad(-0.2, -0.12, 0.17, 0.12, 20, 1), mossPad(0.18, -0.18, 0.2, 0.11, -10, 2), mossPad(0.02, 0.18, 0.22, 0.13, 5, 3))
+model("moss_patch", { scale: 1.3 }, mossPad(-0.18, -0.15, 0.24, 0.12, 35, 4), mossPad(0.12, 0.12, 0.28, 0.13, 35, 5), mossPad(0.3, -0.2, 0.12, 0.07, 35, 6))
+model("moss_tall", { scale: 1.2 }, mossPad(0.02, 0.06, 0.32, 0.17, 10, 7), tf({ pos: [0.08, 0.02, -0.06] }, blades(16, [0.45, 0.18], 0.12, 0.22, 101, 0, PADS)))
+// sprouts: clusters of broad curved blades, dark at the foot and light at
+// the tip, spread over most of the cell
+model("sprouts", [[-0.24, -0.1], [0.14, -0.2], [0.0, 0.16], [0.3, 0.12], [-0.3, 0.22]].map(([x, z], i) =>
+  tf({ pos: [x, 0, z], scale: 1.3 }, blades(7, [0.22, 0.16], 0.1, 0.2, 111 + i * 7, 1, PADS))))
+for (const n of ["moss_pads", "moss_patch", "moss_tall", "sprouts"]) looms(n)
