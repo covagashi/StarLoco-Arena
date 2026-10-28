@@ -249,8 +249,13 @@ cada vez, empezando por la más usada.
   - Un murete en ruinas de una casilla de largo, medio metro de grueso y
     unos 1,3 m de alto, con la parte de arriba redondeada (un perfil
     extruido) y hierba al pie. El mismo revoque que la casa.
-  - Hiedra: un tallo con hojas anchas de tres lóbulos (la primera versión
-    parecían estrellas); en el roto sigue el borde partido. La marca de
+  - Hiedra, rehecha a petición del dueño ("intenta hacer mejor la
+    hiedra"): como la dibuja el retail, un tronco leñoso que sale del suelo,
+    grueso al pie, ramificado en ramitas finas; hojas ovaladas con punta,
+    grandes abajo y más pequeñas hacia las puntas, separadas de la pared
+    cada una con su ángulo, en dos tonos (una hoja oscura bajo otra clara).
+    En el roto una rama pasa por encima y deja un ramillete de pie arriba.
+    Dueño: "ya me parece perfecto, buen trabajo". Hoja: `arena5-hiedra.png`. La marca de
     hierro va en un panel con borde oscuro (el hueco no se veía).
   - Looms: los del revoque, con la hiedra naranja, roja o verde.
   - Hojas: `arena5-murete-1.png` … `-3.png` y

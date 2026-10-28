@@ -23,7 +23,7 @@ const PAL = {
   soilD: ["#5a4220", "#3a2c1c", "#5e2a18"],
   // ivy on the low walls: autumn orange (retail), deep red, green
   ivyD: ["#a83c10", "#6a1414", "#2e5a1e"], ivy: ["#e0661c", "#a02a1e", "#4a8a2c"], ivyL: ["#f4a03a", "#d0503a", "#7ab040"],
-  vine: ["#6a5236", "#4e3a2a", "#5a4a30"], iron: ["#2e2a26", "#2e2a26", "#2e2a26"],
+  vine: ["#a8926e", "#7a6250", "#8e7e5c"], vineD: ["#6e5a40", "#4a382c", "#5a4e38"], iron: ["#2e2a26", "#2e2a26", "#2e2a26"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -194,34 +194,71 @@ const lwBody = (h, len = 0.98, seed = 1) => tf({ rot: [0, 90, 0] }, extrude(lwPr
 const lwSkirt = (seed) => [
   tf({ pos: [0, 0, 0.25] }, blades(14, [0.95, 0.06], 0.08, 0.17, seed, 3)),
   tf({ pos: [0, 0, -0.25] }, blades(10, [0.95, 0.06], 0.06, 0.13, seed + 7, 3))]
-// ivy: a climbing stem with leaves (three-lobed) off it, on the +z face
-// a broad leaf of three round lobes (r(θ) over 24 points), stalk at the origin
-const ivyLeaf = Array.from({ length: 24 }, (_, i) => {
-  const t = (i / 24) * Math.PI * 2, lobe = Math.pow(Math.abs(Math.cos(1.5 * (t - Math.PI / 2))), 0.7)
-  const r = 0.05 * (0.62 + 0.38 * lobe) * (1 - 0.45 * Math.max(0, -Math.sin(t)))
-  return [Math.cos(t) * r, Math.sin(t) * r + 0.035]
+// ivy, as the retail draws it: a woody trunk out of the ground, thick at
+// the foot, branching into thin twigs up the +z face; big leaves low down,
+// smaller toward the tips, each standing off the wall at its own angle, two
+// tones (a dark leaf under a lighter one, so a dark rim shows)
+// a leaf: a broad oval drawn to a point at the tip; stalk at the origin
+const vineLeaf = Array.from({ length: 22 }, (_, i) => {
+  const t = (i / 22) * Math.PI * 2
+  const r = 0.04 * (0.9 + 0.45 * Math.pow(Math.max(0, Math.sin(t)), 12))
+  return [Math.cos(t) * r * 0.95, Math.sin(t) * r * 1.15 + 0.045]
 }).flat()
-function ivyOn(pts, n, seed, z = 0.245) {
-  const out = [tube(pts.flatMap(([x, y]) => [x, y, z + 0.01]), 0.012, { mat: "vine", sides: 4 })]
+const WALL_T = 0.23
+// a branch: tube segments tapering from r0 to r1 along 3D points
+function vineBranch(pts, r0, r1) {
+  const out = [], n = pts.length - 1
   for (let i = 0; i < n; i++) {
-    const t = (i + 0.5) / n, k = Math.min(pts.length - 2, Math.floor(t * (pts.length - 1)))
-    const f = t * (pts.length - 1) - k, x = pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, y = pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f
-    const side = i % 2 ? 1 : -1, m = (i + seed) % 3 === 0 ? "ivyL" : (i + seed) % 3 === 1 ? "ivy" : "ivyD"
-    out.push(extrude(ivyLeaf, 0.008, { mat: m, pos: [x + side * 0.04, y, z + 0.02 + (i % 3) * 0.008], rot: [-15, 0, side * (30 + (i * 23) % 50)], scale: 1.5 + ((i * 7 + seed) % 4) * 0.2 }))
+    const r = r0 + (r1 - r0) * (i / Math.max(1, n - 1))
+    out.push(tube([...pts[i], ...pts[i + 1]], r, { mat: i < 1 && r0 > 0.025 ? "vineD" : "vine", sides: 5 }))
+    if (i < n - 1) out.push(sphere(r, { mat: "vine", detail: 0, pos: pts[i + 1] }))
   }
   return out
 }
+const along = (pts, t) => {
+  const f = t * (pts.length - 1), k = Math.min(pts.length - 2, Math.floor(f)), u = f - k
+  return pts[k].map((v, j) => v + (pts[k + 1][j] - v) * u)
+}
+// leaves along a branch, big at its foot (s0) to small at its tip (s1);
+// h = the wall's top: leaves above it lie on the top instead of the face
+function vineLeaves(pts, n, s0, s1, seed, h = 9) {
+  const out = []
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 1 : 0.08 + 0.92 * (i / (n - 1)), p = along(pts, t), sz = s0 + (s1 - s0) * t
+    const side = (i + seed) % 2 ? 1 : -1, tilt = 12 + ((i * 17 + seed * 5) % 18), turn = side * (20 + ((i * 29 + seed) % 50))
+    const lit = (i + seed) % 3 ? "ivy" : "ivyL"
+    const leaf = [extrude(vineLeaf, 0.005, { mat: "ivyD", scale: sz * 1.06 }),
+      extrude(vineLeaf, 0.005, { mat: lit, pos: [0, 0.004 * sz, 0.006], scale: sz * 0.96 })]
+    const onTop = p[1] > h - 0.04
+    out.push(tf({ pos: p }, tf({ rot: onTop ? [-90 + tilt * 0.5, turn * 2, 0] : [tilt, 0, turn] }, leaf)))
+  }
+  return out
+}
+// a whole plant on the +z face: [points, r0, r1, leaves, s0, s1] per branch
+const ivyPlant = (branches, seed, h) => branches.map(([pts, r0, r1, n, s0, s1], k) => {
+  const P = pts.map(([x, y, z]) => [x, y, z === undefined ? WALL_T + 0.02 : z])
+  return [vineBranch(P, r0, r1), vineLeaves(P, n, s0, s1, seed + k * 3, h)]
+})
 model("low_wall", lwBody(1.2, 0.98, 1), lwSkirt(31))
 model("low_wall_ivy", lwBody(1.28, 0.98, 2), lwSkirt(41),
-  ivyOn([[-0.2, 0], [-0.22, 0.25], [-0.14, 0.5], [-0.2, 0.75], [-0.1, 0.95]], 12, 1),
-  ivyOn([[-0.18, 0.4], [-0.02, 0.5], [0.08, 0.66]], 5, 4))
+  ivyPlant([
+    [[[-0.08, 0, 0.3], [-0.12, 0.12], [-0.18, 0.3], [-0.25, 0.52], [-0.3, 0.74], [-0.28, 0.9]], 0.04, 0.009, 10, 3.0, 1.1],
+    [[[-0.14, 0.2], [-0.02, 0.33], [0.06, 0.47], [0.1, 0.62]], 0.02, 0.007, 6, 1.9, 1.0],
+    [[[-0.22, 0.42], [-0.36, 0.55], [-0.4, 0.68]], 0.015, 0.006, 4, 1.6, 1.0],
+  ], 1))
 // broken: the top bitten off at one end, ivy over it and onto the top
 model("low_wall_ivy_broken",
   tf({ rot: [0, 90, 0] }, extrude(lwProfile(1.3), 0.6, { mat: "plaster", pos: [0, 0, -0.19], jitter: 0.012, seed: 3 }),
     extrude(lwProfile(1.08), 0.4, { mat: "plaster", pos: [0, 0, 0.3], jitter: 0.02, seed: 4 })),
   lwSkirt(51),
-  ivyOn([[-0.32, 0], [-0.3, 0.3], [-0.38, 0.6], [-0.3, 0.9], [-0.18, 1.12]], 14, 2),
-  ivyOn([[-0.3, 1.0], [-0.05, 1.18], [0.12, 1.05], [0.3, 1.02]], 9, 3))
+  ivyPlant([
+    [[[0.08, 0, 0.3], [0.04, 0.16], [-0.08, 0.38], [-0.2, 0.6], [-0.3, 0.85], [-0.32, 1.06]], 0.042, 0.01, 10, 3.1, 1.2],
+    // over the broken top and onto it, a cluster of leaves up there
+    [[[-0.31, 1.0], [-0.26, 1.14], [-0.2, 1.26, 0.16], [-0.08, 1.31, 0.04], [0.06, 1.31, -0.06]], 0.016, 0.007, 7, 1.4, 2.4],
+    [[[-0.1, 0.45], [-0.32, 0.55], [-0.4, 0.66]], 0.015, 0.006, 4, 1.6, 1.0],
+  ], 2),
+  // the red cluster spilling over the top's far corner
+  vineLeaves([[-0.02, 1.3, 0.04], [0.06, 1.31, -0.04], [0.1, 1.29, -0.12]], 5, 2.4, 2.0, 9))
 // the iron mark: a recess in the +z face, a dark bar with cross pieces in it
 model("low_wall_mark", lwBody(1.25, 0.98, 5), lwSkirt(61),
   box(0.2, 0.48, 0.02, { mat: "iron", pos: [-0.1, 0.39, 0.232] }),
