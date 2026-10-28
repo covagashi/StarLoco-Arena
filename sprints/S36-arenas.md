@@ -926,6 +926,38 @@ cada vez, empezando por la más usada.
   marcado en las suposiciones por si sirven aquí, para no duplicar.
 - La niebla del borde del mapa ya va a VFX.
 
+- Nombres del dueño (2026-10-28), guardados en `names.json`:
+  - 2285, losa de roca volcánica; 2280, roca volcánica.
+  - 1765 y 1766, columnas de roca. 1764, 1761, 1762, 1767 y 1817, rocas.
+  - Lava: 2270, 2271, 2276–2279; la 146 es lava derramándose.
+  - Árboles secos: 1729, 1730 y 1731.
+  - Pinchos de roca volcánica: 2290–2295 y 2297.
+  - La 1269 es igual que la 1270 (`weapons_ground`); la 2246, un
+    esqueleto como el 2244 o el 2245.
+- Nueva forma de trabajar (dueño, 2026-10-28): primero se inventarían
+  todas las arenas, recogiendo y agrupando piezas entre mapas, y después
+  se modela por grupos. Así no se repite trabajo. `names.json` tiene dos
+  claves nuevas, y `map_sheet.py` muestra las dos:
+  - `same`: un gfx que el dueño dice que es igual a otro usa su pieza del
+    kit.
+  - `group`: el grupo de nombre del dueño. Se modela una familia por
+    grupo, y la hoja dice cuántos gfx lleva cada grupo en todas las
+    arenas.
+
+### Arena 9 (mundo 40, ruinas con rejas), 2026-10-28
+
+- `mapa-arena9-1.png` … `-6.png`: 40 piezas, 20 ya en los kits (pilares,
+  sillares, rocas y musgo de la arena 6; reja, huesos y sangre de la
+  arena 7) y 20 nuevas, con mi suposición marcada con "¿?".
+- Lo que parece haber:
+  - Losas de piedra clara para el suelo (1829, 1839, 1840).
+  - Muchas piedrecitas y cascotes sueltos (1413, 1428, 1559, 1637,
+    2168–2171, 2174, 2200).
+  - Un hueco con escalones (1570), antorchas de pared (1538) y un bloque
+    de piedra con tapa (1420).
+  - Un escudo redondo (2019), un hacha clavada (2016), una argolla (2020)
+    y un poste con sangre (2443).
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
