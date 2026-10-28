@@ -13,6 +13,7 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["grassRim" + s, { tex: "out/grass" + s, uv: 1.1, rough: 0.85, color: "#9ca482" }],
   ["plaster" + s, { tex: "out/plaster" + s, uv: 1.6, rough: 0.9 }],
   ["cobble" + s, { tex: "out/cobble" + s, uv: 0.5, rough: 0.7 }],
+  ["staves" + s, { tex: "out/staves" + s, uv: 1.3, rough: 0.7 }],
   ["timber" + s, { tex: "out/timber" + s, uv: 0.8, rough: 0.85 }],
   // packed dark earth, no strata (the dirt block's top face and band)
   ["earth" + s, { tex: "out/earth" + s, uv: 1, rough: 0.9 }],
@@ -30,11 +31,13 @@ const PAL = {
   // fence logs: weathered tan (retail), grey, dark; moss on their feet
   logL: ["#e2cf9a", "#c4c2bc", "#8a6e50"], log: ["#b49a64", "#8e8c86", "#5e4632"], logD: ["#7a6640", "#5c5a56", "#3a2a1e"],
   moss: ["#94a82e", "#5e8a3a", "#7e8a34"],
+  // iron hoops and nails
+  hoop: ["#9a9c98", "#8a8e92", "#6e6a64"], hoopD: ["#4a4c4a", "#3e4246", "#34302c"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["grass", "grassRim", "grassMid", "soil", "earth", "plaster", "timber", "cobble", ...Object.keys(PAL)]
+const SKINNED = ["grass", "grassRim", "grassMid", "soil", "earth", "plaster", "timber", "cobble", "staves", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // --- grass block (315, 316, 317; the owner: the same block) -----------------
@@ -344,3 +347,38 @@ const rail = (a, b, seed) => tube([...a, (a[0] + b[0]) / 2 + 0.01, (a[1] + b[1])
 model("fence", { pivot: "origin" }, post(0, 0.25, 0.62, 1), rail([0, 0.46, 0.2], [0, 0.36, -0.72], 2))
 model("fence_pair", { pivot: "origin" }, post(0, 0.32, 0.5, 3), post(0, -0.32, 0.72, 5), rail([0, 0.36, 0.28], [0, 0.48, -0.28], 4))
 for (const n of ["fence", "fence_pair"]) looms(n)
+
+// --- barrel (218) and crate (220) ---------------------------------------------
+// a big barrel, nearly a cell: bulging painted staves, two iron hoops with
+// rivets, thick rims of pale wood top and foot, the lid set in with its
+// bung hole
+model("barrel",
+  lathe([0.36, 0.06, 0.42, 0.3, 0.44, 0.48, 0.42, 0.68, 0.36, 0.9], { mat: "staves", sides: 16, jitter: 0.004 }),
+  lathe([0.39, 0, 0.4, 0.1, 0.36, 0.12, 0, 0.12], { mat: "timber", sides: 16 }),
+  lathe([0.38, 0.86, 0.39, 0.98, 0.3, 0.98, 0.3, 0.93, 0, 0.93], { mat: "timber", sides: 16 }),
+  cyl(0.07, 0.012, { mat: "hoopD", sides: 10, pos: [0.13, 0.93, 0.05] }),
+  [[0.3, 0.435], [0.6, 0.43]].map(([y, r]) => [
+    lathe([r + 0.012, 0, r + 0.014, 0.075, 0, 0.075], { mat: "hoop", sides: 16, pos: [0, y, 0] }),
+    Array.from({ length: 10 }, (_, i) => sphere(0.012, { mat: "hoopD", detail: 0, pos: [Math.cos(i * 0.628) * (r + 0.022), y + 0.037, Math.sin(i * 0.628) * (r + 0.022)] }))]))
+// a wooden crate, open at the top: a frame of beams along every edge, plank
+// panels set back inside it, nails at the joints, the floor showing inside
+const CR = 0.38, CH = 0.6   // half its width, its height
+// a panel of vertical boards between the frame beams, set back from it; the
+// boards turned so the grain runs up them
+const panel = (n, w, h) => Array.from({ length: n }, (_, i) =>
+  box(w / n - 0.012, h, 0.025, { mat: i % 2 ? "timber" : "logD", pos: [-w / 2 + (i + 0.5) * (w / n), 0, 0], rot: [0, 0, 0], jitter: 0.002, seed: i }))
+const PW = 2 * CR - 0.16, PH = CH - 0.16
+model("crate",
+  sym("z", tf({ pos: [0, 0.08, CR - 0.05] }, panel(4, PW, PH))),
+  sym("x", tf({ pos: [CR - 0.05, 0.08, 0], rot: [0, 90, 0] }, panel(4, PW, PH))),
+  box(2 * CR - 0.08, 0.03, 2 * CR - 0.08, { mat: "timber", pos: [0, 0.03, 0] }),
+  // frame: four corner posts, the top and foot edges
+  sym("x", sym("z", box(0.08, CH, 0.08, { mat: "timber", pos: [CR - 0.04, 0, CR - 0.04], jitter: 0.004 }))),
+  [0, CH - 0.08].map((y) => [
+    sym("z", box(2 * CR, 0.08, 0.08, { mat: "timber", pos: [0, y, CR - 0.04], jitter: 0.004 })),
+    sym("x", box(0.08, 0.08, 2 * CR - 0.16, { mat: "timber", pos: [CR - 0.04, y, 0], jitter: 0.004 }))]),
+  // nails at the corners of the two faces the camera sees
+  [[CR - 0.04, CH - 0.04], [-(CR - 0.04), CH - 0.04], [CR - 0.04, 0.04], [-(CR - 0.04), 0.04]].map(([x, y]) => [
+    sphere(0.014, { mat: "hoopD", detail: 0, pos: [x, y, CR + 0.002] }),
+    sphere(0.014, { mat: "hoopD", detail: 0, pos: [CR + 0.002, y, x] })]))
+for (const n of ["barrel", "crate"]) looms(n)

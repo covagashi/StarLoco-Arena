@@ -39,6 +39,11 @@
 			"madera clara",
 			"gris",
 			"oscura"
+		],
+		"staves": [
+			"pintura roja",
+			"pintura verde",
+			"roble sin pintar"
 		]
 	},
 	"shared": [
@@ -304,6 +309,24 @@
 				200
 			],
 			"looms": "log"
+		},
+		{
+			"name": "barrel",
+			"label": "Barril",
+			"kind": "deco",
+			"gfx": [
+				218
+			],
+			"looms": "staves"
+		},
+		{
+			"name": "crate",
+			"label": "Caja de madera",
+			"kind": "deco",
+			"gfx": [
+				220
+			],
+			"looms": "plaster"
 		}
 	]
 }

@@ -290,6 +290,21 @@ cada vez, empezando por la más usada.
     demasiado chillón.
   - Hojas: `arena5-valla.png` y `arena5-valla-montada.png` (una fila sobre
     hierba; el montaje es de prueba).
+- Barril (218) y caja (220), 2026-10-28.
+  - Barril grande, casi de una casilla: duelas pintadas y abombadas, dos
+    aros de hierro con remaches, aros gruesos de madera clara arriba y al
+    pie, y la tapa metida con su agujero. Textura loom nueva `staves`:
+    duelas enteras de arriba abajo con juntas oscuras, cada una de su tono,
+    y la pintura saltada a manchas. Looms: pintura roja (el retail),
+    pintura verde, roble sin pintar.
+  - Caja abierta por arriba: marco de vigas en cada arista, paneles de
+    tablas verticales metidos, clavos en las esquinas y el fondo a la
+    vista. Usa la madera de la casa, así que sus looms van con los del
+    revoque.
+  - Primeras versiones: las duelas con juntas cruzadas (parecían un
+    entarimado) y la caja alta, con los paneles lisos.
+  - Hojas: `arena5-barril-caja.png` y `arena5-barril-caja-montados.png`
+    (junto a la pared de la casa; el montaje es de prueba).
 
 ## Fases
 

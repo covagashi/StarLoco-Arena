@@ -171,3 +171,29 @@ skins({
     })
   }
 }
+
+// --- staves: the barrel's painted boards (218) --------------------------------
+// vertical staves with dark seams, each its own tone; paint worn off in
+// patches and streaks where it was knocked, the wood showing through
+//   a red paint (retail)   b green paint   c bare oak
+skins({
+  a: { v0: "#3a1a10", v1: "#a83a1e", v2: "#cc5228", v3: "#e06c34", vw: "#b8a868" },
+  b: { v0: "#14261a", v1: "#2e6a3a", v2: "#3e8248", v3: "#58a05a", vw: "#b8a868" },
+  c: { v0: "#2a1c10", v1: "#7a5a34", v2: "#94703e", v3: "#ae8a52", vw: "#c8b07a" },
+})
+{
+  // one row of eight boards standing up: no cross joints, a barrel's staves
+  const pl = tiles({ rows: 1, cols: 8, gap: 0.012, bevel: 0.02, vary: 0.2, seed: 561 })
+  const st = pl.as("staves"), stId = pl.id, stMask = pl.mask
+  const wear = noise({ scale: [3, 10], octaves: 3, seed: 562 }).warp(noise({ scale: 4, seed: 563 }), 0.1).threshold(0.66, 0.06).as("wear")
+  const fine = noise({ scale: [8, 60], octaves: 2, seed: 564 })
+  const h = st.mul(0.8).add(fine.mul(0.08)).sub(wear.mul(0.05)).as("staveH")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("staves" + SUF[k], { size: 256, depth: 0.015, ao: 0.5 }, {
+      height: h,
+      color: ramp(stId.mix(fine, 0.3), [col("v1"), col("v2"), col("v3")]).mix(col("vw"), wear.mul(0.85)).mix(col("v0"), stMask.invert().mul(0.9)),
+      rough: fine.levels(0, 1, 0.55, 0.75).mix(0.85, wear),
+    })
+  }
+}
