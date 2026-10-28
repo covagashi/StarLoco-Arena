@@ -253,7 +253,7 @@ cada vez, empezando por la más usada.
     parecían estrellas); en el roto sigue el borde partido. La marca de
     hierro va en un panel con borde oscuro (el hueco no se veía).
   - Looms: los del revoque, con la hiedra naranja, roja o verde.
-  - Hojas: `arena5-murete-1.png`, `arena5-murete-2.png` y
+  - Hojas: `arena5-murete-1.png` … `-3.png` y
     `arena5-murete-montado.png` (una fila sobre hierba; el montaje es de
     prueba y no se sube).
 
