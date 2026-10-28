@@ -674,6 +674,29 @@ cada vez, empezando por la más usada.
     `arena6-engranajes-montados.png` (la rueda delante de la puerta baja,
     la columna sobre la caja de tablas junto al andamio, el engranaje y las
     tuercas en los adoquines; el montaje es de prueba).
+  - Dueño (2026-10-28): "todo ok". Con esto la arena 6 queda cubierta:
+    solo quedan la 1781 (no es un asset) y las nubes 2046-2051 (VFX).
+
+### Arena 7 (mundo 38, cementerio), 2026-10-28
+
+- `mapa-arena7-1.png` … `-12.png`: 88 piezas, 23 ya en los kits, 65
+  nuevas, todas con mi suposición marcada con "¿?" en `names.json`.
+- `map_sheet.py` ahora también cuenta como cubiertas las piezas que un kit
+  toma de otro (`shared` en `kit.json`). Por eso el musgo 1678 y 1679 ya
+  sale cubierto (la arena 6 lo comparte de la arena 5).
+- Lo que parece haber:
+  - Muros del cementerio (1417) coronados por una verja de lanzas de
+    hierro (1445, la pieza más usada).
+  - Losas de piedra parda partidas para el suelo, ocho dibujos (en el mapa
+    van teñidas de oscuro).
+  - Lápidas, cruces de piedra, madera y hierro, una capilla pequeña, una
+    puerta de cripta y una cripta central de bloques claros.
+  - Calaveras, huesos y esqueletos, manchas de sangre, amapolas y una
+    planta morada.
+- El borde delantero del mapa (1482, 1645 y algunas 1426) está pintado en
+  silueta negra: es el marco del primer plano, no otro objeto. La 2038
+  parece niebla (VFX).
+- Pendiente del dueño: corregir los nombres antes de modelar.
 
 ## Fases
 
