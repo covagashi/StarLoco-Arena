@@ -25,6 +25,9 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
 const PAL = {
   // wrought iron of the railings: grey (retail, which the map tints
   // blue-black), rusty, verdigris
+  // grey dead leaves and dust flakes on the floor: grey-brown (retail), ash
+  // grey, rusty brown
+  flake: ["#5e544e", "#7a7874", "#7a5238"], flakeD: ["#3e3632", "#55534f", "#55361f"], flakeL: ["#6e645c", "#8c8a86", "#8a6042"],
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
@@ -152,3 +155,34 @@ model("stone_slab", { pivot: "origin" },
   prismUp(roundSquare(CELL_HALF - 0.012, 0.09, 4, 0.006, 5), 0.035, 0.23, "plaster", 0.008),
   prismUp(roundSquare(CELL_HALF - 0.05, 0.12), 0.015, 0.262, "plaster", 0.005))
 looms("stone_slab")
+
+// --- grey dead leaves and dust (2454, 2453; 2456, 2455) ---------------------
+// flat flakes lying on the floor, the owner: "like the leaves, but grey".
+// The four retail drawings only change how many there are: a spread of many
+// (2454, 2453) and a few (2456, 2455). A flake: a rounded, ragged outline
+// folded a little along its middle, every third one darker or lighter
+function flake(x, z, r, a, i, seed) {
+  const half = (side) => {
+    const pts = [0, -r]
+    for (let k = 1; k < 4; k++) {
+      const t = -Math.PI / 2 + (k / 4) * Math.PI, rr = r * (0.75 + rnd(k + side * 5, 171, seed) * 0.35)
+      pts.push(side * Math.cos(t) * rr * 0.8, Math.sin(t) * rr)
+    }
+    pts.push(0, r)
+    return side > 0 ? pts : pts.reduceRight((o, _, k) => (k % 2 ? o : o.concat(pts[k], pts[k + 1])), [])
+  }
+  const m = i % 3 === 0 ? "flakeD" : i % 3 === 1 ? "flake" : "flakeL"
+  return tf({ pos: [x, 0.006 + (i % 3) * 0.002, z], rot: [0, a, 0] }, tf({ rot: [-90, 0, 0] },
+    extrude(half(1), 0.008, { mat: m, rot: [0, 10, 0] }), extrude(half(-1), 0.008, { mat: m, rot: [0, -10, 0] })))
+}
+// n flakes scattered over a spread of w × d, sizes r0..r1: one per cell of
+// a jittered grid, so they spread out and seldom pile up
+const flakes = (n, w, d, r0, r1, seed) => {
+  const cols = Math.ceil(Math.sqrt(n * w / d)), rows = Math.ceil(n / cols)
+  return Array.from({ length: n }, (_, i) => flake(
+    ((i % cols) + 0.2 + rnd(i, 172, seed) * 0.6) / cols * w - w / 2, (Math.floor(i / cols) + 0.2 + rnd(i, 173, seed) * 0.6) / rows * d - d / 2,
+    r0 + rnd(i, 174, seed) * (r1 - r0), rnd(i, 175, seed) * 360, i, seed))
+}
+model("dead_leaves", { pivot: "origin" }, flakes(12, 0.78, 0.6, 0.06, 0.11, 181))
+model("dead_leaves_few", { pivot: "origin" }, flakes(5, 0.48, 0.36, 0.055, 0.12, 191))
+for (const n of ["dead_leaves", "dead_leaves_few"]) looms(n)

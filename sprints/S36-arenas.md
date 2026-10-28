@@ -771,6 +771,19 @@ cada vez, empezando por la más usada.
   - Primeras versiones: fina y muy clara, con la cara de arriba en
     escalones como una tarta; luego amarilla y con manchas grandes.
   - Hoja: `arena7-losa-piedra.png` (sin montaje, como pidió el dueño).
+  - Dueño (2026-10-28): "ok".
+- Hojas grises y polvo (2454, 2453, 2456, 2455), 2026-10-28.
+  - El dueño: "como las hojas, pero grises". Son copos planos de gris pardo
+    por el suelo, y los cuatro dibujos solo cambian cuántos hay. Con la
+    libertad que dio el dueño para agrupar, son dos modelos: muchos
+    (`dead_leaves`, 2454 y 2453) y pocos (`dead_leaves_few`, 2456 y 2455).
+  - Cada copo es un contorno redondeado y desigual, algo doblado por el
+    medio; uno de cada tres va más oscuro y otro más claro. Se reparten en
+    una rejilla con holgura, así que se esparcen sin amontonarse.
+  - Colores de paleta: gris pardo (el retail), gris ceniza, pardo óxido.
+  - Primeras versiones: copos la mitad de grandes que en el retail,
+    amontonados en grupos y demasiado claros.
+  - Hoja: `arena7-hojas-polvo.png`.
 
 ## Fases
 

@@ -29,6 +29,11 @@
    "revoque crema",
    "blanco grisáceo",
    "ocre"
+  ],
+  "flake": [
+   "gris pardo",
+   "gris ceniza",
+   "pardo óxido"
   ]
  },
  "shared": [],
@@ -84,6 +89,28 @@
    "looms": "plaster",
    "top": 0.28,
    "note": "the stone of the arena 5 house; in the retail map it runs along the front edges"
+  },
+  {
+   "name": "dead_leaves",
+   "label": "Hojas grises y polvo",
+   "kind": "deco",
+   "gfx": [
+    2454,
+    2453
+   ],
+   "looms": "flake",
+   "note": "flat flakes on the floor"
+  },
+  {
+   "name": "dead_leaves_few",
+   "label": "Hojas grises y polvo (pocas)",
+   "kind": "deco",
+   "gfx": [
+    2456,
+    2455
+   ],
+   "looms": "flake",
+   "note": "flat flakes on the floor"
   }
  ]
 }
