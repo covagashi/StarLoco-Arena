@@ -983,6 +983,32 @@ cada vez, empezando por la más usada.
   - La 2763 parece un personaje pintado (un carnicero sentado). Pregunto
     si se quita.
 
+- Nombres del dueño para la arena 10 (2026-10-28):
+  - 2736, losa de ladrillos. 984 y 985 son postes de madera.
+  - La 2737 es la mancha de sangre 1655 (`same`); la 1590, la caja 220.
+  - La 474 es una cascada, aunque en el mapa sale roja de sangre. La 2459
+    es la sangre que va encima de ella.
+  - 2461, 2465 y 2470–2472 unen la losa con el río de sangre, en recto o
+    en escuadra.
+  - Las jaulas (2738, 2739, 2741, 2745, 2751 abierta, 1437 rota) pueden
+    ir vacías; dos llevan un pollo.
+  - La 2763 es una persona sin cabeza sentada en una silla: se hace.
+  - El resto, con sus grupos (embutidos, costillar, herramientas, plato,
+    barril, hacha, alcantarilla…), está en `names.json`. Quedan 60 nuevas.
+
+### Arena 11 (mundo 42, selva con plantas carnívoras), 2026-10-28
+
+- `mapa-arena11-1.png` … `-10.png`: 72 piezas, 31 ya en los kits (hierba,
+  tierra, musgo, plantas y huesos) y 41 nuevas, con mi suposición
+  marcada con "¿?".
+- Lo que parece haber:
+  - Matas de hierba alta (1751–1753, 2784) y dos bloques de hierba alta
+    (516, 580, de la familia del `grass_block`).
+  - Helechos oscuros, algunos con plantas carnívoras (2770, 2772–2775).
+  - Trepadoras con flores, zarzas con espinas (2599–2605) y lascas de
+    tierra seca (2313–2316).
+  - Unas pocas ruinas de piedra con musgo (2323, 2324, 2326, 2329).
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
