@@ -339,10 +339,20 @@ cada vez, empezando por la más usada.
     cripta. En el mapa están encima del tejado: son una buhardilla, una
     ventana de piedra con barrotes, y la 227 es la 226 reflejada. Queda en
     `names.json` como suposición, para que el dueño la confirme.
-  - Arbotante: una banda curva de piedra, de sección cuadrada, que sube
-    desde el suelo y se inclina hacia la pared que apuntala (−x), con unos
-    cascotes y hierba al pie. Unos 2,3 m, como el retail junto a la pared
-    alta.
+  - Arbotante: una banda de piedra de sección cuadrada. Una pata recta,
+    inclinada 15° hacia la pared que apuntala (−x), y un arco que se dobla
+    hasta quedar casi horizontal y acaba en un corte vertical justo en el
+    borde −x de la casilla, plano contra la pared de la casilla de al lado.
+    Unos cascotes y hierba al pie. El origen es el centro de la casilla en
+    el suelo.
+  - Dueño: "júntalo con la pared para que puedas ver si la curvatura es la
+    correcta". Montado contra la pared y comparado con el retail a la misma
+    escala (`arena5-arbotante-vs-retail.png`), salieron tres fallos, que se
+    corrigieron uno a uno: subía recto y se doblaba de golpe arriba (en el
+    retail se inclina desde abajo y acaba casi horizontal, por eso se ve la
+    cara de arriba de su extremo); llegaba casi a las vigas del tejado (en
+    el retail se apoya a la altura de la ventana: ahora mide 1,6 m sobre la
+    hierba y avanza casi una casilla); y era más delgado.
   - Buhardilla: va sobre el tejado (`on: roof`, y = 0 es la tabla del
     tejado). Dos postes algo inclinados hacia dentro, un dintel grueso,
     ventana oscura con una cruz de barrotes, y una mejilla de piedra que

@@ -490,22 +490,41 @@ model("petals",
 for (const n of ["flowers", "flower_single", "petals"]) looms(n)
 
 // --- flying buttress (225) and dormer window (226, 227) ------------------------
-// the buttress: a curved band of plaster stone, square in section, rising
-// from the ground and leaning over toward the wall it props (-x here), its
-// top cut flat where it meets the wall; a few chunks at its foot
+// the buttress: a band of plaster stone, square in section, rising straight
+// from the ground, then bending in an arc toward the wall it props (-x) and
+// ending in a vertical cut flush with that wall. Origin at the cell centre
+// on the ground: the cut lands on the cell's -x edge (x = -0.5), where the
+// face of a wall in the next cell is. Retail: the cut meets the wall a
+// little under the roof beams of a low wall.
+// centreline: a straight leg of length L leaning a0 degrees toward the wall,
+// then an arc of radius R turning to a1 degrees (nearly level), so the top
+// of its end shows as in the retail; the foot is placed so the end lands on
+// the wall (x = edge)
+const BUTT = { L: 0.8, a0: 15, R: 0.85, a1: 85, w0: 0.23, w1: 0.19, edge: -0.5 }
 const bandPts = (() => {
-  const outer = [], inner = []
-  for (let i = 0; i <= 10; i++) {
-    const t = i / 10, x = 0.3 - 0.75 * t * t, y = 2.25 * t, w = 0.22 - 0.05 * t
-    const dx = -1.5 * t * 0.75, dy = 2.25, l = Math.hypot(dx, dy), nx = dy / l, ny = -dx / l
-    outer.push([x + nx * w, y + ny * w]); inner.push([x - nx * w, y - ny * w])
+  const { L, a0, R, a1, w0, w1, edge } = BUTT, rad = Math.PI / 180
+  const C = []   // [x, y, dirx, diry], foot at x = 0 for now
+  const d0 = [-Math.sin(a0 * rad), Math.cos(a0 * rad)]
+  for (let i = 0; i <= 4; i++) C.push([d0[0] * L * i / 4, d0[1] * L * i / 4, ...d0])
+  const [sx, sy] = C[C.length - 1]
+  for (let i = 1; i <= 12; i++) {
+    const f = (a0 + (a1 - a0) * i / 12) * rad
+    C.push([sx - R * (Math.cos(a0 * rad) - Math.cos(f)), sy + R * (Math.sin(f) - Math.sin(a0 * rad)), -Math.sin(f), Math.cos(f)])
   }
-  return [...outer, ...inner.reverse()].map(([x, y]) => [x, Math.max(0, y)]).flat()
+  const shift = edge - C[C.length - 1][0]
+  const outer = [], inner = []
+  C.forEach(([x, y, dx, dy], i) => {
+    const w = w0 + (w1 - w0) * (i / (C.length - 1)), nx = dy, ny = -dx
+    outer.push([x + shift + nx * w, Math.max(0, y + ny * w)]); inner.push([x + shift - nx * w, Math.max(0, y - ny * w)])
+  })
+  // the vertical cut: both end points on x = edge
+  outer[outer.length - 1][0] = edge; inner[inner.length - 1][0] = edge
+  return [...outer, ...inner.reverse()].flat()
 })()
-model("buttress",
-  extrude(bandPts, 0.36, { mat: "plaster", jitter: 0.008, seed: 3 }),
-  rock(0.08, { mat: "plaster", pos: [0.45, 0.04, 0.15], seed: 4 }), rock(0.05, { mat: "plaster", pos: [0.15, 0.03, 0.22], seed: 5 }),
-  tf({ pos: [0.3, 0, 0.18] }, blades(6, [0.3, 0.12], 0.06, 0.13, 91, 2)))
+model("buttress", { pivot: "origin" },
+  extrude(bandPts, 0.4, { mat: "plaster", jitter: 0.006, seed: 3 }),
+  rock(0.07, { mat: "plaster", pos: [0.62, 0.03, 0.14], seed: 4 }), rock(0.045, { mat: "plaster", pos: [0.25, 0.025, 0.22], seed: 5 }),
+  tf({ pos: [0.4, 0, 0.2] }, blades(6, [0.3, 0.12], 0.06, 0.13, 91, 2)))
 // the dormer: sits on a roof (y = 0 is the roof board, the roof falls toward
 // +z): two stone posts and a lintel framing a dark window with a cross of
 // bars, a sloping stone cheek down its open side, a pitched cap of stone

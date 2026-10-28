@@ -415,7 +415,7 @@
 				225
 			],
 			"looms": "plaster",
-			"note": "leans toward -x: place it with the wall on that side"
+			"note": "origin = the cell centre on the ground; its top is cut flush with the cell's -x edge: place it in the cell next to a wall on that side"
 		},
 		{
 			"name": "dormer",
