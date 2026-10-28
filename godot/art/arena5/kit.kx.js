@@ -51,6 +51,9 @@ const PAL = {
   // moss pads and sprouts (1680-1683, 334, 331, 333, 613): soft olive-yellow
   // (retail), deep green, dry straw
   padD: ["#5a681a", "#2a4a22", "#6e5c22"], pad: ["#7e8e22", "#3e6e2e", "#948034"], padL: ["#9cac2c", "#5e923c", "#b4a24e"],
+  // engraved slabs (466-468): cream-olive stone (retail), grey, terracotta;
+  // the raised greca a shade lighter
+  slabD: ["#8a8458", "#6e7074", "#8a4a30"], slab: ["#b8b080", "#9a9c9e", "#b06a48"], slabL: ["#d8d0a2", "#c4c6c6", "#d08e68"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -575,3 +578,57 @@ model("moss_tall", { scale: 1.2 }, mossPad(0.02, 0.06, 0.32, 0.17, 10, 7), tf({ 
 model("sprouts", [[-0.24, -0.1], [0.14, -0.2], [0.0, 0.16], [0.3, 0.12], [-0.3, 0.22]].map(([x, z], i) =>
   tf({ pos: [x, 0, z], scale: 1.3 }, blades(7, [0.22, 0.16], 0.1, 0.2, 111 + i * 7, 1, PADS))))
 for (const n of ["moss_pads", "moss_patch", "moss_tall", "sprouts"]) looms(n)
+
+// --- engraved slabs (466 the knot at the centre, 467/468 the arms round it;
+// 468 is 467 mirrored) -------------------------------------------------------
+// a low stone slab, chipped at the rim, and a greca standing proud of it:
+// square spirals drawn as raised bands. The knot's four spirals each run a
+// tail out to the middle of one edge; an arm's band runs to the middle of
+// its -x edge, so set round the knot the bands join up across cells.
+const SLAB_T = 0.045, BAND = 0.038, RELIEF = 0.018
+// a raised band from (x0, z0) to (x1, z1), axis-aligned
+const band = (x0, z0, x1, z1) => box(Math.abs(x1 - x0) + BAND, RELIEF, Math.abs(z1 - z0) + BAND,
+  { mat: "slabL", pos: [(x0 + x1) / 2, SLAB_T, (z0 + z1) / 2] })
+// a square spiral from its centre outward: legs of 1, 1, 2, 2, 3, 3... steps,
+// turning one way (sgn); returns its points
+function spiralPts(cx, cz, step, legs, sgn, a0 = 0) {
+  const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]].map(([x, z]) => [x, z * sgn])
+  const pts = [[cx, cz]]
+  let [x, z] = [cx, cz]
+  for (let i = 0; i < legs; i++) {
+    const [dx, dz] = dirs[(i + a0) % 4], l = Math.ceil((i + 1) / 2) * step
+    x += dx * l; z += dz * l; pts.push([x, z])
+  }
+  return pts
+}
+const bandsOf = (pts) => pts.slice(1).map((p, i) => band(pts[i][0], pts[i][1], p[0], p[1]))
+const slabBase = (seed) => [
+  // the body reaches 12 cm below its face, to bury a grass block's dome
+  prismUp(roundSquare(0.49, 0.05, 6, 0.012, seed), SLAB_T + 0.12, -0.12, "slab", 0.006),
+  // chips knocked out of the rim
+  [[0.46, 0.2], [-0.3, 0.47], [-0.47, -0.25], [0.15, -0.47]].map(([x, z], i) =>
+    rock(0.035, { mat: "slabD", pos: [x, SLAB_T - 0.01, z], scale: [1.2, 0.5, 1.2], seed: seed + i })),
+]
+// a spiral's tail: from its last point straight to the nearer axis
+const tailTo = ([ex, ez]) => (Math.abs(ex) < Math.abs(ez) ? band(ex, ez, 0, ez) : band(ex, ez, ex, 0))
+// the knot: a cross of bands edge to edge through the centre, a spiral in
+// each quadrant hooked onto it, a stud where the bands cross
+model("slab_knot", { pivot: "origin" }, slabBase(1),
+  band(-0.47, 0, 0.47, 0), band(0, -0.47, 0, 0.47),
+  // one quadrant's spiral, turned four times: a pinwheel, every spiral hooked
+  [0, 90, 180, 270].map((r) => tf({ rot: [0, r, 0] }, (() => {
+    const pts = spiralPts(0.24, 0.24, 0.07, 5, 1, 2)
+    return [bandsOf(pts), tailTo(pts[pts.length - 1])]
+  })())),
+  box(0.08, RELIEF + 0.006, 0.08, { mat: "slabL", pos: [0, SLAB_T, 0] }))
+// an arm: one spiral hooked onto a band running to the middle of the -x
+// edge (where the knot's cross begins), three short parallel stripes in the
+// far corner, a stud
+model("slab_arm", { pivot: "origin" }, slabBase(5),
+  (() => {
+    const pts = spiralPts(0.14, 0.04, 0.085, 6, 1, 0)
+    return [bandsOf(pts), tailTo(pts[pts.length - 1]), band(-0.47, 0, 0.1, 0)]
+  })(),
+  [0, 1, 2].map((i) => band(-0.36 + i * 0.075, -0.42, -0.36 + i * 0.075, -0.3)),
+  box(0.06, RELIEF, 0.06, { mat: "slabL", pos: [0.36, SLAB_T, 0.36] }))
+for (const n of ["slab_knot", "slab_arm"]) looms(n)

@@ -383,6 +383,28 @@ cada vez, empezando por la más usada.
     claras y pequeñas; los brotes, escasos y diminutos.
   - Hojas: `arena5-musgo-1.png`, `-2.png` y `arena5-musgo-montado.png`
     (sobre losas de adoquines y hierba; el montaje es de prueba).
+- La nube de luz (461) es VFX (dueño, 2026-10-28): va a `gfx_rules.json`
+  (`vfx`) y a S37; no se modela.
+- Losas grabadas (466 el nudo del centro; 467 y 468 los brazos, la 468 es la
+  467 reflejada), 2026-10-28.
+  - En el mapa forman una plazuela en cruz de cinco casillas sobre la
+    hierba: el nudo en el centro y un brazo a cada lado.
+  - Una losa baja de piedra, con mellas en el borde, y la greca en relieve
+    encima: espirales cuadradas hechas de bandas claras. El nudo lleva una
+    cruz de bandas de borde a borde y una espiral en cada cuadrante
+    enganchada a ella (un molinete: la misma espiral girada cuatro veces).
+    El brazo lleva una espiral enganchada a una banda que llega al centro
+    de su borde −x, tres rayas en una esquina y un botón. Así, girando cada
+    brazo hacia el nudo, las bandas continúan de una casilla a otra.
+  - El cuerpo baja 12 cm por debajo de la cara para tapar la cúpula del
+    bloque de hierba.
+  - Looms: piedra crema (el retail), gris, terracota.
+  - Primeras versiones: espirales diminutas y apelotonadas (el paso era
+    menor que el ancho de la banda); una espiral del nudo sin enganchar;
+    motas de hierba atravesando la losa; losa algo gruesa.
+  - Hojas: `arena5-losas-grabadas.png` y
+    `arena5-losas-grabadas-montadas.png` (la plazuela de cinco casillas
+    sobre hierba; el montaje es de prueba).
 
 ## Fases
 

@@ -74,6 +74,11 @@
 			"oliva claro",
 			"verde intenso",
 			"paja seca"
+		],
+		"slab": [
+			"piedra crema",
+			"gris",
+			"terracota"
 		]
 	},
 	"shared": [
@@ -473,6 +478,27 @@
 				613
 			],
 			"looms": "pad"
+		},
+		{
+			"name": "slab_knot",
+			"label": "Losa grabada (nudo central)",
+			"kind": "flat",
+			"gfx": [
+				466
+			],
+			"looms": "slab",
+			"note": "face 4.5 cm above the tile's walk surface; its body reaches 12 cm below to bury a grass dome; the cross of bands meets each edge at its middle"
+		},
+		{
+			"name": "slab_arm",
+			"label": "Losa grabada (brazo)",
+			"kind": "flat",
+			"gfx": [
+				467,
+				468
+			],
+			"looms": "slab",
+			"note": "its band meets the middle of its -x edge: turn that edge toward the knot; 468 is 467 mirrored"
 		}
 	]
 }
