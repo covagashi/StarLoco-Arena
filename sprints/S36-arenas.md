@@ -880,7 +880,30 @@ cada vez, empezando por la más usada.
     pendiente casi invisible y luego una rampa; en el bloque inclinado,
     las piedras de los lados cortadas a trozos y las de la pendiente
     hundidas en el núcleo.
-  - Hoja: `arena7-cripta.png`.
+  - Hojas: `arena7-cripta-1.png`, `-2.png`.
+  - Dueño (2026-10-28): "todo ok".
+- Casita de piedra (2491), tierra fresca (2497, 2498), bloque con agujero
+  (2499), roca de pie (1579) y manchas de musgo (2449), 2026-10-28.
+  - Casita: un mausoleo estrecho con la puerta en arco oscura en el
+    hastial (+x), un tejado empinado de lajas de piedra en cuatro filas
+    que vuela sobre las paredes, y la cumbrera de piedras sueltas.
+  - Tierra fresca: un túmulo alargado (a lo largo de x) de tierra recién
+    removida, de lados empinados y cima plana, con terrones alrededor. La
+    2498 lleva tres florecitas clavadas. Usa la textura `dirt` teñida más
+    cálida (`dirtFresh`).
+  - Bloque con agujero: un sarcófago sin tapa, de paredes gruesas
+    alrededor de un fondo hundido, con una placa en el extremo +x.
+  - Roca de pie (1579, el dueño: "roca"): una piedra gris redondeada, de
+    pie y algo ladeada, con matas y piedrecitas pardas al pie. Looms:
+    granito gris (el retail), gris oscuro, arenisca roja.
+  - Manchas de musgo (2449, sin nombre del dueño; parecía musgo): manchas
+    planas de musgo oliva sobre una mancha húmeda oscura, tipo `flat`.
+  - Primeras versiones: el túmulo plano, pálido y luego rojo oscuro, con
+    las flores diminutas; el sarcófago de paredes finas; la roca crema y
+    estrecha; el musgo sobre una mancha roja (el color de la sangre).
+  - Hojas: `arena7-casita-tumbas-1.png` … `-3.png`.
+- Con esto la arena 7 queda cubierta: `mapa-arena7` da 87 piezas, 0
+  nuevas (la 2038, niebla, va a VFX).
 
 ## Fases
 

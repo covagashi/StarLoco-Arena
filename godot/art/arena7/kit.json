@@ -69,6 +69,16 @@
    "sangre roja",
    "icor negro",
    "limo verde"
+  ],
+  "moss": [
+   "musgo oliva",
+   "verde oscuro",
+   "oliva seco"
+  ],
+  "rockGrey": [
+   "granito gris",
+   "gris oscuro",
+   "arenisca roja"
   ]
  },
  "shared": [],
@@ -452,6 +462,63 @@
    ],
    "looms": "stone",
    "note": "its +z side slopes back"
+  },
+  {
+   "name": "stone_house",
+   "label": "Casita de piedra",
+   "kind": "deco",
+   "gfx": [
+    2491
+   ],
+   "looms": "stone",
+   "note": "the doorway faces +x"
+  },
+  {
+   "name": "fresh_grave",
+   "label": "Tierra fresca (recién enterrado)",
+   "kind": "deco",
+   "gfx": [
+    2497
+   ],
+   "looms": "dirt",
+   "note": "the mound runs along x"
+  },
+  {
+   "name": "fresh_grave_flowers",
+   "label": "Tierra fresca con florecitas",
+   "kind": "deco",
+   "gfx": [
+    2498
+   ],
+   "looms": "dirt",
+   "note": "the mound runs along x"
+  },
+  {
+   "name": "stone_trough",
+   "label": "Bloque de piedra con un agujero",
+   "kind": "deco",
+   "gfx": [
+    2499
+   ],
+   "looms": "stone"
+  },
+  {
+   "name": "rock_standing",
+   "label": "Roca de pie",
+   "kind": "deco",
+   "gfx": [
+    1579
+   ],
+   "looms": "rockGrey"
+  },
+  {
+   "name": "moss_stain",
+   "label": "Manchas de musgo",
+   "kind": "flat",
+   "gfx": [
+    2449
+   ],
+   "looms": "moss"
   }
  ]
 }

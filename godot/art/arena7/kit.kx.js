@@ -9,6 +9,8 @@ const LOOMS = ["", "_b", "_c"]
 pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["stone" + s, { tex: "../arena6/out/stone" + s, uv: 0.9, rough: 0.85 }],
   ["stoneShade" + s, { tex: "../arena6/out/stone" + s, uv: 0.9, rough: 0.85, color: "#e4e0d2" }],
+  // the standing rock (1579): grey (the granite), dark grey, red sandstone
+  ["rockGrey" + s, { tex: "../arena6/out/stone" + ["_b", "_b", "_c"][LOOMS.indexOf(s)], uv: 0.9, rough: 0.85, color: ["#ffffff", "#9a9a9a", "#ffffff"][LOOMS.indexOf(s)] }],
   ["flagCrack" + s, { tex: "../arena6/out/flagCrack" + s, uv: 1, rough: 0.8 }],
   // the stone slab (1482, 1645): the plaster stone of the arena 5 house, worn
   // to a duller sand; its sides darker, its foot greyed by damp
@@ -28,6 +30,8 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["dirt" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.9 }],
   ["dirtShade" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.9, color: "#e2d8c6" }],
   ["dirtD" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.95, color: "#84765f" }],
+  // freshly dug earth (2497, 2498): the same earth, warmer and darker
+  ["dirtFresh" + s, { tex: "out/dirt" + s, uv: 1, rough: 0.95, color: "#f4d29a" }],
 ])))
 // palette looms: [a, b, c] per key
 const PAL = {
@@ -56,6 +60,8 @@ const PAL = {
   bloodD: ["#2e1612", "#1e1c1e", "#22361a"], blood: ["#4c1a12", "#34303a", "#3e6a20"], bloodL: ["#b03a1a", "#5a5262", "#7ab030"],
   // the stake through the skeleton (2245)
   stake: ["#6a3e22", "#5a4e44", "#3e2a1c"],
+  // flat moss stains (2449): olive (retail), deep green, dry olive
+  mossDamp: ["#34361e", "#1e2a1a", "#3a3420"], mossD: ["#3e4a14", "#1e3a18", "#4a4416"], moss: ["#7a8a1e", "#3e6a28", "#8a7e26"], mossL: ["#a8b030", "#6a9a3e", "#b0a440"],
   // the candle in the niche (1503): wax, and its flame (glows)
   wax: ["#f0e2a0", "#ecebe2", "#e8c88a"],
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
@@ -63,7 +69,7 @@ const PAL = {
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
 // the candle flame glows the same in every loom
 pal({ flame: { color: "#ffd24a", emit: "#ffb830", glow: 4 } })
-const SKINNED = ["stone", "stoneShade", "flagCrack", "plaster", "plasterSide", "plasterFoot", "stoneMoss", "panel", "board", "boardV", "boardOlive", "dirt", "dirtShade", "dirtD", ...Object.keys(PAL)]
+const SKINNED = ["stone", "stoneShade", "rockGrey", "flagCrack", "plaster", "plasterSide", "plasterFoot", "stoneMoss", "panel", "board", "boardV", "boardOlive", "dirt", "dirtShade", "dirtD", "dirtFresh", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a repeatable pseudo-random number in 0..1 for (i, k, seed)
@@ -618,3 +624,65 @@ model("crypt_block_slope", cryptCore(true, "stoneShade", 0.14), cryptFace(361, t
 // smooth crypt block (2210): one dressed stone, cracked, the +z side sloping
 model("crypt_block_smooth", cryptCore(true, "flagCrack", 0.0))
 for (const n of ["crypt_block", "crypt_block_slope", "crypt_block_smooth"]) looms(n)
+
+// --- the little stone house (2491), fresh graves (2497, 2498) and the stone
+// trough (2499) ---------------------------------------------------------------
+// little stone house (2491): a narrow mausoleum, its gable end with an
+// arched dark doorway facing +x, a steep roof of flat stone slates
+// overhanging the +z and -z walls, a ragged ridge
+const HZ = 0.27, HX = 0.3, EAVE = 0.42, RIDGE = 0.92
+model("stone_house",
+  // walls: the house profile in (z, y) extruded along x (X maps to -z)
+  extrude([HZ, 0, -HZ, 0, -HZ, EAVE, 0, RIDGE - 0.04, HZ, EAVE], 2 * HX, { mat: "stoneShade", rot: [0, 90, 0], jitter: 0.006, seed: 451 }),
+  // the doorway on the +x gable
+  tf({ pos: [HX + 0.002, 0, 0], rot: [0, 90, 0] }, extrude(archPts(0.24, 0.42, 6), 0.01, { mat: "hole" })),
+  // the roof: on each side rows of slates along x, laid down the slope
+  [1, -1].map((k) => {
+    const len = Math.hypot(HZ + 0.08, RIDGE - EAVE + 0.06), a = Math.atan2(RIDGE - EAVE + 0.06, HZ + 0.08) * 180 / Math.PI
+    return tf({ pos: [0, RIDGE, 0], rot: [k * a, 0, 0] }, Array.from({ length: 4 }, (_, r) =>
+      [0, 1, 2].map((c) => {
+        const w = 0.68 / 3, x = -0.34 + (c + 0.5) * w + (r % 2 ? w * 0.3 : 0)
+        return box(w - 0.02, 0.05, len / 4 + 0.04, { mat: (r + c) % 2 ? "stone" : "stoneShade", pos: [Math.min(x, 0.34 - w / 2), -0.02 - r * 0.012, k * (r + 0.5) * len / 4], rot: [0, (rnd(r * 3 + c, 461, k) - 0.5) * 6, 0], jitter: 0.008, seed: 471 + r * 3 + c })
+      })))
+  }),
+  // the ragged ridge: a few stones along it
+  [-0.24, -0.06, 0.12, 0.27].map((x, i) => stone(x, RIDGE - 0.03, 0, 0.14, 0.08 + rnd(i, 462, 5) * 0.08, 0.12, { seed: 481 + i, round: 0.3 })))
+// fresh grave (2497): a long mound of loose, freshly dug earth, crumbs
+// scattered round it
+const moundFn = (hx, hz) => (x, z) => {
+  const ex = Math.max(0, 1 - Math.pow(Math.abs(x) / hx, 6)), ez = Math.max(0, 1 - Math.pow(Math.abs(z) / hz, 3.5))
+  return ex * ez * (0.85 + 0.15 * Math.sin(x * 23) * Math.sin(z * 19))
+}
+const crumbs = (seed) => [[0.44, 0.2], [-0.42, -0.22], [0.36, -0.28], [-0.46, 0.18], [0.1, 0.33], [-0.2, -0.34], [0.48, -0.05]].map(([x, z], i) =>
+  rock(0.02 + rnd(i, 491, seed) * 0.02, { mat: "dirtD", seed: seed + i, pos: [x, 0.01, z], scale: [1, 0.6, 1] }))
+const freshMound = (seed) => [
+  terrain(0.84, 0.56, { res: 24, height: 0.3, fn: moundFn(0.42, 0.28), mat: (h) => (h < 0.06 ? "dirtD" : "dirtFresh") }),
+  crumbs(seed)]
+model("fresh_grave", freshMound(501))
+// fresh grave with flowers (2498): the same mound, a few little flowers
+// stuck in its top
+model("fresh_grave_flowers", freshMound(511),
+  [[-0.2, 0.0, 0.28], [-0.1, -0.05, 0.28], [0.3, 0.06, 0.24]].map(([x, z, y], i) => tf({ pos: [x, y - 0.03, z], scale: 1.4 }, daisy(0, 0, 0.05, 521 + i))))
+// stone trough (2499): an open stone box, a sarcophagus without its lid:
+// thick walls round a sunk floor, a small plaque carved on the +x end
+const TX = 0.38, TZ = 0.28, TH = 0.3, TW = 0.12
+model("stone_trough",
+  box(2 * TX, 0.08, 2 * TZ, { mat: "stoneShade", jitter: 0.004 }),
+  [1, -1].map((k) => stone(0, 0, k * (TZ - TW / 2), 2 * TX, TH, TW, { seed: 531 + k, round: 0.2 })),
+  [1, -1].map((k) => stone(k * (TX - TW / 2), 0, 0, TW, TH, 2 * TZ - 2 * TW + 0.01, { seed: 535 + k, round: 0.2 })),
+  box(0.03, 0.1, 0.18, { mat: "stoneShade", pos: [TX + 0.006, 0.1, 0] }),
+  rock(0.04, { mat: "stone", seed: 539, pos: [TX + 0.06, 0.02, TZ - 0.04], scale: [1, 0.6, 1] }))
+for (const n of ["stone_house", "fresh_grave", "fresh_grave_flowers", "stone_trough"]) looms(n)
+
+// standing rock (1579; the owner: "a rock"): a grey rounded stone standing
+// on end, a little tilted, grass tufts and brown pebbles at its foot
+model("rock_standing",
+  stone(0, 0, 0, 0.5, 0.62, 0.42, { seed: 541, tilt: -6, round: 0.42, mat: "rockGrey" }),
+  tuft(-0.22, 0.12, 5, 0.12, 11), tuft(0.2, 0.16, 4, 0.1, 12),
+  [[-0.12, 0.22], [0.02, 0.24], [0.14, 0.2], [-0.24, 0.0]].map(([x, z], i) => rock(0.05, { mat: "dirtD", seed: 551 + i, pos: [x, 0.025, z + 0.04], scale: [1, 0.7, 1] })))
+// moss stain (2449): flat olive moss blotches over a dark damp patch
+model("moss_stain", { pivot: "origin" },
+  blob(0, 0, 0.2, 561, "mossDamp"),
+  [[-0.08, 0.0, 0.1, "moss"], [0.18, 0.04, 0.09, "mossL"], [-0.24, 0.08, 0.04, "mossL"], [0.02, -0.16, 0.05, "moss"],
+   [-0.04, 0.2, 0.05, "mossL"], [0.22, 0.2, 0.04, "mossD"], [0.06, 0.1, 0.06, "mossD"]].map(([x, z, r, m], i) => blob(x * 1.5, z * 1.5, r, 570 + i, m, 0.008)))
+for (const n of ["rock_standing", "moss_stain"]) looms(n)
