@@ -54,6 +54,9 @@ const PAL = {
   // engraved slabs (466-468): cream-olive stone (retail), grey, terracotta;
   // the raised greca a shade lighter
   slabD: ["#8a8458", "#6e7074", "#8a4a30"], slab: ["#b8b080", "#9a9c9e", "#b06a48"], slabL: ["#d8d0a2", "#c4c6c6", "#d08e68"],
+  // dark stone (the canal block 169): slate grey (retail), basalt, brown
+  darkD: ["#2e2c2a", "#1e2024", "#2e2218"], dark: ["#575450", "#3e4248", "#5a4634"], darkL: ["#7a7670", "#5e646c", "#7e6650"],
+  cleat: ["#c4c6c8", "#9a9ea2", "#b0a088"],
   // roof tiles: green glazed (retail), terracotta, slate
   roofD: ["#1e4a32", "#7a3218", "#2a3038"], roof: ["#2e6a48", "#a8482a", "#3e4650"], roofL: ["#4a8a64", "#c8643a", "#5a6470"],
 }
@@ -665,3 +668,36 @@ model("stone_strips",
   frag2(0.05, -0.43, 0.5, 0.05, 4, 4),
   sproutAt(-0.22, -0.12, 131), sproutAt(0.12, 0.12, 132), sproutAt(0.3, -0.12, 133))
 for (const n of ["paving_broken", "stone_strips"]) looms(n)
+
+// --- chimney (228), canal block (169), wall window (210) ---------------------
+// chimney: stands on a roof (y = 0 is the roof board): a pale stone shaft,
+// a band of timber, a square stone cap with its flue hole
+model("chimney", { pivot: "origin" },
+  prismUp(roundSquare(0.12, 0.03), 0.34, 0, "plaster", 0.008),
+  prismUp(roundSquare(0.15, 0.02), 0.12, 0.33, "timber", 0.004),
+  // the cap: four walls round the flue, the dark flue inside
+  sym("x", box(0.09, 0.2, 0.38, { mat: "plaster", pos: [0.145, 0.45, 0], jitter: 0.005, seed: 1 })),
+  sym("z", box(0.2, 0.2, 0.09, { mat: "plaster", pos: [0, 0.45, 0.145], jitter: 0.005, seed: 2 })),
+  box(0.2, 0.02, 0.2, { mat: "hole", pos: [0, 0.6, 0] }))
+// canal block: a dark stone set in the water channel, its top two long
+// slabs split by a groove and bevelled at the front, a dark plinth under
+// them, two iron cleats with rivets on the back slab
+// the slabs run along x: bevelled under the front (+x), the cleats on a
+// ledge at the back (-x); a side profile (x, y) extruded across z
+const slabProfile = [-0.36, 0, 0.22, 0, 0.42, 0.16, 0.42, 0.3, -0.36, 0.3]
+model("canal_block",
+  prismUp(roundSquare(0.25, 0.04), 0.42, 0, "darkD", 0.008),
+  [-0.2, 0.2].map((z, i) => extrude(slabProfile, 0.38, { mat: i ? "dark" : "darkL", pos: [0, 0.4, z], jitter: 0.006, seed: i })),
+  box(0.2, 0.22, 0.84, { mat: "darkD", pos: [-0.44, 0.48, 0], jitter: 0.006 }),
+  [-0.2, 0.2].map((z) => tf({ pos: [-0.44, 0.7, z] },
+    box(0.13, 0.1, 0.22, { mat: "cleat", jitter: 0.003 }),
+    sym("z", sphere(0.022, { mat: "darkD", detail: 1, pos: [0, 0.1, 0.06] })))))
+// wall window: hangs on a wall face (z = 0 is the face, +z out): a frame of
+// pale planks, a dark opening with a plant behind two bars
+model("wall_window", { pivot: "origin", scale: 1.25 },
+  box(0.34, 0.36, 0.02, { mat: "hole", pos: [0, -0.46, 0.005] }),
+  tf({ pos: [0.02, -0.46, 0.02] }, blades(7, [0.18, 0.02], 0.18, 0.32, 141, 0, PADS)),
+  sym("x", box(0.09, 0.5, 0.06, { mat: "logL", pos: [0.215, -0.52, 0.03], jitter: 0.004 })),
+  box(0.52, 0.09, 0.07, { mat: "logL", pos: [0, -0.11, 0.035], jitter: 0.004, seed: 2 }),
+  box(0.54, 0.08, 0.09, { mat: "log", pos: [0, -0.56, 0.04], jitter: 0.004, seed: 3 }))
+for (const n of ["chimney", "canal_block", "wall_window"]) looms(n)

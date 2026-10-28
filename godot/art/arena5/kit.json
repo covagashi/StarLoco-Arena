@@ -1,5 +1,5 @@
 {
-	"_doc": "Arena 5 (retail world 21: meadow, ruins of a house) kit for the map editor (S36), same schema as art/arena1/kit.json. Pieces the arena also uses from the arena 1 and 2 kits are listed in shared. kind cap = lies over another block's top: y = 0 is that top, the lip hangs over its sides; top = the walk surface above that top (m). kind side = hangs down one side of a block from its rim (y = 0 is the rim, the +z side; the editor turns it to the side wanted); rim = where a tile's side meets its top (m).",
+	"_doc": "Arena 5 (retail world 21: meadow, ruins of a house) kit for the map editor (S36), same schema as art/arena1/kit.json. Pieces the arena also uses from the arena 1 and 2 kits are listed in shared. kind cap = lies over another block's top: y = 0 is that top, the lip hangs over its sides; top = the walk surface above that top (m). kind side = hangs down one side of a block from its rim (y = 0 is the rim, the +z side; the editor turns it to the side wanted); rim = where a tile's side meets its top (m). kind wall = hangs on a wall face (z = 0 is the face, +z out, y = 0 its top).",
 	"biome": "pradera",
 	"arenas": [
 		21
@@ -79,6 +79,11 @@
 			"piedra crema",
 			"gris",
 			"terracota"
+		],
+		"dark": [
+			"pizarra gris",
+			"basalto",
+			"piedra parda"
 		]
 	},
 	"shared": [
@@ -517,6 +522,36 @@
 				16
 			],
 			"looms": "slab"
+		},
+		{
+			"name": "chimney",
+			"label": "Chimenea",
+			"kind": "deco",
+			"gfx": [
+				228
+			],
+			"looms": "plaster",
+			"on": "roof",
+			"note": "y = 0 is the roof board"
+		},
+		{
+			"name": "canal_block",
+			"label": "Bloque de piedra con grapas (en el canal)",
+			"kind": "tile",
+			"gfx": [
+				169
+			],
+			"looms": "dark",
+			"top": 0.7
+		},
+		{
+			"name": "wall_window",
+			"label": "Ventana de madera (en la pared)",
+			"kind": "wall",
+			"gfx": [
+				210
+			],
+			"looms": "timber"
 		}
 	]
 }

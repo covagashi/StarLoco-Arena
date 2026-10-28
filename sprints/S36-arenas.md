@@ -420,6 +420,31 @@ cada vez, empezando por la más usada.
     parecían adoquines, y todo algo pequeño para la casilla.
   - Hojas: `arena5-empedrado.png` y `arena5-empedrado-montado.png` (sobre
     hierba y tierra; el montaje es de prueba).
+- Chimenea (228), bloque del canal (169) y ventana (210), 2026-10-28.
+  - Corrección de tres nombres míos, vistos en el mapa: la 228 no es un
+    pilar pequeño, es una chimenea sobre el tejado; la 169 no es un yunque,
+    es un bloque de piedra oscura con dos grapas de hierro hundido en el
+    canal; la 210 no está en el suelo, es una ventana en la pared alta.
+    Quedan en `names.json` como suposiciones.
+  - Chimenea: fuste de revoque, una banda de madera y un remate cuadrado
+    de piedra con el hueco del humo. Va sobre el tejado (`on: roof`). Looms
+    del revoque.
+  - Bloque del canal: un pedestal oscuro y estrecho, dos losas gruesas a lo
+    largo del canal con una ranura entre ellas y el bisel delante, y detrás
+    un saliente con las dos grapas claras remachadas. Tipo `tile`, cara a
+    0,7 m. Looms: pizarra gris (el retail), basalto, piedra parda.
+  - Ventana: marco de tablas, hueco oscuro con una planta dentro. Tipo
+    nuevo `wall` en `kit.json`: cuelga de la cara de una pared (z = 0 es la
+    cara). Looms de la madera de vigas.
+  - Primeras versiones: el bloque con las losas finas sobre un pedestal
+    igual de ancho y luego girado (las grapas quedaban en un lado); la
+    ventana estrecha, con el hueco asomando por encima del marco.
+  - Hojas: `arena5-chimenea-bloque-ventana.png` y
+    `arena5-chimenea-bloque-ventana-montados.png` (en la casa; el montaje
+    es de prueba).
+- Con esto, las 74 piezas de la arena 5 quedan cubiertas: las nuevas en
+  `godot/art/arena5/`, las demás reutilizadas de las arenas 1 y 2, los
+  ladrillos 214/215/216 omitidos y la nube 461 a VFX.
 
 ## Fases
 
