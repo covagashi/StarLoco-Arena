@@ -11,6 +11,8 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["soil" + s, { tex: "out/soil" + s, uv: 1, rough: 0.85 }],
   // the same grass, shaded darker: the rim of each cell, so the grid reads
   ["grassRim" + s, { tex: "out/grass" + s, uv: 1.1, rough: 0.85, color: "#9ca482" }],
+  // packed dark earth, no strata (the dirt block's top face and band)
+  ["earth" + s, { tex: "out/earth" + s, uv: 1, rough: 0.9 }],
   ["grassMid" + s, { tex: "out/grass" + s, uv: 1.1, rough: 0.85, color: "#c2c8a8" }],
 ])))
 // palette looms: [a, b, c] per key, matching the grass and soil looms
@@ -19,7 +21,7 @@ const PAL = {
   soilD: ["#5a4220", "#3a2c1c", "#5e2a18"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
-const SKINNED = ["grass", "grassRim", "grassMid", "soil", ...Object.keys(PAL)]
+const SKINNED = ["grass", "grassRim", "grassMid", "soil", "earth", ...Object.keys(PAL)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // --- grass block (315, 316, 317; the owner: the same block) -----------------
@@ -70,3 +72,13 @@ model("grass_cap", { pivot: "origin" }, grassTop(0))
 // on across stacked columns
 model("soil_col", prismUp(roundSquare(CELL_HALF, 0.06), 1, 0, "soil", 0.006))
 for (const n of ["grass_block", "grass_cap", "soil_col"]) looms(n)
+
+// --- dirt block (233): bare earth, strata on the sides, a band of packed dark
+// earth along the top with a wavy lower edge, the top face dark too, its
+// edges worn round. In the retail map it is mostly tinted blue-grey (the grey
+// blocks under the grass): that is the editor's tint, not a loom.
+model("dirt_block",
+  prismUp(roundSquare(CELL_HALF, 0.07), 0.74, 0, "soil", 0.006),
+  prismUp(roundSquare(CELL_HALF + 0.002, 0.075), 0.1, 0.72, "earth", 0.006),
+  prismUp(roundSquare(CELL_HALF - 0.03, 0.12), 0.04, 0.81, "earth", 0.004))
+looms("dirt_block")

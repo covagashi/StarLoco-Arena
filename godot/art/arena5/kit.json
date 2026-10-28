@@ -14,6 +14,11 @@
 			"verde fresco",
 			"verde prado",
 			"seco, dorado"
+		],
+		"soil": [
+			"arena ocre",
+			"tierra oscura",
+			"arcilla roja"
 		]
 	},
 	"shared": [
@@ -121,6 +126,17 @@
 			],
 			"looms": "grass",
 			"top": 0.18
+		},
+		{
+			"name": "dirt_block",
+			"label": "Bloque de tierra",
+			"kind": "tile",
+			"gfx": [
+				233
+			],
+			"looms": "soil",
+			"top": 0.85,
+			"col": "soil_col"
 		}
 	]
 }

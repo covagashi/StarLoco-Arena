@@ -184,6 +184,18 @@ cada vez, empezando por la más usada.
     la capa comparten la misma parte de arriba (`grassTop`). Hoja:
     `arena5-hierba-sobre-piedra.png` (con un bloque gris de prueba, no se
     sube).
+- Bloque de tierra (233), 2026-10-28.
+  - Cuerpo con la misma textura de estratos que el bloque de hierba, y una
+    franja de tierra apelmazada oscura arriba, con la cara de arriba de
+    bordes gastados. La primera versión usaba la textura de estratos también
+    arriba (parecía madera) y la franja sobresalía como una tapa.
+  - Textura loom nueva `earth`: tierra pisada sin estratos, piedrecitas
+    clavadas, grietas finas y polvo en lo alto. Looms: arena ocre, tierra
+    oscura, arcilla roja (los de `soil`).
+  - En el mapa retail el 233 va casi siempre teñido de azul, y por eso se
+    ve gris bajo la hierba: ese gris es el tinte del editor, no un loom.
+  - Hojas: `arena5-tierra.png` y `arena5-tierra-prado.png` (mezclado con
+    hierba, a escala real).
 
 ## Fases
 

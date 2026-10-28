@@ -67,3 +67,29 @@ skins({
     })
   }
 }
+
+// --- earth: the packed dark top of the dirt block (233) ---------------------
+// no strata: trodden earth, mottled, small stones pressed in, thin dry cracks
+// and lighter dust on the high spots
+//   a dark olive earth (retail)   b black loam   c dark red clay
+skins({
+  a: { e0: "#241c10", e1: "#4a3e24", e2: "#62553a", e3: "#857652" },
+  b: { e0: "#110d09", e1: "#2a2219", e2: "#3c3226", e3: "#584a3a" },
+  c: { e0: "#200c08", e1: "#4a2618", e2: "#643626", e3: "#8a5440" },
+})
+{
+  const mid = noise({ scale: 5, octaves: 4, seed: 521 }).warp(noise({ scale: 2, seed: 522 }), 0.08).as("earthMid")
+  const fine = noise({ scale: 36, octaves: 3, seed: 523 })
+  const stones = dots({ scale: 10, radius: 0.12, jitter: 1, seed: 524 }).mul(noise({ scale: 3, seed: 525 }).threshold(0.5, 0.2)).as("earthStones")
+  const crack = cells({ scale: 4, jitter: 0.9, seed: 526 }).edge.invert().threshold(0.95, 0.02).mul(noise({ scale: 3, seed: 527 }).threshold(0.6, 0.15)).as("earthCrack")
+  const h = mid.mul(0.6).add(fine.mul(0.15)).add(stones.mul(0.3)).sub(crack.mul(0.2)).as("earthH")
+  const dust = h.convex(0.01, 10).as("earthDust")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("earth" + SUF[k], { size: 512, depth: 0.02, ao: 0.6 }, {
+      height: h,
+      color: ramp(mid, [col("e1"), col("e2"), col("e3")]).mix(col("e0"), crack.mul(0.55).max(h.cavity(0.008, 10).mul(0.4))).mix(col("e3"), stones.mul(0.5)).mix(col("e3"), dust.mul(0.3)),
+      rough: fine.levels(0, 1, 0.8, 0.95).mix(0.7, stones),
+    })
+  }
+}
