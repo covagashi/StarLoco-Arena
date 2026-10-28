@@ -33,6 +33,15 @@ const PAL = {
   brass: ["#e0aa2a", "#b08a48", "#d8a232"], brassD: ["#a07012", "#7a5a2a", "#9a6a14"],
   // the pale worn rim under the sandstone slabs (17-20, 455-457)
   flagRim: ["#e4dcb8", "#d4d6d4", "#e8cdb8"],
+  // the strap-leaf clumps (259, 260): yellow-green with brown bands
+  // (retail), deep green with dark bands, bronze-olive with rust bands
+  strapD: ["#4e5c0e", "#1e4a1c", "#5a4a14"], strap: ["#96a626", "#3a7228", "#8e7e28"], strapL: ["#b4bc3a", "#5a9238", "#ac9c3a"],
+  strapG: ["#7ab828", "#4e9034", "#a0902e"], band: ["#6e5a22", "#24341a", "#6e3a1a"],
+  // the broad-leaved herbs (1789, 1790): fresh green; their red flower (red,
+  // violet, orange) with a yellow heart; the dry stems trailing on the ground
+  herbD: ["#3e6a10", "#24501c", "#5a6a14"], herb: ["#76a81a", "#3e8a2e", "#8a9a24"], herbL: ["#b0d63a", "#78b44a", "#bcc444"],
+  bloom: ["#d8302c", "#8a4ac8", "#e8782a"], bloomD: ["#981c1c", "#5a2a8a", "#a84a14"], stem: ["#4a3a1c", "#3a3420", "#4a3218"],
+  pebble: ["#b4a678", "#9a9a94", "#b08a6e"],
   petal: ["#f4f2ea", "#f4e8a8", "#f0b8c8"], petalD: ["#c8c4b8", "#d0c070", "#c88098"], heart: ["#e8c030", "#d08a20", "#f0d050"],
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
@@ -465,3 +474,81 @@ model("plank_box",
   [-1, 1].map((sx, i) => box(BOX / 2 - 0.014, 0.22, BOX - 0.02, { mat: "board", pos: [sx * (BOX / 4 + 0.004), BOXH - 0.23 - i * 0.02, 0], jitter: 0.008, seed: 231 + i })),
   hinge(BOXH * 0.62, BOX / 2 + 0.08), hinge(BOXH * 0.17, BOX / 2 + 0.08))
 for (const n of ["plank_door", "plank_door_low", "plank_door_window", "plank_box"]) looms(n)
+
+// --- plants: strap-leaf clumps (259, 260) and broad-leaved herbs (1789, 1790)
+// a leaf half: the outline of one side of a leaf along +y (x <= 0), from
+// its midrib out, as [halfwidth, y] pairs; side mirrors it
+const halfLeaf = (prof, side) => {
+  const pts = [0, 0, ...prof.flatMap(([w, y]) => [-side * w, y])], [wl, yl] = prof[prof.length - 1]
+  if (wl > 0) pts.push(0, yl)
+  // keep the outline counter-clockwise whichever side it is on
+  if (side < 0) { const r = []; for (let i = pts.length - 2; i >= 0; i -= 2) r.push(pts[i], pts[i + 1]); return r }
+  return pts
+}
+// a folded leaf piece: the two halves of a profile tipped up from the midrib
+// (a V crease), each its own material
+const foldPiece = (prof, matL, matR, fold = 14) => [
+  extrude(halfLeaf(prof, 1), 0.008, { mat: matL, rot: [0, -fold, 0] }),
+  extrude(halfLeaf(prof, -1), 0.008, { mat: matR, rot: [0, fold, 0] })]
+// a strap leaf: segments chained up the midrib, each bending further
+// outward (about x), so the blade arches over at the tip. len long, w wide
+// at its widest; three short brown bands, each on one half
+function strapLeaf(len, w, bend, seed, mat = "strap") {
+  const segs = [[0.2, 0.55, 0.85, "strapD"], [0.05, 0.85, 0.9, "band"], [0.15, 0.9, 1, mat], [0.05, 1, 1, "band"], [0.15, 1, 0.95, mat], [0.05, 0.95, 0.9, "band"], [0.13, 0.9, 0.85, mat], [0.22, 0.85, 0, "strapL"]]
+  const build = (k) => {
+    if (k === segs.length) return []
+    const [f, w0, w1, m] = segs[k], L = f * len, tip = k === segs.length - 1
+    // the tip is rounded, not a spike
+    const prof = tip ? [[w0 * w / 2, 0], [w0 * w * 0.46, L * 0.45], [w0 * w * 0.34, L * 0.75], [w0 * w * 0.16, L * 0.93], [0, L]] : [[w0 * w / 2, 0], [w1 * w / 2, L]]
+    // the band covers one half only; the other half stays leaf green
+    const side = rnd(k, 101, seed) > 0.5, mL = m === "band" && side ? mat : m, mR = m === "band" && !side ? mat : m
+    return [foldPiece(prof, mL, mR, 8), tf({ pos: [0, L, 0], rot: [bend * (0.2 + k * k * 0.06), 0, 0] }, build(k + 1))]
+  }
+  return build(0)
+}
+// a clump of strap leaves fanned round a centre: n leaves, lengths lo..hi,
+// leaning out lean0..lean1 degrees; every few leaves the lighter green (g)
+const strapClump = (x, z, n, lo, hi, lean0, lean1, w, seed, g = 0) => tf({ pos: [x, 0, z] },
+  Array.from({ length: n }, (_, i) => {
+    const a = (i * 137.5 + rnd(i, 102, seed) * 30) % 360, lean = lean0 + rnd(i, 103, seed) * (lean1 - lean0)
+    const len = lo + rnd(i, 104, seed) * (hi - lo)
+    return tf({ rot: [0, a, 0] }, tf({ rot: [lean, 0, 0] }, strapLeaf(len, w * (0.85 + rnd(i, 105, seed) * 0.3), 4 + lean * 0.12, seed + i, g && i % g === 0 ? "strapG" : "strap")))
+  }))
+// strap-leaf clump (259): three bunches, the middle one tallest
+model("strap_grass",
+  strapClump(0.02, -0.06, 13, 0.95, 1.4, 2, 22, 0.15, 241),
+  strapClump(-0.32, 0.12, 9, 0.7, 1.0, 8, 34, 0.14, 251),
+  strapClump(0.32, 0.14, 9, 0.6, 0.9, 8, 36, 0.14, 261))
+// tall strap-leaf clump (260): bigger, some leaves a fresher green
+model("strap_grass_tall",
+  strapClump(0.0, -0.08, 15, 1.2, 1.75, 2, 20, 0.17, 271, 3),
+  strapClump(-0.36, 0.1, 10, 0.85, 1.2, 8, 32, 0.15, 281, 3),
+  strapClump(0.34, 0.16, 10, 0.75, 1.1, 8, 36, 0.15, 291, 3))
+// a broad pointed leaf on a short stalk, tipped out lean degrees, cupped
+const HERB = [[0.06, 0.03], [0.11, 0.1], [0.12, 0.18], [0.1, 0.26], [0.06, 0.33], [0, 0.4]]
+const herbLeaf = (a, lean, s, i) => tf({ rot: [0, a, 0] }, tf({ rot: [lean, 0, 0], scale: s },
+  tube([0, 0, 0, 0, 0.05, 0.005], 0.008, { mat: "herbD", sides: 4 }),
+  tf({ pos: [0, 0.04, 0] }, foldPiece(HERB, i % 3 ? "herb" : "herbL", i % 2 ? "herbL" : "herb", 22))))
+// a dry stem trailing on the ground from the plant's foot, out along +x+z
+const trail = (a, len, seed) => tf({ rot: [0, a, 0] },
+  tube([0, 0.012, 0, len * 0.4, 0.008, 0.02 * (rnd(1, 107, seed) - 0.5), len, 0.006, 0.05 * (rnd(2, 107, seed) - 0.5)], 0.006, { mat: "stem", sides: 4 }))
+// broad-leaved herb: a rosette of leaves, the inner ones upright, dry stems
+// trailing out towards the front and two pebbles
+function herbPlant(seed, n = 7) {
+  return [
+    Array.from({ length: n }, (_, i) => herbLeaf((i * 137.5) % 360, i < 3 ? 10 + i * 5 : 24 + rnd(i, 106, seed) * 18, 1 + rnd(i, 108, seed) * 0.35 - (i < 3 ? 0.1 : 0), i)),
+    [[-20, 0.5], [10, 0.6], [40, 0.45], [65, 0.36]].map(([a, l], i) => trail(a + rnd(i, 109, seed) * 10, l, seed + i)),
+    rock(0.035, { mat: "pebble", seed: seed + 3, pos: [0.14, 0.015, 0.16] }), rock(0.025, { mat: "pebble", seed: seed + 5, pos: [-0.18, 0.012, 0.12] }),
+  ]
+}
+// herb (1789): two rosettes side by side
+model("herb", herbPlant(311), tf({ pos: [0.2, 0, -0.1], scale: 0.8, rot: [0, 50, 0] }, herbPlant(317, 5)))
+// herb with a flower (1790): the same plant with a five-petal flower among
+// the front leaves
+// facing the camera's way (+x +z), tipped up
+const bloom = (x, y, z) => tf({ pos: [x, y, z], rot: [0, 45, 0] }, tf({ rot: [55, 0, 0] },
+  Array.from({ length: 5 }, (_, i) => tf({ rot: [0, i * 72, 0] }, tf({ rot: [-12, 0, 0] },
+    sphere(0.05, { mat: i % 2 ? "bloom" : "bloomD", detail: 1, pos: [0, 0.008, 0.055], scale: [0.85, 0.3, 1.2] })))),
+  sphere(0.022, { mat: "heart", detail: 1, pos: [0, 0.02, 0] })))
+model("herb_flower", herbPlant(321), tf({ pos: [-0.22, 0, -0.12], scale: 0.8, rot: [0, 120, 0] }, herbPlant(327, 5)), bloom(0.1, 0.2, 0.22))
+for (const n of ["strap_grass", "strap_grass_tall", "herb", "herb_flower"]) looms(n)

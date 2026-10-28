@@ -29,6 +29,16 @@
    "pino miel",
    "gris envejecida",
    "nogal oscuro"
+  ],
+  "strap": [
+   "verde amarillo con bandas pardas",
+   "verde oscuro",
+   "oliva bronce con bandas óxido"
+  ],
+  "herb": [
+   "verde fresco, flor roja",
+   "verde hoja, flor violeta",
+   "oliva, flor naranja"
   ]
  },
  "shared": [
@@ -358,6 +368,44 @@
    ],
    "looms": "board",
    "note": "fills its cell; things stack on its lid (1263 wears a rubble heap)"
+  },
+  {
+   "name": "strap_grass",
+   "label": "Mata de hojas en cinta",
+   "kind": "deco",
+   "gfx": [
+    259
+   ],
+   "looms": "strap"
+  },
+  {
+   "name": "strap_grass_tall",
+   "label": "Mata alta de hojas en cinta",
+   "kind": "deco",
+   "gfx": [
+    260
+   ],
+   "looms": "strap"
+  },
+  {
+   "name": "herb",
+   "label": "Planta de hoja ancha",
+   "kind": "deco",
+   "gfx": [
+    1789
+   ],
+   "looms": "herb",
+   "note": "at the foot of stones; its dry stems trail towards +x +z"
+  },
+  {
+   "name": "herb_flower",
+   "label": "Planta de hoja ancha con flor",
+   "kind": "deco",
+   "gfx": [
+    1790
+   ],
+   "looms": "herb",
+   "note": "at the foot of stones; its dry stems trail towards +x +z"
   }
  ]
 }

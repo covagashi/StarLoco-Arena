@@ -621,6 +621,32 @@ cada vez, empezando por la más usada.
     tres puertas en sus huecos, la caja con el montón encima, el andamio y
     el pilar; el montaje es de prueba).
   - Dueño (2026-10-28): "todo ok".
+- Plantas (259, 260, 1789, 1790), 2026-10-28.
+  - Vistas en el mapa: la 259 y la 260 son matas grandes en la hierba
+    abierta y al pie de los montones; la 1789 y la 1790, plantitas de hoja
+    ancha al pie de las piedras, con tallos secos por el suelo. La 246 de
+    la arena 2 (hierba seca de puntas) no sirve: tiene otra forma.
+  - Mata de hojas en cinta (259, 260): tres matas, la del medio la más
+    alta. Cada hoja es una cinta plegada en V hecha de tramos que se
+    curvan hacia fuera solo al final, con la punta redondeada. Lleva tres
+    bandas pardas cortas, cada una en una mitad de la hoja. La 260 es más
+    grande y algunas de sus hojas son de un verde más fresco.
+  - Planta de hoja ancha (1789): dos rosetas de hojas anchas y
+    puntiagudas, plegadas, sobre un tallito; cuatro tallos secos salen
+    por el suelo hacia +x +z, y hay dos piedrecitas. La 1790 lleva además
+    una flor de cinco pétalos mirando a la cámara.
+  - Colores de paleta (piezas finas, sin loom). Matas: verde amarillo con
+    bandas pardas (el retail), verde oscuro, oliva bronce con bandas óxido.
+    Plantas: verde fresco con flor roja (el retail), verde hoja con flor
+    violeta, oliva con flor naranja.
+  - Primeras versiones: las matas a la mitad de tamaño, bajas y abiertas,
+    con las hojas en punta, muy amarillas, las bandas rojizas y la cara
+    iluminada del pliegue brillando demasiado; la planta pequeña, de hojas
+    estrechas, y la flor diminuta, después girada hacia atrás y luego el
+    doble de grande que en el retail.
+  - Hojas: `arena6-plantas-1.png`, `-2.png` y `arena6-plantas-montadas.png`
+    (matas y plantas en la hierba y al pie del pilar y los montones; el
+    montaje es de prueba).
 
 ## Fases
 
