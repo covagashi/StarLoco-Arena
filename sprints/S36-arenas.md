@@ -907,6 +907,25 @@ cada vez, empezando por la más usada.
 - Con esto la arena 7 queda cubierta: `mapa-arena7` da 87 piezas, 0
   nuevas (la 2038, niebla, va a VFX).
 
+
+### Arena 8 (mundo 39, volcán), 2026-10-28
+
+- `mapa-arena8-1.png` … `-6.png`: 37 piezas, 9 ya en los kits, 28 nuevas,
+  con mi suposición marcada con "¿?" en `names.json`.
+- Lo que parece haber:
+  - Suelo de losas de basalto negras con agujeros (2285, 2280: las dos
+    piezas más usadas, 217 veces).
+  - Casillas y charcos de lava con halo (2270, 2271, 2276–2279) y una
+    cascada de lava por el borde (146).
+  - Pilares de roca altos alrededor (1764–1766), teñidos de pardo oscuro
+    en el mapa, junto al acantilado de la arena 6 (1802–1804, ya hechos).
+  - Pinchos y cuernos de roca volcánica con brasas (2290–2297), árboles
+    secos (1729–1731), rocas sueltas (1761, 1762, 1767, 1817), una flecha
+    (1269) y un esqueleto tumbado más (2246).
+- La arena 2 ya tiene `lava_pool`, `bare_tree` y `basalt_rocks`. Lo he
+  marcado en las suposiciones por si sirven aquí, para no duplicar.
+- La niebla del borde del mapa ya va a VFX.
+
 ## Fases
 
 ### A. Inventario completo (antes de modelar nada)
