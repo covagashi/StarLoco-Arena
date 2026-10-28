@@ -49,6 +49,16 @@
    "madera teñida de oliva",
    "gris envejecida verdosa",
    "nogal oscuro"
+  ],
+  "dead": [
+   "gris morado",
+   "pardo seco",
+   "casi negro"
+  ],
+  "poppy": [
+   "amapolas rojas",
+   "blancas",
+   "naranjas"
   ]
  },
  "shared": [],
@@ -256,6 +266,34 @@
    ],
    "looms": "tomb",
    "note": "faces +z"
+  },
+  {
+   "name": "dead_plant",
+   "label": "Planta muerta",
+   "kind": "deco",
+   "gfx": [
+    1706
+   ],
+   "looms": "dead"
+  },
+  {
+   "name": "poppies",
+   "label": "Amapolas",
+   "kind": "deco",
+   "gfx": [
+    521,
+    520
+   ],
+   "looms": "poppy"
+  },
+  {
+   "name": "flower_patch",
+   "label": "Mata de amapolas y margaritas",
+   "kind": "deco",
+   "gfx": [
+    522
+   ],
+   "looms": "poppy"
   }
  ]
 }

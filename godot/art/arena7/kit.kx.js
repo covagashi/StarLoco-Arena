@@ -42,6 +42,15 @@ const PAL = {
   hole: ["#2e2a24", "#2a2a2c", "#2e221c"],
   // grass tufts at the foot of the stones
   bladeD: ["#5a7414", "#2e5a1e", "#6a6418"], blade: ["#94b024", "#4e8a2c", "#a29a2a"], bladeL: ["#c4d83c", "#7ab446", "#ccc04a"],
+  // the dead plant (1706): grey-purple (retail), dry grey-brown, near black
+  deadD: ["#2c2430", "#4a4238", "#262224"], dead: ["#433846", "#6a5e4e", "#3a3436"], deadL: ["#584c5e", "#867a66", "#4e4648"],
+  // poppies (520, 521, and among 522): red (retail), white, orange; black
+  // hearts; thin olive stems and leaves
+  poppyD: ["#a8201a", "#c8c4b8", "#c85a14"], poppy: ["#dc3a24", "#ecebe4", "#f07e1e"], poppyL: ["#f2603e", "#ffffff", "#ffa040"],
+  poppyC: ["#2a1e1a", "#3a3a2a", "#2a1e1a"],
+  stalkD: ["#4a5a14", "#3e5a1c", "#5a5a18"], stalk: ["#86a024", "#5a8a2c", "#9a9428"], stalkL: ["#c0cc3c", "#8ab44a", "#c8c04a"],
+  // daisies among the 522 poppies: white petals, yellow hearts
+  daisy: ["#f4f2ea", "#f4e8a8", "#f0c8d8"], daisyC: ["#f0c030", "#e8a020", "#f0d050"],
   // the candle in the niche (1503): wax, and its flame (glows)
   wax: ["#f0e2a0", "#ecebe2", "#e8c88a"],
   iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"], ironD: ["#33363c", "#3a2418", "#1f2a24"],
@@ -379,3 +388,55 @@ model("headstone_sunk",
   tuft(-0.32, 0.1, 4, 0.14, 9))
 for (const n of ["headstone_skull", "iron_cross", "stone_cross", "cross_santiago", "headstone_boards", "headstone_tall", "headstone_figure",
   "candle_shrine", "cross_skull", "headstone_wood", "tomb_iron_cross", "headstone_horns", "headstone_sunk"]) looms(n)
+
+// --- plants: the dead plant (1706) and flowers (520, 521, 522) ---------------
+// a pointed leaf (XY outline), base at the origin, pointing up +y
+const blade = (w, l) => [0, 0, w * 0.5, l * 0.18, w * 0.45, l * 0.55, w * 0.18, l * 0.85, 0, l, -w * 0.18, l * 0.85, -w * 0.45, l * 0.55, -w * 0.5, l * 0.18]
+// dead plant (1706): a wide rosette of long pointed leaves, dead and
+// grey-purple, most lying out low, a few inner ones standing, each bent
+// down at its middle
+model("dead_plant", { scale: 1.35 },
+  Array.from({ length: 13 }, (_, i) => {
+    const inner = i < 4, a = i * 137.5 + rnd(i, 211, 3) * 20, l = inner ? 0.3 + rnd(i, 212, 3) * 0.1 : 0.34 + rnd(i, 213, 3) * 0.12
+    const m = i % 3 === 0 ? "deadD" : i % 3 === 1 ? "dead" : "deadL"
+    return tf({ rot: [0, a, 0] }, tf({ rot: [inner ? 30 : 62 + rnd(i, 214, 3) * 14, 0, 0] },
+      extrude(blade(0.15, l * 0.55), 0.01, { mat: m }),
+      tf({ pos: [0, l * 0.5, 0], rot: [inner ? 25 : 18, 0, 0] }, extrude(blade(0.14, l * 0.55).map((v, k) => (k % 2 ? v : v * 0.9)), 0.01, { mat: m }))))
+  }))
+// a petal: a rounded spoon shape, base at the origin, pointing up +y (as in
+// the arena 5 kit)
+const petal = [0, 0, 0.022, 0.02, 0.03, 0.05, 0.022, 0.075, 0, 0.082, -0.022, 0.075, -0.03, 0.05, -0.022, 0.02]
+// a poppy on a thin stem leaning out: a cup of five broad petals round a
+// black heart, facing up and a little out
+function poppy(x, z, h, size, seed) {
+  const lean = (rnd(1, 215, seed) - 0.5) * 30, turn = rnd(2, 216, seed) * 360
+  return tf({ pos: [x, 0, z], rot: [0, turn, 0] }, tf({ rot: [lean, 0, 0] },
+    tube([0, 0, 0, 0.01, h * 0.5, 0, 0, h, 0], 0.006, { mat: "stalk", sides: 4 }),
+    tf({ pos: [0, h, 0], rot: [20, 0, 0] },
+      Array.from({ length: 5 }, (_, i) => tf({ rot: [0, i * 72, 0] },
+        extrude(petal, 0.006, { mat: i % 3 === 0 ? "poppyD" : i % 3 === 1 ? "poppy" : "poppyL", rot: [52 + (i % 2) * 10, 0, 0], scale: size }))),
+      sphere(0.018 * size, { mat: "poppyC", detail: 1, pos: [0, 0.012 * size, 0] }))))
+}
+// a daisy: eight narrow white petals laid out flat round a yellow heart
+const daisy = (x, z, h, seed) => tf({ pos: [x, 0, z], rot: [0, rnd(1, 217, seed) * 360, 0] },
+  tube([0, 0, 0, 0.005, h * 0.5, 0, 0, h, 0], 0.005, { mat: "stalk", sides: 4 }),
+  tf({ pos: [0, h, 0], rot: [15, 0, 0] },
+    Array.from({ length: 8 }, (_, i) => tf({ rot: [0, i * 45, 0] }, extrude(blade(0.03, 0.05), 0.004, { mat: "daisy", rot: [80, 0, 0] }))),
+    sphere(0.016, { mat: "daisyC", detail: 1, pos: [0, 0.006, 0], scale: [1, 0.6, 1] })))
+// a few olive leaves at the foot
+const leaves = (n, w, seed) => Array.from({ length: n }, (_, i) => tf({ pos: [(rnd(i, 218, seed) - 0.5) * w, 0, (rnd(i, 219, seed) - 0.5) * w], rot: [0, rnd(i, 220, seed) * 360, 0] },
+  extrude(blade(0.06, 0.16), 0.006, { mat: i % 3 === 0 ? "stalkD" : i % 3 === 1 ? "stalk" : "stalkL", rot: [40 + rnd(i, 221, seed) * 25, 0, 0] })))
+// poppies (520, 521): nine red poppies spread out at different heights on thin stems,
+// a few leaves at their feet
+model("poppies",
+  [[-0.32, -0.12, 0.2, 1.7], [-0.1, 0.18, 0.28, 1.9], [0.14, -0.2, 0.24, 1.8], [0.34, 0.1, 0.16, 1.6],
+   [-0.38, 0.26, 0.12, 1.4], [0.02, 0.0, 0.32, 2.0], [0.22, 0.32, 0.1, 1.4], [-0.18, -0.36, 0.14, 1.5],
+   [0.36, -0.3, 0.12, 1.4]].map(([x, z, h, k], i) => poppy(x, z, h, k, 231 + i)),
+  leaves(16, 0.75, 241))
+// flower patch (522): small poppies and daisies over a bed of olive leaves
+model("flower_patch",
+  [[-0.2, -0.05, 0.14, 1.4], [0.04, 0.18, 0.18, 1.5], [0.2, -0.12, 0.16, 1.3], [-0.06, -0.22, 0.12, 1.3], [0.26, 0.2, 0.1, 1.2],
+   [-0.3, 0.22, 0.1, 1.2], [0.1, -0.02, 0.2, 1.4]].map(([x, z, h, k], i) => poppy(x, z, h, k, 251 + i)),
+  [[-0.1, 0.08, 0.12], [0.12, 0.02, 0.15], [-0.26, 0.2, 0.09], [0.08, -0.26, 0.1], [0.3, 0.0, 0.08], [-0.2, -0.24, 0.1], [0.2, 0.3, 0.11]].map(([x, z, h], i) => daisy(x, z, h, 261 + i)),
+  leaves(30, 0.66, 271), leaves(10, 0.4, 281))
+for (const n of ["dead_plant", "poppies", "flower_patch"]) looms(n)

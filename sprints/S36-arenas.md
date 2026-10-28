@@ -821,6 +821,23 @@ cada vez, empezando por la más usada.
     a ras de suelo (`clipAbove` recorta el contorno), con su marco y el
     panel hundido, casi derecha, y una mata al lado. Hoja:
     `arena7-lapida-enterrada.png`.
+  - Dueño (2026-10-28): "el resto está perfecto".
+- Plantas (1706, 520, 521, 522), 2026-10-28.
+  - Planta muerta (1706): una roseta ancha de hojas largas en punta, gris
+    morado. La mayoría tumbadas y las de dentro de pie, cada una doblada
+    hacia abajo por la mitad. Looms: gris morado (el retail), pardo seco,
+    casi negro.
+  - Amapolas (520, 521; casi iguales, así que un modelo): nueve amapolas
+    esparcidas a distintas alturas, en tallos finos y algo ladeados. Cada
+    una es una copa de cinco pétalos de cuchara (el pétalo de las flores
+    de la arena 5) alrededor de un corazón negro, con hojas al pie.
+  - Mata de amapolas y margaritas (522): amapolas pequeñas y margaritas
+    blancas de corazón amarillo sobre un lecho de hojas oliva.
+  - Looms de las flores: rojas (el retail), blancas, naranjas.
+  - Primeras versiones: la planta muerta pequeña, lila y de hojas
+    estrechas; las amapolas grandes y apiñadas en el centro; la mata del
+    522 con pocas hojas.
+  - Hojas: `arena7-plantas-1.png`, `-2.png`.
 
 ## Fases
 
