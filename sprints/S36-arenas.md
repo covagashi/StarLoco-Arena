@@ -299,8 +299,8 @@ cada vez, empezando por la más usada.
     pintura verde, roble sin pintar.
   - Caja abierta por arriba: marco de vigas en cada arista, paneles de
     tablas verticales metidos, clavos en las esquinas y el fondo a la
-    vista. Usa la madera de la casa, así que sus looms van con los del
-    revoque.
+    vista. Usa la madera de las vigas de la casa. Looms: madera olivo (el
+    retail), gris envejecida, marrón oscura.
   - Primeras versiones: las duelas con juntas cruzadas (parecían un
     entarimado) y la caja alta, con los paneles lisos.
   - Hojas: `arena5-barril-caja.png` y `arena5-barril-caja-montados.png`

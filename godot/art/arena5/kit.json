@@ -44,6 +44,11 @@
 			"pintura roja",
 			"pintura verde",
 			"roble sin pintar"
+		],
+		"timber": [
+			"madera olivo",
+			"gris envejecida",
+			"marrón oscura"
 		]
 	},
 	"shared": [
@@ -326,7 +331,7 @@
 			"gfx": [
 				220
 			],
-			"looms": "plaster"
+			"looms": "timber"
 		}
 	]
 }
