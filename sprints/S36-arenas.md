@@ -1524,6 +1524,43 @@ y sus hachas ya están en el kit de la arena 9.
       de pantalla.
     - El de pie tenía las costillas hacia arriba y no tocaba el suelo.
 
+- **Losas manchadas, piernas, cajas, trampa, colmillos, pinchos y
+  barriles** (grupos «losa manchada» 1385 y 1466, «pierna» 2758 y 2759,
+  «caja rota» 2740, «caja» 1620, «trampa de suelo» 2479, «colmillos»
+  2593, «pinchos» 2072 y «barril» 832 y 1855). Hojas:
+  `kit-arena10-grasa-piernas-1.png` y `-2.png`, `kit-arena10-cajas.png`,
+  `kit-arena10-trampa-colmillos-pinchos-1.png` y `-2.png`, y
+  `kit-arena10-barriles.png`.
+  - Las piezas pequeñas van en colores de paleta (`MISC`): la loom a es la
+    retail; la b, más oscura, y la c, más cálida.
+  - `grease_stain` (1385) y `grease_stain_small` (1466): la «losa
+    manchada» es grasa amarilla derramada sobre la losa (`flat`). Son
+    salpicaduras redondas que se solapan, cada una con un borde oscuro; la
+    grande forma un anillo y la pequeña, una mancha.
+  - `severed_leg` (2758): una pierna de pie dentro de su bota, de unos
+    0,8 m, con la piel pálida, el corte rojo y el hueso fuera.
+    `severed_leg_lying` (2759): la misma, caída, con sangre en el corte.
+  - `bone_box` (2740) y `tall_box` (1620): cajas de pino claro con un marco
+    de vigas, paneles de tablas hundidos y un perno en cada unión (ayuda
+    `frameBox`). La rota va abierta, con huesos y carne dentro y sangre por
+    la cara +z. La alta mide 1,3 m y tiene la tapa hundida en el marco.
+  - `bear_trap` (2479): un cepo abierto, con un aro de acero y dientes,
+    las mandíbulas y la placa en medio.
+  - `tusks` (2593): cinco colmillos grandes juntos en el suelo, casi de pie
+    y algo curvados (ayuda `rib`, en ejes de pantalla).
+  - `stakes` (2072): cinco estacas afiladas clavadas en el suelo.
+  - `barrel_tap` (832): un barril tumbado sobre dos calzos, con duelas
+    naranjas, aros de hierro y un grifo en el extremo +x.
+  - `soup_tub` (1855): una tina ancha de madera con sopa verde, un aro de
+    hierro, un cucharón dentro y un trapo blanco en el borde -x. Looms de
+    la sopa: verde (retail), estofado y caldo rojo.
+  - Lo que salió mal en la primera versión:
+    - La grasa era amarilla chillona, en gotitas sueltas.
+    - El cepo y las estacas eran pequeños.
+    - Los colmillos salían tumbados hacia los lados; los de la retail
+      suben casi rectos y son gruesos.
+    - La caja alta tenía la tapa al ras del marco.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

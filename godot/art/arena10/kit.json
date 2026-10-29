@@ -49,6 +49,16 @@
 			"hueso marfil",
 			"hueso amarillento",
 			"hueso blanco"
+		],
+		"box": [
+			"pino claro",
+			"pino dorado",
+			"madera oscura"
+		],
+		"misc": [
+			"colores retail",
+			"variante oscura",
+			"variante cálida"
 		]
 	},
 	"shared": [],
@@ -265,6 +275,116 @@
 			],
 			"looms": "bone",
 			"note": "a small ribcage stood on its rib tips, the spine on top"
+		},
+		{
+			"name": "grease_stain",
+			"label": "Losa manchada (grasa)",
+			"kind": "flat",
+			"gfx": [
+				1385
+			],
+			"looms": "misc",
+			"note": "yellow grease spilt in a ring on a floor slab"
+		},
+		{
+			"name": "grease_stain_small",
+			"label": "Losa manchada (grasa, pequeña)",
+			"kind": "flat",
+			"gfx": [
+				1466
+			],
+			"looms": "misc",
+			"note": "one sprawling splash of grease on a floor slab"
+		},
+		{
+			"name": "severed_leg",
+			"label": "Pierna con el hueso asomando",
+			"kind": "deco",
+			"gfx": [
+				2758
+			],
+			"looms": "misc",
+			"note": "a leg standing in its boot, the bone out of the cut, about 0.65 m"
+		},
+		{
+			"name": "severed_leg_lying",
+			"label": "Pierna con el hueso asomando (tumbada)",
+			"kind": "deco",
+			"gfx": [
+				2759
+			],
+			"looms": "misc",
+			"note": "the same leg fallen along x, blood at the cut"
+		},
+		{
+			"name": "bone_box",
+			"label": "Caja rota con huesos",
+			"kind": "deco",
+			"gfx": [
+				2740
+			],
+			"looms": "box",
+			"note": "an open box with bones and meat inside, blood down its +z side"
+		},
+		{
+			"name": "tall_box",
+			"label": "Caja alta",
+			"kind": "deco",
+			"gfx": [
+				1620
+			],
+			"looms": "box",
+			"note": "a closed framed box about 1.3 m tall"
+		},
+		{
+			"name": "bear_trap",
+			"label": "Trampa de suelo",
+			"kind": "deco",
+			"gfx": [
+				2479
+			],
+			"looms": "misc",
+			"note": "a steel bear trap lying open"
+		},
+		{
+			"name": "tusks",
+			"label": "Colmillos",
+			"kind": "deco",
+			"gfx": [
+				2593
+			],
+			"looms": "misc",
+			"note": "four great curved tusks heaped, curling over to -x in screen terms"
+		},
+		{
+			"name": "stakes",
+			"label": "Pinchos",
+			"kind": "deco",
+			"gfx": [
+				2072
+			],
+			"looms": "misc",
+			"note": "five sharpened stakes driven into the floor"
+		},
+		{
+			"name": "barrel_tap",
+			"label": "Barril",
+			"kind": "deco",
+			"gfx": [
+				832
+			],
+			"looms": "misc",
+			"note": "a barrel lying along x on two cradles, its tap at +x"
+		},
+		{
+			"name": "soup_tub",
+			"label": "Tina de sopa",
+			"kind": "deco",
+			"gfx": [
+				1855
+			],
+			"looms": "misc",
+			"note": "a wooden tub of green soup, a ladle in it, a cloth over its -x rim"
 		}
 	]
 }

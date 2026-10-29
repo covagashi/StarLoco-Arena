@@ -60,6 +60,16 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["crateD" + s, { tex: "out/pine" + s, uv: 0.8, rough: 0.8, color: "#a89078" }],
   ["crateDV" + s, { tex: "out/pineV" + s, uv: 0.8, rough: 0.8, color: "#a89078" }],
 ])))
+// the pale boxes (1620, 2740): pine, its a loom the pale ash (retail), b the
+// golden, c the dark; their recessed panels in shade. The barrel (832): the
+// golden pine warmed to orange
+const PINE_OF = ["_b", "", "_c"]
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => [
+  ["box" + s, { tex: "out/pine" + PINE_OF[i], uv: 0.8, rough: 0.8 }],
+  ["boxV" + s, { tex: "out/pineV" + PINE_OF[i], uv: 0.8, rough: 0.8 }],
+  ["boxDV" + s, { tex: "out/pineV" + PINE_OF[i], uv: 0.8, rough: 0.85, color: "#8a7a64" }],
+  ["stave" + s, { tex: "out/pine" + s, uv: 0.8, rough: 0.7, color: "#ffb478" }],
+])))
 // the tablecloths (kit.tx.js cloth): red, blue or green checks
 pal(Object.fromEntries(LOOMS.map((s) => ["cloth" + s, { tex: "out/cloth" + s, uv: 1.0, rough: 0.92 }])))
 // meat and bone, palette colours: fresh (retail), roasted, cured; [a, b, c]
@@ -72,10 +82,22 @@ const MEAT = {
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MEAT).map(([k, v]) =>
   [k + s, { color: v[i], rough: k.startsWith("meat") ? 0.45 : k === "fat" ? 0.5 : 0.75 }]))))
+// grease, leather and skin, steel, ivory, the soup: [a, b, c]
+const MISC = {
+  grease: ["#c4ac54", "#bcb47c", "#9c8a3a"], greaseD: ["#7e7038", "#706e50", "#5e4e22"],
+  leather: ["#8a3418", "#2e2622", "#9a6a3a"], leatherL: ["#b04a24", "#4a3e36", "#c08a52"], strap: ["#6a6a2a", "#5a4a2a", "#3a2a1a"],
+  skin: ["#bcd2c0", "#e2bca2", "#c8a07c"], steel: ["#a8acb2", "#7a7e84", "#9a6a4a"], steelD: ["#5a5e66", "#3e4046", "#5a3a26"],
+  tusk: ["#e6dca8", "#f0ece0", "#d8c49a"], tuskD: ["#b4a676", "#c4beac", "#a48e66"],
+  stake: ["#8a5a2a", "#5e4a36", "#6a3a1a"], stakeD: ["#4e2e12", "#3a2c20", "#3a1c0a"],
+  soup: ["#5aa03a", "#8a5a2a", "#a82a1a"], soupL: ["#9ad060", "#b8844a", "#d8582e"], towel: ["#f2f0ea", "#e8e0c8", "#e0e4ec"],
+}
+const MISC_ROUGH = { grease: 0.25, greaseD: 0.35, steel: 0.35, steelD: 0.45, soup: 0.15, soupL: 0.15, tusk: 0.5, tuskD: 0.55 }
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MISC).map(([k, v]) =>
+  [k + s, { color: v[i], rough: MISC_ROUGH[k] ?? 0.85, metal: k.startsWith("steel") ? 0.6 : 0 }]))))
 // the dashes of the floor's joint line: [a, b, c]
 const DASH = { dash: ["#5a5440", "#3e4042", "#5a2e20"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DASH).map(([k, v]) => [k + s, { color: v[i], rough: 0.95 }]))))
-const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", "cloth", "crate", "crateV", "crateD", "crateDV", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR), ...Object.keys(MEAT),
+const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", "cloth", "crate", "crateV", "crateD", "crateDV", "box", "boxV", "boxDV", "stave", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR), ...Object.keys(MEAT), ...Object.keys(MISC),
   ...Object.keys(WOOD).flatMap((k) => [k, k + "V"])]
 const looms = (name) => threeLooms(name, SKINNED)
 
@@ -409,3 +431,138 @@ model("ribcage_standing", { scale: 1.1 },
   [-0.19, -0.065, 0.065, 0.19].flatMap((x, i) => [-1, 1].map((k) =>
     rib(x, 0.2, 0, 0.55, 0.075, 70, 30, -90 * k + (i - 1.5) * 10, 4, "bone", 0.75))).map((it) => tf({ rot: [0, 45, 0] }, it)))
 for (const n of ["ribcage", "ribcage_small", "ribcage_standing"]) looms(n)
+
+
+// --- grease stains (1385, 1466) -------------------------------------------------
+// the owner's "stained slab": yellow grease spilt on a floor slab, lying on
+// it (flat): overlapping round splashes, a darker rim under each
+const splashes = (spots, seed) => spots.map(([x, z, r], i) => [
+  cyl(r * 1.15, 0.005, { mat: "greaseD", sides: 9, pos: [x, 0, z], scale: [1, 1, 0.8 + rnd(i, 3, seed) * 0.4], rot: [0, rnd(i, 5, seed) * 180, 0], jitter: r * 0.08, seed: seed + i }),
+  cyl(r, 0.008, { mat: "grease", sides: 9, pos: [x, 0, z], scale: [1, 1, 0.8 + rnd(i, 3, seed) * 0.4], rot: [0, rnd(i, 5, seed) * 180, 0], jitter: r * 0.08, seed: seed + i })])
+// grease stain (1385): a ring of splashes round the slab's middle
+model("grease_stain", { pivot: "origin" }, splashes(Array.from({ length: 15 }, (_, i) => {
+  const a = i / 15 * Math.PI * 2 + rnd(i, 7, 501) * 0.3, d = 0.3 + rnd(i, 9, 501) * 0.08
+  return [Math.cos(a) * d, Math.sin(a) * d, 0.09 + rnd(i, 11, 501) * 0.07]
+}), 501))
+// small grease stain (1466): one sprawling splash of drops
+model("grease_stain_small", { pivot: "origin", scale: 1.4 }, splashes([[0, 0, 0.14], [0.14, -0.08, 0.1], [-0.15, 0.06, 0.1], [0.06, 0.16, 0.08],
+  [-0.06, -0.17, 0.08], [0.24, 0.06, 0.06], [-0.26, -0.06, 0.05], [0.18, 0.2, 0.04], [-0.2, 0.2, 0.05]], 511))
+for (const n of ["grease_stain", "grease_stain_small"]) looms(n)
+
+// --- severed legs (2758, 2759) ------------------------------------------------------
+// a leg in a boot: the boot along +x, its shaft up y, a strap round it, the
+// pale leg out of its top cut red, the bone sticking out
+const bootLeg = () => [
+  extrude(roundSquare(1, 0.5).map((v, i) => v * (i % 2 ? 0.07 : 0.14)), 0.14, { mat: "leather", rot: [0, 0, 0], pos: [0.05, 0.07, 0], scale: [1, 1, 1] }),
+  cyl(0.1, 0.32, { mat: "leather", sides: 8, top: 0.11, pos: [-0.02, 0.02, 0] }),
+  cyl(0.12, 0.05, { mat: "leatherL", sides: 8, pos: [-0.02, 0.32, 0] }),
+  cyl(0.106, 0.05, { mat: "strap", sides: 8, pos: [-0.02, 0.14, 0] }),
+  cyl(0.075, 0.13, { mat: "skin", sides: 8, pos: [-0.02, 0.36, 0] }),
+  cyl(0.078, 0.025, { mat: "meat", sides: 8, pos: [-0.02, 0.49, 0] }),
+  cyl(0.026, 0.13, { mat: "bone", sides: 6, pos: [-0.02, 0.5, 0] }),
+  [-1, 1].map((k) => sphere(0.035, { mat: "bone", detail: 1, pos: [-0.02, 0.64, k * 0.024] })),
+]
+// leg (2758): standing in its boot, about 0.65 m
+model("severed_leg", { scale: 1.2 }, tf({ rot: [0, -90, 0] }, bootLeg()))
+// leg lying (2759): the same leg fallen along x, a pool of blood at the cut
+model("severed_leg_lying", { scale: 1.2 }, tf({ pos: [0, 0.11, 0], rot: [0, 0, 90] }, bootLeg()),
+  cyl(0.16, 0.004, { mat: "bloodLit", sides: 9, pos: [-0.55, -0.0, 0.02], scale: [1.4, 1, 0.9] }))
+for (const n of ["severed_leg", "severed_leg_lying"]) looms(n)
+
+// --- pale boxes: the broken box of bones (2740) and the tall box (1620) --------
+// a box with a beam frame on its twelve edges, each side a panel of upright
+// boards set back in shade, an iron bolt at every frame joint
+function frameBox(w, h, d, { top = true, seed = 1 } = {}) {
+  const t = 0.08, out = []
+  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]])
+    out.push(box(t, h, t, { mat: "boxV", pos: [sx * (w - t) / 2, 0, sz * (d - t) / 2], jitter: 0.004 }))
+  for (const y of [0, h - t]) {
+    for (const sz of [1, -1]) out.push(box(w, t, t, { mat: "box", pos: [0, y, sz * (d - t) / 2], jitter: 0.004 }))
+    for (const sx of [1, -1]) out.push(box(t, t, d - 2 * t, { mat: "box", pos: [sx * (w - t) / 2, y, 0], jitter: 0.004 }))
+  }
+  // the panels: boards a little set back from the frame
+  const n = 3
+  for (const [r, len, off] of [[0, w, d], [90, d, w], [180, w, d], [270, d, w]])
+    out.push(tf({ rot: [0, r, 0] }, Array.from({ length: n }, (_, i) => box((len - 2 * t) / n - 0.008, h - 2 * t, 0.03,
+      { mat: "boxDV", pos: [-(len - 2 * t) / 2 + (i + 0.5) * (len - 2 * t) / n, t, off / 2 - t * 0.6], jitter: 0.004, seed: seed + r + i }))))
+  // the lid set down inside the frame
+  if (top) out.push(box(w - 2 * t, 0.03, d - 2 * t, { mat: "boxDV", pos: [0, h - t * 1.6, 0] }))
+  out.push(box(w - 0.04, 0.03, d - 0.04, { mat: "boxDV", pos: [0, 0.01, 0] }))
+  // bolts at the joints on the two faces the camera sees, and on top
+  for (const y of [t / 2, h - t / 2]) for (const k of [-1, 1]) {
+    out.push(sphere(0.022, { mat: "steelD", detail: 1, pos: [k * (w / 2 - t / 2), y, d / 2 + 0.002], scale: [1, 1, 0.5] }))
+    out.push(sphere(0.022, { mat: "steelD", detail: 1, pos: [w / 2 + 0.002, y, k * (d / 2 - t / 2)], scale: [0.5, 1, 1] }))
+  }
+  return out
+}
+// broken box of bones (2740): an open box about 0.8 m, bones and bloody meat
+// heaped inside, two long bones sticking out, blood run down its +z side
+model("bone_box", frameBox(0.86, 0.72, 0.86, { top: false, seed: 521 }),
+  sphere(0.36, { mat: "meatD", detail: 1, pos: [0, 0.6, 0], scale: [1, 0.3, 1] }),
+  steak(-0.12, 0.66, 0.1, 1.0, 30, 20),
+  knuckleBone(0.12, 0.85, -0.12, 0.5, 0.04, 30, 55), knuckleBone(-0.22, 0.76, -0.1, 0.32, 0.035, -60, 70),
+  knuckleBone(0.05, 0.7, 0.2, 0.3, 0.03, 100, 10),
+  smear(-0.12, 0.62, 0.435, 0.24, 0.09), smear(0.2, 0.4, 0.435, 0.06, 0.2),
+  cyl(0.08, 0.004, { mat: "bloodLit", sides: 8, pos: [0.22, 0, 0.5], scale: [1.4, 1, 0.8] }))
+// tall box (1620): a closed box about 0.9 m square and 1.3 m tall
+model("tall_box", frameBox(0.9, 1.3, 0.9, { seed: 531 }))
+for (const n of ["bone_box", "tall_box"]) looms(n)
+
+// --- bear trap (2479) -------------------------------------------------------------
+// a steel trap lying open: a flat ring with teeth all round pointing up, the
+// two jaws laid out flat, the pressure plate and its bar across the middle
+model("bear_trap", { scale: 1.5 },
+  torus(0.2, 0.035, { mat: "steel", rings: 20, sides: 5, pos: [0, 0.035, 0], scale: [1, 1.2, 0.8] }),
+  Array.from({ length: 12 }, (_, i) => {
+    const a = i / 12 * Math.PI * 2
+    return cone(0.035, 0.09, { mat: i % 2 ? "steel" : "steelD", sides: 4, pos: [Math.cos(a) * 0.2, 0.06, Math.sin(a) * 0.16], rot: [0, 0, 0] })
+  }),
+  box(0.42, 0.025, 0.04, { mat: "steelD", pos: [0, 0.01, 0] }),
+  box(0.12, 0.02, 0.1, { mat: "steel", pos: [0, 0.02, 0] }),
+  [-1, 1].map((k) => box(0.06, 0.03, 0.05, { mat: "steelD", pos: [k * 0.24, 0.0, 0] })))
+looms("bear_trap")
+
+// --- tusks (2593) -------------------------------------------------------------------
+// a heap of five great tusks, their roots together on the floor, rising
+// nearly upright and curling a little towards -x (screen terms, like the ribs)
+model("tusks", tf({ rot: [0, 45, 0] },
+  rib(0.1, 0, -0.05, 0.85, 0.13, 6, 7, 180, 5, "tusk", 0.85),
+  rib(-0.05, 0, 0.08, 0.7, 0.12, 12, 6, 175, 5, "tusk", 0.85),
+  rib(0.22, 0, 0.1, 0.55, 0.11, 4, 8, 185, 5, "tuskD", 0.85),
+  rib(-0.2, 0, -0.04, 0.45, 0.085, 35, 8, 170, 5, "tusk", 0.85),
+  rib(-0.3, 0, 0.12, 0.35, 0.08, 70, 6, 160, 4, "tuskD", 0.85)))
+looms("tusks")
+
+// --- stakes (2072) ------------------------------------------------------------------
+// five sharpened wooden stakes driven into the floor
+model("stakes", [[-0.18, -0.1, 0.32], [0.05, -0.2, 0.36], [0.2, 0.0, 0.3], [-0.05, 0.12, 0.4], [0.24, 0.24, 0.24]].map(([x, z, h], i) =>
+  [cone(0.065, h, { mat: "stake", sides: 6, pos: [x, 0, z], rot: [(rnd(i, 3, 541) - 0.5) * 12, 0, (rnd(i, 5, 541) - 0.5) * 12], jitter: 0.004, seed: 541 + i }),
+    cone(0.017, h * 0.25, { mat: "stakeD", sides: 6, pos: [x, h * 0.74, z], rot: [(rnd(i, 3, 541) - 0.5) * 12, 0, (rnd(i, 5, 541) - 0.5) * 12] })]))
+looms("stakes")
+
+// --- barrels: the barrel on its cradle (832) and the soup tub (1855) ---------------
+// barrel (832): a barrel lying along x on two wooden cradles, orange staves,
+// two pairs of iron hoops, a tap at its +x end
+const BR = 0.24, BL = 0.72, BY = 0.36
+model("barrel_tap",
+  tf({ pos: [-BL / 2, BY, 0], rot: [0, 0, -90] },
+    lathe([BR * 0.86, 0, BR, BL * 0.3, BR, BL * 0.7, BR * 0.86, BL], { mat: "stave", sides: 12 }),
+    [0.1, 0.2, 0.8, 0.9].map((u) => torus(BR * (0.95 + 0.1 * Math.sin(u * Math.PI)) * 0.98, 0.016, { mat: "steel", rings: 16, sides: 4, pos: [0, u * BL, 0] }))),
+  [-1, 1].map((k) => cyl(BR * 0.8, 0.02, { mat: "box", sides: 12, rot: [0, 0, 90], pos: [k * (BL / 2 + 0.0) + (k > 0 ? 0.01 : 0), BY, 0] })),
+  cyl(0.025, 0.08, { mat: "steelD", sides: 6, rot: [0, 0, -90], pos: [BL / 2, BY - 0.08, 0] }),
+  box(0.03, 0.06, 0.02, { mat: "steel", pos: [BL / 2 + 0.07, BY - 0.07, 0] }),
+  // the cradles: a block with a hollow for the barrel
+  [-0.2, 0.2].map((x) => extrude([-0.24, 0, 0.24, 0, 0.24, 0.2, 0.15, 0.22, 0.06, 0.15, -0.06, 0.15, -0.15, 0.22, -0.24, 0.2], 0.1,
+    { mat: "tableD", rot: [0, 90, 0], pos: [x, 0, 0], jitter: 0.004 })))
+// soup tub (1855): a wide wooden tub full of green soup, an iron band low
+// round it, a ladle standing in it and a white cloth over its -x rim
+model("soup_tub",
+  lathe([0.34, 0, 0.4, 0.5, 0.42, 0.56, 0.37, 0.56, 0.35, 0.08], { mat: "table", sides: 14 }),
+  torus(0.385, 0.022, { mat: "steelD", rings: 18, sides: 4, pos: [0, 0.13, 0] }),
+  cyl(0.37, 0.02, { mat: "soup", sides: 14, pos: [0, 0.46, 0] }),
+  [[0.1, 0.08, 0.06], [-0.12, -0.1, 0.05], [0.0, -0.18, 0.04], [0.18, -0.08, 0.035]].map(([x, z, r]) => cyl(r, 0.022, { mat: "soupL", sides: 7, pos: [x, 0.465, z] })),
+  tf({ pos: [0.12, 0.45, -0.1], rot: [20, 0, -18] }, cyl(0.035, 0.85, { mat: "table", sides: 6 }), sphere(0.07, { mat: "tableD", detail: 1, pos: [0, -0.02, 0], scale: [1, 0.5, 1] })),
+  // the cloth over the rim
+  box(0.16, 0.02, 0.26, { mat: "towel", pos: [-0.39, 0.56, 0.0], jitter: 0.008 }),
+  box(0.02, 0.24, 0.26, { mat: "towel", pos: [-0.47, 0.34, 0.0], rot: [0, 0, -6], jitter: 0.008 }))
+for (const n of ["barrel_tap", "soup_tub"]) looms(n)
