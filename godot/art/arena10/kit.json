@@ -485,6 +485,96 @@
 			],
 			"looms": "misc",
 			"note": "white knickers on the floor"
+		},
+		{
+			"name": "butcher_block",
+			"label": "Tocón de carnicero",
+			"kind": "deco",
+			"gfx": [
+				2476
+			],
+			"looms": "misc",
+			"note": "a squat block with a metal top, a chunk of meat, a cleaver and hooks on it"
+		},
+		{
+			"name": "grill",
+			"label": "Parrilla",
+			"kind": "deco",
+			"gfx": [
+				2539
+			],
+			"looms": "misc",
+			"note": "a low board frame of glowing coals under a wire grill, its handle at +x"
+		},
+		{
+			"name": "spit_hearth",
+			"label": "Fogón primitivo",
+			"kind": "deco",
+			"gfx": [
+				2540
+			],
+			"looms": "misc",
+			"note": "a bowl of embers between two upright bones, an animal skeleton on a spit along x"
+		},
+		{
+			"name": "aprons",
+			"label": "Delantales",
+			"kind": "deco",
+			"gfx": [
+				2749
+			],
+			"looms": "misc",
+			"note": "two aprons hung on a wall: the wall is the plane x = 0 facing +x, y = 0 the floor"
+		},
+		{
+			"name": "squirrel_rug",
+			"label": "Ardilla aplastada",
+			"kind": "deco",
+			"gfx": [
+				2754
+			],
+			"looms": "misc",
+			"note": "a squirrel flattened like a rug"
+		},
+		{
+			"name": "stone_hand",
+			"label": "Mano de piedra",
+			"kind": "deco",
+			"gfx": [
+				2756
+			],
+			"looms": "misc",
+			"note": "a stone forearm and hand lying along x"
+		},
+		{
+			"name": "pickle_jar",
+			"label": "Jarrón de cristal",
+			"kind": "deco",
+			"gfx": [
+				2761
+			],
+			"looms": "misc",
+			"note": "a glass jar of pale pickled lumps, its lid tied with string"
+		},
+		{
+			"name": "headless_knitter",
+			"label": "Persona sin cabeza en una silla",
+			"kind": "deco",
+			"gfx": [
+				2763
+			],
+			"looms": "misc",
+			"note": "a stout headless woman in a rocking chair, faces +x"
+		},
+		{
+			"name": "skull_blood",
+			"label": "Calavera con sangre",
+			"kind": "deco",
+			"gfx": [
+				2764
+			],
+			"looms": "misc",
+			"note": "a skull in a pool of blood, its face to +x"
 		}
 	]
 }

@@ -96,15 +96,25 @@ const MISC = {
   glass: ["#8a8a2a", "#3a6a4a", "#8a3a2a"], liquor: ["#4a2210", "#2a1a10", "#5a1a10"], cup: ["#a8744a", "#8a8a8a", "#b8885a"],
   fur: ["#b8ba8e", "#8a8680", "#a8825a"], furD: ["#86885e", "#5e5a56", "#7a5a3a"], pink: ["#d888a8", "#d890a0", "#c87888"],
   flesh: ["#f0c8c0", "#e8b8b0", "#f4d0c4"], fleshD: ["#c88880", "#b8787a", "#d09088"],
+  sheet: ["#c4bca0", "#a8acb0", "#b49a7a"], coal: ["#2e2420", "#26262a", "#2a1c16"], ash: ["#8a8a8a", "#6e6e70", "#8a8070"],
+  dress: ["#7ea2c8", "#a87e9a", "#8aa86a"], dressD: ["#4e6e94", "#7a5470", "#5a7a44"], apronBlue: ["#4e7086", "#6a4a5a", "#4a6a4a"],
+  apronBrown: ["#6a5444", "#4a4a4e", "#8a6a3a"], slipper: ["#e898c0", "#c8a0e0", "#f0b890"], yarn: ["#9ac83a", "#e8b030", "#4aa0d0"],
+  stitch: ["#3a9a3a", "#3a5aa8", "#a83a3a"], heart: ["#e85a2a", "#e8c030", "#e85a8a"], pale: ["#ece0b8", "#e8cfb4", "#c89878"],
+  pelt: ["#c0641e", "#8a7a6a", "#a83a1a"], peltL: ["#e08a3a", "#aa9a88", "#c85a2a"], stone: ["#b4c2b0", "#a8a8a8", "#c0a890"], stoneD: ["#7a907a", "#787878", "#8a7460"],
+  jar: ["#9ab08a", "#9aaab8", "#b8a080"], pickle: ["#f0dc98", "#e0e8b0", "#f0b878"], string: ["#c8281a", "#2a5aa8", "#3a8a3a"],
+  skull: ["#e8d080", "#e0dcd0", "#d8b878"], skullD: ["#9a8040", "#8a8680", "#8a6a3a"],
   soup: ["#5aa03a", "#8a5a2a", "#a82a1a"], soupL: ["#9ad060", "#b8844a", "#d8582e"], towel: ["#f2f0ea", "#e8e0c8", "#e0e4ec"],
 }
 const MISC_ROUGH = { glass: 0.1, liquor: 0.1, plate: 0.4, plateD: 0.45, tong: 0.5, tongL: 0.45, flesh: 0.45, fleshD: 0.5, grease: 0.25, greaseD: 0.35, steel: 0.35, steelD: 0.45, soup: 0.15, soupL: 0.15, tusk: 0.5, tuskD: 0.55 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MISC).map(([k, v]) =>
   [k + s, { color: v[i], rough: MISC_ROUGH[k] ?? 0.85, metal: k.startsWith("steel") ? 0.6 : k.startsWith("tong") ? 0.4 : 0 }]))))
+// glowing embers in the grill and the hearth: [a, b, c]
+const EMBER = { ember: ["#ff5a14", "#ffb020", "#ff3010"] }
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(EMBER).map(([k, v]) => [k + s, { color: v[i], emit: v[i], glow: 2, rough: 0.5 }]))))
 // the dashes of the floor's joint line: [a, b, c]
 const DASH = { dash: ["#5a5440", "#3e4042", "#5a2e20"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DASH).map(([k, v]) => [k + s, { color: v[i], rough: 0.95 }]))))
-const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", "cloth", "crate", "crateV", "crateD", "crateDV", "box", "boxV", "boxDV", "stave", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR), ...Object.keys(MEAT), ...Object.keys(MISC),
+const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", "cloth", "crate", "crateV", "crateD", "crateDV", "box", "boxV", "boxDV", "stave", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR), ...Object.keys(MEAT), ...Object.keys(MISC), ...Object.keys(EMBER),
   ...Object.keys(WOOD).flatMap((k) => [k, k + "V"])]
 const looms = (name) => threeLooms(name, SKINNED)
 
@@ -673,3 +683,140 @@ model("knickers", { scale: 1.5 },
   extrude([-0.12, 0.08, 0.12, 0.08, 0.1, 0.0, 0.03, -0.08, -0.03, -0.08, -0.1, 0.0], 0.02, { mat: "towel", rot: [90, 0, 0], pos: [0, 0.01, 0], jitter: 0.004 }),
   box(0.25, 0.02, 0.025, { mat: "towel", pos: [0, 0.012, -0.08] }))
 looms("knickers")
+
+
+// --- butcher's block (2476) ------------------------------------------------------------
+// a squat wooden block filling the cell, about 0.55 m, its top sheathed in a
+// stained metal sheet with rounded edges; on top a chunk of meat bristling
+// with bone spurs, a red-handled cleaver and two hooks; blood run down the
+// +z face
+model("butcher_block",
+  timber(-0.47, 0.47, -0.47, 0.47, 0, 0.48, "postDV", 701, 0.08),
+  prismUp(roundSquare(0.49, 0.1), 0.06, 0.46, "sheet", 0.004),
+  sphere(0.22, { mat: "meat", detail: 1, pos: [-0.08, 0.52, -0.05], scale: [1.5, 0.35, 0.8], jitter: 0.01 }),
+  [-0.3, -0.18, -0.05, 0.08, 0.2].map((x, i) => cone(0.05, 0.16 + (i % 2) * 0.05, { mat: "bone", sides: 5, pos: [x, 0.54, -0.08 + (i % 2) * 0.08], rot: [0, 0, -10 + i * 4] })),
+  tf({ pos: [0.12, 0.525, 0.05], rot: [0, 35, 0] }, box(0.24, 0.012, 0.16, { mat: "steel", pos: [-0.05, 0, 0] }),
+    box(0.3, 0.035, 0.04, { mat: "comb", pos: [0.22, 0, 0] })),
+  [[-0.32, 0.25], [0.25, 0.28]].map(([x, z]) => torus(0.035, 0.009, { mat: "steelD", rings: 8, sides: 4, pos: [x, 0.525, z] })),
+  [-0.25, -0.12, 0.1].map((x, i) => box(0.035 - i * 0.006, 0.35 - i * 0.1, 0.008, { mat: "bloodLit", pos: [x, 0.5 - (0.35 - i * 0.1), 0.475] })))
+looms("butcher_block")
+
+// --- grill (2539) ------------------------------------------------------------------------
+// a low frame of pale boards on four legs, dark coals glowing inside, a
+// wire grill laid over it, its round wooden handle out at +x
+model("grill",
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => box(0.1, 0.24, 0.1, { mat: "boxV", pos: [sx * 0.38, 0, sz * 0.38], jitter: 0.004 })),
+  [0, 90, 180, 270].map((r) => tf({ rot: [0, r, 0] }, box(0.9, 0.12, 0.06, { mat: "box", pos: [0, 0.26, 0.42], jitter: 0.004 }))),
+  box(0.8, 0.04, 0.8, { mat: "coal", pos: [0, 0.27, 0] }),
+  [[-0.2, -0.1], [0.15, 0.2], [0.05, -0.2], [-0.15, 0.22], [0.25, -0.05]].map(([x, z], i) => sphere(0.05, { mat: i % 2 ? "ember" : "coal", detail: 0, pos: [x, 0.31, z], scale: [1.4, 0.5, 1] })),
+  // the wire grill: a frame and bars along x
+  tube([-0.38, 0.39, -0.38, 0.38, 0.39, -0.38, 0.38, 0.39, 0.38, -0.38, 0.39, 0.38], 0.012, { mat: "steel", sides: 4, closed: true }),
+  [-0.28, -0.14, 0, 0.14, 0.28].map((z) => cyl(0.008, 0.76, { mat: "steel", sides: 4, rot: [0, 0, -90], pos: [-0.38, 0.39, z] })),
+  cyl(0.012, 0.16, { mat: "steel", sides: 4, rot: [0, 0, -90], pos: [0.38, 0.39, 0.1] }),
+  sphere(0.07, { mat: "mallet", detail: 1, pos: [0.6, 0.39, 0.1], scale: [1.4, 0.8, 0.8] }))
+looms("grill")
+
+// --- hearth (2540) -----------------------------------------------------------------------
+// a primitive hearth: a round stone bowl of ash with glowing embers between
+// two upright bones, a spit across them along x carrying the skeleton of an
+// animal (its ribs hanging down), a wooden crank at the +x end
+model("spit_hearth",
+  lathe([0.24, 0, 0.32, 0.1, 0.33, 0.16, 0.29, 0.16, 0.27, 0.08], { mat: "post", sides: 12, pos: [0, 0, 0] }),
+  cyl(0.28, 0.02, { mat: "ash", sides: 12, pos: [0, 0.1, 0] }),
+  [[-0.1, 0.05], [0.12, -0.08], [0.0, 0.14], [0.08, 0.1]].map(([x, z]) => sphere(0.04, { mat: "ember", detail: 0, pos: [x, 0.12, z], scale: [1.3, 0.5, 1] })),
+  [-1, 1].map((k) => tf({ pos: [k * 0.42, 0, 0], rot: [0, 0, k * 6] }, cyl(0.09, 0.82, { mat: "bone", sides: 6, top: 0.065 }),
+    sphere(0.08, { mat: "bone", detail: 1, pos: [0, 0.84, 0], scale: [1, 0.8, 1.3] }))),
+  cyl(0.02, 1.15, { mat: "steel", sides: 5, rot: [0, 0, -90], pos: [-0.55, 0.8, 0] }),
+  spine(-0.3, 0.3, 0.8, 0.05),
+  [-0.24, -0.08, 0.08, 0.24].flatMap((x, i) => [-1, 1].map((k) => rib(x, 0.8, 0, 0.42, 0.04, 150, -18, -90 * k, 3))),
+  tf({ pos: [0.6, 0.8, 0] }, box(0.04, 0.18, 0.05, { mat: "table", pos: [0, -0.16, 0] }), cyl(0.03, 0.14, { mat: "table", sides: 6, rot: [0, 0, -90], pos: [0, -0.14, 0] })))
+looms("spit_hearth")
+
+// --- aprons (2749) -----------------------------------------------------------------------
+// two aprons hung on a wall from one peg (the wall is the plane x = 0, facing
+// +x, like arena 9's whip; y = 0 is the floor): a blue one in front, a brown
+// one behind, their bibs, waists and long skirts
+const apron = (z, y0, mat, tilt) => tf({ pos: [0.04, y0, z], rot: [tilt, 0, 0] },
+  extrude([-0.1, 0, 0.1, 0, 0.13, -0.18, 0.2, -0.24, 0.22, -0.9, -0.22, -0.9, -0.2, -0.24, -0.13, -0.18], 0.025,
+    { mat, rot: [0, 90, 0], jitter: 0.006, seed: z * 100 }),
+  box(0.015, 0.05, 0.44, { mat, pos: [0.01, -0.26, 0] }),
+  tube([0.0, 0.0, -0.08, 0.0, 0.12, 0.0, 0.0, 0.0, 0.08], 0.008, { mat, sides: 4 }))
+model("aprons", { pivot: "origin" },
+  cyl(0.025, 0.12, { mat: "table", sides: 6, rot: [0, 0, -90], pos: [0, 1.35, 0] }),
+  apron(0.1, 1.24, "apronBrown", -6),
+  tf({ pos: [0.03, 0, 0] }, apron(-0.12, 1.22, "apronBlue", 5)))
+looms("aprons")
+
+// --- squashed squirrel (2754) --------------------------------------------------------------
+// a squirrel flattened like a rug: a splayed orange pelt, four paws, the
+// big curled tail at the back, its head turned up with crosses for eyes
+model("squirrel_rug", { scale: 1.5 },
+  extrude([-0.2, 0, -0.1, 0.12, 0.08, 0.1, 0.2, 0.18, 0.24, 0.06, 0.16, -0.04, 0.22, -0.16, 0.06, -0.1, -0.08, -0.18, -0.18, -0.12], 0.025,
+    { mat: "pelt", rot: [90, 0, 0], pos: [0, 0.012, 0], jitter: 0.006 }),
+  sphere(0.08, { mat: "peltL", detail: 1, pos: [-0.2, 0.04, 0.02], scale: [1, 0.5, 1] }),
+  [-1, 1].map((k) => [box(0.025, 0.004, 0.006, { mat: "eye", pos: [-0.22, 0.08, k * 0.03], rot: [0, 45, 0] }), box(0.025, 0.004, 0.006, { mat: "eye", pos: [-0.22, 0.08, k * 0.03], rot: [0, -45, 0] })]),
+  torus(0.09, 0.035, { mat: "pelt", rings: 14, sides: 5, pos: [0.24, 0.035, -0.05], scale: [1, 0.5, 1] }),
+  sphere(0.05, { mat: "peltL", detail: 1, pos: [0.24, 0.04, -0.05], scale: [1, 0.5, 1] }))
+looms("squirrel_rug")
+
+// --- stone hand (2756) ----------------------------------------------------------------------
+// a pale stone forearm and hand lying along x, fingers spread at +x, mossy
+// patches
+model("stone_hand",
+  cyl(0.06, 0.5, { mat: "stone", sides: 7, top: 0.05, rot: [0, 0, -90], pos: [-0.35, 0.055, 0], jitter: 0.006 }),
+  box(0.12, 0.06, 0.13, { mat: "stone", pos: [0.2, 0.025, 0], jitter: 0.008 }),
+  [-0.045, -0.015, 0.015, 0.045].map((z, i) => cyl(0.016, 0.1 + (i % 2) * 0.02, { mat: "stone", sides: 5, rot: [0, -z * 300, -90], pos: [0.26, 0.04, z] })),
+  cyl(0.016, 0.08, { mat: "stone", sides: 5, rot: [0, 50, -90], pos: [0.2, 0.04, 0.06] }),
+  [[-0.25, 0.04], [0.0, -0.03]].map(([x, z]) => sphere(0.035, { mat: "stoneD", detail: 0, pos: [x, 0.1, z], scale: [1.5, 0.3, 1] })))
+looms("stone_hand")
+
+// --- jar (2761) -----------------------------------------------------------------------------
+// a glass jar of pale pickled lumps, its lid tied with red string
+model("pickle_jar", { scale: 1.1 },
+  lathe([0.1, 0, 0.12, 0.04, 0.12, 0.24, 0.09, 0.28, 0.09, 0.3], { mat: "jar", sides: 10 }),
+  [[-0.04, 0.08, 0.06], [0.05, 0.12, 0.05], [0.0, 0.18, 0.05]].map(([x, y, r]) => sphere(r, { mat: "pickle", detail: 1, pos: [x, y, 0.08], scale: [1, 1, 0.5] })),
+  cyl(0.1, 0.03, { mat: "string", sides: 10, pos: [0, 0.29, 0] }),
+  tube([0.09, 0.3, 0.0, 0.14, 0.22, 0.02, 0.15, 0.14, 0.0], 0.006, { mat: "string", sides: 4 }))
+looms("pickle_jar")
+
+// --- headless woman in a rocking chair (2763) ---------------------------------------------
+// the owner's "headless person sitting on a wooden chair": a stout woman in
+// a blue dress and a white apron with an embroidered heart, pale arms on
+// the armrests, pink slippers, her knitting yarn rolled off on the floor;
+// a red stump where the head was. Faces +x.
+const SEAT = 0.5
+model("headless_knitter",
+  // the rocking chair
+  [-1, 1].map((k) => tube([-0.5, 0.1, k * 0.3, -0.2, 0.0, k * 0.3, 0.3, 0.0, k * 0.3, 0.55, 0.12, k * 0.3], 0.03, { mat: "post", sides: 5 })),
+  [[-0.3, 0.3], [0.3, 0.3], [-0.3, -0.3], [0.3, -0.3]].map(([x, z]) => cyl(0.035, SEAT, { mat: "postV", sides: 6, pos: [x, 0.0, z] })),
+  box(0.68, 0.06, 0.66, { mat: "post", pos: [0, SEAT, 0] }),
+  [-1, 1].map((k) => [cyl(0.035, 0.85, { mat: "postV", sides: 6, pos: [-0.32, SEAT, k * 0.28], rot: [0, 0, 10] }),
+    box(0.55, 0.05, 0.08, { mat: "post", pos: [0.0, SEAT + 0.3, k * 0.32] })]),
+  [0.2, 0.45, 0.7].map((y) => box(0.04, 0.08, 0.56, { mat: "post", pos: [-0.32 - y * 0.18, SEAT + y, 0], rot: [0, 0, 10] })),
+  // the body: a broad blue dress, the white apron, the stump
+  sphere(0.3, { mat: "dress", detail: 2, pos: [0.0, SEAT + 0.32, 0], scale: [0.95, 1.25, 1.15] }),
+  sphere(0.36, { mat: "dressD", detail: 2, pos: [0.12, SEAT + 0.08, 0], scale: [1.1, 0.45, 1.05] }),
+  box(0.03, 0.42, 0.4, { mat: "towel", pos: [0.33, SEAT, 0], rot: [0, 0, 12], jitter: 0.01 }),
+  box(0.012, 0.12, 0.16, { mat: "stitch", pos: [0.35, SEAT + 0.15, 0], rot: [0, 0, 12] }),
+  box(0.012, 0.07, 0.08, { mat: "heart", pos: [0.357, SEAT + 0.17, 0], rot: [0, 0, 12] }),
+  cyl(0.1, 0.05, { mat: "pale", sides: 8, pos: [-0.02, SEAT + 0.66, 0] }),
+  cyl(0.085, 0.02, { mat: "meat", sides: 8, pos: [-0.02, SEAT + 0.7, 0] }),
+  // arms on the armrests, legs down to the slippers
+  [-1, 1].map((k) => [sphere(0.11, { mat: "pale", detail: 1, pos: [0.0, SEAT + 0.48, k * 0.33], scale: [1, 1.5, 0.9] }),
+    cyl(0.07, 0.36, { mat: "pale", sides: 7, rot: [0, 0, -80], pos: [-0.02, SEAT + 0.36, k * 0.33] }),
+    cyl(0.09, SEAT - 0.02, { mat: "pale", sides: 7, top: 0.07, pos: [0.36, 0.06, k * 0.16], rot: [0, 0, 8] }),
+    sphere(0.08, { mat: "slipper", detail: 1, pos: [0.42, 0.05, k * 0.17], scale: [1.6, 0.6, 1] })]),
+  // the yarn ball and its thread
+  sphere(0.07, { mat: "yarn", detail: 1, pos: [0.72, 0.07, -0.35] }),
+  tube([0.3, SEAT + 0.15, 0.1, 0.5, 0.2, 0.0, 0.6, 0.02, -0.25, 0.72, 0.07, -0.35], 0.006, { mat: "yarn", sides: 4 }))
+looms("headless_knitter")
+
+// --- bloody skull (2764) --------------------------------------------------------------------
+// a yellowed skull lying in a pool of blood, its face to +x
+model("skull_blood", { scale: 1.6 },
+  cyl(0.2, 0.004, { mat: "bloodLit", sides: 10, pos: [0.04, 0, 0], scale: [1.3, 1, 0.9], jitter: 0.02 }),
+  sphere(0.13, { mat: "skull", detail: 2, pos: [0, 0.13, 0], scale: [1.1, 0.95, 0.95] }),
+  box(0.1, 0.07, 0.15, { mat: "skull", pos: [0.08, 0.02, 0], jitter: 0.008 }),
+  [-1, 1].map((k) => sphere(0.035, { mat: "coal", detail: 1, pos: [0.13, 0.13, k * 0.05], scale: [0.5, 1, 1] })),
+  sphere(0.06, { mat: "meatD", detail: 1, pos: [0.0, 0.2, -0.08], scale: [1, 0.6, 0.6] }))
+looms("skull_blood")

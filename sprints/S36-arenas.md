@@ -1589,6 +1589,40 @@ y sus hachas ya están en el kit de la arena 9.
 - Dueño (2026-10-29), mientras hacía estos grupos: "he ido viendo tus
   fotos y todo perfecto".
 
+- **La cocina y las piezas sueltas** (grupos «tocón de carnicero» 2476,
+  «parrilla» 2539, «fogón» 2540, «delantales» 2749, «ardilla» 2754, «mano
+  de piedra» 2756, «jarrón» 2761, «persona sin cabeza» 2763 y «calavera»
+  2764). Hojas: `kit-arena10-cocina-1.png` y `-2.png`, y
+  `kit-arena10-sueltas-1.png` … `-3.png`.
+  - `butcher_block` (2476): un tocón bajo de madera oscura que llena la
+    casilla, de unos 0,55 m, con la cara de arriba forrada de chapa
+    manchada. Encima lleva un trozo de carne erizado de huesos, una cuchilla
+    de mango rojo y dos ganchos; la sangre baja por la cara +z.
+  - `grill` (2539): un marco bajo de tablas claras sobre cuatro patas, con
+    brasas dentro (palette `ember`, que brilla), una parrilla de alambre
+    encima y el mango redondo de madera hacia +x.
+  - `spit_hearth` (2540): un cuenco de ceniza con brasas entre dos huesos
+    de pie, y un espetón a lo largo de x con el esqueleto de un animal y
+    una manivela en el extremo +x.
+  - `aprons` (2749): dos delantales, azul y pardo, colgados de una clavija
+    en la pared, con la misma convención de pared que el látigo.
+  - `squirrel_rug` (2754): una ardilla aplastada como una alfombra, con la
+    cola enroscada y cruces en los ojos.
+  - `stone_hand` (2756): un antebrazo y una mano de piedra clara,
+    tumbados, con manchas de musgo.
+  - `pickle_jar` (2761): un tarro de cristal con trozos claros en conserva
+    y la tapa atada con un cordel rojo.
+  - `headless_knitter` (2763): una mujer robusta sin cabeza en una
+    mecedora. Lleva vestido azul y delantal blanco con un corazón bordado,
+    los brazos pálidos en los apoyabrazos y zapatillas rosas, y el ovillo se
+    le ha caído al suelo. Mira hacia +x.
+  - `skull_blood` (2764): una calavera amarillenta en un charco de sangre.
+  - Lo que salió mal en la primera versión:
+    - El tocón era alto y de madera clara.
+    - Los huesos del fogón eran finos y las costillas apuntaban a un lado.
+    - La ardilla, el tarro y la calavera eran pequeños.
+- **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
