@@ -1,0 +1,19 @@
+{
+	"_doc": "Arena 8 (retail world 39: a volcano) kit for the map editor (S36), same schema as art/arena7/kit.json. Pieces the arena also uses from the other kits are listed in shared.",
+	"biome": "volcán",
+	"arenas": [39],
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"pumice": ["roca volcánica pardo negra", "gris ceniza", "escoria roja"]
+	},
+	"shared": [],
+	"minor": [],
+	"pieces": [
+		{"name": "volcanic_slab", "label": "Losa de roca volcánica", "kind": "tile", "gfx": [2285], "looms": "pumice", "top": 0.3, "note": "three rounded pumice stones side by side; the floor of the volcano"},
+		{"name": "volcanic_rock", "label": "Roca volcánica", "kind": "tile", "gfx": [2280], "looms": "pumice", "top": 0.55, "note": "one big rounded pumice stone filling the cell"}
+	]
+}

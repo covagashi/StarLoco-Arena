@@ -1056,6 +1056,34 @@ cada vez, empezando por la más usada.
     barro y burbujas (2673–2676), «burbuja de barro» (2671, 2672), «flor
     blanca» (2668–2670).
 
+### Modelado de las arenas 8–12 por grupos, 2026-10-29
+
+Kit nuevo `godot/art/arena8/` (volcán), con el mismo formato que los demás.
+Se modela un grupo cada vez y se enseña antes de seguir.
+
+- **Suelo del volcán** (grupos «losa volcánica» 2285 y «roca volcánica»
+  2280; entre las dos salen 217 veces en el mapa). Hoja:
+  `kit-arena8-suelo.png`.
+  - Loom `pumice` (`arena8/kit.tx.js`): roca volcánica de piel lisa, con
+    abultamientos grandes, surcos finos de la colada en algunas piedras,
+    agujeros redondos de tres tamaños y grano fino. Looms: pardo oscuro
+    (como lo tiñe el mapa), gris ceniza y escoria roja.
+  - `volcanic_slab` (2285): tres piedras redondeadas en fila a lo ancho de
+    la casilla, dos largas detrás y una más pequeña y lisa delante.
+    `volcanic_rock` (2280): una cúpula, más alta por detrás. Las dos son
+    `tile`, y sus normales suaves salen del material `soft*`.
+  - Lo que salió mal en la primera versión:
+    - Las piedras tenían el eje largo hacia la cámara y se veían escorzadas,
+      a la mitad de tamaño. Ahora se colocan en ejes de pantalla (u a lo
+      ancho, v hacia la cámara), y la roca mide 1,1 m a lo largo de la
+      diagonal, como la retail.
+    - La roca era un disco plano: ahora es una cúpula.
+    - Los surcos se leían como rayas de cebra en el suelo montado: ahora
+      son finos y solo salen en algunas piedras.
+    - La textura era clara como hormigón y tenía demasiados poros. Al
+      aclararla para que no saliera negra, el suelo parecía de galletas:
+      se quedó a medio camino.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
