@@ -1353,6 +1353,21 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
     - El mango flotaba suelto; ahora cuelga de un tramo de cuero.
     - La clavija era diminuta.
     - El cuero salía anaranjado.
+
+- **Sangre de pared** (grupo «sangre de pared»: 2443). Hoja:
+  `kit-arena9-sangre.png`.
+  - `wall_blood`: una salpicadura a unos 0,6 m con gotas sueltas, cuatro
+    chorretones que bajan por el muro y un charco al pie, que sale un poco
+    al suelo.
+  - En la retail va debajo del látigo. Usa la misma convención de pared
+    (plano x = 0 mirando a +x) y los colores de sangre del desagüe: sangre
+    roja, icor negro y limo verde.
+  - Lo que salió mal en la primera versión:
+    - El charco era rojo vivo; ahora es oscuro y solo el centro brilla un
+      poco.
+    - Los chorretones parecían postes iguales; ahora tienen anchos y largos
+      distintos.
+- **Arena 9 completa**: `map_sheet.py 40 9` da 40 piezas y 0 nuevas.
 - Dueño (2026-10-29): creía que el látigo (2020) y la sangre de pared
   (2443) se habían pasado a VFX en arenas anteriores. No están en la lista
   `vfx` de `gfx_rules.json` ni en los sprints; la sangre del suelo se

@@ -387,3 +387,27 @@ model("coiled_whip", { pivot: "origin" }, tf({ rot: [0, 90, 0] },
   // the lashes off the bottom right
   lash(0.1, 0.72, 0.03, 1), lash(0.15, 0.66, 0.04, 2), lash(0.2, 0.6, 0.025, 3)))
 looms("coiled_whip")
+
+// --- blood down a wall (group «sangre de pared»: 2443) -----------------------
+// blood run down a wall from a splash about 0.6 m up, in three streaks, into
+// a pool on the floor at its foot (in the retail, under the coiled whip).
+// The drains' blood colours. Built against the plane z = 0 facing +z, then
+// turned so the wall is the plane x = 0 facing +x; y = 0 is the floor.
+// a streak on the wall: x along it, from y0 down to the floor, w wide
+const streak = (x, y0, w, seed) => [
+  box(w, y0, 0.006, { mat: "bloodD", pos: [x, 0, 0.004], jitter: 0.002, seed }),
+  sphere(1, { mat: "bloodD", detail: 1, pos: [x, y0, 0.006], scale: [w * 0.6, w * 0.7, 0.006] }),
+]
+model("wall_blood", { pivot: "origin" }, tf({ rot: [0, 90, 0] },
+  streak(-0.14, 0.74, 0.035, 1), streak(0.04, 0.6, 0.08, 2), streak(0.1, 0.5, 0.04, 4), streak(0.27, 0.6, 0.035, 3),
+  // the splash the streaks run from
+  [[0.06, 0.56, 0.2, 0.07], [0.2, 0.5, 0.12, 0.06], [-0.05, 0.6, 0.08, 0.05], [0.34, 0.6, 0.05, 0.04]].map(([x, y, rx, ry], k) =>
+    sphere(1, { mat: "bloodD", detail: 2, pos: [x, y, 0.006], scale: [rx, ry, 0.007], jitter: 0.01, seed: 11 + k })),
+  // the pool at the foot: along the wall and a little out onto the floor
+  [[0.02, 0.14, 0.32, 0.12], [-0.22, 0.12, 0.12, 0.08], [0.24, 0.2, 0.12, 0.09]].map(([x, z, rx, rz], k) =>
+    sphere(1, { mat: "bloodD", detail: 2, pos: [x, 0.004, z], scale: [rx, 0.008, rz], jitter: 0.012, seed: 21 + k })),
+  // the wet middle of the pool a shade brighter, and loose drops by the splash
+  sphere(1, { mat: "blood", detail: 1, pos: [0.0, 0.007, 0.12], scale: [0.14, 0.008, 0.06], jitter: 0.01, seed: 31 }),
+  [[-0.2, 0.68], [0.4, 0.72], [-0.08, 0.74], [0.3, 0.46], [0.12, 0.7]].map(([x, y], k) =>
+    sphere(0.018 + (k % 2) * 0.01, { mat: "bloodD", detail: 1, pos: [x, y, 0.006], scale: [1, 1, 0.3] }))))
+looms("wall_blood")

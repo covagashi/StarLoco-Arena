@@ -46,6 +46,11 @@
 			"cuero rojizo",
 			"cuero negro",
 			"cuerda parda"
+		],
+		"blood": [
+			"sangre roja",
+			"icor negro",
+			"limo verde"
 		]
 	},
 	"shared": [],
@@ -261,6 +266,16 @@
 			],
 			"looms": "whip",
 			"note": "a coiled whip hung from a peg on a wall: the wall is the plane x = 0 facing +x; y = 0 is the floor; about 1.4 m"
+		},
+		{
+			"name": "wall_blood",
+			"label": "Sangre de pared",
+			"kind": "deco",
+			"gfx": [
+				2443
+			],
+			"looms": "blood",
+			"note": "blood run down a wall in three streaks into a pool at its foot; the wall is the plane x = 0 facing +x, y = 0 the floor (under the coiled whip in the retail)"
 		}
 	]
 }
