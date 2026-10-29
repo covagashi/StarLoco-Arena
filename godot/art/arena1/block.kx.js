@@ -57,12 +57,29 @@ const drips = [0, 90, 180, 270].map((rot, s) => tf({ rot: [0, rot, 0] },
   D.map(([o, len, r], i) => drip(o + ((s * 13 + i * 7) % 5 - 2) * 0.015, HALF + 0.025,
     len * (0.8 + ((s * 5 + i * 3) % 4) * 0.12), r, 0))))
 
+// a soft rounded block body: rounded-square prisms stacked so its sides
+// swell out in the middle and pull in at the foot and the top, as the
+// retail draws its blocks; rows: [y, half, corner r] from the foot up
+const swell = (rows, mat, wave = 0.02, seed = 1) => rows.slice(0, -1).map(([y0, h0, r0], i) => {
+  const [y1] = rows[i + 1]
+  return prism(roundSquare(h0, r0, 5, wave, seed + i), y1 - y0 + 0.004, y0, mat, 0.008)
+})
+// lumps of snow rolling over a block's rim, n per side
+const rimLumps = (y, half, n, r, seed, mat = "snow") => [0, 1, 2, 3].flatMap((side) => Array.from({ length: n }, (_, i) => {
+  const t = -half * 0.8 + (i + 0.5) * (1.6 * half / n) + (((side * 7 + i * 3 + seed) % 5) - 2) * 0.012
+  const [x, z] = [[t, half], [half, -t], [-t, -half], [-half, t]][side]
+  const k = 0.8 + ((side * 5 + i * 7 + seed) % 5) * 0.1
+  return sphere(r * k, { mat, detail: 1, pos: [x, y - r * 0.15 * k, z], scale: [1.25, 0.75, 1.25] })
+}))
+// ice block (153): a block of ice a little over a metre, its faceted sides
+// swelling out, a thick lumpy snow cap overhanging the rim, drips down the
+// sides
+const HB = 0.8
 model("ice_block",
-  prism(roundSquare(HALF, 0.07), H, 0, "ice", 0.004),
-  // the cap: one cushion of snow, rounding down to a lip over the body edge
-  terrain(2 * CAP, 2 * CAP, { res: 48, height: 0.3, fn: cushion, mat: "snow", pos: [0, H - 0.12, 0] }),
-  drips)
-
+  swell([[0, 0.45, 0.1], [0.3, 0.5, 0.12], [HB, 0.49, 0.12]], "ice", 0.03, 3),
+  terrain(2 * CAP, 2 * CAP, { res: 40, height: 0.34, fn: cushion, mat: "snow", pos: [0, HB - 0.1, 0] }),
+  rimLumps(HB + 0.07, 0.45, 3, 0.17, 2),
+  tf({ pos: [0, HB - H + 0.04, 0] }, drips))
 // clear ice block (retail 154, also replaces 155 and 156): the same body as
 // ice_block without the snow, standing as tall as the snow-capped one, with
 // a lighter top bevelled in from the edge

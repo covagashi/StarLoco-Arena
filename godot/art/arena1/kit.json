@@ -371,7 +371,15 @@
 			"label": "Roca baja nevada",
 			"kind": "deco",
 			"gfx": [
-				2592,
+				2592
+			],
+			"looms": "boulder"
+		},
+		{
+			"name": "rock_small",
+			"label": "Rocas pequeñas nevadas",
+			"kind": "deco",
+			"gfx": [
 				2586
 			],
 			"looms": "boulder"

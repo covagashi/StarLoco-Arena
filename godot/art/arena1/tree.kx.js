@@ -23,13 +23,13 @@ function limb(pts, r0, r1, mat = "barkD") {
 // a cap of snow sitting on a broken top or a limb end: flattened, lumpy,
 // spilling a couple of thin drips over its rim
 const clump = (x, y, z, r) => [
-  sphere(r, { mat: "snowT", detail: 3, pos: [x, y, z], scale: [1.1, 0.55, 1.1] }),
-  sphere(r * 0.55, { mat: "snowT", detail: 2, pos: [x - r * 0.35, y + r * 0.22, z - r * 0.2], scale: [1, 0.7, 1] }),
+  sphere(r, { mat: "snowT", detail: 3, pos: [x, y + r * 0.15, z], scale: [1.05, 0.8, 1.05] }),
+  sphere(r * 0.6, { mat: "snowT", detail: 2, pos: [x - r * 0.35, y + r * 0.45, z - r * 0.2], scale: [1, 0.85, 1] }),
   sphere(r * 0.22, { mat: "snowT", detail: 2, pos: [x + r * 0.62, y - r * 0.45, z + r * 0.6], scale: [0.8, 1.9, 0.8] }),
   sphere(r * 0.17, { mat: "snowT", detail: 2, pos: [x - r * 0.75, y - r * 0.4, z + r * 0.45], scale: [0.8, 1.7, 0.8] }),
 ]
 
-model("tree",
+model("tree", { scale: 1.2 },
   // back mass: tall, leaning a little, broken top
   lathe([0.4, 0, 0.33, 0.12, 0.27, 0.45, 0.23, 0.85, 0.21, 1.12, 0.14, 1.16, 0, 1.17],
     { mat: "bark", sides: 7, pos: [-0.1, 0, -0.1], rot: [0, 10, -4], jitter: 0.035, seed: 3 }),
@@ -53,4 +53,4 @@ model("tree",
 )
 
 // the tree standing on the ice block (block top ~0.86)
-model("tree_on_block", stamp("ice_block"), stamp("tree", { pos: [0, 0.84, 0], scale: 0.95 }))
+model("tree_on_block", stamp("ice_block"), stamp("tree", { pos: [0, 0.84, 0], scale: 0.6 }))

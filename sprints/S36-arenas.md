@@ -1929,6 +1929,57 @@ demás, colores de paleta en tres looms.
 - **Arena 12 completa**: `map_sheet.py 44 12` da 54 piezas y 0 nuevas.
   Con ella están modeladas las 12 arenas de la 1.0.
 
+Arenas 1 y 2 rehechas con el método actual (dueño, 2026-10-29: "creo que el
+mapa 1, 2 y 3 fueron creados sin el pipeline con las skills"). Primero pidió
+solo `rock_low`, `autumn_bush`, `autumn_bush_tall` y `basalt_rocks`;
+después, todo lo que marqué como flojo. Hojas: `resumen-arena1-*.png` y
+`resumen-arena2-*.png` (retail junto a la loom a; tool
+`m7-referencias/kit_resumen.py`) y `revision-arena1-*`, `revision-arena2-*`
+(las tres looms a escala de juego). Se revisaron las vistas de kiln de
+cada pieza: nada flota.
+
+- **Arena 2**:
+  - Arbustos (1028 y familia, 1035/1021) y árbol otoñal (1029): ramilletes
+    de hojas ovaladas (`spray`) sobre núcleos oscuros (`foliage`), ramas
+    pálidas que asoman con ramilletes en la punta y el hueco oscuro abajo
+    donde se ven los tallos. La primera versión eran bolas de hojas; la
+    segunda, demasiado chillona y con huecos negros.
+  - Árbol sin hojas (2558/2559): tronco pálido con nudos, tocones de ramas,
+    copa partida en dos y ramitas torcidas con pocas hojas.
+  - Hojas caídas: arce de puntas afiladas a tamaño retail; hierba (246):
+    hojas planas anchas con bandas claras.
+  - Bloque de roca marrón (1240–1244): placas angulosas en rejilla 3 × 3 en
+    cada cara y arriba, el corazón oscuro en las grietas; mide 1 m (`top`
+    1,02).
+  - Rocas verdes (137): trece columnas hexagonales con tapa clara, alguna
+    rota en bisel. Piedras blancas (611, 616): losa tallada con espirales y
+    trozos alrededor.
+  - Armas al tamaño retail (~1,5 veces el real): maza con púas y flecha,
+    alabarda con empuñadura de tela, lanza con dos garfios, hoja de hueso
+    dentada con mancha verde.
+- **Arena 1 (y 3, 4)**:
+  - Bloque de hielo (153): cuerpo abombado y una capa gruesa de nieve con
+    bultos que cuelga por el borde. Piedra tallada (77): cubo de aristas muy
+    redondeadas y cara de arriba abombada (soft). Roca tosca (104): trozos
+    redondeados amontonados.
+  - Puente (167) y finales (168, 169): tres tablones gruesos grises con los
+    extremos biselados; herrajes claros con pernos negros; poste oscuro.
+  - Valla (166, 160): postes gruesos y viga biselada, cuerda atada en tres
+    vueltas con flecos; la nevada con montones redondos.
+  - Pinchos (157, 159) y cristales (158): esquirlas de hielo blancas con
+    caras grises (`shardAt`), más pequeñas al pie, montón de nieve.
+  - Escarcha (170, 174): un cordón de nieve con esquirlas en todas
+    direcciones; el cordón de hierba (138–141) es la misma forma en verde.
+  - Farol (1675): cuatro patas que se juntan hacia una lámpara de piedra a
+    2,1 m, dos travesaños y un escudo de tablas con pernos.
+  - Montón de nieve (505), runa octogonal de pizarra con el glifo (507–510).
+  - Rocas nevadas: alta (2584) de dos lóbulos, baja (2592) en cono con
+    gorro de nieve; la 2586 pasa a pieza propia, `rock_small`.
+  - Árbol nevado (175): 1,2 veces más grande y con la nieve en bolas.
+  - Lo que salió mal: la nieve y las rocas salían 1,4–2 veces grandes; la
+    textura de madera hacía rayas en el farol y las vallas (ahora colores
+    lisos, como la retail); el puente tenía las tablas cruzadas.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
