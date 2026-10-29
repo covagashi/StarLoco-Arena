@@ -1,6 +1,6 @@
 # S36 — Arenas: todos los assets primero, y un editor para que el dueño monte los mapas
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B hecha y aprobada el 2026-10-29: los assets de las 12 arenas; siguiente, fase C: el editor)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B hecha y aprobada el 2026-10-29; fase C, el editor, hecha el 2026-10-29: ahora el dueño monta las arenas; después, fase D)
 
 **Alcance (dueño, 2026-10-28): 12 arenas, de la 1 a la 12** (mundos 5, 10,
 12, 15, 21, 36, 38, 39, 40, 41, 42 y 44). El inventario se para aquí: "ya me
@@ -10,7 +10,7 @@ archivo de [S42](./S42-archivo-de-arenas.md), para retomarlas sin el
 cliente antiguo. Lo que queda aquí:
 - ~~modelar las arenas 8–12 por grupos~~ hecho (2026-10-29), y las 1–2
   rehechas con las skills;
-- el editor (fase C), lo siguiente;
+- ~~el editor (fase C)~~ hecho (2026-10-29): `tools/map_editor/`;
 - los `layout` del dueño en el juego (fase D).
 
 ## Por qué cambia el plan (dueño, 2026-10-25)
@@ -2072,23 +2072,64 @@ tres looms a escala de juego a la derecha. Plan actualizado en
 
 ### C. Editor de mapas para el dueño
 
-- [ ] Herramienta que carga la **forma** de cada arena: casillas, alturas,
-      obstáculos y celdas de salida, sacadas de la topología de combate que
-      el servidor ya usa. **La forma no se toca.**
-- [ ] El dueño **coloca los assets**:
-  - una paleta con la lista maestra, filtrada por bioma;
-  - clic en una casilla para poner o quitar;
-  - girar, reflejar, tintar (selector de color o los tintes del bioma) y
-    escalar un poco;
-  - el bloque de suelo por casilla y la decoración encima;
-  - las columnas se rellenan solas hasta el pie del mapa.
-- [ ] Se guarda un `layout` por arena dentro del repo (JSON legible: casilla,
-      modelo, giro, tinte).
-- [ ] La vista es la del juego: ortográfica 2:1, casillas de 86 px y la
-      misma luz.
-- [ ] Por decidir con el dueño: el editor va dentro de Godot (vista real 3D)
-      o en el studio (Go/Wails). **Recomendación: Godot**, porque los
-      modelos y la luz se ven igual que en el combate.
+**Hecho el 2026-10-29, pendiente de que el dueño lo pruebe.** Va en Godot
+(la recomendación): los modelos y la luz se ven igual que en el combate.
+
+    godot --path godot tools/map_editor/map_editor.tscn [-- --arena=N]
+
+- [x] Carga la **forma** de cada arena desde la topología de combate del
+      servidor (`server/data-dist/maps/`): casillas, alturas, obstáculos,
+      salidas de los dos equipos y pedestales. **La forma no se toca.**
+  - La rejilla (G) marca cada casilla por su papel: suelo, obstáculo (rojo),
+    salida del equipo 1 (azul) y del 2 (naranja), pedestal (oro). Las
+    casillas sin suelo salen en gris.
+  - Un obstáculo está, en la topología, a la altura del adorno retail que
+    tenía encima, así que sus piezas se apoyan en el suelo de la casilla
+    vecina más baja (como en `build_map.gd`).
+- [x] El dueño **coloca los assets**:
+  - paleta con miniaturas: las piezas de los kits de la arena más las que
+    toman prestadas (`shared`), o todas; con buscador y grupos (suelos,
+    planas, decoración);
+  - pincel, seleccionar, borrar y cuentagotas; clic derecho quita la pieza
+    de arriba; arrastrando se pintan suelos;
+  - loom a/b/c (con sus nombres del kit), girar 90° o 15°, reflejar, escala
+    0,5–1,5, tinte (selector o muestras), subir/bajar y desplazar;
+  - por casilla, un bloque de suelo (`tile`) y una capa (`cap`); la capa
+    queda arriba y el bloque debajo. La decoración se apila en orden, y
+    con Mayús+clic va encima de la más alta (el mantel sobre la mesa);
+  - las columnas (`col` del kit) se rellenan solas hasta el pie del mapa;
+  - "Rellenar casillas vacías" con el suelo del pincel (con giro al azar si
+    se quiere), "Vaciar el mapa", deshacer y rehacer (un trazo es un paso).
+  - La capa **Retail** (V) pone encima el mapa retail, semitransparente y
+    alineado casilla a casilla, como referencia.
+- [x] Se guarda un `layout` por arena en `godot/art/layouts/arena-NN.json`
+      (Ctrl+S, y también al cambiar de arena o cerrar). Una línea por
+      casilla con kit, pieza, loom, giro, reflejo, tinte, escala y
+      desplazamiento; lo que va por defecto no se escribe.
+- [x] La vista es la del juego: ortográfica 2:1, "Escala de juego" = casillas
+      de 86 px, la misma luz que `build_map.gd` y `kit_shots.gd`.
+- Código: `src/maps/arena_layout.gd` (datos: arenas, kits, forma, fichero) y
+  `src/maps/arena_scene.gd` (de layout a 3D, por casilla). Los dos están en
+  `src/` porque la fase D los usará en `fight_view`. `tools/art/dress.gd`
+  pasa a `src/maps/kit_dress.gd` por lo mismo.
+- Pruebas:
+  - `test/unit/arena_layout_test.gd`: las 12 arenas tienen forma, salidas
+    y paleta; alturas de bloque, capa y decoración; el fichero se lee y
+    escribe sin cambios.
+  - `tools/map_editor/editor_shot.gd` maneja el editor sin nadie, bajo
+    xvfb: rellena, cambia looms, pone decoración, deshace, guarda fuera del
+    repo y hace la captura. Pasado en las 12 arenas, sin modelos que
+    falten.
+- Incidente: el 2026-10-29 otra sesión de Claude se salió de su carpeta y
+  escribió aquí su propio editor (`tools/arena_editor/`, `arena_kits.gd`,
+  `arena_shape.gd`) y pisó `arena_layout.gd`. El dueño pidió deshacerlo: se
+  quitó todo y se volvió a poner esta versión.
+- Hueco de los kits, visto al probar: las arenas 9 y 11 no tienen ningún
+  bloque de suelo (solo planas y decoración), y la 6 y la 7 solo capas.
+  Mientras tanto el dueño puede usar "Piezas de todas las arenas" (p. ej.
+  el bloque de hierba de la 5). Si quiere suelos propios, se modelan.
+- Siguiente: el dueño monta las arenas. Lo que pida del editor se apunta
+  aquí; después, la fase D.
 
 ### D. Del editor al juego
 

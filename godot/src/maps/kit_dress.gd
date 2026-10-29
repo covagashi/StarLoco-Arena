@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## M7: how our kiln GLBs are dressed for the game's look (shared by the
-## tools/art renders).
+## tools/art renders, the map editor and the arena builder).
 
 ## Snow and other soft caps (materials named snow* or soft*): smooth normals;
 ## ice: rim light; everything: no specular glints.

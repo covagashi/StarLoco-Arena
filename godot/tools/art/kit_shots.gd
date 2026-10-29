@@ -8,7 +8,7 @@ extends SceneTree
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
 ##       -s tools/art/kit_shots.gd -- --kit=art/arena1/kit.json --out=<dir> [--zoom=1.6] [--w=300]
 
-const Dress := preload("res://tools/art/dress.gd")
+const Dress := preload("res://src/maps/kit_dress.gd")
 const PX := 43.0 * 1.41421356
 const SIZE := Vector2i(300, 340)
 

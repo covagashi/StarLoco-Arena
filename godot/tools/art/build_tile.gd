@@ -10,7 +10,7 @@ extends SceneTree
 ##       --out=<png> [--close=4] [--cy=0.55 (frame centre height, m)] [--px=200 (frame at 1x)]
 
 const PX := 43.0 * 1.41421356
-const Dress := preload("res://tools/art/dress.gd")
+const Dress := preload("res://src/maps/kit_dress.gd")
 
 var opts := {"glb": "", "out": "/tmp/tile.png", "close": "4", "cy": "0.55", "px": "200"}
 

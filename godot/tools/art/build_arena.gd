@@ -12,7 +12,7 @@ extends SceneTree
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot \
 ##       -s tools/art/build_arena.gd -- --layout=art/arena1/layout.json --out=<png>
 
-const Dress := preload("res://tools/art/dress.gd")
+const Dress := preload("res://src/maps/kit_dress.gd")
 
 const PX := 43.0 * 1.41421356          # screen px per world unit across
 const ALT := 10.0 / (PX * 0.8660254)   # world units per altitude step (10 px)
