@@ -99,7 +99,7 @@ const MISC = {
   fur: ["#b8ba8e", "#8a8680", "#a8825a"], furD: ["#86885e", "#5e5a56", "#7a5a3a"], pink: ["#d888a8", "#d890a0", "#c87888"],
   flesh: ["#f0c8c0", "#e8b8b0", "#f4d0c4"], fleshD: ["#c88880", "#b8787a", "#d09088"],
   sheet: ["#c4bca0", "#a8acb0", "#b49a7a"], coal: ["#2e2420", "#26262a", "#2a1c16"], ash: ["#8a8a8a", "#6e6e70", "#8a8070"],
-  slipper: ["#e898c0", "#c8a0e0", "#f0b890"], yarn: ["#9ac83a", "#e8b030", "#4aa0d0"],
+  slipper: ["#e898c0", "#c8a0e0", "#f0b890"], slipperD: ["#c0607e", "#9a6aa8", "#c88060"], yarn: ["#9ac83a", "#e8b030", "#4aa0d0"],
   stitch: ["#3a9a3a", "#3a5aa8", "#a83a3a"], heart: ["#e85a2a", "#e8c030", "#e85a8a"], pale: ["#ece0b8", "#e8cfb4", "#c89878"],
   softPale: ["#ece0b8", "#e8cfb4", "#c89878"],
   pelt: ["#c0641e", "#8a7a6a", "#a83a1a"], peltL: ["#e08a3a", "#aa9a88", "#c85a2a"], stone: ["#b4c2b0", "#a8a8a8", "#c0a890"], stoneD: ["#7a907a", "#787878", "#8a7460"],
@@ -878,18 +878,36 @@ function limb(pts, mat, swell) {
     out.push(capsule(pts[i], pts[i + 1], pts[i][3], pts[i + 1][3], mat, swell))
   return out
 }
-// a plump hand at (x, y, z), three stubby fingers curled over the needles,
-// the thumb on top; k = -1 / 1 for the side (thumb towards the middle)
-const plumpHand = (x, y, z, k) => [
-  sphere(0.06, { mat: "softPale", detail: 2, pos: [x, y, z], scale: [1.2, 0.75, 1] }),
-  [-0.028, 0, 0.028].map((dz) => capsule([x + 0.03, y + 0.005, z + dz * 1.1], [x + 0.1, y - 0.04, z + dz * 1.2], 0.022, 0.018, "softPale", 1)),
-  capsule([x - 0.01, y + 0.025, z - k * 0.03], [x + 0.06, y + 0.045, z - k * 0.07], 0.022, 0.018, "softPale", 1)]
-// a pink rabbit slipper, facing +x: a plump toe, two ears up at the back,
-// two black eyes
+// a plump hand at (x, y, z), laid flat and stretched out: four short
+// straight fingers carrying on along the forearm's direction (dx, dz), the
+// thumb out towards the middle (k = -1 / 1 for the side)
+const plumpHand = (x, y, z, k, dx, dz) => {
+  const l = Math.hypot(dx, dz), ux = dx / l, uz = dz / l, px = -uz, pz = ux
+  const yaw = Math.atan2(-uz, ux) * DEG
+  return [
+    sphere(0.06, { mat: "softPale", detail: 2, pos: [x, y, z], rot: [0, yaw, 0], scale: [1.25, 0.6, 1.05] }),
+    [-1.5, -0.5, 0.5, 1.5].map((f) => {
+      const o = f * 0.021, len = 0.1 - Math.abs(f) * 0.012
+      return capsule([x + ux * 0.04 + px * o, y, z + uz * 0.04 + pz * o],
+        [x + ux * (0.04 + len) + px * o * 1.15, y - 0.012, z + uz * (0.04 + len) + pz * o * 1.15], 0.019, 0.016, "softPale", 1)
+    }),
+    // the thumb, out towards the middle of the lap (z = 0)
+    ...[Math.sign(pz * -k) || 1].map((t) => capsule([x + px * 0.03 * t, y + 0.01, z + pz * 0.03 * t],
+      [x + ux * 0.05 + px * 0.075 * t, y + 0.005, z + uz * 0.05 + pz * 0.075 * t], 0.021, 0.018, "softPale", 1)),
+  ]
+}
+// a pink cat slipper, facing +x: the shoe a soft oval the foot goes into, a
+// round cat's head on the toe with two pointed ears, eyes shut (little arcs)
+// and a pink nose, a thin tail curling up at the heel
 const slipper = (x, z) => tf({ pos: [x, 0, z] },
-  sphere(0.08, { mat: "slipper", detail: 2, pos: [0.04, 0.05, 0], scale: [1.7, 0.65, 1.05] }),
-  [-1, 1].map((k) => cone(0.03, 0.1, { mat: "slipper", sides: 5, pos: [0.0, 0.07, k * 0.035], rot: [k * 25, 0, 30], scale: [1, 1, 0.5] })),
-  [-1, 1].map((k) => sphere(0.01, { mat: "eye", detail: 0, pos: [0.15, 0.08, k * 0.03] })))
+  sphere(0.08, { mat: "slipper", detail: 2, pos: [-0.02, 0.042, 0], scale: [1.8, 0.55, 1.0] }),
+  sphere(0.075, { mat: "slipper", detail: 2, pos: [0.11, 0.07, 0], scale: [0.85, 0.85, 1.05] }),
+  [-1, 1].map((k) => [cone(0.03, 0.065, { mat: "slipper", sides: 4, pos: [0.1, 0.12, k * 0.042], rot: [k * 22, 0, -8] }),
+    cone(0.016, 0.04, { mat: "slipperD", sides: 3, pos: [0.112, 0.125, k * 0.042], rot: [k * 22, 0, -8] }),
+    // a shut eye: two little dark strokes in a ^
+    [-1, 1].map((e) => box(0.006, 0.005, 0.018, { mat: "eye", pos: [0.175, 0.087, k * 0.03 + e * 0.007], rot: [e * 30, 0, 0] }))]),
+  sphere(0.012, { mat: "slipperD", detail: 1, pos: [0.18, 0.065, 0] }),
+  tube([-0.15, 0.05, 0, -0.21, 0.06, 0.02, -0.24, 0.1, 0.01, -0.22, 0.13, -0.01], 0.011, { mat: "slipper", sides: 4 }))
 // a heart outline (XY) for the knitting's motif
 const heartPts = Array.from({ length: 20 }, (_, i) => {
   const t = i / 20 * Math.PI * 2
@@ -913,7 +931,7 @@ model("headless_knitter", tf({ rot: [0, -90, 0] },
       sphere(0.13, { mat: "softDress", detail: 2, pos: [-0.02, 0.5, k * 0.34], scale: [1, 0.9, 0.9] }),
       capsule([-0.03, 0.56, k * 0.37], [0.02, 0.17, k * 0.46], 0.12, 0.11, "softPale", 1.3),
       capsule([-0.04, 0.24, k * 0.46], [0.28, 0.27, k * 0.27], 0.105, 0.065, "softPale", 1.1),
-      plumpHand(0.3, 0.26, k * 0.2, k)])),
+      plumpHand(0.3, 0.27, k * 0.24, k, 0.32, -k * 0.19)])),
   // the lap; the skirt a bell over the knees, its hem torn short above them;
   // the white apron over it, ragged too
   sphere(0.3, { mat: "softDress", detail: 2, pos: [0.14, SEAT + 0.1, 0], scale: [1.05, 0.42, 1.12], jitter: 0.008, seed: 761 }),

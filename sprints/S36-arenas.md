@@ -1683,6 +1683,15 @@ y sus hachas ya están en el kit de la arena 9.
     - Con cilindros y una esfera en cada articulación, las normales suaves
       del juego marcaban bultos de culturista.
     - Ahora son 8.100 triángulos.
+- Dueño (2026-10-29): "mejor deja las manos estiradas y mira la ropa de
+  los pies". Hoja: `kit-arena10-mejoras-1.png`.
+  - Las manos van planas y estiradas: cuatro dedos cortos y rectos que
+    siguen la dirección del antebrazo sobre el regazo, y el pulgar abierto
+    hacia el centro.
+  - Las zapatillas de la retail son de gato, no de conejo. Ahora tienen
+    una cabeza redonda en la punta, orejas de gato en punta con el interior
+    rosa oscuro, los ojos cerrados en dos rayitas, la nariz y una cola
+    fina que se enrosca en el talón.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
