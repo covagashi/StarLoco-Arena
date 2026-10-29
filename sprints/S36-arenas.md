@@ -1115,6 +1115,36 @@ Se modela un grupo cada vez y se enseña antes de seguir.
       cilindros anchos aplastados contra la cara, con un tubo curvo en el
       borde.
 
+- **`lava_rock` de la arena 2 (128), rehecha con las skills** (dueño,
+  2026-10-29). Hoja: `kit-arena2-lava-rock.png`.
+  - En el mapa es una casilla de suelo (capa 8191): una losa verde al borde
+    de un escalón sobre la lava, y no una losa sobre un poste. Pasa a
+    `tile` con la forma de la `flagstone`.
+  - Lleva una grieta luminosa cerca del borde +x y, por ese lado, dos
+    chorros de lava (uno fino y otro ancho) de un metro, con los colores
+    de la cascada de la arena 8.
+  - La textura de lava con costra de la arena 2 ya no la usaba nadie y se
+    quita.
+- **Columnas de roca** (grupo «columna de roca»: 1765 y 1766; son el muro
+  del fondo de la arena 8 y salen 78 veces). Hojas:
+  `kit-arena8-columnas-1.png` y `-2.png`.
+  - Reutilizan la textura `cliff` de la arena 6, que es la misma arenisca
+    en estratos verticales. Sus looms son ocre, pizarra y pardo oscuro; la
+    c es el tono con que el volcán las tiñe.
+  - `rock_spire` (1765): unos 5 m. Un núcleo en sombra con lajas verticales
+    de alturas distintas alrededor, un trozo roto arriba, un bolo alto al
+    pie y musgo en dos repisas.
+  - `rock_spire_wide` (1766): tres bloques anchos apilados, de esquinas muy
+    redondeadas y abombadas, con cuellos oscuros entre ellos. Lajas en el
+    lado +x y una corona inclinada arriba.
+  - Lo que salió mal en la primera versión:
+    - Las dos eran prismas limpios; ahora tienen silueta irregular y
+      huecos en sombra.
+    - El musgo eran puntos y luego rayas que parecían palitos; se quedan
+      solo las matas en las repisas.
+    - En la 1766, los bolos sueltos sobre un poste parecían un muñeco de
+      nieve: se volvió a bloques anchos abombados.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

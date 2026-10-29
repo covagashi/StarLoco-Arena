@@ -12,7 +12,16 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   // lava (kit.tx.js molten): the cushion top smooth (soft*), the sides a
   // little deeper in tone
   ["softMolten" + s, { tex: "out/molten" + s, uv: 1.7, rough: 0.3 }],
+  // the rock spires: arena 6's cliff sandstone (vertical strata; build its
+  // kit.tx.js first), the tops a shade lighter
+  ["cliff" + s, { tex: "../arena6/out/cliff" + s, uv: 2.2, rough: 0.9 }],
+  ["cliffL" + s, { tex: "../arena6/out/cliff" + s, uv: 2.2, rough: 0.9, color: "#fff4dc" }],
+  // the recessed core between the plates, in shade
+  ["cliffD" + s, { tex: "../arena6/out/cliff" + s, uv: 2.2, rough: 0.95, color: "#a89a82" }],
 ])))
+// moss on the spires' ledges: [a, b, c]
+const MOSS = { moss: ["#7a8a2a", "#5a7a3a", "#6a6a2a"], mossL: ["#a8b83c", "#7ea050", "#94923a"] }
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MOSS).map(([k, v]) => [k + s, v[i]]))))
 // the lava fall cools as it drops: palette glows, [a, b, c] per key
 // the lava sides and drips (molten), a deeper orange than the top; the lava
 // fall cools as it drops (fall0 to fall4) to near black
@@ -25,7 +34,7 @@ const FALL = {
 const GLOW = { molten: 0.9, fall0: 1.3, fall1: 1.1, fall2: 0.8, fall3: 0.5, fall4: 0.15 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(FALL).map(([k, v]) =>
   [k + s, GLOW[k] ? { color: v[i], emit: v[i], glow: GLOW[k], rough: 0.35 } : { color: v[i], rough: 0.9 }]))))
-const SKINNED = ["softPumice", "softPumiceL", "softMolten", ...Object.keys(FALL)]
+const SKINNED = ["softPumice", "softPumiceL", "softMolten", "cliff", "cliffL", "cliffD", ...Object.keys(FALL), ...Object.keys(MOSS)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a rounded floor stone placed in screen terms: u along the screen's
@@ -93,3 +102,46 @@ model("lava_fall", { pivot: "origin" },
   rock(0.15, { mat: "crust", pos: [0.58, 0.02, 0.06], squash: 0.9, seed: 11 }),
   drips(13))
 for (const n of ["lava_cell", "lava_spots", "lava_sheet", "lava_fall"]) looms(n)
+
+// --- rock spires (1765, 1766) -----------------------------------------------
+// tall standing sandstone rocks, about five metres, that wall the arena's back
+// edges: a dark recessed core with plates and boulders standing out of the
+// two faces the camera sees (+x, +z), so the silhouette is ragged and the
+// clefts between them fall into shade.
+// A slab: a vertical plate w wide, d thick, h tall from y, its top cut on a
+// slant, turned a degrees, a little lumpy
+const slab = (x, y, z, w, d, h, slant, a, mat, seed) =>
+  extrude([-w / 2, 0, w / 2, 0, w / 2 - 0.03, h - slant, w * 0.15, h - slant * 0.4, -w / 2 + 0.04, h],
+    d, { mat, pos: [x, y, z], rot: [0, a, 0], jitter: 0.02, seed })
+// a pad of moss on a ledge
+const moss = (x, y, z, r, seed) => sphere(r, { mat: seed % 2 ? "moss" : "mossL", detail: 1, pos: [x, y, z], scale: [1, 0.4, 1], jitter: 0.015, seed })
+// rock spire (1765): a narrow dark core, plates of different heights round
+// it (the tallest at the back), a broken chunk standing proud near the top,
+// a tall rounded boulder leaning at the foot of the seen corner
+model("rock_spire",
+  slab(-0.06, 0, -0.06, 0.6, 0.6, 4.7, 0.3, 45, "cliffD", 1),
+  slab(-0.16, 0, -0.18, 0.58, 0.34, 5.0, 0.35, 45, "cliff", 2),
+  slab(0.26, 0, 0.04, 0.34, 0.3, 4.2, 0.35, 75, "cliff", 3),
+  slab(0.1, 0, 0.27, 0.42, 0.26, 3.5, 0.3, 20, "cliff", 4),
+  slab(-0.3, 0, 0.18, 0.3, 0.26, 2.9, 0.25, 35, "cliff", 5),
+  slab(0.38, 0, -0.26, 0.28, 0.24, 2.4, 0.2, 80, "cliff", 6),
+  box(0.16, 0.6, 0.14, { mat: "cliffL", pos: [0.12, 4.25, 0.06], rot: [0, 40, 6], jitter: 0.015, seed: 7 }),
+  rock(0.3, { mat: "cliff", pos: [0.3, 0.5, 0.3], rough: 0.1, scale: [1, 1.7, 1], seed: 8 }),
+  rock(0.2, { mat: "cliffD", pos: [-0.02, 0.3, 0.42], rough: 0.1, scale: [1, 1.4, 1], seed: 9 }),
+  moss(0.22, 3.52, 0.3, 0.13, 10), moss(-0.32, 2.92, 0.22, 0.12, 11))
+// wide rock spire (1766): a broad mass of three big blocks stacked, each
+// with deeply rounded, bulging corners and pushed a little towards the seen
+// corner, a dark recessed neck between them so the ledges read; vertical
+// plates down the +x side, a slanted crown, moss on the ledges
+const bulge = (y, half, h, dx, dz, seed) => tf({ pos: [dx, y, dz] },
+  prismUp(roundSquare(half, 0.24, 5, 0.07, seed), h, 0, "cliff", 0.035))
+model("rock_spire_wide",
+  prismUp(roundSquare(0.36, 0.1, 4, 0.05, 1), 4.5, 0, "cliffD", 0.03),
+  bulge(0, 0.5, 1.5, 0.03, 0.03, 2),
+  bulge(1.6, 0.47, 1.6, 0.05, 0.05, 3),
+  bulge(3.3, 0.42, 1.05, 0.02, 0.06, 4),
+  slab(0.42, 0, -0.16, 0.36, 0.22, 3.9, 0.3, 90, "cliff", 5),
+  slab(-0.3, 0, -0.32, 0.5, 0.3, 4.6, 0.3, 45, "cliff", 7),
+  tf({ pos: [0.02, 4.38, 0.04] }, slab(0, 0, 0, 0.9, 0.84, 0.55, 0.32, 45, "cliffL", 8)),
+  moss(0.26, 1.52, 0.4, 0.16, 9), moss(-0.18, 3.32, 0.4, 0.13, 10), moss(0.12, 0.08, 0.52, 0.16, 11))
+for (const n of ["rock_spire", "rock_spire_wide"]) looms(n)

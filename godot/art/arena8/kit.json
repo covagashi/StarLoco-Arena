@@ -19,6 +19,11 @@
 			"lava amarillo oro",
 			"lava amarilla clara",
 			"lava rojo anaranjado"
+		],
+		"cliff": [
+			"arenisca ocre",
+			"pizarra gris",
+			"roca parda oscura"
 		]
 	},
 	"shared": [],
@@ -94,6 +99,26 @@
 			"looms": "molten",
 			"top": 0.23,
 			"note": "an edge lava cell pouring over its +x side, about two metres down; turn it to face the drop"
+		},
+		{
+			"name": "rock_spire",
+			"label": "Columna de roca",
+			"kind": "deco",
+			"gfx": [
+				1765
+			],
+			"looms": "cliff",
+			"note": "about 5 m of standing sandstone slabs; walls the arena's back edges; the volcano map darkens it (loom c or a dark tint)"
+		},
+		{
+			"name": "rock_spire_wide",
+			"label": "Columna de roca ancha",
+			"kind": "deco",
+			"gfx": [
+				1766
+			],
+			"looms": "cliff",
+			"note": "three big stacked blocks with a slanted crown, about 5 m"
 		}
 	]
 }
