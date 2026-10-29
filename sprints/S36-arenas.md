@@ -1692,6 +1692,26 @@ y sus hachas ya están en el kit de la arena 9.
     una cabeza redonda en la punta, orejas de gato en punta con el interior
     rosa oscuro, los ojos cerrados en dos rayitas, la nariz y una cola
     fina que se enrosca en el talón.
+- Dueño (2026-10-29): "no, lo haces mal", con la foto marcada en el
+  regazo, y "el brazo te dije colgando".
+  - Fallaban dos cosas:
+    - El regazo era un lío: el punto de pie, un delantal pequeño y los
+      muslos asomando.
+    - Los brazos los había llevado al regazo, y el dueño los pidió
+      colgando.
+  - Ahora una tela blanca ancha cubre todo el regazo. Es una cúpula
+    (lathe) sobre los muslos que cae por todos lados hasta un bajo roto en
+    picos irregulares, y bajo ella asoma la falda azul.
+  - El punto verde va plano encima, hacia las rodillas, con un corazón
+    naranja (dos lóbulos y un cuadrado girado para la punta) y las dos
+    agujas.
+  - Los brazos cuelgan rectos por fuera de los apoyabrazos, con las manos
+    abiertas y los dedos estirados hacia abajo (ayuda `hangingHand`).
+  - Lo que salió mal en esta vuelta:
+    - El lathe de la tela, con el perfil de dentro hacia fuera, salía del
+      revés y se veía como un borde vacío.
+    - Los lóbulos del corazón quedaban bajo la barriga, y desde arriba solo
+      se veía la punta.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
