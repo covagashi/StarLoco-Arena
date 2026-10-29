@@ -1926,6 +1926,8 @@ demás, colores de paleta en tres looms.
   - Lo que salió mal: las juntas de los tallos hacían bultos (las bolas de
     unión eran más gordas que las caras del tallo); la enredadera alta era
     fina abajo.
+- **Arena 12 completa**: `map_sheet.py 44 12` da 54 piezas y 0 nuevas.
+  Con ella están modeladas las 12 arenas de la 1.0.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
