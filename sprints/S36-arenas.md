@@ -1084,6 +1084,37 @@ Se modela un grupo cada vez y se enseña antes de seguir.
       aclararla para que no saliera negra, el suelo parecía de galletas:
       se quedó a medio camino.
 
+- **Lava** (grupo «lava»: 2270, 2271, 2276–2279 y 146). Hojas:
+  `kit-arena8-lava-1.png` y `-2.png`. Dueño (2026-10-29): el
+  `lava_pool` de la arena 2 (142, 143) "debería ser igual", porque se hizo
+  sin las dos skills. Ahora es la misma pieza: la arena 2 ya no tiene modelo
+  propio y toma `lava_spots` de este kit (`shared`).
+  - Loom `molten` (`arena8/kit.tx.js`): lava lisa y luminosa, distinta de
+    la lava con costra de la arena 2. Lleva ondulaciones anchas, manchas
+    redondas más frías (alguna con un aro claro) y un brillo fino. Looms:
+    amarillo oro (retail), amarilla clara y rojo anaranjado.
+  - `lava_cell` (2278): un cojín de lava redondeado que llena la casilla.
+    `lava_spots` (2277, 2279, 2270, 2271, 142, 143): el mismo, con unas
+    gotas colgando del borde. `lava_sheet` (2276): la lámina plana que
+    rellena entre las casillas de lava. `lava_fall` (146): una casilla que
+    se derrama por su lado +x en dos chorros separados por una roca oscura;
+    caen unos dos metros y se enfrían en cinco bandas hasta casi negro.
+  - El halo de luz alrededor de la lava va a S37 (VFX).
+  - Lo que salió mal en la primera versión:
+    - La emisión quemaba el color y la loom b salía casi blanca. Ahora la
+      emisión es más baja y la b, amarilla.
+    - Los lados no se oscurecían, porque el tinte no afecta a la emisión de
+      la textura. Ahora los lados y las gotas van en un color propio, naranja
+      oscuro.
+    - Las manchas eran puntitos rojos: ahora son grandes y anaranjadas.
+    - El cojín era cuadrado sobre un cuerpo de esquinas redondas, y sus
+      picos asomaban.
+    - Las gotas salían hacia arriba (un `lathe` se apoya en su base) y
+      luego atravesaban el cojín. Ahora acaban dentro del cuerpo.
+    - Los chorros eran ladrillos y luego tuberías finas. Ahora son
+      cilindros anchos aplastados contra la cara, con un tubo curvo en el
+      borde.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

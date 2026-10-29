@@ -42,13 +42,8 @@ model("crag_col", prismUp(roundSquare(CELL_HALF, 0.04), 1, 0, "crag", 0.012))
 model("flagstone",
   prismUp(roundSquare(0.5, 0.1), 0.05, 0, "flag", 0.006),
   prismUp(roundSquare(0.47, 0.1), 0.09, 0.04, "flag", 0.008))
-// lava pool (142, 143): a molten sheet, glowing drips over its edge
-model("lava_pool",
-  prismUp(roundSquare(0.49, 0.12), 0.07, 0, "lava", 0.006),
-  [[-0.3, 0.5], [0.05, 0.5], [0.32, 0.5], [0.5, -0.2], [0.5, 0.18]].map(([x, z], i) =>
-    lathe([0, -0.1 - (i % 3) * 0.04, 0.035, -0.06, 0.045, 0, 0.04, 0.07, 0, 0.075],
-      { mat: "lava", sides: 7, pos: [x * 0.98, 0, z * 0.98], scale: [1, 1, 0.6] })))
-for (const n of ["rock_block", "crag_col", "flagstone", "lava_pool"]) looms(n)
+// the lava cells (142, 143) are arena 8's lava_spots (shared in kit.json)
+for (const n of ["rock_block", "crag_col", "flagstone"]) looms(n)
 
 // --- plants ------------------------------------------------------------------
 // a mass of leaves: a dark core covered in maple leaves turned outward, the

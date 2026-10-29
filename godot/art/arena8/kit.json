@@ -1,19 +1,99 @@
 {
 	"_doc": "Arena 8 (retail world 39: a volcano) kit for the map editor (S36), same schema as art/arena7/kit.json. Pieces the arena also uses from the other kits are listed in shared.",
 	"biome": "volcán",
-	"arenas": [39],
+	"arenas": [
+		39
+	],
 	"looms": {
 		"": "a",
 		"_b": "b",
 		"_c": "c"
 	},
 	"loom_names": {
-		"pumice": ["roca volcánica pardo negra", "gris ceniza", "escoria roja"]
+		"pumice": [
+			"roca volcánica pardo negra",
+			"gris ceniza",
+			"escoria roja"
+		],
+		"molten": [
+			"lava amarillo oro",
+			"lava amarilla clara",
+			"lava rojo anaranjado"
+		]
 	},
 	"shared": [],
 	"minor": [],
 	"pieces": [
-		{"name": "volcanic_slab", "label": "Losa de roca volcánica", "kind": "tile", "gfx": [2285], "looms": "pumice", "top": 0.3, "note": "three rounded pumice stones side by side; the floor of the volcano"},
-		{"name": "volcanic_rock", "label": "Roca volcánica", "kind": "tile", "gfx": [2280], "looms": "pumice", "top": 0.55, "note": "one big rounded pumice stone filling the cell"}
+		{
+			"name": "volcanic_slab",
+			"label": "Losa de roca volcánica",
+			"kind": "tile",
+			"gfx": [
+				2285
+			],
+			"looms": "pumice",
+			"top": 0.3,
+			"note": "three rounded pumice stones side by side; the floor of the volcano"
+		},
+		{
+			"name": "volcanic_rock",
+			"label": "Roca volcánica",
+			"kind": "tile",
+			"gfx": [
+				2280
+			],
+			"looms": "pumice",
+			"top": 0.55,
+			"note": "one big rounded pumice stone filling the cell"
+		},
+		{
+			"name": "lava_cell",
+			"label": "Casilla de lava",
+			"kind": "tile",
+			"gfx": [
+				2278
+			],
+			"looms": "molten",
+			"top": 0.23,
+			"note": "smooth glowing lava cushion filling the cell; the glow halo round it goes to S37 (VFX)"
+		},
+		{
+			"name": "lava_spots",
+			"label": "Casilla de lava con manchas",
+			"kind": "tile",
+			"gfx": [
+				2277,
+				2279,
+				2270,
+				2271,
+				142,
+				143
+			],
+			"looms": "molten",
+			"top": 0.24,
+			"note": "the lava cell with its cooler blotches and a few drips over the rim; also arena 2's lava (142, 143)"
+		},
+		{
+			"name": "lava_sheet",
+			"label": "Lámina de lava",
+			"kind": "tile",
+			"gfx": [
+				2276
+			],
+			"looms": "molten",
+			"top": 0.03,
+			"note": "the flat molten floor between the lava cells"
+		},
+		{
+			"name": "lava_fall",
+			"label": "Lava derramándose",
+			"kind": "tile",
+			"gfx": [
+				146
+			],
+			"looms": "molten",
+			"top": 0.23,
+			"note": "an edge lava cell pouring over its +x side, about two metres down; turn it to face the drop"
+		}
 	]
 }

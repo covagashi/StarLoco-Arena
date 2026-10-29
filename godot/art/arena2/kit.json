@@ -89,17 +89,6 @@
 			"top": 0.13
 		},
 		{
-			"name": "lava_pool",
-			"label": "Charco de lava",
-			"kind": "tile",
-			"gfx": [
-				142,
-				143
-			],
-			"looms": "lava",
-			"top": 0.07
-		},
-		{
 			"name": "autumn_bush",
 			"label": "Arbusto otoñal",
 			"kind": "deco",
@@ -312,6 +301,14 @@
 			"gfx": [
 				139,
 				140
+			]
+		},
+		{
+			"kit": "arena8",
+			"name": "lava_spots",
+			"gfx": [
+				142,
+				143
 			]
 		}
 	],
