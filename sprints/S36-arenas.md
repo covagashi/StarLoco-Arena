@@ -1,6 +1,6 @@
 # S36 — Arenas: todos los assets primero, y un editor para que el dueño monte los mapas
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B: bioma nieve aprobado)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B hecha y aprobada el 2026-10-29: los assets de las 12 arenas; siguiente, fase C: el editor)
 
 **Alcance (dueño, 2026-10-28): 12 arenas, de la 1 a la 12** (mundos 5, 10,
 12, 15, 21, 36, 38, 39, 40, 41, 42 y 44). El inventario se para aquí: "ya me
@@ -8,8 +8,9 @@ he cansado de inventariar". Las otras 35 (de la 13 a la 47; la 13 tiene
 hojas y suposiciones, pero no nombres) se guardan en PNG y JSON en el
 archivo de [S42](./S42-archivo-de-arenas.md), para retomarlas sin el
 cliente antiguo. Lo que queda aquí:
-- modelar las arenas 8–12 por grupos (`group` y `same` en `names.json`);
-- el editor (fase C);
+- ~~modelar las arenas 8–12 por grupos~~ hecho (2026-10-29), y las 1–2
+  rehechas con las skills;
+- el editor (fase C), lo siguiente;
 - los `layout` del dueño en el juego (fase D).
 
 ## Por qué cambia el plan (dueño, 2026-10-25)
