@@ -22,6 +22,8 @@ const WOOD = {
   cage: ["#f0d898", "#c8c8c8", "#d0b098"], cageD: ["#a89070", "#8a8a8a", "#8c705c"],
   // the low table (1593): olive-green old wood (retail), grey, brown
   table: ["#c8c890", "#c0c0c0", "#d0a888"], tableD: ["#8a8a5c", "#808080", "#8a6a54"],
+  // the rocking chair (2763): warm brown (honey boards darkened), grey, walnut
+  chair: ["#d8a478", "#c0c0c0", "#e0c0a8"],
 }
 // which board loom each loom of a family uses: the posts' grey-brown comes
 // from the silver-grey boards warmed
@@ -97,9 +99,9 @@ const MISC = {
   fur: ["#b8ba8e", "#8a8680", "#a8825a"], furD: ["#86885e", "#5e5a56", "#7a5a3a"], pink: ["#d888a8", "#d890a0", "#c87888"],
   flesh: ["#f0c8c0", "#e8b8b0", "#f4d0c4"], fleshD: ["#c88880", "#b8787a", "#d09088"],
   sheet: ["#c4bca0", "#a8acb0", "#b49a7a"], coal: ["#2e2420", "#26262a", "#2a1c16"], ash: ["#8a8a8a", "#6e6e70", "#8a8070"],
-  dress: ["#7ea2c8", "#a87e9a", "#8aa86a"], dressD: ["#4e6e94", "#7a5470", "#5a7a44"], apronBlue: ["#4e7086", "#6a4a5a", "#4a6a4a"],
-  apronBrown: ["#6a5444", "#4a4a4e", "#8a6a3a"], slipper: ["#e898c0", "#c8a0e0", "#f0b890"], yarn: ["#9ac83a", "#e8b030", "#4aa0d0"],
+  slipper: ["#e898c0", "#c8a0e0", "#f0b890"], yarn: ["#9ac83a", "#e8b030", "#4aa0d0"],
   stitch: ["#3a9a3a", "#3a5aa8", "#a83a3a"], heart: ["#e85a2a", "#e8c030", "#e85a8a"], pale: ["#ece0b8", "#e8cfb4", "#c89878"],
+  softPale: ["#ece0b8", "#e8cfb4", "#c89878"],
   pelt: ["#c0641e", "#8a7a6a", "#a83a1a"], peltL: ["#e08a3a", "#aa9a88", "#c85a2a"], stone: ["#b4c2b0", "#a8a8a8", "#c0a890"], stoneD: ["#7a907a", "#787878", "#8a7460"],
   jar: ["#9ab08a", "#9aaab8", "#b8a080"], pickle: ["#f0dc98", "#e0e8b0", "#f0b878"], string: ["#c8281a", "#2a5aa8", "#3a8a3a"],
   skull: ["#e8d080", "#e0dcd0", "#d8b878"], skullD: ["#9a8040", "#8a8680", "#8a6a3a"],
@@ -108,13 +110,30 @@ const MISC = {
 const MISC_ROUGH = { glass: 0.1, liquor: 0.1, plate: 0.4, plateD: 0.45, tong: 0.5, tongL: 0.45, flesh: 0.45, fleshD: 0.5, grease: 0.25, greaseD: 0.35, steel: 0.35, steelD: 0.45, soup: 0.15, soupL: 0.15, tusk: 0.5, tuskD: 0.55 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MISC).map(([k, v]) =>
   [k + s, { color: v[i], rough: MISC_ROUGH[k] ?? 0.85, metal: k.startsWith("steel") ? 0.6 : k.startsWith("tong") ? 0.4 : 0 }]))))
+// cloth and bone from kit.tx.js linen, knit, boneTex, tinted per loom: the
+// headless woman's dress, apron and knitting (2763), the hung aprons (2749),
+// the bloody skull (2764); [a, b, c]
+const FABRIC = {
+  dress: ["#8cb0d8", "#b88aa8", "#94b874"], softDress: ["#8cb0d8", "#b88aa8", "#94b874"], softApronW: ["#ffffff", "#f4ecdc", "#e8eef4"], dressD: ["#5e80a8", "#8a5e7c", "#64844a"],
+  apronW: ["#ffffff", "#f4ecdc", "#e8eef4"], softApronBlue: ["#6688a0", "#7a5c6c", "#5a7a5a"], softApronBrown: ["#8a7462", "#5c5c62", "#a07c4c"], apronBlue: ["#6688a0", "#7a5c6c", "#5a7a5a"], apronBrown: ["#8a7462", "#5c5c62", "#a07c4c"],
+  apronBlueD: ["#48647a", "#5a4250", "#425a42"], apronBrownD: ["#64523e", "#424248", "#7a5a32"],
+}
+const FABRIC_TEX = { softApronBlue: "linen", softApronBrown: "linen", softDress: "linen", softApronW: "linen", dress: "linen", dressD: "linen", apronW: "linen", apronBlue: "linen", apronBrown: "linen", apronBlueD: "linen", apronBrownD: "linen" }
+const KNIT = { knitG: ["#7cc04a", "#e8b838", "#5aa8d8"], knitO: ["#f06a30", "#e83a3a", "#f0c040"], yarnBall: ["#a8d848", "#f0c040", "#60b0e0"] }
+// (soft*: smooth normals in the game, for the rounded skull and body)
+const SKULL = { softSkull: ["#f4dc90", "#f2eee6", "#e8c494"], softSkullD: ["#c0a060", "#b8b2a8", "#b08a5c"] }
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => [
+  ...Object.entries(FABRIC).map(([k, v]) => [k + s, { tex: "out/" + FABRIC_TEX[k], uv: 0.5, rough: 0.92, color: v[i] }]),
+  ...Object.entries(KNIT).map(([k, v]) => [k + s, { tex: "out/knit", uv: 0.25, rough: 0.97, color: v[i] }]),
+  ...Object.entries(SKULL).map(([k, v]) => [k + s, { tex: "out/boneTex", uv: 0.4, rough: 0.5, color: v[i] }]),
+])))
 // glowing embers in the grill and the hearth: [a, b, c]
 const EMBER = { ember: ["#ff5a14", "#ffb020", "#ff3010"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(EMBER).map(([k, v]) => [k + s, { color: v[i], emit: v[i], glow: 2, rough: 0.5 }]))))
 // the dashes of the floor's joint line: [a, b, c]
 const DASH = { dash: ["#5a5440", "#3e4042", "#5a2e20"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DASH).map(([k, v]) => [k + s, { color: v[i], rough: 0.95 }]))))
-const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", "cloth", "crate", "crateV", "crateD", "crateDV", "box", "boxV", "boxDV", "stave", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR), ...Object.keys(MEAT), ...Object.keys(MISC), ...Object.keys(EMBER),
+const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", "cloth", "crate", "crateV", "crateD", "crateDV", "box", "boxV", "boxDV", "stave", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR), ...Object.keys(MEAT), ...Object.keys(MISC), ...Object.keys(EMBER), ...Object.keys(FABRIC), ...Object.keys(KNIT), ...Object.keys(SKULL),
   ...Object.keys(WOOD).flatMap((k) => [k, k + "V"])]
 const looms = (name) => threeLooms(name, SKINNED)
 
@@ -733,18 +752,47 @@ model("spit_hearth",
 looms("spit_hearth")
 
 // --- aprons (2749) -----------------------------------------------------------------------
-// two aprons hung on a wall from one peg (the wall is the plane x = 0, facing
-// +x, like arena 9's whip; y = 0 is the floor): a blue one in front, a brown
-// one behind, their bibs, waists and long skirts
-const apron = (z, y0, mat, tilt) => tf({ pos: [0.04, y0, z], rot: [tilt, 0, 0] },
-  extrude([-0.1, 0, 0.1, 0, 0.13, -0.18, 0.2, -0.24, 0.22, -0.9, -0.22, -0.9, -0.2, -0.24, -0.13, -0.18], 0.025,
-    { mat, rot: [0, 90, 0], jitter: 0.006, seed: z * 100 }),
-  box(0.015, 0.05, 0.44, { mat, pos: [0.01, -0.26, 0] }),
-  tube([0.0, 0.0, -0.08, 0.0, 0.12, 0.0, 0.0, 0.0, 0.08], 0.008, { mat, sides: 4 }))
+// two work aprons hung on a wall, each from its own pale horn hook (the wall
+// is the plane x = 0, facing +x, like arena 9's whip; y = 0 is the floor):
+// the blue one in front at -z, the brown one behind at +z. Each: two straps
+// up to the hook, a bib, ties at the waist hanging loose, a long skirt in
+// soft folds (an upright heightfield) down to a ragged hem, a patch pocket.
+// linen tinted.
+// a pleated sheet facing +x: n upright strips from y0 down to y1 (each a
+// little longer or shorter: the ragged hem), w wide at the top flaring to
+// wb, each strip turned ±a° about y so the cloth folds
+const pleats = (y0, y1, w, wb, n, a, mat, matD, seed) => Array.from({ length: n }, (_, i) => {
+  const t = (i + 0.5) / n, zTop = (t - 0.5) * w, zBot = (t - 0.5) * wb, h = y0 - y1 + (rnd(i, 3, seed) - 0.5) * 0.06
+  const sw = Math.max(w, wb) / n + 0.012, tilt = Math.atan2(zBot - zTop, y0 - y1) * 180 / Math.PI
+  return box(0.026, h, sw + 0.01, { mat: i % 2 ? matD : mat, pos: [(i % 2) * 0.008, y0 - h, (zTop + zBot) / 2],
+    rot: [tilt, (i % 2 ? 1 : -1) * a, 0], jitter: 0.004, seed: seed + i })
+})
+// a hanging cloth panel facing +x: a heightfield stood upright (terrain x
+// runs down the cloth, its height out of the wall), h tall and w wide, its
+// top centre at (y, z); soft folds along it, deeper towards the hem
+const clothPanel = (y, z, h, w, folds, depth, mat, seed) =>
+  terrain(h, w, { res: [14, 18], height: depth, mat, pos: [0, y - h / 2, z], rot: [0, 0, -90],
+    fn: (x, zz) => { const t = x / h + 0.5; return (0.5 + 0.5 * Math.sin(zz / w * folds * Math.PI * 2 + seed)) * (0.35 + 0.65 * t) } })
+const hungApron = (z, y, mat, matD, seed) => [
+  // the horn hook: a pale curved horn out of the wall, its tip turned up
+  tf({ pos: [0, y + 0.06, z] }, rib(0, 0, 0, 0.16, 0.035, 80, -28, 0, 3, "bone")),
+  // straps from the hook down to the bib's corners
+  [-1, 1].map((k) => tube([0.05, y + 0.06, z, 0.04, y - 0.06, z + k * 0.1], 0.01, { mat: matD, sides: 4 })),
+  tf({ pos: [0.03, 0, z] },
+    clothPanel(y - 0.04, 0, 0.3, 0.24, 2, 0.02, mat, seed),
+    // the waist: a band and its ties hanging loose at both sides
+    box(0.03, 0.045, 0.42, { mat: matD, pos: [0.02, y - 0.38, 0] }),
+    [-1, 1].map((k) => tube([0.02, y - 0.36, k * 0.21, 0.03, y - 0.44, k * 0.27, 0.025, y - 0.62, k * 0.28], 0.01, { mat: matD, sides: 4 })),
+    clothPanel(y - 0.36, 0, 0.66, 0.5, 3, 0.03, mat, seed + 3),
+    // the ragged hem: a few torn tongues hanging below
+    [-0.17, -0.06, 0.08, 0.18].map((zz, i) => box(0.012, 0.05 + rnd(i, 3, seed) * 0.05, 0.06, { mat: matD, pos: [0.03, y - 1.02 - rnd(i, 3, seed) * 0.05, zz], rot: [(rnd(i, 5, seed) - 0.5) * 20, 0, 0] })),
+    // the patch pocket, proud of the folds
+    box(0.014, 0.14, 0.2, { mat: matD, pos: [0.06, y - 0.72, -0.04], jitter: 0.004 }),
+    box(0.008, 0.008, 0.2, { mat: mat, pos: [0.07, y - 0.59, -0.04] })),
+]
 model("aprons", { pivot: "origin" },
-  cyl(0.025, 0.12, { mat: "table", sides: 6, rot: [0, 0, -90], pos: [0, 1.35, 0] }),
-  apron(0.1, 1.24, "apronBrown", -6),
-  tf({ pos: [0.03, 0, 0] }, apron(-0.12, 1.22, "apronBlue", 5)))
+  hungApron(0.16, 1.36, "softApronBrown", "apronBrownD", 731),
+  tf({ pos: [0.04, 0, 0] }, hungApron(-0.2, 1.32, "softApronBlue", "apronBlueD", 741)))
 looms("aprons")
 
 // --- squashed squirrel (2754) --------------------------------------------------------------
@@ -780,43 +828,107 @@ model("pickle_jar", { scale: 1.1 },
 looms("pickle_jar")
 
 // --- headless woman in a rocking chair (2763) ---------------------------------------------
-// the owner's "headless person sitting on a wooden chair": a stout woman in
-// a blue dress and a white apron with an embroidered heart, pale arms on
-// the armrests, pink slippers, her knitting yarn rolled off on the floor;
-// a red stump where the head was. Faces +x.
-const SEAT = 0.5
-model("headless_knitter",
-  // the rocking chair
-  [-1, 1].map((k) => tube([-0.5, 0.1, k * 0.3, -0.2, 0.0, k * 0.3, 0.3, 0.0, k * 0.3, 0.55, 0.12, k * 0.3], 0.03, { mat: "post", sides: 5 })),
-  [[-0.3, 0.3], [0.3, 0.3], [-0.3, -0.3], [0.3, -0.3]].map(([x, z]) => cyl(0.035, SEAT, { mat: "postV", sides: 6, pos: [x, 0.0, z] })),
-  box(0.68, 0.06, 0.66, { mat: "post", pos: [0, SEAT, 0] }),
-  [-1, 1].map((k) => [cyl(0.035, 0.85, { mat: "postV", sides: 6, pos: [-0.32, SEAT, k * 0.28], rot: [0, 0, 10] }),
-    box(0.55, 0.05, 0.08, { mat: "post", pos: [0.0, SEAT + 0.3, k * 0.32] })]),
-  [0.2, 0.45, 0.7].map((y) => box(0.04, 0.08, 0.56, { mat: "post", pos: [-0.32 - y * 0.18, SEAT + y, 0], rot: [0, 0, 10] })),
-  // the body: a broad blue dress, the white apron, the stump
-  sphere(0.3, { mat: "dress", detail: 2, pos: [0.0, SEAT + 0.32, 0], scale: [0.95, 1.25, 1.15] }),
-  sphere(0.36, { mat: "dressD", detail: 2, pos: [0.12, SEAT + 0.08, 0], scale: [1.1, 0.45, 1.05] }),
-  box(0.03, 0.42, 0.4, { mat: "towel", pos: [0.33, SEAT, 0], rot: [0, 0, 12], jitter: 0.01 }),
-  box(0.012, 0.12, 0.16, { mat: "stitch", pos: [0.35, SEAT + 0.15, 0], rot: [0, 0, 12] }),
-  box(0.012, 0.07, 0.08, { mat: "heart", pos: [0.357, SEAT + 0.17, 0], rot: [0, 0, 12] }),
-  cyl(0.1, 0.05, { mat: "pale", sides: 8, pos: [-0.02, SEAT + 0.66, 0] }),
-  cyl(0.085, 0.02, { mat: "meat", sides: 8, pos: [-0.02, SEAT + 0.7, 0] }),
-  // arms on the armrests, legs down to the slippers
-  [-1, 1].map((k) => [sphere(0.11, { mat: "pale", detail: 1, pos: [0.0, SEAT + 0.48, k * 0.33], scale: [1, 1.5, 0.9] }),
-    cyl(0.07, 0.36, { mat: "pale", sides: 7, rot: [0, 0, -80], pos: [-0.02, SEAT + 0.36, k * 0.33] }),
-    cyl(0.09, SEAT - 0.02, { mat: "pale", sides: 7, top: 0.07, pos: [0.36, 0.06, k * 0.16], rot: [0, 0, 8] }),
-    sphere(0.08, { mat: "slipper", detail: 1, pos: [0.42, 0.05, k * 0.17], scale: [1.6, 0.6, 1] })]),
-  // the yarn ball and its thread
-  sphere(0.07, { mat: "yarn", detail: 1, pos: [0.72, 0.07, -0.35] }),
-  tube([0.3, SEAT + 0.15, 0.1, 0.5, 0.2, 0.0, 0.6, 0.02, -0.25, 0.72, 0.07, -0.35], 0.006, { mat: "yarn", sides: 4 }))
+// the owner's "headless person sitting on a wooden chair": a stout woman
+// slumped in a rocking chair, facing +x. A blue linen dress with puffed
+// sleeves and a low neck, a white apron over her lap falling ragged over the
+// knees, her knitting in her hands (a green piece with an orange heart, two
+// needles, the yarn running down to its ball on the floor), big pale arms on
+// the armrests, thick pale legs, pink rabbit slippers; a red stump with a
+// white bone where the head was.
+const SEAT = 0.48
+const rockingChair = () => [
+  // the rockers: curved runners along x
+  // (a shape's scale also scales a tube's points: tubes stay unscaled)
+  [-1, 1].map((k) => tube([-0.62, 0.17, k * 0.29, -0.35, 0.05, k * 0.29, 0, 0.035, k * 0.29, 0.35, 0.045, k * 0.29, 0.58, 0.13, k * 0.29], 0.035, { mat: "chair", sides: 6 })),
+  // four turned legs, the seat, a rail under it
+  [[-0.3, 1], [0.24, 1], [-0.3, -1], [0.24, -1]].map(([x, k]) => lathe([0.035, 0, 0.045, 0.12, 0.03, 0.3, 0.04, SEAT - 0.02], { mat: "chairV", sides: 6, pos: [x, 0.0, k * 0.29] })),
+  extrude(roundSquare(1, 0.2).map((v, i) => v * (i % 2 ? 0.33 : 0.33)), 0.06, { mat: "chair", rot: [90, 0, 0], pos: [-0.03, SEAT, 0] }),
+  // the tall back, leaning back: two posts with knobs, a curved top rail,
+  // three slats
+  tf({ pos: [-0.32, SEAT, 0], rot: [0, 0, 10] },
+    [-1, 1].map((k) => [lathe([0.04, 0, 0.035, 0.6, 0.045, 0.72, 0.03, 0.78], { mat: "chairV", sides: 6, pos: [0, 0, k * 0.29] }),
+      sphere(0.05, { mat: "chair", detail: 1, pos: [0, 0.8, k * 0.29] })]),
+    tube([0, 0.68, -0.31, -0.04, 0.72, 0, 0, 0.68, 0.31], 0.045, { mat: "chair", sides: 6 }),
+    [-0.14, 0, 0.14].map((z) => box(0.025, 0.5, 0.07, { mat: "chairV", pos: [-0.01, 0.12, z] }))),
+  // the armrests: from the back posts to scrolled ends over the front legs
+  [-1, 1].map((k) => [tube([-0.3, SEAT + 0.3, k * 0.31, 0.0, SEAT + 0.3, k * 0.33, 0.24, SEAT + 0.26, k * 0.33], 0.035, { mat: "chair", sides: 6 }),
+    sphere(0.05, { mat: "chair", detail: 1, pos: [0.27, SEAT + 0.25, k * 0.33] }),
+    cyl(0.025, 0.26, { mat: "chairV", sides: 6, pos: [0.22, SEAT, k * 0.32] })]),
+]
+// a pink rabbit slipper, facing +x: a plump toe, two ears up at the back,
+// two black eyes
+const slipper = (x, z) => tf({ pos: [x, 0, z] },
+  sphere(0.08, { mat: "slipper", detail: 2, pos: [0.04, 0.05, 0], scale: [1.7, 0.65, 1.05] }),
+  [-1, 1].map((k) => cone(0.03, 0.1, { mat: "slipper", sides: 5, pos: [0.0, 0.07, k * 0.035], rot: [k * 25, 0, 30], scale: [1, 1, 0.5] })),
+  [-1, 1].map((k) => sphere(0.01, { mat: "eye", detail: 0, pos: [0.15, 0.08, k * 0.03] })))
+// a heart outline (XY) for the knitting's motif
+const heartPts = Array.from({ length: 20 }, (_, i) => {
+  const t = i / 20 * Math.PI * 2
+  return [16 * Math.sin(t) ** 3 / 17, (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 17]
+}).flat()
+model("headless_knitter", tf({ rot: [0, -90, 0] },
+  rockingChair(),
+  // the body sits on the seat, leaning back with the chair
+  tf({ pos: [-0.06, SEAT + 0.06, 0], rot: [0, 0, 8] },
+    // hips and torso: a stout lathe, wider across z; the low neck pale
+    lathe([0.3, 0, 0.32, 0.1, 0.27, 0.24, 0.3, 0.38, 0.28, 0.5, 0.2, 0.58, 0.1, 0.62], { mat: "softDress", sides: 12, scale: [1.1, 1.05, 1.25], jitter: 0.008, seed: 751 }),
+    sphere(0.12, { mat: "softPale", detail: 2, pos: [0.19, 0.52, 0], scale: [0.5, 0.9, 1.6] }),
+    // the stump: the neck cut red, a white bone in the middle
+    cyl(0.1, 0.05, { mat: "pale", sides: 9, pos: [0, 0.6, 0] }),
+    cyl(0.085, 0.015, { mat: "meat", sides: 9, pos: [0, 0.645, 0] }),
+    cyl(0.025, 0.03, { mat: "bone", sides: 6, pos: [0, 0.65, 0] }),
+    // puffed sleeves and big pale arms down to the armrests, forearms to the lap
+    [-1, 1].map((k) => [
+      sphere(0.13, { mat: "softDress", detail: 2, pos: [-0.02, 0.5, k * 0.34], scale: [1, 0.9, 0.9] }),
+      tube([-0.02, 0.44, k * 0.38, 0.02, 0.24, k * 0.42], 0.115, { mat: "softPale", sides: 8 }),
+      sphere(0.11, { mat: "softPale", detail: 1, pos: [0.02, 0.24, k * 0.42] }),
+      tube([0.02, 0.24, k * 0.42, 0.22, 0.2, k * 0.2], 0.09, { mat: "softPale", sides: 8 }),
+      sphere(0.06, { mat: "softPale", detail: 1, pos: [0.25, 0.2, k * 0.14], scale: [1.1, 0.8, 1] })])),
+  // the lap and thighs under the skirt, the skirt falling ragged from the knees
+  sphere(0.3, { mat: "softDress", detail: 2, pos: [0.14, SEAT + 0.1, 0], scale: [1.05, 0.42, 1.12], jitter: 0.008, seed: 761 }),
+  tf({ pos: [0.42, 0, 0] }, pleats(SEAT + 0.12, 0.2, 0.62, 0.7, 10, 5, "dress", "dressD", 771)),
+  // the white apron over the lap, its hem ragged over the knees
+  sphere(0.27, { mat: "softApronW", detail: 2, pos: [0.17, SEAT + 0.13, 0], scale: [0.95, 0.36, 0.95], jitter: 0.006, seed: 781 }),
+  tf({ pos: [0.44, 0, 0] }, pleats(SEAT + 0.14, SEAT - 0.16, 0.5, 0.56, 8, 4, "apronW", "apronW", 791)),
+  // the knitting held up over the lap, tilted towards +x: a green piece with
+  // an orange heart, two needles through its top edge
+  tf({ pos: [0.26, SEAT + 0.3, 0], rot: [0, 90, 0], scale: 1.3 }, tf({ rot: [-50, 0, 0] },
+    extrude(roundSquare(1, 0.1).map((v, i) => v * (i % 2 ? 0.1 : 0.13)), 0.02, { mat: "knitG", jitter: 0.004 }),
+    extrude(heartPts, 0.02, { mat: "knitO", pos: [0, 0, 0.008], scale: 0.07 }),
+    [-1, 1].map((k) => cyl(0.006, 0.34, { mat: "steel", sides: 4, rot: [0, 0, 90 + k * 12], pos: [0.17, 0.1, 0.012] })))),
+  // legs down to the slippers
+  [-1, 1].map((k) => [tube([0.36, SEAT + 0.05, k * 0.15, 0.42, 0.22, k * 0.17, 0.44, 0.08, k * 0.19], 0.11, { mat: "softPale", sides: 8 }),
+    slipper(0.46, k * 0.19)]),
+  // the yarn: from the knitting down over the rocker to its ball
+  tube([0.3, SEAT + 0.22, -0.05, 0.5, SEAT - 0.1, -0.2, 0.58, 0.15, -0.32, 0.66, 0.02, -0.38, 0.74, 0.07, -0.42], 0.005, { mat: "knitG", sides: 4 }),
+  sphere(0.07, { mat: "yarnBall", detail: 2, pos: [0.76, 0.07, -0.42] }),
+  torus(0.07, 0.006, { mat: "knitG", rings: 12, sides: 3, pos: [0.76, 0.07, -0.42], rot: [60, 30, 0] })))
 looms("headless_knitter")
 
 // --- bloody skull (2764) --------------------------------------------------------------------
-// a yellowed skull lying in a pool of blood, its face to +x
-model("skull_blood", { scale: 1.6 },
-  cyl(0.2, 0.004, { mat: "bloodLit", sides: 10, pos: [0.04, 0, 0], scale: [1.3, 1, 0.9], jitter: 0.02 }),
-  sphere(0.13, { mat: "skull", detail: 2, pos: [0, 0.13, 0], scale: [1.1, 0.95, 0.95] }),
-  box(0.1, 0.07, 0.15, { mat: "skull", pos: [0.08, 0.02, 0], jitter: 0.008 }),
-  [-1, 1].map((k) => sphere(0.035, { mat: "coal", detail: 1, pos: [0.13, 0.13, k * 0.05], scale: [0.5, 1, 1] })),
-  sphere(0.06, { mat: "meatD", detail: 1, pos: [0.0, 0.2, -0.08], scale: [1, 0.6, 0.6] }))
+// a yellowed skull lying tipped on its side in a spreading pool of blood, its
+// face to +x: a big rounded cranium, a heavy brow, deep sockets full of
+// blood, the nose hole, cheekbones and the upper teeth; no jaw. boneTex
+// tinted; the pool is the river's blood loom. Its face turned to the camera
+// (+x +z) and tipped onto its side, as the retail draws it.
+const poolPts = Array.from({ length: 28 }, (_, i) => {
+  const a = i / 28 * Math.PI * 2, r = 0.24 * (0.85 + 0.18 * Math.sin(a * 3 + 1) + 0.08 * Math.sin(a * 5 + 2))
+  return [Math.cos(a) * r * 1.2, Math.sin(a) * r]
+}).flat()
+model("skull_blood", { scale: 1.5 },
+  extrude(poolPts, 0.012, { mat: "softBlood", rot: [90, 0, 0], pos: [0.05, 0.006, 0] }),
+  tf({ pos: [0, 0.12, 0], rot: [0, -45, 0] }, tf({ rot: [-28, 0, -6] },
+    sphere(0.12, { mat: "softSkull", detail: 3, pos: [-0.02, 0.03, 0], scale: [1.12, 0.95, 0.95] }),
+    // the brow ridge over the sockets
+    [-1, 1].map((k) => sphere(0.05, { mat: "softSkull", detail: 2, pos: [0.105, 0.045, k * 0.05], scale: [0.7, 0.45, 1.1] })),
+    // the face: a rounded front, the sockets and the nose hole sunk into it
+    sphere(0.09, { mat: "softSkull", detail: 2, pos: [0.08, -0.04, 0], scale: [0.8, 0.9, 1.15] }),
+    [-1, 1].map((k) => [sphere(0.042, { mat: "meatD", detail: 2, pos: [0.12, 0.0, k * 0.05], scale: [0.7, 1, 1] }),
+      sphere(0.026, { mat: "bloodLit", detail: 1, pos: [0.132, -0.012, k * 0.05], scale: [0.6, 0.8, 0.9] }),
+      sphere(0.04, { mat: "softSkullD", detail: 1, pos: [0.1, -0.06, k * 0.085], scale: [0.8, 0.6, 0.7] })]),
+    extrude([0, 0.03, 0.018, -0.02, -0.018, -0.02], 0.02, { mat: "coal", rot: [0, 90, 0], pos: [0.155, -0.06, 0] }),
+    // the upper teeth in a row under the face
+    box(0.05, 0.03, 0.12, { mat: "softSkullD", pos: [0.12, -0.12, 0] }),
+    Array.from({ length: 6 }, (_, i) => box(0.02, 0.035, 0.016, { mat: "softSkull", pos: [0.148, -0.13, -0.045 + i * 0.018] }))),
+  ))
 looms("skull_blood")

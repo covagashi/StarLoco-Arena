@@ -1621,6 +1621,46 @@ y sus hachas ya están en el kit de la arena 9.
     - El tocón era alto y de madera clara.
     - Los huesos del fogón eran finos y las costillas apuntaban a un lado.
     - La ardilla, el tarro y la calavera eran pequeños.
+
+- Dueño (2026-10-29): "en headless knitter usa las skills para mejorarlo,
+  con skull_blood igual, los aprons también. El resto está ok". Hojas:
+  `kit-arena10-mejoras-1.png` y `-2.png`.
+  - Tres looms nuevas en `kit.tx.js`, claras para teñirlas: `linen`
+    (algodón gastado, con trama fina, arrugas, suciedad en los pliegues y
+    alguna mancha desvaída), `knit` (punto, en columnas de lazadas) y
+    `boneTex` (hueso viejo, con manchas amarillentas, poros y grietas
+    finas).
+  - `headless_knitter`: rehecha y girada para mirar a +z, como la dibuja la
+    retail.
+    - La mecedora tiene balancines curvos, patas torneadas, el respaldo
+      alto con pomos, un travesaño curvo y tres tablillas, y brazos que
+      acaban en voluta.
+    - El cuerpo es un torso de lathe robusto, con el escote pálido y mangas
+      abullonadas. Los brazos son grandes y pálidos, sobre los
+      apoyabrazos, con los antebrazos hacia el regazo.
+    - Lleva la falda en pliegues hasta las rodillas y el delantal blanco
+      con el bajo roto. En las manos tiene el punto verde con un corazón
+      naranja y dos agujas, y la lana baja hasta el ovillo.
+    - Las piernas son gruesas y calza zapatillas de conejo con orejas y
+      ojos. Vestido, piel y calavera van en materiales `soft*` (normales
+      suaves en el juego).
+  - `skull_blood`: un cráneo redondo con arcos de las cejas, cuencas
+    hundidas llenas de sangre, la nariz, los pómulos y la fila de dientes
+    de arriba, sin mandíbula. Está volcado de lado, con la cara hacia la
+    cámara, en un charco de contorno suave con la textura del río.
+  - `aprons`: cada delantal cuelga de su gancho de cuerno, con dos tirantes.
+    El peto y la falda son una tela con pliegues suaves (ayuda
+    `clothPanel`: un `terrain` puesto de pie, con los pliegues más hondos
+    hacia el bajo). Llevan cintas sueltas en la cintura, el bajo roto en
+    lengüetas y un bolsillo.
+  - Lo que salió mal en esta vuelta:
+    - Al escalar un `tube`, el travesaño del respaldo se iba volando y los
+      brazos de la silla se separaban. Los tubos ya no se escalan.
+    - Los pliegues hechos con tiras parecían tablones. Ahora son un
+      `terrain` con normales suaves.
+    - Las manchas de la `linen` salían como lunares oscuros por todo el
+      vestido; ahora son la mitad de fuertes.
+    - La calavera era un huevo con una caja por cejas.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0

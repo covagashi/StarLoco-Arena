@@ -123,3 +123,57 @@ skins({
       })
     }
 }
+
+// --- linen: the dress, the aprons (2749, 2763) -----------------------------------
+// a worn cotton cloth, kept near white so kit.kx.js tints it: a fine plain
+// weave, soft creases, darker grime in the folds, a few faded stains and
+// worn pale patches. One texture; the colours are tints.
+{
+  const thread = weave({ threads: 48, gap: 0.18, seed: 1401 }).as("thread")
+  const crease = noise({ scale: [3, 7], octaves: 3, seed: 1402 }).warp(noise({ scale: 3, seed: 1403 }), 0.12).as("crease")
+  const blot = noise({ scale: 5, octaves: 3, seed: 1404 }).as("blot")
+  const stain = noise({ scale: 3, octaves: 4, seed: 1405 }).warp(noise({ scale: 5, seed: 1406 }), 0.2).threshold(0.72, 0.12).as("stain")
+  const h = crease.mul(0.75).add(thread.mul(0.05)).add(blot.mul(0.12)).as("linenH")
+  const fold = h.cavity(0.01, 12).as("fold")
+  const worn = h.convex(0.01, 12).as("worn")
+  material("linen", { size: 512, depth: 0.012, ao: 0.6 }, {
+    height: h,
+    color: ramp(blot, ["#d8d4cc", "#eceae4", "#f6f4ee"]).mul(thread.levels(0, 1, 0.95, 1))
+      .mix("#a8a094", fold.mul(0.5)).mix("#fbfaf6", worn.mul(0.3)).mix("#b09a78", stain.mul(0.15)),
+    rough: 0.92,
+  })
+}
+
+// --- knit: the knitting in the headless woman's lap (2763) -------------------------
+// stocking stitch: columns of little V loops, row by row, fluffy; near white,
+// tinted green in kit.kx.js
+{
+  const cols = stripes({ count: 24, dir: "v", soft: 0.6 }).as("cols")
+  const rows = stripes({ count: 32, dir: "h", soft: 0.8 }).as("rows")
+  const loops = cols.mul(rows.levels(0, 1, 0.25, 1)).warp(noise({ scale: 24, seed: 1501 }), 0.004).as("loops")
+  const fuzz = noise({ scale: 90, octaves: 2, seed: 1502 })
+  const h = loops.mul(0.8).add(fuzz.mul(0.15)).as("knitH")
+  material("knit", { size: 512, depth: 0.01, ao: 0.6 }, {
+    height: h,
+    color: ramp(h, ["#a8a8a0", "#e4e4dc", "#f8f8f2"]),
+    rough: 0.97,
+  })
+}
+
+// --- bone: the bloody skull (2764) ---------------------------------------------------
+// old bone: smooth ivory with broad yellowed blotches, fine pores, hairline
+// cracks; light, tinted in kit.kx.js
+{
+  const blot = noise({ scale: 4, octaves: 3, seed: 1601 }).warp(noise({ scale: 2, seed: 1602 }), 0.15).as("blot")
+  const pores = dots({ scale: 30, radius: 0.12, jitter: 1, seed: 1603 }).mul(noise({ scale: 4, seed: 1604 }).threshold(0.45, 0.2)).as("pores")
+  const crack = cells({ scale: 4, jitter: 0.9, seed: 1605 }).edge.invert().threshold(0.97, 0.015)
+    .mul(noise({ scale: 3, seed: 1606 }).threshold(0.6, 0.1)).as("crack")
+  const fine = noise({ scale: 60, octaves: 2, seed: 1607 })
+  const h = blot.mul(0.4).add(fine.mul(0.1)).sub(pores.mul(0.15)).sub(crack.mul(0.3)).as("boneH")
+  const grime = h.cavity(0.008, 10).max(crack).as("grime")
+  material("boneTex", { size: 512, depth: 0.01, ao: 0.6 }, {
+    height: h,
+    color: ramp(blot, ["#e8dcb4", "#f2eacc", "#faf4e0"]).mix("#a8946a", grime.mul(0.6)).mix("#c8b488", pores.mul(0.4)),
+    rough: blot.levels(0, 1, 0.55, 0.4),
+  })
+}

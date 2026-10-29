@@ -564,7 +564,7 @@
 				2763
 			],
 			"looms": "misc",
-			"note": "a stout headless woman in a rocking chair, faces +x"
+			"note": "a stout headless woman knitting in a rocking chair, faces +z"
 		},
 		{
 			"name": "skull_blood",
@@ -574,7 +574,7 @@
 				2764
 			],
 			"looms": "misc",
-			"note": "a skull in a pool of blood, its face to +x"
+			"note": "a skull tipped on its side in a pool of blood, its face to +x +z"
 		}
 	]
 }
