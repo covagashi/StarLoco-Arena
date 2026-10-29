@@ -1,0 +1,473 @@
+{
+	"_doc": "Arena 12 (retail world 44: a swamp) kit for the map editor (S36), same schema as art/arena7/kit.json (kind cap = lies over another block's top: y = 0 is that top). Pieces the arena also uses from the other kits are found by map_sheet.py.",
+	"biome": "pantano",
+	"arenas": [
+		44
+	],
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"peat": [
+			"musgo ocre",
+			"musgo verde",
+			"turba rojiza"
+		],
+		"mud": [
+			"barro ocre, hierba oliva",
+			"limo gris, hierba verde",
+			"arcilla roja, hierba pajiza"
+		],
+		"weed": [
+			"verde amarillo",
+			"verde oscuro",
+			"azolla roja"
+		],
+		"stump": [
+			"tocón verde, setas crema",
+			"tocón pardo, setas naranja",
+			"tocón gris, setas lila"
+		],
+		"marsh": [
+			"verde musgo",
+			"verde oliva",
+			"verde azulado"
+		],
+		"cotton": [
+			"penachos blancos",
+			"penachos crema",
+			"penachos lila"
+		],
+		"wood": [
+			"madera parda",
+			"madera gris",
+			"madera rojiza"
+		],
+		"shovel": [
+			"hierro, piedras rojas",
+			"hierro oscuro, piedras grises",
+			"bronce, piedras pardas"
+		],
+		"cane": [
+			"caña oliva, limo verde",
+			"caña verde",
+			"caña ocre"
+		],
+		"vine": [
+			"oliva, bayas lima",
+			"verde, bayas claras",
+			"ocre, bayas naranja"
+		]
+	},
+	"shared": [],
+	"minor": [],
+	"pieces": [
+		{
+			"name": "peat_block",
+			"label": "Bloque de turba",
+			"kind": "tile",
+			"gfx": [
+				619
+			],
+			"looms": "peat",
+			"top": 0.98,
+			"note": "a cell-wide block of moss-grown earth under every cell; the slabs (caps) sit on it"
+		},
+		{
+			"name": "earth_slab_grass",
+			"label": "Losa de tierra con hierba",
+			"kind": "cap",
+			"gfx": [
+				2654,
+				2655
+			],
+			"looms": "mud",
+			"top": 0.38,
+			"note": "lies over the peat block: y = 0 is its top; a raised lip round a lower middle full of swamp grass; the two retail drawings only move the blades"
+		},
+		{
+			"name": "earth_slab_sparse",
+			"label": "Losa de tierra con poca hierba",
+			"kind": "cap",
+			"gfx": [
+				2656
+			],
+			"looms": "mud",
+			"top": 0.38
+		},
+		{
+			"name": "earth_slab_half",
+			"label": "Losa de tierra con hierba detrás",
+			"kind": "cap",
+			"gfx": [
+				2692,
+				1501
+			],
+			"looms": "mud",
+			"top": 0.38,
+			"note": "dense grass on the back half, bare mud in front; 1501 (owner: «losa de barro») is the same drawing"
+		},
+		{
+			"name": "mud_slab",
+			"label": "Losa de barro",
+			"kind": "cap",
+			"gfx": [
+				2657,
+				2660
+			],
+			"looms": "mud",
+			"top": 0.46,
+			"note": "a domed slab of wet mud with pale ridges"
+		},
+		{
+			"name": "mud_slab_drip",
+			"label": "Losa de barro que gotea",
+			"kind": "cap",
+			"gfx": [
+				2659
+			],
+			"looms": "mud",
+			"top": 0.46,
+			"note": "the mud slab with pale crests running down its front edges"
+		},
+		{
+			"name": "duckweed_patch",
+			"label": "Lenteja de agua",
+			"kind": "flat",
+			"gfx": [
+				2666
+			],
+			"looms": "weed",
+			"note": "a mat of duckweed on the water, loose fronds round it"
+		},
+		{
+			"name": "duckweed_patch_dense",
+			"label": "Lenteja de agua (mancha densa)",
+			"kind": "flat",
+			"gfx": [
+				2662,
+				2664
+			],
+			"looms": "weed"
+		},
+		{
+			"name": "duckweed_ring",
+			"label": "Lenteja de agua en corro",
+			"kind": "flat",
+			"gfx": [
+				2663
+			],
+			"looms": "weed",
+			"note": "a ring of duckweed round open water"
+		},
+		{
+			"name": "duckweed_bits",
+			"label": "Lenteja de agua suelta",
+			"kind": "flat",
+			"gfx": [
+				2667
+			],
+			"looms": "weed"
+		},
+		{
+			"name": "tendril_s",
+			"label": "Zarcillo en S",
+			"kind": "flat",
+			"gfx": [
+				2627
+			],
+			"looms": "weed",
+			"note": "a flat tendril floating on the water"
+		},
+		{
+			"name": "tendril_loop",
+			"label": "Zarcillo en bucle",
+			"kind": "flat",
+			"gfx": [
+				2630
+			],
+			"looms": "weed"
+		},
+		{
+			"name": "tendril_curls",
+			"label": "Zarcillos rizados",
+			"kind": "flat",
+			"gfx": [
+				2632
+			],
+			"looms": "weed"
+		},
+		{
+			"name": "murky_puddle",
+			"label": "Charco turbio",
+			"kind": "flat",
+			"gfx": [
+				2661
+			],
+			"looms": "weed",
+			"note": "owner: «mancha o líquido»; dark water, light on its far rims"
+		},
+		{
+			"name": "mushroom_stump",
+			"label": "Tocón con setas",
+			"kind": "deco",
+			"gfx": [
+				2678,
+				2681
+			],
+			"looms": "stump",
+			"note": "a squat mossy stump crowned by a heap of shelf mushrooms; 2681 is the same in the edge's shade"
+		},
+		{
+			"name": "mushroom_stump_tall",
+			"label": "Tocón alto con setas",
+			"kind": "deco",
+			"gfx": [
+				2679,
+				2682
+			],
+			"looms": "stump",
+			"note": "a big cap on top, shelves round its sides; 2682 is the same in the edge's shade"
+		},
+		{
+			"name": "mushroom_stump_low",
+			"label": "Tocón bajo con setas",
+			"kind": "deco",
+			"gfx": [
+				2680
+			],
+			"looms": "stump"
+		},
+		{
+			"name": "marsh_clump",
+			"label": "Mata de musgo",
+			"kind": "deco",
+			"gfx": [
+				2683
+			],
+			"looms": "marsh",
+			"note": "a dark moss cushion with moss balls, paddle leaves and two spikes"
+		},
+		{
+			"name": "marsh_fiddle",
+			"label": "Brotes de helecho",
+			"kind": "deco",
+			"gfx": [
+				2684
+			],
+			"looms": "marsh",
+			"note": "a small cushion, a fiddlehead and a club stalk"
+		},
+		{
+			"name": "marsh_paddles",
+			"label": "Planta de palas",
+			"kind": "deco",
+			"gfx": [
+				2686
+			],
+			"looms": "marsh",
+			"note": "tall upright paddle leaves on dark moss"
+		},
+		{
+			"name": "cotton_grass",
+			"label": "Hierba algodonera",
+			"kind": "deco",
+			"gfx": [
+				2668
+			],
+			"looms": "cotton",
+			"note": "thin stems bowing right, white plumes drooping; 1.6 m"
+		},
+		{
+			"name": "cotton_grass_small",
+			"label": "Hierba algodonera pequeña",
+			"kind": "deco",
+			"gfx": [
+				2669
+			],
+			"looms": "cotton"
+		},
+		{
+			"name": "cotton_grass_tall",
+			"label": "Hierba algodonera alta",
+			"kind": "deco",
+			"gfx": [
+				2670
+			],
+			"looms": "cotton",
+			"note": "2.1 m"
+		},
+		{
+			"name": "plank_raft",
+			"label": "Pasarela de tablas",
+			"kind": "deco",
+			"gfx": [
+				1204
+			],
+			"looms": "wood",
+			"note": "two round logs along z, planks across them, two along z on top; posts 1207/1297 hold it over the water"
+		},
+		{
+			"name": "plank_raft_wide",
+			"label": "Pasarela de tablas anchas",
+			"kind": "deco",
+			"gfx": [
+				1206
+			],
+			"looms": "wood"
+		},
+		{
+			"name": "plank_raft_gap",
+			"label": "Pasarela de tablas con hueco",
+			"kind": "deco",
+			"gfx": [
+				1296
+			],
+			"looms": "wood"
+		},
+		{
+			"name": "rope_posts",
+			"label": "Postes con cuerda",
+			"kind": "deco",
+			"gfx": [
+				1207
+			],
+			"looms": "wood",
+			"note": "a leaning post roped at its foot and top, a short roped post; they hold the walkway (1204)"
+		},
+		{
+			"name": "rope_trestle",
+			"label": "Caballete con cuerda",
+			"kind": "deco",
+			"gfx": [
+				1297
+			],
+			"looms": "wood",
+			"note": "two posts under a crossbeam, a short roped post beside them"
+		},
+		{
+			"name": "shovel",
+			"label": "Pala",
+			"kind": "deco",
+			"gfx": [
+				790
+			],
+			"looms": "shovel",
+			"note": "a shovel stuck in a heap of red stones"
+		},
+		{
+			"name": "broken_cane",
+			"label": "Caña rota",
+			"kind": "deco",
+			"gfx": [
+				2673
+			],
+			"looms": "cane",
+			"note": "a thick snapped cane leaning in the mud, slime down its side, mud balls and bubbles at its foot; 1.7 m"
+		},
+		{
+			"name": "broken_cane_tall",
+			"label": "Caña rota alta",
+			"kind": "deco",
+			"gfx": [
+				2675
+			],
+			"looms": "cane"
+		},
+		{
+			"name": "broken_cane_short",
+			"label": "Caña rota corta",
+			"kind": "deco",
+			"gfx": [
+				2674
+			],
+			"looms": "cane"
+		},
+		{
+			"name": "broken_cane_stub",
+			"label": "Tocón de caña",
+			"kind": "deco",
+			"gfx": [
+				2676
+			],
+			"looms": "cane"
+		},
+		{
+			"name": "mud_bubbles",
+			"label": "Burbujas de barro",
+			"kind": "deco",
+			"gfx": [
+				2671
+			],
+			"looms": "cane"
+		},
+		{
+			"name": "mud_bubble",
+			"label": "Burbuja de barro",
+			"kind": "deco",
+			"gfx": [
+				2672
+			],
+			"looms": "cane"
+		},
+		{
+			"name": "vine_tall",
+			"label": "Enredadera alta",
+			"kind": "deco",
+			"gfx": [
+				2621
+			],
+			"looms": "vine",
+			"note": "a thick fleshy vine 3 m tall, berries at its foot, a thin vine twining up it into a hook at 4 m"
+		},
+		{
+			"name": "vine_loop",
+			"label": "Enredadera en bucle",
+			"kind": "deco",
+			"gfx": [
+				2625
+			],
+			"looms": "vine"
+		},
+		{
+			"name": "vine_cut",
+			"label": "Enredadera cortada",
+			"kind": "deco",
+			"gfx": [
+				2618
+			],
+			"looms": "vine"
+		},
+		{
+			"name": "vine_stub",
+			"label": "Enredadera cortada corta",
+			"kind": "deco",
+			"gfx": [
+				2624
+			],
+			"looms": "vine"
+		},
+		{
+			"name": "vine_over_edge",
+			"label": "Enredadera sobre el borde",
+			"kind": "deco",
+			"gfx": [
+				2619
+			],
+			"looms": "vine",
+			"note": "a cut length of vine lying over the island's edge, leaves hanging down the face; y = 0 is the edge's top; turn it to face the drop"
+		},
+		{
+			"name": "lianas",
+			"label": "Lianas",
+			"kind": "deco",
+			"gfx": [
+				2649
+			],
+			"looms": "vine",
+			"note": "three strands hanging down a cliff face from its top edge (plane x = 0 facing +x), like the arena 9 whip"
+		}
+	]
+}

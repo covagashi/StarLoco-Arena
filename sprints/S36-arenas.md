@@ -1835,6 +1835,98 @@ de una vez (dueño: "hazlo todo de golpe"). Fotos en
 - **Arena 11 completa**: `map_sheet.py 42 11` da 0 nuevas.
 - Dueño (2026-10-29): "todo ok". Arena 11 aprobada.
 
+Arena 12 (mundo 44, pantano), kit nuevo `godot/art/arena12/`, todos los
+grupos de una vez, como la 11. Fotos en `capturas/m7/kit-shots/arena12`.
+Looms propias en `arena12/kit.tx.js`: `peat`/`peatSide` (cojines de musgo,
+y el mismo musgo estirado en vetas para los lados), `mud` (barro con
+crestas pálidas que serpentean y surcos mojados) y `duckweed` (frondas
+redondas apretadas). Las tablas usan la loom `board` de la arena 6; lo
+demás, colores de paleta en tres looms.
+
+- **Suelo** (619, «losa de tierra» 2654–2656, 2692, «losa de barro» 1501,
+  2657, 2659, 2660). Hoja: `kit-arena12-suelo-1.png` … `-3.png`.
+  - `peat_block` (619, `tile`, 1 m): el bloque de debajo de cada casilla,
+    de turba con musgo ocre; arriba, cojines de musgo que se salen un poco
+    del borde.
+  - Las losas son `cap` sobre él. Ayuda `pillow`: un cuerpo de esquinas
+    redondeadas y un campo de alturas inscrito dentro (sus esquinas no
+    asoman por los arcos).
+  - `earth_slab_grass` (2654 y 2655, que solo mueven las hojas),
+    `earth_slab_sparse` (2656) y `earth_slab_half` (2692): un labio alto
+    alrededor y hierba de pantano en el hueco. El 1501, que el dueño puso
+    en «losa de barro», es el mismo dibujo que el 2692: va en esa pieza.
+  - `mud_slab` (2657 y 2660, iguales) y `mud_slab_drip` (2659): una cúpula
+    de barro con tres crestas que serpentean; la segunda gotea crema por los
+    bordes de delante.
+  - Lo que salió mal en la primera versión:
+    - El musgo parecía empedrado (juntas negras) y muy amarillo.
+    - Las losas eran finas y planas, con el lado de "adoquines".
+    - Hacer losa y lados con una sola malla dejaba una placa visible en el
+      suelo alrededor; se cambió a `pillow`.
+    - Las gotas de 2659 parecían una valla.
+- **Líquido verde y charco** (2662–2664, 2666, 2667, 2627, 2630, 2632,
+  2661). Hoja: `kit-arena12-liquido-1.png` … `-4.png`.
+  - `duckweed_patch` (2666), `duckweed_patch_dense` (2662, 2664),
+    `duckweed_ring` (2663, un corro con agua libre en medio) y
+    `duckweed_bits` (2667): manchas de contorno blando con frondas sueltas
+    alrededor (`flat`).
+  - `tendril_s` (2627), `tendril_loop` (2630) y `tendril_curls` (2632):
+    zarcillos planos flotando, como cintas aplastadas.
+  - `murky_puddle` (2661, «mancha o líquido»): agua turbia con brillos en
+    los bordes del fondo.
+  - Lo que salió mal: la lenteja parecía ruido de televisión (textura muy
+    fina y chillona) y los zarcillos eran hilos; el de 2627 iba de pie.
+- **Tocones con setas** (2678–2682). Hoja: `kit-arena12-setas-1.png` y
+  `-2.png`.
+  - 2681 y 2682 son 2678 y 2679 a la sombra del borde: la luz del mapa, no
+    otra planta.
+  - `mushroom_stump` (2678, 2681), `mushroom_stump_tall` (2679, 2682) y
+    `mushroom_stump_low` (2680): tocón verde con raíces por el suelo y
+    sombreros planos apilados.
+  - Dueño (2026-10-29): "en mushroom_stump hay partes flotando". Las setas
+    de arriba estaban en el aire, encima del corte del tocón. Ayuda `caps`:
+    una seta cuya base queda por encima del corte lleva un tallo clavado en
+    él, y las de los lados muerden el tronco. Se revisaron en las vistas de
+    kiln (frente, lado, arriba) todas las piezas del kit: también flotaban
+    dos hojas de las cañas y la enredadera del borde.
+- **Plantitas y flor blanca** (2683, 2684, 2686, 2668–2670). Hoja:
+  `kit-arena12-plantas-1.png` … `-3.png`.
+  - `marsh_clump` (2683), `marsh_fiddle` (2684) y `marsh_paddles` (2686):
+    un cojín de musgo oscuro con bolas, palas de pie, pinchos o un brote
+    de helecho.
+  - `cotton_grass` (2668), `cotton_grass_small` (2669) y
+    `cotton_grass_tall` (2670, 2,1 m): tallos finos que se doblan a la
+    derecha, con penachos blancos de tiras que el viento echa a un lado.
+  - Lo que salió mal: los penachos salían en abanico, como patas de pájaro.
+- **Tablas, postes y pala** (1204, 1206, 1296, 1207, 1297, 790). Hoja:
+  `kit-arena12-tablas-1.png` … `-3.png`.
+  - `plank_raft` (1204), `plank_raft_wide` (1206) y `plank_raft_gap`
+    (1296): dos troncos a lo largo de z, tablas cruzadas encima y una o dos
+    a lo largo, con musgo.
+  - `rope_posts` (1207: un poste inclinado con cuerda abajo y arriba, uno
+    corto y una estaca) y `rope_trestle` (1297: dos postes bajo un
+    travesaño).
+  - `shovel` (790): una pala corta clavada en piedras rojas.
+- **Cañas rotas y burbujas** (2673–2676, 2671, 2672). Hoja:
+  `kit-arena12-canas-1.png` … `-3.png`.
+  - `broken_cane` (2673), `broken_cane_tall` (2675), `broken_cane_short`
+    (2674) y `broken_cane_stub` (2676): una caña gruesa partida, hueca y
+    con dientes abiertos, limo verde por un lado, bolas de barro y
+    burbujas al pie.
+  - `mud_bubbles` (2671) y `mud_bubble` (2672): cúpulas grises de barro.
+- **Enredaderas y lianas** (2618, 2619, 2621, 2624, 2625, 2649). Hoja:
+  `kit-arena12-enredaderas-1.png` … `-3.png`.
+  - `vine_tall` (2621, 4,3 m), `vine_loop` (2625), `vine_cut` (2618) y
+    `vine_stub` (2624): tallos carnosos oliva con racimos de bayas y una
+    cinta fina enroscada que acaba en gancho; los cortados enseñan anillos.
+  - `vine_over_edge` (2619): un trozo cortado tumbado en el borde de la
+    isla, con hojas colgando por la pared (se gira hacia el vacío).
+  - `lianas` (2649): cinco hebras colgando de una pared desde su borde
+    (plano x = 0 mirando a +x, como el látigo de la arena 9).
+  - Lo que salió mal: las juntas de los tallos hacían bultos (las bolas de
+    unión eran más gordas que las caras del tallo); la enredadera alta era
+    fina abajo.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
