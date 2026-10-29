@@ -1743,6 +1743,97 @@ y sus hachas ya están en el kit de la arena 9.
   piernas.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
+Arena 11 (mundo 42, selva), kit nuevo `godot/art/arena11/`, todos los grupos
+de una vez (dueño: "hazlo todo de golpe"). Fotos en
+`capturas/m7/kit-shots/arena11`. La piedra de las ruinas usa la loom
+`stoneMoss` de la arena 6; el resto, colores de paleta en tres looms.
+
+- **Hierba fina** (1751, 1752, 1753, 2784). Hoja:
+  `kit-arena11-hierba-fina-1.png` y `-2.png`.
+  - Ayuda `fineBlade`: una hoja larga en forma de lanza, doblada por el
+    nervio, con una mitad más clara (como la pinta la retail) y el pie más
+    oscuro. `fineTuft` las abre en abanico: cuanto más lejos del centro,
+    más se inclinan hacia fuera.
+  - `grass_fine` (1751), `grass_fine_tall` (1752), `grass_fine_low`
+    (1753) y `grass_fine_broad` (2784, de hoja ancha: verdes detrás,
+    oliva delante, las del centro más altas). Looms: verde lima (retail),
+    verde oscuro y oro de otoño.
+  - Lo que salió mal en la primera versión:
+    - Las hojas eran finas como cerdas y tenían una banda oscura en el pie.
+    - Inclinadas hacia dentro: el giro en z iba al revés. Después se
+      tumbaban del todo, porque se sumaban la inclinación y la curva.
+- **Enredaderas** (grupo «planta»: 2768, 2769, 1788, 1791). Hojas:
+  `kit-arena11-enredaderas-1.png` y `-2.png`.
+  - Ayudas `leafAt` (una hoja de corazón, flecha o lanza en la dirección
+    de pantalla que se le pida, girada sobre su nervio para mirar a la
+    cámara), `sprig` (la hoja en su rabillo), `stem` (un tallo por puntos),
+    `tendril` (zarcillo en espiral) y flores blancas de tres pétalos y
+    turquesa de cinco.
+  - `vine_heart` (2768, 3 m), `flower_vine` (2769, 3,3 m, flores
+    turquesa), `vine_tall` (1788, 4,3 m) y `vine_crowns` (1791, dos matas
+    de tallos con copa de hojas). Looms: flores blancas y turquesa, rosas y
+    violeta, crema y naranja.
+  - Lo que salió mal: las hojas se veían de canto, como pinchos. La
+    dirección de pantalla estaba girada 90° (la hoja "a la derecha"
+    apuntaba a la cámara); ahora cada hoja se orienta con su cara hacia la
+    cámara. Además, las hojas eran estrechas y estaban pegadas al tallo.
+- **Plantas carnívoras y palmeras oscuras** (grupo «planta»: 2770, 2772,
+  2773, 2774, 2775). Hojas: `kit-arena11-carnivoras-1.png` … `-3.png`.
+  - En el mapa retail están en el borde, casi negras: es la luz del mapa,
+    no el color de la planta.
+  - Ayudas `frond` (hoja larga en tramos que se doblan hacia abajo),
+    `whorl` (un paraguas de hojas en la punta de un tallo), `pod` (la vaina
+    que muerde: un huevo oliva con manchas claras, la boca oscura debajo,
+    colmillos de marfil, dos cuernos y un zarcillo) y `litter` (hojas secas
+    en el suelo).
+  - `snap_plant` (2770), `snap_plant_three` (2772), `snap_plant_low`
+    (2773), `dark_palm` (2774, con un paraguas de hojas pálidas) y
+    `dark_palm_small` (2775). Looms: hojas pardas con vainas oliva (retail),
+    verde selva con vainas rojas y carmesí con vainas violeta.
+  - Lo que salió mal: las vainas miraban hacia atrás y eran pequeñas; las
+    hojas, finas como estrellas y de un naranja chillón.
+- **Calas, helecho y brotes** (2776, 2777, 2145–2148, 2781–2783). Hojas:
+  `kit-arena11-calas-helecho-abanico-1.png` y `-2.png`.
+  - `calla_pair` (2776) y `calla` (2777): una roseta de hojas pardas
+    tumbadas y tallos largos con la espata verde oscura y el espádice azul.
+  - `fern_sprig` (2145, 2146, 2147 y 2148, que son la misma planta):
+    tallos en zigzag de 1,6 m con tres hojitas en punta en cada codo, sobre
+    hierba oliva.
+  - `fan_sprouts` (2781–2783): el dueño creía que eran la planta muerta
+    1706, pero ampliadas son dos palmitas de abanico sobre un tallo
+    rastrero. Las tres retail son la misma pieza en amarillo, verde y
+    morado: las looms a, b y c. Se quita el `same` con 1706.
+  - Lo que salió mal: la roseta de las calas era un cuenco; los brotes
+    medían el doble; las hojitas del helecho eran redondas.
+- **Raíces con pinchos** (2599, 2601, 2602, 2604, 2605 y 2600). Hojas:
+  `kit-arena11-raices-1.png` y `-2.png`.
+  - Ayudas `spline` (curva suave por puntos de pantalla) y `thornRoot`
+    (raíz que se afina, con un cuello donde sale del suelo y pinchos crema
+    hacia fuera de la curva).
+  - `thorn_arches` (2599, 2605), `thorn_row` (2601), `thorn_tangle`
+    (2602, 2604) y `thorn_stub` (2600). El dueño puso el 2600 con las
+    hojas secas; ampliado es un trozo de raíz con pinchos, roto.
+  - Lo que salió mal: las raíces eran finas y los pinchos, enormes; las
+    juntas de los tramos se veían como bultos.
+- **Piedras de las ruinas** (grupos «tótem de roca» 2323, 2326, 2329 y
+  «roca con pintura» 2324). Hojas: `kit-arena11-piedras-1.png` y `-2.png`.
+  - `stone_skull` (2326): una roca de ocho caras con la cara +z tallada
+    como una calavera (ojos cuadrados con marco claro, cuatro dientes) y un
+    arco en la cara +x. `carved_block` (2323): un bloque con una espiral
+    grande en la cara +x y dos bloques caídos delante. `carved_block_small`
+    (2329): un meandro arriba y dos ranuras. `painted_rock` (2324): una
+    roca en forma de huevo con espirales pintadas.
+  - Lo que salió mal: el bloque salía en rombo (el lathe de cuatro caras
+    ya es un cuadrado sin girarlo), y los paneles tallados flotaban por
+    encima porque las cajas se apoyan en su base, no en su centro.
+- **Sueltas** (2779, 2771, 1601, 2159). Hoja: `kit-arena11-sueltas-1.png`
+  y `-2.png`.
+  - `leaf_litter` (2779) y `leaf_litter_small` (2771): hojas secas pardas
+    tumbadas (`flat`). `skull_stake` (1601): una calavera en una estaca de
+    1,2 m. `dry_stalk` (2159): un tallo seco de 2,3 m que se dobla a la
+    izquierda, con hojas verdes redondas al pie.
+- **Arena 11 completa**: `map_sheet.py 42 11` da 0 nuevas.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

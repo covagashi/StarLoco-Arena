@@ -1,0 +1,346 @@
+{
+	"_doc": "Arena 11 (retail world 42: a jungle of carnivorous plants) kit for the map editor (S36), same schema as art/arena7/kit.json. Its cracked paving (2313-2316) is in the arena 9 kit; pieces the arena also uses from the other kits are found by map_sheet.py.",
+	"biome": "selva",
+	"arenas": [
+		42
+	],
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"fine": [
+			"verde lima",
+			"verde oscuro",
+			"oro de otoño"
+		],
+		"green": [
+			"verde lima, flores blancas y turquesa",
+			"verde oscuro, flores rosas y violeta",
+			"verde amarillo, flores crema y naranja"
+		],
+		"dark": [
+			"hojas pardas, vainas oliva",
+			"verde selva, vainas rojas",
+			"carmesí, vainas violeta"
+		],
+		"fan": [
+			"amarillo",
+			"verde",
+			"morado"
+		],
+		"thorn": [
+			"raíz verde, pinchos crema",
+			"raíz parda",
+			"raíz morada"
+		],
+		"litter": [
+			"hojas pardas",
+			"hojas oliva",
+			"hojas rojizas"
+		],
+		"ruin": [
+			"piedra oliva con musgo",
+			"granito gris",
+			"arenisca roja"
+		],
+		"props": [
+			"madera y hueso",
+			"gris",
+			"rojizo"
+		]
+	},
+	"shared": [],
+	"minor": [],
+	"pieces": [
+		{
+			"name": "grass_fine",
+			"label": "Hierba fina",
+			"kind": "deco",
+			"gfx": [
+				1751
+			],
+			"looms": "fine",
+			"note": "long thin blades arcing to the sides; wider than a cell"
+		},
+		{
+			"name": "grass_fine_tall",
+			"label": "Hierba fina alta",
+			"kind": "deco",
+			"gfx": [
+				1752
+			],
+			"looms": "fine"
+		},
+		{
+			"name": "grass_fine_low",
+			"label": "Hierba fina baja",
+			"kind": "deco",
+			"gfx": [
+				1753
+			],
+			"looms": "fine"
+		},
+		{
+			"name": "grass_fine_broad",
+			"label": "Hierba fina de hoja ancha",
+			"kind": "deco",
+			"gfx": [
+				2784
+			],
+			"looms": "fine",
+			"note": "olive blades in front, fresh green behind"
+		},
+		{
+			"name": "vine_heart",
+			"label": "Enredadera de hojas de corazón",
+			"kind": "deco",
+			"gfx": [
+				2768
+			],
+			"looms": "green",
+			"note": "a twined stalk 2.6 m tall crowned by a heart leaf; pebbles at its foot"
+		},
+		{
+			"name": "flower_vine",
+			"label": "Enredadera con flores",
+			"kind": "deco",
+			"gfx": [
+				2769
+			],
+			"looms": "green",
+			"note": "3.3 m, teal flowers at the top and on a side shoot"
+		},
+		{
+			"name": "vine_tall",
+			"label": "Enredadera alta",
+			"kind": "deco",
+			"gfx": [
+				1788
+			],
+			"looms": "green",
+			"note": "4.3 m: thin stems, the leaves and white flowers bunched at 1.4-2.8 m"
+		},
+		{
+			"name": "vine_crowns",
+			"label": "Tallos con copa de hojas",
+			"kind": "deco",
+			"gfx": [
+				1791
+			],
+			"looms": "green",
+			"note": "two clumps of bare stems topped with heart leaves and white flowers"
+		},
+		{
+			"name": "snap_plant",
+			"label": "Planta carnívora",
+			"kind": "deco",
+			"gfx": [
+				2770
+			],
+			"looms": "dark",
+			"note": "a stalk climbs 3 m to a big snapping pod; palm whorls lower; dead leaves at its foot. The retail draws these near-black at the rim: our light does that"
+		},
+		{
+			"name": "snap_plant_three",
+			"label": "Planta carnívora de tres vainas",
+			"kind": "deco",
+			"gfx": [
+				2772
+			],
+			"looms": "dark"
+		},
+		{
+			"name": "snap_plant_low",
+			"label": "Planta carnívora baja",
+			"kind": "deco",
+			"gfx": [
+				2773
+			],
+			"looms": "dark",
+			"note": "its pod reaches out to the left"
+		},
+		{
+			"name": "dark_palm",
+			"label": "Palmera oscura",
+			"kind": "deco",
+			"gfx": [
+				2774
+			],
+			"looms": "dark",
+			"note": "no pods; a big whorl of pale leaves in the middle"
+		},
+		{
+			"name": "dark_palm_small",
+			"label": "Palmera oscura pequeña",
+			"kind": "deco",
+			"gfx": [
+				2775
+			],
+			"looms": "dark"
+		},
+		{
+			"name": "calla_pair",
+			"label": "Calas",
+			"kind": "deco",
+			"gfx": [
+				2776
+			],
+			"looms": "dark",
+			"note": "two blue-spadix callas over a rosette of brown leaves"
+		},
+		{
+			"name": "calla",
+			"label": "Cala",
+			"kind": "deco",
+			"gfx": [
+				2777
+			],
+			"looms": "dark"
+		},
+		{
+			"name": "fern_sprig",
+			"label": "Ramita de helecho",
+			"kind": "deco",
+			"gfx": [
+				2145,
+				2146,
+				2147,
+				2148
+			],
+			"looms": "green",
+			"note": "lime zigzag sprigs 1.6 m tall over olive grass; the four retail sprites are the same plant"
+		},
+		{
+			"name": "fan_sprouts",
+			"label": "Brotes de abanico",
+			"kind": "deco",
+			"gfx": [
+				2781,
+				2782,
+				2783
+			],
+			"looms": "fan",
+			"note": "two little fan palms on a creeping stem; 2781 is loom a (yellow), 2782 b (green), 2783 c (purple)"
+		},
+		{
+			"name": "thorn_arches",
+			"label": "Raíces con pinchos",
+			"kind": "deco",
+			"gfx": [
+				2599,
+				2605
+			],
+			"looms": "thorn",
+			"note": "an arch out of the ground and back, and a root curling over to its right"
+		},
+		{
+			"name": "thorn_row",
+			"label": "Fila de raíces con pinchos",
+			"kind": "deco",
+			"gfx": [
+				2601
+			],
+			"looms": "thorn"
+		},
+		{
+			"name": "thorn_tangle",
+			"label": "Maraña de raíces con pinchos",
+			"kind": "deco",
+			"gfx": [
+				2602,
+				2604
+			],
+			"looms": "thorn"
+		},
+		{
+			"name": "thorn_stub",
+			"label": "Tocón de raíz con pinchos",
+			"kind": "deco",
+			"gfx": [
+				2600
+			],
+			"looms": "thorn",
+			"note": "owner grouped 2600 with the dry leaves; enlarged it is a broken thorny root"
+		},
+		{
+			"name": "leaf_litter",
+			"label": "Hojas secas",
+			"kind": "flat",
+			"gfx": [
+				2779
+			],
+			"looms": "litter",
+			"note": "a drift of little brown heart leaves lying flat"
+		},
+		{
+			"name": "leaf_litter_small",
+			"label": "Hojas secas (pocas)",
+			"kind": "flat",
+			"gfx": [
+				2771
+			],
+			"looms": "litter"
+		},
+		{
+			"name": "stone_skull",
+			"label": "Tótem calavera",
+			"kind": "deco",
+			"gfx": [
+				2326
+			],
+			"looms": "ruin",
+			"note": "a boulder 1.6 m carved as a skull on its +z face (square eyes, four teeth), an arch on its +x side"
+		},
+		{
+			"name": "carved_block",
+			"label": "Bloque tallado",
+			"kind": "deco",
+			"gfx": [
+				2323
+			],
+			"looms": "ruin",
+			"note": "a big pale spiral on its +x face; two fallen blocks at its front left"
+		},
+		{
+			"name": "carved_block_small",
+			"label": "Bloque tallado pequeño",
+			"kind": "deco",
+			"gfx": [
+				2329
+			],
+			"looms": "ruin",
+			"note": "a meander on its top, two slots on its +z face, a cube against its +x side"
+		},
+		{
+			"name": "painted_rock",
+			"label": "Roca con pintura",
+			"kind": "deco",
+			"gfx": [
+				2324
+			],
+			"looms": "ruin",
+			"note": "pale spirals painted on its two front faces"
+		},
+		{
+			"name": "skull_stake",
+			"label": "Calavera en una estaca",
+			"kind": "deco",
+			"gfx": [
+				1601
+			],
+			"looms": "props"
+		},
+		{
+			"name": "dry_stalk",
+			"label": "Planta seca",
+			"kind": "deco",
+			"gfx": [
+				2159
+			],
+			"looms": "props",
+			"note": "a dead leaf stalk 2.3 m, its tip bowing to the left; green round leaves at its foot"
+		}
+	]
+}
