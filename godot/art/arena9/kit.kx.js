@@ -36,7 +36,15 @@ const AXE = {
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(AXE).map(([k, v]) =>
   [k + s, { color: v[i], rough: k.startsWith("axe") ? 0.45 : 0.85, metal: k.startsWith("axe") ? 0.5 : 0 }]))))
-const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE)]
+// the wall torch: its wood (bands of pale wood and dark iron), the prongs of
+// its crown, the cold ash inside; [a, b, c]
+const TORCH = {
+  torchWood: ["#8e7c5c", "#7a7670", "#8a5e3e"], torchBand: ["#3a2c22", "#2e2e32", "#3a2418"],
+  prong: ["#c8901e", "#9aa0a8", "#b0602a"], prongD: ["#7a5414", "#5a5e66", "#6a3418"], ash: ["#26201c", "#222224", "#2a1c18"],
+}
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(TORCH).map(([k, v]) =>
+  [k + s, { color: v[i], rough: k.startsWith("prong") ? 0.4 : 0.85, metal: k.startsWith("prong") ? 0.5 : 0 }]))))
+const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE), ...Object.keys(TORCH)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // Screen terms, as in the arena 8 kit: u along the screen's horizontal
@@ -279,3 +287,29 @@ model("butcher_axe_wall", { pivot: "origin" }, tf({ rot: [0, 30, 0] },
   tf({ pos: [0.27, 0.9, 0], rot: [0, 0, -129] }, cleaverHaft()),
   box(0.004, 0.98, 0.03, { mat: "slit", pos: [0, 0.41, 0] })))
 for (const n of ["war_axe", "butcher_axe", "butcher_axe_wall"]) looms(n)
+
+// --- wall torch (group «antorcha»: 1538), unlit ------------------------------
+// fixed to the corner of a pillar, high up: from the bottom, a pointed bulb, a
+// narrow stem, a cup of pale wood bound with dark iron bands, and a crown of
+// golden prongs round the cold ash. About 0.95 m. y = 0 is the bulb's tip;
+// an iron bracket goes back from the cup (-x -z, away from the camera) to the
+// wall.
+model("wall_torch", { pivot: "origin" },
+  lathe([0, 0, 0.06, 0.04, 0.11, 0.12, 0.1, 0.2, 0.06, 0.24], { mat: "torchWood", sides: 7 }),
+  cyl(0.07, 0.03, { mat: "prong", sides: 7, pos: [0, 0.15, 0] }),
+  cyl(0.055, 0.12, { mat: "torchWood", sides: 7, pos: [0, 0.23, 0] }),
+  // the cup: four bands, pale and dark, widening upwards
+  [[0.34, 0.11, "torchBand"], [0.4, 0.13, "torchWood"], [0.46, 0.135, "torchBand"], [0.52, 0.15, "torchWood"], [0.58, 0.155, "torchBand"]].map(([y, r, mat], k) =>
+    lathe([r - 0.02, 0, r, 0.02, r, 0.06], { mat, sides: 9, pos: [0, y - 0.01, 0], rot: [0, k * 9, 0] })),
+  lathe([0, 0, 0.1, 0, 0.12, 0.34], { mat: "torchWood", sides: 9, pos: [0, 0.31, 0] }),
+  // the crown: a ring and seven short prongs splayed out, the ash heaped inside
+  cyl(0.17, 0.05, { mat: "prongD", sides: 9, pos: [0, 0.64, 0] }),
+  lathe([0, 0, 0.15, 0, 0.11, 0.06, 0, 0.09], { mat: "ash", sides: 8, pos: [0, 0.66, 0] }),
+  Array.from({ length: 7 }, (_, k) => {
+    const a = k / 7 * 360 + 10, h = k % 2 ? 0.12 : 0.17
+    return tf({ rot: [0, a, 0] }, tf({ pos: [0.15, 0.67, 0], rot: [0, 0, -38] },
+      cone(0.045, h, { mat: "prong", sides: 4, scale: [0.6, 1, 1] })))
+  }),
+  // the bracket to the wall
+  tf({ rot: [0, 225, 0] }, box(0.05, 0.05, 0.3, { mat: "torchBand", pos: [0, 0.43, 0.2] }), box(0.2, 0.26, 0.03, { mat: "torchBand", pos: [0, 0.32, 0.34] })))
+looms("wall_torch")

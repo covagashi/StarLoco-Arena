@@ -1300,6 +1300,20 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
       recogedor, y el mango subía demasiado.
     - La de la pared se veía de canto. Ahora va girada 30° sobre el filo.
 
+- **Antorcha** (grupo «antorcha»: 1538, apagada; 5 usos en la arena 9).
+  Hoja: `kit-arena9-antorcha.png`.
+  - `wall_torch`: un brasero de unos 0,95 m que va clavado arriba, en la
+    esquina de un pilar. De abajo arriba lleva un bulbo en punta, un vástago
+    estrecho, una copa de madera clara ceñida con bandas de hierro oscuro y
+    una corona de siete púas doradas, con la ceniza fría dentro.
+  - y = 0 es la punta del bulbo. Un soporte de hierro sale de la copa hacia
+    atrás (-x -z) hasta la pared.
+  - Looms: madera clara con púas doradas (retail), gris con acero, y madera
+    rojiza con cobre.
+  - Lo que salió mal en la primera versión: las púas eran largas y rectas,
+    como una corona de rey. Las de la retail son cortas y abiertas hacia
+    fuera.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

@@ -31,6 +31,11 @@
 			"verdín oliva",
 			"acero",
 			"hierro oxidado"
+		],
+		"torch": [
+			"madera clara, hierro y púas doradas",
+			"gris, hierro y acero",
+			"madera rojiza y púas de cobre"
 		]
 	},
 	"shared": [],
@@ -206,6 +211,16 @@
 			],
 			"looms": "axe",
 			"note": "arena 10: the wall is the plane x = 0 facing +x; the edge sunk upright in it, the haft straight out; y = 0 is the floor"
+		},
+		{
+			"name": "wall_torch",
+			"label": "Antorcha de pared (apagada)",
+			"kind": "deco",
+			"gfx": [
+				1538
+			],
+			"looms": "torch",
+			"note": "an unlit cresset fixed high on a pillar's corner; y = 0 is its tip, the bracket goes back (-x -z) to the wall; about 0.95 m"
 		}
 	]
 }
