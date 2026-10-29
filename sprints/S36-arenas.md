@@ -1723,6 +1723,20 @@ y sus hachas ya están en el kit de la arena 9.
     `hemRing`, sobre un arco de la rodilla). La falda azul asoma solo por
     fuera de cada rodilla.
   - El punto con el corazón va plano sobre los muslos.
+- Dueño (2026-10-29): "la tela de la rodilla ha quedado muy mal". Hojas:
+  `kit-arena10-mejoras-1.png` y, de cerca, `kit-arena10-mujer-cerca.png`.
+  - Fallaban tres cosas:
+    - El bajo era una corona de triángulos separada de la pierna, como
+      banderines.
+    - La ayuda `capsule` adelgazaba los tramos más cortos que sus dos
+      radios: el redondeo de las puntas ocupaba todo el tramo y la manga de
+      la rodilla casi desaparecía. Ahora redondea, como mucho, medio tramo.
+    - La parte de arriba de la pantorrilla asomaba por la rodilla.
+  - Ahora la tela baja de una pieza: del muslo a una manga recta (lathe)
+    que cubre la rodilla y el principio de la espinilla. El bajo roto son
+    solapas planas pegadas a la manga y solapadas entre sí (ayuda
+    `hemFlaps`). Por fuera de cada rodilla asoman tres solapas azules del
+    vestido.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0

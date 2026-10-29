@@ -865,7 +865,9 @@ function capsule([x0, y0, z0], [x1, y1, z1], r0, r1, mat, swell = 1.08) {
   for (let i = 0; i <= n; i++) {
     const t = i / n, base = (r0 + (r1 - r0) * t) * (1 + (swell - 1) * Math.sin(t * Math.PI))
     // round the two ends over the end radius
-    const e0 = Math.min(1, (t * len) / r0), e1 = Math.min(1, ((1 - t) * len) / r1)
+    // (a segment shorter than its two radii rounds over half its length)
+    const c0 = Math.min(r0, len / 2), c1 = Math.min(r1, len / 2)
+    const e0 = Math.min(1, (t * len) / c0), e1 = Math.min(1, ((1 - t) * len) / c1)
     const cap = Math.sqrt(1 - (1 - e0) ** 2) * Math.sqrt(1 - (1 - e1) ** 2)
     prof.push(i === 0 || i === n ? 0 : base * cap, t * len)
   }
@@ -896,14 +898,19 @@ const plumpHand = (x, y, z, k, dx, dz) => {
       [x + ux * 0.05 + px * 0.075 * t, y + 0.005, z + uz * 0.05 + pz * 0.075 * t], 0.021, 0.018, "softPale", 1)),
   ]
 }
-// a torn hem round a leg: n ragged cloth points hanging from a ring of
-// radius r centred on (x, y, z), each l0..l0+dl long, over the arc a0..a1
-// (degrees, 0 = +x, the front of the knee); each point leans in on the leg
-const hemRing = (x, y, z, r, n, mat, l0, dl, seed, a0 = -110, a1 = 110) => Array.from({ length: n }, (_, i) => {
-  const a = (a0 + (a1 - a0) * i / (n - 1)) * Math.PI / 180, l = l0 + rnd(i, 3, seed) * dl, w = 0.03 + rnd(i, 7, seed) * 0.02
-  return tf({ pos: [x + Math.cos(a) * r, y, z + Math.sin(a) * r], rot: [0, -a * DEG, 0] }, tf({ rot: [0, 0, 8 + (rnd(i, 5, seed) - 0.5) * 10] },
-    extrude([-0.01, w, 0.0, -w, -l, -w * 0.2, -l * 0.7, w * 0.4], 0.012, { mat, rot: [0, 90, 0], jitter: 0.003, seed: seed + i })))
-})
+// a torn hem round a leg: n ragged flaps of cloth over the arc a0..a1
+// (degrees round the leg, 0 = +x, the front), lying flush on a sleeve of
+// radius r centred on (x, z), their tops at height y tucked under its edge,
+// each l0..l0+dl long, wide enough that neighbours overlap
+const hemFlaps = (x, z, y, r, n, mat, l0, dl, seed, a0, a1) => {
+  const step = Math.abs(a1 - a0) / Math.max(1, n - 1) * Math.PI / 180 * r
+  return Array.from({ length: n }, (_, i) => {
+    const a = (a0 + (a1 - a0) * (n > 1 ? i / (n - 1) : 0.5)) * Math.PI / 180
+    const l = l0 + rnd(i, 3, seed) * dl, w = step * (0.7 + rnd(i, 7, seed) * 0.4), tip = (rnd(i, 5, seed) - 0.5) * w
+    return tf({ pos: [x + Math.cos(a) * r, y, z + Math.sin(a) * r], rot: [0, -a * DEG, 0] },
+      extrude([-w, 0.03, w, 0.03, w * 0.7, -l * 0.5, tip, -l, -w * 0.6, -l * 0.6], 0.008, { mat, rot: [0, 90, 0], pos: [-0.002, 0, 0], jitter: 0.002, seed: seed + i }))
+  })
+}
 // a plump hand hanging open at the end of an arm: the palm flat against the
 // side, four short fingers stretched straight down, the thumb forward (+x)
 const hangingHand = (x, y, z) => [
@@ -952,11 +959,15 @@ model("headless_knitter", tf({ rot: [0, -90, 0] },
   sphere(0.3, { mat: "softDress", detail: 2, pos: [0.1, SEAT + 0.04, 0], scale: [0.9, 0.42, 1.0], jitter: 0.008, seed: 761 }),
   [-1, 1].map((k) => [
     capsule([0.06, SEAT + 0.07, k * 0.15], [0.47, SEAT + 0.0, k * 0.2], 0.16, 0.145, "softApronW", 1.05),
-    // the cloth over the knee, falling a little down the shin
-    capsule([0.44, SEAT + 0.02, k * 0.215], [0.46, SEAT - 0.13, k * 0.235], 0.15, 0.14, "softApronW", 1.0),
-    hemRing(0.455, SEAT - 0.11, k * 0.235, 0.14, 8, "apronW", 0.04, 0.05, 801 + k, -100, 100),
-    // the blue shows under the white only at the outer side of each knee
-    hemRing(0.44, SEAT - 0.13, k * 0.235, 0.145, 3, "dressD", 0.05, 0.05, 811 + k, k * 70, k * 130)]),
+    // the torn hem over the knee: soft uneven tongues of the same cloth
+    // hanging close down the front of the knee; the blue of the dress in two
+    // tongues at its outer side
+    // the cloth wraps the knee and the top of the shin as a straight sleeve
+    // (the thigh's cloth runs into it), its torn hem in flaps lying flush on
+    // it; the blue of the dress in a few flaps under it at the outer side
+    lathe([0.15, 0, 0.153, 0.1, 0.152, 0.2, 0.135, 0.26], { mat: "softApronW", sides: 14, pos: [0.455, SEAT - 0.17, k * 0.232], jitter: 0.004, seed: 805 + k }),
+    hemFlaps(0.455, k * 0.232, SEAT - 0.15, 0.15, 11, "apronW", 0.04, 0.06, 801 + k, -100, 100),
+    hemFlaps(0.455, k * 0.232, SEAT - 0.17, 0.146, 3, "dressD", 0.05, 0.04, 811 + k, k * 80, k * 125)]),
   // the sag of cloth between the thighs
   capsule([0.08, SEAT + 0.04, 0], [0.42, SEAT - 0.03, 0], 0.11, 0.09, "softApronW", 1.0),
   // the knitting laid flat on the cloth: a green piece with an orange heart,
@@ -972,7 +983,7 @@ model("headless_knitter", tf({ rot: [0, -90, 0] },
   // thick pale legs, set wide: the thigh under the skirt, a round knee, the
   // calf bulging, the ankle down into the slipper
   [-1, 1].map((k) => [capsule([0.14, SEAT + 0.04, k * 0.16], [0.44, SEAT - 0.02, k * 0.21], 0.13, 0.115, "softPale", 1.05),
-    capsule([0.4, SEAT + 0.06, k * 0.22], [0.47, 0.04, k * 0.25], 0.12, 0.08, "softPale", 1.2),
+    capsule([0.44, SEAT - 0.02, k * 0.225], [0.47, 0.04, k * 0.25], 0.12, 0.08, "softPale", 1.2),
     tf({ scale: 1.2 }, slipper(0.47 / 1.2, k * 0.26 / 1.2))]),
   // the yarn: from the knitting down over the rocker to its ball
   tube([0.3, SEAT + 0.26, -0.1, 0.52, SEAT + 0.1, -0.2, 0.54, SEAT - 0.1, -0.24, 0.58, 0.15, -0.32, 0.66, 0.02, -0.38, 0.74, 0.07, -0.42], 0.005, { mat: "knitG", sides: 4 }),
