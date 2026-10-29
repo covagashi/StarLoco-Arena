@@ -50,7 +50,16 @@ pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(TORCH).map(([k, v]
 // the round shield: verdigris bronze (retail), iron, copper; [a, b, c]
 const SHIELD = { shield: ["#7c9a5c", "#7e848c", "#a8683a"], shieldL: ["#a8c482", "#aab0b6", "#d08a52"], shieldD: ["#4a6436", "#4a4e56", "#6a3a1e"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(SHIELD).map(([k, v]) => [k + s, { color: v[i], rough: 0.5, metal: 0.45 }]))))
-const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "stoneWhite", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE), ...Object.keys(TORCH), ...Object.keys(SHIELD)]
+// the coiled whip: red-brown leather (retail), black leather, tan rope; its
+// red grip, dark caps, the pale wooden peg, brass knots; [a, b, c]
+const WHIP = {
+  leather: ["#6a3a2e", "#2e2a28", "#a88a5a"], leatherL: ["#8e5648", "#4a4440", "#c8aa76"],
+  whipGrip: ["#8a2416", "#5a1a14", "#6a4a2a"], whipCap: ["#3a2418", "#1a1816", "#3a2a1a"],
+  peg: ["#d8b47c", "#b89a70", "#c8a070"], knot: ["#a89048", "#8a8a8e", "#8a6a3a"],
+}
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(WHIP).map(([k, v]) =>
+  [k + s, { color: v[i], rough: k === "knot" ? 0.4 : 0.8, metal: k === "knot" ? 0.5 : 0 }]))))
+const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "stoneWhite", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE), ...Object.keys(TORCH), ...Object.keys(SHIELD), ...Object.keys(WHIP)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // Screen terms, as in the arena 8 kit: u along the screen's horizontal
@@ -352,3 +361,29 @@ model("rock_chunks",
     [0.14, 0.40, 0.33, 0.15, 0.30, "round", 20, -5, "stoneWhite"], [0.11, -0.37, 0.21, 0.10, 0.19, "round", -5, 0, "stoneWhite"],
     [-0.17, -0.45, 0.10, 0.04, 0.10, "round", 0, 0, "stoneWhite"]], 101))
 looms("rock_chunks")
+
+// --- coiled whip (group «látigo»: 2020) --------------------------------------
+// hung from a peg on a wall: three loose loops of leather about 0.65 m tall,
+// the red grip hanging on the left, three lashes with knots falling on the
+// right nearly to the floor; about 1.4 m in all. Built against the plane
+// z = 0 facing +z, then turned so the wall is the plane x = 0 facing +x (as
+// the butcher's axe in a wall); y = 0 is the floor.
+const lash = (x, len, sway, seed) => {
+  const pts = []
+  for (let k = 0; k <= 6; k++) pts.push(x + Math.sin(k * 1.3 + seed) * sway * k / 6, 0.8 - k / 6 * len, 0.08 + k * 0.004)
+  return [tube(pts, 0.017, { mat: "leather", sides: 5 }),
+    [0.3, 0.55].map((f) => sphere(0.026, { mat: "knot", detail: 1, pos: [pts[Math.round(f * 6) * 3], pts[Math.round(f * 6) * 3 + 1], pts[Math.round(f * 6) * 3 + 2]] }))]
+}
+model("coiled_whip", { pivot: "origin" }, tf({ rot: [0, 90, 0] },
+  // the peg, out of the wall, and the loops hanging from it
+  cyl(0.055, 0.14, { mat: "peg", sides: 6, pos: [-0.08, 1.3, 0], rot: [90, 0, 0] }),
+  // a thick bundle: four loops laid close, a little apart in turn
+  [[0, 0, 1], [0.02, -0.02, -7], [-0.02, 0.012, 6], [0.01, -0.03, -2]].map(([dx, dy, a], k) =>
+    tf({ pos: [dx, 1.06 + dy, 0.05 + k * 0.022], rot: [0, 0, a] }, torus(0.29, 0.032, { mat: k % 2 ? "leatherL" : "leather", sides: 6, rings: 18, rot: [90, 0, 0], scale: [0.78, 1, 1.05] }))),
+  // the grip hanging off the left of the coil, on a short run of leather
+  tube([-0.17, 0.86, 0.07, -0.2, 0.8, 0.075, -0.205, 0.73, 0.08], 0.024, { mat: "leather", sides: 5 }),
+  tf({ pos: [-0.21, 0.5, 0.08], rot: [0, 0, 4] },
+    cyl(0.036, 0.24, { mat: "whipGrip", sides: 6 }), cyl(0.038, 0.04, { mat: "whipCap", sides: 6 }), cyl(0.036, 0.035, { mat: "whipCap", sides: 6, pos: [0, 0.22, 0] })),
+  // the lashes off the bottom right
+  lash(0.1, 0.72, 0.03, 1), lash(0.15, 0.66, 0.04, 2), lash(0.2, 0.6, 0.025, 3)))
+looms("coiled_whip")

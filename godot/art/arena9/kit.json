@@ -41,6 +41,11 @@
 			"bronce con verdín",
 			"hierro",
 			"cobre"
+		],
+		"whip": [
+			"cuero rojizo",
+			"cuero negro",
+			"cuerda parda"
 		]
 	},
 	"shared": [],
@@ -246,6 +251,16 @@
 			],
 			"looms": "stone",
 			"note": "four pale lumps 0.2-0.4 m and a crumb, whiter than the pebbles"
+		},
+		{
+			"name": "coiled_whip",
+			"label": "Látigo recogido",
+			"kind": "deco",
+			"gfx": [
+				2020
+			],
+			"looms": "whip",
+			"note": "a coiled whip hung from a peg on a wall: the wall is the plane x = 0 facing +x; y = 0 is the floor; about 1.4 m"
 		}
 	]
 }

@@ -1340,6 +1340,19 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
     veían grises. Ninguna loom de piedra es tan clara (el tinte solo
     oscurece), así que van en color de paleta. El primer color era casi
     blanco bajo nuestra luz; se bajó a un crema apagado.
+
+- **Látigo** (grupo «látigo»: 2020). Hoja: `kit-arena9-latigo.png`.
+  - `coiled_whip`: un látigo recogido de unos 1,4 m, colgado de una
+    clavija en la pared, con la misma convención que el hacha de la 2481:
+    la pared es el plano x = 0, mirando a +x, e y = 0 es el suelo.
+  - Lleva cuatro vueltas gruesas de cuero, el mango rojo colgando a la
+    izquierda y tres colas con nudos de latón que caen casi hasta el suelo.
+  - Looms: cuero rojizo (retail), cuero negro y cuerda parda.
+  - Lo que salió mal en la primera versión:
+    - El rollo era un alambre fino, y en la retail es un manojo grueso.
+    - El mango flotaba suelto; ahora cuelga de un tramo de cuero.
+    - La clavija era diminuta.
+    - El cuero salía anaranjado.
 - Dueño (2026-10-29): creía que el látigo (2020) y la sangre de pared
   (2443) se habían pasado a VFX en arenas anteriores. No están en la lista
   `vfx` de `gfx_rules.json` ni en los sprints; la sangre del suelo se
