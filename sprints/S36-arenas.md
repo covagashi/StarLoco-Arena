@@ -1833,6 +1833,7 @@ de una vez (dueño: "hazlo todo de golpe"). Fotos en
     1,2 m. `dry_stalk` (2159): un tallo seco de 2,3 m que se dobla a la
     izquierda, con hojas verdes redondas al pie.
 - **Arena 11 completa**: `map_sheet.py 42 11` da 0 nuevas.
+- Dueño (2026-10-29): "todo ok". Arena 11 aprobada.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
