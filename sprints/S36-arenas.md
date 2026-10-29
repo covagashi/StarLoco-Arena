@@ -1979,6 +1979,8 @@ cada pieza: nada flota.
   - Lo que salió mal: la nieve y las rocas salían 1,4–2 veces grandes; la
     textura de madera hacía rayas en el farol y las vallas (ahora colores
     lisos, como la retail); el puente tenía las tablas cruzadas.
+- Dueño (2026-10-29): "ok mejor". Arenas 1 y 2 aprobadas: todos los assets
+  de las 12 arenas están hechos.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
