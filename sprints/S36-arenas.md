@@ -1255,7 +1255,7 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
     - El pardo salía naranja y luego amarillo. Se quedó en un pardo apagado.
 
 - **Alcantarillas** (grupo «alcantarilla»: 1570 de la arena 9 y 2746 de la
-  arena 10). Hoja: `kit-arena9-alcantarilla-1.png`. Las dos son `flat`:
+  arena 10). Hoja: `kit-arena9-alcantarilla.png`. Las dos son `flat`:
   van tumbadas sobre la cara de arriba de un bloque de suelo, como la
   rejilla de la arena 1.
   - `sewer_grate` (1570): cuatro piedras claras hacen un marco que llena la
