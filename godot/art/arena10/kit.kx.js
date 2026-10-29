@@ -896,6 +896,14 @@ const plumpHand = (x, y, z, k, dx, dz) => {
       [x + ux * 0.05 + px * 0.075 * t, y + 0.005, z + uz * 0.05 + pz * 0.075 * t], 0.021, 0.018, "softPale", 1)),
   ]
 }
+// a torn hem round a leg: n ragged cloth points hanging from a ring of
+// radius r centred on (x, y, z), each l0..l0+dl long, over the arc a0..a1
+// (degrees, 0 = +x, the front of the knee); each point leans in on the leg
+const hemRing = (x, y, z, r, n, mat, l0, dl, seed, a0 = -110, a1 = 110) => Array.from({ length: n }, (_, i) => {
+  const a = (a0 + (a1 - a0) * i / (n - 1)) * Math.PI / 180, l = l0 + rnd(i, 3, seed) * dl, w = 0.03 + rnd(i, 7, seed) * 0.02
+  return tf({ pos: [x + Math.cos(a) * r, y, z + Math.sin(a) * r], rot: [0, -a * DEG, 0] }, tf({ rot: [0, 0, 8 + (rnd(i, 5, seed) - 0.5) * 10] },
+    extrude([-0.01, w, 0.0, -w, -l, -w * 0.2, -l * 0.7, w * 0.4], 0.012, { mat, rot: [0, 90, 0], jitter: 0.003, seed: seed + i })))
+})
 // a plump hand hanging open at the end of an arm: the palm flat against the
 // side, four short fingers stretched straight down, the thumb forward (+x)
 const hangingHand = (x, y, z) => [
@@ -937,26 +945,23 @@ model("headless_knitter", tf({ rot: [0, -90, 0] },
       capsule([-0.03, 0.56, k * 0.38], [0.0, 0.18, k * 0.47], 0.12, 0.105, "softPale", 1.3),
       capsule([0.0, 0.24, k * 0.47], [0.04, -0.12, k * 0.48], 0.1, 0.065, "softPale", 1.1),
       hangingHand(0.045, -0.15, k * 0.48)])),
-  // the lap: the thighs under a broad white cloth spread over it, rounded
-  // over the knees and falling all round to a ragged hem; under it the blue
-  // skirt, torn too
-  sphere(0.3, { mat: "softDress", detail: 2, pos: [0.14, SEAT + 0.06, 0], scale: [1.05, 0.42, 1.12], jitter: 0.008, seed: 761 }),
-  lathe([0.33, 0, 0.36, 0.14, 0.32, 0.26], { mat: "softDress", sides: 14, pos: [0.3, SEAT - 0.18, 0], scale: [0.62, 1, 1.08], jitter: 0.01, seed: 765 }),
-  Array.from({ length: 9 }, (_, i) => {
-    const a = (i / 8 - 0.5) * 150 * Math.PI / 180, l = 0.06 + rnd(i, 3, 767) * 0.07
-    return box(0.02, l, 0.08, { mat: i % 2 ? "dressD" : "softDress", pos: [0.3 + Math.cos(a) * 0.21, SEAT - 0.18 - l + 0.02, Math.sin(a) * 0.38],
-      rot: [0, -a * 180 / Math.PI, (rnd(i, 5, 767) - 0.5) * 14] })
-  }),
-  lathe([0.37, -0.2, 0.35, -0.05, 0.3, 0.06, 0.2, 0.1, 0.0, 0.105], { mat: "softApronW", sides: 16, pos: [0.24, SEAT + 0.15, 0], scale: [0.82, 1, 1.12], jitter: 0.008, seed: 791 }),
-  // its torn hem: ragged points hanging from the rim, uneven
-  Array.from({ length: 13 }, (_, i) => {
-    const a = (i / 12 - 0.5) * 180 * Math.PI / 180, l = 0.05 + rnd(i, 3, 793) * 0.07, w = 0.03 + rnd(i, 7, 793) * 0.03
-    return tf({ pos: [0.24 + Math.cos(a) * 0.365 * 0.82, SEAT - 0.045, Math.sin(a) * 0.365 * 1.12], rot: [0, 90 - a * 180 / Math.PI, (rnd(i, 5, 793) - 0.5) * 16] },
-      extrude([-w, 0.01, w, 0.01, w * 0.3, -l, -w * 0.2, -l * 0.7], 0.012, { mat: "apronW", jitter: 0.004, seed: 795 + i }))
-  }),
+  // the lap: the white of her nightgown clings to each thigh (a skin of
+  // cloth a little wider than the leg), sags between them and ends at the
+  // knees in a torn hem round each leg; the blue of the dress shows in
+  // ragged tongues under it. All inside the armrests.
+  sphere(0.3, { mat: "softDress", detail: 2, pos: [0.1, SEAT + 0.04, 0], scale: [0.9, 0.42, 1.0], jitter: 0.008, seed: 761 }),
+  [-1, 1].map((k) => [
+    capsule([0.06, SEAT + 0.07, k * 0.15], [0.47, SEAT + 0.0, k * 0.2], 0.16, 0.145, "softApronW", 1.05),
+    // the cloth over the knee, falling a little down the shin
+    capsule([0.44, SEAT + 0.02, k * 0.215], [0.46, SEAT - 0.13, k * 0.235], 0.15, 0.14, "softApronW", 1.0),
+    hemRing(0.455, SEAT - 0.11, k * 0.235, 0.14, 8, "apronW", 0.04, 0.05, 801 + k, -100, 100),
+    // the blue shows under the white only at the outer side of each knee
+    hemRing(0.44, SEAT - 0.13, k * 0.235, 0.145, 3, "dressD", 0.05, 0.05, 811 + k, k * 70, k * 130)]),
+  // the sag of cloth between the thighs
+  capsule([0.08, SEAT + 0.04, 0], [0.42, SEAT - 0.03, 0], 0.11, 0.09, "softApronW", 1.0),
   // the knitting laid flat on the cloth: a green piece with an orange heart,
   // its two needles lying across it
-  tf({ pos: [0.32, SEAT + 0.275, 0.0], rot: [0, 0, -24] },
+  tf({ pos: [0.31, SEAT + 0.228, 0.0], rot: [0, 0, -12] },
     extrude(roundSquare(1, 0.08).map((v, i) => v * (i % 2 ? 0.2 : 0.16)), 0.018, { mat: "knitG", rot: [-90, 0, 0], jitter: 0.004 }),
     // the heart: two round lobes at the back and a square turned 45° for
     // its point, towards the knees (+x), a hair proud of the knitting

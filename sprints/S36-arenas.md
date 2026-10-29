@@ -1712,6 +1712,17 @@ y sus hachas ya están en el kit de la arena 9.
       revés y se veía como un borde vacío.
     - Los lóbulos del corazón quedaban bajo la barriga, y desde arriba solo
       se veía la punta.
+- Dueño (2026-10-29): "la parte blanca forma parte de la bata/pijama,
+  así que no la dejes cuadrada, tiene que estar pegada a las piernas", y
+  la tela "atrapa la madera del reposabrazos".
+  - La cúpula blanca se quita. Ahora la tela del camisón se pega a cada
+    muslo (una cápsula algo más ancha que la pierna), cae un poco por
+    encima de la rodilla y se hunde entre las dos piernas. Va por debajo
+    de los apoyabrazos.
+  - En cada rodilla, el bajo roto son picos que se pegan a la pierna (ayuda
+    `hemRing`, sobre un arco de la rodilla). La falda azul asoma solo por
+    fuera de cada rodilla.
+  - El punto con el corazón va plano sobre los muslos.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
