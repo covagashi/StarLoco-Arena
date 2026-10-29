@@ -1398,6 +1398,24 @@ y sus hachas ya están en el kit de la arena 9.
       retail.
     - El canto de la losa salía blanco; ahora va en sombra.
 
+- **Postes de madera** (grupo «poste de madera»: 984 y 985; 95 usos). Son
+  los bloques que sostienen el suelo, y la losa de ladrillos va encima.
+  Hoja: `kit-arena10-postes.png`.
+  - La `brick_slab` pasa a `cap`: y = 0 es la cara de arriba del poste.
+  - Usan las tablas de la arena 6 (`board` y `boardV`), teñidas. La loom a
+    sale de la tabla gris templada: pardo gris (retail), gris y rojiza.
+  - `wood_post` (984): un bloque de 1,5 m que llena la casilla. Arriba lleva
+    una viga grande, con la cara de arriba en dos tablas; abajo, una hilada
+    de cuatro tacos. Tiene una grieta en la cara +z.
+  - `wood_post_alt` (985): la hilada de abajo más baja, la viga partida en
+    la cara +x y tres tablas arriba.
+  - Lo que salió mal en la primera versión:
+    - Las juntas no se veían: las piezas se tocaban. Ahora hay un hueco
+      oscuro entre ellas.
+    - Era amarillo miel; la retail es parda gris.
+    - Era un 9 % más estrecho que la retail, que llena la casilla de borde a
+      borde.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
