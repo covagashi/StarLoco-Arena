@@ -1189,6 +1189,28 @@ Se modela un grupo cada vez y se enseña antes de seguir.
     - Los brazos del pino alto se salían de la foto: eran más largos que
       los retail.
 
+- **Pinchos volcánicos** (grupo «pincho volcánico»: 2290–2295 y 2297).
+  Hojas: `kit-arena8-pinchos-1.png` … `-4.png`.
+  - Loom nueva `horn` (`arena8/kit.tx.js`): roca volcánica dura y vítrea,
+    con vetas a lo largo y bandas de color suaves. Looms: naranja parda
+    (retail), basalto gris y obsidiana roja y negra. Las puntas son más
+    oscuras.
+  - La ayuda `horn` (tramos de lathe de cinco caras encadenados, que se
+    afilan y se doblan) hace las siete piezas: `volcanic_spike` (2291),
+    `volcanic_spike_small` (2292, la misma a la mitad),
+    `volcanic_spikes_low` (2290), `volcanic_claws` (2293),
+    `volcanic_palisade` (2294), `volcanic_horn` (2295) y
+    `volcanic_horn_big` (2297, unos 3 m).
+  - Al pie llevan brasas encendidas, en grupitos de pepitas. El halo de
+    luz va a S37.
+  - Lo que salió mal en la primera versión:
+    - La loom parecía madera de caramelo: ahora es más oscura y con
+      menos veta.
+    - Los pinchos inclinados iban demasiado tumbados.
+    - Las brasas eran puntitos, y en la loom b salían blancas.
+- **Arena 8 completa**: `map_sheet.py 39 8` da 37 piezas y 0 nuevas.
+  `arenas.json` del archivo la marca como hecha.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

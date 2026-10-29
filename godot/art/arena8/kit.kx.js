@@ -22,6 +22,9 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   // shade darker
   ["deadwood" + s, { tex: "out/deadwood" + s, uv: 0.8, rough: 0.85 }],
   ["deadwoodD" + s, { tex: "out/deadwood" + s, uv: 0.8, rough: 0.85, color: "#c8bca8" }],
+  // the volcanic spikes and horns (kit.tx.js horn), their tips darker
+  ["horn" + s, { tex: "out/horn" + s, uv: 0.9, rough: 0.5 }],
+  ["hornD" + s, { tex: "out/horn" + s, uv: 0.9, rough: 0.5, color: "#8a6a5a" }],
 ])))
 // moss on the spires' ledges: [a, b, c]
 const MOSS = { moss: ["#5e6e24", "#4a6432", "#585a24"], mossL: ["#7e9030", "#64843e", "#787630"],
@@ -37,10 +40,12 @@ const FALL = {
   fall2: ["#c44e0a", "#d88818", "#8a1c08"], fall3: ["#7a2408", "#9a4a0c", "#4e0e06"],
   fall4: ["#2e0c06", "#4a2208", "#220604"], crust: ["#3a2418", "#4a3a2a", "#2a1410"],
 }
-const GLOW = { molten: 0.9, fall0: 1.3, fall1: 1.1, fall2: 0.8, fall3: 0.5, fall4: 0.15 }
+// embers glowing at the spikes' feet
+FALL.ember = ["#ffb020", "#ffc840", "#ff5a14"]
+const GLOW = { ember: 2, molten: 0.9, fall0: 1.3, fall1: 1.1, fall2: 0.8, fall3: 0.5, fall4: 0.15 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(FALL).map(([k, v]) =>
   [k + s, GLOW[k] ? { color: v[i], emit: v[i], glow: GLOW[k], rough: 0.35 } : { color: v[i], rough: 0.9 }]))))
-const SKINNED = ["softPumice", "softPumiceL", "softMolten", "cliff", "cliffL", "cliffD", "deadwood", "deadwoodD", ...Object.keys(FALL), ...Object.keys(MOSS)]
+const SKINNED = ["softPumice", "softPumiceL", "softMolten", "cliff", "cliffL", "cliffD", "deadwood", "deadwoodD", "horn", "hornD", ...Object.keys(FALL), ...Object.keys(MOSS)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a rounded floor stone placed in screen terms: u along the screen's
@@ -300,3 +305,64 @@ model("dead_pine_short",
   tuft(...tip(2.5, 165, 0.7, 0.35), 170, 0.36, 23), tuft(0.12, 3.2, -0.08, 20, 0.3, 24),
   trunkMoss(2.2, 0.17, 0.3, 25))
 for (const n of ["dead_pine_tall", "dead_pine", "dead_pine_short"]) looms(n)
+
+// --- volcanic spikes and horns (2290-2295, 2297) -----------------------------
+// angular spikes of glassy volcanic rock, leaning or curling, embers glowing
+// round their feet (the halo of light round them goes to S37, VFX).
+// A horn: segs five-sided sections chained, each narrower and bent a further
+// `bend` degrees, the last one coming to a point; it stands at (u, v) in
+// screen terms and leans `lean` degrees towards the screen's right (negative:
+// left), turned `turn` degrees about its own axis
+const horn = (u, v, len, r, lean, bend, seed, { segs = 4, turn = 0, y = 0 } = {}) => {
+  const sl = len / segs
+  const sec = (i) => i >= segs ? [] : tf({ pos: [0, i ? sl : 0, 0], rot: [0, 0, i ? -bend : 0] },
+    lathe([r * (1 - i / segs) * 1.04, -0.01, r * (1 - (i + 1) / segs) + (i === segs - 1 ? 0 : 0.004), sl],
+      { mat: i >= segs - 1 ? "hornD" : "horn", sides: 5, jitter: 0.01, seed: seed + i }), sec(i + 1))
+  return tf({ pos: [(u + v) * R2, y, (v - u) * R2], rot: [0, 45, 0] }, tf({ rot: [0, turn, -lean] }, sec(0)))
+}
+// embers: glowing nuggets heaped round the foot, in screen terms; each spot
+// is a little cluster of three
+const embers = (spots, seed) => spots.flatMap(([u, v, r], i) => [0, 1, 2].map((k) => {
+  const du = (rnd(i, 13 + k, seed) - 0.5) * r * 3, dv = (rnd(i, 17 + k, seed) - 0.5) * r * 2, rr = r * (1.4 - k * 0.3)
+  return sphere(rr, { mat: "ember", detail: 0, pos: [(u + du + v + dv) * R2, rr * 0.4, (v + dv - u - du) * R2], scale: [1, 0.6, 1], jitter: 0.004, seed: seed + i * 3 + k })
+}))
+
+// volcanic spike (2291): one spike rising steeply to the right off a long
+// thick foot, a lesser one behind it
+const spikeParts = (seed) => [
+  horn(-0.2, 0.05, 1.25, 0.24, 40, 5, seed),
+  horn(0.0, -0.12, 0.8, 0.16, 30, 6, seed + 10, { turn: 30 }),
+  embers([[-0.4, 0.2, 0.05], [0.1, 0.25, 0.04], [0.3, 0.1, 0.035], [-0.15, 0.3, 0.03]], seed + 20),
+]
+model("volcanic_spike", spikeParts(1))
+// small volcanic spike (2292): the same, about half its size
+model("volcanic_spike_small", tf({ scale: 0.55 }, spikeParts(31)))
+// low volcanic spikes (2290): three spikes slanting to the right, side by side
+model("volcanic_spikes_low",
+  horn(-0.35, 0.0, 0.75, 0.16, 46, 4, 41), horn(-0.05, 0.1, 0.95, 0.18, 40, 5, 45),
+  horn(0.2, -0.08, 1.1, 0.18, 30, 6, 49, { turn: 20 }),
+  embers([[-0.5, 0.2, 0.04], [-0.1, 0.32, 0.035], [0.35, 0.2, 0.04], [0.05, 0.25, 0.03]], 53))
+// volcanic claws (2293): three curved claws, the outer one reaching far to
+// the right
+model("volcanic_claws",
+  horn(-0.3, 0.0, 1.05, 0.12, -14, 12, 61), horn(-0.08, -0.05, 1.15, 0.12, -6, 12, 65),
+  horn(0.0, 0.1, 1.6, 0.13, 30, 10, 69, { segs: 5 }), horn(-0.42, 0.12, 0.35, 0.08, -10, 0, 74),
+  embers([[-0.5, 0.25, 0.05], [-0.2, 0.3, 0.04], [0.2, 0.3, 0.035], [0.5, 0.15, 0.03]], 76))
+// volcanic palisade (2294): a cluster of straight spikes standing up
+model("volcanic_palisade",
+  [[-0.3, 0.0, 0.7, 0.07, -6], [-0.15, -0.1, 1.05, 0.08, -3], [0.0, 0.05, 0.6, 0.07, 4], [0.1, -0.12, 1.25, 0.09, 3],
+   [0.25, 0.02, 0.85, 0.08, 6], [-0.05, 0.2, 0.45, 0.06, -4], [0.35, -0.15, 0.6, 0.07, 8]].map(([u, v, l, r, lean], i) =>
+    horn(u, v, l, r, lean, 1, 81 + i * 3, { segs: 2 })),
+  embers([[-0.35, 0.25, 0.05], [0.0, 0.3, 0.04], [0.3, 0.2, 0.04], [-0.15, 0.32, 0.03]], 110))
+// volcanic horn (2295): one horn rising and curling over to the right, a
+// stub at its foot
+model("volcanic_horn",
+  horn(0.0, 0.0, 1.7, 0.22, -12, 16, 121, { segs: 5 }), horn(-0.22, 0.12, 0.4, 0.09, -25, 0, 127),
+  embers([[-0.3, 0.25, 0.05], [0.0, 0.3, 0.045], [0.25, 0.2, 0.04], [0.1, 0.35, 0.03]], 130))
+// big volcanic horn (2297): a split foot of thick spikes, out of which a long
+// horn climbs, curving to the right, about three metres
+model("volcanic_horn_big",
+  horn(-0.3, 0.05, 1.0, 0.24, -14, 4, 141), horn(0.25, 0.1, 0.9, 0.22, 16, 4, 145), horn(0.0, -0.15, 1.2, 0.26, 2, 0, 149),
+  horn(0.02, -0.05, 2.4, 0.2, 6, 7, 153, { segs: 5, y: 0.9 }),
+  embers([[-0.45, 0.25, 0.06], [-0.1, 0.35, 0.05], [0.3, 0.3, 0.05], [0.5, 0.1, 0.04], [0.1, 0.2, 0.035]], 160))
+for (const n of ["volcanic_spike", "volcanic_spike_small", "volcanic_spikes_low", "volcanic_claws", "volcanic_palisade", "volcanic_horn", "volcanic_horn_big"]) looms(n)

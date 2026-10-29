@@ -29,6 +29,11 @@
 			"madera blanqueada",
 			"gris ceniza",
 			"carbonizada"
+		],
+		"horn": [
+			"roca volcánica naranja parda",
+			"basalto gris",
+			"obsidiana roja y negra"
 		]
 	},
 	"shared": [],
@@ -204,6 +209,76 @@
 			],
 			"looms": "deadwood",
 			"note": "about 4 m, its top broken into three spikes"
+		},
+		{
+			"name": "volcanic_spike",
+			"label": "Pincho volcánico",
+			"kind": "deco",
+			"gfx": [
+				2291
+			],
+			"looms": "horn",
+			"note": "one spike rising steeply to the right, embers at its foot; the glow halo goes to S37"
+		},
+		{
+			"name": "volcanic_spike_small",
+			"label": "Pincho volcánico pequeño",
+			"kind": "deco",
+			"gfx": [
+				2292
+			],
+			"looms": "horn",
+			"note": "the volcanic spike at about half size"
+		},
+		{
+			"name": "volcanic_spikes_low",
+			"label": "Pinchos volcánicos inclinados",
+			"kind": "deco",
+			"gfx": [
+				2290
+			],
+			"looms": "horn",
+			"note": "three spikes slanting to the right"
+		},
+		{
+			"name": "volcanic_claws",
+			"label": "Garras volcánicas",
+			"kind": "deco",
+			"gfx": [
+				2293
+			],
+			"looms": "horn",
+			"note": "three curved claws, one reaching far to the right"
+		},
+		{
+			"name": "volcanic_palisade",
+			"label": "Pinchos volcánicos rectos",
+			"kind": "deco",
+			"gfx": [
+				2294
+			],
+			"looms": "horn",
+			"note": "a cluster of straight spikes standing up"
+		},
+		{
+			"name": "volcanic_horn",
+			"label": "Cuerno volcánico",
+			"kind": "deco",
+			"gfx": [
+				2295
+			],
+			"looms": "horn",
+			"note": "one horn rising and curling over to the right"
+		},
+		{
+			"name": "volcanic_horn_big",
+			"label": "Cuerno volcánico grande",
+			"kind": "deco",
+			"gfx": [
+				2297
+			],
+			"looms": "horn",
+			"note": "a split foot and a long horn curving to the right, about 3 m"
 		}
 	]
 }

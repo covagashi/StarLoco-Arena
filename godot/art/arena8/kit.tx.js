@@ -102,3 +102,32 @@ skins({
     })
   }
 }
+
+// --- horn: the volcanic spikes and horns (2290-2295, 2297) ------------------
+// hard, glassy volcanic rock: long streaks running the length of the spike
+// (v up the faces), broad soft bands of colour, a few fine cracks, smooth;
+// the edges catch a paler sheen
+//   a burnt orange-brown (retail)   b basalt grey   c obsidian red-black
+skins({
+  a: { h0: "#2a1208", h1: "#5a2c12", h2: "#7e4418", h3: "#a86428" },
+  b: { h0: "#1c1c1e", h1: "#3e3e42", h2: "#5a5a60", h3: "#82828a" },
+  c: { h0: "#0a0606", h1: "#2a1210", h2: "#46201a", h3: "#6e3428" },
+})
+{
+  const streak = noise({ scale: [16, 2], octaves: 3, seed: 861 }).as("streak")
+  const band = noise({ scale: [2, 3], octaves: 2, seed: 862 }).warp(noise({ scale: 2, seed: 863 }), 0.1).as("band")
+  const crack = noise({ scale: [8, 2], octaves: 2, seed: 864 }).levels(0.2, 0.25, 1, 0).clamp(0, 1)
+    .mul(noise({ scale: 3, seed: 865 }).threshold(0.6, 0.1)).as("crack")
+  const fine = noise({ scale: 60, octaves: 2, seed: 866 })
+  const h = streak.mul(0.15).add(band.mul(0.35)).add(fine.mul(0.03)).sub(crack.mul(0.3)).as("hornH")
+  const sheen = h.convex(0.01, 10)
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("horn" + SUF[k], { size: 512, depth: 0.015, ao: 0.5 }, {
+      height: h,
+      color: ramp(band.mix(streak, 0.15).levels(0.2, 0.8, 0, 1), [col("h1"), col("h2"), col("h2"), col("h3")])
+        .mix(col("h0"), crack.mul(0.8)).mix(col("h3"), sheen.mul(0.3)),
+      rough: sheen.levels(0, 1, 0.55, 0.35),
+    })
+  }
+}
