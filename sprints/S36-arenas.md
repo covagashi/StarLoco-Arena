@@ -1165,6 +1165,30 @@ Se modela un grupo cada vez y se enseña antes de seguir.
     - Una mata de musgo quedó escondida detrás, por ponerla en
       coordenadas de mundo.
 
+- **Árboles secos** (grupo «árbol seco»: 1729, 1730 y 1731; son pinos
+  muertos). Hojas: `kit-arena8-arboles-1.png` … `-3.png`.
+  - No son el `bare_tree` de la arena 2: la 2559 es un árbol oscuro y
+    retorcido con hojas.
+  - Loom nueva `deadwood` (`arena8/kit.tx.js`): madera sin corteza y
+    blanqueada, con fibras verticales, alguna grieta oscura y manchas.
+    Looms: blanqueada (retail), gris ceniza y carbonizada (el volcán las
+    tiñe casi de negro).
+  - `dead_pine_tall` (1731): 9,3 m, muy fino, con dos brazos largos y la
+    copa en horquilla. `dead_pine` (1730): 6 m, con una corona de ramas
+    peladas, cuatro penachos y musgo al pie. `dead_pine_short` (1729):
+    4 m, con la copa rota en tres púas.
+  - Tronco en tres tramos encadenados con un poco de giro, raíces abiertas
+    al pie, ramas con una horquilla y penachos de agujas secas en abanico.
+  - Lo que salió mal en la primera versión:
+    - El tronco acababa en punta de aguja.
+    - Las raíces eran estrellas larguísimas.
+    - El musgo eran rectángulos verdes: ahora son bultitos pegados a la
+      madera.
+    - Los penachos eran finos y escasos.
+    - Quedó un penacho flotando sin su rama.
+    - Los brazos del pino alto se salían de la foto: eran más largos que
+      los retail.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

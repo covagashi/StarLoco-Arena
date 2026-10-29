@@ -18,9 +18,15 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["cliffL" + s, { tex: "../arena6/out/cliff" + s, uv: 2.2, rough: 0.9, color: "#fff4dc" }],
   // the recessed core between the plates, in shade
   ["cliffD" + s, { tex: "../arena6/out/cliff" + s, uv: 2.2, rough: 0.95, color: "#a89a82" }],
+  // the dead pines' bleached trunks (kit.tx.js deadwood), thin branches a
+  // shade darker
+  ["deadwood" + s, { tex: "out/deadwood" + s, uv: 0.8, rough: 0.85 }],
+  ["deadwoodD" + s, { tex: "out/deadwood" + s, uv: 0.8, rough: 0.85, color: "#c8bca8" }],
 ])))
 // moss on the spires' ledges: [a, b, c]
-const MOSS = { moss: ["#5e6e24", "#4a6432", "#585a24"], mossL: ["#7e9030", "#64843e", "#787630"] }
+const MOSS = { moss: ["#5e6e24", "#4a6432", "#585a24"], mossL: ["#7e9030", "#64843e", "#787630"],
+  // the dead pines' last tufts of needles: dry gold (retail), rust, ash
+  needle: ["#b08a24", "#8a4a1a", "#6a645a"], needleL: ["#d8b040", "#b0642a", "#8e887c"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MOSS).map(([k, v]) => [k + s, v[i]]))))
 // the lava fall cools as it drops: palette glows, [a, b, c] per key
 // the lava sides and drips (molten), a deeper orange than the top; the lava
@@ -34,7 +40,7 @@ const FALL = {
 const GLOW = { molten: 0.9, fall0: 1.3, fall1: 1.1, fall2: 0.8, fall3: 0.5, fall4: 0.15 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(FALL).map(([k, v]) =>
   [k + s, GLOW[k] ? { color: v[i], emit: v[i], glow: GLOW[k], rough: 0.35 } : { color: v[i], rough: 0.9 }]))))
-const SKINNED = ["softPumice", "softPumiceL", "softMolten", "cliff", "cliffL", "cliffD", ...Object.keys(FALL), ...Object.keys(MOSS)]
+const SKINNED = ["softPumice", "softPumiceL", "softMolten", "cliff", "cliffL", "cliffD", "deadwood", "deadwoodD", ...Object.keys(FALL), ...Object.keys(MOSS)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // a rounded floor stone placed in screen terms: u along the screen's
@@ -200,3 +206,97 @@ model("rock_low",
   boulder(-0.26, 0.15, 0.28, 0.3, 1.4, 0.6, 0.8, "cliffD", 3),
   moss(0.05, 0.42, 0.42, 0.12, 4))
 for (const n of ["rock_tall", "rock_leaning", "rock_peak", "rock_blocky", "rock_low"]) looms(n)
+
+// --- dead pines (1729, 1730, 1731) ------------------------------------------
+// bleached barkless trunks, broken snags, a few long bare branches, small
+// fans of dry needles left at some tips, roots splayed at the foot, moss in
+// patches. The volcano map tints them almost black (loom c is charred).
+// screen directions: a = 0 points right across the screen, 90 towards the
+// camera, 180 left
+const sdir = (a) => {
+  const c = Math.cos(a * Math.PI / 180), s = Math.sin(a * Math.PI / 180)
+  return [(c + s) * R2, (s - c) * R2]
+}
+// the trunk: six-sided, the foot swelling, barely thinner up high, its top
+// broken off flat; three sections chained, each kinked a few degrees (wave),
+// so it wavers like the retail ones. The branches are placed on a straight
+// axis; the kinks are small enough not to part them from the wood.
+const trunk = (h, r, wave, seed) => {
+  const hs = [h * 0.36, h * 0.34, h * 0.3], rs = [r, r * 0.86, r * 0.72, r * 0.48]
+  const sec = (i) => i > 2 ? [] : tf({ pos: [0, i ? hs[i - 1] : 0, 0], rot: i ? [wave * (i % 2 ? 1 : -1), 0, wave * 0.7 * (i % 2 ? -1 : 1)] : [0, 0, 0] },
+    lathe(i ? [rs[i] * 1.04, -0.02, rs[i + 1], hs[i]] : [r * 1.6, 0, r * 1.05, 0.35, rs[1], hs[0]],
+      { mat: "deadwood", sides: 6, jitter: 0.01, seed: seed + i }), sec(i + 1))
+  return sec(0)
+}
+// splayed roots: n low wedges round the foot
+const roots = (r, n, seed) => Array.from({ length: n }, (_, i) => {
+  const a = i * 360 / n + rnd(i, 7, seed) * 30
+  return tf({ rot: [0, a, 0] }, cone(r * 0.8, r * 2.2 + rnd(i, 8, seed) * r, { mat: "deadwood", sides: 4, pos: [r * 1.1, r * 0.6, 0], rot: [0, 0, -62], scale: [1, 1, 0.6], jitter: 0.008, seed: seed + i }))
+})
+// a branch from the trunk at height y towards screen direction a: len long,
+// rising by up, kinked once; r its radius
+const branch = (y, a, len, up, r, kink = 0.15) => {
+  const [dx, dz] = sdir(a), [kx, kz] = sdir(a + 90)
+  const mx = dx * len * 0.5 + kx * kink * len, mz = dz * len * 0.5 + kz * kink * len, my = y + up * 0.4
+  const out = [tube([0, y, 0, mx, my, mz, dx * len, y + up, dz * len], r, { mat: "deadwoodD", sides: 4 })]
+  // a long branch forks: a twig from its middle, up and aside
+  if (len > 0.55) {
+    const [fx, fz] = sdir(a + (kink >= 0 ? 35 : -35))
+    out.push(tube([mx, my, mz, mx + fx * len * 0.3, my + len * 0.22, mz + fz * len * 0.3], r * 0.6, { mat: "deadwoodD", sides: 3 }))
+  }
+  return out
+}
+// a fan of dry needles at (x, y, z), opening towards screen direction a:
+// n blades in a half circle, size long
+const tuft = (x, y, z, a, size, seed) => tf({ pos: [x, y, z], rot: [0, a - 45, 0] },
+  Array.from({ length: 10 }, (_, i) => cone(0.045, size * (0.75 + rnd(i, 9, seed) * 0.35),
+    { mat: i % 2 ? "needle" : "needleL", sides: 3, rot: [rnd(i, 10, seed) * 20 - 10, 0, -80 + i * 17], scale: [1, 1, 0.3] })))
+// where a branch of len towards a ends (the tuft goes there)
+const tip = (y, a, len, up) => { const [dx, dz] = sdir(a); return [dx * len, y + up, dz * len] }
+// a moss patch on the trunk at height y, on the seen side: a few small
+// lumps hugging the wood, h tall
+const trunkMoss = (y, r, h, seed) => Array.from({ length: 4 }, (_, i) => {
+  const a = (rnd(i, 11, seed) - 0.5) * 80 * Math.PI / 180, yy = y - h / 2 + (i + 0.5) * h / 4
+  return sphere(r * 0.6, { mat: (seed + i) % 2 ? "moss" : "mossL", detail: 1,
+    pos: [Math.cos(Math.PI / 4 + a) * r * 0.85, yy, Math.sin(Math.PI / 4 + a) * r * 0.85], scale: [0.6, 1.4 + rnd(i, 12, seed), 0.6], jitter: 0.02, seed: seed + i })
+})
+
+// tall dead pine (1731): about 9 m and very slim; two long bare arms at
+// mid-height, short broken snags all the way up, two tufts high on the left,
+// a broken fork at the top
+model("dead_pine_tall",
+  trunk(8.6, 0.11, 2, 1), roots(0.11, 5, 2),
+  branch(4.3, 20, 1.45, 0.9, 0.035, 0.08), branch(4.0, 160, 1.15, 0.6, 0.03, -0.1),
+  branch(6.6, 170, 0.5, 0.3, 0.03), branch(2.6, 175, 0.85, 0.15, 0.03), branch(5.1, 10, 0.6, 0.15, 0.03),
+  branch(3.1, 160, 0.45, 0.25, 0.04), branch(7.4, 30, 0.3, 0.15, 0.03), branch(8.2, 15, 0.45, 0.5, 0.025),
+  branch(6.15, 165, 0.3, 0.1, 0.025),
+  // the top narrows into a thin fork
+  tf({ pos: [0, 8.5, 0] }, cone(0.05, 0.8, { mat: "deadwood", sides: 5, rot: [3, 0, -6] }), cone(0.03, 0.45, { mat: "deadwoodD", sides: 4, rot: [-10, 0, 25] })),
+  tuft(...tip(6.6, 170, 0.5, 0.3), 160, 0.42, 3), tuft(...tip(6.25, 165, 0.3, 0.1), 175, 0.34, 4),
+  trunkMoss(1.0, 0.13, 0.7, 5), trunkMoss(3.2, 0.11, 0.6, 6))
+// dead pine (1730): about 6 m; a crown of three bare branches arcing out
+// near the top, a curled snag, five tufts of needles, moss on a bulge and a
+// mossy pad round the foot
+model("dead_pine",
+  trunk(6.1, 0.12, 3, 11), roots(0.12, 5, 12),
+  branch(5.0, 175, 0.9, 0.55, 0.03, 0.1), branch(5.15, 10, 0.95, 0.45, 0.03, -0.1), branch(5.6, 30, 0.6, 0.3, 0.025),
+  branch(3.6, 160, 0.8, 0.3, 0.035), branch(3.9, 15, 1.0, 0.25, 0.035, 0.25), branch(2.3, 10, 0.55, 0.2, 0.035),
+  branch(1.9, 170, 0.4, 0.05, 0.03), branch(4.6, 20, 0.45, 0.2, 0.03),
+  tuft(...tip(5.6, 30, 0.6, 0.3), 40, 0.36, 13), tuft(...tip(3.6, 160, 0.8, 0.3), 160, 0.48, 14),
+  tuft(...tip(4.6, 20, 0.45, 0.2), 30, 0.36, 15), tuft(...tip(2.3, 10, 0.55, 0.2), 20, 0.36, 16),
+  trunkMoss(1.4, 0.15, 0.6, 17), trunkMoss(2.5, 0.13, 0.35, 18),
+  sphere(0.5, { mat: "moss", detail: 1, pos: [0.1, 0, 0.1], scale: [1, 0.12, 0.8], jitter: 0.02, seed: 19 }),
+  sphere(0.3, { mat: "mossL", detail: 1, pos: [0.4, 0, 0.0], scale: [1, 0.14, 0.8], jitter: 0.02, seed: 20 }))
+// short dead pine (1729): about 4 m, thick for its height, its top broken
+// into three spikes, two twisted branches, two tufts, roots splayed wide
+model("dead_pine_short",
+  trunk(3.0, 0.15, 4, 21), roots(0.15, 6, 22),
+  tf({ pos: [0, 2.85, 0] },
+    cone(0.07, 1.2, { mat: "deadwood", sides: 5, rot: [4, 0, 8], jitter: 0.008 }),
+    cone(0.06, 1.0, { mat: "deadwood", sides: 5, pos: [0.07, 0, -0.06], rot: [-6, 0, -10], jitter: 0.008 }),
+    cone(0.05, 0.7, { mat: "deadwood", sides: 5, pos: [-0.06, 0, 0.05], rot: [8, 0, 14], jitter: 0.008 })),
+  branch(2.5, 165, 0.7, 0.35, 0.035, 0.35), branch(2.1, 15, 0.6, 0.35, 0.035, -0.3), branch(1.7, 175, 0.5, 0.25, 0.03),
+  branch(1.5, 20, 0.35, 0.3, 0.03),
+  tuft(...tip(2.5, 165, 0.7, 0.35), 170, 0.36, 23), tuft(0.12, 3.2, -0.08, 20, 0.3, 24),
+  trunkMoss(2.2, 0.17, 0.3, 25))
+for (const n of ["dead_pine_tall", "dead_pine", "dead_pine_short"]) looms(n)

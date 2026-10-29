@@ -73,3 +73,32 @@ skins({
     })
   }
 }
+
+// --- deadwood: the bleached trunks of the dead pines (1729-1731) -------------
+// barkless, sun-bleached wood: long vertical fibres (box UVs run v up the
+// trunk, so the grain is fine in u and long in v), a few dark splits along
+// the grain, soft weathered blotches, fine grit
+//   a pale bleached grey-beige (retail)   b ash grey   c charred
+skins({
+  a: { w0: "#5a5244", w1: "#a49a80", w2: "#c4bca2", w3: "#e2dcc4" },
+  b: { w0: "#3e3e3c", w1: "#7e7e78", w2: "#a2a29a", w3: "#c4c4bc" },
+  c: { w0: "#0e0c0a", w1: "#2a2420", w2: "#3e3630", w3: "#5a4e44" },
+})
+{
+  const fibre = noise({ scale: [24, 2], octaves: 3, seed: 841 }).as("fibre")
+  const split = noise({ scale: [10, 1], octaves: 2, seed: 842 }).warp(noise({ scale: 3, seed: 843 }), 0.03)
+    .levels(0.18, 0.24, 1, 0).clamp(0, 1).mul(noise({ scale: 2, seed: 844 }).threshold(0.5, 0.2)).as("split")
+  const blotch = noise({ scale: 3, octaves: 3, seed: 845 }).as("blotch")
+  const fine = noise({ scale: 64, octaves: 2, seed: 846 })
+  const h = fibre.mul(0.4).add(blotch.mul(0.2)).add(fine.mul(0.05)).sub(split.mul(0.4)).as("deadwoodH")
+  const worn = h.convex(0.01, 10)
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("deadwood" + SUF[k], { size: 512, depth: 0.02, ao: 0.6 }, {
+      height: h,
+      color: ramp(fibre.mix(blotch, 0.4).levels(0.2, 0.8, 0, 1), [col("w1"), col("w2"), col("w2"), col("w3")])
+        .mix(col("w0"), split.mul(0.85)).mix(col("w3"), worn.mul(0.3)),
+      rough: fine.levels(0, 1, 0.8, 0.92),
+    })
+  }
+}

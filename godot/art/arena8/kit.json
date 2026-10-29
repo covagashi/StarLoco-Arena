@@ -24,6 +24,11 @@
 			"arenisca ocre",
 			"pizarra gris",
 			"roca parda oscura"
+		],
+		"deadwood": [
+			"madera blanqueada",
+			"gris ceniza",
+			"carbonizada"
 		]
 	},
 	"shared": [],
@@ -169,6 +174,36 @@
 			],
 			"looms": "cliff",
 			"note": "a low heap of rounded flat slabs"
+		},
+		{
+			"name": "dead_pine_tall",
+			"label": "Pino muerto alto",
+			"kind": "deco",
+			"gfx": [
+				1731
+			],
+			"looms": "deadwood",
+			"note": "about 9 m, slim, two long bare arms"
+		},
+		{
+			"name": "dead_pine",
+			"label": "Pino muerto",
+			"kind": "deco",
+			"gfx": [
+				1730
+			],
+			"looms": "deadwood",
+			"note": "about 6 m, a crown of bare branches, tufts of dry needles, a mossy foot"
+		},
+		{
+			"name": "dead_pine_short",
+			"label": "Pino muerto bajo",
+			"kind": "deco",
+			"gfx": [
+				1729
+			],
+			"looms": "deadwood",
+			"note": "about 4 m, its top broken into three spikes"
 		}
 	]
 }
