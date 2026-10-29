@@ -24,6 +24,11 @@
 			"sangre roja",
 			"icor negro",
 			"limo verde"
+		],
+		"cage": [
+			"madera oliva",
+			"madera gris",
+			"madera oscura"
 		]
 	},
 	"shared": [],
@@ -116,6 +121,48 @@
 			"looms": "blood",
 			"top": 0.01,
 			"note": "a river cell pouring over its +x side, about 5.5 m down the island's edge; turn it to face the drop"
+		},
+		{
+			"name": "cage",
+			"label": "Jaula",
+			"kind": "deco",
+			"gfx": [
+				2738,
+				2741
+			],
+			"looms": "cage",
+			"note": "a low cage of thick planks and round bars, a little wider than the cell; 2741 is the same cage turned 90°"
+		},
+		{
+			"name": "cage_chicken",
+			"label": "Jaula con pollo",
+			"kind": "deco",
+			"gfx": [
+				2739,
+				2745
+			],
+			"looms": "cage",
+			"note": "the cage with a chicken inside, facing +x"
+		},
+		{
+			"name": "cage_open",
+			"label": "Jaula abierta",
+			"kind": "deco",
+			"gfx": [
+				2751
+			],
+			"looms": "cage",
+			"note": "a taller hutch, its lid open on the -x side, straw and two chickens inside"
+		},
+		{
+			"name": "cage_broken",
+			"label": "Jaula rota",
+			"kind": "deco",
+			"gfx": [
+				1437
+			],
+			"looms": "cage",
+			"note": "the floor planks whole, the lid slid off leaning to +x, bars knocked over"
 		}
 	]
 }

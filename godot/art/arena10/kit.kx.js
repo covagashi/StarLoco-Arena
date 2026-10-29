@@ -17,10 +17,13 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
 const WOOD = {
   // the wooden posts under the floor (984, 985): grey-brown old timber
   post: ["#d8c4b0", "#b8b8b8", "#c89c84"], postD: ["#8c7c6c", "#707070", "#7a5848"],
+  // the chicken cages (2738, 2739, 2741, 2745, 2751, 1437): honey planks
+  // gone olive (retail), grey, dark; their round bars are palette (BAR)
+  cage: ["#f0d898", "#c8c8c8", "#d0b098"], cageD: ["#a89070", "#8a8a8a", "#8c705c"],
 }
 // which board loom each loom of a family uses: the posts' grey-brown comes
 // from the silver-grey boards warmed
-const WOOD_TEX = { post: ["_b", "_b", "_c"], postD: ["_b", "_b", "_c"] }
+const WOOD_TEX = { post: ["_b", "_b", "_c"], postD: ["_b", "_b", "_c"], cage: ["_b", "_b", "_c"], cageD: ["_b", "_b", "_c"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(WOOD).flatMap(([k, v]) => [
   [k + s, { tex: "../arena6/out/board" + (WOOD_TEX[k] || LOOMS)[i], uv: 0.8, rough: 0.85, color: v[i] }],
   [k + "V" + s, { tex: "../arena6/out/boardV" + (WOOD_TEX[k] || LOOMS)[i], uv: 0.8, rough: 0.85, color: v[i] }]]))))
@@ -37,10 +40,20 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
 // the river (the retail paints it lit): [a, b, c]
 const LIT = { bloodLit: ["#96180e", "#4e4856", "#4e7a26"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(LIT).map(([k, v]) => [k + s, { color: v[i], rough: 0.15 }]))))
+// the cages' round bars and nail heads, the straw, and the chickens (yellow
+// chick, white hen, brown hen): [a, b, c]
+const BAR = {
+  bar: ["#4e4c2c", "#3e4044", "#3a2a1e"], nail: ["#6c6a3c", "#6a6c70", "#5a4632"],
+  straw: ["#e8c040", "#d8c890", "#c89a40"], hinge: ["#c86a1e", "#7a7a80", "#a0521e"],
+  chick: ["#f4d238", "#f2eee2", "#a8622e"], chickD: ["#d8a020", "#cfc8b8", "#7a4220"],
+  beak: ["#f08a1a", "#f0a020", "#e8b030"], comb: ["#d8281a", "#d8281a", "#c02018"], eye: ["#141010", "#141010", "#141010"],
+}
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(BAR).map(([k, v]) =>
+  [k + s, { color: v[i], rough: k === "nail" || k === "hinge" ? 0.5 : 0.85, metal: k === "nail" || k === "hinge" ? 0.4 : 0 }]))))
 // the dashes of the floor's joint line: [a, b, c]
 const DASH = { dash: ["#5a5440", "#3e4042", "#5a2e20"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DASH).map(([k, v]) => [k + s, { color: v[i], rough: 0.95 }]))))
-const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", ...Object.keys(DASH), ...Object.keys(LIT),
+const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR),
   ...Object.keys(WOOD).flatMap((k) => [k, k + "V"])]
 const looms = (name) => threeLooms(name, SKINNED)
 
@@ -150,3 +163,89 @@ model("blood_fall", { pivot: "origin" },
   [-0.3, 0, 0.3].flatMap((z, i) => ["softBloodFlow", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD"].map((m, j) =>
     cyl(0.12, FALL_H / 4 + 0.01, { mat: m, sides: 8, pos: [0.535, -(j + 1) * FALL_H / 4, z], scale: [0.35, 1, 1.1], jitter: 0.004, seed: i * 4 + j }))))
 for (const n of ["blood_river", "blood_gutter", "blood_gutter_corner", "blood_stream", "blood_fall"]) looms(n)
+
+// a repeatable pseudo-random number in 0..1 for (i, k, seed)
+const rnd = (i, k, seed) => ((Math.sin((i + 1) * 12.9898 * k + seed * 78.233) * 43758.5453) % 1 + 1) % 1
+// --- chicken cages (2738, 2739, 2741, 2745, 2751, 1437) -----------------------
+// a low cage a little wider than the cell: three thick planks along z for a
+// floor, three for a lid, eight dark round bars between them (corners and
+// middles), a nail head over each bar. 2741 is the same cage turned 90°. Two
+// of them hold a chicken.
+const CG = { len: 1.06, pw: 0.33, pt: 0.15, bar: 0.39, h: 0.55 }
+// a thick plank along x centred at (y, z), rounded edges seen from above
+const cagePlank = (y, z, len, mat, seed) =>
+  tf({ pos: [0, y, z] }, extrude(roundSquare(1, 0.12).map((v, i) => v * (i % 2 ? (CG.pw - 0.02) / 2 : len / 2)), CG.pt,
+    { mat, rot: [90, 0, 0], pos: [0, CG.pt / 2, 0], jitter: 0.005, seed }))
+const cageBars = (y0, h, skip = []) => [-1, 0, 1].flatMap((i) => [-1, 0, 1].map((k) => [i, k]))
+  .filter(([i, k]) => (i || k) && !skip.some(([a, b]) => a === i && b === k))
+  .map(([i, k]) => cyl(0.055, h, { mat: "bar", sides: 7, pos: [i * CG.bar, y0, k * CG.bar], jitter: 0.003, seed: i * 3 + k }))
+const nails = (y, pts) => pts.map(([x, z]) => sphere(0.055, { mat: "nail", detail: 1, pos: [x, y, z], scale: [1, 0.55, 1] }))
+// two nail heads near each end of every lid plank
+const lidNails = (y) => nails(y, [-1, 1].flatMap((sx) => [-1, 0, 1].flatMap((k) => [-1, 1].map((sz) => [sx * 0.43, k * CG.pw + sz * 0.08]))))
+function cageBody(seed) {
+  const top = CG.pt + CG.h
+  return [
+    [-1, 0, 1].map((k) => cagePlank(0, k * CG.pw, CG.len - (k === 0 ? 0.03 : 0), k ? "cage" : "cageD", seed + k)),
+    cageBars(CG.pt - 0.01, CG.h + 0.02),
+    [-1, 0, 1].map((k) => cagePlank(top, k * CG.pw, CG.len + (k === 1 ? 0.02 : 0), "cage", seed + 5 + k)),
+    lidNails(top + CG.pt),
+  ].map((it) => tf({ rot: [0, 90, 0] }, it))
+}
+// a round chicken, about 0.35 m: plump body, head, beak, comb, a tail tuft;
+// faces +x
+const chicken = (x, y, z, a, s = 1) => tf({ pos: [x, y, z], rot: [0, a, 0], scale: s },
+  sphere(0.17, { mat: "chick", detail: 2, pos: [0, 0.16, 0], scale: [1.1, 0.95, 1] }),
+  sphere(0.11, { mat: "chick", detail: 2, pos: [0.13, 0.3, 0] }),
+  cone(0.035, 0.08, { mat: "beak", sides: 5, pos: [0.22, 0.29, 0], rot: [0, 0, -90] }),
+  box(0.06, 0.06, 0.02, { mat: "comb", pos: [0.13, 0.4, 0], jitter: 0.008 }),
+  [-1, 1].map((sz) => sphere(0.018, { mat: "eye", detail: 1, pos: [0.2, 0.33, sz * 0.06] })),
+  [-1, 1].map((sz) => sphere(0.08, { mat: "chickD", detail: 1, pos: [-0.01, 0.17, sz * 0.15], scale: [1.3, 0.8, 0.4] })),
+  cone(0.07, 0.12, { mat: "chickD", sides: 5, pos: [-0.17, 0.2, 0], rot: [0, 0, 60] }))
+// cage (2738, 2741)
+model("cage", cageBody(301))
+// cage with a chicken (2739, 2745)
+model("cage_chicken", cageBody(311), chicken(0.02, CG.pt, 0.0, 20, 1.3))
+// open hutch (2751): a narrower, taller cage: the floor planks, bars ringed
+// by two rails, and a band of planks round the top with a square mouth; its
+// lid stands open on two orange hinges at the -x side; straw on the floor and
+// two chickens inside
+const HB = 0.4, HUT_TOP = 0.78
+const hutBand = () => [[0, 1], [90, 1], [180, 1], [270, 1]].map(([r]) => tf({ rot: [0, r, 0] },
+  box(2 * HB + 0.08, 0.26, 0.1, { mat: "cage", pos: [0, HUT_TOP - 0.26, HB], jitter: 0.004, seed: r })))
+const straw = (n, r, y, seed) => Array.from({ length: n }, (_, i) => {
+  const a = rnd(i, 3, seed) * 360, d = rnd(i, 5, seed) * r
+  return box(0.32 + rnd(i, 7, seed) * 0.2, 0.012, 0.02, { mat: "straw",
+    pos: [Math.cos(a * Math.PI / 180) * d, y + rnd(i, 9, seed) * 0.03, Math.sin(a * Math.PI / 180) * d], rot: [0, rnd(i, 11, seed) * 180, (rnd(i, 13, seed) - 0.5) * 20] })
+})
+model("cage_open",
+  [-1, 0, 1].map((k) => cagePlank(0, k * 0.3, 0.96, k ? "cage" : "cageD", 321 + k)),
+  [-1, 1].flatMap((i) => [-1, 1].map((k) => cyl(0.05, HUT_TOP - CG.pt, { mat: "bar", sides: 7, pos: [i * HB * 0.92, CG.pt - 0.01, k * HB * 0.92] }))),
+  [-1, 1].flatMap((i) => [-0.13, 0.13].map((k) => cyl(0.042, 0.42, { mat: "bar", sides: 7, pos: [i * HB * 0.92, CG.pt - 0.01, k] }))),
+  [-1, 1].flatMap((i) => [-0.13, 0.13].map((k) => cyl(0.042, 0.42, { mat: "bar", sides: 7, pos: [k, CG.pt - 0.01, i * HB * 0.92] }))),
+  // the rails round the bars, their ends knobbed
+  [0, 90, 180, 270].map((r) => tf({ rot: [0, r, 0] },
+    cyl(0.03, 2 * HB + 0.06, { mat: "cageD", sides: 6, rot: [0, 0, 90], pos: [HB + 0.03, 0.36, HB * 0.95] }),
+    sphere(0.045, { mat: "cageD", detail: 1, pos: [HB + 0.04, 0.36, HB * 0.95] }))),
+  hutBand(),
+  // the lid, open: hinged on the -x side of the mouth, leaning back past
+  // upright; its two orange hinge straps
+  tf({ pos: [-HB - 0.03, HUT_TOP, 0], rot: [0, 0, 96] },
+    [-1, 1].map((k) => box(0.5, 0.1, 0.36, { mat: "cage", pos: [0.26, 0, k * 0.185], jitter: 0.005, seed: 331 + k })),
+    [-0.2, 0.2].map((z) => box(0.18, 0.13, 0.07, { mat: "hinge", pos: [0.08, 0.02, z] }))),
+  straw(26, 0.34, CG.pt, 341),
+  straw(6, 0.45, CG.pt + 0.02, 351),
+  chicken(0.05, CG.pt, -0.12, 30, 1.0), chicken(-0.08, CG.pt, 0.15, -20, 0.9))
+// broken cage (1437): the floor planks whole, the lid slid off and leaning
+// down onto the +x side, two bars knocked over and one still standing
+model("cage_broken",
+  tf({ rot: [0, 90, 0] }, [-1, 0, 1].map((k) => cagePlank(0, k * CG.pw, CG.len, k ? "cage" : "cageD", 361 + k))),
+  // the lid planks leaning from the back over the standing bar to the front
+  tf({ pos: [0.1, 0.12, 0], rot: [0, 0, -33] },
+    [-1, 0, 1].map((k) => tf({ rot: [0, (k * 4), 0] }, box(1.0, CG.pt * 0.8, CG.pw - 0.02, { mat: "cage", pos: [0, 0, k * CG.pw], jitter: 0.005, seed: 365 + k }))),
+    nails(CG.pt * 0.8, [[-0.4, -0.4], [-0.4, 0.27], [0.4, -0.3], [0.4, 0.38], [-0.4, 0.4], [0.4, 0.05]])),
+  cyl(0.055, 0.62, { mat: "bar", sides: 7, pos: [-0.38, CG.pt - 0.02, -0.25], rot: [0, 0, 8] }),
+  cyl(0.055, 0.62, { mat: "bar", sides: 7, pos: [-0.36, CG.pt - 0.02, 0.32], rot: [10, 0, 2] }),
+  // the knocked-over bars: one fallen across the floor, one leaning out
+  cyl(0.055, 0.6, { mat: "bar", sides: 7, pos: [-0.45, CG.pt + 0.05, -0.38], rot: [0, 0, 62] }),
+  cyl(0.055, 0.55, { mat: "bar", sides: 7, pos: [0.1, CG.pt + 0.02, 0.42], rot: [-75, 20, 0] }))
+for (const n of ["cage", "cage_chicken", "cage_open", "cage_broken"]) looms(n)

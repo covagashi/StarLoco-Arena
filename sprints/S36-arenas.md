@@ -1447,6 +1447,28 @@ y sus hachas ya están en el kit de la arena 9.
       la cascada se separaban 1,4 m. Ahora se hacen en z = 0 y se mueven
       después.
 
+- **Jaulas** (grupo «jaula»: 2738, 2739, 2741, 2745, 2751 y 1437). Hojas:
+  `kit-arena10-jaulas-1.png` y `-2.png`.
+  - Tablas de la arena 6 teñidas: madera oliva (retail), gris y oscura.
+    Las barras, los clavos, la paja y los pollos van en colores de paleta.
+  - `cage` (2738, 2741): una jaula baja, algo más ancha que la casilla.
+    Tres tablones gruesos de suelo y tres de tapa, ocho barras redondas y
+    oscuras, y dos clavos gordos en cada punta de tablón. La 2741 es la
+    misma jaula girada 90°.
+  - `cage_chicken` (2739, 2745): la misma, con un pollo redondo dentro
+    (amarillo; en las looms b y c, gallina blanca y parda).
+  - `cage_open` (2751): una jaula más alta y estrecha. Lleva barras con dos
+    travesaños, una banda de tablas arriba con la boca abierta, la tapa
+    levantada sobre dos bisagras naranjas, paja y dos pollos.
+  - `cage_broken` (1437): el suelo entero, la tapa resbalada y apoyada hacia
+    +x, una barra en pie y dos caídas.
+  - Lo que salió mal en la primera versión:
+    - Faltaban las looms b y c, y la foto falló.
+    - Los tablones iban en el otro eje, eran finos y las barras largas.
+    - La madera salía mostaza; ahora sale de la tabla gris templada.
+    - La tapa de la jaula abierta era enorme; ahora son dos tablas de medio
+      metro.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
