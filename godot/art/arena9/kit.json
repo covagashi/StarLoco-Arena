@@ -36,6 +36,11 @@
 			"madera clara, hierro y púas doradas",
 			"gris, hierro y acero",
 			"madera rojiza y púas de cobre"
+		],
+		"shield": [
+			"bronce con verdín",
+			"hierro",
+			"cobre"
 		]
 	},
 	"shared": [],
@@ -221,6 +226,16 @@
 			],
 			"looms": "torch",
 			"note": "an unlit cresset fixed high on a pillar's corner; y = 0 is its tip, the bracket goes back (-x -z) to the wall; about 0.95 m"
+		},
+		{
+			"name": "round_shield",
+			"label": "Escudo redondo",
+			"kind": "deco",
+			"gfx": [
+				2019
+			],
+			"looms": "shield",
+			"note": "a domed bronze shield about 0.8 m across, standing on its rim and leaning well back (55°) (top to -z) against a wall or pillar, its face to +z"
 		}
 	]
 }

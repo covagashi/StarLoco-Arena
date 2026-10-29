@@ -1314,6 +1314,23 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
     como una corona de rey. Las de la retail son cortas y abiertas hacia
     fuera.
 
+- **Escudo** (grupo «escudo»: 2019). Hoja: `kit-arena9-escudo.png`.
+  - `round_shield`: un escudo redondo y abombado, de unos 0,8 m. Se apoya
+    de canto contra un pilar, muy echado hacia atrás (55°), con la cara
+    hacia +z.
+  - Lleva un aro enrollado, la banda de fuera en cuñas claras y oscuras
+    alternas, un aro dentado en relieve y una bolla en el centro.
+  - Looms: bronce con verdín (retail), hierro y cobre.
+  - Lo que salió mal en la primera versión:
+    - Iba casi de pie (22°), y en la retail se ve desde arriba.
+    - Los nervios eran rayitas sueltas.
+    - La muesca rota del borde no se hace.
+- Dueño (2026-10-29): creía que el látigo (2020) y la sangre de pared
+  (2443) se habían pasado a VFX en arenas anteriores. No están en la lista
+  `vfx` de `gfx_rules.json` ni en los sprints; la sangre del suelo se
+  modeló en la arena 7. Dueño: "si no lo encuentras pues sigue con el
+  pipeline normal". Se modelan como los demás grupos.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

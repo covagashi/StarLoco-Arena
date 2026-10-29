@@ -44,7 +44,10 @@ const TORCH = {
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(TORCH).map(([k, v]) =>
   [k + s, { color: v[i], rough: k.startsWith("prong") ? 0.4 : 0.85, metal: k.startsWith("prong") ? 0.5 : 0 }]))))
-const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE), ...Object.keys(TORCH)]
+// the round shield: verdigris bronze (retail), iron, copper; [a, b, c]
+const SHIELD = { shield: ["#7c9a5c", "#7e848c", "#a8683a"], shieldL: ["#a8c482", "#aab0b6", "#d08a52"], shieldD: ["#4a6436", "#4a4e56", "#6a3a1e"] }
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(SHIELD).map(([k, v]) => [k + s, { color: v[i], rough: 0.5, metal: 0.45 }]))))
+const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE), ...Object.keys(TORCH), ...Object.keys(SHIELD)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // Screen terms, as in the arena 8 kit: u along the screen's horizontal
@@ -313,3 +316,25 @@ model("wall_torch", { pivot: "origin" },
   // the bracket to the wall
   tf({ rot: [0, 225, 0] }, box(0.05, 0.05, 0.3, { mat: "torchBand", pos: [0, 0.43, 0.2] }), box(0.2, 0.26, 0.03, { mat: "torchBand", pos: [0, 0.32, 0.34] })))
 looms("wall_torch")
+
+// --- round shield (group «escudo»: 2019) -------------------------------------
+// a domed bronze shield about 0.8 m across, standing on its rim and leaning
+// well back against a wall or pillar, its face towards +z: a rolled rim, radial
+// ribs on the outer band, a raised toothed ring and a boss in the middle.
+// Built lying face up (y is its axis), then stood up.
+const shieldFace = () => [
+  lathe([0, 0, 0.4, 0, 0.37, 0.045, 0.24, 0.085, 0.12, 0.1, 0, 0.105], { mat: "shield", sides: 20 }),
+  torus(0.39, 0.022, { mat: "shieldL", sides: 6, rings: 24, pos: [0, 0.012, 0] }),
+  // the outer band in wedges, light and dark by turns, following the dome
+  Array.from({ length: 14 }, (_, k) => tf({ rot: [0, k * 360 / 14, 0] },
+    box(0.13, 0.016, 0.11, { mat: k % 2 ? "shieldD" : "shieldL", pos: [0.3, 0.048, 0], rot: [0, 0, 17] }))),
+  // the toothed ring and the boss
+  torus(0.19, 0.022, { mat: "shieldL", sides: 6, rings: 20, pos: [0, 0.09, 0] }),
+  Array.from({ length: 12 }, (_, k) => tf({ rot: [0, k * 30 + 15, 0] }, box(0.05, 0.03, 0.045, { mat: "shieldL", pos: [0.215, 0.083, 0], rot: [0, 0, 8] }))),
+  lathe([0, 0, 0.1, 0, 0.08, 0.04, 0, 0.06], { mat: "shieldL", sides: 12, pos: [0, 0.09, 0] }),
+]
+// stood up: its axis turned to +z, then leant well back, 55° (top towards
+// -z); the rim just touches the ground
+model("round_shield", { pivot: "origin" },
+  tf({ pos: [0, 0.4 * Math.cos(55 * Math.PI / 180), 0], rot: [-55, 0, 0] }, tf({ rot: [90, 0, 0] }, shieldFace())))
+looms("round_shield")
