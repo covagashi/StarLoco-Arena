@@ -1,8 +1,9 @@
 {
-	"_doc": "Arena 9 (retail world 40: ruins with iron railings) kit for the map editor (S36); it also holds arena 11's (world 42) broken paving, made with the arena 9 broken slabs, same schema as art/arena7/kit.json. The stone reuses the arena 6 loom textures. Pieces the arena also uses from the other kits are found by map_sheet.py.",
+	"_doc": "Arena 9 (retail world 40: ruins with iron railings) kit for the map editor (S36); it also holds arena 11's (world 42) broken paving and arena 10's (world 41) drain, made with their arena 9 groups, same schema as art/arena7/kit.json. The stone reuses the arena 6 loom textures. Pieces the arena also uses from the other kits are found by map_sheet.py.",
 	"biome": "ruinas",
 	"arenas": [
 		40,
+		41,
 		42
 	],
 	"looms": {
@@ -20,6 +21,11 @@
 			"piedra parda",
 			"gris",
 			"rojiza"
+		],
+		"drain": [
+			"hierro gris, latón, sangre roja",
+			"hierro oxidado, gris, icor negro",
+			"hierro con verdín, cobre, limo verde"
 		]
 	},
 	"shared": [],
@@ -145,6 +151,26 @@
 			],
 			"looms": "stoneBrown",
 			"note": "a long brown stone and a short one with a crack between them"
+		},
+		{
+			"name": "sewer_grate",
+			"label": "Alcantarilla",
+			"kind": "flat",
+			"gfx": [
+				1570
+			],
+			"looms": "stone",
+			"note": "a square stone frame filling the cell round a mossy hole, two iron bars across; lies on a floor block"
+		},
+		{
+			"name": "blood_drain",
+			"label": "Desagüe",
+			"kind": "flat",
+			"gfx": [
+				2746
+			],
+			"looms": "drain",
+			"note": "arena 10: a round brass-rimmed drain at the end of the blood river, one bar across"
 		}
 	]
 }

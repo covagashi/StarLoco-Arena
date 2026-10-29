@@ -1254,6 +1254,29 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
       con brazos quebrados y menos oscuras.
     - El pardo salía naranja y luego amarillo. Se quedó en un pardo apagado.
 
+- **Alcantarillas** (grupo «alcantarilla»: 1570 de la arena 9 y 2746 de la
+  arena 10). Hoja: `kit-arena9-alcantarilla-1.png`. Las dos son `flat`:
+  van tumbadas sobre la cara de arriba de un bloque de suelo, como la
+  rejilla de la arena 1.
+  - `sewer_grate` (1570): cuatro piedras claras hacen un marco que llena la
+    casilla. La boca baja en rampas de musgo hasta el negro, y dos barras
+    gruesas de hierro, a lo largo del eje z como en la retail, quedan
+    hundidas en el hueco.
+  - `blood_drain` (2746): el desagüe redondo donde acaba el río de sangre.
+    Tiene un aro de latón, sangre alrededor del agujero que rebosa por
+    delante y por detrás, el negro dentro y una barra.
+    - Sus looms: latón con sangre roja, gris con icor negro, y cobre con
+      limo verde.
+    - Las ramitas verdes del sprite no se hacen, y la mancha gris de
+      alrededor es sombra pintada.
+  - Lo que salió mal en la primera versión:
+    - Un `lathe` sin radio 0 cierra igual sus tapas, y tapaba los dos
+      agujeros. Ahora el marco son cuatro cajas y el anillo de sangre es un
+      polígono abierto por una ranura (ayuda `ring`).
+    - El marco salía girado 45° y medía 1,34 m: un `lathe` de cuatro caras
+      ya tiene los lados en los ejes.
+    - Las barras eran hilos que pasaban por encima del marco.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

@@ -18,7 +18,16 @@ pal(Object.fromEntries(LOOMS.flatMap((s, i) => [
 // the dark cracks round the broken paving: [a, b, c]
 const CRACK = { crack: ["#3a3028", "#2e2e32", "#382622"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(CRACK).map(([k, v]) => [k + s, { color: v[i], rough: 1 }]))))
-const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack"]
+// the drains: wrought iron (arena 7's railing colours), the moss down the
+// hole's mouth, the dark below, a brass rim, blood; [a, b, c]
+const DRAIN = {
+  iron: ["#5c6068", "#5e3c2a", "#36463e"], ironL: ["#868b94", "#84553a", "#557064"],
+  mouth: ["#46482a", "#3e3e36", "#4a3424"], pit: ["#14120e", "#121214", "#160e0c"],
+  brass: ["#c8a030", "#9a948a", "#b0763a"], blood: ["#8a1810", "#3a3440", "#4a7a24"], bloodD: ["#4c1410", "#24222a", "#2e4a18"],
+}
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DRAIN).map(([k, v]) =>
+  [k + s, { color: v[i], rough: k.startsWith("iron") ? 0.5 : k === "brass" ? 0.35 : k.startsWith("blood") ? 0.25 : 0.95, metal: k.startsWith("iron") || k === "brass" ? 0.6 : 0 }]))))
+const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // Screen terms, as in the arena 8 kit: u along the screen's horizontal
@@ -169,3 +178,38 @@ model("cracked_paving_long", { pivot: "origin" },
   plate([0.03, [-0.475, 0.167, -0.377, 0.003, -0.262, -0.096, -0.115, -0.293, -0.049, -0.491, 0.033, -0.491, 0.049, -0.293, 0.115, -0.228, 0.148, -0.063, 0.131, 0.036, 0.049, -0.03, -0.082, 0.003, -0.213, 0.134, -0.295, 0.2, -0.41, 0.233]], "stoneBrown"),
   plate([0.03, [0.213, 0.003, 0.279, -0.03, 0.492, 0.134, 0.393, 0.299, 0.213, 0.496, 0.148, 0.397, 0.197, 0.266]], "stoneBrown"))
 for (const n of ["broken_slab", "broken_slab_split", "cracked_paving", "cracked_paving_left", "cracked_paving_bits", "cracked_paving_long"]) looms(n)
+
+// --- drains (group «alcantarilla»: 1570 here, 2746 in arena 10) ------------
+// a hole in the floor with iron bars over it; flat pieces laid on a floor
+// block's top. The bars run along world z, as the retail draws them.
+const bar = (x, y, half, r) => tube([x, y, -half, x, y, half], r, { mat: "iron", sides: 6 })
+// a flat ring r0..r1 (a polygon cut open along +x, so it extrudes)
+const ring = (r0, r1, n = 24) => {
+  const pts = []
+  for (let k = 0; k <= n; k++) pts.push(r1 * Math.cos(k / n * 2 * Math.PI), r1 * Math.sin(k / n * 2 * Math.PI))
+  for (let k = n; k >= 0; k--) pts.push(r0 * Math.cos(k / n * 2 * Math.PI), r0 * Math.sin(k / n * 2 * Math.PI))
+  return pts
+}
+// the sewer (1570): a square frame of the pale stone filling the cell, its
+// mouth sloping down into the dark under a mossy lip, two thick bars lying
+// across the hole, sunk below the frame
+model("sewer_grate", { pivot: "origin" },
+  // the frame: four stones round a square opening 0.54 m across
+  sym("z", box(0.94, 0.06, 0.2, { mat: "stone", pos: [0, 0, 0.37], jitter: 0.006, seed: 91 })),
+  sym("x", box(0.2, 0.06, 0.54, { mat: "stoneShade", pos: [0.37, 0, 0], jitter: 0.006, seed: 92 })),
+  // the mouth: four mossy slopes from the frame's inner edge down to the dark
+  [0, 90, 180, 270].map((a) => tf({ rot: [0, a, 0] },
+    box(0.54, 0.012, 0.1, { mat: "mouth", pos: [0, 0.03, 0.23], rot: [-32, 0, 0] }))),
+  box(0.4, 0.006, 0.4, { mat: "pit" }),
+  bar(-0.07, 0.025, 0.25, 0.036), bar(0.08, 0.025, 0.25, 0.036))
+// the drain (2746): a round hole with a brass rim at the end of the blood
+// river, blood round the hole and lapping over the rim front and back, one
+// bar across
+model("blood_drain", { pivot: "origin" },
+  torus(0.33, 0.035, { mat: "brass", sides: 6, rings: 24, pos: [0, 0.03, 0] }),
+  prismUp(ring(0.2, 0.32), 0.03, 0, "blood"),
+  torus(0.205, 0.015, { mat: "bloodD", sides: 5, rings: 24, pos: [0, 0.025, 0] }),
+  cyl(0.21, 0.004, { mat: "pit", sides: 24 }),
+  [[0.24, 0.24], [-0.24, -0.24]].map(([x, z], i) => sphere(1, { mat: "blood", detail: 2, pos: [x, 0.045, z], rot: [0, 45, 0], scale: [0.16, 0.02, 0.07], jitter: 0.004, seed: 81 + i })),
+  bar(0.02, 0.04, 0.24, 0.03))
+for (const n of ["sewer_grate", "blood_drain"]) looms(n)
