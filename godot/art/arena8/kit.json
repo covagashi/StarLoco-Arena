@@ -119,6 +119,56 @@
 			],
 			"looms": "cliff",
 			"note": "three big stacked blocks with a slanted crown, about 5 m"
+		},
+		{
+			"name": "rock_tall",
+			"label": "Roca alta",
+			"kind": "deco",
+			"gfx": [
+				1764
+			],
+			"looms": "cliff",
+			"note": "about 3 m of sandstone slabs, a short spire"
+		},
+		{
+			"name": "rock_leaning",
+			"label": "Roca de lajas inclinadas",
+			"kind": "deco",
+			"gfx": [
+				1762
+			],
+			"looms": "cliff",
+			"note": "three slabs leaning back, lower towards the front"
+		},
+		{
+			"name": "rock_peak",
+			"label": "Roca en punta",
+			"kind": "deco",
+			"gfx": [
+				1761
+			],
+			"looms": "cliff",
+			"note": "one five-sided rock narrowing to a blunt peak"
+		},
+		{
+			"name": "rock_blocky",
+			"label": "Roca de bloques",
+			"kind": "deco",
+			"gfx": [
+				1767
+			],
+			"looms": "cliff",
+			"note": "a big back block, a smaller one and a boulder in front"
+		},
+		{
+			"name": "rock_low",
+			"label": "Roca baja",
+			"kind": "deco",
+			"gfx": [
+				1817
+			],
+			"looms": "cliff",
+			"note": "a low heap of rounded flat slabs"
 		}
 	]
 }

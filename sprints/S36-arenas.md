@@ -1145,6 +1145,26 @@ Se modela un grupo cada vez y se enseña antes de seguir.
     - En la 1766, los bolos sueltos sobre un poste parecían un muñeco de
       nieve: se volvió a bloques anchos abombados.
 
+- **Rocas sueltas** (grupo «roca»: 1761, 1762, 1764, 1767 y 1817; salen
+  en las arenas 8, 18 y 25). Hojas: `kit-arena8-rocas-1.png` … `-3.png`.
+  - La misma arenisca que las columnas (`cliff` de la arena 6), en cinco
+    formas: `rock_tall` (1764, unos 3,3 m), `rock_leaning` (1762, lajas
+    inclinadas hacia atrás), `rock_peak` (1761, un pico de cinco caras),
+    `rock_blocky` (1767, bloques con un bolo delante) y `rock_low` (1817,
+    un montón bajo de lajas redondeadas).
+  - Se construyen con bloques facetados que se estrechan hacia una punta
+    roma (`crag`: un lathe de 5 o 6 caras, aplastado e inclinado),
+    colocados en ejes de pantalla.
+  - Lo que salió mal antes:
+    - Con lajas extruidas finas parecían cartones, y medían el 60 % del
+      ancho retail (la retail desborda la casilla: 1,3–1,7 m de ancho en
+      pantalla).
+    - Con bolos (`rock`) parecían patatas.
+    - Con prismas chaflanados parecían cajas.
+    - La alta se quedaba en 2,5 m.
+    - Una mata de musgo quedó escondida detrás, por ponerla en
+      coordenadas de mundo.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

@@ -20,7 +20,7 @@ pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["cliffD" + s, { tex: "../arena6/out/cliff" + s, uv: 2.2, rough: 0.95, color: "#a89a82" }],
 ])))
 // moss on the spires' ledges: [a, b, c]
-const MOSS = { moss: ["#7a8a2a", "#5a7a3a", "#6a6a2a"], mossL: ["#a8b83c", "#7ea050", "#94923a"] }
+const MOSS = { moss: ["#5e6e24", "#4a6432", "#585a24"], mossL: ["#7e9030", "#64843e", "#787630"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MOSS).map(([k, v]) => [k + s, v[i]]))))
 // the lava fall cools as it drops: palette glows, [a, b, c] per key
 // the lava sides and drips (molten), a deeper orange than the top; the lava
@@ -145,3 +145,58 @@ model("rock_spire_wide",
   tf({ pos: [0.02, 4.38, 0.04] }, slab(0, 0, 0, 0.9, 0.84, 0.55, 0.32, 45, "cliffL", 8)),
   moss(0.26, 1.52, 0.4, 0.16, 9), moss(-0.18, 3.32, 0.4, 0.13, 10), moss(0.12, 0.08, 0.52, 0.16, 11))
 for (const n of ["rock_spire", "rock_spire_wide"]) looms(n)
+
+// --- loose rocks (1761, 1762, 1764, 1767, 1817) -----------------------------
+// the same sandstone as the spires, in five shapes, as wide as the retail
+// ones (about 1.3-1.7 m across the screen, a little over the cell). Built of
+// chunky faceted boulders placed in screen terms like the floor stones:
+// u across the screen, v towards the camera, y its centre height; su, sy, sv
+// its half extents; tilt leans it back (degrees)
+const boulder = (u, y, v, r, su, sy, sv, mat, seed, tilt = 0) =>
+  tf({ pos: [(u + v) * R2, y, (v - u) * R2], rot: [0, 45, 0] },
+    rock(r, { mat, rough: 0.1, scale: [su, sy, sv], rot: [-tilt, 0, 0], seed }))
+// a crag: an angular sandstone block that narrows to a blunt slanted top:
+// a faceted lathe (5-6 sides), flattened to rw across the screen and rd
+// towards the camera, h tall from its foot at y, leaned back by tilt and
+// sideways by roll (degrees)
+const crag = (u, y, v, rw, rd, h, mat, seed, { tilt = 0, roll = 0, sides = 5, turn = 0 } = {}) =>
+  tf({ pos: [(u + v) * R2, y, (v - u) * R2], rot: [0, 45 + turn, 0] },
+    tf({ rot: [-tilt, 0, roll], scale: [rw, 1, rd] },
+      lathe([1, 0, 0.97, h * 0.5, 0.82, h * 0.82, 0.4, h * 0.97, 0, h], { mat, sides, jitter: 0.04, seed })))
+// tall rock (1764): about 3.3 m, a short spire of tall blocks: the tallest
+// at the back, a broad plate in front of it, a lower block at each side
+model("rock_tall",
+  crag(-0.1, 0, -0.2, 0.55, 0.42, 3.3, "cliff", 1, { roll: 2 }),
+  crag(0.1, 0, 0.18, 0.5, 0.22, 2.4, "cliff", 2, { tilt: 3, roll: -3, sides: 6 }),
+  crag(-0.52, 0, 0.0, 0.28, 0.36, 2.7, "cliffD", 3, { roll: 5, turn: 10 }),
+  crag(0.55, 0, -0.05, 0.28, 0.36, 1.7, "cliff", 4, { roll: -6, turn: -10 }),
+  moss(-0.25, 2.65, 0.15, 0.14, 6), moss(0.3, 1.62, 0.28, 0.13, 7))
+// leaning rock (1762): three blocks leaning back one behind the other, each
+// lower towards the front, a small block at the foot
+model("rock_leaning",
+  crag(-0.08, 0, -0.3, 0.72, 0.28, 1.4, "cliff", 1, { tilt: 18 }),
+  crag(0.04, 0, -0.02, 0.64, 0.26, 1.05, "cliff", 2, { tilt: 18, roll: -5, sides: 6 }),
+  crag(0.16, 0, 0.26, 0.55, 0.24, 0.7, "cliff", 3, { tilt: 15, roll: 4 }),
+  crag(-0.66, 0, 0.12, 0.2, 0.22, 0.5, "cliffD", 4),
+  moss(-0.2, 0.5, 0.4, 0.11, 5))
+// peaked rock (1761): one five-sided rock narrowing to a blunt peak, leaning
+// a little back
+model("rock_peak",
+  tf({ rot: [-6, 20, 4] },
+    lathe([0.62, 0, 0.58, 0.45, 0.44, 0.95, 0.17, 1.28, 0, 1.33], { mat: "cliff", sides: 5, jitter: 0.05, seed: 1 })),
+  moss(0.42, 0.5, 0.24, 0.13, 2), moss(0.26, 0.22, 0.44, 0.11, 3))
+// blocky rock (1767): a big back block, a smaller block stacked in front of
+// it, a rounded boulder at the front corner and a shard at its foot
+model("rock_blocky",
+  crag(-0.05, 0, -0.22, 0.78, 0.5, 1.45, "cliff", 1, { roll: 3, sides: 6 }),
+  crag(-0.15, 0, 0.18, 0.55, 0.32, 1.0, "cliff", 2, { tilt: 4 }),
+  boulder(0.42, 0.3, 0.32, 0.34, 1.0, 0.95, 0.9, "cliff", 3),
+  crag(0.68, 0, 0.0, 0.14, 0.16, 0.5, "cliffD", 4, { roll: -12 }),
+  moss(-0.12, 0.98, 0.3, 0.12, 5))
+// low rock (1817): a low heap of rounded flat slabs, the tallest at the back
+model("rock_low",
+  boulder(-0.1, 0.3, -0.16, 0.45, 1.5, 0.75, 0.9, "cliff", 1),
+  boulder(0.34, 0.22, 0.08, 0.38, 1.3, 0.7, 0.9, "cliff", 2),
+  boulder(-0.26, 0.15, 0.28, 0.3, 1.4, 0.6, 0.8, "cliffD", 3),
+  moss(0.05, 0.42, 0.42, 0.12, 4))
+for (const n of ["rock_tall", "rock_leaning", "rock_peak", "rock_blocky", "rock_low"]) looms(n)
