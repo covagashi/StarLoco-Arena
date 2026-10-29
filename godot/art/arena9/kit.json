@@ -1,8 +1,9 @@
 {
-	"_doc": "Arena 9 (retail world 40: ruins with iron railings) kit for the map editor (S36), same schema as art/arena7/kit.json. The stone reuses the arena 6 loom textures. Pieces the arena also uses from the other kits are found by map_sheet.py.",
+	"_doc": "Arena 9 (retail world 40: ruins with iron railings) kit for the map editor (S36); it also holds arena 11's (world 42) broken paving, made with the arena 9 broken slabs, same schema as art/arena7/kit.json. The stone reuses the arena 6 loom textures. Pieces the arena also uses from the other kits are found by map_sheet.py.",
 	"biome": "ruinas",
 	"arenas": [
-		40
+		40,
+		42
 	],
 	"looms": {
 		"": "a",
@@ -14,6 +15,11 @@
 			"arenisca crema",
 			"granito gris",
 			"arenisca roja"
+		],
+		"stoneBrown": [
+			"piedra parda",
+			"gris",
+			"rojiza"
 		]
 	},
 	"shared": [],
@@ -79,6 +85,66 @@
 			],
 			"looms": "stone",
 			"note": "a flat slab of greyer, faintly pink stone with three round pebbles at its left end"
+		},
+		{
+			"name": "broken_slab",
+			"label": "Losa rota",
+			"kind": "deco",
+			"gfx": [
+				2170
+			],
+			"looms": "stone",
+			"note": "a pale flag broken into a big worn plate, a split one and two slivers"
+		},
+		{
+			"name": "broken_slab_split",
+			"label": "Losa rota en tres",
+			"kind": "deco",
+			"gfx": [
+				2171
+			],
+			"looms": "stone",
+			"note": "two worn flags side by side, a thicker broken block in front and a lump behind"
+		},
+		{
+			"name": "cracked_paving",
+			"label": "Losa de piedra rota",
+			"kind": "deco",
+			"gfx": [
+				2313
+			],
+			"looms": "stoneBrown",
+			"note": "arena 11's brown paving: three sharp flat stones among dark cracks in the ground"
+		},
+		{
+			"name": "cracked_paving_left",
+			"label": "Losa de piedra rota (izquierda)",
+			"kind": "deco",
+			"gfx": [
+				2314
+			],
+			"looms": "stoneBrown",
+			"note": "the same, the big stone further left"
+		},
+		{
+			"name": "cracked_paving_bits",
+			"label": "Losa de piedra rota en trozos",
+			"kind": "deco",
+			"gfx": [
+				2315
+			],
+			"looms": "stoneBrown",
+			"note": "three small brown stones round two cracks"
+		},
+		{
+			"name": "cracked_paving_long",
+			"label": "Losa de piedra rota larga",
+			"kind": "deco",
+			"gfx": [
+				2316
+			],
+			"looms": "stoneBrown",
+			"note": "a long brown stone and a short one with a crack between them"
 		}
 	]
 }

@@ -1236,6 +1236,24 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
     - La losa de la 1428 salió primero como un pan y luego naranja. Ahora es
       un bloque con bisel, en el granito de la arena 6 entibiado a rosa.
 
+- **Losas rotas** (grupo «losa rota»: 2170 y 2171 de la arena 9, 2313–2316
+  de la arena 11). Hojas: `kit-arena9-losa-rota-1.png` … `-3.png`.
+  - Las seis van en el kit de la arena 9, que ahora también cubre la arena
+    11 (`arenas: [40, 42]`).
+  - Cada trozo es una placa con el contorno medido en el sprite retail
+    (ayuda `plate`).
+  - Las de arenisca clara, `broken_slab` (2170) y `broken_slab_split`
+    (2171), van gastadas: el canto redondeado y la cara de arriba algo
+    metida.
+  - Las pardas de la arena 11 son `cracked_paving` (2313), `_left` (2314),
+    `_bits` (2315) y `_long` (2316). Van de corte vivo, entre grietas
+    oscuras del suelo: un agujero con brazos quebrados que se afinan
+    (ayuda `crack`).
+  - Lo que salió mal en la primera versión:
+    - Las grietas eran estrellas pequeñas y negras. Ahora son más grandes,
+      con brazos quebrados y menos oscuras.
+    - El pardo salía naranja y luego amarillo. Se quedó en un pardo apagado.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
