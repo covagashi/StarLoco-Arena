@@ -1330,6 +1330,16 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
     - Las cuñas de la banda eran cajas planas y asomaban como dientes por
       la silueta. Ahora son láminas cortadas al perfil de la cúpula, que
       siguen la curva.
+
+- **Trozo de roca** (grupo «trozo de roca»: 1637). Hoja:
+  `kit-arena9-trozo-de-roca.png`.
+  - `rock_chunks`: cuatro cascotes claros de 0,2 a 0,4 m y una miga, medidos
+    en el sprite con la ayuda `pebble`. Son más grandes y más blancos que
+    las roquitas.
+  - Lo que salió mal en la primera versión: con el granito de la arena 6 se
+    veían grises. Ninguna loom de piedra es tan clara (el tinte solo
+    oscurece), así que van en color de paleta. El primer color era casi
+    blanco bajo nuestra luz; se bajó a un crema apagado.
 - Dueño (2026-10-29): creía que el látigo (2020) y la sangre de pared
   (2443) se habían pasado a VFX en arenas anteriores. No están en la lista
   `vfx` de `gfx_rules.json` ni en los sprints; la sangre del suelo se

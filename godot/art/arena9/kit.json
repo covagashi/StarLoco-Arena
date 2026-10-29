@@ -236,6 +236,16 @@
 			],
 			"looms": "shield",
 			"note": "a domed bronze shield about 0.8 m across, standing on its rim and leaning well back (55°) (top to -z) against a wall or pillar, its face to +z"
+		},
+		{
+			"name": "rock_chunks",
+			"label": "Trozo de roca",
+			"kind": "deco",
+			"gfx": [
+				1637
+			],
+			"looms": "stone",
+			"note": "four pale lumps 0.2-0.4 m and a crumb, whiter than the pebbles"
 		}
 	]
 }

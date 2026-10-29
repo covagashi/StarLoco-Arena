@@ -14,6 +14,9 @@ pal(Object.fromEntries(LOOMS.flatMap((s, i) => [
   ["stonePale" + s, { tex: "../arena6/out/stone" + ["_b", "_b", "_c"][i], uv: 0.9, rough: 0.85, color: ["#ffdccc", "#e8e8ec", "#fff0e8"][i] }],
   // the broken paving of arena 11 (2313-2316): a brown stone, light on top
   ["stoneBrown" + s, { tex: "../arena6/out/stone" + ["", "_b", "_c"][i], uv: 0.9, rough: 0.9, color: ["#bca08c", "#a8a49c", "#ccb4ac"][i] }],
+  // the rock chunks (1637): an off-white stone, paler than any stone loom, so
+  // a plain colour
+  ["stoneWhite" + s, { color: ["#b4a88c", "#9c9ca2", "#ac7c64"][i], rough: 0.85 }],
 ])))
 // the dark cracks round the broken paving: [a, b, c]
 const CRACK = { crack: ["#3a3028", "#2e2e32", "#382622"] }
@@ -47,7 +50,7 @@ pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(TORCH).map(([k, v]
 // the round shield: verdigris bronze (retail), iron, copper; [a, b, c]
 const SHIELD = { shield: ["#7c9a5c", "#7e848c", "#a8683a"], shieldL: ["#a8c482", "#aab0b6", "#d08a52"], shieldD: ["#4a6436", "#4a4e56", "#6a3a1e"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(SHIELD).map(([k, v]) => [k + s, { color: v[i], rough: 0.5, metal: 0.45 }]))))
-const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE), ...Object.keys(TORCH), ...Object.keys(SHIELD)]
+const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "stoneWhite", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE), ...Object.keys(TORCH), ...Object.keys(SHIELD)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // Screen terms, as in the arena 8 kit: u along the screen's horizontal
@@ -340,3 +343,12 @@ const shieldFace = () => [
 model("round_shield", { pivot: "origin" },
   tf({ pos: [0, 0.4 * Math.cos(55 * Math.PI / 180), 0], rot: [-55, 0, 0] }, tf({ rot: [90, 0, 0] }, shieldFace())))
 looms("round_shield")
+
+// --- rock chunks (group «trozo de roca»: 1637) -------------------------------
+// four pale lumps broken off a wall, 0.2-0.4 m, and a crumb: bigger and
+// whiter than the pebbles, the same `pebble` lumps
+model("rock_chunks",
+  pebbles([[-0.17, 0.16, 0.43, 0.20, 0.38, "round", 8, 4, "stoneWhite"], [0.25, 0.08, 0.28, 0.14, 0.28, "round", -12, 0, "stoneWhite"],
+    [0.14, 0.40, 0.33, 0.15, 0.30, "round", 20, -5, "stoneWhite"], [0.11, -0.37, 0.21, 0.10, 0.19, "round", -5, 0, "stoneWhite"],
+    [-0.17, -0.45, 0.10, 0.04, 0.10, "round", 0, 0, "stoneWhite"]], 101))
+looms("rock_chunks")
