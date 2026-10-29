@@ -19,6 +19,11 @@
 			"madera parda gris",
 			"madera gris",
 			"madera rojiza"
+		],
+		"blood": [
+			"sangre roja",
+			"icor negro",
+			"limo verde"
 		]
 	},
 	"shared": [],
@@ -56,6 +61,61 @@
 			"looms": "post",
 			"top": 1.5,
 			"note": "the same post, its timbers cut another way"
+		},
+		{
+			"name": "blood_river",
+			"label": "Río de sangre",
+			"kind": "tile",
+			"gfx": [
+				2458
+			],
+			"looms": "blood",
+			"top": 0.04,
+			"note": "a cell of glossy blood edge to edge; a run of them is the river, a step below the floor"
+		},
+		{
+			"name": "blood_gutter",
+			"label": "Canaleta de sangre",
+			"kind": "flat",
+			"gfx": [
+				2461,
+				2472
+			],
+			"looms": "blood",
+			"note": "lies on a floor slab: blood between two low pale curbs, along x, edge to edge so gutters chain"
+		},
+		{
+			"name": "blood_gutter_corner",
+			"label": "Canaleta de sangre (esquina)",
+			"kind": "flat",
+			"gfx": [
+				2465,
+				2470,
+				2471
+			],
+			"looms": "blood",
+			"note": "the gutter turning from +x to +z at the cell's centre"
+		},
+		{
+			"name": "blood_stream",
+			"label": "Chorro de sangre",
+			"kind": "deco",
+			"gfx": [
+				2459
+			],
+			"looms": "blood",
+			"note": "y = 0 is the floor rim a gutter pours over, x = 0 its face; falls about 1.3 m into a splash"
+		},
+		{
+			"name": "blood_fall",
+			"label": "Cascada de sangre",
+			"kind": "tile",
+			"gfx": [
+				474
+			],
+			"looms": "blood",
+			"top": 0.01,
+			"note": "a river cell pouring over its +x side, about 5.5 m down the island's edge; turn it to face the drop"
 		}
 	]
 }

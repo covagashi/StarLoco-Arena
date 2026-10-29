@@ -37,3 +37,33 @@ skins({
     })
   }
 }
+
+// --- blood: the river of blood, its gutters and falls (2458, 2459, 2461-2472,
+// 474) ------------------------------------------------------------------------
+// a thick, glossy liquid: broad slow swirls of darker and brighter red, a mid
+// scale of ripples, a fine sheen; bloodFlow is the same liquid stretched into
+// streaks along v (down a box-projected wall), for the falls. The colours follow arena 9's blood drain.
+//   a red blood (retail)   b black ichor   c green slime
+skins({
+  a: { b0: "#3a0806", b1: "#640c08", b2: "#8c140e", b3: "#c0302a" },
+  b: { b0: "#121014", b1: "#26222a", b2: "#3a3440", b3: "#5a5262" },
+  c: { b0: "#16240a", b1: "#22380e", b2: "#38581a", b3: "#5e8a30" },
+})
+{
+  for (const [name, sc] of [["blood", (s) => s], ["bloodFlow", (s) => [s * 3, Math.max(1, Math.round(s / 3))]]]) {
+    const swirl = noise({ scale: sc(3), octaves: 3, seed: 1101 }).warp(noise({ scale: sc(2), seed: 1102 }), 0.25).as("swirl")
+    const ripple = noise({ scale: sc(9), octaves: 2, seed: 1103 }).warp(noise({ scale: sc(4), seed: 1104 }), 0.1).as("ripple")
+    const fine = noise({ scale: sc(40), octaves: 2, seed: 1105 })
+    const h = swirl.mul(0.4).add(ripple.mul(0.4)).add(fine.mul(0.05)).as("bloodH")
+    const sheen = ripple.levels(0.62, 0.8, 0, 1).mul(swirl.levels(0.4, 0.7, 0.3, 1)).as("sheen")
+    for (const k of "abc") {
+      const col = (n) => n + k
+      material(name + SUF[k], { size: 512, depth: 0.006, ao: 0.2 }, {
+        height: h,
+        color: ramp(swirl.mix(ripple, 0.35).levels(0.25, 0.75, 0, 1), [col("b1"), col("b1"), col("b2"), col("b2")])
+          .mix(col("b3"), sheen.mul(0.55)),
+        rough: sheen.levels(0, 1, 0.3, 0.12),
+      })
+    }
+  }
+}

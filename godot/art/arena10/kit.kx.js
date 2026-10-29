@@ -24,10 +24,23 @@ const WOOD_TEX = { post: ["_b", "_b", "_c"], postD: ["_b", "_b", "_c"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(WOOD).flatMap(([k, v]) => [
   [k + s, { tex: "../arena6/out/board" + (WOOD_TEX[k] || LOOMS)[i], uv: 0.8, rough: 0.85, color: v[i] }],
   [k + "V" + s, { tex: "../arena6/out/boardV" + (WOOD_TEX[k] || LOOMS)[i], uv: 0.8, rough: 0.85, color: v[i] }]]))))
+// blood (kit.tx.js blood, bloodFlow): the river's top smooth (soft*), glossy;
+// the falls streaked down, darker as they drop
+pal(Object.fromEntries(LOOMS.flatMap((s) => [
+  ["softBlood" + s, { tex: "out/blood" + s, uv: 1.2, rough: 0.2 }],
+  ["softBloodFlow" + s, { tex: "out/bloodFlow" + s, uv: 1.2, rough: 0.2 }],
+  ["softBloodFlowD" + s, { tex: "out/bloodFlow" + s, uv: 1.2, rough: 0.25, color: "#8c8080" }],
+  ["softBloodFlowDD" + s, { tex: "out/bloodFlow" + s, uv: 1.2, rough: 0.3, color: "#5a5050" }],
+  ["bloodBed" + s, { tex: "out/blood" + s, uv: 1.2, rough: 0.4, color: "#6a6060" }],
+])))
+// the gutters' and the stream's lit blood, a plain glossy red brighter than
+// the river (the retail paints it lit): [a, b, c]
+const LIT = { bloodLit: ["#96180e", "#4e4856", "#4e7a26"] }
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(LIT).map(([k, v]) => [k + s, { color: v[i], rough: 0.15 }]))))
 // the dashes of the floor's joint line: [a, b, c]
 const DASH = { dash: ["#5a5440", "#3e4042", "#5a2e20"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DASH).map(([k, v]) => [k + s, { color: v[i], rough: 0.95 }]))))
-const SKINNED = ["joint", "softBrick", "softBrickD", "jointD", ...Object.keys(DASH),
+const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", ...Object.keys(DASH), ...Object.keys(LIT),
   ...Object.keys(WOOD).flatMap((k) => [k, k + "V"])]
 const looms = (name) => threeLooms(name, SKINNED)
 
@@ -81,3 +94,59 @@ model("wood_post_alt", postCore(),
   timber(H0, 0.02, -0.12, H1, POST_H - 0.07, POST_H - 0.004, "post", 16, 0.04),
   timber(0.02, H1, -0.12, H1, POST_H - 0.07, POST_H, "post", 17, 0.04))
 for (const n of ["wood_post", "wood_post_alt"]) looms(n)
+
+// --- the river of blood (2458), its gutters (2461, 2465, 2470-2472) and
+// falls (2459, 474) -----------------------------------------------------------
+// river of blood (2458): a cell of thick glossy blood, gently rippled, edge
+// to edge so a run of them is one river; it lies a step below the floor
+const ripple = (seed) => (x, z) => 0.5 + 0.25 * Math.sin(x * 7 + seed) * Math.sin(z * 6 + seed * 1.3) + 0.25 * Math.sin((x + z) * 11 + seed * 2.1)
+model("blood_river",
+  prismUp(roundSquare(0.5, 0.02), 0.03, 0, "bloodBed", 0.002),
+  terrain(1.0, 1.0, { res: 16, height: 0.018, fn: ripple(1), mat: "softBlood", pos: [0, 0.031, 0] }))
+// blood gutter (2461, 2472): a channel of blood along x lying on the floor
+// slab, between two low curbs of the slab's pale stone; it runs from edge to
+// edge so gutters chain, and pours off the floor's rim as the blood stream
+// (2459). The corner (2465, 2470, 2471) turns from +x to +z.
+const GW = 0.1, CURB = 0.04
+const curb = (x0, x1, z0, z1) => box(x1 - x0, 0.055, z1 - z0, { mat: "joint", pos: [(x0 + x1) / 2, 0, (z0 + z1) / 2], jitter: 0.002 })
+const gutterBlood = (x0, x1, z0, z1) => box(x1 - x0, 0.03, z1 - z0, { mat: "bloodLit", pos: [(x0 + x1) / 2, 0, (z0 + z1) / 2] })
+model("blood_gutter", { pivot: "origin" },
+  gutterBlood(-0.5, 0.5, -GW, GW),
+  curb(-0.5, 0.5, -GW - CURB, -GW), curb(-0.5, 0.5, GW, GW + CURB))
+model("blood_gutter_corner", { pivot: "origin" },
+  gutterBlood(-GW, 0.5, -GW, GW), gutterBlood(-GW, GW, GW, 0.5),
+  // the outer curb wraps the corner, the inner one stops at it
+  curb(-GW - CURB, 0.5, -GW - CURB, -GW), curb(-GW - CURB, -GW, -GW, 0.5),
+  curb(GW, 0.5, GW, GW + CURB), curb(GW, GW + CURB, GW + CURB, 0.5))
+// blood stream (2459): the thin pour from a gutter's end over the floor's
+// rim: y = 0 is the lip it leaves, x = 0 the rim's face, falling about 1.3 m
+// onto the river in a splash
+const STREAM = 1.3
+model("blood_stream", { pivot: "origin" },
+  // the lip: a flattened roll over the rim (a tube's scale scales its points
+  // too, so it is built at z = 0)
+  tube([-0.1, 0.015, 0, 0.0, 0.0, 0, 0.06, -0.1, 0], 0.05, { mat: "bloodLit", sides: 6, scale: [1, 1, 1.6] }),
+  cyl(0.07, STREAM - 0.08, { mat: "bloodLit", sides: 7, top: 0.06, pos: [0.07, -STREAM, 0], scale: [0.55, 1, 1.5], jitter: 0.004, seed: 2 }),
+  // the splash: a low crown where it lands, droplets thrown out
+  cyl(0.2, 0.03, { mat: "softBlood", sides: 9, top: 0.14, pos: [0.07, -STREAM, 0], jitter: 0.01, seed: 3 }),
+  lathe([0.06, 0, 0.15, 0.06, 0.13, 0.1, 0.09, 0.07], { mat: "bloodLit", sides: 9, pos: [0.07, -STREAM + 0.02, 0] }),
+  [[0.22, 0.1, 0.035], [-0.12, 0.07, 0.03], [0.14, 0.18, 0.025], [0.02, 0.14, 0.026], [0.18, 0.06, 0.022]].map(([x, z, r], i) =>
+    sphere(r, { mat: "bloodLit", detail: 1, pos: [0.07 + x * (i % 2 ? -1 : 1), -STREAM + 0.06 + (i % 3) * 0.04, z * (i < 3 ? 1 : -1)] })))
+// blood fall (474): the river pouring off the island's edge: a cell of blood
+// rolling over its +x side and falling about 5.5 m as a sheet in three
+// bulging streams, darkening as it drops (green in the retail sprite, tinted
+// red on the map). y = 0 is the cell's top; turn it to face the drop.
+const FALL_H = 5.5
+model("blood_fall", { pivot: "origin" },
+  prismUp(roundSquare(0.5, 0.02), 0.03, -0.03, "bloodBed", 0.002),
+  terrain(1.0, 1.0, { res: 16, height: 0.018, fn: ripple(4), mat: "softBlood", pos: [0, 0.001, 0] }),
+  // the roll over the rim
+  // (a tube's scale also scales its points: flatten it at z = 0, then move it)
+  [-0.3, 0, 0.3].map((z, i) => tf({ pos: [0, 0, z] }, tube([0.4, 0.0, 0, 0.5, -0.02, 0, 0.54, -0.14, 0], 0.08 - (i % 2) * 0.015, { mat: "softBloodFlow", sides: 6, scale: [1, 1, 1.9] }))),
+  // the sheet in four bands that darken as it drops, three low bulges down
+  // its face
+  ["softBloodFlow", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD"].map((m, j) =>
+    box(0.07, FALL_H / 4 + 0.01, 0.98, { mat: m, pos: [0.52, -(j + 1) * FALL_H / 4, 0], jitter: 0.004, seed: j })),
+  [-0.3, 0, 0.3].flatMap((z, i) => ["softBloodFlow", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD"].map((m, j) =>
+    cyl(0.12, FALL_H / 4 + 0.01, { mat: m, sides: 8, pos: [0.535, -(j + 1) * FALL_H / 4, z], scale: [0.35, 1, 1.1], jitter: 0.004, seed: i * 4 + j }))))
+for (const n of ["blood_river", "blood_gutter", "blood_gutter_corner", "blood_stream", "blood_fall"]) looms(n)

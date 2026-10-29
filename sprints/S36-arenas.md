@@ -1416,6 +1416,37 @@ y sus hachas ya están en el kit de la arena 9.
     - Era un 9 % más estrecho que la retail, que llena la casilla de borde a
       borde.
 
+- **Río de sangre** (grupos «alfombra» 2458, «río de sangre» 2461, 2465 y
+  2470–2472, y «cascada de sangre» 474 y 2459). Hojas:
+  `kit-arena10-sangre-1.png` … `-3.png`.
+  - Loom nueva `blood` (`arena10/kit.tx.js`): líquido espeso y brillante,
+    con remolinos lentos, ondas y un brillo fino. `bloodFlow` es la misma,
+    estirada en chorretones para las caídas. Looms: sangre roja (retail),
+    icor negro y limo verde, como el desagüe de la arena 9.
+  - `blood_river` (2458): la «alfombra» roja es el río. Es una casilla de
+    sangre de borde a borde, así que varias seguidas forman el río.
+  - `blood_gutter` (2461, 2472) y `blood_gutter_corner` (2465, 2470,
+    2471): en el mapa, las uniones son una canaleta de sangre sobre el suelo
+    que acaba vertiendo al río. Van sobre la losa (`flat`): sangre entre dos
+    bordillos de la piedra clara de la losa, en recto o en escuadra, y se
+    encadenan.
+  - `blood_stream` (2459): el chorro fino de unos 1,3 m que cae de la
+    canaleta, con su salpicadura y gotas.
+  - `blood_fall` (474): una casilla del río que vierte por su lado +x y cae
+    unos 5,5 m por el borde de la isla, oscureciéndose en cuatro bandas. La
+    retail la pinta verde y el mapa la tiñe de rojo.
+  - Lo que salió mal en la primera versión:
+    - Salían manchas negras en el río: el relieve se hundía por debajo del
+      cuerpo.
+    - La canaleta era un hilo; ahora es más ancha y con bordillos más
+      altos.
+    - El chorro era una tubería oscura y la cascada, tubos de órgano. Ahora
+      el chorro es más ancho y claro, y la cascada una lámina con bultos
+      suaves.
+    - Al escalar un `tube`, kiln escala también sus puntos, y los rollos de
+      la cascada se separaban 1,4 m. Ahora se hacen en z = 0 y se mueven
+      después.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
