@@ -855,6 +855,35 @@ const rockingChair = () => [
     sphere(0.05, { mat: "chair", detail: 1, pos: [0.27, SEAT + 0.25, k * 0.33] }),
     cyl(0.025, 0.26, { mat: "chairV", sides: 6, pos: [0.22, SEAT, k * 0.32] })]),
 ]
+// a soft, fleshy limb along a path of [x, y, z, r] points: each segment one
+// smooth capsule (a lathe with rounded ends, swelling a little in its middle,
+// so a fat arm or calf reads as one soft shape); only the joints crease
+const DEG = 180 / Math.PI
+function capsule([x0, y0, z0], [x1, y1, z1], r0, r1, mat, swell = 1.08) {
+  const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0, len = Math.hypot(dx, dy, dz), prof = []
+  const n = 10
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, base = (r0 + (r1 - r0) * t) * (1 + (swell - 1) * Math.sin(t * Math.PI))
+    // round the two ends over the end radius
+    const e0 = Math.min(1, (t * len) / r0), e1 = Math.min(1, ((1 - t) * len) / r1)
+    const cap = Math.sqrt(1 - (1 - e0) ** 2) * Math.sqrt(1 - (1 - e1) ** 2)
+    prof.push(i === 0 || i === n ? 0 : base * cap, t * len)
+  }
+  return tf({ pos: [x0, y0, z0], rot: [0, Math.atan2(-dz, dx) * DEG, 0] },
+    lathe(prof, { mat, sides: r0 > 0.05 ? 12 : 6, rot: [0, 0, -Math.acos(dy / len) * DEG] }))
+}
+function limb(pts, mat, swell) {
+  const out = []
+  for (let i = 0; i < pts.length - 1; i++)
+    out.push(capsule(pts[i], pts[i + 1], pts[i][3], pts[i + 1][3], mat, swell))
+  return out
+}
+// a plump hand at (x, y, z), three stubby fingers curled over the needles,
+// the thumb on top; k = -1 / 1 for the side (thumb towards the middle)
+const plumpHand = (x, y, z, k) => [
+  sphere(0.06, { mat: "softPale", detail: 2, pos: [x, y, z], scale: [1.2, 0.75, 1] }),
+  [-0.028, 0, 0.028].map((dz) => capsule([x + 0.03, y + 0.005, z + dz * 1.1], [x + 0.1, y - 0.04, z + dz * 1.2], 0.022, 0.018, "softPale", 1)),
+  capsule([x - 0.01, y + 0.025, z - k * 0.03], [x + 0.06, y + 0.045, z - k * 0.07], 0.022, 0.018, "softPale", 1)]
 // a pink rabbit slipper, facing +x: a plump toe, two ears up at the back,
 // two black eyes
 const slipper = (x, z) => tf({ pos: [x, 0, z] },
@@ -877,28 +906,37 @@ model("headless_knitter", tf({ rot: [0, -90, 0] },
     cyl(0.1, 0.05, { mat: "pale", sides: 9, pos: [0, 0.6, 0] }),
     cyl(0.085, 0.015, { mat: "meat", sides: 9, pos: [0, 0.645, 0] }),
     cyl(0.025, 0.03, { mat: "bone", sides: 6, pos: [0, 0.65, 0] }),
-    // puffed sleeves and big pale arms down to the armrests, forearms to the lap
+    // puffed sleeves; the arms big and soft: the upper arm hanging fat
+    // outside the armrest, its flab sagging under it, the forearm laid along
+    // the armrest, the plump hand turned in to the knitting
     [-1, 1].map((k) => [
       sphere(0.13, { mat: "softDress", detail: 2, pos: [-0.02, 0.5, k * 0.34], scale: [1, 0.9, 0.9] }),
-      tube([-0.02, 0.44, k * 0.38, 0.02, 0.24, k * 0.42], 0.115, { mat: "softPale", sides: 8 }),
-      sphere(0.11, { mat: "softPale", detail: 1, pos: [0.02, 0.24, k * 0.42] }),
-      tube([0.02, 0.24, k * 0.42, 0.22, 0.2, k * 0.2], 0.09, { mat: "softPale", sides: 8 }),
-      sphere(0.06, { mat: "softPale", detail: 1, pos: [0.25, 0.2, k * 0.14], scale: [1.1, 0.8, 1] })])),
-  // the lap and thighs under the skirt, the skirt falling ragged from the knees
+      capsule([-0.03, 0.56, k * 0.37], [0.02, 0.17, k * 0.46], 0.12, 0.11, "softPale", 1.3),
+      capsule([-0.04, 0.24, k * 0.46], [0.28, 0.27, k * 0.27], 0.105, 0.065, "softPale", 1.1),
+      plumpHand(0.3, 0.26, k * 0.2, k)])),
+  // the lap; the skirt a bell over the knees, its hem torn short above them;
+  // the white apron over it, ragged too
   sphere(0.3, { mat: "softDress", detail: 2, pos: [0.14, SEAT + 0.1, 0], scale: [1.05, 0.42, 1.12], jitter: 0.008, seed: 761 }),
-  tf({ pos: [0.42, 0, 0] }, pleats(SEAT + 0.12, 0.2, 0.62, 0.7, 10, 5, "dress", "dressD", 771)),
-  // the white apron over the lap, its hem ragged over the knees
-  sphere(0.27, { mat: "softApronW", detail: 2, pos: [0.17, SEAT + 0.13, 0], scale: [0.95, 0.36, 0.95], jitter: 0.006, seed: 781 }),
-  tf({ pos: [0.44, 0, 0] }, pleats(SEAT + 0.14, SEAT - 0.16, 0.5, 0.56, 8, 4, "apronW", "apronW", 791)),
+  lathe([0.33, 0, 0.36, 0.14, 0.32, 0.26], { mat: "softDress", sides: 14, pos: [0.3, SEAT - 0.16, 0], scale: [0.62, 1, 1.08], jitter: 0.01, seed: 765 }),
+  Array.from({ length: 9 }, (_, i) => {
+    const a = (i / 8 - 0.5) * 150 * Math.PI / 180, l = 0.06 + rnd(i, 3, 767) * 0.07
+    return box(0.02, l, 0.08, { mat: i % 2 ? "dressD" : "softDress", pos: [0.3 + Math.cos(a) * 0.21, SEAT - 0.16 - l + 0.02, Math.sin(a) * 0.38],
+      rot: [0, -a * 180 / Math.PI, (rnd(i, 5, 767) - 0.5) * 14] })
+  }),
+  sphere(0.3, { mat: "softApronW", detail: 2, pos: [0.2, SEAT + 0.14, 0], scale: [1.0, 0.38, 1.0], jitter: 0.006, seed: 781 }),
+  tf({ pos: [0.48, 0, 0] }, clothPanel(SEAT + 0.16, 0, 0.32, 0.6, 3, 0.03, "softApronW", 791),
+    [-0.24, -0.12, 0.0, 0.12, 0.23].map((zz, i) => box(0.012, 0.05 + rnd(i, 3, 793) * 0.06, 0.09, { mat: "apronW", pos: [0.02, SEAT - 0.17 - rnd(i, 3, 793) * 0.06, zz], rot: [(rnd(i, 5, 793) - 0.5) * 24, 0, 0] }))),
   // the knitting held up over the lap, tilted towards +x: a green piece with
   // an orange heart, two needles through its top edge
   tf({ pos: [0.26, SEAT + 0.3, 0], rot: [0, 90, 0], scale: 1.3 }, tf({ rot: [-50, 0, 0] },
     extrude(roundSquare(1, 0.1).map((v, i) => v * (i % 2 ? 0.1 : 0.13)), 0.02, { mat: "knitG", jitter: 0.004 }),
     extrude(heartPts, 0.02, { mat: "knitO", pos: [0, 0, 0.008], scale: 0.07 }),
     [-1, 1].map((k) => cyl(0.006, 0.34, { mat: "steel", sides: 4, rot: [0, 0, 90 + k * 12], pos: [0.17, 0.1, 0.012] })))),
-  // legs down to the slippers
-  [-1, 1].map((k) => [tube([0.36, SEAT + 0.05, k * 0.15, 0.42, 0.22, k * 0.17, 0.44, 0.08, k * 0.19], 0.11, { mat: "softPale", sides: 8 }),
-    slipper(0.46, k * 0.19)]),
+  // thick pale legs, set wide: the thigh under the skirt, a round knee, the
+  // calf bulging, the ankle down into the slipper
+  [-1, 1].map((k) => [capsule([0.14, SEAT + 0.06, k * 0.16], [0.46, SEAT + 0.0, k * 0.21], 0.14, 0.12, "softPale", 1.1),
+    capsule([0.4, SEAT + 0.06, k * 0.22], [0.47, 0.04, k * 0.25], 0.12, 0.08, "softPale", 1.2),
+    tf({ scale: 1.2 }, slipper(0.47 / 1.2, k * 0.26 / 1.2))]),
   // the yarn: from the knitting down over the rocker to its ball
   tube([0.3, SEAT + 0.22, -0.05, 0.5, SEAT - 0.1, -0.2, 0.58, 0.15, -0.32, 0.66, 0.02, -0.38, 0.74, 0.07, -0.42], 0.005, { mat: "knitG", sides: 4 }),
   sphere(0.07, { mat: "yarnBall", detail: 2, pos: [0.76, 0.07, -0.42] }),

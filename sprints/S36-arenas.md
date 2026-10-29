@@ -1661,6 +1661,28 @@ y sus hachas ya están en el kit de la arena 9.
     - Las manchas de la `linen` salían como lunares oscuros por todo el
       vestido; ahora son la mitad de fuertes.
     - La calavera era un huevo con una caja por cejas.
+- Dueño (2026-10-29): "mejora los brazos de la mujer", "y las
+  piernas/falda". Hoja: `kit-arena10-mejoras-1.png`.
+  - En la retail, los brazos son enormes y blandos: el de arriba cuelga
+    por fuera del apoyabrazos y el antebrazo descansa sobre él.
+  - Ayuda nueva `capsule`: una cápsula lisa (lathe con los extremos
+    redondos, algo más gruesa en el centro) orientada entre dos puntos, un
+    tramo por segmento. Así un brazo o una pantorrilla gordos se leen como
+    una sola forma blanda, y solo se marca el pliegue del codo o de la
+    rodilla.
+  - Los brazos cuelgan gruesos y los antebrazos van por el apoyabrazos.
+    Las manos son rechonchas, con tres dedos cortos curvados sobre las
+    agujas y el pulgar encima.
+  - Las piernas son gruesas y abiertas: el muslo bajo la falda y la
+    pantorrilla hasta la zapatilla, que también es más grande. La falda es
+    una campana sobre las rodillas con el bajo roto en lengüetas, y el
+    delantal blanco cae en pliegues por delante, con el bajo roto.
+  - Lo que salió mal antes de quedar así:
+    - Con esferas encadenadas, los miembros salían anillados, como un
+      muñeco Michelin, y con 52.000 triángulos.
+    - Con cilindros y una esfera en cada articulación, las normales suaves
+      del juego marcaban bultos de culturista.
+    - Ahora son 8.100 triángulos.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
