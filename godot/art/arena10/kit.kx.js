@@ -20,10 +20,12 @@ const WOOD = {
   // the chicken cages (2738, 2739, 2741, 2745, 2751, 1437): honey planks
   // gone olive (retail), grey, dark; their round bars are palette (BAR)
   cage: ["#f0d898", "#c8c8c8", "#d0b098"], cageD: ["#a89070", "#8a8a8a", "#8c705c"],
+  // the low table (1593): olive-green old wood (retail), grey, brown
+  table: ["#c8c890", "#c0c0c0", "#d0a888"], tableD: ["#8a8a5c", "#808080", "#8a6a54"],
 }
 // which board loom each loom of a family uses: the posts' grey-brown comes
 // from the silver-grey boards warmed
-const WOOD_TEX = { post: ["_b", "_b", "_c"], postD: ["_b", "_b", "_c"], cage: ["_b", "_b", "_c"], cageD: ["_b", "_b", "_c"] }
+const WOOD_TEX = Object.fromEntries(["post", "postD", "cage", "cageD", "table", "tableD"].map((k) => [k, ["_b", "_b", "_c"]]))
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(WOOD).flatMap(([k, v]) => [
   [k + s, { tex: "../arena6/out/board" + (WOOD_TEX[k] || LOOMS)[i], uv: 0.8, rough: 0.85, color: v[i] }],
   [k + "V" + s, { tex: "../arena6/out/boardV" + (WOOD_TEX[k] || LOOMS)[i], uv: 0.8, rough: 0.85, color: v[i] }]]))))
@@ -50,10 +52,30 @@ const BAR = {
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(BAR).map(([k, v]) =>
   [k + s, { color: v[i], rough: k === "nail" || k === "hinge" ? 0.5 : 0.85, metal: k === "nail" || k === "hinge" ? 0.4 : 0 }]))))
+// the meat crates and boxes (kit.tx.js pine, pineV): golden pine, pale ash,
+// dark stained; the corner posts and floor a shade darker
+pal(Object.fromEntries(LOOMS.flatMap((s) => [
+  ["crate" + s, { tex: "out/pine" + s, uv: 0.8, rough: 0.75 }],
+  ["crateV" + s, { tex: "out/pineV" + s, uv: 0.8, rough: 0.75 }],
+  ["crateD" + s, { tex: "out/pine" + s, uv: 0.8, rough: 0.8, color: "#a89078" }],
+  ["crateDV" + s, { tex: "out/pineV" + s, uv: 0.8, rough: 0.8, color: "#a89078" }],
+])))
+// the tablecloths (kit.tx.js cloth): red, blue or green checks
+pal(Object.fromEntries(LOOMS.map((s) => ["cloth" + s, { tex: "out/cloth" + s, uv: 1.0, rough: 0.92 }])))
+// meat and bone, palette colours: fresh (retail), roasted, cured; [a, b, c]
+const MEAT = {
+  meat: ["#a82a20", "#7a3818", "#b86858"], meatD: ["#6a1410", "#4a1e0c", "#7a3a30"], fat: ["#f0dcc8", "#d8b088", "#f4e4d4"],
+  ham: ["#7a4426", "#4e2810", "#9a6644"], hamL: ["#a8683e", "#7a4420", "#c08a64"],
+  sausage: ["#dca492", "#9a5a32", "#c88a74"], sausageD: ["#a86a5a", "#6a3a1c", "#946050"],
+  bone: ["#e4dabc", "#d8ccaa", "#ece4cc"], boneD: ["#aca07e", "#9c8e6a", "#b4aa90"],
+  twine: ["#c89a20", "#b08a3a", "#a87a2a"], wicker: ["#b88a3a", "#8a7a5a", "#7a5430"], wickerD: ["#7a5420", "#5a4e3a", "#4e321a"],
+}
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MEAT).map(([k, v]) =>
+  [k + s, { color: v[i], rough: k.startsWith("meat") ? 0.45 : k === "fat" ? 0.5 : 0.75 }]))))
 // the dashes of the floor's joint line: [a, b, c]
 const DASH = { dash: ["#5a5440", "#3e4042", "#5a2e20"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DASH).map(([k, v]) => [k + s, { color: v[i], rough: 0.95 }]))))
-const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR),
+const SKINNED = ["softBlood", "softBloodFlow", "softBloodFlowD", "softBloodFlowDD", "bloodBed", "joint", "softBrick", "softBrickD", "jointD", "cloth", "crate", "crateV", "crateD", "crateDV", ...Object.keys(DASH), ...Object.keys(LIT), ...Object.keys(BAR), ...Object.keys(MEAT),
   ...Object.keys(WOOD).flatMap((k) => [k, k + "V"])]
 const looms = (name) => threeLooms(name, SKINNED)
 
@@ -249,3 +271,141 @@ model("cage_broken",
   cyl(0.055, 0.6, { mat: "bar", sides: 7, pos: [-0.45, CG.pt + 0.05, -0.38], rot: [0, 0, 62] }),
   cyl(0.055, 0.55, { mat: "bar", sides: 7, pos: [0.1, CG.pt + 0.02, 0.42], rot: [-75, 20, 0] }))
 for (const n of ["cage", "cage_chicken", "cage_open", "cage_broken"]) looms(n)
+
+
+// --- the low table and its tablecloth (1593, 2651) ----------------------------
+// low table (1593): a thick top of three planks along x, a little wider than
+// the cell, on four square legs each bundled from two boards; about 0.55 m
+const TABLE_H = 0.5
+const leg = (x, z, seed) => [-1, 1].map((k) => box(0.11, TABLE_H - 0.2, 0.22, { mat: k < 0 ? "tableDV" : "tableV", pos: [x + k * 0.057, 0, z], jitter: 0.006, seed: seed + k }))
+model("low_table",
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz], i) => leg(sx * 0.33, sz * 0.33, 401 + i * 2)),
+  [-1, 0, 1].map((k) => tf({ pos: [0, TABLE_H - 0.22, k * 0.335] },
+    extrude(roundSquare(1, 0.25).map((v, i) => v * (i % 2 ? 0.163 : 0.52)), 0.22, { mat: "table", rot: [90, 0, 0], pos: [0, 0.11, 0], jitter: 0.008, seed: 411 + k }))))
+// tablecloth (2651): a checked cloth laid on the low table's top (y = 0 is
+// that top) and hanging over its +x side nearly to the floor, flaring out a
+// little, its hem ragged
+model("tablecloth", { pivot: "origin" },
+  box(1.02, 0.015, 1.02, { mat: "cloth", pos: [0, 0, 0] }),
+  tf({ pos: [0.51, 0.008, 0], rot: [90, 0, 0] }, cyl(0.02, 1.02, { mat: "cloth", sides: 6, pos: [0, -0.51, 0] })),
+  tf({ pos: [0.525, 0, 0], rot: [0, 0, 6] },
+    box(0.015, TABLE_H - 0.1, 1.02, { mat: "cloth", pos: [0, -(TABLE_H - 0.1), 0], jitter: 0.004, seed: 421 }),
+    Array.from({ length: 9 }, (_, i) => box(0.012, 0.03 + rnd(i, 3, 425) * 0.04, 0.1, { mat: "cloth", pos: [0, -(TABLE_H - 0.1) - 0.03, -0.45 + i * 0.112], rot: [rnd(i, 5, 425) * 20 - 10, 0, 0] }))))
+for (const n of ["low_table", "tablecloth"]) looms(n)
+
+// --- meat: the butcher's cuts, shared by the crates, the basket, the plates
+// and the block (2742-2744, 2758, 2759, 2363, 2476, 2525) --------------------
+// a ham: a fat brown leg tapering to its knuckle, the cut face red with a
+// ring of fat, a bone end poking out; s = its length, faces +x
+const ham = (x, y, z, s, ry, rz = 0) => tf({ pos: [x, y, z], rot: [0, ry, rz], scale: s },
+  sphere(0.5, { mat: "ham", detail: 2, scale: [0.62, 0.5, 0.5], pos: [0, 0.25, 0], jitter: 0.02, seed: 3 }),
+  lathe([0.24, 0, 0.16, 0.25, 0.09, 0.42, 0.08, 0.5], { mat: "hamL", sides: 8, rot: [0, 0, 90], pos: [-0.12, 0.25, 0] }),
+  cyl(0.24, 0.02, { mat: "fat", sides: 10, rot: [0, 0, -90], pos: [0.27, 0.25, 0], scale: [1, 1, 1] }),
+  cyl(0.19, 0.024, { mat: "meat", sides: 10, rot: [0, 0, -90], pos: [0.275, 0.25, 0] }),
+  cyl(0.045, 0.16, { mat: "bone", sides: 6, rot: [0, 0, 90], pos: [-0.56, 0.25, 0] }),
+  sphere(0.07, { mat: "bone", detail: 1, pos: [-0.72, 0.25, 0], scale: [0.8, 1, 1.3] }))
+// a string of sausages: n plump links along x, pinched and tied
+const sausages = (x, y, z, n, r, ry, curl = 0) => tf({ pos: [x, y, z], rot: [0, ry, 0] },
+  Array.from({ length: n }, (_, i) => {
+    const a = i * curl * Math.PI / 180, px = Math.sin(a) * r * 2.6 * (curl ? 1 / (curl * Math.PI / 180) : i), pz = curl ? (1 - Math.cos(a)) * r * 2.6 / (curl * Math.PI / 180) : 0
+    return [sphere(r, { mat: i % 2 ? "sausageD" : "sausage", detail: 1, pos: [curl ? px : i * r * 2.3, r, pz], rot: [0, -i * curl, 0], scale: [1.35, 1, 1] }),
+      sphere(r * 0.35, { mat: "twine", detail: 0, pos: [(curl ? px : i * r * 2.3) + r * 1.2, r, pz] })]
+  }))
+// a steak: a flat slab of red meat, rounded, its edge rimmed with fat
+const steak = (x, y, z, s, ry, tilt = 0) => tf({ pos: [x, y, z], rot: [tilt, ry, 0], scale: s },
+  extrude(roundSquare(1, 0.6, 4, 0.12, 3).map((v, i) => v * (i % 2 ? 0.16 : 0.22)), 0.05, { mat: "fat", rot: [90, 0, 0], pos: [0, 0.025, 0] }),
+  extrude(roundSquare(1, 0.6, 4, 0.12, 3).map((v, i) => v * (i % 2 ? 0.14 : 0.2)), 0.056, { mat: "meat", rot: [90, 0, 0], pos: [0.005, 0.028, 0] }),
+  box(0.2, 0.058, 0.018, { mat: "fat", pos: [0.0, 0.0, 0.03], rot: [0, 25, 0] }))
+// a short bone with knobbed ends, along x
+const knuckleBone = (x, y, z, len, r, ry, rz = 0) => tf({ pos: [x, y, z], rot: [0, ry, rz] },
+  cyl(r, len, { mat: "bone", sides: 6, rot: [0, 0, -90], pos: [-len / 2, 0, 0] }),
+  [-1, 1].flatMap((e) => [-1, 1].map((k) => sphere(r * 1.5, { mat: e < 0 ? "boneD" : "bone", detail: 1, pos: [e * len / 2, 0, k * r * 0.9] }))))
+// the heap of cuts in a crate or a basket: hams, steaks, bones, sausages,
+// a smear of blood; centred at y, about r across
+const meatHeap = (y, r, seed) => [
+  sphere(r * 0.85, { mat: "hamL", detail: 1, pos: [0, y, 0], scale: [1, 0.4, 0.8] }),
+  ham(-r * 0.3, y - 0.05, -r * 0.25, r * 1.6, 30, 30),
+  ham(r * 0.35, y - 0.06, r * 0.15, r * 1.4, -150, 25),
+  ham(-r * 0.1, y - 0.02, r * 0.45, r * 1.1, -60, 15),
+  steak(-r * 0.55, y + 0.06, r * 0.3, 0.8, 20, -35), steak(r * 0.15, y + 0.16, -r * 0.4, 0.7, -40, 35),
+  knuckleBone(r * 0.45, y + 0.16, -r * 0.05, 0.16, 0.03, 30, 35),
+  sausages(r * 0.5, y + 0.02, r * 0.45, 3, 0.06, -70, 30),
+]
+// a crate of golden boards: two boards to a side, corner posts, open on top
+const meatCrate = (w, d, h, seed) => [
+  box(w - 0.06, 0.04, d - 0.06, { mat: "crateD", pos: [0, 0.01, 0] }),
+  [0, 90, 180, 270].map((r, i) => tf({ rot: [0, r, 0] },
+    [0, 1].map((k) => box((i % 2 ? d : w) - 0.03, h / 2 - 0.012, 0.04, { mat: "crate", pos: [0, k * h / 2, (i % 2 ? w : d) / 2 - 0.02], jitter: 0.005, seed: seed + i * 2 + k })))),
+  [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) => box(0.07, h, 0.07, { mat: "crateDV", pos: [sx * (w / 2 - 0.03), 0, sz * (d / 2 - 0.03)] })),
+]
+// a blood smear down the +z face of a crate (a thin decal, proud of it)
+const smear = (x, y, z, w, h) => [box(w, h, 0.006, { mat: "meatD", pos: [x, y, z], jitter: 0.01 }),
+  box(0.03, h * 1.4, 0.007, { mat: "meatD", pos: [x + w * 0.2, y - h * 0.6, z] })]
+// two crates of meat (2744): two golden crates stacked, the top one heaped
+// with hams, steaks, a bone and sausages, a string of sausages hanging down
+// its +x side, blood smeared on the front
+const CR = { w: 0.96, d: 0.78, h: 0.26 }
+const crateStack = (seed) => [
+  meatCrate(CR.w, CR.d, CR.h, seed),
+  tf({ pos: [0.02, CR.h + 0.01, 0], rot: [0, 4, 0] }, meatCrate(CR.w, CR.d, CR.h, seed + 10), meatHeap(CR.h - 0.05, 0.4, seed)),
+  smear(-0.1, CR.h + 0.12, CR.d / 2 + 0.005, 0.3, 0.08),
+  tf({ pos: [CR.w / 2 + 0.06, 0.12, 0.18], rot: [0, 0, 80] }, sausages(0, 0, 0, 4, 0.055, 90)),
+]
+model("meat_crates", crateStack(431))
+// crates of meat spilled (2743): the same two crates, a ham fallen against
+// their front and a string of sausages on the floor
+model("meat_crates_spilled", crateStack(451),
+  ham(0.05, 0.0, CR.d / 2 + 0.2, 0.42, -100, 40),
+  sausages(0.25, 0, 0.55, 3, 0.06, 20, 50),
+  cyl(0.12, 0.004, { mat: "bloodLit", sides: 9, pos: [-0.05, 0, 0.55], scale: [1.4, 1, 0.8] }))
+// basket of meat (2742): a round wicker basket heaped with the cuts, blood
+// dripping under it, one sausage dropped beside it
+model("meat_basket",
+  lathe([0.22, 0, 0.3, 0.12, 0.36, 0.26, 0.34, 0.27, 0.27, 0.12, 0.18, 0.03], { mat: "wicker", sides: 12 }),
+  [0.06, 0.12, 0.18].map((y, i) => torus(0.26 + y * 0.35, 0.015, { mat: "wickerD", pos: [0, y, 0], rings: 18, sides: 5 })),
+  torus(0.355, 0.03, { mat: "wicker", pos: [0, 0.265, 0], rings: 18, sides: 6 }),
+  meatHeap(0.22, 0.32, 461),
+  cyl(0.16, 0.004, { mat: "bloodLit", sides: 9, pos: [0.06, 0, 0.12], scale: [1.4, 1, 0.9] }),
+  sausages(-0.32, 0, 0.36, 2, 0.06, 30))
+for (const n of ["meat_crates", "meat_crates_spilled", "meat_basket"]) looms(n)
+
+// --- ribcages (2747, 2748, 234) -------------------------------------------------
+// a curved tapering bone: chained lathe sections, each bent a little more
+// (like arena 8's horn); starts at (x, y, z), leaning lean° from upright
+// towards +x after turning turn° about y
+const rib = (x, y, z, len, r, lean, bend, turn, segs = 4, mat = "bone", flat = 1) => {
+  const sl = len / segs
+  const sec = (i) => i >= segs ? [] : tf({ pos: [0, i ? sl : 0, 0], rot: [0, 0, i ? -bend : 0] },
+    lathe([r * (1 - i / segs * 0.7), -0.008, r * (1 - (i + 1) / segs * 0.7), sl], { mat, sides: 5 }), sec(i + 1))
+  return tf({ pos: [x, y, z], rot: [0, turn, 0] }, tf({ rot: [0, 0, -lean] }, tf({ scale: [1, 1, flat] }, sec(0))))
+}
+// a spine lying along x: knobbly vertebrae from x0 to x1 at height y
+const spine = (x0, x1, y, r) => {
+  const n = Math.max(3, Math.round((x1 - x0) / (r * 1.6)))
+  return Array.from({ length: n }, (_, i) => [
+    sphere(r, { mat: i % 2 ? "boneD" : "bone", detail: 1, pos: [x0 + (x1 - x0) * i / (n - 1), y, 0], scale: [0.8, 1, 1.1] }),
+    box(r * 0.5, r * 1.6, r * 0.4, { mat: "bone", pos: [x0 + (x1 - x0) * i / (n - 1), y, -r * 0.6] })])
+}
+// ribcage (2747): a big ribcage lying on the floor, drawn as the retail
+// draws it, in screen terms (turned 45° about y, so x runs along the
+// screen's horizontal): the spine along it, seven ribs rising from it in two
+// rows and sweeping back towards -x, longest in the middle; a pink scrap of
+// gristle at the tail end
+model("ribcage", tf({ rot: [0, 45, 0] },
+  spine(-0.6, 0.5, 0.08, 0.08),
+  [-0.48, -0.32, -0.16, 0, 0.16, 0.32, 0.46].map((x, i) => rib(x, 0.05, i % 2 ? 0.08 : -0.08, 0.6 + Math.sin((i + 1) / 8 * Math.PI) * 0.3, 0.06, -22, 24, 180, 4, "bone", 0.6)),
+  tube([0.5, 0.08, 0, 0.66, 0.16, 0.02, 0.7, 0.3, 0.0, 0.6, 0.36, -0.03], 0.025, { mat: "sausage", sides: 5 })))
+// small ribcage (2748): a little one lying flat, like a fish's bones: the
+// spine along x, short ribs fanning out to both sides, one loose bone
+model("ribcage_small", { scale: 1.35 },
+  spine(-0.3, 0.3, 0.035, 0.04),
+  [-0.24, -0.14, -0.04, 0.06, 0.16, 0.24].flatMap((x, i) => [-1, 1].map((k) => rib(x, 0.03, 0, 0.2 - Math.abs(i - 2.5) * 0.02, 0.025, 50, 14, k * 90 + 10, 3))),
+  knuckleBone(0.12, 0.02, 0.32, 0.24, 0.018, -30))
+// standing ribcage (234): a small ribcage stood up on its rib tips like a
+// spider, the spine on top along x, the ribs arching out and down to the
+// floor on both sides
+model("ribcage_standing", { scale: 1.1 },
+  spine(-0.24, 0.24, 0.2, 0.065),
+  [-0.19, -0.065, 0.065, 0.19].flatMap((x, i) => [-1, 1].map((k) =>
+    rib(x, 0.2, 0, 0.55, 0.075, 70, 30, -90 * k + (i - 1.5) * 10, 4, "bone", 0.75))).map((it) => tf({ rot: [0, 45, 0] }, it)))
+for (const n of ["ribcage", "ribcage_small", "ribcage_standing"]) looms(n)

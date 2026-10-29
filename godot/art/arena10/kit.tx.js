@@ -67,3 +67,59 @@ skins({
     }
   }
 }
+
+// --- cloth: the checked tablecloths (2651) ------------------------------------
+// a cotton cloth in big checks: the weave fine, the checks a touch uneven in
+// tone, a few stains and soft creases; eight checks to a tile
+//   a red and white (retail)   b blue and white   c green and cream
+skins({
+  a: { c0: "#b03a12", c1: "#d24a18", w0: "#e8e2da", w1: "#faf8f2", st: "#7a3020" },
+  b: { c0: "#2a4a8a", c1: "#3a5ea6", w0: "#e2e4ea", w1: "#f8f8fc", st: "#4a3a30" },
+  c: { c0: "#3a6a2e", c1: "#4c823a", w0: "#e8e2c8", w1: "#f8f2dc", st: "#5a4a2a" },
+})
+{
+  const chk = checker({ cols: 8 }).as("checks")
+  const thread = weave({ threads: 64, gap: 0.2, seed: 1201 }).as("thread")
+  const tone = noise({ scale: 6, octaves: 2, seed: 1202 })
+  const crease = noise({ scale: [2, 5], octaves: 2, seed: 1203 }).warp(noise({ scale: 3, seed: 1204 }), 0.1).as("crease")
+  const stain = noise({ scale: 4, octaves: 3, seed: 1205 }).threshold(0.7, 0.06).as("stain")
+  const h = crease.mul(0.6).add(thread.mul(0.15)).as("clothH")
+  for (const k of "abc") {
+    const col = (n) => n + k
+    material("cloth" + SUF[k], { size: 512, depth: 0.008, ao: 0.4 }, {
+      height: h,
+      color: ramp(tone, [col("w0"), col("w1")]).mix(ramp(tone, [col("c0"), col("c1")]), chk)
+        .mul(thread.levels(0, 1, 0.9, 1)).mix(col("st"), stain.mul(0.35)),
+      rough: 0.92,
+    })
+  }
+}
+
+// --- pine: the bright golden boards of the meat crates and boxes (2743, 2744,
+// 1620, 2740) -----------------------------------------------------------------
+// fresh sawn pine: long soft grain streaks, a few knots and dark splits,
+// warm and bright; pineV runs the grain along v for upright boards
+//   a golden pine (retail)   b pale ash   c dark stained
+skins({
+  a: { g0: "#7a4a14", g1: "#c8862a", g2: "#e0a440", g3: "#f4c464" },
+  b: { g0: "#6a5e48", g1: "#b8a888", g2: "#cec0a0", g3: "#e2d6b8" },
+  c: { g0: "#2e1a0e", g1: "#6a3e20", g2: "#80502c", g3: "#9a6640" },
+})
+{
+  const grain = noise({ scale: [2, 28], octaves: 2, seed: 1301 }).warp(noise({ scale: [3, 6], seed: 1302 }), 0.05).as("grain")
+  const split = noise({ scale: [3, 22], octaves: 1, seed: 1303 }).threshold(0.9, 0.03)
+    .mul(noise({ scale: [4, 2], seed: 1304 }).threshold(0.55, 0.1)).as("split")
+  const knots = dots({ scale: 4, radius: 0.06, jitter: 1, seed: 1305 }).mul(noise({ scale: 3, seed: 1306 }).threshold(0.6, 0.1)).as("knots")
+  const blot = noise({ scale: 3, octaves: 2, seed: 1307 })
+  const h = grain.mul(0.6).add(blot.mul(0.2)).sub(split.mul(0.4)).sub(knots.mul(0.3)).as("pineH")
+  for (const [name, r] of [["pine", (f) => f], ["pineV", (f) => f.rotate(90)]])
+    for (const k of "abc") {
+      const col = (n) => n + k
+      material(name + SUF[k], { size: 512, depth: 0.012, ao: 0.4 }, {
+        height: r(h),
+        color: ramp(r(grain.mix(blot, 0.4)), [col("g1"), col("g2"), col("g2"), col("g3")])
+          .mix(col("g0"), r(split).mul(0.8)).mix(col("g0"), r(knots).mul(0.6)),
+        rough: r(grain.levels(0, 1, 0.65, 0.8)),
+      })
+    }
+}

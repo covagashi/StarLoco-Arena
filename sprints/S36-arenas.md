@@ -1469,6 +1469,61 @@ y sus hachas ya están en el kit de la arena 9.
     - La tapa de la jaula abierta era enorme; ahora son dos tablas de medio
       metro.
 
+- **Mesa y mantel** (grupos «banco» 1593 y «mantel» 2651). Hoja:
+  `kit-arena10-mesa.png`.
+  - `low_table` (1593): el «banco» es la mesa baja de las mesas con
+    mantel. Lleva un tablero grueso de tres tablas, algo más ancho que la
+    casilla, sobre cuatro patas cuadradas hechas de dos tablas cada una.
+    Mide 0,5 m. Va en las tablas grises de la arena 6, teñidas: oliva
+    (retail), gris y parda.
+  - `tablecloth` (2651): un mantel de cuadros sobre el tablero de la mesa
+    (y = 0 es el tablero), que cuelga por el lado +x casi hasta el suelo,
+    algo abierto y con el bajo deshilachado. Loom nueva `cloth`
+    (`kit.tx.js`): algodón de cuadros grandes, con trama fina, arrugas y
+    alguna mancha. Looms: cuadros rojos (retail), azules y verdes.
+  - Lo que salió mal en la primera versión: las patas eran altas y el
+    tablero fino, con la tabla del medio más oscura.
+- **Embutidos** (grupo «embutidos»: 2744, 2743 y 2742). Hojas:
+  `kit-arena10-embutidos-1.png` y `-2.png`.
+  - Loom nueva `pine` (y `pineV`, con la veta vertical): pino dorado y
+    brillante para las cajas. Ninguna tabla de las arenas anteriores era
+    tan clara, y el tinte solo oscurece. Looms: pino dorado (retail),
+    fresno claro y madera teñida oscura.
+  - Piezas de carne compartidas, para usarlas también en los platos, la
+    pierna y el tocón: jamón (`ham`), ristra de salchichas (`sausages`),
+    filete (`steak`) y hueso con nudos (`knuckleBone`). El montón
+    (`meatHeap`) junta tres jamones, dos filetes, un hueso y salchichas.
+    Looms de la carne: fresca (retail), asada y curada.
+  - `meat_crates` (2744): dos cajas doradas apiladas. La de arriba va
+    llena de carne y tiene sangre en el frente; una ristra cuelga por el
+    lado +x.
+  - `meat_crates_spilled` (2743): las mismas, con un jamón caído contra el
+    frente, salchichas en el suelo y un charco.
+  - `meat_basket` (2742): una cesta de mimbre redonda llena de carne, con
+    sangre debajo y una salchicha caída.
+  - Lo que salió mal en la primera versión:
+    - Las cajas salían oliva con la tabla de la arena 6.
+    - Los jamones medían 10 cm y no se veían: el montón eran solo filetes.
+- **Costillares** (grupo «costillar»: 2747, 2748 y 234). Hojas:
+  `kit-arena10-costillar-1.png` y `-2.png`.
+  - Ayuda `rib`: un hueso curvo que se afina, hecho de tramos de lathe
+    encadenados, como el cuerno de la arena 8. `spine` es una fila de
+    vértebras.
+  - `ribcage` (2747): un costillar grande tumbado, de 1,1 m. La columna va
+    en el horizontal de la pantalla y siete costillas suben en dos filas y
+    se curvan hacia atrás, como lo dibuja la retail. Lleva un trozo de
+    cartílago rosa en la cola.
+  - `ribcage_small` (2748): uno pequeño y plano, como una espina de pez,
+    con un hueso suelto al lado.
+  - `ribcage_standing` (234): uno pequeño de pie sobre las puntas de las
+    costillas, como una araña.
+  - Lo que salió mal en la primera versión:
+    - Las costillas eran finas y paralelas, como un peine.
+    - Al curvarlas hacia la cámara se tapaban unas a otras. La retail las
+      pinta barridas a lo largo de la columna, así que se colocan en ejes
+      de pantalla.
+    - El de pie tenía las costillas hacia arriba y no tocaba el suelo.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

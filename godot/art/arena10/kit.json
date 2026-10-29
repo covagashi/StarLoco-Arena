@@ -29,6 +29,26 @@
 			"madera oliva",
 			"madera gris",
 			"madera oscura"
+		],
+		"table": [
+			"madera oliva",
+			"madera gris",
+			"madera parda"
+		],
+		"cloth": [
+			"cuadros rojos",
+			"cuadros azules",
+			"cuadros verdes"
+		],
+		"meat": [
+			"carne fresca, pino dorado",
+			"carne asada, madera clara",
+			"carne curada, madera oscura"
+		],
+		"bone": [
+			"hueso marfil",
+			"hueso amarillento",
+			"hueso blanco"
 		]
 	},
 	"shared": [],
@@ -163,6 +183,88 @@
 			],
 			"looms": "cage",
 			"note": "the floor planks whole, the lid slid off leaning to +x, bars knocked over"
+		},
+		{
+			"name": "low_table",
+			"label": "Mesa baja",
+			"kind": "deco",
+			"gfx": [
+				1593
+			],
+			"looms": "table",
+			"top": 0.55,
+			"note": "a thick plank top on four bundled legs, about 0.55 m; the tablecloth (2651) goes on top"
+		},
+		{
+			"name": "tablecloth",
+			"label": "Mantel",
+			"kind": "deco",
+			"gfx": [
+				2651
+			],
+			"looms": "cloth",
+			"on": "block",
+			"note": "lies on the low table's top (y = 0 is that top), hanging over its +x side"
+		},
+		{
+			"name": "meat_crates",
+			"label": "Cajas con embutidos",
+			"kind": "deco",
+			"gfx": [
+				2744
+			],
+			"looms": "meat",
+			"note": "two golden crates stacked, the top one heaped with hams, steaks and sausages"
+		},
+		{
+			"name": "meat_crates_spilled",
+			"label": "Cajas con embutidos (caídos)",
+			"kind": "deco",
+			"gfx": [
+				2743
+			],
+			"looms": "meat",
+			"note": "the same crates, a ham fallen against the front, sausages on the floor"
+		},
+		{
+			"name": "meat_basket",
+			"label": "Cesta de embutidos",
+			"kind": "deco",
+			"gfx": [
+				2742
+			],
+			"looms": "meat",
+			"note": "a round wicker basket heaped with cuts, blood dripping under it"
+		},
+		{
+			"name": "ribcage",
+			"label": "Costillar",
+			"kind": "deco",
+			"gfx": [
+				2747
+			],
+			"looms": "bone",
+			"note": "a big ribcage lying on its side, the spine along x"
+		},
+		{
+			"name": "ribcage_small",
+			"label": "Costillar pequeño",
+			"kind": "deco",
+			"gfx": [
+				2748
+			],
+			"looms": "bone",
+			"note": "a little ribcage lying flat like a fish's bones, a loose bone beside it"
+		},
+		{
+			"name": "ribcage_standing",
+			"label": "Costillar de pie",
+			"kind": "deco",
+			"gfx": [
+				234
+			],
+			"looms": "bone",
+			"note": "a small ribcage stood on its rib tips, the spine on top"
 		}
 	]
 }
