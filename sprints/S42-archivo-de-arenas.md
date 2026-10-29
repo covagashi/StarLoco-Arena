@@ -1,6 +1,6 @@
 # S42 — Archivo de las arenas: referencias en PNG y JSON, sin el cliente antiguo
 
-**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** S · **Estado:** ⚪ planificado (antes de seguir modelando S36)
+**Planificado:** 2026-10-28 · **Abierto:** 2026-10-29 · **Hito:** M7 — Arte propio · **Tamaño:** S · **Estado:** 🟡 esperando al dueño (falta copiar el backup al RAID de la homelab)
 
 ## Decisión del dueño (2026-10-28)
 
@@ -103,6 +103,61 @@ archivo-arenas/
 - `forma.json` de las 47 arenas coincide con lo que decodifica el servidor:
   mismo número de casillas con suelo y mismas salidas. Lo comprueba una
   prueba Go mientras los `.jar` sigan en el repo.
+
+## Hecho (2026-10-29)
+
+- `~/codigo/archivo-arenas/` con las 47 arenas: `mapa.png`, `mapa.json`
+  (cada sprite con su gfx, posición, tamaño, tinte, casilla, capa y orden
+  de dibujo), `piezas/`, `forma.json` y `hojas/`. Ocupa unos 260 MB. El
+  README explica cada fichero y cómo seguir inventariando.
+- `server/cmd/dumparenas` saca `forma.json` de los `.jar` con
+  `gamedata.LoadFightMaps`. Salen 47 arenas y no se salta ninguna. Su
+  prueba compara cada forma con lo que decodifica el servidor: casillas de
+  suelo con su altura, salidas, pedestales y casillas especiales. Con
+  `ARCHIVO_ARENAS=~/codigo/archivo-arenas` compara también las copias del
+  archivo. Pasa.
+- La casilla de cada sprite (sacada de su clave de dibujo) cae en la forma:
+  el 89 % de las casillas de suelo tienen su bloque. Las demás quedan
+  tapadas por piezas grandes de una casilla vecina, como en el retail.
+- Herramientas en `archivo-arenas/herramientas/`: `map_sheet.py`,
+  `arena_sheet.py`, `zoom.py`, `crop.py` y `vs.py` aceptan
+  `--archivo <dir>`. Solo `fuente.py` sabe de dónde se lee. Llevan la
+  Liberation Sans (OFL) dentro, para no depender de la máquina.
+  - `estado.py` rellena `arenas.json`: 7 arenas hechas (1–7), 5 con
+    nombres (8–12), 1 con suposiciones (13) y 34 sin mirar.
+  - `construir.py` rehace el archivo desde el repo mientras exista el
+    retail. Se probó a rehacerlo desde cero y sale igual.
+    `construir.py --comun` refresca los kits y sus fotos.
+- Una sola copia: `~/codigo/m7-referencias/` enlaza a estos scripts y a
+  `comun/names.json`, `gfx_rules.json` y `biomes.json`. Los nombres se
+  siguen apuntando como siempre, y caen en el archivo.
+- Hojas: las de las arenas 2–13 se copiaron tal como las vio el dueño. Las
+  de la 1 y de la 14 a la 47 (34 arenas sin mirar, más la 1, que no tenía)
+  se sacaron solo desde el archivo. Llevan "¿qué es?" en las piezas nuevas.
+- Prueba de que basta: con `godot/assets/mapgfx` y `server/data-dist/maps`
+  apartados (movidos y devueltos después), las hojas de las arenas 9 y 14,
+  `zoom`, `crop`, `vs` y las fichas de los mundos 40 y 46 salen iguales
+  píxel a píxel que desde el repo (22 imágenes).
+- Arreglos que salieron por el camino:
+  - `map_sheet.py` borraba las páginas con `mapa-arena{N}*.png`, así que al
+    sacar la arena 1 se habría llevado las de la 10 a la 19. Ahora borra
+    `mapa-arena{N}-*.png`.
+  - Las fotos de los kits 6 y 7 estaban solo en `piece-loop/shots` y
+    `shots7`, y las hojas no las enseñaban. Se copian a
+    `capturas/m7/kit-shots/arena6` y `arena7`.
+- Backup preparado en `~/codigo/archivo-arenas-backup/`:
+  `archivo-arenas-2026-10-29.tar.zst` (249 MB),
+  `originales-2026-10-29.tar.zst` (11 MB, con los `.jar` y `mapgfx`) y
+  `SHA256SUMS`. Se descomprimió en otra carpeta, y las hojas de la arena
+  20 salieron iguales desde esa copia.
+- **Falta:** llevarlo al RAID de la homelab. La Ally no puede entrar por
+  SSH en la homelab (`Permission denied (publickey,password)`), así que la
+  copia la tiene que traer la homelab. En la homelab:
+
+  ```sh
+  rsync -av davian@ally:codigo/archivo-arenas-backup/ <RAID>/pippop/archivo-arenas/
+  cd <RAID>/pippop/archivo-arenas && sha256sum -c SHA256SUMS
+  ```
 
 ## Fuera de alcance
 

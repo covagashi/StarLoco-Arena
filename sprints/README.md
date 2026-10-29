@@ -101,7 +101,7 @@ Linux y Windows).
 | [S34](./S34-pipeline-de-assets.md) | M7 | M | ⚪ esbozo | Pipeline nuevo: de la fuente al juego en un comando, licencias, comprobaciones |
 | [S35](./S35-personajes.md) | M7 | L | ⚪ esbozo | Personajes: 24 luchadores, 9 invocaciones, 2 coaches; ~10 animaciones por esqueleto |
 | [S36](./S36-arenas.md) | M7 | L | 🔵 en curso | Arenas: **12 para la 1.0** (dueño, 2026-10-28). Assets kiln + loom por grupos, un editor y los `layout` del dueño en el juego |
-| [S42](./S42-archivo-de-arenas.md) | M7 | S | ⚪ planificado (antes de seguir modelando) | Archivo de las 47 arenas en PNG y JSON, fuera del repo y con dos copias; las herramientas de inventario lo leen sin el cliente antiguo |
+| [S42](./S42-archivo-de-arenas.md) | M7 | S | 🟡 esperando al dueño (backup al RAID) | Archivo de las 47 arenas en PNG y JSON, fuera del repo y con dos copias; las herramientas de inventario lo leen sin el cliente antiguo |
 | [S37](./S37-vfx.md) | M7 | M | ⚪ esbozo | Librería de VFX por elemento y forma; cada hechizo, por datos |
 | [S38](./S38-cartas-e-iconos.md) | M7 | L | ⚪ esbozo | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
 | [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |

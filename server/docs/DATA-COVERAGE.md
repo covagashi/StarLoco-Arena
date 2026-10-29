@@ -449,6 +449,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 
 | Date | Change |
 |---|---|
+| 2026-10-29 | S42: `cmd/dumparenas` writes each of the 47 fight arenas' shape (non-void cells with altitude and floor, team starts, coach pedestals, special cells) as JSON for the M7 arena archive, outside the repo. A test checks it against `LoadFightMaps`. No decoder change; it goes away in S43. |
 | 2026-10-22 | S09: the tournament statistics 183, 187, 188, 189 (and 190) moved by the server; the 25 achievements 182–206 can be earned. |
 | 2026-10-22 | S19: statistic coverage, 80 of the 98 counters the achievements reference now moved by the server (from 5). Store gains `MaxStat` / `AddStat` / `StatValue`. |
 | 2026-10-22 | S19: type 400's `QA`–`QD` and `QF` decoded and named (linked achievement, xp, xpLimit); not used yet — the Demon III evolution chain that needs them is S10's. |
