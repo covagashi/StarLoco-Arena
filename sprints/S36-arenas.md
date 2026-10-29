@@ -1374,6 +1374,30 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
   modeló en la arena 7. Dueño: "si no lo encuentras pues sigue con el
   pipeline normal". Se modelan como los demás grupos.
 
+Kit nuevo `godot/art/arena10/` (cocina del carnicero, mundo 41). Su desagüe
+y sus hachas ya están en el kit de la arena 9.
+
+- **Losa de ladrillos** (grupo «losa de ladrillos»: 2736; es el suelo de la
+  arena y sale 203 veces). Hoja: `kit-arena10-losa.png`.
+  - Loom nueva `paver` (`arena10/kit.tx.js`): barro cocido liso, con nubes
+    de tono, roces y desconchones medianos, grano fino y algún poro. Es
+    clara, y el modelo la tiñe. Looms: ladrillo crema (retail), pizarra gris
+    y terracota.
+  - `brick_slab`: una losa fina (`tile`, se pisa a 0,1 m) con tres por tres
+    ladrillos cuadrados y acolchados, más oscuros en el borde. Las juntas
+    son claras. Una de ellas lleva la línea de rayitas oscuras que pinta la
+    retail. Debajo irán los postes de madera (984, 985).
+  - Lo que salió mal en la primera versión:
+    - Los ladrillos eran tacos de bordes biselados, por ir sin normales
+      suaves. Ahora el material es `soft*` y la esquina más redonda.
+    - Salía un 20 % más clara y más amarilla que la retail. El amarillo
+      venía del tinte y de nuestra luz cálida; ahora el tinte es casi
+      neutro.
+    - Los ladrillos quedaban pequeños, con juntas anchas, porque el borde
+      del cojín se hundía bajo la junta. Ahora llenan la casilla como en la
+      retail.
+    - El canto de la losa salía blanco; ahora va en sombra.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

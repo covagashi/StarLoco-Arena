@@ -1,0 +1,34 @@
+{
+	"_doc": "Arena 10 (retail world 41: a butcher's kitchen) kit for the map editor (S36), same schema as art/arena7/kit.json. Its blood drain and butcher's axes are in the arena 9 kit; pieces the arena also uses from the other kits are found by map_sheet.py.",
+	"biome": "cocina",
+	"arenas": [
+		41
+	],
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"paver": [
+			"ladrillo crema",
+			"pizarra gris",
+			"terracota"
+		]
+	},
+	"shared": [],
+	"minor": [],
+	"pieces": [
+		{
+			"name": "brick_slab",
+			"label": "Losa de ladrillos",
+			"kind": "tile",
+			"gfx": [
+				2736
+			],
+			"looms": "paver",
+			"top": 0.1,
+			"note": "a thin pale slab with three by three soft square bricks; the kitchen floor, set on the wooden posts (984, 985)"
+		}
+	]
+}
