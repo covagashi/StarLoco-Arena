@@ -89,11 +89,18 @@ const MISC = {
   skin: ["#bcd2c0", "#e2bca2", "#c8a07c"], steel: ["#a8acb2", "#7a7e84", "#9a6a4a"], steelD: ["#5a5e66", "#3e4046", "#5a3a26"],
   tusk: ["#e6dca8", "#f0ece0", "#d8c49a"], tuskD: ["#b4a676", "#c4beac", "#a48e66"],
   stake: ["#8a5a2a", "#5e4a36", "#6a3a1a"], stakeD: ["#4e2e12", "#3a2c20", "#3a1c0a"],
+  tong: ["#6e8a6a", "#5a5e66", "#7a6a4a"], tongL: ["#9ab890", "#8a8e96", "#a8946a"], rust: ["#a8542a", "#8a4a2a", "#7a3a1a"],
+  handle: ["#6a3e1e", "#4a3a2e", "#8a5a30"], mallet: ["#e2dac0", "#b8b4aa", "#c8a074"],
+  plate: ["#e0c060", "#ece8de", "#c8784a"], plateD: ["#a88a34", "#b8b2a4", "#8a4a2a"], dish: ["#7a5230", "#5a4a3a", "#8a6a4a"],
+  lettuce: ["#6aa83a", "#4a8a3a", "#8ab040"], lettuceD: ["#3a6a1e", "#2a5a24", "#5a7a24"], mash: ["#ecdcb0", "#e8d8b8", "#f0e0a0"], carrot: ["#e86a1e", "#d8501a", "#e8902a"],
+  glass: ["#8a8a2a", "#3a6a4a", "#8a3a2a"], liquor: ["#4a2210", "#2a1a10", "#5a1a10"], cup: ["#a8744a", "#8a8a8a", "#b8885a"],
+  fur: ["#b8ba8e", "#8a8680", "#a8825a"], furD: ["#86885e", "#5e5a56", "#7a5a3a"], pink: ["#d888a8", "#d890a0", "#c87888"],
+  flesh: ["#f0c8c0", "#e8b8b0", "#f4d0c4"], fleshD: ["#c88880", "#b8787a", "#d09088"],
   soup: ["#5aa03a", "#8a5a2a", "#a82a1a"], soupL: ["#9ad060", "#b8844a", "#d8582e"], towel: ["#f2f0ea", "#e8e0c8", "#e0e4ec"],
 }
-const MISC_ROUGH = { grease: 0.25, greaseD: 0.35, steel: 0.35, steelD: 0.45, soup: 0.15, soupL: 0.15, tusk: 0.5, tuskD: 0.55 }
+const MISC_ROUGH = { glass: 0.1, liquor: 0.1, plate: 0.4, plateD: 0.45, tong: 0.5, tongL: 0.45, flesh: 0.45, fleshD: 0.5, grease: 0.25, greaseD: 0.35, steel: 0.35, steelD: 0.45, soup: 0.15, soupL: 0.15, tusk: 0.5, tuskD: 0.55 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(MISC).map(([k, v]) =>
-  [k + s, { color: v[i], rough: MISC_ROUGH[k] ?? 0.85, metal: k.startsWith("steel") ? 0.6 : 0 }]))))
+  [k + s, { color: v[i], rough: MISC_ROUGH[k] ?? 0.85, metal: k.startsWith("steel") ? 0.6 : k.startsWith("tong") ? 0.4 : 0 }]))))
 // the dashes of the floor's joint line: [a, b, c]
 const DASH = { dash: ["#5a5440", "#3e4042", "#5a2e20"] }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DASH).map(([k, v]) => [k + s, { color: v[i], rough: 0.95 }]))))
@@ -566,3 +573,103 @@ model("soup_tub",
   box(0.16, 0.02, 0.26, { mat: "towel", pos: [-0.39, 0.56, 0.0], jitter: 0.008 }),
   box(0.02, 0.24, 0.26, { mat: "towel", pos: [-0.47, 0.34, 0.0], rot: [0, 0, -6], jitter: 0.008 }))
 for (const n of ["barrel_tap", "soup_tub"]) looms(n)
+
+
+// --- tools (1636, 2102, 2580) -----------------------------------------------------
+// mallet (1636): a big pale wooden mallet lying on the floor, its square
+// head down, the handle along +x resting on the floor
+model("mallet", { scale: 1.3 },
+  box(0.2, 0.18, 0.18, { mat: "mallet", pos: [-0.2, 0, 0], jitter: 0.01, seed: 601 }),
+  tf({ pos: [-0.12, 0.09, 0], rot: [0, 0, -4] }, cyl(0.035, 0.4, { mat: "handle", sides: 6, rot: [0, 0, -90] })))
+// smith's tongs (2102): long tongs standing on their round jaws, the two
+// arms opening up in a V, green with rust (verdigris iron)
+model("tongs", { scale: 0.95 },
+  torus(0.13, 0.045, { mat: "tong", rings: 14, sides: 5, rot: [90, 0, 0], pos: [0, 0.17, 0] }),
+  [[0.03, 0.03], [0.07, 0.04], [-0.06, 0.08], [0.0, 0.19], [-0.1, 0.18]].map(([x, z], i) => sphere(0.03, { mat: "rust", detail: 0, pos: [x * 1.2, 0.08 + z * 0.6, 0.03], scale: [1, 1, 0.4] })),
+  [-1, 1].map((k) => tf({ pos: [k * 0.04, 0.28, 0], rot: [0, 0, -k * 14] },
+    cyl(0.045, 0.8, { mat: "tong", sides: 6, top: 0.035 }), sphere(0.04, { mat: "tongL", detail: 1, pos: [0, 0.82, 0], scale: [1, 1.6, 1] }),
+    sphere(0.03, { mat: "rust", detail: 0, pos: [0, 0.3 + k * 0.1, 0.02], scale: [1, 1.6, 0.5] }))),
+  cyl(0.04, 0.05, { mat: "tongL", sides: 6, rot: [90, 0, 0], pos: [0, 0.25, -0.025] }))
+// hammer and spanner (2580): a small hammer and a spanner lying crossed
+model("hammer_spanner", { scale: 1.6 },
+  tf({ rot: [0, 25, 0] }, box(0.14, 0.06, 0.07, { mat: "steel", pos: [-0.12, 0.0, 0] }),
+    cyl(0.022, 0.3, { mat: "handle", sides: 6, rot: [0, 0, -90], pos: [-0.08, 0.03, 0] })),
+  tf({ pos: [0.02, 0.0, -0.02], rot: [0, -60, 0] },
+    box(0.32, 0.018, 0.04, { mat: "steel", pos: [0, 0.0, 0] }),
+    [-1, 1].map((e) => tf({ pos: [e * 0.17, 0, 0] }, cyl(0.045, 0.02, { mat: "steel", sides: 8 }),
+      box(0.05, 0.022, 0.035, { mat: "steelD", pos: [e * 0.03, 0.0, 0] })))))
+for (const n of ["mallet", "tongs", "hammer_spanner"]) looms(n)
+
+// --- plates and food (2525, 2531, 2581, 2363) --------------------------------------
+// a round plate: a shallow dish with a raised rim
+const plate = (r, mat = "plate") => [
+  lathe([r * 0.7, 0, r, 0.03, r * 0.98, 0.045, r * 0.82, 0.02, 0.0, 0.02], { mat, sides: 14 }),
+  torus(r * 0.97, 0.012, { mat: mat === "plate" ? "plateD" : mat, rings: 16, sides: 4, pos: [0, 0.04, 0] })]
+// plate with a bone (2525): a pottery plate with red sauce, the ribs of a
+// roast arching over it, a fork stuck upright in it, a bone dropped beside
+model("plate_bones", { scale: 1.3 },
+  plate(0.26),
+  cyl(0.19, 0.008, { mat: "meat", sides: 12, pos: [0, 0.02, 0], scale: [1, 1, 0.9], jitter: 0.01 }),
+  spine(-0.14, 0.14, 0.05, 0.03),
+  [-0.12, -0.04, 0.04, 0.12].flatMap((x) => [-1, 1].map((k) => rib(x, 0.05, 0, 0.3, 0.02, 30, 34, -90 * k, 3))),
+  tf({ pos: [0.03, 0.06, -0.02], rot: [8, 0, -6] }, cyl(0.008, 0.18, { mat: "steel", sides: 4 }),
+    [-1, 0, 1].map((k) => box(0.005, 0.06, 0.005, { mat: "steel", pos: [k * 0.012, 0.17, 0] })),
+    cyl(0.014, 0.12, { mat: "handle", sides: 6, pos: [0, 0.2, 0] })),
+  knuckleBone(-0.3, 0.015, 0.12, 0.14, 0.012, 30))
+// plate of leftovers (2531): a wooden dish with lettuce, mash and carrot bits
+model("plate_leftovers", { scale: 1.5 },
+  plate(0.22, "dish"),
+  [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+    const a = i * 45 + 10
+    return box(0.12, 0.012, 0.07, { mat: i % 2 ? "lettuce" : "lettuceD", pos: [Math.cos(a * Math.PI / 180) * 0.15, 0.04 + (i % 3) * 0.008, Math.sin(a * Math.PI / 180) * 0.15], rot: [0, -a, (i % 2 ? 15 : -10)], jitter: 0.01, seed: 611 + i })
+  }),
+  sphere(0.11, { mat: "mash", detail: 1, pos: [0, 0.04, 0], scale: [1, 0.35, 0.85], jitter: 0.01, seed: 619 }),
+  [[0.04, 0.02], [-0.05, 0.04], [0.0, -0.05]].map(([x, z]) => box(0.03, 0.02, 0.02, { mat: "carrot", pos: [x, 0.07, z] })))
+// liquor and a little plate (2581): a gourd-shaped bottle of dark liquor, a
+// little cup and a small plate with scraps
+model("liquor_plate", { scale: 1.6 },
+  lathe([0.07, 0, 0.1, 0.06, 0.09, 0.14, 0.05, 0.19, 0.06, 0.25, 0.03, 0.3, 0.025, 0.36], { mat: "glass", sides: 10, pos: [-0.04, 0, -0.06] }),
+  cyl(0.025, 0.03, { mat: "handle", sides: 6, pos: [-0.04, 0.36, -0.06] }),
+  lathe([0.025, 0, 0.04, 0.05, 0.035, 0.06], { mat: "cup", sides: 8, pos: [0.15, 0, -0.02] }),
+  tf({ pos: [0.04, 0, 0.13] }, plate(0.12, "dish"), steak(0, 0.03, 0, 0.35, 20)))
+// steak on lettuce (2363): a wooden platter heaped with lettuce, a big
+// T-bone steak on top, a knife stuck upright in it
+model("steak_platter", { scale: 1.3 },
+  plate(0.3, "dish"),
+  Array.from({ length: 12 }, (_, i) => {
+    const a = i * 30 + 7, d = 0.12 + (i % 3) * 0.05
+    return box(0.18, 0.02, 0.11, { mat: i % 2 ? "lettuce" : "lettuceD", pos: [Math.cos(a * Math.PI / 180) * d, 0.04 + (i % 4) * 0.01, Math.sin(a * Math.PI / 180) * d], rot: [0, -a, (i % 2 ? 20 : -15)], jitter: 0.012, seed: 621 + i })
+  }),
+  steak(0.02, 0.08, 0.02, 0.85, 25),
+  cyl(0.03, 0.03, { mat: "bone", sides: 8, pos: [0.12, 0.09, -0.05] }),
+  tf({ pos: [-0.04, 0.1, 0.02], rot: [0, 30, 6] }, box(0.008, 0.14, 0.035, { mat: "steel", pos: [0, -0.04, 0] }), box(0.016, 0.1, 0.03, { mat: "handle", pos: [0, 0.1, 0] })))
+for (const n of ["plate_bones", "plate_leftovers", "liquor_plate", "steak_platter"]) looms(n)
+
+// --- dead rats (1634, 2762) -----------------------------------------------------------
+// skinned rat (1634): a small skinned rat curled up in a lumpy pink heap,
+// blood spattered round it (the owner's "little dead rat with blood")
+model("rat_skinned", { scale: 1.7 },
+  Array.from({ length: 9 }, (_, i) => sphere(0.06 + (i % 3) * 0.012, { mat: i % 2 ? "flesh" : "fleshD", detail: 1,
+    pos: [Math.cos(i * 0.9) * 0.08, 0.05 + (i % 2) * 0.02, Math.sin(i * 0.9) * 0.06], jitter: 0.008, seed: 631 + i })),
+  tube([0.12, 0.02, 0.02, 0.2, 0.01, 0.06, 0.24, 0.01, 0.0], 0.01, { mat: "pink", sides: 4 }),
+  [[0.16, -0.05, 0.04], [-0.15, 0.07, 0.035], [0.0, 0.14, 0.03], [-0.17, -0.07, 0.025]].map(([x, z, r]) =>
+    cyl(r, 0.004, { mat: "bloodLit", sides: 7, pos: [x, 0, z], scale: [1.6, 1, 0.6], rot: [0, x * 200, 0] })))
+// dead rat (2762): a fat rat on its side, paws up, crosses for eyes, its
+// long pink tail out behind (along -x... it faces +x)
+model("rat_dead", { scale: 1.3 },
+  sphere(0.13, { mat: "fur", detail: 2, pos: [0, 0.1, 0], scale: [1.4, 0.8, 0.9] }),
+  sphere(0.08, { mat: "fur", detail: 1, pos: [0.19, 0.08, 0], scale: [1.3, 0.85, 0.9] }),
+  cone(0.03, 0.06, { mat: "pink", sides: 5, rot: [0, 0, -90], pos: [0.28, 0.07, 0] }),
+  [-1, 1].map((k) => cyl(0.035, 0.012, { mat: "pink", sides: 7, rot: [90, 0, 0], pos: [0.17, 0.15, k * 0.05] })),
+  [-1, 1].map((k) => [box(0.03, 0.006, 0.006, { mat: "eye", pos: [0.24, 0.12, k * 0.04], rot: [0, 0, 45] }), box(0.03, 0.006, 0.006, { mat: "eye", pos: [0.24, 0.12, k * 0.04], rot: [0, 0, -45] })]),
+  [[0.08, 1], [-0.08, 1], [0.08, -1], [-0.08, -1]].map(([x, k]) => cyl(0.015, 0.08, { mat: "pink", sides: 4, pos: [x, 0.16, k * 0.05], rot: [k * 30, 0, 0] })),
+  sphere(0.06, { mat: "furD", detail: 1, pos: [-0.04, 0.05, 0.1], scale: [1.5, 0.5, 0.4] }),
+  tube([-0.17, 0.06, 0, -0.32, 0.02, 0.06, -0.45, 0.01, 0.02, -0.55, 0.01, 0.08], 0.012, { mat: "pink", sides: 4 }))
+for (const n of ["rat_skinned", "rat_dead"]) looms(n)
+
+// --- underwear (1719) -------------------------------------------------------------------
+// a pair of white knickers dropped on the floor
+model("knickers", { scale: 1.5 },
+  extrude([-0.12, 0.08, 0.12, 0.08, 0.1, 0.0, 0.03, -0.08, -0.03, -0.08, -0.1, 0.0], 0.02, { mat: "towel", rot: [90, 0, 0], pos: [0, 0.01, 0], jitter: 0.004 }),
+  box(0.25, 0.02, 0.025, { mat: "towel", pos: [0, 0.012, -0.08] }))
+looms("knickers")

@@ -385,6 +385,106 @@
 			],
 			"looms": "misc",
 			"note": "a wooden tub of green soup, a ladle in it, a cloth over its -x rim"
+		},
+		{
+			"name": "mallet",
+			"label": "Martillo",
+			"kind": "deco",
+			"gfx": [
+				1636
+			],
+			"looms": "misc",
+			"note": "a big wooden mallet lying, head at -x"
+		},
+		{
+			"name": "tongs",
+			"label": "Tenazas de herrero",
+			"kind": "deco",
+			"gfx": [
+				2102
+			],
+			"looms": "misc",
+			"note": "long tongs standing on their round jaws, about 1 m"
+		},
+		{
+			"name": "hammer_spanner",
+			"label": "Martillo y llave",
+			"kind": "deco",
+			"gfx": [
+				2580
+			],
+			"looms": "misc",
+			"note": "a small hammer and a spanner lying crossed"
+		},
+		{
+			"name": "plate_bones",
+			"label": "Plato con un hueso",
+			"kind": "deco",
+			"gfx": [
+				2525
+			],
+			"looms": "misc",
+			"note": "a pottery plate with sauce, roast ribs and a fork stuck in"
+		},
+		{
+			"name": "plate_leftovers",
+			"label": "Plato con restos",
+			"kind": "deco",
+			"gfx": [
+				2531
+			],
+			"looms": "misc",
+			"note": "a wooden dish with lettuce, mash and carrot"
+		},
+		{
+			"name": "liquor_plate",
+			"label": "Platito y licor",
+			"kind": "deco",
+			"gfx": [
+				2581
+			],
+			"looms": "misc",
+			"note": "a bottle of liquor, a cup and a small plate"
+		},
+		{
+			"name": "steak_platter",
+			"label": "Filete con lechuga",
+			"kind": "deco",
+			"gfx": [
+				2363
+			],
+			"looms": "misc",
+			"note": "a T-bone on a bed of lettuce, a knife stuck in it"
+		},
+		{
+			"name": "rat_skinned",
+			"label": "Ratilla muerta con sangre",
+			"kind": "deco",
+			"gfx": [
+				1634
+			],
+			"looms": "misc",
+			"note": "a small skinned rat curled up, blood round it"
+		},
+		{
+			"name": "rat_dead",
+			"label": "Rata muerta",
+			"kind": "deco",
+			"gfx": [
+				2762
+			],
+			"looms": "misc",
+			"note": "a fat rat on its side, crosses for eyes, faces +x"
+		},
+		{
+			"name": "knickers",
+			"label": "Braga",
+			"kind": "deco",
+			"gfx": [
+				1719
+			],
+			"looms": "misc",
+			"note": "white knickers on the floor"
 		}
 	]
 }

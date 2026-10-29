@@ -1561,6 +1561,34 @@ y sus hachas ya están en el kit de la arena 9.
       suben casi rectos y son gruesos.
     - La caja alta tenía la tapa al ras del marco.
 
+- **Herramientas, platos, ratas y braga** (grupos «herramientas» 1636,
+  2102 y 2580; «plato» 2525, 2531 y 2581; «comida» 2363; «rata muerta»
+  1634 y 2762; «braga» 1719). Hojas: `kit-arena10-herramientas-1.png` y
+  `-2.png`, `kit-arena10-platos-1.png` y `-2.png`, y
+  `kit-arena10-ratas-braga-1.png` y `-2.png`.
+  - Todo en colores de paleta (`MISC`).
+  - `mallet` (1636): una maza grande de madera clara, tumbada.
+    `tongs` (2102): tenazas de herrero de pie sobre la boca redonda, con
+    los brazos en V, de hierro con verdín y manchas de óxido.
+    `hammer_spanner` (2580): un martillo y una llave cruzados en el suelo.
+  - `plate_bones` (2525): un plato de barro con salsa, las costillas de un
+    asado en arco y un tenedor clavado de pie. `plate_leftovers` (2531):
+    un plato de madera con lechuga, puré y zanahoria. `liquor_plate`
+    (2581): una botella de licor en forma de calabaza, un vasito y un
+    platito. `steak_platter` (2363): un chuletón sobre lechuga, con un
+    cuchillo clavado. Usan las piezas de carne compartidas.
+  - `rat_skinned` (1634): una rata pequeña despellejada, enroscada, con
+    sangre. A mí el sprite me parece un cerebro; lo he hecho como dice el
+    dueño, y se cambia si hace falta.
+  - `rat_dead` (2762): una rata gorda de lado, con las patas arriba, cruces
+    en los ojos y la cola rosa.
+  - `knickers` (1719): una braga blanca en el suelo.
+  - Lo que salió mal en la primera versión: todo salía a dos tercios del
+    tamaño retail. Estas piezas dibujan la comida y las herramientas más
+    grandes de lo real, así que se escalaron al sprite.
+- Dueño (2026-10-29), mientras hacía estos grupos: "he ido viendo tus
+  fotos y todo perfecto".
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
