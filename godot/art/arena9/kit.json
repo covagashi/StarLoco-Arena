@@ -1,0 +1,84 @@
+{
+	"_doc": "Arena 9 (retail world 40: ruins with iron railings) kit for the map editor (S36), same schema as art/arena7/kit.json. The stone reuses the arena 6 loom textures. Pieces the arena also uses from the other kits are found by map_sheet.py.",
+	"biome": "ruinas",
+	"arenas": [
+		40
+	],
+	"looms": {
+		"": "a",
+		"_b": "b",
+		"_c": "c"
+	},
+	"loom_names": {
+		"stone": [
+			"arenisca crema",
+			"granito gris",
+			"arenisca roja"
+		]
+	},
+	"shared": [],
+	"minor": [],
+	"pieces": [
+		{
+			"name": "pebbles",
+			"label": "Roquitas",
+			"kind": "deco",
+			"gfx": [
+				1413,
+				2174
+			],
+			"looms": "stone",
+			"note": "a lump, a sharp chip and three crumbs of the pale ruin stone; 1413 and 2174 are the same scatter"
+		},
+		{
+			"name": "pebbles_spread",
+			"label": "Roquitas esparcidas",
+			"kind": "deco",
+			"gfx": [
+				1559
+			],
+			"looms": "stone",
+			"note": "eight pebbles spread across the cell: lumps, a shard, crumbs"
+		},
+		{
+			"name": "stone_shards",
+			"label": "Lascas de piedra",
+			"kind": "deco",
+			"gfx": [
+				2168
+			],
+			"looms": "stone",
+			"note": "sharp stone shards, one long split shard and a dark one"
+		},
+		{
+			"name": "stone_flake",
+			"label": "Trozo de losa",
+			"kind": "deco",
+			"gfx": [
+				2169
+			],
+			"looms": "stone",
+			"note": "a broken flagstone in two pieces with a flake on it and a dark wedge"
+		},
+		{
+			"name": "pebbles_few",
+			"label": "Roquitas sueltas",
+			"kind": "deco",
+			"gfx": [
+				2200
+			],
+			"looms": "stone",
+			"note": "a few crumbs: a sharp chip, a darker lump"
+		},
+		{
+			"name": "slab_chips",
+			"label": "Laja con roquitas",
+			"kind": "deco",
+			"gfx": [
+				1428
+			],
+			"looms": "stone",
+			"note": "a flat slab of greyer, faintly pink stone with three round pebbles at its left end"
+		}
+	]
+}

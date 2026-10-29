@@ -1211,6 +1211,31 @@ Se modela un grupo cada vez y se enseña antes de seguir.
 - **Arena 8 completa**: `map_sheet.py 39 8` da 37 piezas y 0 nuevas.
   `arenas.json` del archivo la marca como hecha.
 
+Kit nuevo `godot/art/arena9/` (ruinas con rejas, mundo 40). La piedra usa
+la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
+
+- **Roquitas** (grupo «roquitas»: 1413, 1428, 1559, 2168, 2169, 2174 y
+  2200; solo salen en la arena 9). Hojas: `kit-arena9-roquitas-1.png` …
+  `-3.png`.
+  - Seis modelos con la misma ayuda `pebble`, que coloca cada piedra en ejes
+    de pantalla, con su tamaño y su sitio medidos en el sprite retail.
+    Hay seis formas: bulto, pico, cuña con arista, lasca plana, losa gastada
+    y bloque escuadrado.
+  - `pebbles` (1413 y 2174, que son el mismo sprite), `pebbles_spread`
+    (1559), `stone_shards` (2168), `stone_flake` (2169, una losa rota con
+    otra más fina encima), `pebbles_few` (2200) y `slab_chips` (1428, un
+    bloque de piedra rosada con tres roquitas).
+  - Lo que salió mal en la primera versión:
+    - El `jitter` se aplicaba en metros y deformaba piedras de 10 cm. Ahora
+      se aplica a la forma unidad, antes de escalarla.
+    - Las piedras quedaban apiñadas en profundidad: convertí la altura del
+      sprite a metros con la escala horizontal (61 px/m) en vez de la del
+      suelo (30 px/m).
+    - Las cuñas de la 2168 eran pirámides, y la losa de la 2169, un
+      rectángulo de esquinas vivas.
+    - La losa de la 1428 salió primero como un pan y luego naranja. Ahora es
+      un bloque con bisel, en el granito de la arena 6 entibiado a rosa.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de
