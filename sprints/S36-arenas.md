@@ -1325,6 +1325,11 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
     - Iba casi de pie (22°), y en la retail se ve desde arriba.
     - Los nervios eran rayitas sueltas.
     - La muesca rota del borde no se hace.
+  - Dueño (2026-10-29): "haz más cóncavo el escudo".
+    - La cúpula pasa de 10 a 22 cm de fondo.
+    - Las cuñas de la banda eran cajas planas y asomaban como dientes por
+      la silueta. Ahora son láminas cortadas al perfil de la cúpula, que
+      siguen la curva.
 - Dueño (2026-10-29): creía que el látigo (2020) y la sangre de pared
   (2443) se habían pasado a VFX en arenas anteriores. No están en la lista
   `vfx` de `gfx_rules.json` ni en los sprints; la sangre del suelo se

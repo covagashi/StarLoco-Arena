@@ -318,20 +318,22 @@ model("wall_torch", { pivot: "origin" },
 looms("wall_torch")
 
 // --- round shield (group «escudo»: 2019) -------------------------------------
-// a domed bronze shield about 0.8 m across, standing on its rim and leaning
+// a deep-domed bronze shield about 0.8 m across (the owner: more curved), standing on its rim and leaning
 // well back against a wall or pillar, its face towards +z: a rolled rim, radial
 // ribs on the outer band, a raised toothed ring and a boss in the middle.
 // Built lying face up (y is its axis), then stood up.
 const shieldFace = () => [
-  lathe([0, 0, 0.4, 0, 0.37, 0.045, 0.24, 0.085, 0.12, 0.1, 0, 0.105], { mat: "shield", sides: 20 }),
+  lathe([0, 0, 0.4, 0, 0.385, 0.05, 0.34, 0.1, 0.27, 0.145, 0.19, 0.18, 0.1, 0.205, 0, 0.215], { mat: "shield", sides: 20 }),
   torus(0.39, 0.022, { mat: "shieldL", sides: 6, rings: 24, pos: [0, 0.012, 0] }),
   // the outer band in wedges, light and dark by turns, following the dome
+  // each wedge a thin slab cut to the dome's profile, so it lies on the curve
   Array.from({ length: 14 }, (_, k) => tf({ rot: [0, k * 360 / 14, 0] },
-    box(0.13, 0.016, 0.11, { mat: k % 2 ? "shieldD" : "shieldL", pos: [0.3, 0.048, 0], rot: [0, 0, 17] }))),
+    extrude([0.39, 0.062, 0.343, 0.113, 0.272, 0.159, 0.235, 0.177, 0.235, 0.15, 0.27, 0.135, 0.338, 0.093, 0.38, 0.045], 0.1,
+      { mat: k % 2 ? "shieldD" : "shieldL", pos: [0, 0, -0.05] }))),
   // the toothed ring and the boss
-  torus(0.19, 0.022, { mat: "shieldL", sides: 6, rings: 20, pos: [0, 0.09, 0] }),
-  Array.from({ length: 12 }, (_, k) => tf({ rot: [0, k * 30 + 15, 0] }, box(0.05, 0.03, 0.045, { mat: "shieldL", pos: [0.215, 0.083, 0], rot: [0, 0, 8] }))),
-  lathe([0, 0, 0.1, 0, 0.08, 0.04, 0, 0.06], { mat: "shieldL", sides: 12, pos: [0, 0.09, 0] }),
+  torus(0.19, 0.022, { mat: "shieldL", sides: 6, rings: 20, pos: [0, 0.18, 0] }),
+  Array.from({ length: 12 }, (_, k) => tf({ rot: [0, k * 30 + 15, 0] }, box(0.05, 0.03, 0.045, { mat: "shieldL", pos: [0.215, 0.163, 0], rot: [0, 0, 22] }))),
+  lathe([0, 0, 0.1, 0, 0.08, 0.04, 0, 0.06], { mat: "shieldL", sides: 12, pos: [0, 0.195, 0] }),
 ]
 // stood up: its axis turned to +z, then leant well back, 55° (top towards
 // -z); the rim just touches the ground
