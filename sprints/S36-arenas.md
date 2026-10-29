@@ -1737,6 +1737,10 @@ y sus hachas ya están en el kit de la arena 9.
     solapas planas pegadas a la manga y solapadas entre sí (ayuda
     `hemFlaps`). Por fuera de cada rodilla asoman tres solapas azules del
     vestido.
+- Dueño (2026-10-29): "usa el color de piel más oscuro para que veas el
+  contraste". La piel pasa a crema tostada (retail), rosa tostado y morena
+  (`pale` y `softPale`), y la tela blanca del camisón ya se separa de las
+  piernas.
 - **Arena 10 completa**: `map_sheet.py 41 10` da 76 piezas y 0 nuevas.
 
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
