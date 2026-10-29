@@ -26,6 +26,11 @@
 			"hierro gris, latón, sangre roja",
 			"hierro oxidado, gris, icor negro",
 			"hierro con verdín, cobre, limo verde"
+		],
+		"axe": [
+			"verdín oliva",
+			"acero",
+			"hierro oxidado"
 		]
 	},
 	"shared": [],
@@ -171,6 +176,36 @@
 			],
 			"looms": "drain",
 			"note": "arena 10: a round brass-rimmed drain at the end of the blood river, one bar across"
+		},
+		{
+			"name": "war_axe",
+			"label": "Hacha de guerra",
+			"kind": "deco",
+			"gfx": [
+				2016
+			],
+			"looms": "axe",
+			"note": "about 2.4 m, stuck upright in the floor, leaning a little; crescent blade, hammer block, wrapped haft"
+		},
+		{
+			"name": "butcher_axe",
+			"label": "Hacha clavada en la mesa",
+			"kind": "deco",
+			"gfx": [
+				2755
+			],
+			"looms": "axe",
+			"note": "arena 10: its edge sunk in a table's top along x, the haft rising towards the back"
+		},
+		{
+			"name": "butcher_axe_wall",
+			"label": "Hacha clavada en la pared",
+			"kind": "deco",
+			"gfx": [
+				2481
+			],
+			"looms": "axe",
+			"note": "arena 10: the wall is the plane x = 0 facing +x; the edge sunk upright in it, the haft straight out; y = 0 is the floor"
 		}
 	]
 }

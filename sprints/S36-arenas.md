@@ -1277,6 +1277,29 @@ la textura `stone` de la arena 6; todavía no tiene `kit.tx.js` propio.
       ya tiene los lados en los ejes.
     - Las barras eran hilos que pasaban por encima del marco.
 
+- **Hachas** (grupo «hacha»: 2016 de la arena 9; 2755 y 2481 de la arena
+  10). Hojas: `kit-arena9-hachas-1.png` y `-2.png`.
+  - Looms: verdín oliva (retail), acero y hierro oxidado. Son colores de
+    paleta, sin textura.
+  - `war_axe` (2016): un hacha de guerra de unos 2,4 m, clavada de pie en
+    el suelo y algo inclinada a la derecha. Lleva una cabeza maciza con
+    martillo, dos remaches y un pincho, una media luna con el filo más
+    claro y el mango vendado con dos tiras sueltas.
+  - La 2755 y la 2481 son la misma hacha de carnicero en dos posturas.
+    Comparten la cabeza (`cleaverHead`) y el mango (`cleaverHaft`); cada
+    uno va con su propio ángulo, y una ranura oscura marca el corte.
+    - `butcher_axe` (2755): clavada en la mesa, con la hoja inclinada
+      hacia atrás y el mango casi horizontal.
+    - `butcher_axe_wall` (2481): clavada en una pared, que es el plano
+      x = 0 mirando a +x. El filo va vertical y el mango sale hacia abajo.
+  - Lo que salió mal en la primera versión:
+    - La media luna no tocaba la cabeza.
+    - Una segunda lámina del mismo grosor hacía rayas en la hoja: dos caras
+      en el mismo plano.
+    - Con el mango en el plano de la hoja, la de la mesa parecía un
+      recogedor, y el mango subía demasiado.
+    - La de la pared se veía de canto. Ahora va girada 30° sobre el filo.
+
 ### Arena 13 (mundo 45, playa), 2026-10-28 — fuera de la 1.0
 
 - El dueño para el inventario en la arena 12. Esta queda en el archivo de

@@ -27,7 +27,16 @@ const DRAIN = {
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(DRAIN).map(([k, v]) =>
   [k + s, { color: v[i], rough: k.startsWith("iron") ? 0.5 : k === "brass" ? 0.35 : k.startsWith("blood") ? 0.25 : 0.95, metal: k.startsWith("iron") || k === "brass" ? 0.6 : 0 }]))))
-const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN)]
+// the axes: their heads olive verdigris (retail), steel, rusty iron; the
+// hafts' wood and cloth wrapping
+const AXE = {
+  axe: ["#8a9c5c", "#9298a2", "#8a5a3a"], axeL: ["#bccc8c", "#c4c8ce", "#b47c54"], axeD: ["#56663a", "#5a5e66", "#552f1c"],
+  haft: ["#8e7e34", "#6e5a40", "#5a3a22"], wrap: ["#e4dca0", "#dcd8cc", "#d4c094"],
+  grip: ["#4a2a14", "#3a2e24", "#2e1c10"], slit: ["#100c08", "#100c08", "#100c08"],
+}
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(AXE).map(([k, v]) =>
+  [k + s, { color: v[i], rough: k.startsWith("axe") ? 0.45 : 0.85, metal: k.startsWith("axe") ? 0.5 : 0 }]))))
+const SKINNED = ["stone", "stoneShade", "stoneDark", "stonePale", "stoneBrown", "crack", ...Object.keys(DRAIN), ...Object.keys(AXE)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // Screen terms, as in the arena 8 kit: u along the screen's horizontal
@@ -213,3 +222,60 @@ model("blood_drain", { pivot: "origin" },
   [[0.24, 0.24], [-0.24, -0.24]].map(([x, z], i) => sphere(1, { mat: "blood", detail: 2, pos: [x, 0.045, z], rot: [0, 45, 0], scale: [0.16, 0.02, 0.07], jitter: 0.004, seed: 81 + i })),
   bar(0.02, 0.04, 0.24, 0.03))
 for (const n of ["sewer_grate", "blood_drain"]) looms(n)
+
+// --- axes (group «hacha»: 2016 here, 2755 and 2481 in arena 10) -------------
+// a flat blade: an outline in XY (metres) given a thickness along z
+const blade = (pts, t, mat) => extrude(pts, t, { mat, pos: [0, 0, -t / 2], jitter: 0.004 })
+// the war axe (2016): about 2.4 m, stuck upright in the floor and leaning a
+// little to the right; a big head (socket and hammer in one block, a spike
+// on top) and a crescent blade on +x, the haft wrapped in cloth under the
+// head. Built facing the screen (x = screen horizontal), turned 45° at the end.
+const crescent = [0.1, 1.7, 0.24, 1.86, 0.34, 2.14, 0.44, 2.0, 0.48, 1.8, 0.49, 1.6, 0.45, 1.38, 0.34, 1.12, 0.22, 1.02, 0.27, 1.22, 0.24, 1.36, 0.1, 1.46]
+const crescentEdge = [0.34, 2.14, 0.44, 2.0, 0.48, 1.8, 0.49, 1.6, 0.45, 1.38, 0.34, 1.12, 0.22, 1.02,
+  0.2, 1.07, 0.3, 1.17, 0.4, 1.4, 0.43, 1.6, 0.42, 1.8, 0.38, 1.97, 0.31, 2.07]
+model("war_axe", { pivot: "origin" },
+  tf({ rot: [0, 45, 0] }, tf({ rot: [0, 0, -8] },
+    cyl(0.04, 0.9, { mat: "haft", sides: 6, pos: [0, -0.05, 0] }),
+    // the cloth wrapping, banded, and two frayed ends hanging off it
+    [0, 1, 2, 3, 4, 5].map((k) => cyl(k % 2 ? 0.058 : 0.066, 0.17, { mat: "wrap", sides: 7, pos: [0, 0.82 + k * 0.16, 0], rot: [0, 0, k % 2 ? 6 : -6], jitter: 0.006, seed: k })),
+    box(0.035, 0.24, 0.012, { mat: "wrap", pos: [-0.09, 0.84, 0.03], rot: [0, 0, -28] }),
+    box(0.035, 0.2, 0.012, { mat: "wrap", pos: [0.08, 1.04, 0.03], rot: [0, 0, 24] }),
+    // the head: a chunky block round the haft, the hammer face on -x a shade
+    // lighter, a blunt spike on top
+    box(0.3, 0.42, 0.18, { mat: "axe", pos: [-0.05, 1.54, 0], jitter: 0.015, seed: 3 }),
+    box(0.08, 0.34, 0.22, { mat: "axeL", pos: [-0.22, 1.58, 0], jitter: 0.01, seed: 4 }),
+    // two rivets on the head
+    sym("x", sphere(0.025, { mat: "axeD", detail: 1, pos: [0.05, 1.8, 0.09] })),
+    box(0.08, 0.08, 0.21, { mat: "axeD", pos: [0.02, 1.7, 0] }),
+    cone(0.06, 0.16, { mat: "axeL", sides: 4, pos: [-0.06, 1.95, 0] }),
+    // the crescent blade on +x, its neck in the head; a lighter honed band
+    // along the edge, a little thicker than the blade so it shows
+    blade(crescent, 0.05, "axe"), blade(crescentEdge, 0.06, "axeL"))))
+
+// the butcher's axe (2755 on a table, 2481 in a wall): a wide blade whose
+// edge (along x, at y = 0) is sunk in a surface, a socket at its back
+// (0, 0.3); the haft goes on from the socket its own way, as each sprite
+// has it. A dark slit marks the cut.
+const cleaverBlade = [-0.42, 0.0, 0.4, 0.0, 0.3, 0.2, 0.14, 0.3, 0.1, 0.26, 0.02, 0.32, -0.06, 0.28, -0.12, 0.33, -0.3, 0.24]
+const cleaverHead = () => [blade(cleaverBlade, 0.04, "axe"), box(0.14, 0.12, 0.08, { mat: "axeD", pos: [0.0, 0.25, 0] })]
+// the haft along +y from the socket: dark grip, white wrapping, a knob
+const cleaverHaft = () => [
+  cyl(0.03, 0.28, { mat: "grip", sides: 6 }),
+  cyl(0.04, 0.32, { mat: "wrap", sides: 7, pos: [0, 0.26, 0] }),
+  sphere(0.05, { mat: "grip", detail: 1, pos: [0, 0.62, 0] }),
+]
+// on a table (2755): the edge 6 cm into the top along world x, the blade
+// leaning back 32°, the haft going back (-z) almost level and turned 30°
+// towards +x
+model("butcher_axe", { pivot: "origin" },
+  tf({ pos: [0, -0.07, 0], rot: [-32, 0, 0], scale: 1.15 }, cleaverHead()),
+  tf({ pos: [0, 0.22, -0.19], rot: [0, -30, 0] }, tf({ rot: [-82, 0, 0] }, cleaverHaft())),
+  box(0.86, 0.004, 0.03, { mat: "slit" }))
+// in a wall (2481): the wall is the plane x = 0, its face towards +x; the
+// edge upright 6 cm into it, the haft coming out and down (+x, 39° down)
+// the whole turned 30° about the edge so the blade shows its face
+model("butcher_axe_wall", { pivot: "origin" }, tf({ rot: [0, 30, 0] },
+  tf({ pos: [-0.06, 0.9, 0], rot: [0, 0, -90], scale: 1.15 }, cleaverHead()),
+  tf({ pos: [0.27, 0.9, 0], rot: [0, 0, -129] }, cleaverHaft()),
+  box(0.004, 0.98, 0.03, { mat: "slit", pos: [0, 0.41, 0] })))
+for (const n of ["war_axe", "butcher_axe", "butcher_axe_wall"]) looms(n)
