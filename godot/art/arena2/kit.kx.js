@@ -8,7 +8,6 @@ const LOOMS = ["", "_b", "_c"]
 pal(Object.fromEntries(LOOMS.flatMap((s) => [
   ["crag" + s, { tex: "out/crag" + s, uv: 1, rough: 0.85 }],
   ["flag" + s, { tex: "out/flag" + s, uv: 1, rough: 0.8 }],
-  ["lava" + s, { tex: "out/lava" + s, uv: 0.8, rough: 0.4 }],
   ["totem" + s, { tex: "out/totem" + s, uv: 0.8, rough: 0.8 }],
 ])))
 // palette looms: [a, b, c] per key
@@ -25,7 +24,16 @@ const PAL = {
 }
 pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(PAL).map(([k, v]) => [k + s, v[i]]))))
 pal({ glowL: { color: "#ffb040", emit: "#ff8a20", glow: 4 } })
-const SKINNED = ["crag", "flag", "lava", "totem", ...Object.keys(PAL)]
+// the lava of the lava rock (128), the colours of arena 8's lava fall: hot
+// in the crack, cooling as it drops; [a, b, c] glowing per key
+const LAVA = {
+  lava0: ["#f8a818", "#ffd040", "#f06018"], lava1: ["#e88010", "#f8b428", "#c8380c"],
+  lava2: ["#c44e0a", "#d88818", "#8a1c08"], lava3: ["#7a2408", "#9a4a0c", "#4e0e06"],
+}
+const LAVA_GLOW = { lava0: 1.3, lava1: 1.1, lava2: 0.8, lava3: 0.5 }
+pal(Object.fromEntries(LOOMS.flatMap((s, i) => Object.entries(LAVA).map(([k, v]) =>
+  [k + s, { color: v[i], emit: v[i], glow: LAVA_GLOW[k], rough: 0.35 }]))))
+const SKINNED = ["crag", "flag", "totem", ...Object.keys(PAL), ...Object.keys(LAVA)]
 const looms = (name) => threeLooms(name, SKINNED)
 
 // --- ground ------------------------------------------------------------------
@@ -124,13 +132,25 @@ model("basalt_rocks",
    [0.3, -0.15, 0.1, 0.3], [-0.32, -0.14, 0.11, 0.28]].map(([x, z, r, h], i) => [
     cyl(r, h, { mat: i % 2 ? "basalt" : "basaltD", sides: 6, pos: [x, 0, z], rot: [0, i * 17, 0], jitter: 0.01 }),
     cyl(r * 0.96, 0.03, { mat: "basaltL", sides: 6, pos: [x, h, z], rot: [0, i * 17, 0] })]))
-// lava rock (128): a raised slab, lava pouring off its front edge
-model("lava_rock",
-  prismUp(roundSquare(0.42, 0.1), 0.12, 0.55, "flag", 0.008),
-  cyl(0.18, 0.56, { mat: "crag", sides: 6, jitter: 0.02 }),
-  extrude([-0.12, 0, 0.12, 0, 0.1, -0.7, 0.14, -1.15, -0.14, -1.15, -0.1, -0.7], 0.06,
-    { mat: "lava", pos: [0.12, 0.67, 0.42], jitter: 0.004 }),
-  sphere(0.1, { mat: "lava", detail: 1, pos: [0.12, 0.66, 0.38], scale: [1.4, 0.4, 1] }))
+// lava rock (128): a flagstone at the edge of a step over the lava, cracked
+// near its +x edge, the crack glowing; from where it reaches the +x side the lava
+// pours down about a metre in two streams, a thin one and a wide one,
+// cooling as they fall (the colours of arena 8's lava fall)
+const crack = [[0.02, 0.12, 0.16, 0.05], [0.16, 0.05, 0.32, 0.08], [0.32, 0.08, 0.47, 0.02]]
+const lavaStream = (z, r, len) => [
+  tube([0.4, 0.13, z, 0.5, 0.11, z, 0.53, 0.0, z], r, { mat: "lava0", sides: 6 }),
+  ["lava0", "lava0", "lava1", "lava2"].map((m, i) => cyl(r * (1 - i * 0.06), len / 4,
+    { mat: m, sides: 6, pos: [0.53, -(i + 1) * len / 4, z], scale: [0.5, 1, 1], jitter: 0.004, seed: i + 3 })),
+]
+model("lava_rock", { pivot: "origin" },
+  prismUp(roundSquare(0.5, 0.1), 0.05, 0, "flag", 0.006),
+  prismUp(roundSquare(0.47, 0.1), 0.09, 0.04, "flag", 0.008),
+  // the crack: a glowing seam a hair proud of the top, zig-zagging to +x
+  crack.map(([x0, z0, x1, z1]) => {
+    const len = Math.hypot(x1 - x0, z1 - z0), a = Math.atan2(z1 - z0, x1 - x0) * 180 / Math.PI
+    return box(len + 0.03, 0.012, 0.035, { mat: "lava0", pos: [(x0 + x1) / 2, 0.126, (z0 + z1) / 2], rot: [0, -a, 0] })
+  }),
+  lavaStream(0.02, 0.1, 1.0), lavaStream(-0.2, 0.035, 0.85))
 // totems (274: two heads, 275: three, the top one horned): rounded carved
 // heads stacked on dark necks, about a cell wide. Pale spirals stand proud of
 // the faces the camera sees (+x, +z); the eyes are dark sockets under a pale

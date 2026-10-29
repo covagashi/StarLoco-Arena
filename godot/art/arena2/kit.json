@@ -20,11 +20,6 @@
 			"arenisca",
 			"pizarra"
 		],
-		"lava": [
-			"naranja dorado",
-			"amarillo incandescente",
-			"rojo profundo"
-		],
 		"leaf": [
 			"ocre",
 			"rojo",
@@ -172,11 +167,13 @@
 		{
 			"name": "lava_rock",
 			"label": "Roca con lava",
-			"kind": "deco",
+			"kind": "tile",
 			"gfx": [
 				128
 			],
-			"looms": "flag"
+			"looms": "flag",
+			"top": 0.13,
+			"note": "a flagstone at a step over the lava, cracked and glowing, the lava pouring down its +x side about a metre; turn it to face the drop"
 		},
 		{
 			"name": "totem",

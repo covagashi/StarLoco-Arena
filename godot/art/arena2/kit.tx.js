@@ -61,30 +61,6 @@ skins({
   }
 }
 
-// --- lava: molten sheet, crusted dark islands drifting on bright flow -------
-//   a orange-gold   b white-hot yellow   c deep red
-skins({
-  a: { v0: "#3a1206", v1: "#e0520e", v2: "#ffa21e", v3: "#ffe266" },
-  b: { v0: "#4a2a06", v1: "#f0a010", v2: "#ffd84a", v3: "#fff6b8" },
-  c: { v0: "#22070a", v1: "#9a160e", v2: "#e03a12", v3: "#ff8a3a" },
-})
-{
-  const flow = noise({ scale: 3, octaves: 4, seed: 221 }).warp(noise({ scale: 2, seed: 222 }), 0.12).as("flow")
-  const crust = cells({ scale: 5, jitter: 0.9, seed: 223 }).edge.smooth(0.05, 0.3)
-    .mul(noise({ scale: 3, seed: 224 }).threshold(0.55, 0.12)).as("crust")
-  const h = crust.mul(0.6).add(flow.mul(0.3)).as("lavaH")
-  for (const k of "abc") {
-    const col = (n) => n + k
-    const hot = ramp(flow, [col("v1"), col("v2"), col("v3")])
-    material("lava" + SUF[k], { size: 512, depth: 0.02, ao: 0.3 }, {
-      height: h,
-      color: hot.mix(col("v0"), crust.mul(0.9)),
-      rough: crust.mix(0.25, 0.9),
-      emit: hot.mix(col("v0"), crust),
-    })
-  }
-}
-
 // --- carved stone (the totems 274, 275): soft weathered stone, moss in the
 // carvings facing up
 //   a mossy sandstone   b grey   c red stone
