@@ -2138,14 +2138,15 @@ tres looms a escala de juego a la derecha. Plan actualizado en
     vacío". La 6 comparte también el bloque de tierra de la 5, para poner
     bajo los adoquines. La 9 comparte el bloque de piedra tallada de la 1,
     porque su pilar es decoración y no va bajo una losa (decisión mía).
-  - Falta modelar la 580 de la arena 11: un bloque de hierba más bajo y
-    liso. El dueño dice que la 516 es la misma pieza (`same` 516 → 580).
+  - La 516 y la 580 de la arena 11 son el bloque de hierba de la 5
+    (dueño, 2026-10-30; `same` → 315). No hay que modelarlas.
 - 2026-10-30: las arenas 7, 8, 10 y 12 comparten también lo que les
   faltaba (musgo, acantilado de la 6, runas, huesos, caja…). Con esto las
-  12 arenas tienen bloque de suelo y todas sus piezas retail en su kit,
-  salvo la 580 de la arena 11.
+  12 arenas tienen bloque de suelo y todas sus piezas retail en su kit.
+  No falta ninguna pieza por crear. Las 11 que se cubren con una pieza
+  parecida están en `~/codigo/capturas/m7/piezas-parecidas.png`.
 - Siguiente (dueño, 2026-10-30: "si hay mapas incompletos, no podemos
-  seguir con la fase D"): modelar la 580; el dueño monta las 12 arenas en
+  seguir con la fase D"): el dueño monta las 12 arenas en
   el editor (aún no hay ningún `layout` guardado). La fase D no empieza
   hasta que las 12 estén montadas.
 
