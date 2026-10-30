@@ -53,7 +53,163 @@
 			"limo verde"
 		]
 	},
-	"shared": [],
+	"shared": [
+		{
+			"kit": "arena1",
+			"name": "stone_block",
+			"gfx": []
+		},
+		{
+			"kit": "arena6",
+			"name": "stone_pillar",
+			"gfx": [
+				1650
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "stone_slab",
+			"gfx": [
+				1839,
+				1829,
+				1840
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "iron_railing",
+			"gfx": [
+				1445
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "ashlar_block",
+			"gfx": [
+				1381
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "rubble_heap",
+			"gfx": [
+				1565
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "mossy_cap",
+			"gfx": [
+				1472
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "grate",
+			"gfx": [
+				513
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "blood_drops",
+			"gfx": [
+				1655
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "rock_mound",
+			"gfx": [
+				1833
+			]
+		},
+		{
+			"kit": "arena5",
+			"name": "moss_pads",
+			"gfx": [
+				2449
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "blood_pool",
+			"gfx": [
+				2447
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "rock_heap",
+			"gfx": [
+				1834
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "rock_pair",
+			"gfx": [
+				1835
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skeleton_stake",
+			"gfx": [
+				2245
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "bones_skull",
+			"gfx": [
+				2268
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "rune",
+			"gfx": [
+				512
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skeleton",
+			"gfx": [
+				2247,
+				2244
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "wall_top",
+			"gfx": [
+				1420
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "rock_blocks",
+			"gfx": [
+				1836
+			]
+		},
+		{
+			"kit": "arena2",
+			"name": "bone_blade_stuck",
+			"gfx": [
+				2006
+			]
+		},
+		{
+			"kit": "arena2",
+			"name": "weapons_ground",
+			"gfx": [
+				1272
+			]
+		}
+	],
 	"minor": [],
 	"pieces": [
 		{

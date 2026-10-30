@@ -2124,10 +2124,22 @@ tres looms a escala de juego a la derecha. Plan actualizado en
   escribió aquí su propio editor (`tools/arena_editor/`, `arena_kits.gd`,
   `arena_shape.gd`) y pisó `arena_layout.gd`. El dueño pidió deshacerlo: se
   quitó todo y se volvió a poner esta versión.
-- Hueco de los kits, visto al probar: las arenas 9 y 11 no tienen ningún
-  bloque de suelo (solo planas y decoración), y la 6 y la 7 solo capas.
-  Mientras tanto el dueño puede usar "Piezas de todas las arenas" (p. ej.
-  el bloque de hierba de la 5). Si quiere suelos propios, se modelan.
+- Hueco de los kits, visto al probar: las arenas 6, 7, 9 y 11 no ofrecían
+  bloque de suelo. Revisado contra el mapa retail (2026-10-30), no faltaban
+  modelos: sus suelos son piezas de otros kits que su `kit.json` no
+  compartía.
+  - 6: el bloque de hierba de la 5 (solo compartía la capa).
+  - 7: el bloque de tierra de la 5 debajo, y el de hierba encima.
+  - 9: el pilar de piedras de la 6 hace de bloque y de muro; las losas son
+    la losa de piedra de la 7 (`same`).
+  - 11: el bloque de hierba de la 5 y las losas de tierra de la 7.
+  - Hecho: los cuatro kits comparten ya todo lo que usa su mapa retail.
+  - Dueño: "lo que no puede ser es que el bloque se quede completamente
+    vacío". La 6 comparte también el bloque de tierra de la 5, para poner
+    bajo los adoquines. La 9 comparte el bloque de piedra tallada de la 1,
+    porque su pilar es decoración y no va bajo una losa (decisión mía).
+  - Falta modelar la 580 de la arena 11: un bloque de hierba más bajo y
+    liso. El dueño dice que la 516 es la misma pieza (`same` 516 → 580).
 - Siguiente: el dueño monta las arenas. Lo que pida del editor se apunta
   aquí; después, la fase D.
 

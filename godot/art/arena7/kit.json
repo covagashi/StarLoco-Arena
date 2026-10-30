@@ -83,6 +83,123 @@
    "gfx": [
     2449
    ]
+  },
+  {
+   "kit": "arena5",
+   "name": "dirt_block",
+   "gfx": [
+    233
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_edge",
+   "gfx": [
+    1199,
+    1355
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_block",
+   "gfx": [
+    315,
+    316,
+    317
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_tuft",
+   "gfx": [
+    1754
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "moss_tall",
+   "gfx": [
+    1680,
+    1678
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "stone_pillar",
+   "gfx": [
+    1650
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_tuft_small",
+   "gfx": [
+    1755
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "rubble_heap",
+   "gfx": [
+    1565
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "mossy_cap",
+   "gfx": [
+    1472
+   ]
+  },
+  {
+   "kit": "arena1",
+   "name": "rune",
+   "gfx": [
+    509,
+    511
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "rock_heap",
+   "gfx": [
+    1834
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "rock_pair",
+   "gfx": [
+    1835
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "ashlar_block",
+   "gfx": [
+    1381
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "rock_blocks",
+   "gfx": [
+    1836
+   ]
+  },
+  {
+   "kit": "arena6",
+   "name": "rock_mound",
+   "gfx": [
+    1833
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "moss_patch",
+   "gfx": [
+    1683
+   ]
   }
  ],
  "minor": [],

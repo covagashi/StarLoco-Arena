@@ -107,6 +107,20 @@
    "gfx": [
     1679
    ]
+  },
+  {
+   "kit": "arena5",
+   "name": "grass_block",
+   "gfx": [
+    315,
+    316,
+    317
+   ]
+  },
+  {
+   "kit": "arena5",
+   "name": "dirt_block",
+   "gfx": []
   }
  ],
  "minor": [],

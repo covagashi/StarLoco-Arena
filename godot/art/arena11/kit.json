@@ -51,7 +51,180 @@
 			"rojizo"
 		]
 	},
-	"shared": [],
+	"shared": [
+		{
+			"kit": "arena5",
+			"name": "grass_block",
+			"gfx": [
+				317,
+				316,
+				315
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "dirt_cap",
+			"gfx": [
+				1533,
+				1526,
+				1532,
+				1527
+			]
+		},
+		{
+			"kit": "arena5",
+			"name": "grass_tuft",
+			"gfx": [
+				1754
+			]
+		},
+		{
+			"kit": "arena5",
+			"name": "moss_pads",
+			"gfx": [
+				1682,
+				1679
+			]
+		},
+		{
+			"kit": "arena5",
+			"name": "grass_tuft_small",
+			"gfx": [
+				1755
+			]
+		},
+		{
+			"kit": "arena5",
+			"name": "moss_patch",
+			"gfx": [
+				1683,
+				1681
+			]
+		},
+		{
+			"kit": "arena5",
+			"name": "moss_tall",
+			"gfx": [
+				1678,
+				1680
+			]
+		},
+		{
+			"kit": "arena9",
+			"name": "cracked_paving",
+			"gfx": [
+				2313
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "blood_drops",
+			"gfx": [
+				1655
+			]
+		},
+		{
+			"kit": "arena9",
+			"name": "cracked_paving_left",
+			"gfx": [
+				2314
+			]
+		},
+		{
+			"kit": "arena9",
+			"name": "cracked_paving_long",
+			"gfx": [
+				2316
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "blood_splat",
+			"gfx": [
+				2446
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skulls_dirt",
+			"gfx": [
+				1458
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "dead_plant",
+			"gfx": [
+				1706
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skeleton_stake",
+			"gfx": [
+				2245
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "rune",
+			"gfx": [
+				512,
+				511,
+				507,
+				510
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "herb",
+			"gfx": [
+				1789
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "herb_flower",
+			"gfx": [
+				1790
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skull_hand",
+			"gfx": [
+				1571
+			]
+		},
+		{
+			"kit": "arena9",
+			"name": "cracked_paving_bits",
+			"gfx": [
+				2315
+			]
+		},
+		{
+			"kit": "arena10",
+			"name": "ribcage",
+			"gfx": [
+				2747
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skeleton",
+			"gfx": [
+				2244
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "blood_pool",
+			"gfx": [
+				2447
+			]
+		}
+	],
 	"minor": [],
 	"pieces": [
 		{
