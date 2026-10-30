@@ -2144,7 +2144,8 @@ tres looms a escala de juego a la derecha. Plan actualizado en
   faltaba (musgo, acantilado de la 6, runas, huesos, caja…). Con esto las
   12 arenas tienen bloque de suelo y todas sus piezas retail en su kit.
   No falta ninguna pieza por crear. Las 11 que se cubren con una pieza
-  parecida están en `~/codigo/capturas/m7/piezas-parecidas.png`.
+  parecida están en `~/codigo/capturas/m7/piezas-parecidas.png`. Dueño
+  (2026-10-30): "lo veo ok".
 - Siguiente (dueño, 2026-10-30: "si hay mapas incompletos, no podemos
   seguir con la fase D"): el dueño monta las 12 arenas en
   el editor (aún no hay ningún `layout` guardado). La fase D no empieza
