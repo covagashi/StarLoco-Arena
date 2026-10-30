@@ -61,7 +61,37 @@
 			"variante cálida"
 		]
 	},
-	"shared": [],
+	"shared": [
+		{
+			"kit": "arena5",
+			"name": "crate",
+			"gfx": [
+				220,
+				1590
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "blood_splat",
+			"gfx": [
+				2446
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "bone_fence",
+			"gfx": [
+				2766
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "bones",
+			"gfx": [
+				2265
+			]
+		}
+	],
 	"minor": [],
 	"pieces": [
 		{

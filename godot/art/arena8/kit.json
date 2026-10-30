@@ -36,7 +36,79 @@
 			"obsidiana roja y negra"
 		]
 	},
-	"shared": [],
+	"shared": [
+		{
+			"kit": "arena6",
+			"name": "cliff_slant",
+			"gfx": [
+				1804
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "cliff_col",
+			"gfx": [
+				1803
+			]
+		},
+		{
+			"kit": "arena6",
+			"name": "cliff_col_knobs",
+			"gfx": [
+				1802
+			]
+		},
+		{
+			"kit": "arena1",
+			"name": "rune",
+			"gfx": [
+				510
+			]
+		},
+		{
+			"kit": "lava",
+			"name": "stuck_weapons",
+			"gfx": [
+				1269
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skeleton_stake",
+			"gfx": [
+				2245
+			]
+		},
+		{
+			"kit": "arena2",
+			"name": "weapons_ground",
+			"gfx": [
+				1270
+			]
+		},
+		{
+			"kit": "lava",
+			"name": "bones",
+			"gfx": [
+				2246
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skulls_dirt",
+			"gfx": [
+				1458,
+				1664
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skeleton",
+			"gfx": [
+				2244
+			]
+		}
+	],
 	"minor": [],
 	"pieces": [
 		{

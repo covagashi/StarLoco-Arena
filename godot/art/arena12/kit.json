@@ -61,7 +61,45 @@
 			"ocre, bayas naranja"
 		]
 	},
-	"shared": [],
+	"shared": [
+		{
+			"kit": "arena1",
+			"name": "rune",
+			"gfx": [
+				511,
+				509,
+				507
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "skulls_dirt",
+			"gfx": [
+				1458
+			]
+		},
+		{
+			"kit": "arena7",
+			"name": "headstone_wood",
+			"gfx": [
+				2500
+			]
+		},
+		{
+			"kit": "arena10",
+			"name": "ribcage_standing",
+			"gfx": [
+				234
+			]
+		},
+		{
+			"kit": "arena11",
+			"name": "skull_stake",
+			"gfx": [
+				1601
+			]
+		}
+	],
 	"minor": [],
 	"pieces": [
 		{
