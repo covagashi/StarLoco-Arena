@@ -64,6 +64,11 @@
 			]
 		},
 		{
+			"kit": "arena5",
+			"name": "dirt_block",
+			"gfx": []
+		},
+		{
 			"kit": "arena7",
 			"name": "dirt_cap",
 			"gfx": [

@@ -2147,9 +2147,36 @@ tres looms a escala de juego a la derecha. Plan actualizado en
   parecida están en `~/codigo/capturas/m7/piezas-parecidas.png`. Dueño
   (2026-10-30): "lo veo ok".
 - Siguiente (dueño, 2026-10-30: "si hay mapas incompletos, no podemos
-  seguir con la fase D"): el dueño monta las 12 arenas en
-  el editor (aún no hay ningún `layout` guardado). La fase D no empieza
-  hasta que las 12 estén montadas.
+  seguir con la fase D"): las 12 arenas montadas; la fase D no empieza
+  hasta entonces.
+- Borradores de las 12 (dueño, 2026-10-30: "mira de crear los 12 mapas
+  con nuestros assets y te digo"). Cambia la regla de que el dueño monta
+  desde cero: ahora revisa y corrige un borrador.
+  - `tools/map_editor/draft_from_retail.gd` monta cada arena en el editor
+    desde el mapa retail del archivo (S42): por cada sprite, nuestra pieza
+    en su casilla, en el orden de dibujo retail, con su tinte y su escala;
+    reflejada si el retail la refleja (reflejo + 90°).
+  - Reglas: una copia exacta repetida del mismo sprite cuenta una vez; una
+    decoración va encima de la anterior si es la misma pieza (pilares en
+    muro) o su kit dice `on`; toda casilla sin bloque ni acantilado lleva
+    el bloque más usado de la arena (en la 7, el de tierra: su hierba va
+    sobre tierra), y bajo una losa de tierra va el bloque de tierra; el
+    negro puro del retail (silueta del borde, arenas 7 y 11) no se copia.
+  - Arreglo en la forma: un obstáculo sin suelo al lado se apoyaba a la
+    altura de su decorado y salían torres; ahora va a la altura del suelo
+    más cercano (`_floor_near`, con prueba).
+  - Guardados en `godot/art/layouts/arena-01.json` … `-12.json`. Hojas
+    retail / borrador: `~/codigo/capturas/m7/mapas/borradores-1.png` …
+    `-6.png`.
+  - Para el dueño:
+    - La decoración retail del fondo y del borde (los árboles y cristales
+      de la 1, los arbustos de la 2…) va en casillas fuera de la rejilla del
+      combate, y el editor solo deja poner piezas dentro. ¿Se permite
+      decorar fuera de la rejilla?
+    - Los pedestales de coach salen como torres del bloque base (6, 7).
+    - Los árboles quemados de la 8 salen claros: el retail los pinta casi
+      negros.
+    - El bloque de la 9 es la piedra tallada de la arena 1 (decisión mía).
 
 ### D. Del editor al juego
 

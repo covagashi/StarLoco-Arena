@@ -21,6 +21,23 @@ func run(t) -> void:
 		t.ok(not Layout.palette(w).is_empty(), "arena %d has a palette" % n)
 	t.eq(Layout.world_of(0), -1, "no arena 0")
 	t.eq(Layout.world_of(13), -1, "no arena 13 in the 1.0")
+	# an obstacle stands on the nearest walkable floor, even two rings away
+	# (the back rows of an arena are obstacles next to obstacles)
+	var ob := {"alt": 30, "ground": false}
+	var row := {Vector2i(0, 0): ob, Vector2i(1, 0): ob, Vector2i(2, 0): {"alt": 4, "ground": true},
+		Vector2i(0, 1): {"alt": 6, "ground": true}, Vector2i(3, 0): {"alt": 1, "ground": true}}
+	t.eq(Layout._floor_near(row, Vector2i(0, 0), 30), 6, "next to a floor: that floor")
+	var far := {Vector2i(0, 0): ob, Vector2i(1, 0): ob, Vector2i(2, 0): {"alt": 4, "ground": true},
+		Vector2i(3, 0): {"alt": 1, "ground": true}}
+	t.eq(Layout._floor_near(far, Vector2i(0, 0), 30), 4, "two away: the nearest ring's floor, not a farther lower one")
+	t.eq(Layout._floor_near({Vector2i(0, 0): ob}, Vector2i(0, 0), 30), 30, "no floor at all: its own altitude")
+	for n in range(1, Layout.WORLDS.size() + 1):
+		var sh := Layout.shape(Layout.world_of(n))
+		var high := 0
+		for c: Dictionary in sh.cells.values():
+			if c.role == "obstacle" and c.surface > sh.alt_min + 40:
+				high += 1
+		t.eq(high, 0, "arena %d: no obstacle floats far above its floor" % n)
 
 	# a block and a cap: the cap's top is the walk surface, the block under it
 	var block := Layout.new_item("arena5", "grass_block")

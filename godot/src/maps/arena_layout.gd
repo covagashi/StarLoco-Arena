@@ -151,16 +151,32 @@ static func shape(world: int) -> Dictionary:
 		"floor_y": alt_min * ALT - FLOOR_DEPTH}
 
 
-## Altitude of the lowest walkable neighbour (the floor an obstacle stands on).
+## Altitude of the nearest walkable cell (the floor an obstacle stands on):
+## the closest ring of cells round p that has one, its lowest. The back rows
+## of an arena are obstacles next to obstacles, and must still stand on
+## the floor, not at their prop's height.
 static func _floor_near(cells: Dictionary, p: Vector2i, fallback: int) -> int:
-	var best := fallback
-	var found := false
-	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-		var nb: Dictionary = cells.get(p + d, {})
-		if nb.get("ground", false) and (not found or nb.alt < best):
-			best = nb.alt
-			found = true
-	return best
+	var seen := {p: true}
+	var ring: Array[Vector2i] = [p]
+	while not ring.is_empty():
+		var next: Array[Vector2i] = []
+		var best := 1 << 30
+		for q in ring:
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n: Vector2i = q + d
+				if seen.has(n) or not cells.has(n):
+					continue
+				seen[n] = true
+				var c: Dictionary = cells[n]
+				if c.alt == Topology.VOID_ALT:
+					continue
+				if c.ground:
+					best = mini(best, c.alt)
+				next.append(n)
+		if best != 1 << 30:
+			return best
+		ring = next
+	return fallback
 
 
 # --- items ---------------------------------------------------------------
