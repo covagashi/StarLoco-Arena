@@ -17,7 +17,7 @@ extends SceneTree
 ##
 ##   xvfb-run -a -s "-screen 0 1600x900x24" godot --path godot \
 ##       -s tools/map_editor/draft_from_retail.gd -- \
-##       --archivo=<archivo-arenas> --shots=<dir> [--arenas=1,2,...] [--save]
+##       --archivo=<archivo-arenas> --shots=<dir> [--arenas=1,2,...] [--save] [--floor]
 ##
 ## Without --save the layouts go to --shots, never into art/layouts/.
 
@@ -170,6 +170,10 @@ func _draft(ed: Control, arena: int) -> void:
 		if c is Array and c.size() == 3 and c != [1, 1, 1] and not silhouette:
 			it.tint = Color(clampf(c[0], 0, 1), clampf(c[1], 0, 1), clampf(c[2], 0, 1)).to_html(false)
 		var kind := Layout.kind_of(it)
+		# --floor: only the ground (blocks, caps, the island's cliff); the
+		# owner places runes, flat pieces and decoration
+		if opts.has("floor") and not kind in ["tile", "cap", "cliff"]:
+			continue
 		# a decoration that starts at the cell's top and reaches far below it
 		# hangs down from the cell: the retail draws the island's side that
 		# way (arena 9's pillars under its edge). One standing on the cell
