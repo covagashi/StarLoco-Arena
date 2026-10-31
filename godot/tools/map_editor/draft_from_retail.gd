@@ -140,6 +140,7 @@ func _draft(ed: Control, arena: int) -> void:
 	var tile_count := {}
 	var unmapped := {}
 	var outside := 0
+	var hung := 0
 	for s: Dictionary in sprites:
 		var g := int(s.gfx)
 		if skip.has(g) or minor.has(g):
@@ -148,7 +149,9 @@ func _draft(ed: Control, arena: int) -> void:
 		if ref.is_empty():
 			unmapped[g] = unmapped.get(g, 0) + 1
 			continue
-		var p := Vector2i(int(s.celda[0]), int(s.celda[1]))
+		# the archive's celda is the game cell minus (1, 1): measured on the
+		# retail ground blocks, whose top lines up with the game cell + (1, 1)
+		var p := Vector2i(int(s.celda[0]) + 1, int(s.celda[1]) + 1)
 		var dup := "%d/%d/%s/%s/%s" % [p.x, p.y, g, s.sx, s.orden]
 		if seen.has(dup):
 			continue
@@ -167,6 +170,15 @@ func _draft(ed: Control, arena: int) -> void:
 		if c is Array and c.size() == 3 and c != [1, 1, 1] and not silhouette:
 			it.tint = Color(clampf(c[0], 0, 1), clampf(c[1], 0, 1), clampf(c[2], 0, 1)).to_html(false)
 		var kind := Layout.kind_of(it)
+		# a decoration that starts at the cell's top and reaches far below it
+		# hangs down from the cell: the retail draws the island's side that
+		# way (arena 9's pillars under its edge). One standing on the cell
+		# ends near the cell's front corner (21.5 px under its centre).
+		if not kind in ["tile", "cap", "flat", "cliff"]:
+			var centre: float = (p.x + p.y) * 21.5 - float(shape[p].surface) * 10.0
+			if float(s.sy) - centre > -30.0 and float(s.sy) + absf(float(s.h)) - centre > 80.0:
+				hung += 1
+				continue
 		var size = tex.get(str(g))
 		if size is Array and float(size[0]) > 0.0 and not kind in ["tile", "cap", "cliff"]:
 			var sc := absf(float(s.w)) / float(size[0])
@@ -240,8 +252,8 @@ func _draft(ed: Control, arena: int) -> void:
 	var save_to: String = "" if opts.has("save") else String(opts.shots).path_join("arena-%02d.json" % arena)
 	var err := Layout.save_layout(ed.layout, save_to)
 	ed.dirty = false
-	print("[draft] arena %d (world %d): %d items, %d base blocks (%s), %d sprites off the shape, unmapped %s, missing models %s, saved %s" % [
-		arena, world, placed, based, base, outside, unmapped, ed.builder.missing.keys(), error_string(err)])
+	print("[draft] arena %d (world %d): %d items, %d base blocks (%s), %d sprites off the shape, %d hanging under, unmapped %s, missing models %s, saved %s" % [
+		arena, world, placed, based, base, outside, hung, unmapped, ed.builder.missing.keys(), error_string(err)])
 
 
 ## As the editor's Shift+click: the top of the cell's highest decoration

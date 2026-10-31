@@ -31,6 +31,38 @@ func run(t) -> void:
 		Vector2i(3, 0): {"alt": 1, "ground": true}}
 	t.eq(Layout._floor_near(far, Vector2i(0, 0), 30), 4, "two away: the nearest ring's floor, not a farther lower one")
 	t.eq(Layout._floor_near({Vector2i(0, 0): ob}, Vector2i(0, 0), 30), 30, "no floor at all: its own altitude")
+	# the owner's role changes: only the changes are written, they read back,
+	# a change back to the fight data's role disappears, a pedestal stays
+	var sh5 := Layout.shape(Layout.world_of(1))
+	var floor_cell := Vector2i(-99, -99)
+	var coach_cell := Vector2i(-99, -99)
+	var start_cell := Vector2i(-99, -99)
+	for p: Vector2i in sh5.cells:
+		match String(sh5.cells[p].role):
+			"floor": floor_cell = p
+			"coach": coach_cell = p
+			"team1": start_cell = p
+	var before := Layout.start_counts(sh5)
+	var rl := Layout.empty_layout(1)
+	rl.roles[floor_cell] = "obstacle"
+	rl.roles[start_cell] = "floor"
+	rl.roles[coach_cell] = "obstacle"
+	Layout.apply_roles(sh5, rl.roles)
+	t.eq(sh5.cells[floor_cell].role, "obstacle", "a floor cell turned into an obstacle")
+	t.eq(sh5.cells[start_cell].role, "floor", "a team 2 start turned into floor")
+	t.eq(sh5.cells[coach_cell].role, "coach", "a coach pedestal stays one")
+	t.eq(Layout.start_counts(sh5).team1, before.team1 - 1, "team 2 has one start fewer")
+	var rtext := Layout.to_json(rl)
+	t.ok(rtext.contains("\"roles\""), "the role changes are written")
+	var rback := Layout.parse(rtext, 1)
+	t.eq(rback.roles.size(), 3, "and read back")
+	t.eq(rback.roles.get(floor_cell, ""), "obstacle", "with their role")
+	t.eq(Layout.to_json(rback), rtext, "the file round-trips")
+	t.ok(not Layout.to_json(Layout.empty_layout(1)).contains("roles"), "no changes: no roles key")
+	t.eq(Layout.parse('{"arena": 1, "cells": {}, "roles": {"1,1": "lava"}}', 1).roles.size(), 0,
+		"an unknown role is ignored")
+	Layout.apply_roles(sh5, {})
+	t.eq(sh5.cells[floor_cell].role, "floor", "no changes: the fight data's roles come back")
 	for n in range(1, Layout.WORLDS.size() + 1):
 		var sh := Layout.shape(Layout.world_of(n))
 		var high := 0

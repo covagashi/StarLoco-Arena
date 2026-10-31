@@ -2177,6 +2177,18 @@ tres looms a escala de juego a la derecha. Plan actualizado en
     - Los árboles quemados de la 8 salen claros: el retail los pinta casi
       negros.
     - El bloque de la 9 es la piedra tallada de la arena 1 (decisión mía).
+- 2026-10-31: los borradores estaban desplazados una casilla. La `celda`
+  del archivo (S42) es la casilla del juego menos (1, 1): medido en los
+  bloques de suelo retail, cuyo borde de arriba cuadra con la casilla + (1, 1)
+  con 2 px de error. La capa Retail del editor y la rejilla ya estaban bien
+  (usan la posición en pantalla); `draft_from_retail.gd` corregido.
+- Rejilla editable (dueño, 2026-10-31: "¿puedo mover las rejillas en rojo
+  y cambiar las naranjas?"). Herramienta **Casillas (C)** del editor: suelo,
+  obstáculo, salida del equipo 1 o del 2; arrastrar para varias; clic
+  derecho vuelve al papel original; deshacer incluido; cuenta las salidas
+  de cada equipo y avisa si no son iguales. Los pedestales no cambian.
+  Se guarda en el `layout` (`roles`, solo los cambios), con pruebas.
+  - Falta: que el servidor y el combate usen esos papeles (fase D / S43).
 
 ### D. Del editor al juego
 

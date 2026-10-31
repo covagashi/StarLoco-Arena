@@ -25,6 +25,8 @@ Rueda: zoom · botón central o Espacio+arrastrar: mover
 
 [b]Teclas[/b]
 B pincel · S seleccionar · X borrar · I cuentagotas
+C casillas: clic pone el papel elegido (suelo, obstáculo,
+  salida 1 o 2), arrastra para varias; der.: el original
 1 2 3: loom a b c
 R / Mayús+R: girar 90° · , y . : girar 15°
 F: reflejar · + y −: escala
@@ -55,6 +57,8 @@ var builder := ArenaScene.new()
 var palette := []
 var brush := {}
 var tool := "paint"
+## the fight role the cells tool gives a cell
+var cell_role := "obstacle"
 ## {"cell": Vector2i, "i": int} or {}
 var selected := {}
 var random_rot := false
@@ -107,6 +111,8 @@ var _off_label: Label
 var _rand_check: CheckBox
 var _fill_button: Button
 var _cell_label: Label
+var _role_buttons := {}
+var _starts_label: Label
 var _grid_check: CheckButton
 var _retail_check: CheckButton
 var _retail_alpha: HSlider
@@ -143,6 +149,7 @@ func load_arena(n: int) -> void:
 	_arena_pick.select(n - 1)
 	shape = Layout.shape(Layout.world_of(n))
 	layout = Layout.load_layout(n)
+	Layout.apply_roles(shape, layout.roles)
 	_undo.clear()
 	_redo.clear()
 	selected = {}
@@ -177,7 +184,7 @@ func save() -> void:
 # --- edits (all go through _commit so they can be undone) ------------------
 
 func _snapshot() -> void:
-	_undo.append(layout.cells.duplicate(true))
+	_undo.append(_state())
 	if _undo.size() > 300:
 		_undo.pop_front()
 	_redo.clear()
@@ -200,12 +207,20 @@ func redo() -> void:
 	_swap(_redo, _undo)
 
 
+## What undo keeps: the pieces and the role changes.
+func _state() -> Dictionary:
+	return {"cells": layout.cells.duplicate(true), "roles": layout.roles.duplicate()}
+
+
 func _swap(from: Array, to: Array) -> void:
 	if from.is_empty():
 		return
 	var before: Dictionary = layout.cells
-	to.append(before.duplicate(true))
-	layout.cells = from.pop_back()
+	to.append(_state())
+	var st: Dictionary = from.pop_back()
+	layout.cells = st.cells
+	layout.roles = st.roles
+	Layout.apply_roles(shape, layout.roles)
 	var changed := {}
 	for p in before:
 		if not layout.cells.has(p) or layout.cells[p] != before[p]:
@@ -286,6 +301,34 @@ func fill_empty() -> void:
 	if not changed.is_empty():
 		_commit(changed)
 		_update_status("Rellenadas %d casillas" % changed.size())
+
+
+## Gives cell p the fight role r (the cells tool). Its role from the fight
+## data is kept apart, so giving it back removes the change. snap = false
+## inside a drag, so the stroke is one undo step.
+func set_role(p: Vector2i, r: String, snap := true) -> void:
+	if not shape.cells.has(p) or not r in Layout.EDITABLE_ROLES:
+		return
+	var c: Dictionary = shape.cells[p]
+	if c.base_role == "coach" or c.role == r:
+		return
+	if snap:
+		_snapshot()
+	if r == c.base_role:
+		layout.roles.erase(p)
+	else:
+		layout.roles[p] = r
+	Layout.apply_roles(shape, layout.roles)
+	dirty = true
+	_rebuild_overlay()
+	_update_status()
+	_update_hover_label()
+
+
+## Cell p back to its role from the fight data.
+func reset_role(p: Vector2i) -> void:
+	if shape.cells.has(p):
+		set_role(p, shape.cells[p].base_role)
 
 
 func clear_all() -> void:
@@ -661,7 +704,10 @@ func _on_view_input(e: InputEvent) -> void:
 		_set_hover(cell_at(e.position))
 		if _painting and _hover != null and _hover != _last_paint:
 			_last_paint = _hover
-			place(_hover, false, false)   # one undo step for the whole stroke
+			if tool == "cells":
+				set_role(_hover, cell_role, false)
+			else:
+				place(_hover, false, false)   # one undo step for the whole stroke
 	elif e is InputEventMouseButton:
 		var mb := e as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
@@ -673,7 +719,10 @@ func _on_view_input(e: InputEvent) -> void:
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
 			var p = cell_at(mb.position)
 			if p != null:
-				remove_top(p)
+				if tool == "cells":
+					reset_role(p)
+				else:
+					remove_top(p)
 		elif mb.button_index == MOUSE_BUTTON_LEFT:
 			if not mb.pressed:
 				_painting = false
@@ -685,7 +734,12 @@ func _on_view_input(e: InputEvent) -> void:
 				_refresh_selection()
 				_refresh_inspector()
 				return
-			if mb.alt_pressed or tool == "pick":
+			if tool == "cells":
+				_snapshot()
+				set_role(p, cell_role, false)
+				_painting = true
+				_last_paint = p
+			elif mb.alt_pressed or tool == "pick":
 				eyedrop(p)
 			elif tool == "select":
 				select_at(p)
@@ -738,6 +792,7 @@ func _unhandled_key_input(e: InputEvent) -> void:
 			KEY_S: _set_tool("select")
 			KEY_X: _set_tool("erase")
 			KEY_I: _set_tool("pick")
+			KEY_C: _set_tool("cells")
 			KEY_1: set_loom("a")
 			KEY_2: set_loom("b")
 			KEY_3: set_loom("c")
@@ -947,7 +1002,7 @@ func _build_inspector() -> Control:
 	tools.columns = 2
 	var tg := ButtonGroup.new()
 	for t in [["paint", "Pincel (B)"], ["select", "Seleccionar (S)"], ["erase", "Borrar (X)"],
-			["pick", "Cuentagotas (I)"]]:
+			["pick", "Cuentagotas (I)"], ["cells", "Casillas (C)"]]:
 		var b := Button.new()
 		b.text = t[1]
 		b.toggle_mode = true
@@ -959,6 +1014,31 @@ func _build_inspector() -> Control:
 		_tool_buttons[t[0]] = b
 	box.add_child(tools)
 	_tool_buttons.paint.button_pressed = true
+
+	_heading(box, "Casillas del combate (C)")
+	var roles := GridContainer.new()
+	roles.columns = 2
+	var rg := ButtonGroup.new()
+	for r: String in Layout.EDITABLE_ROLES:
+		var b := Button.new()
+		b.text = {"floor": "Suelo", "obstacle": "Obstáculo", "team0": "Salida equipo 1",
+			"team1": "Salida equipo 2"}[r]
+		b.toggle_mode = true
+		b.button_group = rg
+		b.focus_mode = Control.FOCUS_NONE
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_color_override("font_color", Color(ROLE_COLORS[r], 1.0) if r != "floor" else Color.WHITE)
+		b.pressed.connect(func() -> void:
+			cell_role = r
+			_set_tool("cells"))
+		roles.add_child(b)
+		_role_buttons[r] = b
+	box.add_child(roles)
+	_role_buttons[cell_role].button_pressed = true
+	_starts_label = Label.new()
+	_starts_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_starts_label.add_theme_font_size_override("font_size", 12)
+	box.add_child(_starts_label)
 
 	_heading(box, "Pieza")
 	_piece_label = Label.new()
@@ -1187,6 +1267,11 @@ func _update_status(msg := "") -> void:
 		shape.get("cells", {}).size(), zoom]
 	if not builder.missing.is_empty():
 		s += " · faltan %d modelos: compila el kit con kiln" % builder.missing.size()
+	if _starts_label != null and shape.has("cells"):
+		var n2 := Layout.start_counts(shape)
+		var changed: int = layout.get("roles", {}).size()
+		_starts_label.text = "Salidas: equipo 1 %d · equipo 2 %d%s\n%d casillas cambiadas. Clic der.: volver al original." % [
+			n2.team0, n2.team1, "  ⚠ no son iguales" if n2.team0 != n2.team1 else "", changed]
 	if msg != "":
 		s = msg + " · " + s
 	_status.text = s

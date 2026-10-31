@@ -12,9 +12,13 @@ extends RefCounted
 ##        "rot": degrees about y, "flip": mirrored, "tint": "rrggbb"
 ##        multiplier, "scale": uniform, "off": [x, y, z] in m}
 ## Everything after kit/piece is optional: a missing key is its default.
+## "roles": {"x,y": "floor"|"obstacle"|"team0"|"team1"} — the cells whose
+## fight role the owner changed (owner, 2026-10-31); only the changes are
+## written. The cells, their heights and the coach pedestals stay fixed.
 ##
-## The shape is never edited: cells, altitudes, obstacles and start cells are
-## the fight topology the server uses (server/data-dist/maps/).
+## The cells and their altitudes are never edited: they are the fight
+## topology the server uses (server/data-dist/maps/). Which cells are
+## obstacles or start cells can be changed per layout (roles).
 
 const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
@@ -26,6 +30,8 @@ const ART_DIR := "res://art"
 const LAYOUT_DIR := "res://art/layouts"
 ## Loom letter -> model file suffix (kit.json "looms").
 const LOOMS := {"a": "", "b": "_b", "c": "_c"}
+## The fight roles the owner can give a cell (a coach pedestal stays one).
+const EDITABLE_ROLES := ["floor", "obstacle", "team0", "team1"]
 
 const PX := 43.0 * 1.41421356          # screen px per world unit across
 const ALT := 10.0 / (PX * 0.8660254)   # world units per altitude step (10 px)
@@ -179,6 +185,28 @@ static func _floor_near(cells: Dictionary, p: Vector2i, fallback: int) -> int:
 	return fallback
 
 
+## The shape with a layout's role changes on it: each cell keeps its role
+## from the fight data in base_role, and role becomes the layout's one.
+## A change on a coach pedestal, or on a cell the shape hasn't, is ignored.
+static func apply_roles(shape: Dictionary, roles: Dictionary) -> void:
+	for p: Vector2i in shape.cells:
+		var c: Dictionary = shape.cells[p]
+		if not c.has("base_role"):
+			c.base_role = c.role
+		c.role = c.base_role
+		if c.base_role != "coach" and roles.has(p):
+			c.role = roles[p]
+
+
+## How many start cells each team has: {team0: n, team1: n}.
+static func start_counts(shape: Dictionary) -> Dictionary:
+	var out := {"team0": 0, "team1": 0}
+	for c: Dictionary in shape.cells.values():
+		if out.has(c.role):
+			out[c.role] += 1
+	return out
+
+
 # --- items ---------------------------------------------------------------
 
 ## A new item with every field at its default.
@@ -272,7 +300,7 @@ static func item_y(items: Array, i: int) -> float:
 # --- layout files --------------------------------------------------------
 
 static func empty_layout(arena: int) -> Dictionary:
-	return {"arena": arena, "world": world_of(arena), "cells": {}}
+	return {"arena": arena, "world": world_of(arena), "cells": {}, "roles": {}}
 
 
 ## The arena's saved layout, or an empty one.
@@ -302,6 +330,12 @@ static func parse(text: String, arena := 0) -> Dictionary:
 				items.append(full_item(it))
 		if not items.is_empty():
 			out.cells[Vector2i(int(xy[0]), int(xy[1]))] = items
+	var roles = d.get("roles", {})
+	if roles is Dictionary:
+		for key: String in roles:
+			var xy := key.split(",")
+			if xy.size() == 2 and String(roles[key]) in EDITABLE_ROLES:
+				out.roles[Vector2i(int(xy[0]), int(xy[1]))] = String(roles[key])
 	return out
 
 
@@ -322,9 +356,17 @@ static func to_json(layout: Dictionary) -> String:
 		lines.append("\t\t\"%d,%d\": [%s]" % [p.x, p.y, ", ".join(row)])
 	var head := "{\n\t\"arena\": %d,\n\t\"world\": %d,\n\t\"cells\": {" % [
 		layout.arena, layout.world]
-	if lines.is_empty():
-		return head + "}\n}\n"
-	return head + "\n" + ",\n".join(lines) + "\n\t}\n}\n"
+	var body := head + ("}" if lines.is_empty() else "\n" + ",\n".join(lines) + "\n\t}")
+	var roles: Dictionary = layout.get("roles", {})
+	if not roles.is_empty():
+		var rk: Array = roles.keys()
+		rk.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			return a.y < b.y or (a.y == b.y and a.x < b.x))
+		var rl := []
+		for p: Vector2i in rk:
+			rl.append("\t\t\"%d,%d\": \"%s\"" % [p.x, p.y, roles[p]])
+		body += ",\n\t\"roles\": {\n" + ",\n".join(rl) + "\n\t}"
+	return body + "\n}\n"
 
 
 static func save_layout(layout: Dictionary, path := "") -> Error:

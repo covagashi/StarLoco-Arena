@@ -33,6 +33,8 @@ func _run() -> void:
 	print("[shot] arena %s: %d cells, palette %d" % [opts.arena, cells.size(), ed.palette.size()])
 	if opts.has("demo"):
 		await _demo(ed, cells)
+	if opts.has("cells"):
+		await _cells_demo(ed, cells)
 	if opts.has("retail"):
 		ed._retail_check.button_pressed = true
 	if opts.has("game"):
@@ -96,3 +98,31 @@ func _count(ed: Control) -> int:
 	for items in ed.layout.cells.values():
 		n += items.size()
 	return n
+
+
+## The cells tool: a floor cell to obstacle, a team 2 start to floor, a
+## floor cell to a team 1 start; undo and redo; a pedestal stays one.
+func _cells_demo(ed: Control, cells: Dictionary) -> void:
+	ed._set_tool("cells")
+	var keys: Array = cells.keys()
+	keys.sort()
+	var picks := {}
+	for p: Vector2i in keys:
+		var r: String = cells[p].role
+		if not picks.has(r):
+			picks[r] = p
+	var before: Dictionary = Layout.start_counts(ed.shape)
+	ed.set_role(picks.floor, "obstacle")
+	ed.set_role(picks.team1, "floor")
+	var keys2: Array = keys.filter(func(p: Vector2i) -> bool: return cells[p].role == "floor")
+	ed.set_role(keys2[0], "team0")
+	if picks.has("coach"):
+		ed.set_role(picks.coach, "obstacle")
+	var after: Dictionary = Layout.start_counts(ed.shape)
+	ed.undo()
+	var undone: Dictionary = Layout.start_counts(ed.shape)
+	ed.redo()
+	print("[shot] cells: starts %s -> %s, undo %s, redo %s; %d changes; pedestal %s" % [
+		before, after, undone, Layout.start_counts(ed.shape), ed.layout.roles.size(),
+		cells[picks.coach].role if picks.has("coach") else "-"])
+	await process_frame
