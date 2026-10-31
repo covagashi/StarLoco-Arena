@@ -16,7 +16,10 @@ extends RefCounted
 ## the cells whose fight role the owner changed (owner, 2026-10-31); only
 ## the changes are written. "void" takes a cell out of the arena (a retail
 ## test leftover, like arena 5's pedestal under the map). The cells' heights
-## stay fixed.
+## stay fixed unless "alts" changes them.
+## "alts": {"x,y": n} — the cells whose height the owner changed
+## (owner, 2026-10-31: "hay que poder cambiar la altura"), as the walk
+## surface in altitude steps (ALT m each); only the changes are written.
 ##
 ## The cells and their altitudes are never edited: they are the fight
 ## topology the server uses (server/data-dist/maps/). Which cells are
@@ -200,6 +203,23 @@ static func apply_roles(shape: Dictionary, roles: Dictionary) -> void:
 			c.role = roles[p]
 
 
+## The shape with a layout's height changes on it: each cell keeps its
+## surface from the fight data in base_surface, and surface becomes the
+## layout's one. The floor the columns run down to follows the lowest cell.
+static func apply_alts(shape: Dictionary, alts: Dictionary) -> void:
+	var lo := 1 << 30
+	for p: Vector2i in shape.cells:
+		var c: Dictionary = shape.cells[p]
+		if not c.has("base_surface"):
+			c.base_surface = c.surface
+		c.surface = int(alts.get(p, c.base_surface))
+		if c.get("role", "") != "void" and (c.ground or alts.has(p)):
+			lo = mini(lo, c.surface)
+	if lo != 1 << 30:
+		shape.alt_min = lo
+		shape.floor_y = lo * ALT - FLOOR_DEPTH
+
+
 ## How many start cells each team has, and pedestals: {team0, team1, coach}.
 static func start_counts(shape: Dictionary) -> Dictionary:
 	var out := {"team0": 0, "team1": 0, "coach": 0}
@@ -302,7 +322,7 @@ static func item_y(items: Array, i: int) -> float:
 # --- layout files --------------------------------------------------------
 
 static func empty_layout(arena: int) -> Dictionary:
-	return {"arena": arena, "world": world_of(arena), "cells": {}, "roles": {}}
+	return {"arena": arena, "world": world_of(arena), "cells": {}, "roles": {}, "alts": {}}
 
 
 ## The arena's saved layout, or an empty one.
@@ -338,6 +358,12 @@ static func parse(text: String, arena := 0) -> Dictionary:
 			var xy := key.split(",")
 			if xy.size() == 2 and String(roles[key]) in EDITABLE_ROLES:
 				out.roles[Vector2i(int(xy[0]), int(xy[1]))] = String(roles[key])
+	var alts = d.get("alts", {})
+	if alts is Dictionary:
+		for key: String in alts:
+			var xy := key.split(",")
+			if xy.size() == 2 and (alts[key] is float or alts[key] is int):
+				out.alts[Vector2i(int(xy[0]), int(xy[1]))] = int(alts[key])
 	return out
 
 
@@ -368,6 +394,15 @@ static func to_json(layout: Dictionary) -> String:
 		for p: Vector2i in rk:
 			rl.append("\t\t\"%d,%d\": \"%s\"" % [p.x, p.y, roles[p]])
 		body += ",\n\t\"roles\": {\n" + ",\n".join(rl) + "\n\t}"
+	var alts: Dictionary = layout.get("alts", {})
+	if not alts.is_empty():
+		var ak: Array = alts.keys()
+		ak.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			return a.y < b.y or (a.y == b.y and a.x < b.x))
+		var al := []
+		for p: Vector2i in ak:
+			al.append("\t\t\"%d,%d\": %d" % [p.x, p.y, alts[p]])
+		body += ",\n\t\"alts\": {\n" + ",\n".join(al) + "\n\t}"
 	return body + "\n}\n"
 
 

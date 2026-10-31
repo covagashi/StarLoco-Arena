@@ -27,7 +27,8 @@ Rueda: zoom · botón central o Espacio+arrastrar: mover
 B pincel · S seleccionar · X borrar · I cuentagotas
 C casillas: clic pone el papel elegido (suelo, obstáculo,
   salida 1 o 2, pedestal, sin casilla), arrastra para
-  varias; der.: el original
+  varias; Bajar/Subir: un escalón por clic (Mayús: 5);
+  der.: la casilla vuelve a su papel y altura originales
 1 2 3: loom a b c
 R / Mayús+R: girar 90° · , y . : girar 15°
 F: reflejar · + y −: escala
@@ -154,6 +155,7 @@ func load_arena(n: int) -> void:
 	shape = Layout.shape(Layout.world_of(n))
 	layout = Layout.load_layout(n)
 	Layout.apply_roles(shape, layout.roles)
+	Layout.apply_alts(shape, layout.alts)
 	_undo.clear()
 	_redo.clear()
 	selected = {}
@@ -213,7 +215,8 @@ func redo() -> void:
 
 ## What undo keeps: the pieces and the role changes.
 func _state() -> Dictionary:
-	return {"cells": layout.cells.duplicate(true), "roles": layout.roles.duplicate()}
+	return {"cells": layout.cells.duplicate(true), "roles": layout.roles.duplicate(),
+		"alts": layout.alts.duplicate()}
 
 
 func _swap(from: Array, to: Array) -> void:
@@ -224,7 +227,16 @@ func _swap(from: Array, to: Array) -> void:
 	var st: Dictionary = from.pop_back()
 	layout.cells = st.cells
 	layout.roles = st.roles
+	var floor_before: float = shape.floor_y
+	var alts_before: Dictionary = layout.alts
+	layout.alts = st.get("alts", {})
 	Layout.apply_roles(shape, layout.roles)
+	Layout.apply_alts(shape, layout.alts)
+	if not is_equal_approx(floor_before, shape.floor_y):
+		_rebuild_all()
+	else:
+		for p in alts_before.keys() + layout.alts.keys():
+			_rebuild_cell(p)
 	var changed := {}
 	for p in before:
 		if not layout.cells.has(p) or layout.cells[p] != before[p]:
@@ -331,10 +343,62 @@ func set_role(p: Vector2i, r: String, snap := true) -> void:
 	_update_hover_label()
 
 
-## Cell p back to its role from the fight data.
+## Raises (d > 0) or lowers cell p's walk surface by d altitude steps.
+func change_alt(p: Vector2i, d: int, snap := true) -> void:
+	if not shape.cells.has(p) or d == 0:
+		return
+	if snap:
+		_snapshot()
+	var c: Dictionary = shape.cells[p]
+	var n: int = c.surface + d
+	if n == c.base_surface:
+		layout.alts.erase(p)
+	else:
+		layout.alts[p] = n
+	var floor_before: float = shape.floor_y
+	Layout.apply_alts(shape, layout.alts)
+	dirty = true
+	if not is_equal_approx(floor_before, shape.floor_y):
+		_rebuild_all()
+	else:
+		_rebuild_cell(p)
+	_rebuild_overlay()
+	_set_hover(_hover)
+	_update_status()
+
+
+## Cell p back to its role and height from the fight data.
 func reset_role(p: Vector2i) -> void:
-	if shape.cells.has(p):
-		set_role(p, shape.cells[p].base_role)
+	if not shape.cells.has(p):
+		return
+	var c: Dictionary = shape.cells[p]
+	if c.role == c.base_role and not layout.alts.has(p):
+		return
+	_snapshot()
+	if layout.alts.has(p):
+		change_alt(p, int(c.base_surface) - int(c.surface), false)
+	set_role(p, c.base_role, false)
+
+
+func _rebuild_all() -> void:
+	for p in _cells.keys():
+		_rebuild_cell(p)
+	for p in layout.cells:
+		if not _cells.has(p):
+			_rebuild_cell(p)
+
+
+## Height step of the current click or drag: 1, or 5 with Shift.
+var _alt_step := 1
+
+
+## One click (or drag step) of the cells tool on p: a role, or a height step.
+func _cells_click(p: Vector2i) -> void:
+	match cell_role:
+		"up", "down":
+			change_alt(p, _alt_step if cell_role == "up" else -_alt_step, false)
+		_:
+			set_role(p, cell_role, false)
 
 
 func clear_all() -> void:
@@ -715,7 +779,7 @@ func _on_view_input(e: InputEvent) -> void:
 		if _painting and _hover != null and _hover != _last_paint:
 			_last_paint = _hover
 			if tool == "cells":
-				set_role(_hover, cell_role, false)
+				_cells_click(_hover)
 			else:
 				place(_hover, false, false)   # one undo step for the whole stroke
 	elif e is InputEventMouseButton:
@@ -746,7 +810,8 @@ func _on_view_input(e: InputEvent) -> void:
 				return
 			if tool == "cells":
 				_snapshot()
-				set_role(p, cell_role, false)
+				_alt_step = 5 if mb.shift_pressed else 1
+				_cells_click(p)
 				_painting = true
 				_last_paint = p
 			elif mb.alt_pressed or tool == "pick":
@@ -1044,6 +1109,21 @@ func _build_inspector() -> Control:
 		roles.add_child(b)
 		_role_buttons[r] = b
 	box.add_child(roles)
+	var alt_row := HBoxContainer.new()
+	for r in [["down", "▼ Bajar"], ["up", "▲ Subir"]]:
+		var b := Button.new()
+		b.text = r[1]
+		b.toggle_mode = true
+		b.button_group = rg
+		b.focus_mode = Control.FOCUS_NONE
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "Un escalón por clic; con Mayús, cinco (más o menos un bloque)"
+		b.pressed.connect(func() -> void:
+			cell_role = r[0]
+			_set_tool("cells"))
+		alt_row.add_child(b)
+		_role_buttons[r[0]] = b
+	box.add_child(alt_row)
 	_role_buttons[cell_role].button_pressed = true
 	_starts_label = Label.new()
 	_starts_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1281,7 +1361,8 @@ func _update_status(msg := "") -> void:
 		var n2 := Layout.start_counts(shape)
 		var changed: int = layout.get("roles", {}).size()
 		_starts_label.text = "Salidas: equipo 1 %d · equipo 2 %d%s · pedestales %d\n%d casillas cambiadas. Clic der.: volver al original." % [
-			n2.team0, n2.team1, "  ⚠ no son iguales" if n2.team0 != n2.team1 else "", n2.coach, changed]
+			n2.team0, n2.team1, "  ⚠ no son iguales" if n2.team0 != n2.team1 else "", n2.coach,
+			changed + layout.get("alts", {}).size()]
 	if msg != "":
 		s = msg + " · " + s
 	_status.text = s
@@ -1298,7 +1379,7 @@ func _update_hover_label() -> void:
 		for it: Dictionary in _items(p):
 			names.append("%s (%s)" % [Layout.piece(it.kit, it.piece).get("label", it.piece), it.loom])
 		lines.append("%s: %d,%d · %s · altura %d · %s" % [pair[0], p.x, p.y,
-			ROLE_NAMES.get(c.get("role", ""), "?"), int(c.get("alt", 0)),
+			ROLE_NAMES.get(c.get("role", ""), "?"), int(c.get("surface", 0)),
 			", ".join(names) if not names.is_empty() else "vacía"])
 	_hover_label.text = "   " + "   |   ".join(lines)
 	if _cell_label != null:

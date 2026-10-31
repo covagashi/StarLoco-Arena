@@ -2196,6 +2196,13 @@ tres looms a escala de juego a la derecha. Plan actualizado en
     las corrige con esta herramienta. En la 5 se quitó la casilla perdida
     (17,17) y se pusieron tres pedestales en (17, 8–10), simétricos a los
     de (0, 8–10).
+  - Alturas (dueño, 2026-10-31: "hay que poder cambiar la altura"): en la
+    misma herramienta, **Bajar / Subir** un escalón por clic (Mayús: 5,
+    más o menos un bloque); el clic derecho devuelve papel y altura. Se
+    guarda en el `layout` (`alts`, la superficie en escalones de ALT, solo
+    los cambios); las columnas bajan hasta la casilla más baja. Con pruebas.
+  - Falta lo mismo que con los papeles: que el servidor (línea de visión,
+    movimiento) y el combate usen esas alturas (fase D / S43).
 
 ### D. Del editor al juego
 

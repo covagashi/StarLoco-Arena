@@ -35,6 +35,8 @@ func _run() -> void:
 		await _demo(ed, cells)
 	if opts.has("cells"):
 		await _cells_demo(ed, cells)
+	if opts.has("alts"):
+		await _alts_demo(ed, cells)
 	if opts.has("retail"):
 		ed._retail_check.button_pressed = true
 	if opts.has("game"):
@@ -125,4 +127,27 @@ func _cells_demo(ed: Control, cells: Dictionary) -> void:
 	print("[shot] cells: starts %s -> %s, undo %s, redo %s; %d changes; pedestal %s" % [
 		before, after, undone, Layout.start_counts(ed.shape), ed.layout.roles.size(),
 		cells[picks.coach].role if picks.has("coach") else "-"])
+	await process_frame
+
+
+## Heights: a floor cell up five steps, another under every cell; undo and
+## redo; the cell's node moves with its surface and the columns reach the
+## new floor.
+func _alts_demo(ed: Control, cells: Dictionary) -> void:
+	var keys: Array = cells.keys().filter(func(p: Vector2i) -> bool: return cells[p].role == "floor")
+	keys.sort()
+	var a: Vector2i = keys[keys.size() / 2]
+	var b: Vector2i = keys[keys.size() / 3]
+	var sa: int = cells[a].surface
+	var floor0: float = ed.shape.floor_y
+	ed.change_alt(a, 5)
+	ed.change_alt(b, ed.shape.alt_min - 6 - cells[b].surface)
+	var up: int = cells[a].surface
+	var floor1: float = ed.shape.floor_y
+	var node_y: float = ed._cells[a].position.y if ed._cells.has(a) else -999.0
+	ed.undo()
+	var after_undo: float = ed.shape.floor_y
+	ed.redo()
+	print("[shot] alts: %s %d -> %d (node y %.2f = %.2f); floor %.2f -> %.2f, undo %.2f, redo %.2f; %d changes" % [
+		a, sa, up, node_y, up * Layout.ALT, floor0, floor1, after_undo, ed.shape.floor_y, ed.layout.alts.size()])
 	await process_frame

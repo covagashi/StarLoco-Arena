@@ -69,6 +69,23 @@ func run(t) -> void:
 	t.eq(Layout.start_counts(sh5).coach, before_c + 1, "a floor cell made a pedestal counts")
 	Layout.apply_roles(sh5, {})
 	t.eq(sh5.cells[floor_cell].role, "floor", "no changes: the fight data's roles come back")
+	# the owner's height changes: the surface moves, the floor follows the
+	# lowest cell, they are written and read back, none = the fight data's
+	var base_s: int = sh5.cells[floor_cell].surface
+	Layout.apply_alts(sh5, {floor_cell: base_s + 5})
+	t.eq(sh5.cells[floor_cell].surface, base_s + 5, "a cell raised five steps")
+	var low: int = sh5.alt_min - 7
+	Layout.apply_alts(sh5, {floor_cell: low})
+	t.eq(sh5.alt_min, low, "lowered under every other cell: the floor follows it")
+	t.ok(is_equal_approx(sh5.floor_y, low * Layout.ALT - Layout.FLOOR_DEPTH), "and the columns run that far")
+	var al := Layout.empty_layout(1)
+	al.alts[floor_cell] = base_s + 5
+	var atext := Layout.to_json(al)
+	t.ok(atext.contains("\"alts\""), "height changes are written")
+	t.eq(Layout.parse(atext, 1).alts.get(floor_cell, -999), base_s + 5, "and read back")
+	t.eq(Layout.to_json(Layout.parse(atext, 1)), atext, "the file round-trips")
+	Layout.apply_alts(sh5, {})
+	t.eq(sh5.cells[floor_cell].surface, base_s, "no changes: the fight data's height comes back")
 	for n in range(1, Layout.WORLDS.size() + 1):
 		var sh := Layout.shape(Layout.world_of(n))
 		var high := 0
