@@ -33,7 +33,8 @@ C casillas: clic pone el papel elegido (suelo, obstáculo,
 R / Mayús+R: girar 90° · , y . : girar 15°
 F: reflejar · + y −: escala
 AvPág / RePág: subir / bajar (Mayús: más)
-Ctrl+flechas: desplazar (Mayús: más) · Inicio: centrar
+Ctrl+flechas u Opción+flechas: desplazar (Mayús: más)
+  (o las flechas del panel, a la derecha) · Inicio: centrar
 Supr: quitar la seleccionada · Esc: deseleccionar
 Flechas: mover la vista · G rejilla · V retail
 Ctrl+Z / Ctrl+Y: deshacer / rehacer · Ctrl+S: guardar
@@ -443,6 +444,11 @@ func rescale(s: float) -> void:
 
 func set_tint(hex: String) -> void:
 	edit(func(it: Dictionary) -> void: it.tint = hex)
+
+
+## The nudge of one click or key: 0.05 m, 0.25 m with Shift held.
+func _nudge_step() -> float:
+	return 0.25 if Input.is_key_pressed(KEY_SHIFT) else 0.05
 
 
 func nudge(d: Vector3) -> void:
@@ -861,6 +867,11 @@ func _unhandled_key_input(e: InputEvent) -> void:
 			KEY_UP: nudge(_screen_dir(Vector2(0, -1)) * step)
 			KEY_DOWN: nudge(_screen_dir(Vector2(0, 1)) * step)
 			_: handled = false
+	elif k.alt_pressed and k.keycode in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]:
+		# Option+arrows: the Mac's Ctrl+arrows switch desktops
+		var dirs := {KEY_LEFT: Vector2(-1, 0), KEY_RIGHT: Vector2(1, 0),
+			KEY_UP: Vector2(0, -1), KEY_DOWN: Vector2(0, 1)}
+		nudge(_screen_dir(dirs[k.keycode]) * step)
 	else:
 		match k.keycode:
 			KEY_B: _set_tool("paint")
@@ -1222,10 +1233,26 @@ func _build_inspector() -> Control:
 	_off_label = Label.new()
 	box.add_child(_off_label)
 	var off := HBoxContainer.new()
-	_button(off, "▲", func() -> void: nudge(Vector3(0, 0.05, 0)), "AvPág")
-	_button(off, "▼", func() -> void: nudge(Vector3(0, -0.05, 0)), "RePág")
-	_button(off, "Centrar", reset_offset, "Inicio")
+	_button(off, "Subir", func() -> void: nudge(Vector3(0, _nudge_step(), 0)), "AvPág (Mac: Fn+↑)")
+	_button(off, "Bajar", func() -> void: nudge(Vector3(0, -_nudge_step(), 0)), "RePág (Mac: Fn+↓)")
 	box.add_child(off)
+	# on-screen arrows for the horizontal move (owner, 2026-10-31: on the Mac
+	# Ctrl+arrows belongs to the system); they move as the screen shows
+	var pad := GridContainer.new()
+	pad.columns = 3
+	for k in [["", Vector2.ZERO], ["↑", Vector2(0, -1)], ["", Vector2.ZERO],
+			["←", Vector2(-1, 0)], ["Centrar", Vector2.INF], ["→", Vector2(1, 0)],
+			["", Vector2.ZERO], ["↓", Vector2(0, 1)], ["", Vector2.ZERO]]:
+		if k[0] == "":
+			pad.add_child(Control.new())
+		elif k[1] == Vector2.INF:
+			_button(pad, "Centrar", reset_offset, "Inicio (Mac: Fn+←)")
+		else:
+			var d: Vector2 = k[1]
+			var b := _button(pad, k[0], func() -> void: nudge(_screen_dir(d) * _nudge_step()),
+				"Mover en horizontal; con Mayús, más. Teclado: Opción+flechas o Ctrl+flechas")
+			b.custom_minimum_size = Vector2(48, 0)
+	box.add_child(pad)
 
 	_heading(box, "Mapa")
 	_fill_button = _button(box, "Rellenar casillas vacías", fill_empty,

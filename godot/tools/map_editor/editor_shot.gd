@@ -37,6 +37,8 @@ func _run() -> void:
 		await _cells_demo(ed, cells)
 	if opts.has("alts"):
 		await _alts_demo(ed, cells)
+	if opts.has("nudge"):
+		await _nudge_demo(ed)
 	if opts.has("retail"):
 		ed._retail_check.button_pressed = true
 	if opts.has("game"):
@@ -150,4 +152,37 @@ func _alts_demo(ed: Control, cells: Dictionary) -> void:
 	ed.redo()
 	print("[shot] alts: %s %d -> %d (node y %.2f = %.2f); floor %.2f -> %.2f, undo %.2f, redo %.2f; %d changes" % [
 		a, sa, up, node_y, up * Layout.ALT, floor0, floor1, after_undo, ed.shape.floor_y, ed.layout.alts.size()])
+	await process_frame
+
+
+## The on-screen arrows and Option+arrows move the selected piece across
+## the ground; Centrar puts it back.
+func _nudge_demo(ed: Control) -> void:
+	var target = null
+	for p: Vector2i in ed.layout.cells:
+		var items: Array = ed.layout.cells[p]
+		for i in items.size():
+			if Layout.kind_of(items[i]) == "deco":
+				target = {"cell": p, "i": i}
+	if target == null:
+		print("[shot] nudge: no decoration to move")
+		return
+	ed._set_tool("select")
+	ed.selected = target
+	ed.brush = ed.layout.cells[target.cell][target.i].duplicate(true)
+	var arrows := {}
+	for b in ed.find_children("*", "Button", true, false):
+		if b.text in ["←", "→", "↑", "↓", "Centrar"]:
+			arrows[b.text] = b
+	arrows["→"].pressed.emit()
+	var after_btn: Array = ed.layout.cells[target.cell][target.i].off.duplicate()
+	var key := InputEventKey.new()
+	key.keycode = KEY_UP
+	key.alt_pressed = true
+	key.pressed = true
+	ed._unhandled_key_input(key)
+	var after_key: Array = ed.layout.cells[target.cell][target.i].off.duplicate()
+	arrows["Centrar"].pressed.emit()
+	print("[shot] nudge: buttons %s; after → %s; after Option+↑ %s; after Centrar %s" % [
+		arrows.keys(), after_btn, after_key, ed.layout.cells[target.cell][target.i].off])
 	await process_frame
