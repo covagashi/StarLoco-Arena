@@ -12,9 +12,11 @@ extends RefCounted
 ##        "rot": degrees about y, "flip": mirrored, "tint": "rrggbb"
 ##        multiplier, "scale": uniform, "off": [x, y, z] in m}
 ## Everything after kit/piece is optional: a missing key is its default.
-## "roles": {"x,y": "floor"|"obstacle"|"team0"|"team1"} — the cells whose
-## fight role the owner changed (owner, 2026-10-31); only the changes are
-## written. The cells, their heights and the coach pedestals stay fixed.
+## "roles": {"x,y": "floor"|"obstacle"|"team0"|"team1"|"coach"|"void"} —
+## the cells whose fight role the owner changed (owner, 2026-10-31); only
+## the changes are written. "void" takes a cell out of the arena (a retail
+## test leftover, like arena 5's pedestal under the map). The cells' heights
+## stay fixed.
 ##
 ## The cells and their altitudes are never edited: they are the fight
 ## topology the server uses (server/data-dist/maps/). Which cells are
@@ -30,8 +32,8 @@ const ART_DIR := "res://art"
 const LAYOUT_DIR := "res://art/layouts"
 ## Loom letter -> model file suffix (kit.json "looms").
 const LOOMS := {"a": "", "b": "_b", "c": "_c"}
-## The fight roles the owner can give a cell (a coach pedestal stays one).
-const EDITABLE_ROLES := ["floor", "obstacle", "team0", "team1"]
+## The fight roles the owner can give a cell; void = no cell there.
+const EDITABLE_ROLES := ["floor", "obstacle", "team0", "team1", "coach", "void"]
 
 const PX := 43.0 * 1.41421356          # screen px per world unit across
 const ALT := 10.0 / (PX * 0.8660254)   # world units per altitude step (10 px)
@@ -187,20 +189,20 @@ static func _floor_near(cells: Dictionary, p: Vector2i, fallback: int) -> int:
 
 ## The shape with a layout's role changes on it: each cell keeps its role
 ## from the fight data in base_role, and role becomes the layout's one.
-## A change on a coach pedestal, or on a cell the shape hasn't, is ignored.
+## A change on a cell the shape hasn't is ignored.
 static func apply_roles(shape: Dictionary, roles: Dictionary) -> void:
 	for p: Vector2i in shape.cells:
 		var c: Dictionary = shape.cells[p]
 		if not c.has("base_role"):
 			c.base_role = c.role
 		c.role = c.base_role
-		if c.base_role != "coach" and roles.has(p):
+		if roles.has(p):
 			c.role = roles[p]
 
 
-## How many start cells each team has: {team0: n, team1: n}.
+## How many start cells each team has, and pedestals: {team0, team1, coach}.
 static func start_counts(shape: Dictionary) -> Dictionary:
-	var out := {"team0": 0, "team1": 0}
+	var out := {"team0": 0, "team1": 0, "coach": 0}
 	for c: Dictionary in shape.cells.values():
 		if out.has(c.role):
 			out[c.role] += 1

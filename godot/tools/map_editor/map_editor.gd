@@ -26,7 +26,8 @@ Rueda: zoom · botón central o Espacio+arrastrar: mover
 [b]Teclas[/b]
 B pincel · S seleccionar · X borrar · I cuentagotas
 C casillas: clic pone el papel elegido (suelo, obstáculo,
-  salida 1 o 2), arrastra para varias; der.: el original
+  salida 1 o 2, pedestal, sin casilla), arrastra para
+  varias; der.: el original
 1 2 3: loom a b c
 R / Mayús+R: girar 90° · , y . : girar 15°
 F: reflejar · + y −: escala
@@ -45,11 +46,11 @@ const GROUPS := [["Todo", []], ["Suelos", ["tile", "cap"]], ["Planas", ["flat"]]
 ## Grid colours (owner, 2026-10-31: more solid; team 2 green).
 const ROLE_COLORS := {"floor": Color(1, 1, 1, 0.4), "obstacle": Color(1.0, 0.2, 0.15, 1.0),
 	"team0": Color(0.2, 0.5, 1.0, 1.0), "team1": Color(0.15, 0.85, 0.25, 1.0),
-	"coach": Color(1.0, 0.8, 0.15, 1.0)}
+	"coach": Color(1.0, 0.8, 0.15, 1.0), "void": Color(0.55, 0.55, 0.55, 0.5)}
 ## How opaque a non-floor cell's fill is.
 const ROLE_FILL := 0.6
 const ROLE_NAMES := {"floor": "suelo", "obstacle": "obstáculo", "team0": "salida equipo 1",
-	"team1": "salida equipo 2", "coach": "pedestal del entrenador"}
+	"team1": "salida equipo 2", "coach": "pedestal del entrenador", "void": "sin casilla"}
 const TINTS := ["ffffff", "e8e0ff", "d6e6ff", "ffe6c8", "e0f0d0", "c8c8c8", "a0a0a0", "ffd0d0"]
 const THUMB := 72
 
@@ -248,7 +249,7 @@ func _set_items(p: Vector2i, items: Array) -> void:
 
 ## Puts the brush on cell p. stack: on top of the cell's highest decoration.
 func place(p: Vector2i, stack := false, snap := true) -> void:
-	if brush.is_empty() or not shape.cells.has(p):
+	if brush.is_empty() or not shape.cells.has(p) or shape.cells[p].role == "void":
 		return
 	var it: Dictionary = brush.duplicate(true)
 	if random_rot:
@@ -313,7 +314,7 @@ func set_role(p: Vector2i, r: String, snap := true) -> void:
 	if not shape.cells.has(p) or not r in Layout.EDITABLE_ROLES:
 		return
 	var c: Dictionary = shape.cells[p]
-	if c.base_role == "coach" or c.role == r:
+	if c.role == r:
 		return
 	if snap:
 		_snapshot()
@@ -323,6 +324,8 @@ func set_role(p: Vector2i, r: String, snap := true) -> void:
 		layout.roles[p] = r
 	Layout.apply_roles(shape, layout.roles)
 	dirty = true
+	if r == "void" or c.base_role == "void" or layout.cells.has(p):
+		_rebuild_cell(p)
 	_rebuild_overlay()
 	_update_status()
 	_update_hover_label()
@@ -468,7 +471,7 @@ func _rebuild_cell(p: Vector2i) -> void:
 		_cells[p].queue_free()
 		_cells.erase(p)
 	var items := _items(p)
-	if items.is_empty() or not shape.cells.has(p):
+	if items.is_empty() or not shape.cells.has(p) or shape.cells[p].role == "void":
 		return
 	var n := builder.build_cell(p, shape.cells[p], items, shape.floor_y)
 	_world.add_child(n)
@@ -503,7 +506,9 @@ func _rebuild_overlay() -> void:
 			if Layout.kind_of(x) in ["tile", "cap"]:
 				has_ground = true
 		var fill := Color(0.6, 0.6, 0.6, 0.35) if not has_ground else Color(0, 0, 0, 0)
-		if c.role != "floor":
+		if c.role == "void":
+			fill = Color(0, 0, 0, 0)
+		elif c.role != "floor":
 			fill = Color(col, ROLE_FILL)
 		if fill.a > 0.0:
 			for k in [0, 1, 2, 0, 2, 3]:
@@ -635,6 +640,8 @@ func fit_view() -> void:
 	var ylo := INF
 	var yhi := -INF
 	for p: Vector2i in shape.cells:
+		if shape.cells[p].role == "void":
+			continue
 		lo = lo.min(Vector2(p))
 		hi = hi.max(Vector2(p) + Vector2.ONE)
 		ylo = minf(ylo, _surface_y(p))
@@ -1025,7 +1032,7 @@ func _build_inspector() -> Control:
 	for r: String in Layout.EDITABLE_ROLES:
 		var b := Button.new()
 		b.text = {"floor": "Suelo", "obstacle": "Obstáculo", "team0": "Salida equipo 1",
-			"team1": "Salida equipo 2"}[r]
+			"team1": "Salida equipo 2", "coach": "Pedestal", "void": "Sin casilla"}[r]
 		b.toggle_mode = true
 		b.button_group = rg
 		b.focus_mode = Control.FOCUS_NONE
@@ -1273,8 +1280,8 @@ func _update_status(msg := "") -> void:
 	if _starts_label != null and shape.has("cells"):
 		var n2 := Layout.start_counts(shape)
 		var changed: int = layout.get("roles", {}).size()
-		_starts_label.text = "Salidas: equipo 1 %d · equipo 2 %d%s\n%d casillas cambiadas. Clic der.: volver al original." % [
-			n2.team0, n2.team1, "  ⚠ no son iguales" if n2.team0 != n2.team1 else "", changed]
+		_starts_label.text = "Salidas: equipo 1 %d · equipo 2 %d%s · pedestales %d\n%d casillas cambiadas. Clic der.: volver al original." % [
+			n2.team0, n2.team1, "  ⚠ no son iguales" if n2.team0 != n2.team1 else "", n2.coach, changed]
 	if msg != "":
 		s = msg + " · " + s
 	_status.text = s

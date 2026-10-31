@@ -50,7 +50,7 @@ func run(t) -> void:
 	Layout.apply_roles(sh5, rl.roles)
 	t.eq(sh5.cells[floor_cell].role, "obstacle", "a floor cell turned into an obstacle")
 	t.eq(sh5.cells[start_cell].role, "floor", "a team 2 start turned into floor")
-	t.eq(sh5.cells[coach_cell].role, "coach", "a coach pedestal stays one")
+	t.eq(sh5.cells[coach_cell].role, "obstacle", "a coach pedestal can be moved off")
 	t.eq(Layout.start_counts(sh5).team1, before.team1 - 1, "team 2 has one start fewer")
 	var rtext := Layout.to_json(rl)
 	t.ok(rtext.contains("\"roles\""), "the role changes are written")
@@ -61,6 +61,12 @@ func run(t) -> void:
 	t.ok(not Layout.to_json(Layout.empty_layout(1)).contains("roles"), "no changes: no roles key")
 	t.eq(Layout.parse('{"arena": 1, "cells": {}, "roles": {"1,1": "lava"}}', 1).roles.size(), 0,
 		"an unknown role is ignored")
+	t.eq(Layout.parse('{"arena": 1, "cells": {}, "roles": {"1,1": "void", "2,2": "coach"}}', 1).roles.size(), 2,
+		"void and coach are roles the owner can give")
+	Layout.apply_roles(sh5, {})
+	var before_c: int = Layout.start_counts(sh5).coach
+	Layout.apply_roles(sh5, {floor_cell: "coach"})
+	t.eq(Layout.start_counts(sh5).coach, before_c + 1, "a floor cell made a pedestal counts")
 	Layout.apply_roles(sh5, {})
 	t.eq(sh5.cells[floor_cell].role, "floor", "no changes: the fight data's roles come back")
 	for n in range(1, Layout.WORLDS.size() + 1):

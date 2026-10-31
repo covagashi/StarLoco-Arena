@@ -288,5 +288,11 @@
 		"11,17": [{"kit":"arena5","piece":"grass_block","tint":"a3bdff"}],
 		"12,17": [{"kit":"arena5","piece":"grass_block","tint":"9fbbff"}],
 		"13,17": [{"kit":"arena5","piece":"grass_block","tint":"9fbbff"}]
+	},
+	"roles": {
+		"17,8": "coach",
+		"17,9": "coach",
+		"17,10": "coach",
+		"17,17": "void"
 	}
 }

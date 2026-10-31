@@ -2189,6 +2189,13 @@ tres looms a escala de juego a la derecha. Plan actualizado en
   de cada equipo y avisa si no son iguales. Los pedestales no cambian.
   Se guarda en el `layout` (`roles`, solo los cambios), con pruebas.
   - Falta: que el servidor y el combate usen esos papeles (fase D / S43).
+  - Ampliado (dueño, 2026-10-31, arena 5): también **Pedestal** y **Sin
+    casilla**. Las arenas retail 5–12 traen datos de prueba: la 5 tiene
+    1 salida contra 14 y un pedestal a 100 de altura bajo el mapa; de la 7
+    a la 12 no hay pedestales y las salidas son 1–5 contra 6–8. El dueño
+    las corrige con esta herramienta. En la 5 se quitó la casilla perdida
+    (17,17) y se pusieron tres pedestales en (17, 8–10), simétricos a los
+    de (0, 8–10).
 
 ### D. Del editor al juego
 
