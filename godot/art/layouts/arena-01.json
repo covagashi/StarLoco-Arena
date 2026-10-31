@@ -175,5 +175,15 @@
 		"13,16": [{"kit":"arena1","piece":"ice_block","scale":0.95}],
 		"14,16": [{"kit":"arena1","piece":"ice_block","scale":0.95}],
 		"12,17": [{"kit":"arena1","piece":"ice_clear","rot":270.0}]
+	},
+	"roles": {
+		"6,2": "floor",
+		"13,2": "floor",
+		"7,3": "team1",
+		"14,3": "team1",
+		"6,4": "team1",
+		"7,4": "team1",
+		"12,4": "team1",
+		"12,17": "floor"
 	}
 }

@@ -127,3 +127,7 @@ __pycache__/
 # for isolated work. Never committable. Project-level .claude/settings.json is
 # deliberately NOT ignored, so only this subtree is listed.
 /.claude/worktrees/
+
+# macOS metadata written over Samba from the Mac
+._*
+.DS_Store

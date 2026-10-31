@@ -42,9 +42,12 @@ const KIND_NAMES := {"tile": "bloque de suelo", "cap": "capa sobre el bloque",
 	"wall": "en una pared", "cliff": "acantilado"}
 const GROUPS := [["Todo", []], ["Suelos", ["tile", "cap"]], ["Planas", ["flat"]],
 	["Decoración", ["deco", "side", "wall", "cliff"]]]
-const ROLE_COLORS := {"floor": Color(1, 1, 1, 0.16), "obstacle": Color(1.0, 0.35, 0.3, 0.55),
-	"team0": Color(0.3, 0.6, 1.0, 0.75), "team1": Color(1.0, 0.45, 0.25, 0.75),
-	"coach": Color(1.0, 0.82, 0.3, 0.8)}
+## Grid colours (owner, 2026-10-31: more solid; team 2 green).
+const ROLE_COLORS := {"floor": Color(1, 1, 1, 0.4), "obstacle": Color(1.0, 0.2, 0.15, 1.0),
+	"team0": Color(0.2, 0.5, 1.0, 1.0), "team1": Color(0.15, 0.85, 0.25, 1.0),
+	"coach": Color(1.0, 0.8, 0.15, 1.0)}
+## How opaque a non-floor cell's fill is.
+const ROLE_FILL := 0.6
 const ROLE_NAMES := {"floor": "suelo", "obstacle": "obstáculo", "team0": "salida equipo 1",
 	"team1": "salida equipo 2", "coach": "pedestal del entrenador"}
 const TINTS := ["ffffff", "e8e0ff", "d6e6ff", "ffe6c8", "e0f0d0", "c8c8c8", "a0a0a0", "ffd0d0"]
@@ -501,7 +504,7 @@ func _rebuild_overlay() -> void:
 				has_ground = true
 		var fill := Color(0.6, 0.6, 0.6, 0.35) if not has_ground else Color(0, 0, 0, 0)
 		if c.role != "floor":
-			fill = Color(col, 0.3)
+			fill = Color(col, ROLE_FILL)
 		if fill.a > 0.0:
 			for k in [0, 1, 2, 0, 2, 3]:
 				tris.append(q[k])
