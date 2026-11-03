@@ -91,8 +91,8 @@
 		"10,7": [{"kit":"arena2","piece":"flagstone","tint":"ff5900"}],
 		"11,7": [{"kit":"arena2","piece":"flagstone","tint":"ff3900"}],
 		"12,7": [{"kit":"arena2","piece":"flagstone","tint":"ff2500"}],
-		"13,7": [{"kit":"arena2","piece":"rock_block","tint":"ff0f00","off":[0.0,-0.9,0.0]}, {"kit":"arena2","piece":"totem_tall","rot":60.0,"tint":"ff0f00","off":[0.0,-2.65,0.0]}, {"kit":"arena2","piece":"fallen_leaves","loom":"b","tint":"ffa135","off":[0.0,0.1,0.0]}],
-		"14,7": [{"kit":"arena2","piece":"rock_block","tint":"ff2700"}],
+		"13,7": [{"kit":"arena2","piece":"totem","tint":"ff0f00","off":[0.0,-1.25,0.0]}],
+		"14,7": [{"kit":"arena2","piece":"rock_block","tint":"ff2700","off":[0.0,0.4,0.0]}],
 		"15,7": [{"kit":"arena2","piece":"flagstone","tint":"ff1f00"}],
 		"16,7": [{"kit":"arena2","piece":"rock_block","tint":"ff2900"}],
 		"1,8": [{"kit":"arena1","piece":"stone_block","tint":"ffb18f"}, {"kit":"arena1","piece":"slab","tint":"ffb18f"}],
@@ -229,6 +229,14 @@
 	},
 	"roles": {
 		"4,7": "obstacle",
-		"5,7": "obstacle"
+		"5,7": "obstacle",
+		"13,7": "obstacle",
+		"14,7": "obstacle"
+	},
+	"alts": {
+		"0,7": 11,
+		"13,7": 0,
+		"14,7": 0,
+		"1,8": 5
 	}
 }

@@ -5,7 +5,7 @@
 		"0,0": [{"kit":"arena5","piece":"wall_low","tint":"bdd1ff","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,2.25,0.0]}],
 		"1,0": [{"kit":"arena5","piece":"wall_low","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,2.25,0.0]}],
 		"2,0": [{"kit":"arena5","piece":"wall_low","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"chimney","off":[0.0,2.45,0.0]}],
-		"3,0": [{"kit":"arena5","piece":"wall_low","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"roof","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"wall_window"}, {"kit":"arena5","piece":"dormer","off":[0.0,2.45,0.0]}],
+		"3,0": [{"kit":"arena5","piece":"wall_low","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"roof","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"wall_window"}, {"kit":"arena5","piece":"dormer","off":[0.0,2.45,0.0]}, {"kit":"arena5","piece":"wall_window","off":[-6.116,0.0,-1.379]}],
 		"4,0": [{"kit":"arena5","piece":"wall_low","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,2.25,0.0]}],
 		"5,0": [{"kit":"arena5","piece":"wall_low","off":[0.0,2.25,0.0]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,2.25,0.0]}],
 		"6,0": [{"kit":"arena5","piece":"grass_block","tint":"c7d7ff"}, {"kit":"arena5","piece":"low_wall_ivy"}],
@@ -21,7 +21,7 @@
 		"2,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap","tint":"95a8ff"}],
 		"3,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap","tint":"9daeff"}],
 		"4,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap_alt","tint":"a4b2ff"}],
-		"5,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"low_wall_end","rot":270.0,"scale":1.35,"off":[0.0,-0.25,0.0]}],
+		"5,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"low_wall_end","rot":270.0,"scale":1.35,"off":[-0.035,-0.25,-0.319]}],
 		"6,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap_alt","tint":"abb7f8"}],
 		"7,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap","tint":"a5b0e6"}],
 		"8,1": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap_alt","tint":"b8c3f6"}],
@@ -31,7 +31,7 @@
 		"12,1": [{"kit":"arena1","piece":"stone_block","tint":"ffffe3"}],
 		"13,1": [{"kit":"arena5","piece":"grass_block","tint":"ffffe3"}],
 		"14,1": [{"kit":"arena1","piece":"rock_block","tint":"ffffc1"}],
-		"0,2": [{"kit":"arena5","piece":"wall_high","off":[0.0,3.35,0.0]}, {"kit":"arena5","piece":"dormer","rot":90.0,"off":[0.0,3.65,0.0]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,3.4,0.0]}],
+		"0,2": [{"kit":"arena5","piece":"wall_high","off":[0.0,3.35,0.0]}, {"kit":"arena5","piece":"dormer","rot":90.0,"off":[0.141,3.65,-0.141]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,3.4,0.0]}],
 		"1,2": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap_alt","rot":270.0,"tint":"8da2ff"}],
 		"2,2": [{"kit":"arena5","piece":"grass_block","tint":"9cb4ff"}, {"kit":"arena5","piece":"petals"}],
 		"3,2": [{"kit":"arena5","piece":"grass_block","tint":"a8bbff"}],
@@ -48,7 +48,7 @@
 		"14,2": [{"kit":"arena1","piece":"rock_block","tint":"fffbdc"}],
 		"0,3": [{"kit":"arena5","piece":"wall_high","off":[0.0,3.4,0.0]}, {"kit":"arena5","piece":"roof","rot":90.0,"off":[0.0,3.35,0.0]}],
 		"1,3": [{"kit":"arena5","piece":"grass_block"}, {"kit":"arena5","piece":"cobble_cap_alt","rot":270.0,"tint":"8ba3ff"}],
-		"2,3": [{"kit":"arena5","piece":"grass_block","tint":"95adff"}, {"kit":"arena5","piece":"buttress"}],
+		"2,3": [{"kit":"arena5","piece":"grass_block","tint":"95adff"}, {"kit":"arena5","piece":"buttress","off":[-0.389,0.0,0.389]}],
 		"3,3": [{"kit":"arena5","piece":"grass_block","tint":"9fb4ff"}],
 		"4,3": [{"kit":"arena5","piece":"grass_block","tint":"abbeff"}],
 		"5,3": [{"kit":"arena5","piece":"grass_block","tint":"b4c5ff"}],
@@ -169,7 +169,7 @@
 		"14,9": [{"kit":"arena1","piece":"rock_block","loom":"c","tint":"0515ff"}],
 		"15,9": [{"kit":"arena1","piece":"stone_block","tint":"fffbe5"}],
 		"16,9": [{"kit":"arena5","piece":"grass_block","tint":"ffffd9"}, {"kit":"arena5","piece":"fence_pair","tint":"95b5ff"}],
-		"17,9": [{"kit":"arena1","piece":"stone_block","tint":"809dff","off":[0.0,0.7,0.0]}, {"kit":"arena1","piece":"slab","tint":"a7bfff","off":[0.0,0.7,0.0]}],
+		"17,9": [{"kit":"arena1","piece":"stone_block","tint":"809dff"}, {"kit":"arena1","piece":"slab","tint":"a7bfff"}],
 		"0,10": [{"kit":"arena1","piece":"stone_block","tint":"809dff"}, {"kit":"arena1","piece":"slab","loom":"b","tint":"a7bfff"}],
 		"1,10": [{"kit":"arena5","piece":"grass_block","tint":"7b9bff"}],
 		"2,10": [{"kit":"arena5","piece":"grass_block","tint":"7f9cff"}],
@@ -249,7 +249,7 @@
 		"7,14": [{"kit":"arena5","piece":"grass_block","tint":"7aa1ff"}],
 		"8,14": [{"kit":"arena5","piece":"grass_block","tint":"81a7ff"}],
 		"9,14": [{"kit":"arena5","piece":"grass_block","tint":"88adff"}],
-		"10,14": [{"kit":"arena5","piece":"grass_block","tint":"95b5ff","off":[0.0,-0.45,0.0]}, {"kit":"arena5","piece":"crate","tint":"95b5ff","off":[0.0,-0.55,0.0]}],
+		"10,14": [{"kit":"arena5","piece":"grass_block","tint":"95b5ff","off":[0.0,-0.2,0.0]}, {"kit":"arena5","piece":"crate","tint":"95b5ff","off":[0.0,-0.1,0.0]}],
 		"11,14": [{"kit":"arena5","piece":"grass_block","tint":"adc3ff"}, {"kit":"arena5","piece":"fence_pair","tint":"95b5ff"}],
 		"12,14": [{"kit":"arena5","piece":"grass_block","tint":"abc1ff"}],
 		"13,14": [{"kit":"arena5","piece":"grass_block","tint":"a9c1ff"}],
@@ -344,5 +344,9 @@
 		"14,14": "team0",
 		"13,15": "team0",
 		"17,17": "void"
+	},
+	"alts": {
+		"17,9": -8,
+		"10,14": -11
 	}
 }
