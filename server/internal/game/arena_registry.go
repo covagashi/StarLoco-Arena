@@ -24,6 +24,9 @@ type arenaRegistry struct {
 	mu    sync.RWMutex
 	cache map[uint16]*arena
 	ids   []uint16 // sorted, for deterministic random selection
+	// release are the arenas new fights are drawn on: the prototype's own
+	// (gamedata.FightMaps.Release), or every arena when there are none.
+	release []uint16
 }
 
 // initArenas converts every decoded fight map into an arena. Safe to call once at
@@ -47,6 +50,15 @@ func (d *Deps) initArenas() {
 		r.ids = append(r.ids, a.worldID)
 	}
 	sort.Slice(r.ids, func(i, j int) bool { return r.ids[i] < r.ids[j] })
+	r.release = r.release[:0]
+	for _, id := range d.FightMaps.Release() {
+		if r.cache[uint16(id)] != nil {
+			r.release = append(r.release, uint16(id))
+		}
+	}
+	if len(r.release) == 0 {
+		r.release = append(r.release, r.ids...)
+	}
 }
 
 // arenaByID returns the arena for a world id, or the fallback when unknown.
@@ -63,7 +75,8 @@ func (d *Deps) arenaByID(id uint16) *arena {
 }
 
 // pickArena chooses an arena for a new fight. With map data loaded this rotates
-// over every shipped arena, so fights are not all played on world 5.
+// over the release arenas (the prototype's six, S36), so fights are not all
+// played on world 5.
 func (d *Deps) pickArena() *arena { return d.pickArenaSeating(1) }
 
 // pickArenaSeating chooses an arena that can seat at least n coaches PER SIDE.
@@ -81,12 +94,12 @@ func (d *Deps) pickArenaSeating(n int) *arena {
 	r := &d.arenas
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if len(r.ids) == 0 {
+	if len(r.release) == 0 {
 		return &practiceArena
 	}
 	if n > 1 {
-		eligible := make([]*arena, 0, len(r.ids))
-		for _, id := range r.ids {
+		eligible := make([]*arena, 0, len(r.release))
+		for _, id := range r.release {
 			if a := r.cache[id]; a != nil && a.coachCapacity() >= n {
 				eligible = append(eligible, a)
 			}
@@ -95,7 +108,7 @@ func (d *Deps) pickArenaSeating(n int) *arena {
 			return eligible[rand.Intn(len(eligible))]
 		}
 	}
-	return r.cache[r.ids[rand.Intn(len(r.ids))]]
+	return r.cache[r.release[rand.Intn(len(r.release))]]
 }
 
 // loadedArenaCount reports how many arenas the registry holds (0 = fallback only).

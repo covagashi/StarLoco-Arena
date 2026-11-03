@@ -37,6 +37,9 @@ const WORLDS := [5, 10, 12, 15, 21, 36, 38, 39, 40, 41, 42, 44]
 const RELEASE := 6
 const ART_DIR := "res://art"
 const LAYOUT_DIR := "res://art/layouts"
+## The fight shapes the server plays, exported from the layouts
+## (fight_shape / fight_json); the server embeds this folder.
+const FIGHT_DIR := "res://../server/internal/gamedata/arenas"
 ## Loom letter -> model file suffix (kit.json "looms").
 const LOOMS := {"a": "", "b": "_b", "c": "_c"}
 ## The fight roles the owner can give a cell; void = no cell there.
@@ -427,5 +430,136 @@ static func save_layout(layout: Dictionary, path := "") -> Error:
 	if f == null:
 		return FileAccess.get_open_error()
 	f.store_string(to_json(layout))
+	f.close()
+	return OK
+
+
+# --- the fight's shape (S36 phase D) --------------------------------------
+
+## What the fight plays on: the arena's shape with the layout's roles and
+## heights on it, the way the 3D view draws it.
+## {world, arena, cells: {Vector2i: {alt, ground}}, team0, team1, coach:
+##  [Vector3i], specials: [{pos: Vector3i, template}]}
+## A walkable cell's alt is its surface; an obstacle keeps its retail
+## altitude unless the owner moved it (only void vs not matters for it on
+## the server). Start cells and pedestals stand at their surface: the ones
+## the .fmd had keep its order, the owner's new ones follow in row order.
+## The .fmd's special cells stay where the cell is still walkable.
+static func fight_shape(arena: int) -> Dictionary:
+	var world := world_of(arena)
+	var layout := load_layout(arena)
+	var sh := shape(world)
+	apply_roles(sh, layout.roles)
+	apply_alts(sh, layout.alts)
+	var fmd := FightMap.load(world)
+	var out := {"world": world, "arena": arena, "cells": {}, "team0": [], "team1": [],
+		"coach": [], "specials": []}
+	var keys: Array = sh.cells.keys()
+	keys.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return a.y < b.y or (a.y == b.y and a.x < b.x))
+	var listed := {}
+	for role in ["team0", "team1", "coach"]:
+		for c in fmd.get(role, []):
+			var p := Vector2i(c.x, c.y)
+			if sh.cells.has(p) and sh.cells[p].role == role and not listed.has(p):
+				listed[p] = true
+				out[role].append(Vector3i(p.x, p.y, sh.cells[p].surface))
+	for p: Vector2i in keys:
+		var c: Dictionary = sh.cells[p]
+		match String(c.role):
+			"void":
+				continue
+			"obstacle":
+				out.cells[p] = {"alt": c.surface if layout.alts.has(p) else c.alt, "ground": false}
+			"coach":
+				out.cells[p] = {"alt": c.surface, "ground": false}
+			_:
+				out.cells[p] = {"alt": c.surface, "ground": true}
+		if c.role in ["team0", "team1", "coach"] and not listed.has(p):
+			out[c.role].append(Vector3i(p.x, p.y, c.surface))
+	for sp in fmd.get("specials", []):
+		var p := Vector2i(sp.pos.x, sp.pos.y)
+		if out.cells.has(p) and out.cells[p].ground:
+			out.specials.append({"pos": Vector3i(p.x, p.y, out.cells[p].alt),
+				"template": int(sp.template)})
+	return out
+
+
+## The fight shape as the server reads it (server/internal/gamedata/
+## arenas/<world>.json): one line per cell, "x,y": [alt, "floor" | "obstacle"].
+static func fight_json(fs: Dictionary) -> String:
+	var lines := []
+	var keys: Array = fs.cells.keys()
+	keys.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return a.y < b.y or (a.y == b.y and a.x < b.x))
+	for p: Vector2i in keys:
+		var c: Dictionary = fs.cells[p]
+		lines.append('\t\t"%d,%d": [%d, "%s"]' % [p.x, p.y, c.alt,
+			"floor" if c.ground else "obstacle"])
+	var pos := func(list: Array) -> String:
+		var a := []
+		for v: Vector3i in list:
+			a.append("[%d, %d, %d]" % [v.x, v.y, v.z])
+		return "[" + ", ".join(a) + "]"
+	var sp := []
+	for s: Dictionary in fs.specials:
+		sp.append("[%d, %d, %d, %d]" % [s.pos.x, s.pos.y, s.pos.z, s.template])
+	return "{\n\t\"world\": %d,\n\t\"arena\": %d,\n" % [fs.world, fs.arena] \
+		+ "\t\"team0\": %s,\n\t\"team1\": %s,\n\t\"coach\": %s,\n" % [
+			pos.call(fs.team0), pos.call(fs.team1), pos.call(fs.coach)] \
+		+ "\t\"specials\": [%s],\n" % ", ".join(sp) \
+		+ "\t\"cells\": {\n" + ",\n".join(lines) + "\n\t}\n}\n"
+
+
+static func fight_path(world: int) -> String:
+	return "%s/%d.json" % [FIGHT_DIR, world]
+
+
+## The world's exported fight shape in fight_view's terms, or {} when the
+## world has none: {cells: {Vector2i: {alt, ground}}, fmd: {team0, team1,
+## coach: [{x, y, z}], specials: [{pos: {x, y, z}, template}]}} — the same
+## shapes Topology.load_world and FightMap.load return.
+static func load_fight_shape(world: int) -> Dictionary:
+	var path := ProjectSettings.globalize_path(fight_path(world))
+	if not FileAccess.file_exists(path):
+		return {}
+	var d = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not d is Dictionary or not d.get("cells") is Dictionary:
+		return {}
+	var cells := {}
+	for key: String in d.cells:
+		var xy := key.split(",")
+		var v: Array = d.cells[key]
+		cells[Vector2i(int(xy[0]), int(xy[1]))] = {"alt": int(v[0]), "ground": v[1] == "floor"}
+	var fmd := {"specials": []}
+	for role in ["team0", "team1", "coach"]:
+		fmd[role] = []
+		for v: Array in d.get(role, []):
+			fmd[role].append({"x": int(v[0]), "y": int(v[1]), "z": int(v[2])})
+	for v: Array in d.get("specials", []):
+		fmd.specials.append({"pos": {"x": int(v[0]), "y": int(v[1]), "z": int(v[2])},
+			"template": int(v[3])})
+	return {"cells": cells, "fmd": fmd}
+
+
+## Writes the release arenas' fight shapes for the server. Returns the paths.
+static func export_fight_shapes() -> Array:
+	var out := []
+	for arena in range(1, RELEASE + 1):
+		if export_fight_shape(arena) == OK:
+			out.append(ProjectSettings.globalize_path(fight_path(world_of(arena))))
+	return out
+
+
+## Writes one release arena's fight shape; arenas 7-12 have none yet.
+static func export_fight_shape(arena: int) -> Error:
+	if not in_release(arena):
+		return ERR_UNAVAILABLE
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(FIGHT_DIR))
+	var f := FileAccess.open(ProjectSettings.globalize_path(fight_path(world_of(arena))),
+		FileAccess.WRITE)
+	if f == null:
+		return FileAccess.get_open_error()
+	f.store_string(fight_json(fight_shape(arena)))
 	f.close()
 	return OK

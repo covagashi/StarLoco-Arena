@@ -115,6 +115,9 @@ type FightMaps struct {
 	// unreachable counts special cells dropped because the topology gives their
 	// cell no floor — a content quirk in the retail data, not a decode failure.
 	unreachable int
+	// release are the prototype's own arenas (arenas.go), the ones new fights
+	// are drawn on.
+	release []int32
 }
 
 // Skipped returns the arena ids that were dropped for lack of topology.
@@ -143,7 +146,25 @@ func (f *FightMaps) Len() int { return len(f.byID) }
 // LoadFightMaps decodes every arena under <dir>/maps. A world is included only if
 // its fight jar holds a non-empty .fmd; worlds whose topology is present but which
 // define no fight start points are overworld maps and are skipped.
+//
+// The prototype's own arenas (arenas.go, embedded) then replace the retail
+// data of their worlds.
 func LoadFightMaps(dir string) (*FightMaps, error) {
+	own, err := loadOwnArenas()
+	if err != nil {
+		return nil, fmt.Errorf("own arenas: %w", err)
+	}
+	out, err := loadRetailFightMaps(dir)
+	if err != nil {
+		return nil, err
+	}
+	out.applyOwnArenas(own)
+	return out, nil
+}
+
+// loadRetailFightMaps is LoadFightMaps without the own arenas: the retail
+// .jar data alone.
+func loadRetailFightMaps(dir string) (*FightMaps, error) {
 	fightDir := filepath.Join(dir, "maps", "fight")
 	entries, err := os.ReadDir(fightDir)
 	if err != nil {

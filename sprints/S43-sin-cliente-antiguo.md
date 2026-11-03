@@ -33,6 +33,13 @@ al retail.
 
 ### 1. Formato propio para la forma de las arenas
 
+> **Hecho en parte en S36 (2026-11-03):** las 6 arenas del prototipo ya
+> tienen su JSON (`server/internal/gamedata/arenas/<mundo>.json`, sacado
+> del `layout`, embebido en el servidor) y la rotación es solo de esas 6
+> (paso 2). Falta: que el servidor arranque sin los `.jar` (hoy los sigue
+> leyendo para las otras 41 arenas) y que el cliente no lea
+> `Topology`/`FightMap` para nada.
+
 - Un JSON legible por arena, con seguimiento en git, por ejemplo
   `server/arenas/<id>.json`. No va en `server/data/`, que es la copia local
   ignorada (AGENTS.md). Lleva casillas con altura y suelo, salidas por

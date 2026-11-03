@@ -142,3 +142,27 @@ func run(t) -> void:
 	t.ok(is_equal_approx(tb.off[0], 0.25) and is_equal_approx(tb.off[2], -0.1), "offset survives")
 	t.eq(Layout.to_json(back), text, "writing it again changes nothing")
 	t.eq(Layout.parse("not json", 3).cells.size(), 0, "a broken file reads as empty")
+	# the fight shapes the server embeds are the layouts' (S36 phase D): a
+	# layout saved without exporting would fight on stale cells
+	for n in range(1, Layout.RELEASE + 1):
+		var w := Layout.world_of(n)
+		var fs := Layout.fight_shape(n)
+		var path := ProjectSettings.globalize_path(Layout.fight_path(w))
+		t.eq(FileAccess.get_file_as_string(path), Layout.fight_json(fs),
+			"arena %d's fight shape is up to date (run tools/map_editor/export_fight_shapes.gd)" % n)
+		var fback := Layout.load_fight_shape(w)
+		t.eq(fback.cells.size(), fs.cells.size(), "arena %d's fight shape reads back" % n)
+		var starts_ok := true
+		for role in ["team0", "team1"]:
+			for c: Dictionary in fback.fmd[role]:
+				var cell: Dictionary = fback.cells.get(Vector2i(c.x, c.y), {})
+				starts_ok = starts_ok and cell.get("ground", false) and cell.alt == c.z
+		t.ok(starts_ok and not fback.fmd.team0.is_empty() and not fback.fmd.team1.is_empty(),
+			"arena %d's start cells stand on floor at their height" % n)
+	t.eq(Layout.load_fight_shape(Layout.world_of(7)), {}, "arena 7 has no fight shape yet")
+	# arena 5: the owner's 8 against 8 and three pedestals a side replace the
+	# retail test data (1 against 14, a pedestal under the map)
+	var a5 := Layout.load_fight_shape(21)
+	t.eq([a5.fmd.team0.size(), a5.fmd.team1.size(), a5.fmd.coach.size()], [8, 8, 6],
+		"arena 5 plays the owner's start cells and pedestals")
+	t.ok(not a5.cells.has(Vector2i(17, 17)), "arena 5's stray cell is gone")

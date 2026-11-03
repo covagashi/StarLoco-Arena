@@ -14,6 +14,7 @@ const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArenaView := preload("res://src/maps/arena_view.gd")
+const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
 const FightHud := preload("res://src/fight/fight_hud.gd")
 const State := preload("res://src/state.gd")
@@ -437,6 +438,11 @@ func _load() -> void:
 	_fmd = FightMap.load(map_id)
 	var topo := Topology.load_world(map_id, Topology.SCOPE_ARENA)
 	_cells = topo.get("cells", {})
+	# the prototype's arenas play the owner's shape, as the server does
+	var own := ArenaLayout.load_fight_shape(map_id)
+	if not own.is_empty():
+		_cells = own.cells
+		_fmd = own.fmd
 	_alt_min = 0
 	_alt_max = 0
 	for c in _cells.values():

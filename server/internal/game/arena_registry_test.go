@@ -195,3 +195,35 @@ func TestSuddenDeathWorksOnEveryArena(t *testing.T) {
 		}
 	}
 }
+
+// TestNewFightsOnlyOnReleaseArenas: the rotation draws from the prototype's
+// six arenas only (S36), for 1v1 and for 2v2, while every other arena still
+// resolves by id.
+func TestNewFightsOnlyOnReleaseArenas(t *testing.T) {
+	d := loadArenaRegistry(t)
+	release := map[uint16]bool{5: true, 10: true, 12: true, 15: true, 21: true, 36: true}
+	seen := map[uint16]bool{}
+	for i := 0; i < 400; i++ {
+		a := d.pickArena()
+		if !release[a.worldID] {
+			t.Fatalf("picked world %d, not a release arena", a.worldID)
+		}
+		seen[a.worldID] = true
+		if b := d.pickArenaSeating(2); !release[b.worldID] || b.coachCapacity() < 2 {
+			t.Fatalf("2v2 picked world %d (seats %d a side)", b.worldID, b.coachCapacity())
+		}
+	}
+	if len(seen) != len(release) {
+		t.Errorf("400 picks reached %d of the %d release arenas", len(seen), len(release))
+	}
+	if !d.hasArena(38) {
+		t.Error("world 38 (arena 7, not released) no longer resolves by id")
+	}
+	capable := []uint16{}
+	for id := range release {
+		if d.arenaByID(id).coachCapacity() >= 2 {
+			capable = append(capable, id)
+		}
+	}
+	t.Logf("release arenas that seat 2 coaches a side: %v", capable)
+}

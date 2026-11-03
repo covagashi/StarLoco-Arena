@@ -11,6 +11,16 @@ func loadMaps(t *testing.T) *FightMaps {
 	return m
 }
 
+// loadRetailMaps is the retail .jar data without the own arenas over it.
+func loadRetailMaps(t *testing.T) *FightMaps {
+	t.Helper()
+	m, err := loadRetailFightMaps(clientBdataDir)
+	if err != nil {
+		t.Skipf("map data not available: %v", err)
+	}
+	return m
+}
+
 // TestFightMapsLoad checks the whole set decodes and that every arena is coherent:
 // a bounding box, at least one start cell per side, and every start cell standing on
 // real ground at the altitude the .fmd recorded (the client rejects a fighter whose
@@ -65,7 +75,7 @@ func TestFightMapsLoad(t *testing.T) {
 // obstacles, the 9 special cells and a 151/22/151 floor/obstacle/void split). The
 // loader must reproduce it exactly, or every other map it produces is suspect too.
 func TestFightMap5MatchesHandDecode(t *testing.T) {
-	m := loadMaps(t).Get(5)
+	m := loadRetailMaps(t).Get(5)
 	if m == nil {
 		t.Fatal("world 5 missing")
 	}

@@ -2443,14 +2443,42 @@ manchas de lava de arena8). Lo que sale:
   - Montar la arena tarda 0,1–0,5 s y el primer fotograma 0,5–1,2 s en
     llvmpipe (sin GPU).
   - Pendiente:
-    - Los `roles` y `alts` del dueño solo los ve el dibujo: el combate y el
-      servidor siguen con los de los `.jar` (54 casillas cambiadas en la 5,
-      88 en la 6). Es el paso 1 de S43, que se adelanta aquí.
+    - ~~Los `roles` y `alts` del dueño solo los ve el dibujo~~ hecho, abajo.
     - Un juego exportado no lleva `art/` (tiene `.gdignore`, y los GLB se
       leen del disco en tiempo de ejecución): hay que empaquetar los GLB y
       los `layout` de las 6 arenas para la exportación.
     - Rendimiento con GPU de verdad (miles de llamadas de dibujo por arena,
       ver la tabla de arriba): unir las piezas por material.
+- [x] El servidor y el combate juegan la forma del `layout` (2026-11-03),
+      el paso 1 de S43 adelantado.
+  - `arena_layout.gd` `fight_shape()` convierte el `layout` (forma +
+    papeles + alturas, lo mismo que dibuja el 3D) en la forma del combate:
+    suelo, obstáculo o nada por casilla, con su altura; salidas y pedestales
+    a la altura de su casilla (las del `.fmd` en su orden, las nuevas del
+    dueño detrás); las casillas especiales del `.fmd` que siguen siendo
+    suelo.
+  - Un JSON por arena del prototipo en `server/internal/gamedata/arenas/`
+    (`<mundo>.json`, una línea por casilla). El editor lo escribe al
+    guardar; `tools/map_editor/export_fight_shapes.gd` los rehace todos, y
+    una prueba unitaria falla si alguno no cuadra con su `layout`.
+  - El servidor los lleva embebidos (`gamedata/arenas.go`) y sustituyen a
+    los `.jar` de sus mundos. Los combates nuevos se sortean **solo entre
+    las 6** (`FightMaps.Release`); las demás arenas siguen cargadas por id.
+    El cliente (`fight_view`) lee el mismo JSON para sus casillas, salidas
+    y pedestales.
+  - Resultado: arena 1, 8 contra 11 salidas (el dueño añadió 5 al equipo 2
+    el 31-oct); arenas 2–4, 8 contra 8; arena 5, 8 contra 8 (el retail traía
+    1 contra 14) y sin la casilla perdida bajo el mapa; arena 6, 6 contra 6
+    con 2 pedestales.
+  - **2 contra 2: solo 3 de las 6 sientan dos coaches por lado** (3, 4 y 5:
+    mundos 12, 15 y 21). La 1 y la 2 tienen 6 pedestales, pero no reparten
+    3 y 3 por cercanía a las salidas; la 6 tiene 2. El 2v2 sortea entre
+    esas 3. A decidir con el dueño (S43 ya lo preveía).
+  - Pruebas: Go `TestOwnArenas`, `TestOwnArenaReplacesRetail`,
+    `TestDecodeArenaFileRejectsBadData`, `TestNewFightsOnlyOnReleaseArenas`;
+    toda la batería del servidor (e2e incluidas) pasa. Godot: 546
+    comprobaciones. Captura de la colocación en la arena 5 con las salidas
+    del dueño.
 - [ ] El dueño monta las arenas 1–6 del prototipo (2026-11-03). Hechas por
       él: 1–5; la 6 en curso. Las 7–12, más adelante.
 

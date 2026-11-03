@@ -181,6 +181,9 @@ func load_arena(n: int) -> void:
 
 func save() -> void:
 	var err := Layout.save_layout(layout)
+	if err == OK and Layout.in_release(arena):
+		# the server plays what the layout says (cells, starts, heights)
+		err = Layout.export_fight_shape(arena)
 	if err == OK:
 		dirty = false
 		_update_status("Guardado en " + Layout.layout_path(arena).trim_prefix("res://"))
