@@ -94,9 +94,9 @@ for k in (-1, 1):
     skin += [("cap", B(-0.03, 0.44, k * 0.39), B(0.0, 0.2, k * 0.45), 0.12),
              ("cap", B(0.0, 0.2, k * 0.46), B(0.04, -0.08, k * 0.48), 0.095),
              (B(0.045, -0.14, k * 0.48), 0.06, (0.6, 1.05, 1.25)),           # the palm, flat to her side
-             ("cap", W(0.44, S - 0.05, k * 0.225), W(0.46, 0.2, k * 0.245), 0.085),  # the shin
-             (W(0.45, S - 0.2, k * 0.232), 0.1, (1, 1, 1.25)),                 # the calf's bulge
-             ("cap", W(0.46, 0.22, k * 0.245), W(0.465, 0.07, k * 0.25), 0.045)]  # the ankle, into the slipper
+             ("cap", W(0.45, S - 0.1, k * 0.232), W(0.47, 0.16, k * 0.17), 0.095),  # the shin, the feet drawn in between the rockers
+             (W(0.455, S - 0.21, k * 0.21), 0.105, (1, 1, 1.35)),               # the calf's bulge
+             ("cap", W(0.48, 0.16, k * 0.165), W(0.52, 0.085, k * 0.145), 0.05)]  # the ankle, ending inside the slipper
 soft("skin", "softPale", skin)
 # the fingers: kiln's hanging hand (four fingers straight down, the thumb
 # forward), as separate rounded fingers so they read at game scale
@@ -109,12 +109,33 @@ for k in (-1, 1):
     a, b = B(hx + 0.05, hy - 0.01, hz), B(hx + 0.09, hy - 0.07, hz)
     p.tube([a, a.lerp(b, 0.5), b], 0.023, 0.019, mat="softPale", sides=6)
     p.blob(b, 0.019, "softPale", sub=1)
-# the white nightgown over the thighs, sagging between them, wrapping the knees
+# the white nightgown over the thighs, a flat drape between them (no lump)
 gown = []
 for k in (-1, 1):
-    gown += [("cap", W(0.06, S + 0.08, k * 0.15), W(0.45, S + 0.0, k * 0.21), 0.155),
-             (W(0.455, S - 0.06, k * 0.232), 0.15, (1.05, 1.05, 0.9)),
-             ("cap", W(0.455, S - 0.04, k * 0.232), W(0.455, S - 0.16, k * 0.232), 0.15)]  # the sleeve the torn hem hangs from
-gown += [("cap", W(0.08, S + 0.05, 0), W(0.42, S - 0.02, 0), 0.1)]
-soft("gown", "softApronW", gown, grow=1.15)  # thin enough for the knitting to lie on it
+    gown += [("cap", W(0.06, S + 0.08, k * 0.15), W(0.4, S + 0.02, k * 0.2), 0.155)]
+gown += [(W(0.25, S + 0.05, 0), 0.11, (1.0, 1.8, 0.4))]
+soft("gown", "softApronW", gown, grow=1.15)
+# the knee sleeve: kiln's exact lathe, so the torn hem (kept from kiln) lies
+# flush round it instead of hanging off it like wings
+for k in (-1, 1):
+    p.lathe([(0.15, 0), (0.153, 0.1), (0.152, 0.2), (0.135, 0.26), (0.0, 0.27)], "softApronW", sides=14,
+            c=W(0.455, S - 0.17, k * 0.232))
+# the slippers (kept from kiln) turned out a little at the toes, as the
+# retail draws her feet, and moved forward and in: in kiln they ran through
+# the chair's rockers (x 0.26..0.32, from y -0.49 back)
+import bmesh  # noqa: E402
+kept = p.parts[0]
+bm = bmesh.new()
+bm.from_mesh(kept.data)
+mats = [m.name.split("_")[0] if m else "" for m in kept.data.materials]
+for k in (-1, 1):
+    pivot = W(0.455, 0, k * 0.25)
+    FWD = W(0.065, 0, 0)  # forward, clear of the chair's front rail
+    side = 1 if pivot.x > 0 else -1
+    verts = {v for f in bm.faces if mats[f.material_index] in ("slipper", "slipperD", "eye")
+             and (f.calc_center_median().x > 0) == (side > 0) and f.calc_center_median().z < 0.25 for v in f.verts}
+    bmesh.ops.rotate(bm, verts=list(verts), cent=pivot, matrix=Matrix.Rotation(math.radians(12) * side, 3, "Z"))
+    bmesh.ops.translate(bm, verts=list(verts), vec=FWD + Vector((-side * 0.105, 0, 0)))
+bm.to_mesh(kept.data)
+bm.free()
 p.finish("headless_knitter", fit="none")

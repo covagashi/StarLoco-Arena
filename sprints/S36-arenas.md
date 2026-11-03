@@ -2365,6 +2365,20 @@ manchas de lava de arena8). Lo que sale:
       la vista de juego no se veía. Ahora toda pieza se revisa con
       `godot/tools/art/four_views.sh` (frente, derecha, arriba y cámara de
       juego) antes de darla por buena.
+    - Segunda corrección de la señora (dueño: "te vuelvo a decir, está mal,
+      mira las zapatillas y las piernas"). Mirado de cerca y medido:
+      - los bajos rotos flotaban como alas, porque la manga de la rodilla no
+        era la de kiln; ahora es el mismo torno de kiln, cerrado arriba;
+      - entre los muslos colgaba un bulto (la caída del camisón); ahora es
+        una caída plana;
+      - el tobillo asomaba por debajo de la zapatilla; ahora acaba dentro;
+      - las zapatillas atravesaban los patines de la mecedora (ya pasaba en
+        kiln): patín en x 0,26–0,32 desde y −0,49, zapatilla hasta 0,36. Los
+        pies van algo más juntos y adelantados, con la punta un poco hacia
+        fuera; ahora la zapatilla llega a x 0,257.
+      - Lección: los planos de cuerpo entero esconden estos fallos. Los
+        puntos de apoyo (pies, manos, bajos) se miran con zoom y se mide su
+        caja contra lo que tocan.
 - **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
   27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
   jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el
