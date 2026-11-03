@@ -74,6 +74,21 @@ def plan(cfg, only):
     return todo, done, stale
 
 
+def follow_blender_stamp(models, name, old, new):
+    """build_models.py stamps the GLBs it writes: when this rewrites one of
+    them, move its stamp along, or it would take the bake for a kiln rebuild."""
+    path = os.path.join(models, ".blender.json")
+    try:
+        with open(path) as f:
+            stamp = json.load(f)
+    except (OSError, ValueError):
+        return
+    if stamp.get(name, {}).get("sig") == old:
+        stamp[name]["sig"] = new
+        with open(path, "w") as f:
+            json.dump(stamp, f, indent=1, sort_keys=True)
+
+
 def bake(blender, kit, name, strength):
     models = os.path.join(ART, kit, "out", "models")
     src = os.path.join(models, name)
@@ -83,7 +98,9 @@ def bake(blender, kit, name, strength):
                            capture_output=True, text=True)
         if r.returncode != 0 or not os.path.exists(dst):
             return kit, name, (r.stdout + r.stderr)[-2000:]
+        old = sig(src)
         shutil.move(dst, src)
+        follow_blender_stamp(models, name, old, sig(src))
     return kit, name, None
 
 

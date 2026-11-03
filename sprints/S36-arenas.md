@@ -2272,10 +2272,44 @@ manchas de lava de arena8). Lo que sale:
     salta lo hecho y rehace lo que kiln ha reconstruido; `--check` lista lo
     pendiente. Hojas: `arbol-arena5-variantes.png` y
     `arbol-arena5-en-arena.png`.
-  - Siguientes candidatos de las 6 arenas, de uno en uno y con el visto
-    bueno del dueño: `leaf_tree_fork` y `leaf_tree_young` (arena 5), el
-    árbol y los arbustos de otoño (arena 2), el tocón nevado y el árbol
-    muerto (arena 1), `bare_tree` (arena 2).
+  - **Resto de piezas orgánicas de las 6 arenas, de una vez (dueño,
+    2026-11-03: "hazlo del tirón y no me enseñes nada, ya veo que sabes el
+    estilo").** Revisadas por mí con hojas retail / kiln / Blender:
+
+    | Pieza | Kit | Script | Triángulos kiln → Blender |
+    |---|---|---|---|
+    | `leaf_tree_fork` | arena5 | `leaf_tree_fork.py` | 6.722 → 10.878 |
+    | `leaf_tree_young` | arena5 | `leaf_tree_young.py` | 4.248 → 4.594 |
+    | `autumn_tree` | arena2 | `autumn_tree.py` | 23.656 → ~22.000 |
+    | `autumn_bush` | arena2 | `autumn_bush.py` | 20.744 → ~20.700 |
+    | `autumn_bush_tall` | arena2 | `autumn_bush_tall.py` | 19.980 → ~19.100 |
+    | `bare_tree` | arena2 | `bare_tree.py` | 1.596 → 2.324 |
+    | `dead_tree` | arena1 | `dead_tree.py` | 1.596 → 1.140 |
+    | `tree` (tocón nevado) | arena1 | `snow_tree.py` | 14.342 → 4.268 |
+
+    - Cada script sigue la colocación de kiln que el dueño ya aprobó y
+      cambia la geometría: troncos y ramas como curvas continuas con grosor,
+      giro y raíces; la copa verde como la del `leaf_tree`; el follaje de
+      otoño como en kiln (rociadas de hojas hacia la cámara, núcleo oscuro,
+      hueco por donde se ve el tallo) con ramas curvas.
+    - Ayudas comunes en `tools/blender/models/lib.py`: lee los materiales
+      de la pieza de kiln (también los de los looms, aunque un loom cambie
+      un material: el tocón nevado _b/_c lleva `snow` en vez de `snowT`), la
+      escala de sus texturas y su altura. La textura se proyecta como en
+      kiln.
+    - Fallos vistos y arreglados en la revisión: en los arbustos, las hojas
+      planas seguían la superficie y se veían de canto (astillas); ahora
+      miran a la cámara, como en kiln. Las hojas sin grosor cogían rayas de
+      sombra en el juego (shadow acne); llevan el grosor de kiln. Faltaban
+      raíces en el árbol seco y en el tocón nevado.
+    - Orden del pipeline arreglado: hornear la AO reescribe el GLB y
+      `build_models.py` lo tomaba por una pieza reconstruida por kiln.
+      `bake_kits.py` ahora mueve también la marca de `build_models.py`.
+      Probado: kiln → modelos → AO → las dos comprobaciones sin pendientes.
+    - Ojo con `kiln build --only`: los looms son modelos aparte (`x_b`,
+      `x_c`); hay que nombrarlos también.
+    - Las 6 arenas renderizadas antes y después sin nada roto; 525 pruebas
+      unitarias sin fallos.
 - **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
   27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
   jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el
