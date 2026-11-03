@@ -1,6 +1,6 @@
 # S43 — Sin el cliente antiguo
 
-**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ⚪ esbozo (cierra M7; tras las 12 arenas y S35, S37–S41)
+**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ⚪ esbozo (cierra M7; tras las 6 arenas del prototipo y S35, S37–S41)
 
 ## Decisión del dueño (2026-10-28)
 
@@ -38,7 +38,8 @@ al retail.
   ignorada (AGENTS.md). Lleva casillas con altura y suelo, salidas por
   equipo, pedestales y casillas especiales. Es el mismo contenido que el
   `forma.json` de S42.
-- Solo las **12 arenas** de la 1.0. **La forma no se toca** (S36): se
+- Solo las **6 arenas** del prototipo (1–6; dueño, 2026-11-03). Las 7–12
+  se convierten cuando el dueño las monte. **La forma no se toca** (S36): se
   convierte, no se rediseña.
 - El servidor carga ese JSON. El lector de `.jar` (`fightmaps.go`, la parte
   de `archive/zip`) y `server/cmd/dumparenas` se borran.
@@ -46,13 +47,13 @@ al retail.
   compara, por última vez, la forma JSON con la de los `.jar` antes de
   borrarlos.
 
-### 2. La rotación, solo con las 12
+### 2. La rotación, solo con las 6
 
-- `arena_registry.go` sortea entre las 12 arenas con `layout`, no entre las
-  46.
-- Hay que comprobar cuántas de las 12 tienen dos pedestales por lado (el
+- `arena_registry.go` sortea entre las 6 arenas del prototipo
+  (`release_worlds()` del cliente), no entre las 46.
+- Hay que comprobar cuántas de las 6 tienen dos pedestales por lado (el
   2v2 sortea solo entre esas). Si son muy pocas, se decide con el dueño.
-- Las otras 35 siguen en el archivo de S42, listas para añadirlas una a una
+- Las 7–12 entran cuando tengan `layout`. Las otras 35 siguen en el archivo de S42, listas para añadirlas una a una
   cuando tengan arte y `layout`.
 
 ### 3. Una prueba "sin retail"
@@ -76,7 +77,7 @@ Esto se hace cuando el paso 3 pasa y el dueño da el ok:
 
 ## Orden
 
-- Los pasos 1 y 2 pueden empezar cuando las 12 arenas tengan `layout`
+- Los pasos 1 y 2 pueden empezar cuando las 6 arenas del prototipo tengan `layout`
   (S36, fase D), sin esperar al resto de M7.
 - Los pasos 3 y 4 necesitan que S35 y S37–S41 hayan sustituido su parte.
 - "Dejar de depender totalmente" llega con el paso 4.
@@ -85,5 +86,5 @@ Esto se hace cuando el paso 3 pasa y el dueño da el ok:
 
 Desde un checkout limpio, sin `godot/assets/` retail ni
 `server/data-dist/`, el servidor arranca y el cliente juega un combate en
-cualquiera de las 12 arenas, con nuestros modelos, efectos, sonidos, cartas
+cualquiera de las 6 arenas del prototipo, con nuestros modelos, efectos, sonidos, cartas
 y textos. Ningún fichero del repo lee formatos del cliente antiguo.

@@ -28,9 +28,13 @@ extends RefCounted
 const Topology := preload("res://src/maps/topology.gd")
 const FightMap := preload("res://src/maps/fightmap.gd")
 
-## The 12 arenas of 1.0 (S36 scope, owner 2026-10-28) by retail world id:
-## arena N is the N-th.
+## The 12 modelled arenas (S36, owner 2026-10-28) by retail world id:
+## arena N is the N-th. All 12 stay in the map editor.
 const WORLDS := [5, 10, 12, 15, 21, 36, 38, 39, 40, 41, 42, 44]
+## The prototype ships arenas 1..RELEASE only (owner, 2026-11-03: "al ser
+## un prototipo, dejemos solo las 6 arenas"); 7-12 wait until more players
+## come in, and the owner builds them then.
+const RELEASE := 6
 const ART_DIR := "res://art"
 const LAYOUT_DIR := "res://art/layouts"
 ## Loom letter -> model file suffix (kit.json "looms").
@@ -50,6 +54,15 @@ static var _kits := {}
 ## Arena number (1..12) -> world id, or -1.
 static func world_of(arena: int) -> int:
 	return WORLDS[arena - 1] if arena >= 1 and arena <= WORLDS.size() else -1
+
+
+## The world ids the prototype plays on (arenas 1..RELEASE).
+static func release_worlds() -> Array:
+	return WORLDS.slice(0, RELEASE)
+
+
+static func in_release(arena: int) -> bool:
+	return arena >= 1 and arena <= RELEASE
 
 
 static func layout_path(arena: int) -> String:

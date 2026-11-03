@@ -939,7 +939,9 @@ func _build_ui() -> void:
 		for kn: String in Layout.kits():
 			if Layout.WORLDS[i] in Layout.kits()[kn].get("arenas", []):
 				kits.append(Layout.kits()[kn].get("biome", kn))
-		_arena_pick.add_item("Arena %d · mundo %d · %s" % [i + 1, Layout.WORLDS[i], ", ".join(kits)])
+		# 7-12 are kept for later: the prototype plays 1-6 (owner, 2026-11-03)
+		var later := "" if Layout.in_release(i + 1) else " · más adelante"
+		_arena_pick.add_item("Arena %d · mundo %d · %s%s" % [i + 1, Layout.WORLDS[i], ", ".join(kits), later])
 	_arena_pick.item_selected.connect(func(i: int) -> void: load_arena(i + 1))
 	top.add_child(_arena_pick)
 	_button(top, "Guardar", save, "Ctrl+S")

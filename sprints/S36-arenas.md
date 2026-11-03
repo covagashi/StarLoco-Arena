@@ -2,7 +2,14 @@
 
 **Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B hecha y aprobada el 2026-10-29; fase C, el editor, hecha el 2026-10-29: ahora el dueño monta las arenas; después, fase D)
 
-**Alcance (dueño, 2026-10-28): 12 arenas, de la 1 a la 12** (mundos 5, 10,
+**Alcance del prototipo (dueño, 2026-11-03): 6 arenas, de la 1 a la 6**
+(mundos 5, 10, 12, 15, 21 y 36): "al ser un prototipo, dejemos solo las 6
+arenas; si va entrando más gente, yo ya hago el resto de las 12". Las
+arenas 7–12 siguen modeladas, con su borrador y en el editor (marcadas "más
+adelante"); sus `layout` no bloquean la fase D ni S43. En el código:
+`RELEASE := 6` y `release_worlds()` en `arena_layout.gd`.
+
+**Alcance anterior (dueño, 2026-10-28): 12 arenas, de la 1 a la 12** (mundos 5, 10,
 12, 15, 21, 36, 38, 39, 40, 41, 42 y 44). El inventario se para aquí: "ya me
 he cansado de inventariar". Las otras 35 (de la 13 a la 47; la 13 tiene
 hojas y suposiciones, pero no nombres) se guardan en PNG y JSON en el
@@ -2208,8 +2215,8 @@ tres looms a escala de juego a la derecha. Plan actualizado en
 
 - [ ] `fight_view` dibuja el `layout` de la arena con nuestros modelos en vez
       de `MapGfx` retail.
-- [ ] El dueño monta las arenas que quiera para la 1.0. Antes se habló de
-      12–20.
+- [ ] El dueño monta las arenas 1–6 del prototipo (2026-11-03). Hechas por
+      él: 1–5; la 6 en curso. Las 7–12, más adelante.
 
 ## Lo que queda a medias de la sesión del 2026-10-25 (sin commit)
 
@@ -2225,7 +2232,7 @@ tres looms a escala de juego a la derecha. Plan actualizado en
 
 ## Criterio de cierre
 
-Las 12 arenas tienen un `layout` hecho por el dueño con nuestros assets, el
-servidor sortea solo entre ellas y `MapGfx` retail ya no se usa. La forma
+Las 6 arenas del prototipo (1–6) tienen un `layout` hecho por el dueño con
+nuestros assets, el servidor sortea solo entre ellas y `MapGfx` retail ya no se usa. La forma
 propia de las arenas y el borrado del retail van en
 [S43](./S43-sin-cliente-antiguo.md).

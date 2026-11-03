@@ -21,6 +21,9 @@ func run(t) -> void:
 		t.ok(not Layout.palette(w).is_empty(), "arena %d has a palette" % n)
 	t.eq(Layout.world_of(0), -1, "no arena 0")
 	t.eq(Layout.world_of(13), -1, "no arena 13 in the 1.0")
+	# the prototype plays arenas 1-6 only (owner, 2026-11-03)
+	t.eq(Layout.release_worlds(), [5, 10, 12, 15, 21, 36], "the prototype's 6 arenas")
+	t.ok(Layout.in_release(6) and not Layout.in_release(7), "arena 7 waits")
 	# an obstacle stands on the nearest walkable floor, even two rings away
 	# (the back rows of an arena are obstacles next to obstacles)
 	var ob := {"alt": 30, "ground": false}

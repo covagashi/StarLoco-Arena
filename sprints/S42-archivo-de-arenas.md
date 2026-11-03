@@ -9,6 +9,8 @@
 > sitio, y que en un futuro lo podamos inventariar pero sin usar Java ni
 > nada del estilo del cliente antiguo."
 
+- (2026-11-03: el prototipo sale con 6, de la 1 a la 6; las 7–12 quedan
+  modeladas para cuando entre más gente.)
 - La 1.0 lleva **12 arenas**, de la 1 a la 12 (mundos 5, 10, 12, 15, 21,
   36, 38, 39, 40, 41, 42 y 44). Todas tienen ya los nombres del dueño.
 - Las otras **35** (de la 13 a la 47, mundos 45…110) no se modelan ahora.

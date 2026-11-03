@@ -100,14 +100,14 @@ Linux y Windows).
 | [S33](./S33-plan-de-arte.md) | M7 | M | 🟡 esperando al dueño | Plan de arte: estilo, técnica (3D/cutout, VFX en tiempo real, animación procedural) y prototipo vertical |
 | [S34](./S34-pipeline-de-assets.md) | M7 | M | ⚪ esbozo | Pipeline nuevo: de la fuente al juego en un comando, licencias, comprobaciones |
 | [S35](./S35-personajes.md) | M7 | L | ⚪ esbozo | Personajes: 24 luchadores, 9 invocaciones, 2 coaches; ~10 animaciones por esqueleto |
-| [S36](./S36-arenas.md) | M7 | L | 🟡 esperando al dueño | Arenas: **12 para la 1.0** (dueño, 2026-10-28). Assets kiln + loom hechos (fase B), editor hecho (fase C) y borradores de las 12 desde el retail (2026-10-30). El dueño los corrige en el editor; **eso bloquea la fase D y [S43](./S43-sin-cliente-antiguo.md)**. S35 y S37–S39 no dependen de ellos |
+| [S36](./S36-arenas.md) | M7 | L | 🟡 esperando al dueño | Arenas: **6 para el prototipo** (1–6, dueño, 2026-11-03; las 7–12 quedan para cuando entre más gente). Assets kiln + loom hechos (fase B), editor hecho (fase C) y borradores de las 12 desde el retail (2026-10-30). El dueño los corrige en el editor; **eso bloquea la fase D y [S43](./S43-sin-cliente-antiguo.md)**. S35 y S37–S39 no dependen de ellos |
 | [S42](./S42-archivo-de-arenas.md) | M7 | S | 🟡 esperando al dueño (backup al RAID) | Archivo de las 47 arenas en PNG y JSON, fuera del repo y con dos copias; las herramientas de inventario lo leen sin el cliente antiguo |
 | [S37](./S37-vfx.md) | M7 | M | ⚪ esbozo | Librería de VFX por elemento y forma; cada hechizo, por datos |
 | [S38](./S38-cartas-e-iconos.md) | M7 | L | ⚪ esbozo | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
 | [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |
 | [S40](./S40-cartas-propias.md) | M7 | L | ⚪ esbozo (tras el arte) | Cartas propias: diseño y datos fuera del retail |
 | [S41](./S41-textos-propios.md) | M7 | M | ⚪ esbozo (tras las cartas) | Textos propios en es/en/fr |
-| [S43](./S43-sin-cliente-antiguo.md) | M7 | M | ⚪ esbozo (cierra M7) | Sin el cliente antiguo: forma de arena propia, rotación de 12, prueba sin retail y borrado de `godot/assets/` retail y `data-dist` |
+| [S43](./S43-sin-cliente-antiguo.md) | M7 | M | ⚪ esbozo (cierra M7) | Sin el cliente antiguo: forma de arena propia, rotación de 6, prueba sin retail y borrado de `godot/assets/` retail y `data-dist` |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
 | [S31](./S31-assets-sin-usar.md) | M5 | M | 🟢 cerrado | Fuera los assets sin usar: 435 de 823 MB; quedan 47 mapas, 38 muñecos y 2.395 animaciones; etapa `prune` en el generador |
 | [S30](./S30-tienda.md) | M5 | L | ⚪ esbozo (después de S16) | Tienda: cosméticos con pesetas y compras con dinero real, sin pagar para ganar |
