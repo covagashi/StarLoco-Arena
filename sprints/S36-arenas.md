@@ -2417,8 +2417,40 @@ manchas de lava de arena8). Lo que sale:
 
 ### D. Del editor al juego
 
-- [ ] `fight_view` dibuja el `layout` de la arena con nuestros modelos en vez
-      de `MapGfx` retail.
+- [x] `fight_view` dibuja el `layout` de la arena con nuestros modelos en vez
+      de `MapGfx` retail (2026-11-03). Toda arena con `layout` (las 12) sale
+      en 3D; las demás siguen con `MapGfx` hasta que S43 las quite.
+  - `src/maps/arena_view.gd`: la arena se monta una vez con
+    `arena_scene.gd` (lo mismo que ve el editor, con los papeles y alturas
+    del `layout`) en un SubViewport, a pantalla completa en una capa por
+    debajo del mundo 2D. Su cámara ortográfica copia la Camera2D del
+    combate (centro y zoom), así que la casilla (x, y) cae donde la pone
+    `_iso`. Solo se vuelve a pintar cuando se mueve la cámara o la ventana.
+  - Oclusión: un segundo viewport ve el mismo mundo con un quad a pantalla
+    completa que escribe la profundidad de cada píxel en tres dígitos de 5
+    bits. Los luchadores (y coaches) y las marcas del suelo llevan
+    `occluder(alt)`: un shader 2D que calcula la profundidad de su píxel y
+    lo esconde donde la arena está delante. Las marcas van en una capa por
+    altura (`MarkLayer`), por debajo de los luchadores. Medido: la
+    profundidad descodificada en el centro de un bloque liso cuadra con la
+    esperada con 0,01 de error; la nieve de los bloques sobresale 0,26, y
+    por eso el margen es 0,45 para los luchadores y 0,35 para las marcas.
+  - Visto en capturas (xvfb): las arenas 1, 2, 5 y 6 con la vista previa
+    del HUD (4 contra 4, hechizo, movimiento) y con luchadores puestos
+    detrás de cada pieza alta: el cristal, la planta, el pico y el tocón
+    los tapan; las zonas de salida y el camino se esconden tras las piezas
+    y se ven en el suelo. 525 pruebas unitarias sin fallos.
+  - Montar la arena tarda 0,1–0,5 s y el primer fotograma 0,5–1,2 s en
+    llvmpipe (sin GPU).
+  - Pendiente:
+    - Los `roles` y `alts` del dueño solo los ve el dibujo: el combate y el
+      servidor siguen con los de los `.jar` (54 casillas cambiadas en la 5,
+      88 en la 6). Es el paso 1 de S43, que se adelanta aquí.
+    - Un juego exportado no lleva `art/` (tiene `.gdignore`, y los GLB se
+      leen del disco en tiempo de ejecución): hay que empaquetar los GLB y
+      los `layout` de las 6 arenas para la exportación.
+    - Rendimiento con GPU de verdad (miles de llamadas de dibujo por arena,
+      ver la tabla de arriba): unir las piezas por material.
 - [ ] El dueño monta las arenas 1–6 del prototipo (2026-11-03). Hechas por
       él: 1–5; la 6 en curso. Las 7–12, más adelante.
 

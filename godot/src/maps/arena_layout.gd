@@ -3,8 +3,8 @@ extends RefCounted
 ## M7 (S36): an arena's layout — which of our kiln pieces stand on which
 ## cell — plus the arena list, the kits the pieces come from and the arena's
 ## shape. Pure data and arithmetic: the map editor (tools/map_editor/) writes
-## layouts, arena_scene.gd turns one into 3D, and phase D's fight_view will
-## read the same files.
+## layouts, arena_scene.gd turns one into 3D, and fight_view draws them
+## through arena_view.gd.
 ##
 ## art/layouts/arena-NN.json (one per arena, readable and diffable):
 ##   {"arena": 1, "world": 5, "cells": {"x,y": [item, ...]}}

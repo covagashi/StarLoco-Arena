@@ -13,6 +13,7 @@ const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
+const ArenaView := preload("res://src/maps/arena_view.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
 const FightHud := preload("res://src/fight/fight_hud.gd")
 const State := preload("res://src/state.gd")
@@ -65,6 +66,24 @@ var _sorted := []    # ground cell positions, back-to-front (x+y, then x)
 var _sprites := {}   # actor id -> AnmSprite
 var _gfx: Node2D           # painted backdrop layer (created in _ready)
 var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
+## M7 (S36, phase D): the owner's layout in 3D under the world, instead of
+## the retail painted map, for every arena that has one.
+var _arena: ArenaView
+var _arena_3d := false
+## The ground marks over the 3D arena, one layer per surface altitude (each
+## hides where the arena is in front of it): alt -> MarkLayer.
+var _mark_layers := {}
+var _marks: Node2D
+
+
+## The ground marks of one surface altitude, drawn with that altitude's
+## occluder (ArenaView.occluder).
+class MarkLayer extends Node2D:
+	var fns: Array = []
+
+	func _draw() -> void:
+		for f: Callable in fns:
+			f.call(self)
 ## Off only for art renders (tools/render_fightmap.gd): the map without the
 ## spawn zones and placement rings drawn over it.
 var overlays_visible := true
@@ -138,6 +157,14 @@ func _ready() -> void:
 	add_child(_gfx)
 	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
 	_gfx.overlay_source = _depth_overlays   # ground marks in depth order
+	_arena = ArenaView.new()
+	_arena.name = "Arena3D"
+	_arena.follow = cam
+	add_child(_arena)
+	_marks = Node2D.new()
+	_marks.name = "Marks"
+	add_child(_marks)
+	move_child(_marks, _actors.get_index())   # on the floor, under the fighters
 	_fight_hud = FightHud.new()
 	if ArtStyle.hud_life() == "ring":
 		_fight_hud.hp_style = FightHud.FighterCard.HpStyle.RING
@@ -401,7 +428,12 @@ func _wire_fight_focus() -> void:
 
 func _load() -> void:
 	var map_id := int($UI/TopBar/MapId.text)
-	_gfx_active = _gfx.load_world(map_id)
+	_arena_3d = _arena.load_world(map_id)
+	for l in _mark_layers.values():
+		l.queue_free()
+	_mark_layers = {}
+	_gfx_active = not _arena_3d and _gfx.load_world(map_id)
+	_gfx.visible = not _arena_3d
 	_fmd = FightMap.load(map_id)
 	var topo := Topology.load_world(map_id, Topology.SCOPE_ARENA)
 	_cells = topo.get("cells", {})
@@ -472,6 +504,7 @@ func _spawn_actors() -> void:
 		# coaches stand on top of the pedestal they are parked on
 		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z + 1.0)
 		spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
+		spr.material = _arena.occluder(c.z + 1, true)
 		_actors.add_child(spr)
 		# pedestal spectators have no wire identity — palette defaults
 		spr.tints = Palettes.coach_tints(0, 0)
@@ -915,6 +948,7 @@ func _place_actor(a: Dictionary) -> void:
 		spr.load_action(_coach_set(int(a.id)), "%d_AnimStatique" % dir)
 	spr.position = _iso(a.x + 0.5, a.y + 0.5, a.z)
 	spr.z_index = clampi(int(a.x + a.y) * 4 + 1, -4096, 4096)
+	spr.material = _arena.occluder(a.z, true)
 	_actor_cells[a.id] = Vector3i(a.x, a.y, a.z)
 	if _gfx_active:
 		# merged painter: the map-gfx layer calls draw_on at our zkey slot
@@ -932,6 +966,7 @@ func _move_actor(id: int, p: Vector3i) -> void:
 		return
 	spr.position = _iso(p.x + 0.5, p.y + 0.5, p.z)
 	spr.z_index = clampi((p.x + p.y) * 4 + 1, -4096, 4096)
+	spr.material = _arena.occluder(p.z, true)
 	_actor_cells[id] = p
 	queue_redraw()
 
@@ -3280,6 +3315,13 @@ func _alt_color(alt: float) -> Color:
 
 
 func _draw() -> void:
+	if _arena_3d:
+		# the 3D arena carries ground and walls: the ground marks go to
+		# their altitude's layer, only text and outlines stay up here
+		_draw_arena_marks()
+		if overlays_visible:
+			_draw_top_overlays()
+		return
 	if _gfx_active:
 		# painted backdrop already carries ground+walls — keep only the
 		# gameplay overlays (spawn zones, placement/hover rings)
@@ -3349,7 +3391,8 @@ func _depth_overlays() -> Array:
 ## A mark lying on cell (x, y).
 func _ground(x: int, y: int, layer: int, fn: Callable) -> void:
 	if _ov_collect:
-		_ov.append({"key": MapGfx.ground_key(x, y), "o": layer, "d": fn})
+		var alt: int = _cells.get(Vector2i(x, y), {}).get("alt", 0)
+		_ov.append({"key": MapGfx.ground_key(x, y), "o": layer, "d": fn, "alt": alt})
 	else:
 		fn.call(self)
 
@@ -3357,9 +3400,37 @@ func _ground(x: int, y: int, layer: int, fn: Callable) -> void:
 ## A mark under the fighter standing on p (ring, aura, selection).
 func _under_actor(p: Vector3i, fn: Callable) -> void:
 	if _ov_collect:
-		_ov.append({"key": MapGfx.actor_key_cell(p) - 1, "o": 0, "d": fn})
+		_ov.append({"key": MapGfx.actor_key_cell(p) - 1, "o": 0, "d": fn, "alt": p.z})
 	else:
 		fn.call(self)
+
+
+## The ground marks over the 3D arena: gathered like map_gfx's, in depth
+## order, and handed to one MarkLayer per altitude.
+func _draw_arena_marks() -> void:
+	var by_alt := {}
+	for m: Dictionary in _depth_overlays():
+		if not by_alt.has(m.alt):
+			by_alt[m.alt] = []
+		by_alt[m.alt].append(m)
+	for alt in _mark_layers.keys():
+		if not by_alt.has(alt):
+			_mark_layers[alt].fns = []
+			_mark_layers[alt].queue_redraw()
+	for alt: int in by_alt:
+		var ms: Array = by_alt[alt]
+		ms.sort_custom(func(a, b): return a.key < b.key \
+			or (a.key == b.key and a.o < b.o))
+		if not _mark_layers.has(alt):
+			var l := MarkLayer.new()
+			l.material = _arena.occluder(alt, false)
+			_marks.add_child(l)
+			_mark_layers[alt] = l
+		var fns := []
+		for m: Dictionary in ms:
+			fns.append(m.d)
+		_mark_layers[alt].fns = fns
+		_mark_layers[alt].queue_redraw()
 
 
 func _draw_zone(ci: CanvasItem, poly: PackedVector2Array, col: Color,
