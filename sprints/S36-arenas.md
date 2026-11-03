@@ -2232,10 +2232,23 @@ manchas de lava de arena8). Lo que sale:
   - peor: la hierba de las arenas 5 y 6 y el follaje de otoño de la 2 salen
     oscuros y sucios.
   - Propuesta: hornear solo la nieve, las rocas, el escombro y los
-    andamios, y dejar sin hornear los bloques de hierba y el follaje (o
-    hornearlos a 0,25). **Decide el dueño** (una pieza aprobada cambia de
-    aspecto). Si se aprueba, el paso va después de `kiln build`, porque los
-    GLB de `out/` no van en git.
+    andamios, y dejar sin hornear los bloques de hierba y el follaje.
+  - **Hecho (dueño, 2026-11-03: "ok hazlo").** La lista va en
+    `godot/art/ao.json`, a fuerza 0,5. Entran 111 GLB: la nieve de arena1
+    (toda pieza con material de nieve), las rocas, el escombro, los
+    acantilados y los andamios de arena6, y `basalt_rocks` de arena2. Se
+    quedan sin hornear los bloques de suelo sin nieve, la hierba, el follaje
+    de otoño y lo demás. Paso del pipeline, **después de `kiln build`**:
+
+        python3 godot/tools/blender/bake_kits.py        # --check, --kit arena1
+
+    Guarda en `out/models/.ao.json` el tamaño y la fecha de cada pieza
+    horneada. Si se lanza otra vez, se salta lo hecho y solo hornea lo que
+    kiln ha vuelto a construir (probado con `rubble_heap`). Una pieza
+    horneada a otra fuerza sale como "stale": hay que reconstruirla con kiln.
+    Antes y después a escala de juego: `final-arenas-*.png`. La nieve y el
+    borde de la 6 ganan forma; la 2 y la 5 apenas cambian. 525 pruebas
+    unitarias sin fallos.
 - **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
   27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
   jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el

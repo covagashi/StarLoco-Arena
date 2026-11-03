@@ -1,0 +1,13 @@
+{
+	"_doc": "Pieces that get ambient occlusion baked into their vertex colours after kiln build (godot/tools/blender/bake_kits.py; S36, owner 2026-11-03). Every loom of a piece (x, x_b, x_c) is baked. Chosen from the review sheets: snow, rocks, rubble and scaffolds gain shape; grass blocks, other floor blocks and autumn foliage stay unbaked because they come out dark. strength 0..1: 0 = unchanged, 1 = full AO.",
+	"strength": 0.5,
+	"pieces": {
+		"arena1": ["ice_block", "ice_pillar", "mound", "loose_snow", "frost", "frost_small", "ice_crystals",
+			"spike", "spike_double", "pebbles", "leaves", "tree", "fence_piece_snow"],
+		"arena2": ["basalt_rocks"],
+		"arena6": ["rock_pair", "rock_heap", "rock_mound", "rock_blocks", "rubble_heap", "stone_pillar",
+			"ashlar_block", "mossy_cap", "nut_heap", "gear_column", "gear_small", "cog_wheel",
+			"cliff_col", "cliff_col_knobs", "cliff_slant", "cliff_shard", "cliff_tip",
+			"scaffold", "scaffold_tall", "cage_piece", "cage_low", "cage_low_broken", "boards_nailed"]
+	}
+}
