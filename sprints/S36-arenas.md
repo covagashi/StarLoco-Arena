@@ -2467,7 +2467,7 @@ manchas de lava de arena8). Lo que sale:
     El cliente (`fight_view`) lee el mismo JSON para sus casillas, salidas
     y pedestales.
   - Resultado: arena 1, 8 contra 11 salidas (el dueño añadió 5 al equipo 2
-    el 31-oct); arenas 2–4, 8 contra 8; arena 5, 8 contra 8 (el retail traía
+    el 31-oct, sin querer; dueño, 2026-11-03: "déjalo así"); arenas 2–4, 8 contra 8; arena 5, 8 contra 8 (el retail traía
     1 contra 14) y sin la casilla perdida bajo el mapa; arena 6, 6 contra 6
     con 2 pedestales.
   - El 2vs2 no sale en el prototipo (escondido desde S20, `DUO` apagado en
