@@ -35,10 +35,15 @@ const WORLDS := [5, 10, 12, 15, 21, 36, 38, 39, 40, 41, 42, 44]
 ## un prototipo, dejemos solo las 6 arenas"); 7-12 wait until more players
 ## come in, and the owner builds them then.
 const RELEASE := 6
+## Where the arena art is read from in the editor and dev runs. art/ has a
+## .gdignore (the GLBs are read raw at run time, not imported), so it never
+## reaches an exported .pck: a release ships the prototype's part of it as a
+## loose art/ folder beside the executable (tools/art/pack_arenas.gd), the
+## way assets/ ships. root() picks the one this build reads.
 const ART_DIR := "res://art"
-const LAYOUT_DIR := "res://art/layouts"
 ## The fight shapes the server plays, exported from the layouts
-## (fight_shape / fight_json); the server embeds this folder.
+## (fight_shape / fight_json); the server embeds this folder. A release
+## carries them in art/fight/.
 const FIGHT_DIR := "res://../server/internal/gamedata/arenas"
 ## Loom letter -> model file suffix (kit.json "looms").
 const LOOMS := {"a": "", "b": "_b", "c": "_c"}
@@ -52,6 +57,25 @@ const FLOOR_DEPTH := 1.2
 
 ## kit dir name ("arena1") -> parsed kit.json; filled on first use.
 static var _kits := {}
+## Test seam: read the art from here instead (set_root).
+static var _root := ""
+
+
+## The art folder this build reads: res://art in the editor, the art/
+## folder beside the executable in an exported game.
+static func root() -> String:
+	if _root != "":
+		return _root
+	if OS.has_feature("template"):
+		return OS.get_executable_path().get_base_dir().path_join("art")
+	return ART_DIR
+
+
+## Points the art at another folder ("" = back to root()'s choice); the
+## kits are read again from there.
+static func set_root(dir: String) -> void:
+	_root = dir.trim_suffix("/")
+	_kits = {}
 
 
 ## Arena number (1..12) -> world id, or -1.
@@ -69,20 +93,20 @@ static func in_release(arena: int) -> bool:
 
 
 static func layout_path(arena: int) -> String:
-	return "%s/arena-%02d.json" % [LAYOUT_DIR, arena]
+	return "%s/layouts/arena-%02d.json" % [root(), arena]
 
 
 ## Every tracked kit: art/arena<N>/kit.json. The biome folders (lava/,
 ## pradera/…) are the discarded agent attempt and stay out.
 static func kits() -> Dictionary:
 	if _kits.is_empty():
-		var d := DirAccess.open(ART_DIR)
+		var d := DirAccess.open(root())
 		if d == null:
 			return _kits
 		for sub in d.get_directories():
 			if not (sub.begins_with("arena") and sub.substr(5).is_valid_int()):
 				continue
-			var path := "%s/%s/kit.json" % [ART_DIR, sub]
+			var path := "%s/%s/kit.json" % [root(), sub]
 			if not FileAccess.file_exists(path):
 				continue
 			var kit = JSON.parse_string(FileAccess.get_file_as_string(path))
@@ -144,7 +168,7 @@ static func loom_names(p: Dictionary) -> Array:
 
 
 static func model_path(kit: String, name: String, loom := "a") -> String:
-	return "%s/%s/out/models/%s%s.glb" % [ART_DIR, kit, name, LOOMS.get(loom, "")]
+	return "%s/%s/out/models/%s%s.glb" % [root(), kit, name, LOOMS.get(loom, "")]
 
 
 ## The arena's shape, from the fight topology and the .fmd start cells:
@@ -512,6 +536,8 @@ static func fight_json(fs: Dictionary) -> String:
 
 
 static func fight_path(world: int) -> String:
+	if root() != ART_DIR:
+		return "%s/fight/%d.json" % [root(), world]
 	return "%s/%d.json" % [FIGHT_DIR, world]
 
 

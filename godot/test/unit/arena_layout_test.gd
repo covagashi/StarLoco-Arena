@@ -166,3 +166,15 @@ func run(t) -> void:
 	t.eq([a5.fmd.team0.size(), a5.fmd.team1.size(), a5.fmd.coach.size()], [8, 8, 6],
 		"arena 5 plays the owner's start cells and pedestals")
 	t.ok(not a5.cells.has(Vector2i(17, 17)), "arena 5's stray cell is gone")
+	# a release reads the arenas from the art/ folder beside the executable
+	# (tools/art/pack_arenas.gd): every path follows root()
+	t.eq(Layout.root(), Layout.ART_DIR, "dev runs read res://art")
+	Layout.set_root("/opt/pippop/art/")
+	t.eq(Layout.layout_path(1), "/opt/pippop/art/layouts/arena-01.json", "packed layout path")
+	t.eq(Layout.fight_path(21), "/opt/pippop/art/fight/21.json", "packed fight shape path")
+	t.eq(Layout.model_path("arena5", "leaf_tree", "b"),
+		"/opt/pippop/art/arena5/out/models/leaf_tree_b.glb", "packed model path")
+	Layout.set_root("")
+	t.eq(Layout.fight_path(21), Layout.FIGHT_DIR + "/21.json", "back to the server's folder")
+	t.ok(not Layout.kits().is_empty(), "the kits read again from res://art")
+

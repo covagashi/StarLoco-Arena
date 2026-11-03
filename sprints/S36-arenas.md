@@ -2444,9 +2444,19 @@ manchas de lava de arena8). Lo que sale:
     llvmpipe (sin GPU).
   - Pendiente:
     - ~~Los `roles` y `alts` del dueño solo los ve el dibujo~~ hecho, abajo.
-    - Un juego exportado no lleva `art/` (tiene `.gdignore`, y los GLB se
-      leen del disco en tiempo de ejecución): hay que empaquetar los GLB y
-      los `layout` de las 6 arenas para la exportación.
+    - ~~Un juego exportado no lleva `art/`~~ hecho (2026-11-03): las arenas
+      van sueltas en una carpeta `art/` junto al ejecutable, como `assets/`.
+      `tools/art/pack_arenas.gd -- ../dist/<plataforma>` copia solo lo que
+      usan las 6: los `layout`, los `kit.json`, los GLB colocados en su loom
+      con sus columnas (las texturas van dentro del GLB) y las formas de
+      combate en `art/fight/`; si falta un GLB, no empaqueta. 155 archivos,
+      86 MB (138 GLB). `arena_layout.gd` `root()` lee `res://art` en el
+      editor y `<ejecutable>/art` en el juego exportado.
+      - Probado: exportación Linux (`dist/linux`) con su `art/`; las 6
+        arenas cargan solo desde la carpeta empaquetada con 0 modelos
+        perdidos (captura de la 2). El ejecutable exportado no acepta `-s`,
+        así que esa prueba se hizo con el editor apuntado a la carpeta
+        (`set_root`). 552 comprobaciones unitarias.
     - Rendimiento con GPU de verdad (miles de llamadas de dibujo por arena,
       ver la tabla de arriba): unir las piezas por material.
 - [x] El servidor y el combate juegan la forma del `layout` (2026-11-03),
