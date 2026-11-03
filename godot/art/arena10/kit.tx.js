@@ -177,3 +177,29 @@ skins({
     rough: blot.levels(0, 1, 0.55, 0.4),
   })
 }
+
+// --- fur and flesh for the dead rats, modelled in Blender (S36; owner
+// 2026-11-03: "puedes hacer blender+loom"): kept grey, so each loom's colour
+// (fur, flesh in kit.kx.js) tints them; tools/blender/models/rat_*.py put
+// them on the Blender mesh, projected like kiln does
+{
+  const strands = noise({ scale: [6, 64], octaves: 3, seed: 2101 }).warp(noise({ scale: 3, seed: 2102 }), 0.06).as("strands")
+  const tufts = noise({ scale: 5, octaves: 2, seed: 2103 }).as("tufts")
+  const h = strands.mul(0.7).add(tufts.mul(0.3)).as("furH")
+  material("furTex", { size: 512, depth: 0.02, ao: 0.6 }, {
+    height: h,
+    color: ramp(h.levels(0.25, 0.8), ["#a0a0a0", "#d8d8d8", "#f6f6f6"]),
+    rough: 0.9,
+  })
+}
+{
+  const veins = ridged({ scale: 5, octaves: 4, seed: 2111 }).warp(noise({ scale: 3, seed: 2112 }), 0.1).as("veins")
+  const marble = noise({ scale: 7, octaves: 3, seed: 2113 }).as("marble")
+  const vein = veins.threshold(0.9, 0.04).as("vein")
+  const h = marble.mul(0.5).sub(vein.mul(0.3)).as("fleshH")
+  material("fleshTex", { size: 512, depth: 0.015, ao: 0.6 }, {
+    height: h,
+    color: ramp(marble, ["#dcd2d2", "#f4eeee", "#ffffff"]).mix("#a83a3a", vein.mul(0.8)),
+    rough: marble.levels(0, 1, 0.35, 0.55),
+  })
+}

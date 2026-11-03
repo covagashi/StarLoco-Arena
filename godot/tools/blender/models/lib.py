@@ -16,6 +16,7 @@ owner approved. Everything is flat-shaded like the rest of the kit; the
 game smooths "snow*" and "soft*" materials itself (kit_dress.gd).
 """
 import math
+import os
 import random
 import statistics
 import sys
@@ -23,6 +24,7 @@ import sys
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 # kiln's ovate leaf (arena 2): base at the origin, pointing +y, 1 long
 OVATE = [(0, 0), (0.24, 0.16), (0.32, 0.45), (0.2, 0.78), (0, 1), (-0.2, 0.78), (-0.32, 0.45), (-0.24, 0.16)]
@@ -60,7 +62,12 @@ def base_name(name):
 
 
 class Piece:
-    def __init__(self):
+    def __init__(self, keep=(), keep_flat=()):
+        """keep: base names of kiln materials whose faces stay as they are
+        (a kiln wall under Blender ivy); keep_flat: materials whose flat
+        patches stay (kiln's painted-on moss) while their spiky ones are
+        rebuilt; the rest of the kiln mesh is read only for self.comps, its
+        patches per material: (centre, normal, radius, area, flatness 0..1)."""
         args = sys.argv[sys.argv.index("--") + 1:]
         self.src, self.dst = args[0], args[1]
         self.rng = random.Random(int(args[2]) if len(args) > 2 else 7)
@@ -89,10 +96,80 @@ class Piece:
                 self.tile[m.name] = 1 / statistics.median(ratios[m.name])
         self.lo, self.hi = lo, hi
         self.height = hi.z - lo.z
-        for o in list(bpy.context.scene.objects):
-            bpy.data.objects.remove(o)
         self.parts = []
+        self.comps = {}
+        kiln = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+        for o in kiln:
+            self._read_kiln(o, set(keep), set(keep_flat))
+        for o in list(bpy.context.scene.objects):
+            if o not in self.parts:
+                bpy.data.objects.remove(o)
         self.flat = set()  # materials on single-sided cards: exported double-sided
+
+    def _read_kiln(self, o, keep, keep_flat=frozenset()):
+        """Patches per material (self.comps[base] = [(centre, normal, radius,
+        area)]) and, if keep, a part holding the kept faces."""
+        me = o.data.copy()
+        me.transform(o.matrix_world)
+        src = me.copy()  # the whole kiln mesh, for soften()
+        self.kiln_src = getattr(self, "kiln_src", []) + [src]
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+        names = [base_name(m.name) if m else "" for m in me.materials]
+        seen, kept_faces = set(), set()
+        bm.faces.ensure_lookup_table()
+        for f in bm.faces:
+            if f.index in seen or f.material_index >= len(names):
+                continue
+            mi = f.material_index
+            stack, comp = [f], []
+            seen.add(f.index)
+            while stack:  # faces of the same material touching each other
+                g = stack.pop()
+                comp.append(g)
+                for v in g.verts:
+                    for h in v.link_faces:
+                        if h.index not in seen and h.material_index == mi:
+                            seen.add(h.index)
+                            stack.append(h)
+            area = sum(g.calc_area() for g in comp) or 1e-9
+            c = sum((g.calc_center_median() * g.calc_area() for g in comp), Vector()) / area
+            n = sum((g.normal * g.calc_area() for g in comp), Vector())
+            n = n.normalized() if n.length > 1e-9 else Vector((0, 0, 1))
+            rad = max((v.co - c).length for g in comp for v in g.verts)
+            flat = sum((g.normal * g.calc_area() for g in comp), Vector()).length / area
+            self.comps.setdefault(names[mi], []).append((c, n, rad, area, flat))
+            if names[mi] in keep_flat and flat > 0.9:
+                kept_faces.update(g.index for g in comp)
+        if keep or keep_flat:
+            bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in kept_faces and (
+                f.material_index >= len(names) or names[f.material_index] not in keep)], context="FACES")
+            bm.to_mesh(me)
+            ob = bpy.data.objects.new(o.name + "_kept", me)
+            bpy.context.collection.objects.link(ob)
+            self.parts.append(ob)
+        bm.free()
+
+    def moss_over(self, mats_in, mats_out=("moss", "mossL"), per_area=900, rad=(0.025, 0.05), only_spiky=False):
+        """Soft faceted moss knobs where the kiln piece had patches of the
+        materials mats_in, lying on the surface; only_spiky: just where
+        kiln's patch was not flat (its spiky tufts)."""
+        for name in mats_in:
+            for c, n, r_, area, flat in self.comps.get(name, []):
+                if only_spiky and flat > 0.9:
+                    continue
+                k = max(2, min(14, int(area * per_area)))
+                t = n.orthogonal().normalized()
+                b = n.cross(t)
+                for _ in range(k):
+                    a, d = self.rng.uniform(0, math.tau), math.sqrt(self.rng.random()) * r_ * 0.8
+                    q = c + (t * math.cos(a) + b * math.sin(a)) * d
+                    s = self.rng.uniform(*rad)
+                    m = mats_out[1] if self.rng.random() < 0.35 else mats_out[0]
+                    rot = n.to_track_quat("Z", "Y").to_matrix()
+                    ob = self.blob((0, 0, 0), s, m, scale=(1.3, 1.1, 0.55), sub=1, jitter=s * 0.12)
+                    ob.data.transform(Matrix.Translation(q + n * s * 0.2) @ rot.to_4x4())
 
     def first(self, *names):
         """The first of names this piece has (a loom can swap a material)."""
@@ -476,6 +553,113 @@ class Piece:
         bm.free()
         return self._link("blade", me, list(mats))
 
+    # --- sculpted shapes from kiln's primitives, loom maps --------------------------
+    def _apply(self, ob, mod):
+        bpy.ops.object.select_all(action="DESELECT")
+        bpy.context.view_layer.objects.active = ob
+        ob.select_set(True)
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+        ob.select_set(False)
+
+    def soften(self, mats, voxel=0.012, smooth=4, ratio=0.3, carve=(), extra=()):
+        """Kiln builds bodies from overlapping spheres and capsules, which read
+        as a pile of balls. This merges the faces of mats into one surface
+        (voxel remesh), carves out carve = [(centre, radius, (sx, sy, sz))]
+        (eye sockets), smooths it, lowers its triangles to ratio and gives
+        each face the material of the nearest kiln face. extra = [(material,
+        centre, radius, (sx, sy, sz))]: volumes added before the merge (a
+        bust, a belly) that kiln didn't have."""
+        src = self.kiln_src[0]
+        names = [base_name(m.name) if m else "" for m in src.materials]
+        bm = bmesh.new()
+        bm.from_mesh(src)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index >= len(names)
+                                    or names[f.material_index] not in mats], context="FACES")
+        for mname, c, r_, sc in extra:
+            mi = names.index(mname)
+            geom = bmesh.ops.create_icosphere(bm, subdivisions=2, radius=1.0)
+            for v in geom["verts"]:
+                v.co = Vector((v.co.x * sc[0], v.co.y * sc[1], v.co.z * sc[2])) * r_ + Vector(c)
+            for f in {f for v in geom["verts"] for f in v.link_faces}:
+                f.material_index = mi
+        bm.faces.ensure_lookup_table()
+        tree = BVHTree.FromBMesh(bm)
+        face_mat = [f.material_index for f in bm.faces]
+        me = bpy.data.meshes.new("soft")
+        bm.to_mesh(me)
+        bm.free()
+        ob = bpy.data.objects.new("soft", me)
+        bpy.context.collection.objects.link(ob)
+        m = ob.modifiers.new("remesh", "REMESH")
+        m.mode = "VOXEL"
+        m.voxel_size = voxel
+        self._apply(ob, m)
+        for c, r_, sc in carve:
+            cut = bmesh.new()
+            bmesh.ops.create_icosphere(cut, subdivisions=3, radius=1.0)
+            for v in cut.verts:
+                v.co = Vector((v.co.x * sc[0], v.co.y * sc[1], v.co.z * sc[2])) * r_ + Vector(c)
+            cme = bpy.data.meshes.new("cut")
+            cut.to_mesh(cme)
+            cut.free()
+            cob = bpy.data.objects.new("cut", cme)
+            bpy.context.collection.objects.link(cob)
+            b = ob.modifiers.new("carve", "BOOLEAN")
+            b.operation = "DIFFERENCE"
+            b.object = cob
+            self._apply(ob, b)
+            bpy.data.objects.remove(cob)
+        if smooth:
+            sm = ob.modifiers.new("smooth", "SMOOTH")
+            sm.factor = 0.5
+            sm.iterations = smooth
+            self._apply(ob, sm)
+        if ratio < 1:
+            d = ob.modifiers.new("decimate", "DECIMATE")
+            d.ratio = ratio
+            self._apply(ob, d)
+        me.materials.clear()  # a boolean can leave an empty slot that shifts the indices
+        for mat in src.materials:
+            me.materials.append(mat)
+        for poly in me.polygons:
+            hit = tree.find_nearest(poly.center)
+            if hit[2] is not None:
+                poly.material_index = face_mat[hit[2]]
+        self.parts.append(ob)
+        return ob
+
+    def loom_tex(self, name, tex_dir, tile):
+        """Put a loom material's maps (tex_dir/<x>_albedo.png, _normal.png) on
+        the materials whose base name is name, kiln's way: the albedo
+        multiplied by the material's colour, the normal map, projected at
+        tile metres (finish() writes the UVs)."""
+        stem = os.path.basename(tex_dir.rstrip("/"))
+        alb = bpy.data.images.load(os.path.join(tex_dir, stem + "_albedo.png"), check_existing=True)
+        nor = bpy.data.images.load(os.path.join(tex_dir, stem + "_normal.png"), check_existing=True)
+        nor.colorspace_settings.name = "Non-Color"
+        for m in bpy.data.materials:
+            if base_name(m.name) != name or not m.use_nodes:
+                continue
+            nt = m.node_tree
+            bsdf = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
+            if not bsdf:
+                continue
+            ti = nt.nodes.new("ShaderNodeTexImage")
+            ti.image = alb
+            mul = nt.nodes.new("ShaderNodeMix")
+            mul.data_type = "RGBA"
+            mul.blend_type = "MULTIPLY"
+            mul.inputs["Factor"].default_value = 1
+            mul.inputs[7].default_value = bsdf.inputs["Base Color"].default_value
+            nt.links.new(ti.outputs["Color"], mul.inputs[6])
+            nt.links.new(mul.outputs[2], bsdf.inputs["Base Color"])
+            tn = nt.nodes.new("ShaderNodeTexImage")
+            tn.image = nor
+            nm = nt.nodes.new("ShaderNodeNormalMap")
+            nt.links.new(tn.outputs["Color"], nm.inputs["Color"])
+            nt.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
+            self.tile[m.name] = tile
+
     # --- out ---------------------------------------------------------------------
     def finish(self, name, height=None, fit="height"):
         """Join, box-project UVs for textured materials, scale to the kiln
@@ -493,7 +677,9 @@ class Piece:
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         me = ob.data
         zs = [v.co.z for v in me.vertices]
-        if fit == "max":
+        if fit == "none":  # kiln faces kept: same units as kiln
+            k = 1.0
+        elif fit == "max":
             dims = [max(v.co[i] for v in me.vertices) - min(v.co[i] for v in me.vertices) for i in range(3)]
             k = max(self.hi - self.lo) / max(dims)
         else:
@@ -508,7 +694,7 @@ class Piece:
         uv = me.uv_layers[0].data
         for p in me.polygons:
             m = me.materials[p.material_index]
-            tile = self.tile.get(m.name)
+            tile = self.tile.get(m.name) if m else None
             if not tile:
                 continue
             n = p.normal
@@ -520,7 +706,7 @@ class Piece:
         for p in me.polygons:
             p.use_smooth = False
         for m in me.materials:
-            if base_name(m.name) in self.flat:
+            if m and base_name(m.name) in self.flat:
                 m.use_backface_culling = False
         me.calc_loop_triangles()
         print(f"PIECE {name} tris={len(me.loop_triangles)} height={(height or self.height):.2f}")

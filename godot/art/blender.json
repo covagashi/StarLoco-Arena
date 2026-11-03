@@ -1,5 +1,5 @@
 {
-	"_doc": "Kit pieces modelled in Blender instead of kiln (S36; owner 2026-11-03: anything with curves or organic shapes goes to Blender, and much of the decoration (owner, same day: 'hay mucha decoración que va mejor en blender'), rigid and square pieces stay in kiln). After kiln build, godot/tools/blender/build_models.py runs each script on every loom of the piece: the kiln GLB gives the materials and the height, the script's mesh replaces it in out/models/. Then bake_kits.py (art/ao.json).",
+	"_doc": "Kit pieces modelled in Blender instead of kiln (S36; owner 2026-11-03: anything with curves or organic shapes goes to Blender, and much of the decoration (owner, same day: 'hay mucha decoración que va mejor en blender'), rigid and square pieces stay in kiln). After kiln build, godot/tools/blender/build_models.py runs each script on every loom of the piece: the kiln GLB gives the materials and the height, the script's mesh replaces it in out/models/. Then bake_kits.py (art/ao.json). Pieces with loom maps of their own (arena 10's rats) need that kit's loom built first (loom build kit.tx.js).",
 	"pieces": {
 		"arena1": {
 			"tree": "models/snow_tree.py",
@@ -30,12 +30,23 @@
 			"leaf_tree_young": "models/leaf_tree_young.py",
 			"moss_patch": "models/moss_patch.py",
 			"petals": "models/petals.py",
-			"grass_tuft": "models/grass_tuft.py"
+			"grass_tuft": "models/grass_tuft.py",
+			"roof": "models/roof.py",
+			"low_wall_ivy": "models/low_wall_ivy.py",
+			"low_wall_ivy_broken": "models/low_wall_ivy_broken.py",
+			"fence": "models/fence.py",
+			"fence_pair": "models/fence_pair.py"
 		},
 		"arena6": {
 			"herb": "models/herb.py",
 			"herb_flower": "models/herb_flower.py",
 			"strap_grass": "models/strap_grass.py"
+		},
+		"arena10": {
+			"headless_knitter": "models/headless_knitter.py",
+			"skull_blood": "models/skull_blood.py",
+			"rat_dead": "models/rat_dead.py",
+			"rat_skinned": "models/rat_skinned.py"
 		}
 	}
 }

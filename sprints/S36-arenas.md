@@ -2338,6 +2338,33 @@ manchas de lava de arena8). Lo que sale:
       pequeñas que las de kiln (`herb` se escala por la altura).
     - Carrera arreglada: `bake_kits.py` hornea en paralelo y perdía
       escrituras de la marca de `build_models.py`; ahora con un candado.
+  - **Segunda tanda: tejado, hiedra, vallas y arena 10 (dueño, 2026-11-03:
+    "el tejado también"; "había una señora y la cabeza y una rata que
+    quedaron mal, ¿puedes hacer Blender + loom?").**
+    - Arena 5: `roof` (tejas curvas con grosor y labio, solapadas),
+      `low_wall_ivy` y `low_wall_ivy_broken` (el muro de kiln se queda; la
+      hiedra es una rama continua con hojas de dos tonos abombadas),
+      `fence` y `fence_pair` (troncos rugosos con astillas, musgo en bultos
+      y travesaño combado).
+    - Arena 10: `headless_knitter` (el cuerpo modelado de nuevo con superficies
+      blandas: caderas, barriga, pecho, mangas, brazos, manos con dedos,
+      muslos bajo el camisón, pantorrillas y tobillos que entran en la
+      zapatilla; la silla, el cuello, las zapatillas, el punto y los bajos
+      rotos son los de kiln), `skull_blood` (una calavera de una pieza con
+      las cuencas y la nariz talladas), `rat_dead` y `rat_skinned` (cuerpo de
+      una pieza con texturas loom nuevas, `furTex` y `fleshTex` en
+      `art/arena10/kit.tx.js`).
+    - `lib.py`: `Piece(keep=…)` conserva caras de kiln por material;
+      `soften` funde las esferas de kiln en una superficie, talla agujeros y
+      reparte los materiales; `loom_tex` pone mapas loom en una pieza de
+      Blender.
+    - Probado y descartado: el musgo de los bloques de piedra de la arena 6
+      en Blender. Las manchas planas de kiln se leen mejor; se queda kiln.
+    - **Revisión en cuatro vistas (dueño: "¿por qué no usas las 4
+      vistas?").** Las zapatillas flotaban y las manos no tenían dedos: en
+      la vista de juego no se veía. Ahora toda pieza se revisa con
+      `godot/tools/art/four_views.sh` (frente, derecha, arriba y cámara de
+      juego) antes de darla por buena.
 - **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
   27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
   jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el

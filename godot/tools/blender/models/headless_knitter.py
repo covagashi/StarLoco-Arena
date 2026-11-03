@@ -1,0 +1,120 @@
+"""Arena 10's headless knitter (retail 2763), in Blender: her body modelled
+from scratch as soft continuous shapes (metaballs, one surface per
+material): broad hips, a belly, a bust and a rounded back in the blue dress,
+puffed sleeves, heavy arms tapering to the wrists and hands hanging over the
+armrests, the white nightgown over thick thighs, the calves down into the
+slippers. Kiln's layout (kit.kx.js: SEAT 0.48, the body leaning back 8°, the
+whole turned -90° about y). Kept from kiln as they are: the rocking chair,
+the neck stump, the slippers, the knitting, the yarn and the torn hems.
+Materials and their linen loom as in kiln.
+"""
+import math
+import os
+import sys
+
+import bpy
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib import Piece  # noqa: E402
+from mathutils import Matrix, Quaternion, Vector  # noqa: E402
+
+p = Piece(keep={"chair", "chairV", "pale", "meat", "bone", "slipper", "slipperD", "eye", "knitG", "knitO",
+                "steel", "yarnBall", "apronW", "dressD"})
+SEAT = 0.48
+LEAN = math.radians(8)
+
+
+def W(x, y, z):
+    """kiln's local model coordinates (x to her front, y up) to Blender."""
+    return Vector((-z, -x, y))
+
+
+def B(x, y, z):
+    """her body's frame: on the seat, leaning back with the chair."""
+    xr = x * math.cos(LEAN) - y * math.sin(LEAN)
+    yr = x * math.sin(LEAN) + y * math.cos(LEAN)
+    return W(xr - 0.06, yr + SEAT + 0.06, z)
+
+
+def soft(name, mat, balls, res=0.018, grow=1.4):
+    """One continuous surface from metaball ellipsoids (c, r, (sx, sy, sz))
+    and capsules ('cap', a, b, r). A metaball's surface sits well inside its
+    radius: grow makes the sizes the ones written here."""
+    mb = bpy.data.metaballs.new(name)
+    mb.resolution = mb.render_resolution = res
+    mb.threshold = 0.6
+    for e in balls:
+        if e[0] == "cap":
+            _, a, b, r = e
+            el = mb.elements.new(type="CAPSULE")
+            el.co = (a + b) / 2
+            el.radius = r * grow
+            el.size_x = (b - a).length / 2
+            el.rotation = Vector((1, 0, 0)).rotation_difference((b - a).normalized())
+        else:
+            c, r, sc = e
+            el = mb.elements.new(type="ELLIPSOID")
+            el.co = c
+            el.radius = r * grow
+            el.size_x, el.size_y, el.size_z = sc
+    ob = bpy.data.objects.new(name, mb)
+    bpy.context.collection.objects.link(ob)
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
+    bpy.ops.object.convert(target="MESH")
+    ob = bpy.context.view_layer.objects.active
+    ob.select_set(False)
+    d = ob.modifiers.new("decimate", "DECIMATE")
+    d.ratio = 0.35
+    p._apply(ob, d)
+    ob.data.materials.clear()
+    ob.data.materials.append(p.mat(mat))
+    p.parts.append(ob)
+
+
+S = SEAT
+# the blue dress: hips, belly, back, bust, shoulders, puffed sleeves (the body
+# frame's z is across her: ellipsoid sizes are given as Blender x, y, z =
+# across, front-back, up)
+soft("dressBody", "softDress", grow=1.45, balls=[
+    (B(0.0, 0.1, 0), 0.34, (1.25, 1.0, 0.75)),
+    (B(0.1, 0.26, 0), 0.27, (1.15, 1.0, 0.9)),
+    (B(-0.07, 0.42, 0), 0.27, (1.25, 0.9, 0.8)),
+    (B(-0.04, 0.53, 0), 0.2, (1.4, 0.9, 0.6)),          # the shoulders up to the stump
+    (B(0.13, 0.42, -0.12), 0.13, (1, 1, 0.95)), (B(0.13, 0.42, 0.12), 0.13, (1, 1, 0.95)),
+    (B(-0.03, 0.52, -0.26), 0.13, (1, 1, 0.9)), (B(-0.03, 0.52, 0.26), 0.13, (1, 1, 0.9)),
+    (B(-0.03, 0.49, -0.34), 0.135, (1, 1, 1.0)), (B(-0.03, 0.49, 0.34), 0.135, (1, 1, 1.0)),
+    (B(0.0, 0.58, 0), 0.1, (1.2, 1, 0.6)),
+    (W(0.1, S + 0.02, 0), 0.26, (1.0, 0.9, 0.35)),      # the lap of the dress under the nightgown
+])
+# her skin: arms (upper arm, forearm), hands, knees and calves
+skin = []
+for k in (-1, 1):
+    skin += [("cap", B(-0.03, 0.44, k * 0.39), B(0.0, 0.2, k * 0.45), 0.12),
+             ("cap", B(0.0, 0.2, k * 0.46), B(0.04, -0.08, k * 0.48), 0.095),
+             (B(0.045, -0.14, k * 0.48), 0.06, (0.6, 1.05, 1.25)),           # the palm, flat to her side
+             ("cap", W(0.44, S - 0.05, k * 0.225), W(0.46, 0.2, k * 0.245), 0.085),  # the shin
+             (W(0.45, S - 0.2, k * 0.232), 0.1, (1, 1, 1.25)),                 # the calf's bulge
+             ("cap", W(0.46, 0.22, k * 0.245), W(0.465, 0.07, k * 0.25), 0.045)]  # the ankle, into the slipper
+soft("skin", "softPale", skin)
+# the fingers: kiln's hanging hand (four fingers straight down, the thumb
+# forward), as separate rounded fingers so they read at game scale
+for k in (-1, 1):
+    hx, hy, hz = 0.045, -0.14, k * 0.48
+    for f in (-1.5, -0.5, 0.5, 1.5):
+        a, b = B(hx + f * 0.022, hy - 0.04, hz), B(hx + f * 0.025, hy - 0.13 + abs(f) * 0.012, hz)
+        p.tube([a, a.lerp(b, 0.5), b], 0.021, 0.017, mat="softPale", sides=6)
+        p.blob(b, 0.017, "softPale", sub=1)
+    a, b = B(hx + 0.05, hy - 0.01, hz), B(hx + 0.09, hy - 0.07, hz)
+    p.tube([a, a.lerp(b, 0.5), b], 0.023, 0.019, mat="softPale", sides=6)
+    p.blob(b, 0.019, "softPale", sub=1)
+# the white nightgown over the thighs, sagging between them, wrapping the knees
+gown = []
+for k in (-1, 1):
+    gown += [("cap", W(0.06, S + 0.08, k * 0.15), W(0.45, S + 0.0, k * 0.21), 0.155),
+             (W(0.455, S - 0.06, k * 0.232), 0.15, (1.05, 1.05, 0.9)),
+             ("cap", W(0.455, S - 0.04, k * 0.232), W(0.455, S - 0.16, k * 0.232), 0.15)]  # the sleeve the torn hem hangs from
+gown += [("cap", W(0.08, S + 0.05, 0), W(0.42, S - 0.02, 0), 0.1)]
+soft("gown", "softApronW", gown, grow=1.15)  # thin enough for the knitting to lie on it
+p.finish("headless_knitter", fit="none")
