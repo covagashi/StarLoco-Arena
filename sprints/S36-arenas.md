@@ -2457,8 +2457,33 @@ manchas de lava de arena8). Lo que sale:
         perdidos (captura de la 2). El ejecutable exportado no acepta `-s`,
         así que esa prueba se hizo con el editor apuntado a la carpeta
         (`set_root`). 552 comprobaciones unitarias.
-    - Rendimiento con GPU de verdad (miles de llamadas de dibujo por arena,
-      ver la tabla de arriba): unir las piezas por material.
+    - ~~Rendimiento con GPU de verdad~~ hecho (2026-11-03). La arena del
+      combate es estática: al cargarla, `arena_scene.gd` `flatten()` junta
+      cada malla repetida en un MultiMesh (el tinte va como color de la
+      instancia si la malla no trae colores de vértice; si los trae, una
+      malla por tinte; las piezas reflejadas, aparte, con la cara contraria).
+      El editor sigue con un nodo por casilla.
+
+      | Arena | Llamadas antes | Después | Fotograma, cámara quieta | Moviendo la cámara |
+      |---|---|---|---|---|
+      | 1 | 1.378 | 162 | 0,8 ms | 9,4 ms |
+      | 2 | 1.854 | 230 | 0,6 ms | 4,3 ms |
+      | 3 | 1.724 | 514 | 0,8 ms | 12,2 ms |
+      | 4 | 956 | 382 | 0,7 ms | 7,8 ms |
+      | 5 | 4.214 | 313 | 0,8 ms | 9,4 ms |
+      | 6 | 6.898 | 234 | 0,9 ms | 14,6 ms |
+
+      - Medido en la GPU de la Ally (radeonsi) con `gamescope --backend
+        headless`, sin abrir nada en pantalla: así se puede medir con GPU
+        de verdad en vez de llvmpipe.
+      - Hallazgo: en esta GPU el tiempo por fotograma era el mismo antes y
+        después; manda el número de triángulos (1,7 M en la 6), no las
+        llamadas. Como la arena solo se repinta al mover la cámara, va a
+        60 fps incluso en la 6. Si hiciera falta más, el siguiente paso es
+        quitar las caras tapadas entre bloques vecinos.
+      - Capturas antes/después idénticas (diferencia media 0,00–0,04 por
+        canal; lo único distinto, una marca 2D animada); la oclusión sigue
+        igual. 552 comprobaciones unitarias.
 - [x] El servidor y el combate juegan la forma del `layout` (2026-11-03),
       el paso 1 de S43 adelantado.
   - `arena_layout.gd` `fight_shape()` convierte el `layout` (forma +

@@ -141,6 +141,154 @@ func _columns(root: Node3D, it: Dictionary, path: String, top_y: float,
 		guard += 1
 
 
+## The built arena (cells from build_cell under src) redone for the GPU:
+## every mesh placed more than once becomes one MultiMesh, one draw call per
+## surface however many times it stands, instead of one per copy (a big
+## arena had 1,000-7,000 draw calls). A copy keeps its tint (as the
+## instance's colour when the mesh has no vertex colours, so differently
+## tinted copies still share a MultiMesh; else as its own tinted mesh) and
+## its shadow setting; a mirrored copy goes with the other mirrored ones,
+## its faces culled the other way round. The models' lights move over as
+## they are.
+## The fight's arena is static, so this is done once, after building; the
+## editor keeps the per-cell nodes it edits.
+func flatten(src: Node3D) -> Node3D:
+	var out := Node3D.new()
+	out.name = "Arena"
+	var groups := {}   # key -> {mesh, shadow, at: [Transform3D], tint: [Color]}
+	for n in src.find_children("*", "", true, false):
+		if n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			if mi.mesh == null or not mi.visible:
+				continue
+			var t := _in_space(mi, src)
+			var mirrored := t.basis.determinant() < 0.0
+			var c: Color = mi.get_meta("tint", Color.WHITE)
+			var by_colour := _plain(mi.mesh)
+			var mesh := _coloured_mesh(mi.mesh, mirrored) if by_colour \
+				else _placed_mesh(mi, mirrored)
+			var key := "%d/%d" % [mesh.get_instance_id(), mi.cast_shadow]
+			if not groups.has(key):
+				groups[key] = {"mesh": mesh, "shadow": mi.cast_shadow, "at": [],
+					"tint": [], "coloured": by_colour}
+			groups[key].at.append(t)
+			groups[key].tint.append(c)
+		elif n is Light3D:
+			var l := (n as Light3D).duplicate() as Light3D
+			for ch in l.get_children():
+				ch.free()
+			l.transform = _in_space(n, src)
+			out.add_child(l)
+	for g: Dictionary in groups.values():
+		var at: Array = g.at
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = g.coloured
+		mm.mesh = g.mesh
+		mm.instance_count = at.size()
+		for i in at.size():
+			mm.set_instance_transform(i, at[i])
+			if g.coloured:
+				mm.set_instance_color(i, g.tint[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.cast_shadow = g.shadow
+		out.add_child(mmi)
+	return out
+
+
+## n's transform in space's coordinates (n need not be in the tree).
+static func _in_space(n: Node3D, space: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var cur: Node = n
+	while cur != null and cur != space:
+		t = (cur as Node3D).transform * t
+		cur = cur.get_parent()
+	return t
+
+
+## "<mesh>/<override materials>/<mirrored>" -> the mesh a copy draws with
+var _placed := {}
+## "<mesh>/<mirrored>" -> its copy that takes the tint from the instance
+var _coloured := {}
+## material id (+ mirrored) -> its copy tinted by the instance colour
+var _coloured_mat := {}
+
+
+## True when no surface of the mesh has vertex colours: the instance colour
+## can then carry the tint (it multiplies COLOR, which is white here).
+static func _plain(mesh: Mesh) -> bool:
+	for s in mesh.get_surface_count():
+		if mesh.surface_get_format(s) & Mesh.ARRAY_FORMAT_COLOR:
+			return false
+		if not mesh.surface_get_material(s) is BaseMaterial3D:
+			return false
+	return true
+
+
+## The mesh with every material taking the instance colour as a tint, the
+## same multiply as tint() (in sRGB, like albedo_color).
+func _coloured_mesh(src: Mesh, mirrored: bool) -> Mesh:
+	var key := "%d/%s" % [src.get_instance_id(), mirrored]
+	if not _coloured.has(key):
+		var mesh := src.duplicate() as Mesh
+		for s in mesh.get_surface_count():
+			var m := src.surface_get_material(s) as BaseMaterial3D
+			var mkey := "%d/%s" % [m.get_instance_id(), mirrored]
+			if not _coloured_mat.has(mkey):
+				var c := (_flip_cull(m) if mirrored else m).duplicate() as BaseMaterial3D
+				c.vertex_color_use_as_albedo = true
+				c.vertex_color_is_srgb = true
+				_coloured_mat[mkey] = c
+			mesh.surface_set_material(s, _coloured_mat[mkey])
+		_coloured[key] = mesh
+	return _coloured[key]
+## material id -> its copy with the faces culled the other way round
+var _mirrored_mat := {}
+
+
+## The mesh mi draws, its tint (surface overrides) baked into the surfaces'
+## materials, and the culling turned round when the copy is mirrored. Copies
+## that look the same share one mesh, so they share one MultiMesh.
+func _placed_mesh(mi: MeshInstance3D, mirrored: bool) -> Mesh:
+	var src := mi.mesh
+	var mats := []
+	var changed := mirrored
+	for s in src.get_surface_count():
+		var m := mi.get_surface_override_material(s)
+		if m != null:
+			changed = true
+		else:
+			m = src.surface_get_material(s)
+		if mirrored and m is BaseMaterial3D:
+			m = _flip_cull(m)
+		mats.append(m)
+	if not changed:
+		return src
+	var ids := []
+	for m in mats:
+		ids.append(m.get_instance_id() if m != null else 0)
+	var key := "%d/%s" % [src.get_instance_id(), ids]
+	if not _placed.has(key):
+		var mesh := src.duplicate() as Mesh
+		for s in mats.size():
+			mesh.surface_set_material(s, mats[s])
+		_placed[key] = mesh
+	return _placed[key]
+
+
+func _flip_cull(m: BaseMaterial3D) -> BaseMaterial3D:
+	if m.cull_mode == BaseMaterial3D.CULL_DISABLED:
+		return m
+	var id := m.get_instance_id()
+	if not _mirrored_mat.has(id):
+		var f := m.duplicate() as BaseMaterial3D
+		f.cull_mode = BaseMaterial3D.CULL_FRONT if m.cull_mode == BaseMaterial3D.CULL_BACK \
+			else BaseMaterial3D.CULL_BACK
+		_mirrored_mat[id] = f
+	return _mirrored_mat[id]
+
+
 ## Multiplies every surface's albedo by c (white leaves the model alone).
 func tint(n: Node3D, c: Color) -> void:
 	if c.is_equal_approx(Color.WHITE):
@@ -148,6 +296,7 @@ func tint(n: Node3D, c: Color) -> void:
 	var hex := c.to_html(false)
 	for mi in n.find_children("*", "MeshInstance3D", true, false) + ([n] if n is MeshInstance3D else []):
 		var m := mi as MeshInstance3D
+		m.set_meta("tint", c)   # flatten() hands it to the instance
 		for s in m.mesh.get_surface_count():
 			var src := m.mesh.surface_get_material(s) as BaseMaterial3D
 			if src == null:

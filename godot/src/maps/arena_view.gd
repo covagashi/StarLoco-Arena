@@ -165,10 +165,13 @@ func load_world(world_id: int) -> bool:
 	_root = Node3D.new()
 	_vp.add_child(_root)
 	ArenaScene.add_lights(_root)
+	var cells := Node3D.new()
 	for p: Vector2i in layout.cells:
 		if not shape.cells.has(p) or shape.cells[p].role == "void":
 			continue
-		_root.add_child(_builder.build_cell(p, shape.cells[p], layout.cells[p], shape.floor_y))
+		cells.add_child(_builder.build_cell(p, shape.cells[p], layout.cells[p], shape.floor_y))
+	_root.add_child(_builder.flatten(cells))
+	cells.free()
 	_cam = ArenaScene.game_camera(720.0, 1.0, Vector3.ZERO)
 	_cam.cull_mask &= ~DEPTH_LAYER
 	_vp.add_child(_cam)
