@@ -2256,8 +2256,26 @@ manchas de lava de arena8). Lo que sale:
   giro y raíces; copa con un núcleo oscuro y hojas de arce repartidas por
   su superficie. Usa los materiales y la altura de la pieza de kiln, así
   que encaja en el kit. 12.400 triángulos (kiln: 7.670). Hoja retail /
-  kiln / Blender: `arbol-arena5-blender.png`. **Todavía no sustituye a la
-  pieza del juego: espera al dueño.**
+  kiln / Blender: `arbol-arena5-blender.png`.
+  - **Aprobado (dueño, 2026-11-03: "el árbol me gusta").** Regla del dueño:
+    lo que tenga curvas o formas orgánicas (árboles, arbustos, raíces,
+    tocones, personajes) se modela en Blender; lo rígido y cuadrado
+    (bloques, losas, cajas, muros, casas) sigue en kiln.
+  - En el juego desde el mismo día, en sus tres looms. `art/blender.json`
+    dice qué pieza sale de qué script. El pipeline de un kit queda:
+
+        kiln build kit.kx.js                            # en art/<kit>/
+        python3 godot/tools/blender/build_models.py     # piezas de Blender
+        python3 godot/tools/blender/bake_kits.py        # AO (art/ao.json)
+
+    `build_models.py` guarda una marca por GLB: si se lanza otra vez, se
+    salta lo hecho y rehace lo que kiln ha reconstruido; `--check` lista lo
+    pendiente. Hojas: `arbol-arena5-variantes.png` y
+    `arbol-arena5-en-arena.png`.
+  - Siguientes candidatos de las 6 arenas, de uno en uno y con el visto
+    bueno del dueño: `leaf_tree_fork` y `leaf_tree_young` (arena 5), el
+    árbol y los arbustos de otoño (arena 2), el tocón nevado y el árbol
+    muerto (arena 1), `bare_tree` (arena 2).
 - **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
   27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
   jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el

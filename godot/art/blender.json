@@ -1,0 +1,6 @@
+{
+	"_doc": "Kit pieces modelled in Blender instead of kiln (S36; owner 2026-11-03: anything with curves or organic shapes goes to Blender, rigid and square pieces stay in kiln). After kiln build, godot/tools/blender/build_models.py runs each script on every loom of the piece: the kiln GLB gives the materials and the height, the script's mesh replaces it in out/models/. Then bake_kits.py (art/ao.json).",
+	"pieces": {
+		"arena5": {"leaf_tree": "models/leaf_tree.py"}
+	}
+}

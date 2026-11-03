@@ -6,6 +6,9 @@ surface, light on top and dark underneath. Uses the kiln piece's materials
 (so looms and the game's dressing still match) and its size.
 
     blender -b -P godot/tools/blender/models/leaf_tree.py -- <kiln leaf_tree.glb> <out.glb> [seed]
+
+Approved by the owner 2026-11-03 ("el árbol me gusta"); built for every loom
+by tools/blender/build_models.py (art/blender.json).
 """
 import math
 import random
@@ -22,7 +25,11 @@ rng = random.Random(int(args[2]) if len(args) > 2 else 7)
 # --- the kiln piece: its materials and its size ------------------------------
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
-mats = {m.name: m for m in bpy.data.materials}
+# loom variants name them tree_b, tree_c…: key them by the base name
+mats = {}
+for m in bpy.data.materials:
+    base = m.name[:-2] if m.name[-2:] in ("_b", "_c") else m.name
+    mats.setdefault(base, m)
 lo, hi = Vector((1e9,) * 3), Vector((-1e9,) * 3)
 for o in [o for o in bpy.context.scene.objects if o.type == "MESH"]:
     for v in o.data.vertices:
