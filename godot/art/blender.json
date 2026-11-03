@@ -1,20 +1,41 @@
 {
-	"_doc": "Kit pieces modelled in Blender instead of kiln (S36; owner 2026-11-03: anything with curves or organic shapes goes to Blender, rigid and square pieces stay in kiln). After kiln build, godot/tools/blender/build_models.py runs each script on every loom of the piece: the kiln GLB gives the materials and the height, the script's mesh replaces it in out/models/. Then bake_kits.py (art/ao.json).",
+	"_doc": "Kit pieces modelled in Blender instead of kiln (S36; owner 2026-11-03: anything with curves or organic shapes goes to Blender, and much of the decoration (owner, same day: 'hay mucha decoración que va mejor en blender'), rigid and square pieces stay in kiln). After kiln build, godot/tools/blender/build_models.py runs each script on every loom of the piece: the kiln GLB gives the materials and the height, the script's mesh replaces it in out/models/. Then bake_kits.py (art/ao.json).",
 	"pieces": {
 		"arena1": {
 			"tree": "models/snow_tree.py",
-			"dead_tree": "models/dead_tree.py"
+			"dead_tree": "models/dead_tree.py",
+			"spike": "models/spike.py",
+			"spike_double": "models/spike_double.py",
+			"ice_crystals": "models/ice_crystals.py",
+			"frost": "models/frost.py",
+			"frost_small": "models/frost_small.py",
+			"mound": "models/mound.py",
+			"loose_snow": "models/loose_snow.py",
+			"pebbles": "models/pebbles.py",
+			"leaves": "models/leaves.py"
 		},
 		"arena2": {
 			"autumn_tree": "models/autumn_tree.py",
 			"autumn_bush": "models/autumn_bush.py",
 			"autumn_bush_tall": "models/autumn_bush_tall.py",
-			"bare_tree": "models/bare_tree.py"
+			"bare_tree": "models/bare_tree.py",
+			"bone_blade_stuck": "models/bone_blade_stuck.py",
+			"sword_stuck": "models/sword_stuck.py",
+			"fallen_leaves": "models/fallen_leaves.py",
+			"spiky_grass": "models/spiky_grass.py"
 		},
 		"arena5": {
 			"leaf_tree": "models/leaf_tree.py",
 			"leaf_tree_fork": "models/leaf_tree_fork.py",
-			"leaf_tree_young": "models/leaf_tree_young.py"
+			"leaf_tree_young": "models/leaf_tree_young.py",
+			"moss_patch": "models/moss_patch.py",
+			"petals": "models/petals.py",
+			"grass_tuft": "models/grass_tuft.py"
+		},
+		"arena6": {
+			"herb": "models/herb.py",
+			"herb_flower": "models/herb_flower.py",
+			"strap_grass": "models/strap_grass.py"
 		}
 	}
 }

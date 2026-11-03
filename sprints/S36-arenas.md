@@ -2310,6 +2310,34 @@ manchas de lava de arena8). Lo que sale:
       `x_c`); hay que nombrarlos también.
     - Las 6 arenas renderizadas antes y después sin nada roto; 525 pruebas
       unitarias sin fallos.
+  - **Decoración orgánica (dueño, 2026-11-03: "mira los picos de hielo, los
+    huesos, el musgo, la nieve de decoración"; y luego "el tejado también,
+    hay mucha decoración que va mejor en Blender").** Primera tanda, 19
+    piezas, cada una con su script en `tools/blender/models/`:
+    - Hielo (arena1): `spike`, `spike_double`, `ice_crystals`, `frost`,
+      `frost_small`. Cristales facetados (prisma con punta, caras alternas
+      `shard`/`shardD`) en vez de láminas planas.
+    - Nieve (arena1): `mound`, `loose_snow` (masas blandas con metaballs),
+      `pebbles` (piedras con su gorro de nieve), `leaves` (hojas en copa con
+      nieve en las puntas, como el retail).
+    - Huesos y armas (arena2): `bone_blade_stuck` (hoja de hueso curva con
+      dientes) y `sword_stuck` (hoja curva). Quedan en kiln la lanza y
+      `weapons_ground`: son rígidas.
+    - Plantas: `fallen_leaves` (hojas de arce en vez de estrellas),
+      `spiky_grass`, `grass_tuft`, `strap_grass` (hojas curvas con pliegue),
+      `herb`, `herb_flower` (dos rosetas, la flor hacia la cámara),
+      `petals`, y `moss_patch` (bultos facetados de tres verdes).
+    - Nuevas ayudas en `lib.py`: `strip` (hoja curva con pliegue y grosor),
+      `crystal`, `lumps` (metaballs cortados en el suelo), `cupped` (hoja o
+      pétalo tumbado y abombado), `bladeform` (hoja de arma con sección de
+      rombo) y `finish(fit="max")` para piezas planas.
+    - Fallos vistos y arreglados en la revisión: gorros de nieve dentro de
+      la piedra, nieve en el suelo en vez de en las puntas, musgo plano como
+      un charco (los metaballs salen demasiado lisos: ahora son bultos
+      facetados), hierba rala, flor escondida bajo las hojas, plantas más
+      pequeñas que las de kiln (`herb` se escala por la altura).
+    - Carrera arreglada: `bake_kits.py` hornea en paralelo y perdía
+      escrituras de la marca de `build_models.py`; ahora con un candado.
 - **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
   27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
   jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el

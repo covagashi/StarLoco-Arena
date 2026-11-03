@@ -322,10 +322,165 @@ class Piece:
                 items.append((self.leaf_at(pos, nrm, self.rng.uniform(*size)), name))
         self.cards(items, outline, ["treeL", "tree", "treeD", "treeX"])
 
+
+    # --- blades, crystals, lumps, cupped leaves (deco pieces) -----------------------
+    def strip(self, base, up, out, length, width, mats, bend=0.6, segs=6, shape="blade", fold=0.25,
+              thick=0.012, twist=0.0):
+        """A curved leaf: from base along up, curving towards out by bend
+        radians over its length, width by shape ('blade': wide at the foot to
+        a point; 'strap': even, rounded tip; 'leaf': narrow foot, broad
+        middle, pointed tip). A crease down the middle (fold) and kiln's
+        thickness. mats cycle per segment (bands); one name = plain."""
+        Y = up.normalized()
+        Z = out - Y * out.dot(Y)
+        Z = Z.normalized() if Z.length > 1e-6 else Y.orthogonal().normalized()
+        X = Y.cross(Z)
+        widths = {"blade": lambda t: (1 - t) ** 0.85,
+                  "strap": lambda t: 1.0 if t < 0.8 else math.sqrt(max(0.0, 1 - ((t - 0.8) / 0.2) ** 2)),
+                  "leaf": lambda t: math.sin(math.pi * min(1.0, t)) ** 0.7 * (0.35 + 0.65 * min(1.0, t * 2.5))}[shape]
+        bm = bmesh.new()
+        pos = Vector(base)
+        rows = []
+        for i in range(segs + 1):
+            t = i / segs
+            th = bend * t
+            d = Y * math.cos(th) + Z * math.sin(th)
+            n = X.cross(d).normalized()
+            xa = Matrix.Rotation(twist * t, 3, d) @ X
+            w = width * widths(t) / 2
+            rows.append((pos.copy(), xa, n, w))
+            pos = pos + d * (length / segs)
+        self.last_tip = rows[-1][0]  # where the leaf ends, for snow or a flower on it
+        for side, off in ((0, thick / 2), (1, -thick / 2)):
+            vs = [[bm.verts.new(c + n * off - xa * w), bm.verts.new(c + n * off - n * fold * w),
+                   bm.verts.new(c + n * off + xa * w)] for c, xa, n, w in rows]
+            for i in range(segs):
+                a, b = vs[i], vs[i + 1]
+                for f in ((a[0], a[1], b[1], b[0]), (a[1], a[2], b[2], b[1])):
+                    face = bm.faces.new(f if side == 0 else tuple(reversed(f)))
+                    face.material_index = i % len(mats)
+            if not thick:
+                break
+        me = bpy.data.meshes.new("strip")
+        bm.to_mesh(me)
+        bm.free()
+        if not thick:
+            self.flat |= set(mats)
+        return self._link("strip", me, list(mats))
+
+    def crystal(self, base, dirv, r, length, mats=("shard", "shardD"), sides=6, tip=0.3, sink=0.05):
+        """A faceted ice crystal: a prism from base along dirv ending in a
+        point; faces alternate between mats, so the facets read."""
+        D = dirv.normalized()
+        X = D.orthogonal().normalized()
+        Yv = D.cross(X)
+        a0 = self.rng.uniform(0, math.tau)
+        ring = lambda h, rr: [base + D * h + (X * math.cos(a0 + i * math.tau / sides) + Yv * math.sin(a0 + i * math.tau / sides))
+                              * rr * self.rng.uniform(0.85, 1.1) for i in range(sides)]
+        bm = bmesh.new()
+        lo = [bm.verts.new(v) for v in ring(-sink, r * 1.05)]
+        hi = [bm.verts.new(v) for v in ring(length * (1 - tip), r * 0.92)]
+        apex = bm.verts.new(base + D * length + X * r * self.rng.uniform(-0.2, 0.2))
+        for i in range(sides):
+            j = (i + 1) % sides
+            bm.faces.new((lo[i], lo[j], hi[j], hi[i])).material_index = i % 2
+            bm.faces.new((hi[i], hi[j], apex)).material_index = (i + 1) % 2
+        bm.faces.new(list(reversed(lo))).material_index = 1
+        me = bpy.data.meshes.new("crystal")
+        bm.to_mesh(me)
+        bm.free()
+        return self._link("crystal", me, list(mats))
+
+    def lumps(self, balls, mats, res=0.045, shade=None, clip=True):
+        """A soft mass (snow drift, moss cushion) from metaball ellipsoids
+        balls = [(centre, radius, (sx, sy, sz))], cut at the ground.
+        shade(normal, centre-relative position, rng) -> index into mats."""
+        mb = bpy.data.metaballs.new("mb")
+        mb.resolution = mb.render_resolution = res
+        mb.threshold = 0.6
+        for c, r, sc in balls:
+            e = mb.elements.new(type="ELLIPSOID")
+            e.co = Vector(c)
+            e.radius = r
+            e.size_x, e.size_y, e.size_z = sc
+        ob = bpy.data.objects.new("mb", mb)
+        bpy.context.collection.objects.link(ob)
+        bpy.ops.object.select_all(action="DESELECT")
+        bpy.context.view_layer.objects.active = ob
+        ob.select_set(True)
+        bpy.ops.object.convert(target="MESH")
+        ob = bpy.context.view_layer.objects.active
+        ob.select_set(False)
+        me = ob.data
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        if clip:
+            bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(v.co.z < 0.0 for v in f.verts)], context="FACES")
+            for v in bm.verts:
+                v.co.z = max(v.co.z, 0.0)
+        for f in bm.faces:
+            f.material_index = shade(f.normal, f.calc_center_median(), self.rng) if shade else 0
+        bm.to_mesh(me)
+        bm.free()
+        me.materials.clear()
+        for m in mats:
+            me.materials.append(self.mat(m))
+        self.parts.append(ob)
+        return ob
+
+    def cupped(self, outline, M, mats, cup=0.25, thick=0.01, pick=None):
+        """A leaf or petal lying in its plane, edges lifted by cup (a fan
+        round its centre), placed by matrix M. pick(i) -> index into mats
+        per wedge (default 0)."""
+        cx = sum(x for x, _ in outline) / len(outline)
+        cy = sum(y for _, y in outline) / len(outline)
+        rmax = max(math.hypot(x - cx, y - cy) for x, y in outline) or 1
+        bm = bmesh.new()
+        for off, flip in ((thick / 2, False), (-thick / 2, True)):
+            c = bm.verts.new(M @ Vector((cx, cy, off)))
+            ring = [bm.verts.new(M @ Vector((x, y, off + cup * (math.hypot(x - cx, y - cy) / rmax) ** 2 * rmax)))
+                    for x, y in outline]
+            for i in range(len(ring)):
+                f = (c, ring[i], ring[(i + 1) % len(ring)])
+                face = bm.faces.new(tuple(reversed(f)) if flip else f)
+                face.material_index = pick(i) if pick else 0
+            if not thick:
+                break
+        me = bpy.data.meshes.new("cupped")
+        bm.to_mesh(me)
+        bm.free()
+        if not thick:
+            self.flat |= set(mats)
+        return self._link("cupped", me, list(mats))
+
+    def bladeform(self, stations, n, mats, pick=None):
+        """A blade with a diamond section: stations = [(centre, left, right,
+        half-thickness)] (left/right: Vectors from the centre to each edge),
+        n = the side the faces look to. pick(station, face) -> index into
+        mats (face 0, 3: the left half; 1, 2: the right), default 0."""
+        bm = bmesh.new()
+        rows = []
+        for c, l, rr, t in stations:
+            rows.append([bm.verts.new(c + l), bm.verts.new(c + n * t), bm.verts.new(c + rr), bm.verts.new(c - n * t)])
+        for i in range(len(rows) - 1):
+            a, b = rows[i], rows[i + 1]
+            for k, f in enumerate(((a[0], b[0], b[1], a[1]), (a[1], b[1], b[2], a[2]),
+                                   (a[2], b[2], b[3], a[3]), (a[3], b[3], b[0], a[0]))):
+                face = bm.faces.new(f)
+                face.material_index = pick(i, k) if pick else 0
+        bm.faces.new(list(reversed(rows[0])))
+        bm.faces.new(rows[-1])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        me = bpy.data.meshes.new("blade")
+        bm.to_mesh(me)
+        bm.free()
+        return self._link("blade", me, list(mats))
+
     # --- out ---------------------------------------------------------------------
-    def finish(self, name, height=None):
+    def finish(self, name, height=None, fit="height"):
         """Join, box-project UVs for textured materials, scale to the kiln
-        piece's height (or height), flat-shade, export."""
+        piece's height (or height; fit="max": its largest side, for flat or
+        wide pieces), flat-shade, export."""
         bpy.ops.object.select_all(action="DESELECT")
         for o in self.parts:
             o.select_set(True)
@@ -338,7 +493,11 @@ class Piece:
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         me = ob.data
         zs = [v.co.z for v in me.vertices]
-        k = (height or self.height) / (max(zs) - min(zs))
+        if fit == "max":
+            dims = [max(v.co[i] for v in me.vertices) - min(v.co[i] for v in me.vertices) for i in range(3)]
+            k = max(self.hi - self.lo) / max(dims)
+        else:
+            k = (height or self.height) / (max(zs) - min(zs))
         for v in me.vertices:  # about the origin (the foot), to the kiln height
             v.co = v.co * k
         while len(me.uv_layers) > 1:  # parts bring their own layers: keep one

@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -74,9 +75,17 @@ def plan(cfg, only):
     return todo, done, stale
 
 
+STAMP_LOCK = threading.Lock()  # bakes run in threads; the stamp files are shared
+
+
 def follow_blender_stamp(models, name, old, new):
     """build_models.py stamps the GLBs it writes: when this rewrites one of
     them, move its stamp along, or it would take the bake for a kiln rebuild."""
+    with STAMP_LOCK:
+        _follow(models, name, old, new)
+
+
+def _follow(models, name, old, new):
     path = os.path.join(models, ".blender.json")
     try:
         with open(path) as f:
