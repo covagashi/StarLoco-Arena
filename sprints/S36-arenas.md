@@ -2211,6 +2211,59 @@ tres looms a escala de juego a la derecha. Plan actualizado en
   - Falta lo mismo que con los papeles: que el servidor (línea de visión,
     movimiento) y el combate usen esas alturas (fase D / S43).
 
+### Revisión de los assets de las 6 arenas con Blender (2026-11-03)
+
+Dueño: "repasa los assets de las 6 arenas y mira dónde se necesita
+Blender; si no hay Blender, instálalo". Blender 5.2.3 LTS instalado en
+`~/.local/opt/blender-5.2.3-linux-x64`, con enlace en `~/.local/bin/blender`;
+`kiln render` ya lo encuentra. Herramientas en `godot/tools/blender/`
+(`audit.py`, `bake_ao.py`). Hojas en `~/codigo/capturas/m7/blender/`.
+
+Las 6 arenas usan 128 GLB de los kits arena1, arena2, arena5, arena6 (y las
+manchas de lava de arena8). Lo que sale:
+
+- **Oclusión ambiental horneada: sí hace falta Blender.** El juego dibuja
+  con el renderer Compatibility, que no tiene SSAO, así que las piezas no
+  tienen sombra de contacto. `bake_ao.py` la hornea con Cycles en el color
+  de vértice (fuerza 0,5; menos de 1 s por pieza). Prueba con las 128 piezas
+  y las 6 arenas a escala de juego (`ao-arenas-*.png`, `ao-piezas.png`):
+  - mejora clara: la nieve de las arenas 1, 3 y 4 (se leen los bultos, ya
+    no es una mancha blanca), el escombro, las rocas y los andamios de la 6;
+  - peor: la hierba de las arenas 5 y 6 y el follaje de otoño de la 2 salen
+    oscuros y sucios.
+  - Propuesta: hornear solo la nieve, las rocas, el escombro y los
+    andamios, y dejar sin hornear los bloques de hierba y el follaje (o
+    hornearlos a 0,25). **Decide el dueño** (una pieza aprobada cambia de
+    aspecto). Si se aprueba, el paso va después de `kiln build`, porque los
+    GLB de `out/` no van en git.
+- **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
+  27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
+  jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el
+  detalle se quita en el `.kx.js`.
+- **El problema de rendimiento está en Godot, no en los modelos.** Una vista
+  de la arena entera (con la pasada de sombra):
+
+  | Arena | Llamadas de dibujo | Primitivas |
+  |---|---|---|
+  | 1 | 1.387 | 2,0 M |
+  | 2 | 1.891 | 0,9 M |
+  | 3 | 1.728 | 2,5 M |
+  | 4 | 956 | 1,6 M |
+  | 5 | 4.435 | 1,9 M |
+  | 6 | 7.167 | 3,7 M |
+
+  Cada pieza es un nodo con varias superficies, y el renderer Compatibility
+  no las agrupa. Los bloques de suelo son la mayor parte (`ice_block`,
+  7.144 triángulos, va 258 veces). El arreglo es de la fase D: unir las
+  piezas de la arena por material (o `MultiMesh` para los bloques) y quitar
+  las caras tapadas entre bloques vecinos. Blender no hace falta para eso.
+- **Personajes (S35): ahí sí, Blender.** kiln anima piezas rígidas
+  (`part` + `animate`), pero no tiene esqueleto con pesos. Un rig común para
+  24 luchadores necesita esqueleto y pesos: script `bpy` en Blender headless.
+- Sin Blender: el agua de la arena 5 es un azul marino plano que parece un
+  agujero (es un shader de agua en Godot) y la luz fuerte que quema la
+  nieve (es la luz de Godot).
+
 ### D. Del editor al juego
 
 - [ ] `fight_view` dibuja el `layout` de la arena con nuestros modelos en vez
