@@ -2376,6 +2376,14 @@ manchas de lava de arena8). Lo que sale:
         kiln): patín en x 0,26–0,32 desde y −0,49, zapatilla hasta 0,36. Los
         pies van algo más juntos y adelantados, con la punta un poco hacia
         fuera; ahora la zapatilla llega a x 0,257.
+      - Tercera corrección (dueño: "la decoración de las pantorrillas está
+        mal"): los bajos eran las tiras planas de kiln y colgaban en el aire
+        alrededor de la pantorrilla, con las azules separadas hacia fuera.
+        Rehechos en Blender: 15 lenguas blancas con grosor en todo el
+        contorno, continuando la manga y cerrándose hasta apoyarse en la
+        pantorrilla, y 4 lenguas del vestido (`dressD`) asomando por debajo
+        en el lado de fuera. Revisado con zoom en seis ángulos y en los tres
+        looms.
       - Lección: los planos de cuerpo entero esconden estos fallos. Los
         puntos de apoyo (pies, manos, bajos) se miran con zoom y se mide su
         caja contra lo que tocan.

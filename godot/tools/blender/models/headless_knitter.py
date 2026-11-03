@@ -5,7 +5,8 @@ puffed sleeves, heavy arms tapering to the wrists and hands hanging over the
 armrests, the white nightgown over thick thighs, the calves down into the
 slippers. Kiln's layout (kit.kx.js: SEAT 0.48, the body leaning back 8°, the
 whole turned -90° about y). Kept from kiln as they are: the rocking chair,
-the neck stump, the slippers, the knitting, the yarn and the torn hems.
+the neck stump, the slippers, the knitting and the yarn; the torn hems are
+rebuilt here (kiln's flat flaps hung in the air round the calves).
 Materials and their linen loom as in kiln.
 """
 import math
@@ -19,7 +20,7 @@ from lib import Piece  # noqa: E402
 from mathutils import Matrix, Quaternion, Vector  # noqa: E402
 
 p = Piece(keep={"chair", "chairV", "pale", "meat", "bone", "slipper", "slipperD", "eye", "knitG", "knitO",
-                "steel", "yarnBall", "apronW", "dressD"})
+                "steel", "yarnBall"})
 SEAT = 0.48
 LEAN = math.radians(8)
 
@@ -120,10 +121,56 @@ soft("gown", "softApronW", gown, grow=1.15)
 for k in (-1, 1):
     p.lathe([(0.15, 0), (0.153, 0.1), (0.152, 0.2), (0.135, 0.26), (0.0, 0.27)], "softApronW", sides=14,
             c=W(0.455, S - 0.17, k * 0.232))
+# the torn hem round each knee (kiln's flat flaps hung in the air round the
+# calf): thick ragged tongues continuing the sleeve, each following the leg
+# down and in until it lies on the calf; under them at the outer side a few
+# longer tongues of the blue dress
+import bmesh  # noqa: E402
+
+
+def tongue(bm, axis, a, w, top, r_top, r_bot, length, thick, mi, tip):
+    """One ragged tongue on the cone round axis (a vertical line through
+    axis.x, axis.y): centred at angle a, w wide, from height top down by
+    length, its radius going r_top to r_bot; tip: how far the point sits off
+    centre (fraction of w)."""
+    outline = [(-w / 2, 0), (w / 2, 0), (w * 0.42, length * 0.55), (w * tip, length), (-w * 0.45, length * 0.6)]
+    def at(u, v, inset):
+        t = v / length
+        rr = r_top + (r_bot - r_top) * t - inset
+        ang = a + u / r_top
+        return Vector((axis.x + math.cos(ang) * rr, axis.y + math.sin(ang) * rr, top - v))
+    front = [bm.verts.new(at(u, v, 0)) for u, v in outline]
+    back = [bm.verts.new(at(u, v, thick)) for u, v in outline]
+    fs = [bm.faces.new(front), bm.faces.new(list(reversed(back)))]
+    for i in range(len(outline)):
+        j = (i + 1) % len(outline)
+        fs.append(bm.faces.new((front[j], front[i], back[i], back[j])))
+    for f in fs:
+        f.material_index = mi
+
+
+rng = p.rng
+for k in (-1, 1):
+    axis = W(0.455, 0, k * 0.232)
+    out_a = math.atan2(0, 1) if axis.x > 0 else math.pi   # the outer side (away from the other leg)
+    bm = bmesh.new()
+    top = S - 0.165
+    n = 15
+    for i in range(n):  # white, all round
+        a = i / n * math.tau + rng.uniform(-0.05, 0.05)
+        tongue(bm, axis, a, 2 * math.pi * 0.152 / n * 1.25, top, 0.153, 0.128, rng.uniform(0.05, 0.11), 0.01, 0,
+               rng.uniform(-0.25, 0.25))
+    for i in range(4):  # the blue dress under it at the outer side, a little longer
+        a = out_a + (i - 1.5) * 0.42 + rng.uniform(-0.08, 0.08)
+        tongue(bm, axis, a, 0.075, top + 0.01, 0.146, 0.122, rng.uniform(0.1, 0.14), 0.008, 1, rng.uniform(-0.3, 0.3))
+    me = bpy.data.meshes.new("hem")
+    bm.to_mesh(me)
+    bm.free()
+    p._link("hem", me, ["apronW", "dressD"])
+
 # the slippers (kept from kiln) turned out a little at the toes, as the
 # retail draws her feet, and moved forward and in: in kiln they ran through
 # the chair's rockers (x 0.26..0.32, from y -0.49 back)
-import bmesh  # noqa: E402
 kept = p.parts[0]
 bm = bmesh.new()
 bm.from_mesh(kept.data)
