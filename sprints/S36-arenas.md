@@ -2249,6 +2249,15 @@ manchas de lava de arena8). Lo que sale:
     Antes y después a escala de juego: `final-arenas-*.png`. La nieve y el
     borde de la 6 ganan forma; la 2 y la 5 apenas cambian. 525 pruebas
     unitarias sin fallos.
+- **Modelar en Blender (dueño, 2026-11-03: "pensaba que ibas a editar
+  directamente el 3D y modelarlo").** Muestra: el árbol verde de la arena 5
+  (2548) hecho desde cero con `bpy` en
+  `godot/tools/blender/models/leaf_tree.py`. Tronco de curvas con grosor,
+  giro y raíces; copa con un núcleo oscuro y hojas de arce repartidas por
+  su superficie. Usa los materiales y la altura de la pieza de kiln, así
+  que encaja en el kit. 12.400 triángulos (kiln: 7.670). Hoja retail /
+  kiln / Blender: `arbol-arena5-blender.png`. **Todavía no sustituye a la
+  pieza del juego: espera al dueño.**
 - **Reducir triángulos: Blender no ayuda.** Disolver caras planas quita un
   27 % al bloque de hielo, un 9 % al de hierba y nada al árbol de otoño: el
   jitter de kiln deja pocas caras en el mismo plano. Para bajar más, el
