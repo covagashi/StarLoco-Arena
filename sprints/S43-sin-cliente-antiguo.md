@@ -56,10 +56,10 @@ al retail.
 
 ### 2. La rotación, solo con las 6
 
-- `arena_registry.go` sortea entre las 6 arenas del prototipo
-  (`release_worlds()` del cliente), no entre las 46.
-- Hay que comprobar cuántas de las 6 tienen dos pedestales por lado (el
-  2v2 sortea solo entre esas). Si son muy pocas, se decide con el dueño.
+- ~~`arena_registry.go` sortea entre las 6 arenas del prototipo~~ hecho
+  en S36 (2026-11-03).
+- ~~Pedestales por lado para el 2v2~~: no aplica, el 2vs2 está escondido
+  desde S20 (dueño). Si vuelve, solo la 3, la 4 y la 5 sientan dos por lado.
 - Las 7–12 entran cuando tengan `layout`. Las otras 35 siguen en el archivo de S42, listas para añadirlas una a una
   cuando tengan arte y `layout`.
 

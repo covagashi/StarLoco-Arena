@@ -2470,10 +2470,9 @@ manchas de lava de arena8). Lo que sale:
     el 31-oct); arenas 2–4, 8 contra 8; arena 5, 8 contra 8 (el retail traía
     1 contra 14) y sin la casilla perdida bajo el mapa; arena 6, 6 contra 6
     con 2 pedestales.
-  - **2 contra 2: solo 3 de las 6 sientan dos coaches por lado** (3, 4 y 5:
-    mundos 12, 15 y 21). La 1 y la 2 tienen 6 pedestales, pero no reparten
-    3 y 3 por cercanía a las salidas; la 6 tiene 2. El 2v2 sortea entre
-    esas 3. A decidir con el dueño (S43 ya lo preveía).
+  - El 2vs2 no sale en el prototipo (escondido desde S20, `DUO` apagado en
+    `features.gd`), así que los pedestales por lado no importan ahora. Si
+    algún día vuelve: solo la 3, la 4 y la 5 sientan dos coaches por lado.
   - Pruebas: Go `TestOwnArenas`, `TestOwnArenaReplacesRetail`,
     `TestDecodeArenaFileRejectsBadData`, `TestNewFightsOnlyOnReleaseArenas`;
     toda la batería del servidor (e2e incluidas) pasa. Godot: 546
