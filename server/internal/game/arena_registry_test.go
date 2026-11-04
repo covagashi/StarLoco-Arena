@@ -1,23 +1,18 @@
 package game
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
 
-// loadArenaRegistry builds a registry from the real map data on a fresh Deps,
-// which also keeps it from leaking into any other test.
+// loadArenaRegistry builds a registry from the embedded arenas on a fresh
+// Deps, which also keeps it from leaking into any other test.
 func loadArenaRegistry(t *testing.T) *Deps {
 	t.Helper()
-	// a local data/ copy if there is one, else the committed data-dist
-	maps, err := gamedata.LoadFightMaps(filepath.Join("..", "..", "data"))
+	maps, err := gamedata.LoadFightMaps()
 	if err != nil {
-		maps, err = gamedata.LoadFightMaps(filepath.Join("..", "..", "data-dist"))
-	}
-	if err != nil {
-		t.Skipf("map data not available: %v", err)
+		t.Fatal(err)
 	}
 	d := &Deps{FightMaps: maps}
 	d.initArenas()
@@ -35,8 +30,8 @@ func arenaIDsOf(d *Deps) []uint16 {
 // with start cells on real floor at the altitude the client expects.
 func TestArenaRegistryLoadsEveryMap(t *testing.T) {
 	d := loadArenaRegistry(t)
-	if n := d.loadedArenaCount(); n != 47 {
-		t.Errorf("registry holds %d arenas, want 47", n)
+	if n := d.loadedArenaCount(); n != 6 {
+		t.Errorf("registry holds %d arenas, want the prototype's 6", n)
 	}
 	ids := arenaIDsOf(d)
 
@@ -197,8 +192,8 @@ func TestSuddenDeathWorksOnEveryArena(t *testing.T) {
 }
 
 // TestNewFightsOnlyOnReleaseArenas: the rotation draws from the prototype's
-// six arenas only (S36), for 1v1 and for 2v2, while every other arena still
-// resolves by id.
+// six arenas only (S36), for 1v1 and for 2v2, and an id that is not one of
+// them (an old ghost's retired arena) plays on the first of them.
 func TestNewFightsOnlyOnReleaseArenas(t *testing.T) {
 	d := loadArenaRegistry(t)
 	release := map[uint16]bool{5: true, 10: true, 12: true, 15: true, 21: true, 36: true}
@@ -216,8 +211,11 @@ func TestNewFightsOnlyOnReleaseArenas(t *testing.T) {
 	if len(seen) != len(release) {
 		t.Errorf("400 picks reached %d of the %d release arenas", len(seen), len(release))
 	}
-	if !d.hasArena(38) {
-		t.Error("world 38 (arena 7, not released) no longer resolves by id")
+	if d.hasArena(38) {
+		t.Error("world 38 (arena 7, not released) is loaded")
+	}
+	if got := d.arenaByID(38).worldID; got != 5 {
+		t.Errorf("unknown world 38 plays on world %d, want 5 (arena 1)", got)
 	}
 	capable := []uint16{}
 	for id := range release {

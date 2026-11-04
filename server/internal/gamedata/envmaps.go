@@ -117,7 +117,7 @@ func (e *EnvElement) DescriptorFields() []string {
 }
 
 // LoadEnvWorld decodes every interactive element of one world. dir is the
-// directory CONTAINING maps/ (the same root LoadFightMaps takes).
+// directory CONTAINING maps/ (the same root LoadWorldTopology takes).
 //
 // Elements come back sorted by instance id so the result is stable run to run,
 // which matters because the first Zaap of a world is used as its default spawn.

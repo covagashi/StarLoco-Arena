@@ -1,7 +1,6 @@
 package game
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
@@ -21,16 +20,11 @@ import (
 
 func loadRealFightMaps(t *testing.T) *gamedata.FightMaps {
 	t.Helper()
-	for _, root := range []string{
-		filepath.Join("..", "..", "data"),
-		filepath.Join("..", "..", "data-dist"),
-	} {
-		if m, err := gamedata.LoadFightMaps(root); err == nil && m.Len() > 0 {
-			return m
-		}
+	m, err := gamedata.LoadFightMaps()
+	if err != nil {
+		t.Fatal(err)
 	}
-	t.Skip("no fight-map data")
-	return nil
+	return m
 }
 
 func TestArenaDropsEmptyPedestalSlots(t *testing.T) {
@@ -92,13 +86,11 @@ func TestSomeArenasSeatTwoCoachesPerSide(t *testing.T) {
 	if capable == 0 {
 		t.Fatalf("no arena of %d can seat 2 coaches a side - 2v2 is unhostable", total)
 	}
-	// The shipped data has 28 arenas with all six slots filled; 24 split 3/3.
-	// Assert a substantial floor rather than an exact count, so re-tuned data
-	// does not fail the build, but a collapse (e.g. the sentinel filter eating
-	// real cells) does.
-	if capable < 20 {
-		t.Errorf("only %d/%d arenas can seat 2 coaches a side, expected at least 20 "+
-			"(28 populate all six pedestals)", capable, total)
+	// Of the prototype's six, arenas 3, 4 and 5 (worlds 12, 15, 21) seat two
+	// a side. 2vs2 is hidden (S20), so this only guards against a collapse
+	// (e.g. the sentinel filter eating real cells).
+	if capable < 3 {
+		t.Errorf("only %d/%d arenas can seat 2 coaches a side, expected 3", capable, total)
 	}
 	t.Logf("%d/%d arenas can host a 2v2", capable, total)
 }

@@ -275,19 +275,8 @@ func gameDataStatus(cfg config.Config, deps *game.Deps, loc gamedata.Location) {
 	}
 
 	fmt.Println()
-	switch {
-	case !haveCards && !haveArenas:
-		fmt.Println("  No game data found, so fights are unavailable.")
-	case haveCards && !haveArenas:
-		// Almost always means the operator pointed at contents/bdata, which
-		// holds the records but not the arenas. Say so, rather than making
-		// them guess which half is missing.
-		fmt.Println("  Found the cards and spells, but no arenas, so fights are unavailable.")
-		fmt.Println("  The arenas sit next to the records, not inside them - point one")
-		fmt.Println("  folder higher up.")
-	default:
-		fmt.Println("  Found the arenas, but no cards or spells, so fights are unavailable.")
-	}
+	// The arenas are embedded, so the cards and spells are what is missing.
+	fmt.Println("  No cards or spells found, so fights are unavailable.")
 
 	fmt.Println()
 	fmt.Println("  The game data belongs to Ankama and cannot be shipped with this")

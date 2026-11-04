@@ -26,8 +26,8 @@ crit/fumble (5/1 vs 0/0), and the spell cooldown field — which left **97 of 20
 |---|---|---|
 | `bdata/indexes.bdat` | `[i32 type][utf name][utf value][i64 pos]` per record | `gamedata.Open` |
 | `bdata/data.bdat` | one zlib stream per record: `[i32 id][i16 ver][i32 len][payload]` | `gamedata.Store.ReadRecord` |
-| `maps/fight/*.jar` | `.fmd` start points + special cells (47 arenas) | `gamedata.LoadFightMaps` |
-| `maps/tplg/*.jar` | per-map topology tiles | `gamedata.LoadFightMaps` |
+| `maps/fight/*.jar` | `.fmd` start points + special cells (47 arenas) | **no longer read** (S43): the server plays the prototype's six own arenas, `gamedata/arenas/<world>.json`, embedded (`gamedata.LoadFightMaps`) |
+| `maps/tplg/*.jar` | per-map topology tiles | only the GM `/TP` (`gamedata.LoadWorldTopology`); arenas no longer read it (S43) |
 | `maps/env/*.jar` | interactive elements | ✅ **read** (`gamedata/envmaps.go`: `ru_2`/`aEG` + the `do_1` part table). Committed to `data-dist` (all 114). `cmd/genelements` turns them into `game/elements_data.go`; reproduced the old hand table 139/139 and found a wrong direction byte (B-102) |
 | `i18n/texts_*.properties` | all display strings, keyed `content.<table>.<id>` | **not read** — the server sends ids and the client resolves them (correct: strings are client-side) |
 
@@ -498,3 +498,4 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 | 2026-10-06 | **Godot-facing server pass**: 4521 facing accepted during placement for own living fighters, no turn check (B-170); new Godot-only opcode pair 60000/60001 answers a key/value map carrying `web_base_url` (from `web.public_url`, else the bound portal listener) so the client's bug reporter learns where to POST; `web.bug_report_webhook` forwards accepted reports as a Discord-compatible `{content, embeds[]}` POST — async, logged-only on failure, the URL never leaves the server. |
 | 2026-10-06 | Godot UI review (B-172): login/creation keyboard focus, bounded olive/gold bug report, and es/en/fr chat/debrief text. No data record or wire coverage changed; windowed 1280×720 and 800×600 review fixture covers all twenty native panel routes. |
 | 2026-10-17 | S05: `tools/asset-import/card_names.py` also writes `godot/assets/gamedata/cardsets.json` — the card set names (`content.25`, en/es/fr, 138 sets), used by the lobby City panel and the inventory — and now passes every `dumpcards` field through (it had been dropping `reqLevel`, which the client's fusion math reads; the committed-elsewhere `cards.json` is now reproduced exactly). |
+| 2026-11-04 | S43 step 1: fight arenas no longer come from `maps/fight` + `maps/tplg`. `gamedata.LoadFightMaps()` takes no directory and returns the six embedded own arenas (`arenas/<world>.json`, exported from the owner's layouts); the `.fmd`/topology arena decoder and `cmd/dumparenas` are gone. An unknown arena id (an old ghost's) plays on arena 1 (world 5). The topology decoder stays for the GM `/TP`. |

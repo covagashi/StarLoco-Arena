@@ -58,7 +58,7 @@ The card, spell and arena data fights need is already in the `data` folder next
 to `arena-server` - nothing to do here. The startup message confirms it:
 
 ```
-  Game data     907 cards, 203 spells, 47 arenas
+  Game data     907 cards, 203 spells, 6 arenas
                 from /path/to/arena-server/data
 ```
 

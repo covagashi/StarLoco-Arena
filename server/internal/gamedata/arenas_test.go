@@ -37,11 +37,7 @@ func TestOwnArenas(t *testing.T) {
 // retail test data: 8 start cells a side instead of 1 against 14, three
 // pedestals a side, and the stray cell under the map (17,17) is gone.
 func TestOwnArenaReplacesRetail(t *testing.T) {
-	retail := loadRetailMaps(t).Get(21)
 	own := loadMaps(t).Get(21)
-	if len(retail.Team0) == len(own.Team0) && len(retail.Team1) == len(own.Team1) {
-		t.Fatalf("world 21 still has the retail start cells %d/%d", len(own.Team0), len(own.Team1))
-	}
 	if len(own.Team0) != 8 || len(own.Team1) != 8 {
 		t.Errorf("start cells %d/%d, want 8/8", len(own.Team0), len(own.Team1))
 	}

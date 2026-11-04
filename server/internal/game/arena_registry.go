@@ -6,14 +6,13 @@ import (
 	"sync"
 )
 
-// The server supports every arena the client ships: 46 playable fight maps decoded
-// from data/maps (see gamedata.LoadFightMaps). Each has its own topology, scenery,
-// start cells and special cells, so a Fight carries the arena it is being played on
-// rather than the whole package sharing one.
+// The server plays the prototype's six arenas, embedded in the binary (see
+// gamedata.LoadFightMaps). Each has its own shape, start cells and special
+// cells, so a Fight carries the arena it is being played on rather than the
+// whole package sharing one.
 //
-// When the map files are absent (a bare checkout, or a unit test) the registry is
-// empty and everything falls back to the hand-decoded world 5, which is why
-// practiceArena still exists.
+// A bare Deps (a unit test) has an empty registry, and everything falls back
+// to the hand-decoded world 5, which is why practiceArena still exists.
 
 // arenaRegistry is the arenas one server plays on. It lives on Deps rather than
 // in package globals: with globals, the first server in a process to load the
@@ -61,7 +60,9 @@ func (d *Deps) initArenas() {
 	}
 }
 
-// arenaByID returns the arena for a world id, or the fallback when unknown.
+// arenaByID returns the arena for a world id. An unknown id (an old ghost's
+// arena that is no longer played) gets the first release arena, or the
+// fallback when none is loaded.
 func (d *Deps) arenaByID(id uint16) *arena {
 	if d == nil {
 		return &practiceArena
@@ -70,6 +71,9 @@ func (d *Deps) arenaByID(id uint16) *arena {
 	defer d.arenas.mu.RUnlock()
 	if a := d.arenas.cache[id]; a != nil {
 		return a
+	}
+	if len(d.arenas.release) > 0 {
+		return d.arenas.cache[d.arenas.release[0]]
 	}
 	return &practiceArena
 }
@@ -81,10 +85,8 @@ func (d *Deps) pickArena() *arena { return d.pickArenaSeating(1) }
 
 // pickArenaSeating chooses an arena that can seat at least n coaches PER SIDE.
 //
-// It matters because the .fmd's six pedestal slots are not populated everywhere:
-// 15 of the 47 shipped arenas define none at all and a few define only some, so
-// a 2v2 dropped on one of those would have nowhere to stand its second coach.
-// 25 arenas can seat two a side. If none qualifies the choice is widened rather
+// Not every arena seats two a side: of the prototype's six, only arenas 3, 4
+// and 5 (worlds 12, 15, 21) do. If none qualifies the choice is widened rather
 // than failed - a fight on a pedestal-less map still plays correctly, the
 // coaches simply have no avatar (buildActorAppearForFight skips them).
 func (d *Deps) pickArenaSeating(n int) *arena {

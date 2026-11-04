@@ -31,19 +31,13 @@ type Bundle struct {
 func LoadBundle(loc Location, log *slog.Logger) *Bundle {
 	b := &Bundle{Loc: loc}
 
-	// Fight arenas come from the client's own map files rather than the bdat
-	// store, so they load independently: a server without them still runs,
-	// falling back to the built-in world 5.
-	if loc.MapsRoot != "" {
-		fm, err := LoadFightMaps(loc.MapsRoot)
-		if err != nil {
-			log.Debug("fight maps not loaded; falling back to the built-in arena",
-				"dir", loc.MapsRoot, "err", err)
-		} else {
-			b.FightMaps = fm
-			log.Debug("fight maps loaded", "arenas", fm.Len(),
-				"skipped", fm.Skipped(), "unreachableSpecials", fm.UnreachableSpecials())
-		}
+	// The fight arenas are the prototype's own, embedded in the binary, so
+	// they load whatever loc points at.
+	if fm, err := LoadFightMaps(); err != nil {
+		log.Warn("fight arenas not loaded; falling back to the built-in arena", "err", err)
+	} else {
+		b.FightMaps = fm
+		log.Debug("fight arenas loaded", "arenas", fm.Len())
 	}
 
 	st, err := Open(loc.BdatDir)

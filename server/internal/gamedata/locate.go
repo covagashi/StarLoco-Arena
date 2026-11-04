@@ -17,7 +17,7 @@ type Location struct {
 	// BdatDir contains data.bdat and indexes.bdat.
 	BdatDir string
 	// MapsRoot is the directory CONTAINING maps/ (not maps/ itself), because
-	// LoadFightMaps joins "maps" itself.
+	// LoadWorldTopology and LoadEnvWorld join "maps" themselves.
 	MapsRoot string
 	// Root is the directory that matched, for reporting to the operator.
 	Root string

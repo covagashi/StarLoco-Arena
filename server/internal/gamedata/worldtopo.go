@@ -2,9 +2,32 @@ package gamedata
 
 import (
 	"archive/zip"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
+)
+
+const (
+	chunkSide = 18
+	// The two topology tile kinds that carry per-cell floor data. Type 2 (ajg_2)
+	// stores one palette-indexed layer per cell; type 5 (ajj_2) stores a sorted
+	// list of packed entries, several layers deep. The remaining kinds (0/1/3/6)
+	// are placeholders or render-only and contribute no floor.
+	// Tile chunk kinds — client `afg.az(type & 0x0F)`.
+	//
+	// 0 and 1 were long unhandled here: type 0 is exactly 8 bytes and was dropped
+	// by a "no per-cell data" size guard, and type 1 fell through to default. Both
+	// assumptions were wrong — 0 carries a UNIFORM altitude+ground for all 324
+	// cells and 1 a 4-bit palette grid. Together they are the majority of the
+	// overworld (roughly 55-90% of a world's chunks), so overworld altitude
+	// lookups read void without them.
+	tileTypeUniform = 0 // ajo_2
+	tileTypeNibble  = 1 // ajq_2
+	tileTypeFlat    = 2 // ajg_2
+	tileTypePacked  = 3 // aji_2
+	tileTypeLayered = 5 // ajj_2
 )
 
 // Topology decoding, shared by arenas and the overworld.
@@ -324,4 +347,71 @@ func LoadWorldTopology(dir string, worldID int16) (*WorldTopology, error) {
 		return nil, fmt.Errorf("world %d: no topology chunks", worldID)
 	}
 	return t, nil
+}
+
+// --- helpers ------------------------------------------------------------------
+
+func readZipFile(f *zip.File) ([]byte, error) {
+	rc, err := f.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	return io.ReadAll(rc)
+}
+
+func readZipEntrySuffix(jarPath, suffix string) ([]byte, error) {
+	zr, err := zip.OpenReader(jarPath)
+	if err != nil {
+		return nil, err
+	}
+	defer zr.Close()
+	for _, f := range zr.File {
+		if strings.HasSuffix(f.Name, suffix) && !f.FileInfo().IsDir() {
+			return readZipFile(f)
+		}
+	}
+	return nil, nil
+}
+
+// leReader is a little-endian cursor that latches an error instead of panicking.
+type leReader struct {
+	b   []byte
+	i   int
+	err bool
+}
+
+func (r *leReader) need(n int) bool {
+	if r.i+n > len(r.b) {
+		r.err = true
+		return false
+	}
+	return true
+}
+
+func (r *leReader) u8() uint8 {
+	if !r.need(1) {
+		return 0
+	}
+	v := r.b[r.i]
+	r.i++
+	return v
+}
+
+func (r *leReader) u16() uint16 {
+	if !r.need(2) {
+		return 0
+	}
+	v := binary.LittleEndian.Uint16(r.b[r.i:])
+	r.i += 2
+	return v
+}
+
+func (r *leReader) u32() uint32 {
+	if !r.need(4) {
+		return 0
+	}
+	v := binary.LittleEndian.Uint32(r.b[r.i:])
+	r.i += 4
+	return v
 }

@@ -50,7 +50,7 @@ type Deps struct {
 	// absent. Not to be confused with Challenges below, which is the live
 	// coach-vs-coach direct-challenge manager.
 	ChallengeDefs *gamedata.Challenges
-	// FightMaps holds every arena decoded from data/maps; nil falls back to the
+	// FightMaps holds the prototype's arenas (embedded); nil falls back to the
 	// hand-decoded world 5 (see arena_registry.go).
 	FightMaps *gamedata.FightMaps
 	// MapsRoot is the maps directory (contents/maps). Only the GM teleport uses
