@@ -216,3 +216,28 @@ y pelo). Cada parte espera el visto bueno del dueño.
 **Para el dueño:** `~/codigo/capturas/s35/s35-pieza-cabeza-vs-retail.png`
 (retail ×4 y la cabeza en 6 direcciones a la misma escala) y
 `s35-pieza-cabeza-4vistas.png`.
+
+**Cabeza, segunda vuelta (2026-11-04):**
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "busca por internet alguna skill… está muy mal dibujado" → "1" | instaladas las 28 skills de EL4CTEO/blender-skills (MIT, v1.2.0; código revisado: sin red, sin borrados) en `~/.claude/skills` | — |
+| "está fatal. ¿por qué haces la cara en forma de V?" | error mío: barbilla en punta de anime que el retail no tiene; ahora cara redonda y llena, mandíbula corta, barbilla suave | `parts/head.py` |
+
+- Aspecto **dibujado** (skill `blender-stylized-npr`): `src/anims/toon.gd`
+  pone a cada material del luchador `toon.gdshader` (dos tonos, sombra
+  fría, sombras proyectadas con corte duro) y un pase de **contorno**
+  marrón oscuro (`toon_outline.gdshader`, casco invertido medido en
+  píxeles de pantalla: igual de fino a zoom 1 que de cerca). Los rasgos de
+  la cara llevan los dos tonos pero no contorno.
+- Normales de la cara copiadas de un elipsoide (Data Transfer): sombra
+  limpia, sin manchas en nariz y mejillas.
+- Fallos encontrados: el pelo salía negro (normales de los mechones hacia
+  dentro, el contorno los tapaba): ahora se recalculan; el contorno no se
+  veía (el renderizador de compatibilidad no da el tamaño del píxel en el
+  shader): lo pasa `toon.gd` desde la cámara (`set_pixel`).
+- Pendiente de decidir: las arenas siguen en su luz PBR; luchadores en
+  dibujo y arenas pintadas pueden convivir, pero hay que verlo junto.
+
+**Para el dueño:** `s35-pieza-cabeza-cerca.png` (de cerca, 4 lados) y
+`s35-pieza-cabeza-vs-retail.png` (a escala de juego junto al retail).

@@ -9,18 +9,21 @@ extends SceneTree
 ##       --model=art/characters/out/mannequin.glb --out=<dir> [--frames=6 | --video]
 ##       [--dirs=SE,SW,NE] [--size=200x240] [--zoom=1.6] [--anims=idle,walk]
 ##       [--focus=0.62]   (height the camera centres on: 1.1 = the face)
+##       [--lift=0]       (raise a lone part off the cell)
+##       [--pbr]          (the arenas' PBR look instead of the fighters' toon)
 ##
 ## Output: <dir>/<anim>/<dir>_<nn>.png and <dir>/index.json.
 
 const ArenaScene := preload("res://src/maps/arena_scene.gd")
 const Dress := preload("res://src/maps/kit_dress.gd")
+const Toon := preload("res://src/anims/toon.gd")
 const PX := 43.0 * 1.41421356
 ## Screen direction → model yaw (the model faces +Z; the camera sits at
 ## yaw 45, so yaw 45 faces the viewer).
 const YAW := {"S": 45.0, "SE": 90.0, "E": 135.0, "NE": 180.0, "N": 225.0, "NW": 270.0, "W": 315.0, "SW": 0.0}
 
 var opts := {"model": "art/characters/out/mannequin.glb", "out": "/tmp/anim_sheet", "frames": "6",
-	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62"}
+	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62", "lift": "0"}
 var cam := Camera3D.new()
 var model: Node3D
 var player: AnimationPlayer
@@ -33,6 +36,8 @@ func _initialize() -> void:
 			opts[kv[0]] = kv[1]
 		elif a == "--video":
 			opts.video = true
+		elif a == "--pbr":
+			opts.pbr = true
 	var sz: PackedStringArray = String(opts.size).split("x")
 	DisplayServer.window_set_size(Vector2i(int(sz[0]), int(sz[1])))
 	root.size = Vector2i(int(sz[0]), int(sz[1]))
@@ -50,8 +55,13 @@ func _run() -> void:
 		quit(1)
 		return
 	model = doc.generate_scene(st)
-	for mi in model.find_children("*", "MeshInstance3D", true, false):
-		Dress.dress(mi)
+	model.position.y = float(opts.lift)
+	if opts.has("pbr"):  # the arenas' look, for comparison
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			Dress.dress(mi)
+	else:
+		Toon.set_pixel(1.0 / (PX * float(opts.zoom)))
+		Toon.dress(model)
 	root.add_child(model)
 	var players := model.find_children("*", "AnimationPlayer", true, false)
 	# a part without animations (tools/blender/characters/parts) shows as "rest"

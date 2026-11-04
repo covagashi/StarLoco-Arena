@@ -9,7 +9,7 @@ subdivided (no fused spheres), the eyes laid on the face by ray casts, and
 the hair as tapering locks (bezier curves with a flat profile) over a cap.
 Units: metres = cells; the origin is the base of the neck, the face looks
 -Y. Reference: retail class 1 (fighter -110), ~31 % of the height: a small
-face with a pointed chin under a star of wide, flat locks.
+round face under a star of wide, flat locks.
 """
 import math
 import os
@@ -65,24 +65,24 @@ C = Vector((0, 0.005, 0.15))  # centre of the cranium above the neck
 
 
 def skull_shape(v):
-    """Unit sphere → head. Wide cranium, a flat face, cheeks, and a jaw that
-    narrows to a small pointed chin, the retail's shape."""
+    """Unit sphere → head. Round and full like the retail's: a wide
+    cranium, round cheeks, a short jaw and a soft round chin (owner: no V
+    face)."""
     x, y, z = v
     out = Vector((x * 0.118, y * 0.115, z * 0.12))
-    if z < 0:  # the jaw: narrower, longer and forward to the chin
+    if z < 0:  # the jaw: only a little narrower and shorter, the chin round
         k = -z
-        out.x *= 1 - 0.55 * k ** 1.4
-        out.z *= 1 + 0.35 * k
+        out.x *= 1 - 0.16 * k ** 2
+        out.z *= 1 - 0.08 * k
         if y < 0:
-            out.y *= 1 - 0.25 * k
-        out.y -= 0.012 * k ** 2
-    if y < -0.2:  # a flatter face
-        out.y *= 1 - 0.12 * (-y - 0.2)
+            out.y *= 1 - 0.06 * k
+    if y < -0.2:  # a slightly flatter face
+        out.y *= 1 - 0.08 * (-y - 0.2)
     if y > 0:  # the back of the cranium rounder
         out.y *= 1.08
-    # cheeks
-    cheek = math.exp(-((z + 0.25) / 0.25) ** 2) * math.exp(-((abs(x) - 0.6) / 0.3) ** 2) * max(0.0, -y)
-    out += Vector((0.006 * math.copysign(1, x), -0.004, 0)) * cheek
+    # full cheeks, low on the face
+    cheek = math.exp(-((z + 0.35) / 0.3) ** 2) * math.exp(-((abs(x) - 0.55) / 0.35) ** 2) * max(0.0, -y)
+    out += Vector((0.008 * math.copysign(1, x), -0.006, 0)) * cheek
     return C + out
 
 
@@ -118,7 +118,39 @@ def build_skull():
         join(ob, eo)
     ob.data.materials.append(mat("skin"))
     smooth(ob)
+    face_normals(ob)
     return ob
+
+
+def face_normals(ob):
+    """Anime faces: real normals give blotchy shadows round the nose and
+    cheeks, so the face takes its normals from a plain ellipsoid (custom
+    normals, Data Transfer; blender-stylized-npr). The weight fades out
+    towards the ears and the crown so the seam doesn't show."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=24, radius=1.0)
+    for v in bm.verts:
+        v.co = C + Vector((v.co.x * 0.118, v.co.y * 0.112, v.co.z * 0.12))
+    me = bpy.data.meshes.new("proxy")
+    bm.to_mesh(me)
+    bm.free()
+    proxy = link("proxy", me)
+    vg = ob.vertex_groups.new(name="face")
+    for v in ob.data.vertices:
+        front = min(1.0, max(0.0, (C.y - v.co.y - 0.02) / 0.06))
+        low = min(1.0, max(0.0, (C.z + 0.06 - v.co.z) / 0.04))
+        if front * low > 0:
+            vg.add([v.index], front * low, "REPLACE")
+    m = ob.modifiers.new("face", "DATA_TRANSFER")
+    m.object = proxy
+    m.use_loop_data = True
+    m.data_types_loops = {"CUSTOM_NORMAL"}
+    m.loop_mapping = "POLYINTERP_NEAREST"
+    m.vertex_group = "face"
+    apply_all(ob)
+    if "face" in ob.vertex_groups:
+        ob.vertex_groups.remove(ob.vertex_groups["face"])
+    bpy.data.objects.remove(proxy)
 
 
 def join(a, b):
@@ -191,7 +223,7 @@ def build_face(skull):
                                         (ex + 0.025 * X, ez + 0.015)], 0.002, 0.003, 0.002))
         obs.append(stroke("brow", tree, [(ex - 0.018 * X, ez + 0.04), (ex + 0.004 * X, ez + 0.046),
                                         (ex + 0.024 * X, ez + 0.043)], 0.004, 0.002, 0.002))
-    obs.append(stroke("mouth", tree, [(-0.016, C.z - 0.083), (0, C.z - 0.086), (0.018, C.z - 0.08)], 0.0022, 0.0018, 0.0005))
+    obs.append(stroke("mouth", tree, [(-0.014, C.z - 0.068), (0, C.z - 0.071), (0.016, C.z - 0.066)], 0.0022, 0.0018, 0.0005))
     return obs
 
 
@@ -241,7 +273,7 @@ def build_hair(skull):
     for v in bm.verts:
         v.co += v.normal * 0.012
     dead = [f for f in bm.faces if (f.calc_center_median().z < C.z + 0.03 and f.calc_center_median().y < C.y - 0.02)
-            or f.calc_center_median().z < C.z - 0.1]
+            or f.calc_center_median().z < C.z - 0.09]
     bmesh.ops.delete(bm, geom=dead, context="FACES")
     bm.to_mesh(me)
     bm.free()
@@ -288,6 +320,12 @@ def to_mesh(obs):
         o.select_set(True)
         bpy.context.view_layer.objects.active = o
         bpy.ops.object.convert(target="MESH")
+        bm = bmesh.new()  # the lens profile winds inwards: point the normals out
+        bm.from_mesh(o.data)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.to_mesh(o.data)
+        bm.free()
         smooth(o)
         out.append(o)
     return out
