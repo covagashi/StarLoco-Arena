@@ -85,7 +85,7 @@ Lo que la primera versión hizo mal, ya corregido:
   lavaba todo; ahora usa `ArenaScene.add_lights`.
 
 Pendiente:
-- Bajar a ≤4.000 triángulos por luchador (hoy 9.626) (12 en pantalla, demo web en
+- Bajar triángulos por luchador (ver "Más acabado": hoy 21.963) (12 en pantalla, demo web en
   móviles de 2 GB, S44); la cabeza aún muestra facetas del decimado.
 - Meter el actor 3D en `fight_view`: la arena se pinta **una vez** en un
   SubViewport y los actores son sprites 2D encima con un oclusor de
@@ -136,3 +136,51 @@ Medido: 20 huesos, 10 animaciones, 9.626 triángulos.
 (el retail ×4 a la izquierda, el nuestro a la misma escala),
 `s35-luchador1.mp4` (las 10 animaciones en 4 direcciones),
 `s35-luchador1-1.png` / `-2.png` y `s35-luchador1-4vistas.png`.
+
+### Más acabado (dueño, 2026-11-04: "quiero más acabado")
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "¿has usado blender para el muñeco?" → "quiero más acabado" | geometría de detalle y texturas loom | `fighter1.py`, `art/characters/fighter1.tx.js` |
+
+- **Texturas loom** (`loom build godot/art/characters/fighter1.tx.js`
+  antes de Blender): lana del chaleco, algodón del bombacho, lino de las
+  mangas, cuero de botas y cinturón, pelo, piel y oro. Albedos en gris
+  claro que `fighter1.py` multiplica por el color de cada material (como
+  kiln), así una clase o un cosmético recolorea los mismos mapas. UV por
+  proyección de caja en reposo, cada material a su tamaño de tesela.
+- **Cara**: blanco del ojo, iris, pupila y brillo, cejas en arco y una
+  boca torcida.
+- **Manos** con palma, cuatro dedos algo doblados y pulgar (malla aparte,
+  vóxel fino, rígida en `hand`); la manga acaba en un puño ancho abierto.
+- **Pelo** en mechones: cada pincho es un mechón principal y dos finos,
+  algo curvados, con la punta afilada.
+- **Bombacho** con pliegues en la malla (`wrinkle()`): anillos fruncidos
+  sobre el tobillo, pliegues junto a la rodilla.
+- **Pies**: tres tiras naranjas sobre el puño del pantalón (en `shin`) y
+  suela oscura (en `foot`). **Hebilla** dorada y **ribete** dorado en los
+  faldones. La parte alta de la manga lleva el color del chaleco: tapa el
+  hombro.
+
+Lo que la primera pasada hizo mal, corregido sobre primeros planos
+(`--zoom=12 --focus=…`, nuevo en `anim_sheet.gd`):
+- Texturas demasiado finas y contrastadas: a escala de juego el chaleco
+  parecía cota de malla y el tejido de las mangas, escamas. Ahora lana y
+  lino casi lisos, teselas de 0,3–0,55 m.
+- Pliegues pintados en la textura del bombacho: proyectados sobre la
+  pierna redonda salían como llamas. Los pliegues van solo en la malla.
+- Pelo rayado en horizontal (textura de hebras proyectada en caja): ahora
+  manchas suaves sin dirección.
+- Dedos como collares de cuentas (esferas sueltas): ahora fundidos.
+- Suelas que sobresalían como esquís; picos del pantalón bajo las tiras;
+  manchas blancas de manga en los hombros.
+
+Medido: 21.963 triángulos, GLB de 3,2 MB (siete texturas 512²). **El
+presupuesto ya no es ≤4.000**: con este acabado, el objetivo realista es
+~10.000 por luchador y texturas compartidas entre clases; queda para
+cuando el dueño apruebe el aspecto.
+
+**Para el dueño** (`~/codigo/capturas/s35/`): `s35-luchador1-detalle.png`
+(primeros planos: cara, manos, pies), `s35-luchador1-vs-retail.png`,
+`s35-luchador1-4vistas.png`, `s35-luchador1.mp4` y las hojas
+`s35-luchador1-1/2.png`.

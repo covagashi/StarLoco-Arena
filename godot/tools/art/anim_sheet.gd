@@ -8,6 +8,7 @@ extends SceneTree
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot -s tools/art/anim_sheet.gd -- \
 ##       --model=art/characters/out/mannequin.glb --out=<dir> [--frames=6 | --video]
 ##       [--dirs=SE,SW,NE] [--size=200x240] [--zoom=1.6] [--anims=idle,walk]
+##       [--focus=0.62]   (height the camera centres on: 1.1 = the face)
 ##
 ## Output: <dir>/<anim>/<dir>_<nn>.png and <dir>/index.json.
 
@@ -19,7 +20,7 @@ const PX := 43.0 * 1.41421356
 const YAW := {"S": 45.0, "SE": 90.0, "E": 135.0, "NE": 180.0, "N": 225.0, "NW": 270.0, "W": 315.0, "SW": 0.0}
 
 var opts := {"model": "art/characters/out/mannequin.glb", "out": "/tmp/anim_sheet", "frames": "6",
-	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": ""}
+	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62"}
 var cam := Camera3D.new()
 var model: Node3D
 var player: AnimationPlayer
@@ -101,8 +102,7 @@ func _stage() -> void:
 	cam.size = root.size.y / (PX * zoom)
 	cam.rotation_degrees = Vector3(-30, 45, 0)
 	var b := cam.transform.basis
-	# the feet a fifth of the way up from the bottom of the frame
-	cam.position = Vector3(0, 0.62, 0) + b.z * 20.0
+	cam.position = Vector3(0, float(opts.focus), 0) + b.z * 20.0
 	cam.near = 0.1
 	cam.far = 60.0
 	root.add_child(cam)

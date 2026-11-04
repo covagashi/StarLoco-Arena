@@ -27,8 +27,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = args[0] if args else os.path.normpath(os.path.join(HERE, "..", "..", "..", "art", "characters", "out", "fighter1.glb"))
 FPS = 30
-ANKLE, TOE = 0.075, 0.022
-HEAD_SCALE = 1.15  # head, face and hair about the neck  # foot bone head / tail above the sole
+ANKLE, TOE = 0.075, 0.022  # foot bone head / tail above the sole
+HEAD_SCALE = 1.15  # head, face and hair about the neck
 
 # ---------------------------------------------------------------- skeleton
 
@@ -76,8 +76,16 @@ def build_armature():
 PALETTE = {  # own colours; the retail sprite is only the shape reference
     "skin": "e6bf9a", "hair": "d9c48e", "shirt": "d6cfc0", "vest": "77736c",
     "pants": "3a7773", "belt": "6b4a33", "gold": "e2bd6e", "boots": "5a3a26",
-    "strap": "d9892b", "eye": "2a1d14", "mouth": "8e4a3a",
+    "strap": "d9892b", "eye": "2a1d14", "mouth": "8e4a3a", "sclera": "f2ede4",
+    "iris": "3d5f6b", "glint": "fff8ec", "sole": "2e2219", "brow": "a38c55",
 }
+# loom maps (art/characters/fighter1.tx.js) per material, and the metres
+# one tile covers
+LOOM = os.path.normpath(os.path.join(HERE, "..", "..", "..", "art", "characters", "out"))
+TEX = {"vest": ("vestTex", 0.4), "pants": ("pantsTex", 0.55), "shirt": ("shirtTex", 0.3),
+       "boots": ("leatherTex", 0.12), "belt": ("leatherTex", 0.12), "strap": ("leatherTex", 0.1),
+       "hair": ("hairTex", 0.3), "brow": ("hairTex", 0.06), "skin": ("skinTex", 0.15),
+       "gold": ("goldTex", 0.08)}
 MATS = {}
 
 
@@ -89,8 +97,52 @@ def mat(name):
         bsdf = m.node_tree.nodes["Principled BSDF"]
         bsdf.inputs["Base Color"].default_value = c
         bsdf.inputs["Roughness"].default_value = 0.8
+        if name in TEX:
+            loom_maps(m, bsdf, TEX[name][0])
         MATS[name] = m
     return MATS[name]
+
+
+def loom_maps(m, bsdf, stem):
+    """The loom albedo multiplied by the material's colour, and its normal
+    map (kiln's way, as tools/blender/models/lib.py does for the kits)."""
+    d = os.path.join(LOOM, stem)
+    alb = bpy.data.images.load(os.path.join(d, stem + "_albedo.png"), check_existing=True)
+    nor = bpy.data.images.load(os.path.join(d, stem + "_normal.png"), check_existing=True)
+    nor.colorspace_settings.name = "Non-Color"
+    nt = m.node_tree
+    ti = nt.nodes.new("ShaderNodeTexImage")
+    ti.image = alb
+    mul = nt.nodes.new("ShaderNodeMix")
+    mul.data_type = "RGBA"
+    mul.blend_type = "MULTIPLY"
+    mul.inputs["Factor"].default_value = 1
+    mul.inputs[7].default_value = bsdf.inputs["Base Color"].default_value
+    nt.links.new(ti.outputs["Color"], mul.inputs[6])
+    nt.links.new(mul.outputs[2], bsdf.inputs["Base Color"])
+    tn = nt.nodes.new("ShaderNodeTexImage")
+    tn.image = nor
+    nm = nt.nodes.new("ShaderNodeNormalMap")
+    nt.links.new(tn.outputs["Color"], nm.inputs["Color"])
+    nt.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
+
+
+def uv_box(ob):
+    """Box-project UVs in rest space, each face at its material's tile size,
+    so a texture keeps one scale over the whole figure."""
+    me = ob.data
+    while me.uv_layers:
+        me.uv_layers.remove(me.uv_layers[0])
+    uv = me.uv_layers.new(name="UVMap").data
+    for p in me.polygons:
+        m = me.materials[p.material_index] if me.materials else None
+        tile = TEX.get(m.name.split(".")[0], (None, 0.2))[1] if m else 0.2
+        n = p.normal
+        ax = max(range(3), key=lambda i: abs(n[i]))
+        a, b = [(1, 2), (0, 2), (0, 1)][ax]
+        for li in p.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            uv[li].uv = (co[a] / tile, co[b] / tile)
 
 
 # ---------------------------------------------------------------- shapes
@@ -187,7 +239,7 @@ def build_body():
     capsule(bm, (0, 0, 0.88), (0, 0, 1.03), 0.034, 0.03, 4, tag="neck", **T)
     for S in "LR":
         X = 1 if S == "L" else -1
-        capsule(bm, (0.04 * X, 0, 0.89), (0.10 * X, 0, 0.9), 0.045, 0.042, 3, tag="torso", **T)
+        capsule(bm, (0.04 * X, 0, 0.89), (0.105 * X, 0, 0.895), 0.047, 0.046, 3, tag="torso", **T)
         # baggy trousers: full at the knee and calf, gathered at the ankle
         capsule(bm, (0.07 * X, 0, 0.6), (0.1 * X, 0, 0.32), 0.07, 0.085, tag="leg", **T)
         capsule(bm, (0.1 * X, 0, 0.32), (0.104 * X, 0.005, 0.18), 0.088, 0.078, 4, tag="leg", **T)
@@ -197,11 +249,12 @@ def build_body():
     src_tags = [tags.get(f) for f in bm.faces]
     tree = BVHTree.FromBMesh(bm)
     ob = new_object("body", bm)
-    soften(ob, 0.009, 0.1)
+    soften(ob, 0.008, 0.16)
+    wrinkle(ob)
     # clean cuts where one material meets the next
     bm = bmesh.new()
     bm.from_mesh(ob.data)
-    cuts = [((0, 0, z), (0, 0, 1)) for z in (0.6, 0.645, 0.15)]
+    cuts = [((0, 0, z), (0, 0, 1)) for z in (0.6, 0.645)]
     for co, no in cuts:
         bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co, plane_no=no)
     bm.to_mesh(ob.data)
@@ -218,7 +271,7 @@ def build_body():
         if pt == "boot":
             m = "boots"
         elif pt == "cuff":
-            m = "strap" if z < 0.15 else "pants"
+            m = "pants"
         elif pt in ("leg", "hips"):
             m = "pants" if z < 0.6 else ("belt" if z < 0.645 else "vest")
         elif pt == "torso":
@@ -229,32 +282,79 @@ def build_body():
     return ob
 
 
+def wrinkle(ob):
+    """Folds in the trousers: rings bunched up over the gathered ankle,
+    softer diagonal folds behind the knee, nothing above the hips."""
+    for v in ob.data.vertices:
+        z = v.co.z
+        if z > 0.56 or z < 0.07:
+            continue
+        X = 1 if v.co.x > 0 else -1
+        r = Vector((v.co.x - 0.1 * X, v.co.y, 0))
+        if r.length < 1e-4:
+            continue
+        a = math.atan2(r.y, r.x)
+        cuff = max(0.0, 1 - (z - 0.1) / 0.16)            # strong over the ankle
+        knee = math.exp(-((z - 0.33) / 0.07) ** 2)       # around the knee
+        top = min(1.0, (0.56 - z) / 0.08)                # fades out at the belt
+        cuff *= min(1.0, max(0.0, (z - 0.09) / 0.05))       # but not the very rim
+        d = 0.0045 * cuff * math.sin(z * 260 + 1.5 * math.sin(a * 3)) \
+            + 0.004 * knee * math.sin(z * 110 + a * 2) + 0.0025 * math.sin(z * 70 + a * 5)
+        v.co += r.normalized() * d * top
+
+
 def build_arm(S):
     """One arm on its own: hung beside the baggy trousers, a fused skin
     would join sleeve and leg and drag one with the other."""
     X = 1 if S == "L" else -1
     bm = bmesh.new()
-    capsule(bm, (0.085 * X, 0, 0.9), *bone(f"upper_arm.{S}")[:1], 0.04, 0.038, 3)
+    capsule(bm, (0.1 * X, 0, 0.875), *bone(f"upper_arm.{S}")[:1], 0.03, 0.036, 3)
     capsule(bm, *bone(f"upper_arm.{S}"), 0.037, 0.031)
-    capsule(bm, *bone(f"forearm.{S}"), 0.031, 0.034)   # loose sleeve at the wrist
-    h, t = bone(f"hand.{S}")
-    blob(bm, h.lerp(t, 0.5), (0.025, 0.034, 0.045))
-    thumb = h.lerp(t, 0.3) + Vector((-0.01 * X, -0.03, 0))
-    capsule(bm, h.lerp(t, 0.15) + Vector((0, -0.015, 0)), thumb, 0.014, 0.012, 3)
-    ob = new_object(f"arm.{S}", bm)
-    soften(ob, 0.007, 0.15, 4)
     fh, ft = bone(f"forearm.{S}")
+    capsule(bm, fh, ft.lerp(fh, 0.12), 0.031, 0.034)   # the sleeve widens to the wrist
     axis = (ft - fh).normalized()
-    wrist = ft + axis * 0.012
+    blob(bm, ft - axis * 0.012, (0.04, 0.04, 0.04), sub=3)  # a loose cuff
+    ob = new_object(f"arm.{S}", bm)
+    soften(ob, 0.006, 0.18, 4)
+    # open the cuff: cut off its end so the hand comes out of a sleeve
     bm = bmesh.new()
     bm.from_mesh(ob.data)
-    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=wrist, plane_no=axis)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=ft + axis * 0.012,
+                           plane_no=axis, clear_outer=True)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(0, 0, 0.84),
+                           plane_no=(0, 0, 1))
     bm.to_mesh(ob.data)
     bm.free()
     ob.data.materials.append(mat("shirt"))
+    ob.data.materials.append(mat("vest"))
+    for p in ob.data.polygons:  # the vest covers the top of the shoulder
+        p.material_index = 1 if p.center.z > 0.84 else 0
+    return ob
+
+
+def build_hand(S):
+    """A hand with a palm, four fingers a little curled and a thumb, rigid
+    on the hand bone; its own fine voxels, so the fingers stay round."""
+    X = 1 if S == "L" else -1
+    h, t = bone(f"hand.{S}")
+    down = (t - h).normalized()
+    fwd = Vector((0, -1, 0))
+    side = down.cross(fwd).normalized() * X   # the palm faces the leg
+    bm = bmesh.new()
+    palm = h + down * 0.03
+    blob(bm, palm, (0.02, 0.026, 0.026), sub=2)
+    blob(bm, h + down * 0.005, (0.017, 0.021, 0.016), sub=2)  # wrist
+    for i, (off, ln) in enumerate(((-0.017, 0.042), (-0.006, 0.047), (0.006, 0.045), (0.016, 0.037))):
+        base = palm + down * 0.02 + fwd * off
+        mid = base + down * ln * 0.55 - side * 0.004
+        tip = mid + (down * 0.7 - side * 0.7).normalized() * ln * 0.45
+        capsule(bm, base, mid, 0.0075, 0.007, 8)
+        capsule(bm, mid, tip, 0.007, 0.0058, 8)
+    tb = palm + fwd * -0.022 - side * 0.006
+    capsule(bm, tb, tb + (fwd * -0.6 + down * 0.6 - side * 0.5).normalized() * 0.035, 0.009, 0.007, 8)
+    ob = new_object(f"hand.{S}", bm)
+    soften(ob, 0.0025, 0.12, 3)
     ob.data.materials.append(mat("skin"))
-    for p in ob.data.polygons:
-        p.material_index = 1 if (p.center - wrist).dot(axis) > 0 else 0
     return ob
 
 
@@ -295,6 +395,43 @@ def build_flaps():
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     ob = new_object("flaps", bm)
     ob.data.materials.append(mat("vest"))
+    ob.data.materials.append(mat("gold"))
+    for p in ob.data.polygons:  # a gold hem
+        p.material_index = 1 if p.center.z < 0.47 else 0
+    return ob
+
+
+def ring(bm, c, rx, ry, thick, n=16):
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        blob(bm, (c[0] + rx * math.cos(a), c[1] + ry * math.sin(a), c[2]), (thick, thick, thick * 0.8), sub=1)
+
+
+def build_feet(S):
+    """Straps wound over the gathered trouser cuff (on the shin) and a sole
+    under the boot (on the foot)."""
+    X = 1 if S == "L" else -1
+    bm = bmesh.new()
+    for z, r in ((0.095, 0.042), (0.125, 0.05), (0.155, 0.056)):
+        ring(bm, (0.105 * X, 0.008, z), r, r * 0.95, 0.012)
+    straps = new_object(f"straps.{S}", bm)
+    soften(straps, 0.004, 0.2, 2)
+    straps.data.materials.append(mat("strap"))
+    bm = bmesh.new()
+    for k in range(7):
+        f = k / 6
+        blob(bm, (0.105 * X, 0.03 - 0.13 * f, 0.009), (0.034 - 0.006 * abs(f - 0.4), 0.026, 0.009), sub=2)
+    sole = new_object(f"sole.{S}", bm)
+    soften(sole, 0.005, 0.25, 2)
+    sole.data.materials.append(mat("sole"))
+    return straps, sole
+
+
+def build_buckle():
+    bm = bmesh.new()
+    blob(bm, (0, -0.088, 0.623), (0.026, 0.008, 0.02), sub=3)
+    ob = new_object("buckle", bm)
+    ob.data.materials.append(mat("gold"))
     return ob
 
 
@@ -329,15 +466,29 @@ def build_head():
 def build_face():
     """Eyes and mouth sunk into the face: they tell where it looks."""
     bm = bmesh.new()
+    parts = {"sclera": [], "iris": [], "eye": [], "glint": [], "brow": [], "mouth": []}
     for X in (1, -1):
-        blob(bm, (0.04 * X, -0.09, 1.115), (0.019, 0.014, 0.028), sub=2)
-    eyes = new_object("eyes", bm)
-    eyes.data.materials.append(mat("eye"))
-    bm = bmesh.new()
-    blob(bm, (0, -0.093, 1.05), (0.02, 0.01, 0.006), sub=2)
-    mouth = new_object("mouth", bm)
-    mouth.data.materials.append(mat("mouth"))
-    return eyes, mouth
+        parts["sclera"].append(((0.04 * X, -0.087, 1.115), (0.021, 0.014, 0.027)))
+        parts["iris"].append(((0.037 * X, -0.097, 1.112), (0.013, 0.008, 0.019)))
+        parts["eye"].append(((0.037 * X, -0.1025, 1.111), (0.007, 0.004, 0.011)))
+        parts["glint"].append(((0.032 * X, -0.106, 1.121), (0.0035, 0.002, 0.0045)))
+        for k in range(4):  # brow: a short tapering arc, raised at the outer end
+            f = k / 3
+            parts["brow"].append(((X * (0.022 + 0.04 * f), -0.094 + 0.012 * f * f, 1.152 + 0.008 * f),
+                                  (0.009 - 0.002 * f, 0.006, 0.0055 - 0.0015 * f)))
+    for k in range(5):  # mouth: a small smirk
+        f = k / 4 - 0.5
+        parts["mouth"].append(((0.03 * f, -0.094 + 0.01 * f * f, 1.048 + 0.006 * f + 0.004 * f * f),
+                               (0.007, 0.004, 0.003)))
+    obs = []
+    for name, blobs in parts.items():
+        bm = bmesh.new()
+        for c, r in blobs:
+            blob(bm, c, r, sub=2)
+        ob = new_object(name, bm)
+        ob.data.materials.append(mat(name))
+        obs.append(ob)
+    return obs
 
 
 def build_hair():
@@ -360,13 +511,20 @@ def build_hair():
     for d, ln in spikes:
         base = Vector((0, 0.012, 1.14)) + Vector((d.x * 0.09, d.y * 0.088, d.z * 0.085))
         up = (d + Vector((0, 0.1, 0.12))).normalized()    # out all round, a little up and back
-        n = 5
-        for k in range(n + 1):
-            t = k / n
-            r = 0.042 * (1 - t) + 0.011  # tips stay thicker than the voxels
-            blob(bm, base + up * ln * t, (r, r, r), sub=2)
+        bend = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.3, 0.6))) * 0.25
+        # a clump: the main lock and two thinner ones beside it, each a
+        # little curved, so the mop reads as hair and not as horns
+        for j, (k_ln, k_r, off) in enumerate(((1.0, 1.0, 0), (0.7, 0.6, 1), (0.6, 0.55, -1))):
+            side = up.cross(Vector((0, 0, 1)) if abs(up.z) < 0.9 else Vector((1, 0, 0))).normalized()
+            b0 = base + side * 0.018 * off
+            n = 10
+            for k in range(n + 1):
+                t = k / n
+                r = (0.04 * (1 - t) ** 1.3 + 0.004) * k_r + 0.001
+                p = b0 + (up + bend * t) * ln * k_ln * t
+                blob(bm, p, (r, r, r), sub=2)
     ob = new_object("hair", bm)
-    soften(ob, 0.006, 0.07, 2)
+    soften(ob, 0.0035, 0.035, 2)
     ob.data.materials.append(mat("hair"))
     return ob
 
@@ -658,14 +816,19 @@ def main():
     bpy.context.scene.render.fps = FPS
     rig = build_armature()
     body = build_body()
-    eyes, mouth = build_face()
-    rigid = {build_head(): "head", eyes: "head", mouth: "head", build_hair(): "head",
-             build_collar(): "chest", build_flaps(): "hips"}
+    rigid = {o: "head" for o in build_face()}
+    rigid.update({build_head(): "head", build_hair(): "head", build_collar(): "chest",
+                  build_flaps(): "hips", build_buckle(): "hips"})
+    for S in "LR":
+        straps, sole = build_feet(S)
+        rigid.update({build_hand(S): f"hand.{S}", straps: f"shin.{S}", sole: f"foot.{S}"})
     for o, b in rigid.items():  # the retail head is a third of the height
         if b == "head":
             for v in o.data.vertices:
                 v.co = Vector((0, 0, 1.0)) + (v.co - Vector((0, 0, 1.0))) * HEAD_SCALE
     arms = [build_arm("L"), build_arm("R")]
+    for o in [body] + arms + list(rigid):
+        uv_box(o)
     skin_to(rig, body, arms, rigid)
     animate(rig)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
