@@ -184,3 +184,35 @@ cuando el dueño apruebe el aspecto.
 (primeros planos: cara, manos, pies), `s35-luchador1-vs-retail.png`,
 `s35-luchador1-4vistas.png`, `s35-luchador1.mp4` y las hojas
 `s35-luchador1-1/2.png`.
+
+### Por partes (dueño, 2026-11-04)
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "está saliendo muy mal, ¿qué te parece si dibujas el cuerpo por partes y luego lo unes?" → "modelar en Blender solo la cabeza, después torso, una pierna (espejo) y una mano; luego con loom la ropa" | se deja el cuerpo de esferas fundidas (`fighter1.py`, aspecto de plastilina); cada parte se modela aparte y se enseña sola | `tools/blender/characters/parts/` |
+
+Orden: cabeza → torso → pierna (con espejo) → mano (con espejo) → unir
+y vestir (la forma de la ropa es una capa modelada; loom pone tela, cuero
+y pelo). Cada parte espera el visto bueno del dueño.
+
+**Parte 1, cabeza** (`parts/head.py` → `art/characters/out/parts/head.glb`):
+- Cráneo con jaula de pocos polígonos (esfera 16×12 deformada: cráneo
+  ancho, cara plana, mejillas, mandíbula que se estrecha a una barbilla
+  en punta, nariz) y subdivisión 2; orejas aparte.
+- Ojos puestos sobre la cara con rayos (blanco, iris, pupila, brillo),
+  línea del párpado, cejas y boca como trazos con grosor.
+- Pelo: casquete sobre el cráneo y 23 mechones anchos y planos (curvas
+  bezier con perfil de lente, afiladas en la punta) en estrella hacia
+  todos lados, más un flequillo de 4 mechones sobre la frente.
+- 15.560 triángulos (se bajarán al unir).
+- Corregido antes de enseñar: mechones como agujas (eran 30 finos → 23
+  anchos), franja clara en las puntas que hacía bandas (fuera), cara y
+  ojos demasiado grandes frente al pelo (el retail apenas enseña la cara),
+  huecos del casquete junto a la oreja.
+
+`anim_sheet.gd` acepta ahora una parte sin animaciones (la saca como
+`rest`).
+
+**Para el dueño:** `~/codigo/capturas/s35/s35-pieza-cabeza-vs-retail.png`
+(retail ×4 y la cabeza en 6 direcciones a la misma escala) y
+`s35-pieza-cabeza-4vistas.png`.

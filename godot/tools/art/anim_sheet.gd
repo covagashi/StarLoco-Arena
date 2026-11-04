@@ -53,24 +53,27 @@ func _run() -> void:
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		Dress.dress(mi)
 	root.add_child(model)
-	player = model.find_children("*", "AnimationPlayer", true, false)[0]
-	var names: Array = Array(player.get_animation_list())
+	var players := model.find_children("*", "AnimationPlayer", true, false)
+	# a part without animations (tools/blender/characters/parts) shows as "rest"
+	player = players[0] if not players.is_empty() else null
+	var names: Array = Array(player.get_animation_list()) if player else ["rest"]
 	if opts.anims != "":
 		names = Array(String(opts.anims).split(","))
 	var index := {}
 	var fps := 30.0
 	for anim: String in names:
-		var a := player.get_animation(anim)
-		var n := ceili(a.length * fps) + 1 if opts.has("video") else int(opts.frames)
-		index[anim] = {"length": a.length, "frames": n}
+		var length := player.get_animation(anim).length if player else 0.0
+		var n := ceili(length * fps) + 1 if opts.has("video") and player else int(opts.frames) if player else 1
+		index[anim] = {"length": length, "frames": n}
 		DirAccess.make_dir_recursive_absolute("%s/%s" % [opts.out, anim])
 		for d: String in String(opts.dirs).split(","):
 			model.rotation_degrees.y = YAW[d]
 			for i in n:
-				var t := i / fps if opts.has("video") else a.length * i / maxf(1.0, n - 1)
-				player.play(anim)
-				player.seek(minf(t, a.length), true)
-				player.pause()
+				if player:
+					var t := i / fps if opts.has("video") else length * i / maxf(1.0, n - 1)
+					player.play(anim)
+					player.seek(minf(t, length), true)
+					player.pause()
 				for k in (3 if i == 0 else 1):
 					await process_frame
 				await RenderingServer.frame_post_draw
