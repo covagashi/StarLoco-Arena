@@ -97,11 +97,11 @@ Linux y Windows).
 | [S29](./S29-torneos-sin-conexion.md) | M6 | L | 🟢 cerrado | Torneos sin conexión: el servidor juega el cuadro IA contra IA con el último fantasma de cada uno y graba cada combate |
 | [S27](./S27-supermensajes.md) | M6 | M | ⛔ descartado (dueño, 2026-10-25) | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
 | [S32](./S32-fuera-el-retail.md) | M7 | M | 🟢 cerrado | Fuera la extracción del retail: `tools/` borrado, docs reescritos; los `dump*` se quedan hasta S40 (leen `data-dist`) |
-| [S33](./S33-plan-de-arte.md) | M7 | M | 🟡 esperando al dueño | Plan de arte: estilo, técnica (3D/cutout, VFX en tiempo real, animación procedural) y prototipo vertical |
+| [S33](./S33-plan-de-arte.md) | M7 | M | 🟢 cerrado (2026-11-04) | Plan de arte: estilo, técnica (3D/cutout, VFX en tiempo real, animación procedural) y prototipo vertical |
 | [S34](./S34-pipeline-de-assets.md) | M7 | M | ⚪ esbozo | Pipeline nuevo: de la fuente al juego en un comando, licencias, comprobaciones |
 | [S35](./S35-personajes.md) | M7 | L | ⚪ esbozo | Personajes: 24 luchadores, 9 invocaciones, 2 coaches; ~10 animaciones por esqueleto |
 | [S36](./S36-arenas.md) | M7 | L | 🟢 cerrado (2026-11-04) | Arenas: **6 para el prototipo** (1–6), montadas por el dueño con nuestros assets kiln + loom y el editor; el combate las dibuja en 3D y el servidor sortea solo entre ellas. Las 7–12, más adelante. Quitar `MapGfx` y los `.jar` va en [S43](./S43-sin-cliente-antiguo.md) |
-| [S42](./S42-archivo-de-arenas.md) | M7 | S | 🟡 esperando al dueño (backup al RAID) | Archivo de las 47 arenas en PNG y JSON, fuera del repo y con dos copias; las herramientas de inventario lo leen sin el cliente antiguo |
+| [S42](./S42-archivo-de-arenas.md) | M7 | S | 🟢 cerrado (2026-11-04, backup verificado en el RAID) | Archivo de las 47 arenas en PNG y JSON, fuera del repo y con dos copias; las herramientas de inventario lo leen sin el cliente antiguo |
 | [S37](./S37-vfx.md) | M7 | M | ⚪ esbozo | Librería de VFX por elemento y forma; cada hechizo, por datos |
 | [S38](./S38-cartas-e-iconos.md) | M7 | L | ⚪ esbozo | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
 | [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |

@@ -1,6 +1,6 @@
 # S42 — Archivo de las arenas: referencias en PNG y JSON, sin el cliente antiguo
 
-**Planificado:** 2026-10-28 · **Abierto:** 2026-10-29 · **Hito:** M7 — Arte propio · **Tamaño:** S · **Estado:** 🟡 esperando al dueño (falta copiar el backup al RAID de la homelab)
+**Planificado:** 2026-10-28 · **Abierto:** 2026-10-29 · **Hito:** M7 — Arte propio · **Tamaño:** S · **Estado:** 🟢 cerrado (2026-11-04: backup en el RAID de la homelab, verificado)
 
 ## Decisión del dueño (2026-10-28)
 
@@ -95,7 +95,8 @@ archivo-arenas/
 - La Ally no puede entrar por SSH en la homelab (solo al revés). Por eso la
   copia la trae la homelab con `rsync` desde `davian@ally`, o el dueño
   autoriza la clave de la Ally en la homelab.
-- No va a `oracle-1` ni a la Samba.
+- No va a `oracle-1` ni a la Samba de la Ally (`codigo`); sí al recurso
+  `raid-storage` de la Samba de la homelab, que es el RAID.
 
 ### 4. Prueba de que basta
 
@@ -152,14 +153,19 @@ archivo-arenas/
   `originales-2026-10-29.tar.zst` (11 MB, con los `.jar` y `mapgfx`) y
   `SHA256SUMS`. Se descomprimió en otra carpeta, y las hojas de la arena
   20 salieron iguales desde esa copia.
-- **Falta:** llevarlo al RAID de la homelab. La Ally no puede entrar por
-  SSH en la homelab (`Permission denied (publickey,password)`), así que la
-  copia la tiene que traer la homelab. En la homelab:
-
-  ```sh
-  rsync -av davian@ally:codigo/archivo-arenas-backup/ <RAID>/pippop/archivo-arenas/
-  cd <RAID>/pippop/archivo-arenas && sha256sum -c SHA256SUMS
-  ```
+- ~~Falta llevarlo al RAID de la homelab~~ hecho. La copia del 29-oct ya
+  estaba en el RAID desde el 30-oct. El 2026-11-04, a petición del dueño,
+  se comprobó por Samba: `//100.118.233.117/raid-storage`, carpeta
+  `backups/pippop/archivo-arenas/`. Se bajó entera y `sha256sum -c` cuadra.
+  Desde el 29-oct habían cambiado 658 archivos del archivo (los nombres
+  del dueño en `comun/names.json`, `kits.json`, fotos de kits, hojas de la
+  arena 11). Por eso se añadió `archivo-arenas-2026-11-04.tar.zst` (255 MB,
+  zstd -19): descomprimido es idéntico al archivo (`diff -rq`), se subió
+  junto al anterior y `SHA256SUMS` cubre los tres. Se volvió a bajar del
+  RAID y las tres sumas cuadran. Los originales no han cambiado.
+- Para la próxima copia: `tar | zstd` del archivo con la fecha, añadirlo a
+  `SHA256SUMS` y subirlo con `smbclient -N //100.118.233.117/raid-storage`
+  (la Samba entra como invitado; por SSH no se puede).
 
 ## Fuera de alcance
 

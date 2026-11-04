@@ -1,6 +1,6 @@
 # S33 — Plan de arte: estilo, técnica y prototipo vertical
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🟡 esperando al dueño (elegir técnica)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🟢 cerrado (dueño, 2026-11-04; la técnica quedó en kiln + loom + Blender en S34–S36)
 
 ## Objetivo
 
