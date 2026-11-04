@@ -306,19 +306,19 @@ python3 -I godot/tools/art/flow_refs.py ~/codigo/capturas/s35/flow
 ```
 
 Paquete de referencia (retail, **solo forma**; las zonas grises son las que
-el retail tiñe, no colores que copiar), en hojas del tamaño de la pantalla:
-- `clases/clase-01…12.png`: masculino y femenino en reposo, 5 vistas
-  (frente, 3/4 frente, perfil, 3/4 espalda, espalda; las otras 3 del
-  retail son espejos).
-- `vistas/clase-NN-m|f/`: cada vista sola (×6, fondo liso), para subir a
-  Flow como referencia.
-- `accesorios/`: los 75 equipos de luchador por ranura (23 armas, 15
-  mascotas, 15 capas, 16 sombreros, 6 dofus) y `armas-en-mano.png` (la
-  postura de cada familia de arma; el retail pinta el arma en otro sprite).
-- `ropa-coach/`: la ropa del coach por ranura (faldas, peinados, marcas,
-  brazaletes, botas, hombreras, capas, pantalones, torsos, cascos, armas).
-- `otros/`: los 2 coaches (sin ropa: es un muñeco de recortables) y las 9
-  invocaciones (solo miran a las diagonales).
+el retail tiñe, no colores que copiar): una hoja del tamaño de la pantalla
+por figura, en reposo y en todas las direcciones que tiene el retail.
+- `clase-01…12-m.png` / `-f.png`: los 24 luchadores, hombre y mujer por
+  separado, 5 vistas (frente, 3/4 frente, perfil, 3/4 espalda, espalda; las
+  otras 3 del retail son espejos).
+- `coach-7000.png`, `coach-7001.png`: los 2 coaches, 5 vistas.
+- `invocacion-NNNN.png`: las 9 invocaciones, 4 vistas en diagonal (no
+  tienen más).
+
+Corrección del dueño: "con la forma retail es suficiente y si separas la
+mujer y el hombre, mejor": fuera las vistas sueltas, los accesorios, la ropa
+del coach y las posturas con arma (161 hojas → 35); el rig se hace luego
+sobre la malla de Meshy.
 
 Para entregar por muñeco: GLB de alta de Meshy y, si se puede, uno reducido
 (~5k triángulos), más las imágenes de Flow, en
