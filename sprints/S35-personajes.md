@@ -264,3 +264,33 @@ enséñame solo 1 vista; a partir de allí te digo si se anima o no"):**
 
 **Para el dueño:** `~/codigo/capturas/s35/s35-cuerpo-entero.png` (una
 vista, cámara del juego).
+
+### Sobre el boceto del dueño (2026-11-04)
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "está fatal, ¿cuál ha sido la pipeline?" | explicado: todo inventado con números, sin diseño de partida | — |
+| "envíame donde se ve el muñeco en varias direcciones… DEL RETAIL" | hoja del retail clase 1 en 8 direcciones (×6, fondo liso) | `capturas/s35/retail-clase1-direcciones.png` |
+| boceto de Flow (frente, ¾, perfil, espalda) "¿esto te va bien?" | sí; guardado como plano | `m7-referencias/s35/boceto-clase1-flow.jpg` |
+| "el color de piel debería cambiarse como el pelo… elige los mejores colores" | piel y pelo son canales de tinte (`skin*`, `hair*`); por defecto piel `e8bd96`, pelo `e3cf86` | `src/anims/toon.gd`, `parts/body.py` |
+
+- **Medido, no inventado:** siluetas de frente, perfil y espalda del
+  boceto (fondo rellenado desde los bordes; 415 px = 1,45 m), leídas por
+  altura: ancho y fondo del torso, piernas y brazos, nube del pelo. Los
+  lofts de `body.py` salen de esa tabla.
+- Lo que toma del boceto: chaleco oscuro sin mangas con cuello alto,
+  hombreras, panel gris con remate blanco ondulado y emblema dorado
+  (también en la espalda); fajín blanco; faldones laterales con bajo
+  curvo y ribete dorado, abiertos delante y detrás; brazos desnudos con
+  brazalete dorado y vendas blancas del codo a la mano; bombacho turquesa
+  bajo la rodilla con puño blanco; espinillas y pies descalzos en
+  sandalias con tiras doradas; orejas de elfo; ojos con el párpado medio
+  caído; pelo en nube de pinchos hacia fuera.
+- `front_decal()`: el panel, el remate y el emblema son un contorno
+  rellenado y proyectado sobre el pecho (sin escalones de píxel).
+- `anim_sheet.gd --skin= --hair=` prueba los tintes.
+- 58.544 triángulos (el pelo y la subdivisión): se bajan al rigar.
+
+**Para el dueño:** `s35-luchador1-vs-boceto.png` (el 3D en cuatro vistas
+sobre el boceto), `s35-luchador1-juego.png` (cámara del juego) y
+`s35-luchador1-tintes.png` (tres combinaciones de piel y pelo).

@@ -26,7 +26,7 @@ args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = args[0] if args else os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "art", "characters", "out", "parts", "head.glb"))
 
 PALETTE = {"skin": "e6bf9a", "hair": "d9c48e", "sclera": "f4f0e8", "iris": "3d5f6b",
-           "pupil": "1c1612", "glint": "ffffff", "brow": "a38c55", "mouth": "8e4a3a", "lash": "2a1d14"}
+           "pupil": "1c1612", "glint": "ffffff", "hair_brow": "c9b26a", "mouth": "8e4a3a", "lash": "2a1d14"}
 MATS = {}
 
 
@@ -102,13 +102,17 @@ def build_skull():
     ob = link("skull", me)
     ob.modifiers.new("sub", "SUBSURF").levels = 2
     apply_all(ob)
-    # ears: a flattened, slightly pointed lobe each side
+    # ears: long pointed elf ears, out to the side and a little up and back
+    # (boceto: they poke out of the hair at eye height)
     for X in (1, -1):
         bm = bmesh.new()
-        bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=1.0)
+        bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=8, radius=1.0)
         for v in bm.verts:
             x, y, z = v.co
-            v.co = C + Vector((X * (0.112 + 0.008 * x * X), 0.005 + 0.02 * y, -0.01 + 0.032 * z + 0.01 * max(0, z) * (-y)))
+            t = (x * X + 1) / 2                     # 0 at the root, 1 at the tip
+            w = (1 - t) ** 0.8                      # tapering to a point
+            v.co = C + Vector((X * (0.1 + 0.085 * t), -0.004 + 0.018 * t + 0.022 * y * w,
+                               -0.025 + 0.035 * t + 0.03 * z * w))
         e = bpy.data.meshes.new("ear")
         bm.to_mesh(e)
         bm.free()
@@ -214,15 +218,15 @@ def build_face(skull):
     ez = C.z - 0.005
     for X in (1, -1):
         ex = 0.045 * X
-        obs.append(decal("sclera", tree, ex, ez, 0.02, 0.026, 0.0005, 0.005))
-        obs.append(decal("iris", tree, ex - 0.003 * X, ez - 0.002, 0.013, 0.02, 0.0035, 0.003))
-        obs.append(decal("pupil", tree, ex - 0.004 * X, ez - 0.003, 0.006, 0.01, 0.005, 0.002))
-        obs.append(decal("glint", tree, ex - 0.008 * X, ez + 0.008, 0.0035, 0.0045, 0.0065, 0.0015))
-        # upper lid line: a dark arc that thickens to the outer corner
-        obs.append(stroke("lash", tree, [(ex - 0.02 * X, ez + 0.017), (ex, ez + 0.026), (ex + 0.02 * X, ez + 0.02),
-                                        (ex + 0.025 * X, ez + 0.015)], 0.002, 0.003, 0.002))
-        obs.append(stroke("brow", tree, [(ex - 0.018 * X, ez + 0.04), (ex + 0.004 * X, ez + 0.046),
-                                        (ex + 0.024 * X, ez + 0.043)], 0.004, 0.002, 0.002))
+        # half-lidded (boceto): the lid cuts straight across the top of the iris
+        obs.append(decal("sclera", tree, ex, ez - 0.004, 0.02, 0.016, 0.0005, 0.005))
+        obs.append(decal("iris", tree, ex - 0.003 * X, ez - 0.006, 0.012, 0.013, 0.0035, 0.003))
+        obs.append(decal("pupil", tree, ex - 0.004 * X, ez - 0.007, 0.0055, 0.007, 0.005, 0.002))
+        obs.append(decal("glint", tree, ex - 0.007 * X, ez - 0.002, 0.003, 0.003, 0.0065, 0.0015))
+        obs.append(stroke("lash", tree, [(ex - 0.022 * X, ez + 0.006), (ex, ez + 0.01), (ex + 0.022 * X, ez + 0.009),
+                                        (ex + 0.028 * X, ez + 0.004)], 0.0026, 0.0034, 0.0025))
+        obs.append(stroke("hair_brow", tree, [(ex - 0.018 * X, ez + 0.03), (ex + 0.004 * X, ez + 0.034),
+                                             (ex + 0.024 * X, ez + 0.03)], 0.0038, 0.002, 0.002))
     obs.append(stroke("mouth", tree, [(-0.014, C.z - 0.068), (0, C.z - 0.071), (0.016, C.z - 0.066)], 0.0022, 0.0018, 0.0005))
     return obs
 
@@ -261,6 +265,20 @@ def lock(lens, a, b, c, width, tilt, name="lock"):
     return link(name, cu)
 
 
+# the hair cloud the boceto's silhouette draws (front and side views, in
+# this part's units: the body scales the head by 1.08 and puts it on the neck)
+CLOUD_C = Vector((0, 0.023, 0.235))
+CLOUD_R = Vector((0.21, 0.2, 0.22))
+
+
+def cloud(p, d):
+    """Distance from p along d to the edge of the hair cloud (an ellipsoid)."""
+    q = Vector(((p - CLOUD_C).x / CLOUD_R.x, (p - CLOUD_C).y / CLOUD_R.y, (p - CLOUD_C).z / CLOUD_R.z))
+    e = Vector((d.x / CLOUD_R.x, d.y / CLOUD_R.y, d.z / CLOUD_R.z))
+    a, b, c = e.dot(e), 2 * q.dot(e), q.dot(q) - 1
+    return (-b + math.sqrt(max(0.0, b * b - 4 * a * c))) / (2 * a)
+
+
 def build_hair(skull):
     rng = random.Random(3)
     lens = profile()
@@ -283,17 +301,19 @@ def build_hair(skull):
     obs.append(cap)
     # the star: wide flat locks radiating from the crown, all round
     golden = math.pi * (3 - math.sqrt(5))
-    n = 24
+    n = 36
     for i in range(n):
-        zz = 1 - 1.55 * (i + 0.5) / n          # from the top down past the ears
+        zz = 1 - 1.6 * (i + 0.5) / n           # from the top down past the ears
         rr = math.sqrt(max(0.0, 1 - zz * zz))
         th = golden * i
         d = Vector((rr * math.cos(th), rr * math.sin(th), zz))
         if d.y < -0.35 and d.z < 0.45:          # the face stays clear (bangs below)
             continue
+        if abs(d.x) > 0.75 and -0.45 < d.z < 0.15 and d.y < 0.3:   # nor the elf ears
+            continue
         root = C + Vector((d.x * 0.1, d.y * 0.1, d.z * 0.1))
-        out = (d + Vector((0, 0.1, 0.12))).normalized()
-        ln = rng.uniform(0.11, 0.15) + 0.025 * max(0.0, d.y)
+        out = d                                  # straight out all round: the boceto's mop
+        ln = cloud(root, out) * rng.uniform(0.9, 1.0)
         bend = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(0, 1))) * 0.02
         mid = root + out * ln * 0.5 + bend
         tip = root + out * ln + bend * 2.5
