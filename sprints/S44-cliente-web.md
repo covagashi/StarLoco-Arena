@@ -11,6 +11,8 @@
 
 > "Con que funcione con 2 GB de RAM ya es más que suficiente."
 
+> "Que tenga cuenta demo por el momento."
+
 - La demo pública es **web**: un enlace y a jugar, sin instalar nada. Los
   ejecutables de escritorio (S15/S16) pasan a segundo plano y solo se hacen
   si la demo tiene tirón.
@@ -21,7 +23,8 @@
 
 - Godot 4.7 exporta a web, y el cliente ya usa `gl_compatibility`
   (WebGL2), que es el renderizador que funciona en el navegador.
-- El portal web del servidor ya crea las cuentas.
+- El portal web del servidor ya crea las cuentas, y el servidor ya sabe
+  crear una cuenta al vuelo en el login (`auto_register`).
 - Lo que falta: el cliente se conecta con `StreamPeerTCP`
   (`src/net/arena_client.gd`), y el navegador no puede abrir TCP directo.
   Hoy hay 354 MB de `assets/` retail y 86 MB de arenas (las 6).
@@ -64,7 +67,25 @@
   de las texturas en web, y quitar las caras tapadas entre bloques
   vecinos (la arena 6 tiene 1,7 M de triángulos).
 
-### 5. Publicación
+### 5. Cuenta demo (dueño, 2026-11-04)
+
+- Por ahora no hay registro: se entra con un botón **"Jugar"** y ya.
+- Cada visitante tiene **su propia** cuenta demo, no una compartida: con
+  una sola cuenta, dos personas a la vez se pisarían el coach, los
+  luchadores y la sesión.
+- El servidor crea la cuenta demo al pulsar "Jugar" (nombre generado, sin
+  correo ni contraseña) y devuelve un token. El navegador lo guarda, así
+  que al volver se sigue con el mismo coach. Si se borra el navegador, la
+  cuenta se pierde; es una demo.
+- Las cuentas demo no juegan las clasificaciones de temporada ni reciben
+  premios que no se puedan perder. Las que lleven 30 días sin entrar se
+  borran.
+- Límite de cuentas demo nuevas por IP y por hora, para que no se llene la
+  base de datos.
+- Más adelante, si hay tirón: pasar la cuenta demo a una cuenta normal
+  (correo y contraseña) sin perder el progreso. No entra en este sprint.
+
+### 6. Publicación
 
 - Dónde: dominio propio o itch.io. Portales como Poki o CrazyGames piden
   carga corta y jugar sin cuenta; se valora cuando haya demo.
@@ -73,6 +94,6 @@
 ## Criterio de cierre
 
 Desde un enlace, en Chrome y Firefox de escritorio, alguien sin nada
-instalado crea su cuenta, entra al lobby y juega un combate entero contra
+instalado pulsa "Jugar" (cuenta demo, sin registrarse), entra al lobby y juega un combate entero contra
 el servidor de producción por `wss://`. La primera carga es ≤ 50 MB y la
 pestaña se queda en ≤ 500 MB durante el combate de la arena 6.
