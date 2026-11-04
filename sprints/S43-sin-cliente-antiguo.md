@@ -1,6 +1,6 @@
 # S43 — Sin el cliente antiguo
 
-**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ⚪ esbozo (cierra M7; tras S35 y S37–S41; las 6 arenas ya están)
+**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (pasos 1 y 2 hechos el 2026-11-04; 3 y 4 tras S35 y S37–S41)
 
 ## Decisión del dueño (2026-10-28)
 
@@ -36,9 +36,39 @@ al retail.
 > **Hecho en parte en S36 (2026-11-03):** las 6 arenas del prototipo ya
 > tienen su JSON (`server/internal/gamedata/arenas/<mundo>.json`, sacado
 > del `layout`, embebido en el servidor) y la rotación es solo de esas 6
-> (paso 2). Falta: que el servidor arranque sin los `.jar` (hoy los sigue
-> leyendo para las otras 41 arenas) y que el cliente no lea
-> `Topology`/`FightMap` para nada.
+> (paso 2).
+>
+> **Hecho (2026-11-04):**
+> - Servidor: `gamedata.LoadFightMaps()` ya no recibe carpeta ni lee
+>   `.jar`. Las arenas son las 6 embebidas y nada más; el servidor arranca
+>   con "6 arenas". Fuera el decodificador `.fmd`/topología de las arenas y
+>   `cmd/dumparenas` (su trabajo, el archivo de S42, ya está hecho). Un id
+>   de arena desconocido (el de un fantasma viejo) juega en la arena 1.
+>   El lector de topología sigue solo para el `/TP` de GM, que es del mundo
+>   abierto, no de las arenas.
+> - Cliente: la forma base de las 12 arenas (las casillas y alturas
+>   retail y las salidas del `.fmd`) se congeló una vez en
+>   `godot/art/shapes/arena-NN.json`, con el mismo formato que la forma de
+>   combate. `arena_layout.gd` `shape()` y `fight_shape()` la leen de ahí;
+>   `fight_view` lee solo la forma de combate propia. `pack_arenas.gd`
+>   también copia `shapes/`.
+> - Comprobado: `shape()` da lo mismo que antes en las 12 arenas (huella
+>   md5 de cada una, antes y después), y al volver a exportar las formas de
+>   combate no cambia ningún archivo. Go: gamedata, game y e2e pasan.
+>   Godot: 552 comprobaciones. `fight_smoke` contra el servidor juega un
+>   combate entero en la arena 2 (rc 0), y la captura de la arena 5 sale
+>   con 8 contra 8 y 6 pedestales.
+> - De paso: `unit_runner.gd` da fallo si una suite no hace ninguna
+>   comprobación. Un error de script en `fight_view.gd` había dejado
+>   `direction8` en 0 comprobaciones sin ponerse en rojo.
+> - `fight_smoke` con una base de datos vacía no puede crear el coach (el
+>   mensaje de crear coach cambió y el smoke no). Se probó con una copia de
+>   la base local. Pendiente de arreglar en el smoke.
+> - Aún leen `.jar`: el minimapa del mundo abierto (`main.gd`),
+>   `deprecated_hall/`, `tools/export_islands.gd`, `tools/art/build_map.gd`,
+>   `test/map_smoke.gd`, el `/TP` de GM y `envmaps.go` (elementos del
+>   mundo). Es todo del mundo abierto o herramientas viejas, y se borra en
+>   el paso 4.
 
 - Un JSON legible por arena, con seguimiento en git, por ejemplo
   `server/arenas/<id>.json`. No va en `server/data/`, que es la copia local

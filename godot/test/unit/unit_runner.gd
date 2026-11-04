@@ -35,7 +35,14 @@ func _ready() -> void:
 			t.checks += 1
 			t.failures.append("%s: could not instantiate" % suite_file)
 		elif instance.has_method("run"):
+			# A run() that hits a script error stops there with no failure of
+			# its own (S43: fight_view.gd failed to parse and direction8 went
+			# from 10 checks to 0, still green), so a suite must check something.
+			var before: int = t.checks
 			instance.run(t)
+			if t.checks == before:
+				t.checks += 1
+				t.failures.append("%s: ran no checks (script error?)" % suite_file)
 		else:
 			t.checks += 1
 			t.failures.append("%s: suite has no run(t) entry point" % suite_file)

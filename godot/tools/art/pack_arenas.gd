@@ -6,6 +6,7 @@ extends SceneTree
 ##   godot --headless --path godot -s tools/art/pack_arenas.gd -- <dist dir>
 ## e.g. -- ../dist/linux. Copies:
 ##   art/layouts/arena-NN.json   each arena's layout
+##   art/shapes/arena-NN.json    each arena's base shape
 ##   art/<kit>/kit.json          every kit a layout uses
 ##   art/<kit>/out/models/*.glb  every model it places, in its loom, and the
 ##                               columns under its blocks (textures inside)
@@ -30,6 +31,7 @@ func _initialize() -> void:
 	for arena in range(1, Layout.RELEASE + 1):
 		var world := Layout.world_of(arena)
 		files[Layout.layout_path(arena)] = "layouts/arena-%02d.json" % arena
+		files[Layout.shape_path(arena)] = "shapes/arena-%02d.json" % arena
 		files[Layout.fight_path(world)] = "fight/%d.json" % world
 		var layout := Layout.load_layout(arena)
 		for items: Array in layout.cells.values():

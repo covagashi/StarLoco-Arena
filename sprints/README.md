@@ -107,7 +107,7 @@ Linux y Windows).
 | [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |
 | [S40](./S40-cartas-propias.md) | M7 | L | ⚪ esbozo (tras el arte) | Cartas propias: diseño y datos fuera del retail |
 | [S41](./S41-textos-propios.md) | M7 | M | ⚪ esbozo (tras las cartas) | Textos propios en es/en/fr |
-| [S43](./S43-sin-cliente-antiguo.md) | M7 | M | ⚪ esbozo (cierra M7) | Sin el cliente antiguo: forma de arena propia, rotación de 6, prueba sin retail y borrado de `godot/assets/` retail y `data-dist` |
+| [S43](./S43-sin-cliente-antiguo.md) | M7 | M | 🔵 en curso (pasos 1–2 hechos, 2026-11-04) | Sin el cliente antiguo: servidor y combate ya no leen `.jar` de arenas (6 propias embebidas, forma base congelada en `godot/art/shapes/`); faltan la prueba sin retail y el borrado de `godot/assets/` retail y `data-dist`, tras S35 y S37–S41 |
 | [S16](./S16-release-1.0.md) | M5 | M | ⏸ en pausa (dueño, 2026-10-25: hasta cambiar los assets) | Release pública 1.0: pipeline, instancia segura, docs, legal |
 | [S31](./S31-assets-sin-usar.md) | M5 | M | 🟢 cerrado | Fuera los assets sin usar: 435 de 823 MB; quedan 47 mapas, 38 muñecos y 2.395 animaciones; etapa `prune` en el generador |
 | [S30](./S30-tienda.md) | M5 | L | ⚪ esbozo (después de S16) | Tienda: cosméticos con pesetas y compras con dinero real, sin pagar para ganar |

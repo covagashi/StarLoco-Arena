@@ -21,12 +21,14 @@ extends RefCounted
 ## (owner, 2026-10-31: "hay que poder cambiar la altura"), as the walk
 ## surface in altitude steps (ALT m each); only the changes are written.
 ##
-## The cells and their altitudes are never edited: they are the fight
-## topology the server uses (server/data-dist/maps/). Which cells are
-## obstacles or start cells can be changed per layout (roles).
-
-const Topology := preload("res://src/maps/topology.gd")
-const FightMap := preload("res://src/maps/fightmap.gd")
+## The cells and their altitudes are never edited: they are the arena's
+## base shape, art/shapes/arena-NN.json (the retail fight topology and .fmd,
+## frozen once in S43 so nothing reads the old client's .jar files):
+##   {"world": 5, "arena": 1, "team0": [[x, y, z], ...], "team1": [...],
+##    "coach": [...], "specials": [[x, y, z, template], ...],
+##    "cells": {"x,y": [alt, "floor" | "obstacle"]}}
+## A cell that is not listed is void. Which cells are obstacles or start
+## cells can be changed per layout (roles), and their heights (alts).
 
 ## The 12 modelled arenas (S36, owner 2026-10-28) by retail world id:
 ## arena N is the N-th. All 12 stay in the map editor.
@@ -94,6 +96,20 @@ static func in_release(arena: int) -> bool:
 
 static func layout_path(arena: int) -> String:
 	return "%s/layouts/arena-%02d.json" % [root(), arena]
+
+
+static func shape_path(arena: int) -> String:
+	return "%s/shapes/arena-%02d.json" % [root(), arena]
+
+
+## The world's base shape as {cells: {Vector2i: {alt, ground}}, fmd: {team0,
+## team1, coach: [{x, y, z}], specials: [{pos: {x, y, z}, template}]}}, or
+## {} when the world is not one of ours.
+static func base_shape(world: int) -> Dictionary:
+	var arena := WORLDS.find(world) + 1
+	if arena == 0:
+		return {}
+	return _read_shape(ProjectSettings.globalize_path(shape_path(arena)))
 
 
 ## Every tracked kit: art/arena<N>/kit.json. The biome folders (lava/,
@@ -171,16 +187,16 @@ static func model_path(kit: String, name: String, loom := "a") -> String:
 	return "%s/%s/out/models/%s%s.glb" % [root(), kit, name, LOOMS.get(loom, "")]
 
 
-## The arena's shape, from the fight topology and the .fmd start cells:
+## The arena's shape, from its base shape (cells and .fmd start cells):
 ## {cells: {Vector2i: {alt, ground, surface, role}}, alt_min, floor_y}.
 ## surface = the altitude pieces stand on: a walkable cell's own; an
 ## obstacle's altitude is the height of the retail prop on it, so it stands
 ## at its lowest walkable neighbour's. role: floor, obstacle, team0, team1,
 ## coach (a coach's pedestal).
 static func shape(world: int) -> Dictionary:
-	var topo := Topology.load_world(world, Topology.SCOPE_ARENA)
-	var fmd := FightMap.load(world)
-	var raw: Dictionary = topo.get("cells", {})
+	var base := base_shape(world)
+	var fmd: Dictionary = base.get("fmd", {})
+	var raw: Dictionary = base.get("cells", {})
 	var role := {}
 	for t in ["team0", "team1", "coach"]:
 		for c in fmd.get(t, []):
@@ -189,8 +205,6 @@ static func shape(world: int) -> Dictionary:
 	var alt_min := 1 << 30
 	for p: Vector2i in raw:
 		var c: Dictionary = raw[p]
-		if c.alt == Topology.VOID_ALT:
-			continue
 		var r: String = role.get(p, "floor" if c.ground else "obstacle")
 		var surface: int = c.alt if c.ground or r == "coach" else _floor_near(raw, p, c.alt)
 		cells[p] = {"alt": c.alt, "ground": c.ground, "surface": surface, "role": r}
@@ -219,8 +233,6 @@ static func _floor_near(cells: Dictionary, p: Vector2i, fallback: int) -> int:
 					continue
 				seen[n] = true
 				var c: Dictionary = cells[n]
-				if c.alt == Topology.VOID_ALT:
-					continue
 				if c.ground:
 					best = mini(best, c.alt)
 				next.append(n)
@@ -475,7 +487,7 @@ static func fight_shape(arena: int) -> Dictionary:
 	var sh := shape(world)
 	apply_roles(sh, layout.roles)
 	apply_alts(sh, layout.alts)
-	var fmd := FightMap.load(world)
+	var fmd: Dictionary = base_shape(world).get("fmd", {})
 	var out := {"world": world, "arena": arena, "cells": {}, "team0": [], "team1": [],
 		"coach": [], "specials": []}
 	var keys: Array = sh.cells.keys()
@@ -543,10 +555,14 @@ static func fight_path(world: int) -> String:
 
 ## The world's exported fight shape in fight_view's terms, or {} when the
 ## world has none: {cells: {Vector2i: {alt, ground}}, fmd: {team0, team1,
-## coach: [{x, y, z}], specials: [{pos: {x, y, z}, template}]}} — the same
-## shapes Topology.load_world and FightMap.load return.
+## coach: [{x, y, z}], specials: [{pos: {x, y, z}, template}]}} — the
+## shapes the retail Topology.load_world and FightMap.load returned.
 static func load_fight_shape(world: int) -> Dictionary:
-	var path := ProjectSettings.globalize_path(fight_path(world))
+	return _read_shape(ProjectSettings.globalize_path(fight_path(world)))
+
+
+## A fight shape or base shape file (the same format) in fight_view's terms.
+static func _read_shape(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
 	var d = JSON.parse_string(FileAccess.get_file_as_string(path))

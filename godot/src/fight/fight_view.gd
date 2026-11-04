@@ -8,8 +8,6 @@ extends Node2D
 
 const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const ReplayBar := preload("res://src/fight/replay_bar.gd")
-const Topology := preload("res://src/maps/topology.gd")
-const FightMap := preload("res://src/maps/fightmap.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const XpsFx := preload("res://src/anims/xps_fx.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
@@ -435,14 +433,10 @@ func _load() -> void:
 	_mark_layers = {}
 	_gfx_active = not _arena_3d and _gfx.load_world(map_id)
 	_gfx.visible = not _arena_3d
-	_fmd = FightMap.load(map_id)
-	var topo := Topology.load_world(map_id, Topology.SCOPE_ARENA)
-	_cells = topo.get("cells", {})
-	# the prototype's arenas play the owner's shape, as the server does
+	# the owner's shape, as the server plays it; {} for any other id
 	var own := ArenaLayout.load_fight_shape(map_id)
-	if not own.is_empty():
-		_cells = own.cells
-		_fmd = own.fmd
+	_cells = own.get("cells", {})
+	_fmd = own.get("fmd", {})
 	_alt_min = 0
 	_alt_max = 0
 	for c in _cells.values():
@@ -476,11 +470,6 @@ func _load() -> void:
 		for pos in _sorted:
 			box = box.expand(_iso(pos.x + 0.5, pos.y + 0.5, _cells[pos].alt))
 		cam.position = box.get_center()
-		cam.make_current()
-	elif topo.has("bounds"):
-		var b: Rect2i = topo.bounds
-		var center := _iso(b.get_center().x, b.get_center().y, 0)
-		cam.position = center
 		cam.make_current()
 
 
