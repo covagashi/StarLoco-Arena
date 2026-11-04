@@ -10,6 +10,7 @@ extends SceneTree
 ##       [--dirs=SE,SW,NE] [--size=200x240] [--zoom=1.6] [--anims=idle,walk]
 ##       [--focus=0.62]   (height the camera centres on: 1.1 = the face)
 ##       [--lift=0]       (raise a lone part off the cell)
+##       [--pitch=30 --nocell --bg=ffffff]   (turnaround sheets: level camera, no cell)
 ##       [--pbr]          (the arenas' PBR look instead of the fighters' toon)
 ##
 ## Output: <dir>/<anim>/<dir>_<nn>.png and <dir>/index.json.
@@ -23,7 +24,7 @@ const PX := 43.0 * 1.41421356
 const YAW := {"S": 45.0, "SE": 90.0, "E": 135.0, "NE": 180.0, "N": 225.0, "NW": 270.0, "W": 315.0, "SW": 0.0}
 
 var opts := {"model": "art/characters/out/mannequin.glb", "out": "/tmp/anim_sheet", "frames": "6",
-	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62", "lift": "0"}
+	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62", "lift": "0", "pitch": "30", "bg": ""}
 var cam := Camera3D.new()
 var model: Node3D
 var player: AnimationPlayer
@@ -38,6 +39,8 @@ func _initialize() -> void:
 			opts.video = true
 		elif a == "--pbr":
 			opts.pbr = true
+		elif a == "--nocell":
+			opts.nocell = true
 	var sz: PackedStringArray = String(opts.size).split("x")
 	DisplayServer.window_set_size(Vector2i(int(sz[0]), int(sz[1])))
 	root.size = Vector2i(int(sz[0]), int(sz[1]))
@@ -99,6 +102,9 @@ func _run() -> void:
 ## orthographic camera at the given zoom.
 func _stage() -> void:
 	ArenaScene.add_lights(root)
+	if opts.bg != "":
+		var we: WorldEnvironment = root.find_children("*", "WorldEnvironment", false, false)[0]
+		we.environment.background_color = Color.html(opts.bg)
 	var cell := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(1, 0.1, 1)
@@ -108,12 +114,13 @@ func _stage() -> void:
 	box.material = m
 	cell.mesh = box
 	cell.position.y = -0.05
-	root.add_child(cell)
+	if not opts.has("nocell"):
+		root.add_child(cell)
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	var zoom := float(opts.zoom)
 	cam.size = root.size.y / (PX * zoom)
-	cam.rotation_degrees = Vector3(-30, 45, 0)
+	cam.rotation_degrees = Vector3(-float(opts.pitch), 45, 0)
 	var b := cam.transform.basis
 	cam.position = Vector3(0, float(opts.focus), 0) + b.z * 20.0
 	cam.near = 0.1
