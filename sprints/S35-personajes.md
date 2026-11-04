@@ -42,8 +42,9 @@ usa para luchadores.
   sitio; el juego desliza el actor), `cast`, `melee`, `hit`, `die`, `jump`
   (también teletransporte), `celebrate`, `carry_loop`, `throw`. El golpe
   blanco, el temblor y el número los pone el juego, no la animación.
-- **Proporción:** 1,30 celdas sin sombrero (~70 px a zoom 1), cabeza ~37 %;
-  el sombrero de cada clase la lleva al 45 % de la hoja de estilo.
+- **Proporción:** la del retail (ver abajo, corrección del dueño): 1,45
+  celdas con el pelo (~78 px a zoom 1), cabeza y pelo un tercio de la
+  altura, cuerpo largo y delgado.
 
 ## Paso 1: rig y animaciones base (2026-11-04)
 
@@ -51,13 +52,13 @@ Un muñeco neutro (túnica, cinturón, botas, ojos) para ver el esqueleto y
 las animaciones; no es ninguna clase.
 
 ```
-blender -b -P godot/tools/blender/characters/mannequin.py      # → art/characters/out/mannequin.glb
+blender -b -P godot/tools/blender/characters/fighter1.py       # → art/characters/out/fighter1.glb
 xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot -s tools/art/anim_sheet.gd -- \
     --out=<dir> --frames=6 --dirs=SE,NW --zoom=2 --size=240x280      # o --video
 python3 -I godot/tools/art/anim_sheet.py <dir> <hoja.png | video.mp4>
 ```
 
-- `mannequin.py`: cuerpo de esferas fundidas (remesh por vóxel, suavizado,
+- `fighter1.py` (antes `mannequin.py`): cuerpo de esferas fundidas (remesh por vóxel, suavizado,
   decimado), cabeza aparte y rígida en `head`, pesos automáticos de Blender
   en el cuerpo. Las poses se escriben en términos del cuerpo
   (`lean`, `arm_R=(adelante, afuera)`, `knee_L`…), no en ejes de hueso.
@@ -84,7 +85,7 @@ Lo que la primera versión hizo mal, ya corregido:
   lavaba todo; ahora usa `ArenaScene.add_lights`.
 
 Pendiente:
-- Bajar a ≤4.000 triángulos por luchador (12 en pantalla, demo web en
+- Bajar a ≤4.000 triángulos por luchador (hoy 9.626) (12 en pantalla, demo web en
   móviles de 2 GB, S44); la cabeza aún muestra facetas del decimado.
 - Meter el actor 3D en `fight_view`: la arena se pinta **una vez** en un
   SubViewport y los actores son sprites 2D encima con un oclusor de
@@ -93,3 +94,45 @@ Pendiente:
   viewport y luchador).
 - El dueño revisa el esqueleto y las animaciones antes de empezar las
   clases (paso 2).
+
+### Corrección del dueño: el luchador 1, sobre el retail (2026-11-04)
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "no me gustan los diseños, toma como referencia 1 del retail" | fuera el muñeco cabezón; el luchador 1 se rehace sobre la clase 1 retail (`fighter_-110`), solo como referencia de forma, con colores propios | `fighter1.py` |
+
+Referencia (fuera del repo): `~/codigo/m7-referencias/s35/retail-110.png`
+(×4: reposo de frente y de espaldas, andar en 4 direcciones, golpe,
+muerte, hechizo, placaje). Medido en el sprite: 78 px de alto, el cuello a
+un 31 % desde arriba, hombros de 11 px.
+
+Lo que cambia respecto al muñeco:
+- Cuerpo largo y estrecho (hombros a ±0,10), brazos largos hasta medio
+  muslo, piernas separadas; cabeza pequeña dentro de una **nube de
+  pinchos** (34 pinchos hacia fuera en todas direcciones, también bajando
+  por los lados), escalada ×1,15 para que cabeza y pelo sean un tercio.
+- Ropa: chaleco gris con mangas blancas, cuello dorado anudado, cinturón,
+  **faldones** delante y detrás hasta medio muslo (dos paneles curvos, no
+  una falda, para que las piernas no la atraviesen al andar), **bombacho**
+  ancho recogido en el tobillo con tiras naranjas, botas.
+- Los brazos con los brazos de llevar/celebrar/lanzar vuelven arriba: con
+  brazos largos ya pasan la cabeza.
+
+Fallos de la primera versión, corregidos:
+- Puntas de pelo más finas que el vóxel: salían trocitos flotando.
+  Ahora las puntas tienen grosor mínimo y `drop_crumbs()` borra islas
+  sueltas.
+- Brazos fundidos con el bombacho (cuelgan pegados): al moverse el
+  pantalón se estiraba hacia la mano. Cada brazo es ahora su propia malla,
+  con pesos solo de su cadena (pecho, hombro, brazo, antebrazo, mano).
+- Aun así los pesos automáticos daban la cara exterior del muslo a los
+  huesos del brazo (una "aleta" verde en los gestos vistos de espaldas): el
+  cuerpo ya no lleva pesos de brazo.
+- Faldones de cartón (una caja fina): ahora dos pieles curvas de 1,6 cm.
+
+Medido: 20 huesos, 10 animaciones, 9.626 triángulos.
+
+**Para el dueño** (`~/codigo/capturas/s35/`): `s35-luchador1-vs-retail.png`
+(el retail ×4 a la izquierda, el nuestro a la misma escala),
+`s35-luchador1.mp4` (las 10 animaciones en 4 direcciones),
+`s35-luchador1-1.png` / `-2.png` y `s35-luchador1-4vistas.png`.
