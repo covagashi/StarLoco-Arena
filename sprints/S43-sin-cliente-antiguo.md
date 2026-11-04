@@ -1,6 +1,6 @@
 # S43 — Sin el cliente antiguo
 
-**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ⚪ esbozo (cierra M7; tras las 6 arenas del prototipo y S35, S37–S41)
+**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ⚪ esbozo (cierra M7; tras S35 y S37–S41; las 6 arenas ya están)
 
 ## Decisión del dueño (2026-10-28)
 

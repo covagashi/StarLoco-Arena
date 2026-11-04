@@ -1,6 +1,6 @@
 # S36 — Arenas: todos los assets primero, y un editor para que el dueño monte los mapas
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase B hecha y aprobada el 2026-10-29; fase C, el editor, hecha el 2026-10-29: ahora el dueño monta las arenas; después, fase D)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟢 cerrado (2026-11-04: las 6 arenas del prototipo, como las dejó el dueño)
 
 **Alcance del prototipo (dueño, 2026-11-03): 6 arenas, de la 1 a la 6**
 (mundos 5, 10, 12, 15, 21 y 36): "al ser un prototipo, dejemos solo las 6
@@ -2513,8 +2513,10 @@ manchas de lava de arena8). Lo que sale:
     toda la batería del servidor (e2e incluidas) pasa. Godot: 546
     comprobaciones. Captura de la colocación en la arena 5 con las salidas
     del dueño.
-- [ ] El dueño monta las arenas 1–6 del prototipo (2026-11-03). Hechas por
-      él: 1–5; la 6 en curso. Las 7–12, más adelante.
+- [x] El dueño monta las arenas 1–6 del prototipo. Dueño, 2026-11-04:
+      las 6 se quedan como están (la 6 incluida). Sus formas de combate,
+      rehechas con `export_fight_shapes.gd`, no cambian. Las 7–12, más
+      adelante.
 
 ## Lo que queda a medias de la sesión del 2026-10-25 (sin commit)
 
