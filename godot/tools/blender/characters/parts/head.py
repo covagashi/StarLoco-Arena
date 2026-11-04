@@ -346,4 +346,5 @@ def main():
     print(f"[head] {OUT}: {tris} tris, {len(hair_obs)} hair pieces")
 
 
-main()
+if __name__ == "__main__":
+    main()

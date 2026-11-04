@@ -241,3 +241,26 @@ y pelo). Cada parte espera el visto bueno del dueño.
 
 **Para el dueño:** `s35-pieza-cabeza-cerca.png` (de cerca, 4 lados) y
 `s35-pieza-cabeza-vs-retail.png` (a escala de juego junto al retail).
+
+**Cuerpo entero por partes (dueño, 2026-11-04: "haz el cuerpo entero y
+enséñame solo 1 vista; a partir de allí te digo si se anima o no"):**
+`parts/body.py` → `art/characters/out/parts/body.glb`, sin rig todavía.
+- Torso: un loft de 9 anillos de las caderas al cuello, con un anillo en
+  cada borde de prenda (pantalón, cinturón, chaleco, piel): los colores
+  acaban en una línea limpia. Subdivisión 2.
+- Una pierna en loft (bombacho ancho en rodilla y pantorrilla, fruncido
+  en el tobillo) con espejo; bota de caja redondeada con puntera, suela y
+  tres tiras (toros) con espejo.
+- Un brazo en loft (manga blanca, puño abierto, el hombro bajo el
+  chaleco) con espejo; una mano de dibujo (palma ancha, cuatro dedos
+  gordos en puño suelto, pulgar) con espejo.
+- Cuello dorado (toro) con nudo, cinturón con hebilla, faldones delante
+  y detrás con ribete dorado; la cabeza de `head.py` a ×1,08.
+- Fallos antes de enseñar: el nudo del cuello flotaba lejos (giraba sobre
+  el origen), cuello demasiado largo, manos como garritas (ahora de
+  dibujo, grandes), agujeros oscuros en las puntas de los dedos (tubos sin
+  tapa).
+- 38.788 triángulos, 1,38 de alto: la subdivisión se baja al rigar.
+
+**Para el dueño:** `~/codigo/capturas/s35/s35-cuerpo-entero.png` (una
+vista, cámara del juego).
