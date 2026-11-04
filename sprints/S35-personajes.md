@@ -294,3 +294,34 @@ vista, cámara del juego).
 **Para el dueño:** `s35-luchador1-vs-boceto.png` (el 3D en cuatro vistas
 sobre el boceto), `s35-luchador1-juego.png` (cámara del juego) y
 `s35-luchador1-tintes.png` (tres combinaciones de piel y pelo).
+
+### Cambio de flujo: Google Flow → Meshy (dueño, 2026-11-04)
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "se te queda muy grande… pagaré 1 mes de Meshy" → "con google flow he hecho la pose A o T de varios ángulos, y luego pasarlo por meshy" → "sí, genérame eso" | los muñecos ya no se modelan a mano en bpy: el dueño los redibuja en Flow (pose A, varias vistas) desde el retail y los pasa por Meshy; yo preparo las referencias y luego limpio, reduzco, rigo a los 20 huesos y pruebo en combate | `godot/tools/art/flow_refs.py` |
+
+```
+python3 -I godot/tools/art/flow_refs.py ~/codigo/capturas/s35/flow
+```
+
+Paquete de referencia (retail, **solo forma**; las zonas grises son las que
+el retail tiñe, no colores que copiar), en hojas del tamaño de la pantalla:
+- `clases/clase-01…12.png`: masculino y femenino en reposo, 5 vistas
+  (frente, 3/4 frente, perfil, 3/4 espalda, espalda; las otras 3 del
+  retail son espejos).
+- `vistas/clase-NN-m|f/`: cada vista sola (×6, fondo liso), para subir a
+  Flow como referencia.
+- `accesorios/`: los 75 equipos de luchador por ranura (23 armas, 15
+  mascotas, 15 capas, 16 sombreros, 6 dofus) y `armas-en-mano.png` (la
+  postura de cada familia de arma; el retail pinta el arma en otro sprite).
+- `ropa-coach/`: la ropa del coach por ranura (faldas, peinados, marcas,
+  brazaletes, botas, hombreras, capas, pantalones, torsos, cascos, armas).
+- `otros/`: los 2 coaches (sin ropa: es un muñeco de recortables) y las 9
+  invocaciones (solo miran a las diagonales).
+
+Para entregar por muñeco: GLB de alta de Meshy y, si se puede, uno reducido
+(~5k triángulos), más las imágenes de Flow, en
+`~/codigo/capturas/s35/meshy/<clase>_<m|f>/`. Presupuesto en juego: 3–6k
+triángulos y textura de 1024 (o 512) por luchador (demo web, S44).
+Antes de las 24, un piloto: la clase 1 en los dos sexos de punta a punta.
