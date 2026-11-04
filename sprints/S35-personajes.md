@@ -320,6 +320,13 @@ mujer y el hombre, mejor": fuera las vistas sueltas, los accesorios, la ropa
 del coach y las posturas con arma (161 hojas → 35); el rig se hace luego
 sobre la malla de Meshy.
 
+Después (dueño: "los accesorios y la ropa dámelo"), como ideas aparte, 15
+ilustraciones por hoja:
+- `accesorios/`: los 75 equipos de luchador por ranura (23 armas, 15
+  mascotas, 15 capas, 16 sombreros, 6 dofus).
+- `ropa-coach/`: la ropa del coach por ranura (faldas, peinados, marcas,
+  brazaletes, botas, hombreras, capas, pantalones, torsos, cascos, armas).
+
 Para entregar por muñeco: GLB de alta de Meshy y, si se puede, uno reducido
 (~5k triángulos), más las imágenes de Flow, en
 `~/codigo/capturas/s35/meshy/<clase>_<m|f>/`. Presupuesto en juego: 3–6k
