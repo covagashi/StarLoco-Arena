@@ -7,7 +7,7 @@ extends SceneTree
 ##   xvfb-run -a -s "-screen 0 1080x1920x24" godot --path godot -s tools/promo/promo.gd -- \
 ##       --mode=map|build|orbit|spin --arena=10 | --model=res://art/arena10/out/models/x.glb \
 ##       --out=<png or dir> [--size=1080x1350] [--view=game|persp] [--yaw=45] [--pitch=32]
-##       [--zoom=1] [--frames=1] [--bg=1c232c] [--focus=x,y,z]
+##       [--zoom=1] [--frames=1] [--bg=1c232c] [--focus=x,y,z] [--wire=1]   (wireframe)
 
 const Layout := preload("res://src/maps/arena_layout.gd")
 const ArenaScene := preload("res://src/maps/arena_scene.gd")
@@ -27,6 +27,8 @@ func _initialize() -> void:
 		if a.begins_with("--") and "=" in a:
 			var kv := a.substr(2).split("=", true, 1)
 			opts[kv[0]] = kv[1]
+	if opts.has("wire"):  # before any mesh loads
+		RenderingServer.set_debug_generate_wireframes(true)
 	var sz: PackedStringArray = String(opts.size).split("x")
 	DisplayServer.window_set_size(Vector2i(int(sz[0]), int(sz[1])))
 	root.size = Vector2i(int(sz[0]), int(sz[1]))
@@ -44,6 +46,8 @@ func _run() -> void:
 		var f: PackedStringArray = String(opts.focus).split(",")
 		center = Vector3(float(f[0]), float(f[1]), float(f[2]))
 	root.add_child(cam)
+	if opts.has("wire"):
+		root.debug_draw = Viewport.DEBUG_DRAW_WIREFRAME
 	var n := int(opts.frames)
 	var still := n <= 1
 	if not still:
