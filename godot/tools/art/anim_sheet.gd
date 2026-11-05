@@ -13,6 +13,7 @@ extends SceneTree
 ##       [--pitch=30 --nocell --bg=ffffff]   (turnaround sheets: level camera, no cell)
 ##       [--skin=e8bd96 --hair=e3cf86]   (tint channels)
 ##       [--pbr]          (the arenas' PBR look instead of the fighters' toon)
+##       [--spin=120]     (turntable: N frames of one full turn, first frame of each anim)
 ##
 ## Output: <dir>/<anim>/<dir>_<nn>.png and <dir>/index.json.
 
@@ -82,13 +83,17 @@ func _run() -> void:
 	for anim: String in names:
 		var length := player.get_animation(anim).length if player else 0.0
 		var n := ceili(length * fps) + 1 if opts.has("video") and player else int(opts.frames) if player else 1
+		if opts.has("spin"):
+			n = int(opts.spin)
 		index[anim] = {"length": length, "frames": n}
 		DirAccess.make_dir_recursive_absolute("%s/%s" % [opts.out, anim])
 		for d: String in String(opts.dirs).split(","):
 			model.rotation_degrees.y = YAW[d]
 			for i in n:
+				if opts.has("spin"):
+					model.rotation_degrees.y = YAW[d] + 360.0 * i / n
 				if player:
-					var t := i / fps if opts.has("video") else length * i / maxf(1.0, n - 1)
+					var t := 0.0 if opts.has("spin") else i / fps if opts.has("video") else length * i / maxf(1.0, n - 1)
 					player.play(anim)
 					player.seek(minf(t, length), true)
 					player.pause()
