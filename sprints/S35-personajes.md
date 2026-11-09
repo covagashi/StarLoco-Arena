@@ -332,3 +332,59 @@ Para entregar por muñeco: GLB de alta de Meshy y, si se puede, uno reducido
 `~/codigo/capturas/s35/meshy/<clase>_<m|f>/`. Presupuesto en juego: 3–6k
 triángulos y textura de 1024 (o 512) por luchador (demo web, S44).
 Antes de las 24, un piloto: la clase 1 en los dos sexos de punta a punta.
+
+### Lote 1 de Meshy: inventario y correspondencia (2026-11-09)
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "ya tengo los assets… están en la homelab" | bajados los 56 GLB de `//debian/codigo/pippop-arena-assets` a `~/codigo/capturas/s35/meshy/_homelab/` (272 MB, fuera del repo); inventario y hojas de revisión; propuesta de qué figura es cada clase | `godot/art/characters/meshy_map.json` |
+
+Medido (Blender 5.2 headless, `inventario.json` junto a los GLB):
+- 53 figuras de Meshy: una malla, un material, una textura 2048², 12–21k
+  triángulos, **sin esqueleto**, pose A, todas normalizadas a 0,95 m de
+  alto (hay que escalarlas a 1,45 celdas al meterlas en el juego).
+- El mecha chibi viene dos veces: `Chibi_Mecha_Remeshed` (10k) y la misma
+  malla con rig de Mixamo (50 huesos, `Alert`/`Running`/`Walking`, texturas
+  4096², 33 MB). El rig de Mixamo no nos sirve tal cual (el juego usa los
+  20 huesos y las 10 animaciones de S33); vale como prueba de que la
+  malla se deforma bien.
+- `fox_warrior` viene en dos versiones (15k "game asset" masculino y 20k
+  "lowpoly" femenino): son los dos sexos de Zurcarák, no un duplicado.
+
+**Hojas para el dueño:** `~/codigo/capturas/s35/s35-meshy-lote1-{1,2,3}.png`
+(frente, luz neutra, número y triángulos bajo cada figura).
+
+Propuesta de correspondencia (número de la hoja), comparada con las
+hojas retail del paquete de Flow; **el dueño confirma o corrige**:
+
+| Clase | f | m |
+|---|---|---|
+| 1 Feca | 29 falda turquesa | 33 pelo de punta, pantalón teal |
+| 2 Osamodas | 30 cuernos y pelaje | 06 cuernos y pelaje |
+| 3 Anutrof | 31 lazos naranja, botas rojas | 07 chaleco marrón, pantalón ocre |
+| 4 Sram | 03 traje blanco con huesos | 53 calavera |
+| 5 Xelor | 08 mecha azul | 01 mecha chibi (00 es el mismo con Mixamo) |
+| 6 Zurcarák | 28 orejas, naranja | 55 orejas, naranja (alt. 19 gato blanco) |
+| 7 Aniripsa | 11 hada con alas | 34 abrigo marrón con alas (alt. 22) |
+| 8 Yopuka | 32 cinta roja | 47 pelo de fuego (alt. 25) |
+| 9 Ocra | 13 armadura marrón y amarilla | 24 coleta, botas lima |
+| 10 Sadida | 05 flor en el pelo | 04 rastas |
+| 11 Sacrógrito | 12 moño, falda roja (26 es casi igual) | 14 bufanda roja, vendas |
+| 12 Pandawa | 48 | 09 |
+| Coach 7000 / 7001 | 15 (bikini verde) | 27 (calzón verde) |
+
+Invocaciones: 8001 → 49 muñeco vudú · 8002 → 02 muñeco con venda ·
+8003 → 10 saco · 8004 → 23 pangolín · 8005 → 43 tofu (35, 37 y 39 son
+variantes) · 8006 → 41 oveja · 8007 → 54 gólem · 8009 → 42 árbol ·
+**8010 (huevo gris con pinchos) sin figura clara**: ¿44 nube, 50
+armadillo o 21 araña?
+
+Sin hueco en S31 (21 figuras): oso, chafer, cuervo enjaulado, gato
+blanco, encapuchada, araña, elfo alado, elfo verde/rojo, un duplicado de
+Sacrógrito f, tres tofus, dos conejos, chica y chico demonio, ninja
+morada, nube, armadillo, mono y pájaro de hojas. Candidatos a monstruos
+de las ligas PvE o invocaciones futuras; no se tocan en S35.
+
+Siguiente (cuando el dueño confirme la tabla): el piloto, Feca f y m de
+punta a punta: limpieza, reducción a 3–6k triángulos y textura 1024, rig
+a los 20 huesos con las 10 animaciones, y un combate.
