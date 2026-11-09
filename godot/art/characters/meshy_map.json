@@ -87,11 +87,8 @@
         "id": "red_headband_warrior_20k_mesh"
       },
       "m": {
-        "n": 47,
-        "id": "Flame_Knight_LowPoly",
-        "alt": [
-          25
-        ]
+        "n": 25,
+        "id": "armored_spiky_elf_lowpoly"
       }
     },
     "09_ocra": {
@@ -192,33 +189,34 @@
       "propio": "cristal/espejo: lo modelo yo (pieza rigida, sin rig)"
     }
   },
-  "sin_hueco": [
-    19,
-    20,
-    21,
-    22,
-    25,
-    26,
-    35,
-    36,
-    37,
-    38,
-    39,
-    40,
-    44,
-    45,
-    46,
-    50,
-    51,
-    52
-  ],
-  "sin_hueco_doc": "oso, chafer, cuervo enjaulado, gato blanco, encapuchada, arana, elfo alado, elfo verde/rojo, duplicado de 12, tres tofus mas, dos conejos, chica y chico demonio, ninja morada, nube, armadillo, mono de hojas, pajaro de hojas: candidatos a monstruos PvE / invocaciones futuras",
   "ferinia": {
-    "confirmados": [
+    "regla": "dueno 2026-11-09: solo los GLB de Pippop. Los de Ferinia tienen nombre en mayusculas con _LowPoly (Bear_Warrior_LowPoly...); los de Pippop van en minusculas (_lowpoly, game_asset, 20k_mesh). Los 20 de Ferinia estan apartados en ~/codigo/capturas/s35/meshy/_ferinia.",
+    "numeros": [
       16,
       17,
-      18
-    ],
-    "doc": "dueno 2026-11-09: se colaron GLB de Ferinia en la carpeta de la homelab; 16 oso, 17 chafer, 18 cuervo enjaulado. El resto de sin_hueco probablemente tambien; no se usan en Pippop."
+      18,
+      19,
+      20,
+      21,
+      22,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      44,
+      45,
+      46,
+      47,
+      50,
+      51,
+      52
+    ]
+  },
+  "sobrante": {
+    "n": 26,
+    "id": "bulb_warrior_20k_mesh",
+    "doc": "segunda version de Sacrogrito f (12)"
   }
 }

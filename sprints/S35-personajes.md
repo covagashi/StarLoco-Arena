@@ -364,9 +364,9 @@ hojas retail del paquete de Flow; **el dueño confirma o corrige**:
 | 3 Anutrof | 31 lazos naranja, botas rojas | 07 chaleco marrón, pantalón ocre |
 | 4 Sram | 03 traje blanco con huesos | 53 calavera |
 | 5 Xelor | 08 mecha azul | 01 mecha chibi (00 es el mismo con Mixamo; confirmado por el dueño) |
-| 6 Zurcarák | 28 orejas, naranja | 55 orejas, naranja (alt. 19 gato blanco) |
-| 7 Aniripsa | 11 hada con alas | 34 abrigo marrón con alas (alt. 22) |
-| 8 Yopuka | 32 cinta roja | 47 pelo de fuego (alt. 25) |
+| 6 Zurcarák | 28 orejas, naranja | 55 orejas, naranja |
+| 7 Aniripsa | 11 hada con alas | 34 abrigo marrón con alas |
+| 8 Yopuka | 32 cinta roja | 25 verde y rojo, pelo de punta (el 47 era de Ferinia) |
 | 9 Ocra | 13 armadura marrón y amarilla | 24 coleta, botas lima |
 | 10 Sadida | 05 flor en el pelo | 04 rastas |
 | 11 Sacrógrito | 12 moño, falda roja (26 es casi igual) | 14 bufanda roja, vendas |
@@ -374,21 +374,22 @@ hojas retail del paquete de Flow; **el dueño confirma o corrige**:
 | Coach 7000 / 7001 | 15 (bikini verde) | 27 (calzón verde) |
 
 Invocaciones: 8001 → 49 muñeco vudú · 8002 → 02 muñeco con venda ·
-8003 → 10 saco · 8004 → 23 pangolín · 8005 → 43 tofu (35, 37 y 39 son
-variantes) · 8006 → 41 oveja · 8007 → 54 gólem · 8009 → 42 árbol ·
+8003 → 10 saco · 8004 → 23 pangolín · 8005 → 43 tofu · 8006 → 41 oveja · 8007 → 54 gólem · 8009 → 42 árbol ·
 **8010 es un cristal, un espejo** (dueño, 2026-11-09): no viene de
 Meshy, lo modelo yo como pieza rígida (sin rig; el brillo y el giro los
 pone el juego).
 
-**Se colaron GLB de Ferinia** (dueño, 2026-11-09): 16 oso, 17 chafer y
-18 cuervo enjaulado son de Ferinia, no de Pippop; seguramente también el
-resto de esta lista. No se usan aquí.
+**Solo los de Pippop** (dueño, 2026-11-09: "se me ha colado… has pillado
+los glb de ferinia… ignora los de ferinia"). En la carpeta de la homelab
+hay 20 GLB de Ferinia. Se distinguen por el nombre: los de Ferinia van en
+mayúsculas con `_LowPoly` (`Bear_Warrior_LowPoly`), los de Pippop en
+minúsculas (`_lowpoly`, `game_asset`, `20k_mesh`). Apartados en
+`~/codigo/capturas/s35/meshy/_ferinia/`. Quedan 35 figuras de Pippop:
+las 34 de la tabla más una segunda versión de Sacrógrito f (26).
 
-Sin hueco en S31 (21 figuras): oso, chafer, cuervo enjaulado, gato
-blanco, encapuchada, araña, elfo alado, elfo verde/rojo, un duplicado de
-Sacrógrito f, tres tofus, dos conejos, chica y chico demonio, ninja
-morada, nube, armadillo, mono y pájaro de hojas. Candidatos a monstruos
-de las ligas PvE o invocaciones futuras; no se tocan en S35.
+**Hojas con la propuesta** (`~/codigo/capturas/s35/`):
+`s35-meshy-pippop-clases.png` (arriba mujer, abajo hombre) y
+`s35-meshy-pippop-invocaciones.png` (invocaciones y coaches).
 
 Siguiente (cuando el dueño confirme la tabla): el piloto, Feca f y m de
 punta a punta: limpieza, reducción a 3–6k triángulos y textura 1024, rig
