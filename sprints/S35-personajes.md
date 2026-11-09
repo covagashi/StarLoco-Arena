@@ -363,7 +363,7 @@ hojas retail del paquete de Flow; **el dueño confirma o corrige**:
 | 2 Osamodas | 30 cuernos y pelaje | 06 cuernos y pelaje |
 | 3 Anutrof | 31 lazos naranja, botas rojas | 07 chaleco marrón, pantalón ocre |
 | 4 Sram | 03 traje blanco con huesos | 53 calavera |
-| 5 Xelor | 08 mecha azul | 01 mecha chibi (00 es el mismo con Mixamo) |
+| 5 Xelor | 08 mecha azul | 01 mecha chibi (00 es el mismo con Mixamo; confirmado por el dueño) |
 | 6 Zurcarák | 28 orejas, naranja | 55 orejas, naranja (alt. 19 gato blanco) |
 | 7 Aniripsa | 11 hada con alas | 34 abrigo marrón con alas (alt. 22) |
 | 8 Yopuka | 32 cinta roja | 47 pelo de fuego (alt. 25) |
@@ -376,8 +376,9 @@ hojas retail del paquete de Flow; **el dueño confirma o corrige**:
 Invocaciones: 8001 → 49 muñeco vudú · 8002 → 02 muñeco con venda ·
 8003 → 10 saco · 8004 → 23 pangolín · 8005 → 43 tofu (35, 37 y 39 son
 variantes) · 8006 → 41 oveja · 8007 → 54 gólem · 8009 → 42 árbol ·
-**8010 (huevo gris con pinchos) sin figura clara**: ¿44 nube, 50
-armadillo o 21 araña?
+**8010 es un cristal, un espejo** (dueño, 2026-11-09): no viene de
+Meshy, lo modelo yo como pieza rígida (sin rig; el brillo y el giro los
+pone el juego).
 
 Sin hueco en S31 (21 figuras): oso, chafer, cuervo enjaulado, gato
 blanco, encapuchada, araña, elfo alado, elfo verde/rojo, un duplicado de
