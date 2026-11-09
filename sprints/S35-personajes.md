@@ -380,6 +380,10 @@ variantes) · 8006 → 41 oveja · 8007 → 54 gólem · 8009 → 42 árbol ·
 Meshy, lo modelo yo como pieza rígida (sin rig; el brillo y el giro los
 pone el juego).
 
+**Se colaron GLB de Ferinia** (dueño, 2026-11-09): 16 oso, 17 chafer y
+18 cuervo enjaulado son de Ferinia, no de Pippop; seguramente también el
+resto de esta lista. No se usan aquí.
+
 Sin hueco en S31 (21 figuras): oso, chafer, cuervo enjaulado, gato
 blanco, encapuchada, araña, elfo alado, elfo verde/rojo, un duplicado de
 Sacrógrito f, tres tofus, dos conejos, chica y chico demonio, ninja

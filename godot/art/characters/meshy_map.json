@@ -193,9 +193,6 @@
     }
   },
   "sin_hueco": [
-    16,
-    17,
-    18,
     19,
     20,
     21,
@@ -215,5 +212,13 @@
     51,
     52
   ],
-  "sin_hueco_doc": "oso, chafer, cuervo enjaulado, gato blanco, encapuchada, arana, elfo alado, elfo verde/rojo, duplicado de 12, tres tofus mas, dos conejos, chica y chico demonio, ninja morada, nube, armadillo, mono de hojas, pajaro de hojas: candidatos a monstruos PvE / invocaciones futuras"
+  "sin_hueco_doc": "oso, chafer, cuervo enjaulado, gato blanco, encapuchada, arana, elfo alado, elfo verde/rojo, duplicado de 12, tres tofus mas, dos conejos, chica y chico demonio, ninja morada, nube, armadillo, mono de hojas, pajaro de hojas: candidatos a monstruos PvE / invocaciones futuras",
+  "ferinia": {
+    "confirmados": [
+      16,
+      17,
+      18
+    ],
+    "doc": "dueno 2026-11-09: se colaron GLB de Ferinia en la carpeta de la homelab; 16 oso, 17 chafer, 18 cuervo enjaulado. El resto de sin_hueco probablemente tambien; no se usan en Pippop."
+  }
 }
