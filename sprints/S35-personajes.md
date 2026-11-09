@@ -1,6 +1,6 @@
 # S35 — Personajes
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-11-04 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (paso 1 a revisar por el dueño)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-11-04 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (lote 1 de Meshy copiado; mañana, piloto Feca)
 
 ## Alcance (lo que hoy se usa, S31)
 
@@ -391,6 +391,31 @@ las 34 de la tabla más una segunda versión de Sacrógrito f (26).
 `s35-meshy-pippop-clases.png` (arriba mujer, abajo hombre) y
 `s35-meshy-pippop-invocaciones.png` (invocaciones y coaches).
 
-Siguiente (cuando el dueño confirme la tabla): el piloto, Feca f y m de
-punta a punta: limpieza, reducción a 3–6k triángulos y textura 1024, rig
-a los 20 huesos con las 10 animaciones, y un combate.
+**Copiados para trabajar (2026-11-09):** cada GLB de Pippop en su carpeta,
+`~/codigo/capturas/s35/meshy/<carpeta>/meshy.glb` (36 ficheros):
+`01_feca_f` … `12_pandawa_m`, `coach_7000_m`, `coach_7001_f`,
+`invocacion_8001` … `invocacion_8009`, más `05_xelor_m_mixamo` (el
+mismo Xelor con rig de Mixamo, solo para comparar) y
+`11_sacrogrito_f_alt`. Los originales siguen en `_homelab/` con
+`inventario.json`. Los de Ferinia no se usan ni se tocan.
+
+Decisiones abiertas:
+- 8005 y 8006: el dueño escribió "8005 = 02, 8006 = 10", pero 02 y 10
+  tienen la forma de 8002 y 8003 en la hoja retail; se queda 8005 → 43
+  y 8006 → 41 hasta que lo confirme.
+- Rig: lo hago yo en Blender con los 20 huesos y las 10 animaciones
+  (recomendado al dueño: el rig de Meshy/Mixamo no tiene nuestras
+  animaciones ni sirve para criaturas). El Xelor con Mixamo sirve de
+  comparación en el piloto.
+
+**Mañana, piloto Feca f y m** (`01_feca_f`, `01_feca_m`), de punta a punta:
+1. Limpiar en Blender: escala a 1,45 celdas, pies en el suelo, origen,
+   orientación al frente del juego, revisión con `blender-asset-qa`.
+2. Reducir a 3–6k triángulos y la textura de 2048 a 1024.
+3. Rig a los 20 huesos (pesos automáticos, retoque) y las 10 animaciones
+   de `fighter1.py`.
+4. Hoja con `anim_sheet.gd` a escala de juego, junto al Xelor de Mixamo.
+5. Un combate con el Feca nuevo.
+
+Después: el cristal de 8010 (pieza rígida, la modelo yo) y el resto de
+clases en lote.
