@@ -392,7 +392,7 @@ las 34 de la tabla más una segunda versión de Sacrógrito f (26).
 `s35-meshy-pippop-invocaciones.png` (invocaciones y coaches).
 
 **Copiados para trabajar (2026-11-09):** cada GLB de Pippop en su carpeta,
-`~/codigo/capturas/s35/meshy/<carpeta>/meshy.glb` (36 ficheros):
+`~/codigo/capturas/s35/meshy/<carpeta>/<carpeta>.glb` (36 ficheros, p. ej. `01_feca_f/01_feca_f.glb`):
 `01_feca_f` … `12_pandawa_m`, `coach_7000_m`, `coach_7001_f`,
 `invocacion_8001` … `invocacion_8009`, más `05_xelor_m_mixamo` (el
 mismo Xelor con rig de Mixamo, solo para comparar) y
