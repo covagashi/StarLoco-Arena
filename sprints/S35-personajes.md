@@ -513,3 +513,13 @@ SE y NW), `s35-feca-f-1/2.png` y `s35-feca-m-1/2.png` (las 10 animaciones,
 direcciones), `s35-feca-f/m-4vistas.png`, `s35-feca-m-combate-arena2.png` /
 `s35-feca-f-combate-arena2.png` (en la arena 2) y `s35-feca-combate.mp4`
 (el combate real).
+
+**2026-11-10 — Osamodas f y m (S35b).** La f sale sin tocar nada. El m
+lleva brazales fundidos con las borlas del cinturón (z 0,62–0,78): las
+manos quedaban fuera del brazo y, al subirlo, el pelo del brazal se
+quedaba flotando en la cadera. Nuevo `extend_hand()` en `meshy_fighter.py`,
+solo cuando `--joints` mueve `hand_tip.S` (los Feca no cambian: sin
+`--joints`). Relajar el ancho mínimo de la mano en general se probó y
+rompía el brazo derecho del Feca m (cogía el bajo del abrigo hasta 0,41).
+`FIGHT_UI_BREED=<n>` en la vista previa de combate.
+

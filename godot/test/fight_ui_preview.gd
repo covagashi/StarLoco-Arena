@@ -12,7 +12,8 @@ extends Node2D
 ## that fighter's card), FIGHT_UI_SPECTATE=1 (watching, not playing),
 ## FIGHT_UI_PLACEMENT=1 (the placement phase instead of turn 7),
 ## FIGHT_UI_MAP=<arena> (default 10). FIGHT_UI_FECA=1 (S35 pilot: Arel and
-## Brune are the 3D Feca m and f), FIGHT_UI_FOCUS=<fid>[,<zoom>] (camera on
+## Brune are the 3D Feca m and f; FIGHT_UI_BREED=<n> any other 3D class,
+## 2 = Osamodas), FIGHT_UI_FOCUS=<fid>[,<zoom>] (camera on
 ## that fighter, default zoom 2). FIGHT_UI_TACTICS=spell (Arel's spell 4
 ## armed, the pointer on a castable cell: reach, AoE, hover, plus a placed
 ## trap) or =move (the walk preview and its MP cost).
@@ -31,6 +32,12 @@ const FIGHTERS := [
 ]
 
 
+func _model_breed() -> int:
+	if OS.get_environment("FIGHT_UI_BREED") != "":
+		return int(OS.get_environment("FIGHT_UI_BREED"))
+	return 1 if OS.get_environment("FIGHT_UI_FECA") == "1" else 0
+
+
 func _ready() -> void:
 	State.fight_world = 10 if OS.get_environment("FIGHT_UI_MAP") == "" \
 		else int(OS.get_environment("FIGHT_UI_MAP"))
@@ -38,9 +45,9 @@ func _ready() -> void:
 	State.fighters = {}
 	var timeline := []
 	var rows := FIGHTERS.duplicate(true)
-	if OS.get_environment("FIGHT_UI_FECA") == "1":   # S35 pilot: the 3D Fecas
-		rows[0][4] = 1   # Arel → Feca m
-		rows[1][4] = 1   # Brune → Feca f
+	if _model_breed() > 0:   # S35: Arel and Brune as a 3D class, m and f
+		rows[0][4] = _model_breed()
+		rows[1][4] = _model_breed()
 	for r in rows:
 		State.fighters[r[0]] = {"id": r[0], "name": r[1], "coach": r[2],
 			"team": r[3], "breed": r[4], "sex": r[5], "spells": r[6], "cards": []}
@@ -172,7 +179,7 @@ func _stage(fight: Node) -> void:
 	fight._attach_buff(4, 126, 9005, 0, 2, false)    # drunk
 	fight._attach_buff(4, 19, 9006, 1, 1, false)     # +1 MP
 	fight._attach_buff(4, 20, 9007, 1, 1, false)     # -1 MP (4th chip → "+2")
-	var spr = fight._sprites.get(8 if OS.get_environment("FIGHT_UI_FECA") == "1" else 2)
+	var spr = fight._sprites.get(8 if _model_breed() > 0 else 2)
 	if spr != null:
 		spr.modulate.a = 0.0                           # unseen enemy
 	fight._kill_actor(6)

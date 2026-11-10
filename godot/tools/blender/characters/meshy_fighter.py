@@ -419,8 +419,12 @@ def find_joints(ob):
         J[f"foot.{S}"] = an
         J[f"toe.{S}"] = Vector((an.x, feet[S]["y0"] + 0.025, 0.022))
     if OPT["joints"]:
-        for k, v in json.load(open(OPT["joints"])).items():
+        fix = json.load(open(OPT["joints"]))
+        for k, v in fix.items():
             J[k] = Vector(v)
+        for S in "LR":  # a hand moved lower: its slice pieces join the arm
+            if f"hand_tip.{S}" in fix:
+                extend_hand(S, J, table)
     LOG["landmarks"] = {"ankle": round(ankle_z, 3), "crotch": round(crotch_z, 3), "armpit": round(armpit_z, 3),
                         "shoulder_top": round(top, 3), "shoulder": round(sh_z, 3),
                         "neck": round(neck_z, 3), "height": round(H, 3)}
@@ -430,6 +434,50 @@ def find_joints(ob):
             for z, cl in table.items():
                 f.write(f"{z:.2f} " + "  ".join(f"[{c['x0']:+.3f},{c['x1']:+.3f} y{c['cy']:+.3f}]" for c in cl) + "\n")
     return J
+
+
+def extend_hand(S, J, table):
+    """The hand hangs apart under a part fused to the body (a bracer on a
+    belt), so the slices missed it: below the arm's lowest piece, the
+    piece around the forearm-hand-tip line is arm; the fused stretch in
+    between takes the width of the pieces around it."""
+    a = ARM[S]
+    pieces = a["pieces"]
+    chain = [J[f"forearm.{S}"], J[f"hand.{S}"], J[f"hand_tip.{S}"]]
+
+    def x_at(z):
+        for p, q in zip(chain, chain[1:]):
+            if q.z <= z <= p.z:
+                return p.x + (q.x - p.x) * (z - p.z) / (q.z - p.z)
+        return None
+
+    # the body runs close beside the hand: no slack on the inner edge
+    # (arm_side allows 1.2 cm around a piece)
+    inner = lambda x0, x1: (x0 + 0.012, x1) if S == "L" else (x0, x1 - 0.012)
+    low = min(pieces)
+    for z in sorted(table):
+        x = x_at(z)
+        if z >= low or x is None:
+            continue
+        for c in table[z]:
+            if c["x0"] - 0.01 <= x <= c["x1"] + 0.01 and not (c["x0"] < 0 < c["x1"]) and c["x1"] - c["x0"] < 0.11:
+                pieces[z] = inner(c["x0"], c["x1"])
+    # fused to the body (the outermost piece reaches the middle, a bracer
+    # on the belt): the inner edge is the narrower of the free pieces
+    # around, the outer edge the fused piece's (the arm is outermost)
+    def outer(z):
+        c = table[z][-1] if S == "L" else table[z][0]
+        return c if (c["x0"] < 0.03 if S == "L" else c["x1"] > -0.03) else None
+    free = sorted(z for z in pieces if not (table.get(z) and outer(z)))
+    for z in sorted(table):
+        if free[0] < z < free[-1] and table[z] and outer(z):
+            lo = pieces[max(k for k in free if k < z)]
+            hi = pieces[min(k for k in free if k > z)]
+            c = outer(z)
+            pieces[z] = (max(lo[0], hi[0]), c["x1"]) if S == "L" else (c["x0"], min(lo[1], hi[1]))
+    known = sorted(pieces)
+    a["tip"] = min(known[0] - 0.015, J[f"hand_tip.{S}"].z)
+    LOG.setdefault("hand_extended", {})[S] = round(known[0], 3)
 
 
 def bones_from(J):

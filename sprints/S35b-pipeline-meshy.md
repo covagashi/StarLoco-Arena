@@ -97,6 +97,7 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | `can't find arm X apart from the body` | brazos pegados al cuerpo en todo el alto | `--joints` con hombro, codo, muñeca y punta |
 | cadera en la rodilla | el pantalón se toca en la rodilla | ya resuelto (hueco más alto); si no, `--joints` |
 | la mano corta o larga | la mano toca la ropa (se alarga 6,5 % del alto) | `--joints` con `hand.S` y `hand_tip.S` |
+| manos sin pintar bajo un brazal fundido al cinturón (`hand_hidden` y la mano por debajo) | el brazo solo se ve suelto por encima; la mano, más estrecha que el brazal, no entra | `--joints` con `hand.S` y `hand_tip.S` más abajo: `extend_hand()` suma las piezas de la mano y, en el tramo fundido, el borde interior más estrecho y el exterior de la pieza fundida (Osamodas m) |
 | migas de ropa en las manos | Meshy fundió la ropa con la mano | aceptado a escala de juego; anotarlo |
 | agujeritos oscuros en cintura/abrigo | el corte de las uniones fundidas | aceptado; anotarlo |
 | algo grande sube con los brazos (capa, alas, mochila) | pesos de brazo por encima del corte | revisar el render de pesos; bajar el 2,2 × radio en `skin()` solo si hace falta |
@@ -117,8 +118,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 |---|---|---|---|---|---|---|
 | 01_feca_f | feca_f | ✅ | — | ✅ | ✅ | piloto |
 | 01_feca_m | feca_m | ✅ | — | ✅ | ✅ | piloto; migas de abrigo en las manos |
-| 02_osamodas_f | osamodas_f | | | | | |
-| 02_osamodas_m | osamodas_m | | | | | |
+| 02_osamodas_f | osamodas_f | ✅ | — | ✅ | ✅ | limpio; agujeritos oscuros en la cadera (aceptado) |
+| 02_osamodas_m | osamodas_m | ✅ | `hand.L/R` (±0,215, 0,055, 0,625), `hand_tip.L/R` (±0,205, 0,04, 0,52) | ✅ | ✅ | brazales fundidos con las borlas del cinturón: sin `--joints` las manos quedaban fuera del brazo; con ellas, `extend_hand` (abajo) |
 | 03_anutrof_f | anutrof_f | | | | | |
 | 03_anutrof_m | anutrof_m | | | | | |
 | 04_sram_f | sram_f | | | | | |
