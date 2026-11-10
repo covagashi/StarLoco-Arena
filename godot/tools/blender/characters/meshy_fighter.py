@@ -295,7 +295,8 @@ def find_joints(ob):
                 runs.append([r])
         if not runs:
             raise SystemExit(f"[meshy] can't find arm {S} apart from the body")
-        arm = max(runs, key=lambda run: (run[-1][0], len(run)))
+        # a lone piece or two up there is a hair curl beside the face
+        arm = max([r for r in runs if len(r) >= 3] or runs, key=lambda run: (run[-1][0], len(run)))
         line = fit_line([r[:3] for r in arm])
         top = arm[-1][0]
         keep = list(arm)
@@ -457,11 +458,16 @@ def extend_hand(S, J, table):
     low = min(pieces)
     for z in sorted(table):
         x = x_at(z)
-        if z >= low or x is None:
+        if x is None or z > J[f"hand.{S}"].z + 0.03:
             continue
-        for c in table[z]:
-            if c["x0"] - 0.01 <= x <= c["x1"] + 0.01 and not (c["x0"] < 0 < c["x1"]) and c["x1"] - c["x0"] < 0.11:
-                pieces[z] = inner(c["x0"], c["x1"])
+        free = [c for c in table[z] if not (c["x0"] < 0 < c["x1"])]
+        for c in free:
+            if c["x0"] - 0.01 <= x <= c["x1"] + 0.01 and c["x1"] - c["x0"] < 0.11:
+                x0, x1 = pieces[z] if z >= low and z in pieces else (c["x0"], c["x1"])
+                for t in free:  # the thumb: a small piece right beside the hand
+                    if t is not c and t["x1"] - t["x0"] < 0.05 and min(abs(t["x1"] - x0), abs(t["x0"] - x1)) < 0.03:
+                        x0, x1 = min(x0, t["x0"]), max(x1, t["x1"])
+                pieces[z] = inner(x0, x1) if z < low else (x0, x1)
     # fused to the body (the outermost piece reaches the middle, a bracer
     # on the belt): the inner edge is the narrower of the free pieces
     # around, the outer edge the fused piece's (the arm is outermost)
@@ -477,6 +483,7 @@ def extend_hand(S, J, table):
             pieces[z] = (max(lo[0], hi[0]), c["x1"]) if S == "L" else (c["x0"], min(lo[1], hi[1]))
     known = sorted(pieces)
     a["tip"] = min(known[0] - 0.015, J[f"hand_tip.{S}"].z)
+    a["hand_z"] = J[f"hand.{S}"].z + 0.03  # below: the hand's pieces bound it
     LOG.setdefault("hand_extended", {})[S] = round(known[0], 3)
 
 
@@ -555,7 +562,10 @@ def arm_vertices(ob, segs):
     cand = {}
     for v in me.vertices:
         S = arm_side(v.co)
-        if S and min(seg_dist(v.co, *segs[f"{b}.{S}"]) for b in ARM_CHAIN) <= ARM[S]["half"] + 0.03:
+        # a hand found by extend_hand is bounded by its pieces: more room
+        # around the bone (a thumb in front of the hand)
+        slack = 0.05 if S and v.co.z < ARM[S].get("hand_z", -1) else 0.03
+        if S and min(seg_dist(v.co, *segs[f"{b}.{S}"]) for b in ARM_CHAIN) <= ARM[S]["half"] + slack:
             cand[v.index] = S
     nbr, allnbr = {i: [] for i in cand}, {}
     for e in me.edges:

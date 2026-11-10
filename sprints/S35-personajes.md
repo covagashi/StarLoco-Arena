@@ -523,3 +523,13 @@ solo cuando `--joints` mueve `hand_tip.S` (los Feca no cambian: sin
 rompía el brazo derecho del Feca m (cogía el bajo del abrigo hasta 0,41).
 `FIGHT_UI_BREED=<n>` en la vista previa de combate.
 
+**2026-11-10 — Anutrof f y m (S35b).** La f lleva falda larga y unas
+bolsas que agarra con las manos. Con la falda, la entrepierna salía en el
+bajo, así que la cadera va por `--joints`. Los rizos del pelo se tomaban
+por el brazo, y ahora el brazo es un tramo de 3 cortes o más. Las bolsas
+están fundidas con la mano y dejan esquirlas al subir los brazos;
+aceptado a escala de juego. El m lleva guanteletes: la mano se corta en
+el puño y el pulgar es una pieza aparte. `extend_hand` ahora suma esas
+piezas pequeñas y da más holgura bajo la muñeca. El Osamodas m se
+reconstruyó con esto y sigue limpio; los Feca no cambian (sin `--joints`).
+
