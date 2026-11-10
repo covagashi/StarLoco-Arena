@@ -565,3 +565,13 @@ detrás del torso no es brazo (los doce anteriores salen idénticos). En la
 f probé a bajar los hombros con `--joints` y fue un error mío (su cintura
 es muy fina y la confundí con el pecho); quedan los del script.
 
+**2026-11-10 — Corrección del dueño: hombros de la Aniripsa f.** "El
+nivel de los hombros ha quedado casi por el codo". El pelo largo le tapa
+los hombros, así que el script no veía dónde se estrecha el torso hacia
+el cuello y dejaba el hombro en la axila, que en ella es el brazalete de
+la manga (0,95). Ahora, si no hay estrechamiento, el hombro va 2,5 cm bajo
+la base del cuello (1,04) y en la línea del propio brazo, no en el pelo de
+la espalda; el codo sube con él (0,85). Las doce figuras anteriores salen
+idénticas. Yo lo había dado por bueno al compararlo con mi error de antes;
+a partir de aquí, los hombros se miran de cerca en cada figura.
+

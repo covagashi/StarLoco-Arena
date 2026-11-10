@@ -387,6 +387,9 @@ def find_joints(ob):
     sh_z = top - 1.1 * (ARM["L"]["half"] + ARM["R"]["half"]) / 2
     sh_z = max(sh_z, armpit_z + 0.02)
     neck0 = neck_z - 0.035
+    hidden = top == armpit_z  # long hair over the shoulders hides them: just under the neck
+    if hidden:
+        sh_z = max(sh_z, neck0 - 0.025)
     J["root"] = Vector((0, 0, 0))
     J["hips"] = Vector((0, torso_y(hip_z), hip_z))
     for name, k in (("spine", 0.286), ("chest", 0.629)):
@@ -406,6 +409,9 @@ def find_joints(ob):
             edge = mid[0]["x1"] if X > 0 else -mid[0]["x0"]
             a.x = X * min(abs(a.x), edge - 0.4 * ARM[S]["half"])
             a.y = torso_y(sh_z)
+        if hidden:  # the slices up there are hair: the arm's own top instead
+            p = line(armpit_z)
+            a = Vector((p.x, p.y, sh_z))
         J[f"upper_arm.{S}"] = a
         # elbow and wrist on the arm's own centre at their height (the arm
         # bends; the shoulder-to-hand line misses it by centimetres)
@@ -415,7 +421,7 @@ def find_joints(ob):
             r = rows.get(round(round(q.z / step) * step, 3))
             J[name] = Vector((r[1], r[2], q.z)) if r and r[4] - r[3] < 0.09 else q
         J[f"hand_tip.{S}"] = b
-        J[f"shoulder.{S}"] = Vector((0.03 * X, torso_y(sh_z), sh_z))
+        J[f"shoulder.{S}"] = Vector((0.03 * X, a.y if hidden else torso_y(sh_z), sh_z))
         lr = legrows[S]
         leg = fit_line(lr) if len(lr) > 3 else (lambda z, X=X: Vector((0.08 * X, 0, z)))
         th = leg(hip_z)
