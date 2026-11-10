@@ -55,3 +55,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-10-22 | [S10: tutorial y onboarding (abierto y cerrado)](./2026-10-22-s10.md) |
 | 2026-10-24 | [Login con ✕ y ojo; la lista del dueño, en sprints S20–S24 (M6)](./2026-10-24-sprints-m6.md) |
 | 2026-10-24 | [M6 entero: S20 → S24 (hub, Historia, p2w, paneles, NPCs con cara)](./2026-10-24-m6.md) |
+| 2026-11-10 | [S35b: las 26 figuras y las 9 invocaciones en 3D; plan de la tanda 3 de marketing](./2026-11-10-s35b.md) |
