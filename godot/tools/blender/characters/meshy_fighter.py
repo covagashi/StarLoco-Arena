@@ -5,7 +5,7 @@ texture budget of the web demo, fitted with the common 20-bone skeleton
 rig_anims.py.
 
     blender -b -P tools/blender/characters/meshy_fighter.py -- <in.glb> <out.glb>
-        [--tris=5000] [--tex=1024] [--joints=<overrides.json>] [--debug=<dir>]
+        [--tris=5000] [--tex=1024] [--joints=<overrides.json>] [--arm_slack=0.03] [--debug=<dir>]
         [--overhead_out=40]   (raised arms open into a V: short arms, big head)
 
 What it does, in order:
@@ -36,7 +36,7 @@ sys.path.insert(0, HERE)
 import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-OPT = {"tris": "5000", "tex": "1024", "joints": "", "debug": "", "overhead_out": "40"}
+OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "debug": "", "overhead_out": "40"}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -564,7 +564,11 @@ def arm_vertices(ob, segs):
         S = arm_side(v.co)
         # a hand found by extend_hand is bounded by its pieces: more room
         # around the bone (a thumb in front of the hand)
-        slack = 0.05 if S and v.co.z < ARM[S].get("hand_z", -1) else 0.03
+        # (--arm_slack: room around the bones for armour sticking out of
+        # the arm, a bracer's fins)
+        slack = float(OPT["arm_slack"])
+        if S and v.co.z < ARM[S].get("hand_z", -1):
+            slack = max(slack, 0.05)
         if S and min(seg_dist(v.co, *segs[f"{b}.{S}"]) for b in ARM_CHAIN) <= ARM[S]["half"] + slack:
             cand[v.index] = S
     nbr, allnbr = {i: [] for i in cand}, {}

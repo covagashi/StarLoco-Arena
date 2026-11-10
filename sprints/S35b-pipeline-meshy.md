@@ -41,6 +41,9 @@ axila, alto del hombro, hombro, cuello), `tris`, `textures`, `arm_cut`,
 - cadera en la entrepierna (no en la rodilla si el pantalón se toca);
 - rodilla a media pierna, tobillo dentro del zapato, pie hacia delante.
 
+Si la armadura del brazo sobresale (aletas, coderas): `--arm_slack=0.06`
+(holgura alrededor del hueso, 0,03 por defecto); apuntarlo en la tabla.
+
 Si algo cae mal: un JSON con las articulaciones a corregir
 (`{"upper_arm.L": [x, y, z], …}`, nombres de `bones_from()`) y
 `--joints=<json>`; guardarlo junto al GLB de Meshy (`<carpeta>/joints.json`)
@@ -98,6 +101,7 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | cadera en la rodilla | el pantalón se toca en la rodilla | ya resuelto (hueco más alto); si no, `--joints` |
 | la cadera en el bajo de una falda larga | solo bajo la falda hay hueco entre las piernas | `--joints` con `hips`, `spine`, `chest`, `thigh.S` y `shin.S` (Anutrof f) |
 | un rizo de pelo junto a la cara tomado por el brazo | una pieza suelta bajo 0,72 del alto | ya resuelto: el brazo es un tramo de 3 cortes o más |
+| "alas" o trozos de armadura que se quedan en el pecho al subir los brazos | la armadura del brazo (aletas del brazal, codera) sobresale más de radio + 3 cm del hueso | `--arm_slack=0.06` (Xelor f y m) |
 | pulgares flotando junto a la cadera | el pulgar es una pieza aparte, delante de la mano | ya resuelto en `extend_hand` (suma piezas pequeñas pegadas a la mano y da 5 cm de holgura bajo la muñeca); hace falta `--joints` con `hand_tip.S` (vale su propio valor, el de la línea `[meshy]`) |
 | la mano corta o larga | la mano toca la ropa (se alarga 6,5 % del alto) | `--joints` con `hand.S` y `hand_tip.S` |
 | manos sin pintar bajo un brazal fundido al cinturón (`hand_hidden` y la mano por debajo) | el brazo solo se ve suelto por encima; la mano, más estrecha que el brazal, no entra | `--joints` con `hand.S` y `hand_tip.S` más abajo: `extend_hand()` suma las piezas de la mano y, en el tramo fundido, el borde interior más estrecho y el exterior de la pieza fundida (Osamodas m) |
@@ -127,8 +131,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 03_anutrof_m | anutrof_m | ✅ | `forearm.L/R` (±0,193, 0,08, 0,85), `hand.L/R` (±0,24, 0,035, 0,64), `hand_tip.L/R` (±0,23, 0,03, 0,55) | ✅ | ✅ | guanteletes anchos: la mano se cortaba en el puño; el pulgar (pieza aparte, delante) se quedaba en la cadera |
 | 04_sram_f | sram_f | ✅ | `hand_tip.L/R` (±0,233, 0,011, 0,53), su propio valor | ✅ | ✅ | el pulgar (pieza aparte) flotaba junto al muslo; `hand_tip` en `--joints` activa `extend_hand` |
 | 04_sram_m | sram_m | ✅ | `hand_tip.L/R` (±0,238, 0,072, 0,51), su propio valor | ✅ | ✅ | igual que la f |
-| 05_xelor_f | xelor_f | | | | | |
-| 05_xelor_m | xelor_m | | | | | |
+| 05_xelor_f | xelor_f | ✅ | `hand.L/R` (±0,19, 0,066, 0,60), `hand_tip.L/R` (±0,185, 0,058, 0,49); `--arm_slack=0.06` | ✅ | ✅ | manos fundidas con la cadera; piezas del codo sueltas en el pecho sin `--arm_slack` |
+| 05_xelor_m | xelor_m | ✅ | `hand_tip.L/R` (±0,238/0,239, 0,005, 0,52), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | aletas del brazal hacían "alas" sin `--arm_slack`; trae mapa de metal (2 texturas, 1,1 MB): bien en Godot, oscuro en `four_views` (sin entorno) |
 | 06_zurcarak_f | zurcarak_f | | | | | |
 | 06_zurcarak_m | zurcarak_m | | | | | |
 | 07_aniripsa_f | aniripsa_f | | | | | alas |

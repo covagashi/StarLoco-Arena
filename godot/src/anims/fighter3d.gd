@@ -30,7 +30,8 @@ const YAW := {0: 135.0, 1: 90.0, 2: 45.0, 3: 0.0, 4: 315.0, 5: 270.0, 6: 225.0, 
 const MIRROR := {0: 4, 1: 3, 2: 2, 3: 1, 4: 0, 5: 7, 6: 6, 7: 5}
 ## breed → [male, female] model under art/characters/out (S35 pilot: Feca).
 const MODELS := {1: ["feca_m", "feca_f"], 2: ["osamodas_m", "osamodas_f"],
-		3: ["anutrof_m", "anutrof_f"], 4: ["sram_m", "sram_f"]}
+		3: ["anutrof_m", "anutrof_f"], 4: ["sram_m", "sram_f"],
+		5: ["xelor_m", "xelor_f"]}
 const MODEL_DIR := "res://art/characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)

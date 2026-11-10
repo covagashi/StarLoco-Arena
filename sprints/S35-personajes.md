@@ -540,3 +540,12 @@ recoge `extend_hand`. Repasados los Feca con la misma mirada: la f deja
 dos puntitos junto a la falda con los brazos arriba; pequeño, el piloto
 está aprobado, no se toca salvo que el dueño lo pida.
 
+**2026-11-10 — Xelor f y m (S35b).** Los dos mecha llegan como una malla
+soldada (`islands: 1`). Las aletas del brazal del m y las coderas de la
+f sobresalen del brazo más que la holgura del script y se quedaban con el
+cuerpo, estiradas en "alas". Nueva opción `--arm_slack` (0,03 por
+defecto, 0,06 en los dos Xelor). La f además tiene las manos fundidas con
+la cadera y el m el pulgar suelto: `--joints` con la mano. El m conserva
+el mapa de metal de Meshy (segunda textura); en Godot el dorado brilla
+bien, solo `four_views.sh` (Blender sin entorno) lo enseña oscuro.
+
