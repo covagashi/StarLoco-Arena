@@ -1,6 +1,6 @@
 # S35b — Pipeline Meshy → luchador (una clase por sesión)
 
-**Planificado:** 2026-11-10 · **Hito:** M7 — Arte propio · **Tamaño:** S por figura · **Estado:** 🔵 abierto: 12 clases y 2 coaches hechos (2026-11-10); faltan las invocaciones
+**Planificado:** 2026-11-10 · **Hito:** M7 — Arte propio · **Tamaño:** S por figura · **Estado:** ✅ cerrado 2026-11-10: 12 clases, 2 coaches y 9 invocaciones en 3D
 
 Receta para empezar **limpio**: una sesión por figura (o por clase, f y m),
 sin releer S35 entero. Todo lo de aquí se probó en el piloto Feca (S35,
@@ -125,14 +125,55 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | una cola entre las piernas | tapa el hueco de la entrepierna; la pierna busca la pieza más cercana al centro | `--joints` con cadera, columna, muslos y rodillas (Zurcarák f); la cola queda con la cadera |
 | figura sin forma humana (alas grandes, criatura) | el ajuste busca dos brazos y dos piernas | parar y preguntar al dueño |
 
+## Invocaciones (receta aparte)
+
+Decisiones del dueño, 2026-11-10: más pequeñas que un luchador (~0,9
+celdas; gólem y árbol ~1,2) y las que no tienen dos brazos con un
+esqueleto corto propio. Con estas proporciones el ajuste por cortes de
+`meshy_fighter.py` no sirve, así que van por `meshy_summon.py`, que
+reutiliza su limpieza y exporta igual, pero:
+
+- las articulaciones vienen **enteras** de `<carpeta>/joints.json` (se
+  leen en los cortes: `--debug` de meshy_fighter o un volcado de
+  `Slicer`);
+- pesos de calor sin el corte de brazos, cada vértice con sus huesos
+  cercanos, la cabeza rígida (`--head_r=<m>` la limita a un radio);
+- `--strict_arms=1`: el brazo solo pesa donde es el hueso más cercano;
+  `--rigid_islands=<f>`: cada pieza suelta va entera con el hueso más
+  cercano (gólem); `--arm_max=<grados>`: brazos levantados como mucho tanto
+  (aletas fundidas al saco);
+- `--shape=creature`: el esqueleto corto de `creature_anims.py` (cuerpo,
+  cabeza, patas, cola) con las 10 animaciones adaptadas, mismos nombres.
+
+```
+blender -b -P tools/blender/characters/meshy_summon.py -- \
+    ~/codigo/capturas/s35/meshy/invocacion_8007/invocacion_8007.glb art/characters/out/summon_8007.glb \
+    --joints=~/codigo/capturas/s35/meshy/invocacion_8007/joints.json --head_r=0.2 --rigid_islands=0.2 --debug=$S
+```
+
+El juego las escala (`Fighter3D.SUMMONS`, look → modelo y altura) y
+`fight_view` las dibuja en 3D por su `look`; los dobles (look 0, breed)
+usan el modelo de su clase. Vista previa: `FIGHT_UI_SUMMON=<look>`
+cambia la invocación de Cael (fid 7) y `FIGHT_UI_FOCUS=7,2` la enfoca.
+
+| Look | Figura | Esqueleto | Opciones | Altura | Notas |
+|---|---|---|---|---|---|
+| 8001 | muñeco vudú | humano | — | 0,9 | cabeza enorme rígida |
+| 8002 | muñeco con venda | humano | — | 0,9 | |
+| 8003 | saco | humano | `--strict_arms=1 --arm_max=110` | 0,9 | las aletas, fundidas al costado, lo rasgaban al subir |
+| 8004 | pangolín | criatura (2 patas, cola) | `--shape=creature` | 0,9 | los bracitos van con el pecho |
+| 8005 | pollito | criatura (2 patas) | `--shape=creature` | 0,9 | |
+| 8006 | oveja | criatura (4 patas) | `--shape=creature` | 0,9 | patas delanteras del pecho, traseras de la cadera |
+| 8007 | gólem | humano | `--head_r=0.2 --rigid_islands=0.2` | 1,2 | piedras sueltas: cada una entera con un hueso |
+| 8009 | árbol | humano | — | 1,2 | hojas sueltas con la copa |
+| 8010 | cristal | 1 hueso | `crystal_8010.py` (lo modelo yo) | 1,3 | flota y gira; el óvalo a tamaño retail |
+
 ## Fuera de esta receta
 
-- **Invocaciones** (8001–8009): no son humanas; antes hay que decidir el
-  rig con el dueño. **8010** es un cristal rígido que modelo yo (S35).
-- **Coaches** 7000/7001: humanos, valen con esta receta, pero en combate no
-  pasan por `Fighter3D` (son el jugador, no luchadores).
+- **Coaches** 7000/7001: en combate no pasan por `Fighter3D` (son el
+  jugador, no luchadores).
 - Viewport compartido para 12 luchadores y la sombra en el suelo: trabajo
-  aparte, después de las clases.
+  aparte.
 
 ## Tabla de figuras
 
@@ -167,5 +208,5 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 
 ## Criterio de cierre
 
-Las 24 filas de clase con huesos revisados, hojas y combate, y los dos
-coaches con hojas. Las invocaciones se planifican aparte.
+Las 24 filas de clase con huesos revisados, hojas y combate, los dos
+coaches con hojas y las 9 invocaciones en combate (hecho, 2026-11-10).

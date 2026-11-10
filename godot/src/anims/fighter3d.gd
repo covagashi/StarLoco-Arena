@@ -35,6 +35,14 @@ const MODELS := {1: ["feca_m", "feca_f"], 2: ["osamodas_m", "osamodas_f"],
 		7: ["aniripsa_m", "aniripsa_f"], 8: ["yopuka_m", "yopuka_f"],
 		9: ["ocra_m", "ocra_f"], 10: ["sadida_m", "sadida_f"],
 		11: ["sacrogrito_m", "sacrogrito_f"], 12: ["pandawa_m", "pandawa_f"]}
+## summon look → [model, height in cells]; built at 1.45 like a fighter and
+## scaled down here (owner, 2026-11-10: smaller than a fighter, ~0.9; the
+## golem and the tree ~1.2; the crystal 8010, crystal_8010.py, 1.3 so its
+## oval reads at the retail size).
+const SUMMONS := {8001: ["summon_8001", 0.9], 8002: ["summon_8002", 0.9], 8003: ["summon_8003", 0.9],
+		8004: ["summon_8004", 0.9], 8005: ["summon_8005", 0.9], 8006: ["summon_8006", 0.9],
+		8007: ["summon_8007", 1.2], 8009: ["summon_8009", 1.2], 8010: ["summon_8010", 1.3]}
+const BUILT_HEIGHT := 1.45
 const MODEL_DIR := "res://art/characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)
@@ -58,6 +66,19 @@ static func model_for(breed: int, sex: int) -> String:
 	return path if FileAccess.file_exists(path) else ""
 
 
+## The model path for a summon look, or "" when none is built.
+static func summon_for(look: int) -> String:
+	if not SUMMONS.has(look):
+		return ""
+	var path := MODEL_DIR % SUMMONS[look][0]
+	return path if FileAccess.file_exists(path) else ""
+
+
+## A summon's height relative to a fighter's.
+static func summon_scale(look: int) -> float:
+	return float(SUMMONS[look][1]) / BUILT_HEIGHT if SUMMONS.has(look) else 1.0
+
+
 static func _template(path: String) -> Node3D:
 	if _templates.has(path):
 		return _templates[path]
@@ -75,12 +96,14 @@ static func _template(path: String) -> Node3D:
 
 
 ## A fighter for `path`, or null when the GLB can't be read.
-static func create(path: String, tints := {}) -> Node2D:
+static func create(path: String, tints := {}, scale := 1.0) -> Node2D:
 	var t := _template(path)
 	if t == null:
 		return null
 	var f: Node2D = (load("res://src/anims/fighter3d.gd") as GDScript).new()
-	f._build(t.duplicate(), tints)
+	var m: Node3D = t.duplicate()
+	m.scale = Vector3.ONE * scale
+	f._build(m, tints)
 	return f
 
 

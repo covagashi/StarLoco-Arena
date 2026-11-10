@@ -819,7 +819,7 @@ def skin(ob, rig, J):
 
 # ---------------------------------------------------------------- debug
 
-def debug_render(ob, rig, J):
+def debug_render(ob, rig, J, bones=None):
     """Front and side x-ray renders with the joints as red balls."""
     d = OPT["debug"]
     scn = bpy.context.scene
@@ -836,7 +836,7 @@ def debug_render(ob, rig, J):
         o = bpy.context.active_object
         o.data.materials.append(mat)
         balls.append(o)
-    for _, h, t, _ in bones_from(J):
+    for _, h, t, _ in bones or bones_from(J):
         v = Vector(t) - Vector(h)
         if v.length < 1e-4:
             continue
@@ -910,6 +910,10 @@ def main():
     rig_anims.TOE = (J["toe.L"].z + J["toe.R"].z) / 2
     rig_anims.OVERHEAD_OUT = float(OPT["overhead_out"])
     rig_anims.animate(rig)
+    export(ob, rig, J)
+
+
+def export(ob, rig, J):
     os.makedirs(os.path.dirname(os.path.abspath(OUT)), exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
     ob.select_set(True)
@@ -926,4 +930,5 @@ def main():
     print("[meshy] " + OUT + " " + json.dumps(LOG))
 
 
-main()
+if __name__ == "__main__":  # meshy_summon.py imports the steps
+    main()

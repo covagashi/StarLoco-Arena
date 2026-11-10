@@ -640,3 +640,12 @@ y pangolín 8004 llevan un esqueleto corto propio (cuerpo, cabeza, patas)
 con las 10 animaciones adaptadas; muñecos 8001/8002, saco 8003, gólem
 8007 y árbol 8009 van con el esqueleto humano.
 
+**2026-11-10 — Invocaciones en 3D (S35b cerrado).** Las ocho de Meshy por
+`meshy_summon.py` (articulaciones a mano: el ajuste por cortes no lee un
+muñeco, un saco ni un gólem) y el cristal 8010 por `crystal_8010.py`
+(óvalo, marco y ocho rayos; flota, gira, tiembla al recibir, se hunde al
+morir). Pollito, oveja y pangolín con el esqueleto corto de
+`creature_anims.py`. El juego las dibuja por su `look` y a su altura
+(`Fighter3D.SUMMONS`). Tabla en S35b. Pendiente fuera de S35b: la sombra
+en el suelo (el cristal flota y en el retail proyecta una).
+

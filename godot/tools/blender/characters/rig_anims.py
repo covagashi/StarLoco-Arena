@@ -14,6 +14,10 @@ ANKLE, TOE = 0.075, 0.022  # fighter1's; meshy_fighter.py sets its own
 # raised past 100 degrees also open sideways by up to this many degrees, a
 # V instead of hands on the face. fighter1's long arms need none.
 OVERHEAD_OUT = 0.0
+# A stubby limb fused to a big body (a sack's flaps) tears the body open
+# when raised far: arm raises above this many degrees scale down into it
+# (meshy_summon --arm_max). 180 = no limit.
+ARM_MAX = 180.0
 
 # ---------------------------------------------------------------- poses
 # A pose is {bone: rotation}. Turning a bone about an armature axis means
@@ -74,6 +78,8 @@ def pose(**kw):
     for S in "LR":
         X = side(S)
         fwd, out, tw = (tuple(g(f"arm_{S}", (0, 0, 0))) + (0, 0, 0))[:3]
+        if ARM_MAX < 180:
+            fwd, out = fwd * ARM_MAX / 180, out * ARM_MAX / 180
         q = Quaternion(Vector(X_AX), math.radians(-fwd))
         q = Quaternion(Vector(Y_AX), math.radians(-out * X)) @ q
         q = Quaternion(Vector(Z_AX), math.radians(tw * X)) @ q

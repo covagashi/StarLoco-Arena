@@ -13,7 +13,8 @@ extends Node2D
 ## FIGHT_UI_PLACEMENT=1 (the placement phase instead of turn 7),
 ## FIGHT_UI_MAP=<arena> (default 10). FIGHT_UI_FECA=1 (S35 pilot: Arel and
 ## Brune are the 3D Feca m and f; FIGHT_UI_BREED=<n> any other 3D class,
-## 2 = Osamodas), FIGHT_UI_FOCUS=<fid>[,<zoom>] (camera on
+## 2 = Osamodas), FIGHT_UI_SUMMON=<look> (Cael's summon, fid 7; default
+## 8002), FIGHT_UI_FOCUS=<fid>[,<zoom>] (camera on
 ## that fighter, default zoom 2). FIGHT_UI_TACTICS=spell (Arel's spell 4
 ## armed, the pointer on a castable cell: reach, AoE, hover, plus a placed
 ## trap) or =move (the walk preview and its MP cost).
@@ -54,7 +55,8 @@ func _ready() -> void:
 		timeline.append(r[0])
 	# a summon of Cael's, right after its caster (insertSummonIntoTimeline)
 	State.fighters[7] = {"id": 7, "name": "Bouftou", "coach": 7, "team": 0,
-		"look": 8002, "summon": true, "hp": 30, "spells": [], "cards": []}
+		"look": 8002 if OS.get_environment("FIGHT_UI_SUMMON") == "" else int(OS.get_environment("FIGHT_UI_SUMMON")),
+		"summon": true, "hp": 30, "spells": [], "cards": []}
 	timeline.insert(timeline.find(3) + 1, 7)
 	var crowd := int(OS.get_environment("FIGHT_UI_CROWD"))
 	for i in crowd * 2:

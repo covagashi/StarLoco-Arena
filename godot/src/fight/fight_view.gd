@@ -919,10 +919,19 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 					get_tree().change_scene_to_file("res://src/main.tscn")
 
 
-## S35 pilot: a fighter whose breed has a built 3D model (Fighter3D.MODELS)
-## is drawn by it instead of the retail frames; summons and coaches stay.
+## S35: a fighter whose breed has a built 3D model (Fighter3D.MODELS), or a
+## summon whose look has one (Fighter3D.SUMMONS, scaled to its size), is
+## drawn by it instead of the retail frames; the rest and coaches stay.
 func _attach_model3d(spr: AnmSprite, f: Dictionary) -> void:
-	if spr.model3d != null or int(f.get("look", 0)) != 0 or f.get("summon", false):
+	if spr.model3d != null:
+		return
+	var look := int(f.get("look", 0))
+	if look > 0:
+		var sp := Fighter3D.summon_for(look)
+		if sp != "":
+			spr.model3d = Fighter3D.create(sp, {}, Fighter3D.summon_scale(look))
+		return
+	if look != 0 or (f.get("summon", false) and int(f.get("breed", -1)) < 1):
 		return
 	var path := Fighter3D.model_for(int(f.get("breed", 0)), int(f.get("sex", 0)))
 	if path != "":
