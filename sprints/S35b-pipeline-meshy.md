@@ -150,8 +150,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 08_yopuka_m | yopuka_m | ✅ | `hand_tip.L/R` (±0,2, 0,012, 0,45), su propio valor | ✅ | ✅ | hombrera de un lado: se queda con el pecho, bien |
 | 09_ocra_f | ocra_f | ✅ | `hand_tip.L/R` (±0,223/0,226, 0,035, 0,50), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | el codo toca la cintura (0,70–0,72): esquirlas del codo en la cadera sin `--arm_slack` |
 | 09_ocra_m | ocra_m | ✅ | `hand_tip.L/R` (±0,204, 0,048, 0,53), su propio valor | ✅ | ✅ | solo los pulgares |
-| 10_sadida_f | sadida_f | | | | | |
-| 10_sadida_m | sadida_m | | | | | |
+| 10_sadida_f | sadida_f | ✅ | `hand_tip.L/R` (±0,218/0,22, 0,041, 0,56), su propio valor | ✅ | ✅ | pelo sobre los hombros (hombro bajo el cuello, bien); las pulseras pasan enteras al brazo |
+| 10_sadida_m | sadida_m | ✅ | `hand_tip.L/R` (±0,23/0,224, 0,042, 0,55), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | hojas del brazal sobre la falda: sin `--arm_slack` se quedaban en la cintura; quedan dos motas de puntas de la falda (con 0,08 igual), aceptado |
 | 11_sacrogrito_f | sacrogrito_f | | | | | hay `_alt` |
 | 11_sacrogrito_m | sacrogrito_m | | | | | |
 | 12_pandawa_f | pandawa_f | | | | | |

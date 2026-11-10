@@ -588,3 +588,9 @@ mirados de cerca: bien en los dos. Los pulgares, como siempre, con
 `hand_tip`; la f además apoya el codo en la cintura y necesitó
 `--arm_slack=0.06`.
 
+**2026-11-10 — Sadida f y m (S35b).** Sin cambios en el script. Los dos
+llevan pelo sobre los hombros: el arreglo de la Aniripsa f los pone bajo
+el cuello, mirados de cerca y bien. El m apoya las hojas del brazal en
+la falda: `--arm_slack=0.06`; quedan dos motas que son puntas de la falda
+(no cambian con 0,08), aceptadas a escala de juego.
+
