@@ -38,6 +38,20 @@ var external_draw := false
 ## the frame's mask (R=ch1, G=ch2, B=ch8) unless overridden per-call.
 var tints := {}
 
+## S35 pilot: a 3D fighter (fighter3d.gd) drawn in place of the frames.
+## load_action / play_once hand it the retail action names; it plays its own
+## animation and facing and signals the end of a one-shot.
+var model3d: Node2D = null:
+	set(m):
+		if model3d != null:
+			model3d.queue_free()
+		model3d = m
+		if m != null:
+			add_child(m)
+			m.finished.connect(func():
+				playing = false
+				action_finished.emit())
+
 ## meta.json "sfx" — {frame index: [sound ids]} baked from Sons* parts.
 ## Played through a small round-robin pool; streams are cached by path.
 var _sfx: Dictionary = {}
@@ -65,6 +79,14 @@ static var _anm_scripts = null
 ## replaces like retail's divide/mul, it never stacks.  The explicit arg
 ## overrides `self.tints` only when non-empty.
 func load_action(set_dir: String, action: String, tints := {}) -> bool:
+	if model3d != null:
+		if not model3d.take(action, false, false):
+			return false
+		current = "%s/%s" % [AssetPaths.normalize(set_dir), action]
+		once = false
+		hold_last = false
+		playing = true
+		return true
 	set_dir = AssetPaths.normalize(set_dir)   # legacy res:// callers
 	var eff: Dictionary = tints if not tints.is_empty() else self.tints
 	var key := "%s/%s" % [set_dir, action]
@@ -170,6 +192,14 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 ## Load + play a gesture once (cast/hit/death). Returns false when the set
 ## lacks the action — callers fall back silently, assets are optional.
 func play_once(set_dir: String, action: String, hold := false) -> bool:
+	if model3d != null:
+		if not model3d.take(action, true, hold):
+			return false
+		current = "%s/%s" % [AssetPaths.normalize(set_dir), action]
+		once = true
+		hold_last = hold
+		playing = true
+		return true
 	if not load_action(set_dir, action):
 		return false
 	once = true

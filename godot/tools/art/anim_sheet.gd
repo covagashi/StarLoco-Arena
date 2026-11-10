@@ -14,6 +14,8 @@ extends SceneTree
 ##       [--skin=e8bd96 --hair=e3cf86]   (tint channels)
 ##       [--pbr]          (the arenas' PBR look instead of the fighters' toon)
 ##       [--spin=120]     (turntable: N frames of one full turn, first frame of each anim)
+##       [--height=1.45]  (scale the model to this height, e.g. a Mixamo figure in metres)
+##       [--hide=Icosphere]   (comma-separated nodes to leave out, e.g. a stray helper)
 ##
 ## Output: <dir>/<anim>/<dir>_<nn>.png and <dir>/index.json.
 
@@ -26,7 +28,7 @@ const PX := 43.0 * 1.41421356
 const YAW := {"S": 45.0, "SE": 90.0, "E": 135.0, "NE": 180.0, "N": 225.0, "NW": 270.0, "W": 315.0, "SW": 0.0}
 
 var opts := {"model": "art/characters/out/mannequin.glb", "out": "/tmp/anim_sheet", "frames": "6",
-	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62", "lift": "0", "pitch": "30", "bg": "", "skin": "", "hair": ""}
+	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62", "lift": "0", "pitch": "30", "bg": "", "skin": "", "hair": "", "height": "", "hide": ""}
 var cam := Camera3D.new()
 var model: Node3D
 var player: AnimationPlayer
@@ -61,6 +63,11 @@ func _run() -> void:
 		return
 	model = doc.generate_scene(st)
 	model.position.y = float(opts.lift)
+	for n in String(opts.hide).split(",", false):
+		var h := model.find_child(n, true, false)
+		if h:
+			h.get_parent().remove_child(h)
+			h.queue_free()
 	if opts.has("pbr"):  # the arenas' look, for comparison
 		for mi in model.find_children("*", "MeshInstance3D", true, false):
 			Dress.dress(mi)
@@ -72,6 +79,15 @@ func _run() -> void:
 				tints[ch] = Color.html(opts[ch])
 		Toon.dress(model, tints)
 	root.add_child(model)
+	if opts.height != "":
+		var top := -INF
+		var bottom := INF
+		for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			var box := mi.global_transform * mi.get_aabb()
+			top = maxf(top, box.end.y)
+			bottom = minf(bottom, box.position.y)
+		if top > bottom:
+			model.scale = Vector3.ONE * float(opts.height) / (top - bottom)
 	var players := model.find_children("*", "AnimationPlayer", true, false)
 	# a part without animations (tools/blender/characters/parts) shows as "rest"
 	player = players[0] if not players.is_empty() else null

@@ -10,6 +10,7 @@ const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const ReplayBar := preload("res://src/fight/replay_bar.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
 const XpsFx := preload("res://src/anims/xps_fx.gd")
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArenaView := preload("res://src/maps/arena_view.gd")
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
@@ -918,6 +919,16 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 					get_tree().change_scene_to_file("res://src/main.tscn")
 
 
+## S35 pilot: a fighter whose breed has a built 3D model (Fighter3D.MODELS)
+## is drawn by it instead of the retail frames; summons and coaches stay.
+func _attach_model3d(spr: AnmSprite, f: Dictionary) -> void:
+	if spr.model3d != null or int(f.get("look", 0)) != 0 or f.get("summon", false):
+		return
+	var path := Fighter3D.model_for(int(f.get("breed", 0)), int(f.get("sex", 0)))
+	if path != "":
+		spr.model3d = Fighter3D.create(path)
+
+
 ## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.
 func _place_actor(a: Dictionary) -> void:
 	var spr: AnmSprite = _sprites.get(a.id)
@@ -935,6 +946,7 @@ func _place_actor(a: Dictionary) -> void:
 	if State.fighters.has(a.id):
 		var f: Dictionary = State.fighters[a.id]
 		spr.tints = _fighter_tints(f)
+		_attach_model3d(spr, f)
 		_load_fighter_anim(spr, a.id, a.dir)
 		_hp_lost[a.id] = int(f.get("hp_lost", 0))
 		_nameplate(spr, a.id)
@@ -1549,6 +1561,9 @@ func _float_text(fid: int, text: String, color: Color) -> void:
 	lbl.add_theme_font_size_override("font_size", 13)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	if spr.scale.x < 0.0:   # a mirrored fighter: unmirror the text, keep it centred
+		lbl.scale.x = -1.0
+		lbl.position.x = 40.0
 	spr.add_child(lbl)
 	var tw := create_tween()
 	tw.set_parallel(true)

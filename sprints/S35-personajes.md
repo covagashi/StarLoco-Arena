@@ -1,6 +1,6 @@
 # S35 — Personajes
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-11-04 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (lote 1 de Meshy copiado; mañana, piloto Feca)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-11-04 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (piloto Feca f y m hecho, a la espera del dueño)
 
 ## Alcance (lo que hoy se usa, S31)
 
@@ -408,7 +408,7 @@ Decisiones abiertas:
   animaciones ni sirve para criaturas). El Xelor con Mixamo sirve de
   comparación en el piloto.
 
-**Mañana, piloto Feca f y m** (`01_feca_f`, `01_feca_m`), de punta a punta:
+**Piloto Feca f y m** (`01_feca_f`, `01_feca_m`), de punta a punta (plan del 2026-11-09, hecho el 2026-11-10, abajo):
 1. Limpiar en Blender: escala a 1,45 celdas, pies en el suelo, origen,
    orientación al frente del juego, revisión con `blender-asset-qa`.
 2. Reducir a 3–6k triángulos y la textura de 2048 a 1024.
@@ -419,3 +419,97 @@ Decisiones abiertas:
 
 Después: el cristal de 8010 (pieza rígida, la modelo yo) y el resto de
 clases en lote.
+
+### Piloto Feca f y m (2026-11-10)
+
+| Dueño | Cambio | Fichero |
+|---|---|---|
+| "continúa con: mañana empiezo el piloto con los dos Feca" | de un GLB de Meshy a un luchador del juego en un solo paso de Blender, y el luchador 3D dentro del combate | `tools/blender/characters/meshy_fighter.py`, `rig_anims.py`, `src/anims/fighter3d.gd` |
+| "revisa bien dónde has puesto los hombros, lo has puesto a la altura de los bíceps/tríceps" | tenía razón: el hombro iba 3,5 cm sobre la axila, y con los brazos pegados al cuerpo eso es el bíceps. Ahora sale de la silueta: el alto del hombro es el último corte, subiendo, que aún es claramente más ancho que el cuello, y la articulación va un radio de brazo por debajo (f 0,919 → 0,981; m 0,855 → 0,960) | `meshy_fighter.py` |
+
+```
+blender -b -P tools/blender/characters/meshy_fighter.py -- \
+    ~/codigo/capturas/s35/meshy/01_feca_m/01_feca_m.glb art/characters/out/feca_m.glb [--debug=<dir>]
+```
+
+Pasos, todos en `meshy_fighter.py`:
+1. **Limpieza y escala:** junta las mallas, une los vértices duplicados de
+   las costuras de Meshy (de ~8.000 aristas abiertas a 130–226), escala a
+   1,45 de alto, pies en z=0 y centrados, mirando a -Y (el frente del
+   juego; el de Meshy ya lo es).
+2. **Reducción:** 20.900 → 5.000 triángulos (colapso) y la textura de 2048
+   a 1024, en JPEG dentro del GLB: ~790 KB por luchador.
+3. **Rig:** los 20 huesos de `fighter1.py` puestos sobre la malla a partir
+   de cortes horizontales reales (triángulos cortados por el plano y unidos
+   en lazos): pies, tobillo, entrepierna (el hueco más alto entre las
+   piernas: el bombacho del m se toca en la rodilla), brazos (las piezas de
+   fuera en cada corte), mano (si el brazo acaba tocando el cuerpo, una
+   mano más: 6,5 % del alto, como `fighter1`), cuello (el corte más
+   estrecho) y hombro (arriba). Un JSON `--joints` corrige cualquier
+   articulación a mano; `--debug` saca los cortes y una radiografía de los
+   huesos.
+4. **Pesos:** los automáticos de Blender y luego tres reglas, porque Meshy
+   funde lo que se toca: (a) por debajo de la axila un vértice es de brazo
+   solo si está en la pieza del brazo de su corte, cerca de sus huesos y
+   unido por la malla al núcleo del brazo; (b) la malla se **corta** entre
+   las caras de brazo y las del cuerpo (codo pegado a la cintura de la f,
+   mano pegada al abrigo del m), por aristas y por esquinas; (c) por encima
+   del corte, huesos del brazo solo a menos de dos radios del brazo (la
+   mochila del m subía con las manos). Luego un suavizado de pesos (4
+   pasadas) y la cabeza rígida.
+5. **Animaciones:** las 10 de `fighter1.py`, que ahora viven en
+   `rig_anims.py` (`fighter1.py` sale igual byte a byte). Los brazos cortos
+   bajo una cabeza grande no pasan por encima de ella: al subir más de 100°
+   se abren en V (`--overhead_out=40`; `fighter1` usa 0).
+
+Medido (los dos): 20 huesos, 10 animaciones, 4.999–5.000 triángulos,
+textura 1024², GLB de 772–775 KB.
+
+Lo que salió mal antes de enseñarlo, corregido:
+- Cortes por vértices después de reducir: con 2.500 vértices no salían ni
+  brazos ni piernas. Ahora corta triángulos y antes de reducir.
+- Caderas a la altura de la rodilla en el m (el bombacho se toca ahí).
+- Las puntas del abrigo del m pasaban por manos.
+- Brazos levantados que se cruzaban delante del pecho (la V giraba al
+  revés con el brazo hacia arriba).
+- "Alas": telas estiradas de la mano a la cadera (caras fundidas, la cara
+  interior de la manga que quedaba en el cuerpo, triángulos largos del
+  reducido que cruzaban el corte). Quedan unos agujeritos oscuros donde
+  estaba la unión, visibles solo de cerca.
+
+Pendiente:
+- Unas migas del abrigo siguen pegadas a las manos del m (estaban fundidas
+  con la mano en la malla de Meshy).
+- Los GLB del juego (`art/characters/out/`) no van al repo, como los kits:
+  se rehacen con el comando de arriba desde `~/codigo/capturas/s35/meshy/`.
+
+**En combate** (`src/anims/fighter3d.gd`, técnica A de S33): cada luchador
+3D tiene su viewport pequeño y transparente con la luz de la arena y la
+cámara del juego, a 2× y mostrado como sprite con el origen en los pies.
+Cuelga del `AnmSprite` (`model3d`), así `fight_view` lo sigue colocando,
+ordenando, ocultando tras la arena, con nombre y texto flotante como
+antes; las acciones retail (`1_AnimMarche02`, `AnimSort-…`, `AnimHit`,
+`AnimKO-…`, `Anim0xPorte`) se traducen a las 10 animaciones y la dirección a
+un giro (deshace el espejo de 3/4/7). Solo los luchadores con modelo
+(`Fighter3D.MODELS`: Feca) cambian; el resto sigue en sprite retail.
+- Prueba sin servidor: `FIGHT_UI_FECA=1 FIGHT_UI_FOCUS=1,2
+  test/fight_ui_preview.tscn` (Arel y Brune pasan a Feca m y f; arena 2).
+- Combate real: la repetición grabada `2610251213_test_VS_test2.slr`
+  (11 turnos, un Féca m contra dos Humo) con `tools/reel/make_reel.sh`: anda,
+  lanza, recibe y muere de espaldas sin errores. Es el mundo 65, un mapa
+  antiguo pintado (no hay repetición con Feca en las arenas nuevas ni con
+  Feca f).
+- De paso: el texto flotante salía en espejo sobre un luchador mirando a
+  3/4/7 (no era del 3D, pasaba ya); ahora se desespeja como el nombre.
+- Tests de Godot: 20 suites, 552 comprobaciones, 0 fallos, y los dos
+  previews visuales.
+- Pendiente: un viewport compartido para doce luchadores (hoy uno por
+  luchador, ~4 ms cada uno según S33) y la sombra en el suelo.
+
+**Para el dueño** (`~/codigo/capturas/s35/`):
+`s35-feca-piloto-escala.png` (los dos Feca y el Xelor de Mixamo, ×1 y ×2,
+SE y NW), `s35-feca-f-1/2.png` y `s35-feca-m-1/2.png` (las 10 animaciones,
+6 fotogramas, SE y NW), `s35-feca-f.mp4` / `s35-feca-m.mp4` (las 10 en 4
+direcciones), `s35-feca-f/m-4vistas.png`, `s35-feca-m-combate-arena2.png` /
+`s35-feca-f-combate-arena2.png` (en la arena 2) y `s35-feca-combate.mp4`
+(el combate real).

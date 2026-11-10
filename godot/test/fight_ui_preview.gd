@@ -11,7 +11,9 @@ extends Node2D
 ## summons per team, to load the columns), FIGHT_UI_HOVER=<fid> (pointer on
 ## that fighter's card), FIGHT_UI_SPECTATE=1 (watching, not playing),
 ## FIGHT_UI_PLACEMENT=1 (the placement phase instead of turn 7),
-## FIGHT_UI_MAP=<arena> (default 10). FIGHT_UI_TACTICS=spell (Arel's spell 4
+## FIGHT_UI_MAP=<arena> (default 10). FIGHT_UI_FECA=1 (S35 pilot: Arel and
+## Brune are the 3D Feca m and f), FIGHT_UI_FOCUS=<fid>[,<zoom>] (camera on
+## that fighter, default zoom 2). FIGHT_UI_TACTICS=spell (Arel's spell 4
 ## armed, the pointer on a castable cell: reach, AoE, hover, plus a placed
 ## trap) or =move (the walk preview and its MP cost).
 
@@ -35,7 +37,11 @@ func _ready() -> void:
 	State.my_coach_id = 7
 	State.fighters = {}
 	var timeline := []
-	for r in FIGHTERS:
+	var rows := FIGHTERS.duplicate(true)
+	if OS.get_environment("FIGHT_UI_FECA") == "1":   # S35 pilot: the 3D Fecas
+		rows[0][4] = 1   # Arel → Feca m
+		rows[1][4] = 1   # Brune → Feca f
+	for r in rows:
 		State.fighters[r[0]] = {"id": r[0], "name": r[1], "coach": r[2],
 			"team": r[3], "breed": r[4], "sex": r[5], "spells": r[6], "cards": []}
 		timeline.append(r[0])
@@ -81,6 +87,12 @@ func _ready() -> void:
 			fight._mp_left = 3
 			fight._hover = _cell_near(fight, 0, 4)   # one step past the 3 MP
 			fight.queue_redraw()
+	if OS.get_environment("FIGHT_UI_FOCUS") != "":   # close-up: "<fid>[,<zoom>]"
+		var fz := OS.get_environment("FIGHT_UI_FOCUS").split(",")
+		var fspr: Node2D = fight._sprites.get(int(fz[0]))
+		if fspr != null:
+			fight.cam.position = fspr.position + Vector2(0, -40)
+			fight.cam.zoom = Vector2.ONE * (float(fz[1]) if fz.size() > 1 else 2.0)
 	if OS.get_environment("FIGHT_UI_HOVER") != "":
 		fight._on_card_hover(int(OS.get_environment("FIGHT_UI_HOVER")), true)
 	if OS.get_environment("FIGHT_UI_CHAT") == "open":
@@ -160,7 +172,7 @@ func _stage(fight: Node) -> void:
 	fight._attach_buff(4, 126, 9005, 0, 2, false)    # drunk
 	fight._attach_buff(4, 19, 9006, 1, 1, false)     # +1 MP
 	fight._attach_buff(4, 20, 9007, 1, 1, false)     # -1 MP (4th chip → "+2")
-	var spr = fight._sprites.get(2)
+	var spr = fight._sprites.get(8 if OS.get_environment("FIGHT_UI_FECA") == "1" else 2)
 	if spr != null:
 		spr.modulate.a = 0.0                           # unseen enemy
 	fight._kill_actor(6)
