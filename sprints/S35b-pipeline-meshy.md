@@ -105,6 +105,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | cadera en la rodilla | el pantalón se toca en la rodilla | ya resuelto (hueco más alto); si no, `--joints` |
 | la cadera en el bajo de una falda larga | solo bajo la falda hay hueco entre las piernas | `--joints` con `hips`, `spine`, `chest`, `thigh.S` y `shin.S` (Anutrof f) |
 | alas a la espalda tomadas por brazos (axila = alto del hombro, hombro en el cuello) | las alas salen a los lados por encima de los brazos | ya resuelto: un tramo más de 10 cm por detrás del torso no es brazo (Aniripsa m) |
+| el hueso del cuello se va hacia atrás, dentro del pelo (vista lateral) | el centro del corte del cuello incluye la melena | `--joints` con `neck`, `head` y `top` a la profundidad del pecho (Sadida m, Aniripsa f); mirar la vista lateral |
+| hombro a la altura del busto con pelo alrededor del cuello | el pelo cae junto al cuello y el cuello mide el doble: «bajo el cuello» queda bajo | `--joints` con `upper_arm.S`, `shoulder.S` (y `forearm.S`) un radio de brazo bajo lo alto del hombro (Sadida f) |
 | hombro casi en el codo con pelo largo sobre los hombros | el pelo tapa dónde se estrecha el torso hacia el cuello; el hombro se quedaba en la axila (un brazalete) | ya resuelto: sin estrechamiento, el hombro va 2,5 cm bajo la base del cuello, en la línea del brazo (Aniripsa f) |
 | un rizo de pelo junto a la cara tomado por el brazo | una pieza suelta bajo 0,72 del alto | ya resuelto: el brazo es un tramo de 3 cortes o más |
 | esquirlas en la cintura al subir los brazos | el codo toca la cintura y sus caras se quedan con el cuerpo | `--arm_slack=0.06` (Ocra f) |
@@ -144,14 +146,14 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 05_xelor_m | xelor_m | ✅ | `hand_tip.L/R` (±0,238/0,239, 0,005, 0,52), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | aletas del brazal hacían "alas" sin `--arm_slack`; trae mapa de metal (2 texturas, 1,1 MB): bien en Godot, oscuro en `four_views` (sin entorno) |
 | 06_zurcarak_f | zurcarak_f | ✅ | `hips` 0,58, `spine`, `chest`, `upper_arm`/`shoulder` 1,03, `forearm` 0,85, `thigh`/`shin`, `hand_tip` 0,60 | ✅ | ✅ | cola grande: tapa el hueco entre las piernas (entrepierna en 0,39) y una pierna se iba a la cola; con `--joints` la cola va rígida con la cadera al andar |
 | 06_zurcarak_m | zurcarak_m | ✅ | `hand_tip.L/R` (±0,249, 0,041, 0,51), su propio valor | ✅ | ✅ | solo los pulgares |
-| 07_aniripsa_f | aniripsa_f | ✅ (corregido por el dueño) | `hand_tip.L/R` (±0,223, 0,056, 0,58), su propio valor | ✅ | ✅ | alas pequeñas a la espalda, van con el pecho; el pelo largo tapa los hombros y el hombro caía en el brazalete de la manga, casi en el codo: ya resuelto (hombro bajo el cuello, 1,04); migas de pétalos en las manos, no se ven a escala de juego |
+| 07_aniripsa_f | aniripsa_f | ✅ (corregido por el dueño) | `hand_tip.L/R` (±0,223, 0,056, 0,58); `neck`/`head`/`top` y 0,05 (el cuello se iba 10 cm atrás, al pelo) | ✅ | ✅ | alas pequeñas a la espalda, van con el pecho; el pelo largo tapa los hombros y el hombro caía en el brazalete de la manga, casi en el codo: ya resuelto (hombro bajo el cuello, 1,04); migas de pétalos en las manos, no se ven a escala de juego |
 | 07_aniripsa_m | aniripsa_m | ✅ | `hand_tip.L/R` (±0,219, 0,038, 0,50), su propio valor | ✅ | ✅ | alas de espinas a la espalda: el script las tomaba por brazos (hombro en 1,06); ya resuelto |
 | 08_yopuka_f | yopuka_f | ✅ | `forearm`/`hand`/`hand_tip` de los dos lados (izq. mano hasta 0,51; der. `hand_tip` en la punta de la espada, -0,317, -0,199, 0,28) | ✅ | ✅ | espada en la mano derecha: va entera y rígida con la mano (pieza suelta → brazo); la mano izquierda toca el muslo y el script la alargaba hasta la rodilla |
 | 08_yopuka_m | yopuka_m | ✅ | `hand_tip.L/R` (±0,2, 0,012, 0,45), su propio valor | ✅ | ✅ | hombrera de un lado: se queda con el pecho, bien |
 | 09_ocra_f | ocra_f | ✅ | `hand_tip.L/R` (±0,223/0,226, 0,035, 0,50), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | el codo toca la cintura (0,70–0,72): esquirlas del codo en la cadera sin `--arm_slack` |
 | 09_ocra_m | ocra_m | ✅ | `hand_tip.L/R` (±0,204, 0,048, 0,53), su propio valor | ✅ | ✅ | solo los pulgares |
-| 10_sadida_f | sadida_f | ✅ | `hand_tip.L/R` (±0,218/0,22, 0,041, 0,56), su propio valor | ✅ | ✅ | pelo sobre los hombros (hombro bajo el cuello, bien); las pulseras pasan enteras al brazo |
-| 10_sadida_m | sadida_m | ✅ | `hand_tip.L/R` (±0,23/0,224, 0,042, 0,55), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | hojas del brazal sobre la falda: sin `--arm_slack` se quedaban en la cintura; quedan dos motas de puntas de la falda (con 0,08 igual), aceptado |
+| 10_sadida_f | sadida_f | ✅ (corregido por el dueño) | `upper_arm`/`shoulder.L/R` z 0,975, `forearm.L/R` z 0,815, `hand_tip.L/R` | ✅ | ✅ | el pelo rodea el cuello en los mismos cortes: el cuello medía el doble y el hombro caía a la altura del busto (0,94); las pulseras pasan enteras al brazo |
+| 10_sadida_m | sadida_m | ✅ | `hand_tip.L/R`; `neck`/`head`/`top` y 0,035; `--arm_slack=0.06` | ✅ | ✅ | hojas del brazal sobre la falda; el cuello se iba 15 cm atrás, dentro de las rastas; quedan dos motas de puntas de la falda, aceptado |
 | 11_sacrogrito_f | sacrogrito_f | | | | | hay `_alt` |
 | 11_sacrogrito_m | sacrogrito_m | | | | | |
 | 12_pandawa_f | pandawa_f | | | | | |

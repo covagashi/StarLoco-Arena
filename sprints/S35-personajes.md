@@ -594,3 +594,14 @@ el cuello, mirados de cerca y bien. El m apoya las hojas del brazal en
 la falda: `--arm_slack=0.06`; quedan dos motas que son puntas de la falda
 (no cambian con 0,08), aceptadas a escala de juego.
 
+**2026-11-10 — Corrección del dueño: hombros de la Sadida f.** "No tiene
+muy bien los hombros". Quedaban a la altura del busto (0,94): su pelo cae
+junto al cuello, el corte del cuello mide el doble y la regla de "2,5 cm
+bajo el cuello" de la Aniripsa queda 6 cm baja. Corregido con `--joints`
+(0,975, codo 0,815). Revisando las vistas laterales: el cuello del
+Sadida m (15 cm) y de la Aniripsa f (10 cm) se iba hacia atrás dentro del
+pelo; también por `--joints`. Los demás, menos de 7 cm (Feca f, aprobado).
+Otra vez di por buenos unos hombros sin compararlos con lo alto del
+hombro de la malla; desde aquí, regla: hombro ≈ un radio de brazo bajo la
+piel del hombro, y vista lateral del cuello.
+
