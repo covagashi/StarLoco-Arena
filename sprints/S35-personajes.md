@@ -575,3 +575,11 @@ la espalda; el codo sube con él (0,85). Las doce figuras anteriores salen
 idénticas. Yo lo había dado por bueno al compararlo con mi error de antes;
 a partir de aquí, los hombros se miran de cerca en cada figura.
 
+**2026-11-10 — Yopuka f y m (S35b).** La f lleva una espada en la mano
+derecha: es una pieza suelta de la malla y ahora va entera con el brazo
+(regla nueva: pieza suelta que es en su mayoría brazo). Con eso el
+Osamodas m también pasa sus guantes enteros al brazo; sigue limpio y se
+rehicieron sus hojas; las otras trece salen idénticas. La mano izquierda
+de la f toca el muslo y el script la estiraba hasta la rodilla: `--joints`.
+El m, solo los pulgares. Hombros mirados de cerca en los dos: bien.
+

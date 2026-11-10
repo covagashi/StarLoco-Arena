@@ -32,7 +32,7 @@ const MIRROR := {0: 4, 1: 3, 2: 2, 3: 1, 4: 0, 5: 7, 6: 6, 7: 5}
 const MODELS := {1: ["feca_m", "feca_f"], 2: ["osamodas_m", "osamodas_f"],
 		3: ["anutrof_m", "anutrof_f"], 4: ["sram_m", "sram_f"],
 		5: ["xelor_m", "xelor_f"], 6: ["zurcarak_m", "zurcarak_f"],
-		7: ["aniripsa_m", "aniripsa_f"]}
+		7: ["aniripsa_m", "aniripsa_f"], 8: ["yopuka_m", "yopuka_f"]}
 const MODEL_DIR := "res://art/characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)

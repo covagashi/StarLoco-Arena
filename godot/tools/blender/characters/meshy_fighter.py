@@ -612,6 +612,26 @@ def arm_vertices(ob, segs):
             if co.z < ARM[S]["pit"] and sum(arm_of.get(j) == S for j in ns) * 3 >= 2 * len(ns):
                 grow[i] = S
         arm_of.update(grow)
+    # a loose piece (a sword in the hand) that is mostly arm goes whole
+    seen = set()
+    for i in allnbr:
+        if i in seen:
+            continue
+        comp, stack = [], [i]
+        seen.add(i)
+        while stack:
+            j = stack.pop()
+            comp.append(j)
+            for k in allnbr[j]:
+                if k not in seen:
+                    seen.add(k)
+                    stack.append(k)
+        for S in "LR":
+            n = sum(arm_of.get(j) == S for j in comp)
+            if n * 2 > len(comp) and all(me.vertices[j].co.z < ARM[S]["pit"] for j in comp):
+                for j in comp:
+                    arm_of[j] = S
+                LOG.setdefault("loose_to_arm", []).append(len(comp))
     return arm_of, cand
 
 

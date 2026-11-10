@@ -108,6 +108,7 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | hombro casi en el codo con pelo largo sobre los hombros | el pelo tapa dónde se estrecha el torso hacia el cuello; el hombro se quedaba en la axila (un brazalete) | ya resuelto: sin estrechamiento, el hombro va 2,5 cm bajo la base del cuello, en la línea del brazo (Aniripsa f) |
 | un rizo de pelo junto a la cara tomado por el brazo | una pieza suelta bajo 0,72 del alto | ya resuelto: el brazo es un tramo de 3 cortes o más |
 | "alas" o trozos de armadura que se quedan en el pecho al subir los brazos | la armadura del brazo (aletas del brazal, codera) sobresale más de radio + 3 cm del hueso | `--arm_slack=0.06` (Xelor f y m) |
+| un arma en la mano se queda a trozos | el filo se sale de la holgura del hueso | ya resuelto: una pieza suelta de la malla que es más de la mitad brazo va entera con él; `hand_tip` en la punta del arma para que el hueso de la mano la cubra (Yopuka f) |
 | pulgares flotando junto a la cadera | el pulgar es una pieza aparte, delante de la mano | ya resuelto en `extend_hand` (suma piezas pequeñas pegadas a la mano y da 5 cm de holgura bajo la muñeca); hace falta `--joints` con `hand_tip.S` (vale su propio valor, el de la línea `[meshy]`) |
 | la mano corta o larga | la mano toca la ropa (se alarga 6,5 % del alto) | `--joints` con `hand.S` y `hand_tip.S` |
 | manos sin pintar bajo un brazal fundido al cinturón (`hand_hidden` y la mano por debajo) | el brazo solo se ve suelto por encima; la mano, más estrecha que el brazal, no entra | `--joints` con `hand.S` y `hand_tip.S` más abajo: `extend_hand()` suma las piezas de la mano y, en el tramo fundido, el borde interior más estrecho y el exterior de la pieza fundida (Osamodas m) |
@@ -144,8 +145,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 06_zurcarak_m | zurcarak_m | ✅ | `hand_tip.L/R` (±0,249, 0,041, 0,51), su propio valor | ✅ | ✅ | solo los pulgares |
 | 07_aniripsa_f | aniripsa_f | ✅ (corregido por el dueño) | `hand_tip.L/R` (±0,223, 0,056, 0,58), su propio valor | ✅ | ✅ | alas pequeñas a la espalda, van con el pecho; el pelo largo tapa los hombros y el hombro caía en el brazalete de la manga, casi en el codo: ya resuelto (hombro bajo el cuello, 1,04); migas de pétalos en las manos, no se ven a escala de juego |
 | 07_aniripsa_m | aniripsa_m | ✅ | `hand_tip.L/R` (±0,219, 0,038, 0,50), su propio valor | ✅ | ✅ | alas de espinas a la espalda: el script las tomaba por brazos (hombro en 1,06); ya resuelto |
-| 08_yopuka_f | yopuka_f | | | | | |
-| 08_yopuka_m | yopuka_m | | | | | |
+| 08_yopuka_f | yopuka_f | ✅ | `forearm`/`hand`/`hand_tip` de los dos lados (izq. mano hasta 0,51; der. `hand_tip` en la punta de la espada, -0,317, -0,199, 0,28) | ✅ | ✅ | espada en la mano derecha: va entera y rígida con la mano (pieza suelta → brazo); la mano izquierda toca el muslo y el script la alargaba hasta la rodilla |
+| 08_yopuka_m | yopuka_m | ✅ | `hand_tip.L/R` (±0,2, 0,012, 0,45), su propio valor | ✅ | ✅ | hombrera de un lado: se queda con el pecho, bien |
 | 09_ocra_f | ocra_f | | | | | |
 | 09_ocra_m | ocra_m | | | | | |
 | 10_sadida_f | sadida_f | | | | | |
