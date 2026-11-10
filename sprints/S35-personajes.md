@@ -605,3 +605,12 @@ Otra vez di por buenos unos hombros sin compararlos con lo alto del
 hombro de la malla; desde aquí, regla: hombro ≈ un radio de brazo bajo la
 piel del hombro, y vista lateral del cuello.
 
+**2026-11-10 — Sacrogrito f y m (S35b).** El m lleva una bufanda cuya
+cola cuelga junto al brazo izquierdo, 13 cm por detrás: el script la
+tomaba por el brazo (mano en x 0,40, el brazo real casi sin pesos).
+Ahora, en cada corte, la pieza exterior que cuelga más de 10 cm detrás
+del torso se salta. Diecinueve figuras salen idénticas; el Yopuka m se
+mueve 1 mm en un hombro. Guanteletes con `--arm_slack=0.06`; la bufanda
+se queda con el cuerpo. La f: la coleta llevaba el cuello 5 cm atrás,
+`--joints`. Hombros y cuellos mirados de cerca, como acordado.
+

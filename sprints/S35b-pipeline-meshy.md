@@ -104,6 +104,7 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | `can't find arm X apart from the body` | brazos pegados al cuerpo en todo el alto | `--joints` con hombro, codo, muñeca y punta |
 | cadera en la rodilla | el pantalón se toca en la rodilla | ya resuelto (hueco más alto); si no, `--joints` |
 | la cadera en el bajo de una falda larga | solo bajo la falda hay hueco entre las piernas | `--joints` con `hips`, `spine`, `chest`, `thigh.S` y `shin.S` (Anutrof f) |
+| un brazo sale torcido hacia fuera, el otro sin pesos (bufanda, capa colgando junto al brazo) | en cada corte el brazo era la pieza más exterior, y esa era la bufanda | ya resuelto: en cada corte se salta la pieza más de 10 cm por detrás del torso (Sacrogrito m) |
 | alas a la espalda tomadas por brazos (axila = alto del hombro, hombro en el cuello) | las alas salen a los lados por encima de los brazos | ya resuelto: un tramo más de 10 cm por detrás del torso no es brazo (Aniripsa m) |
 | el hueso del cuello se va hacia atrás, dentro del pelo (vista lateral) | el centro del corte del cuello incluye la melena | `--joints` con `neck`, `head` y `top` a la profundidad del pecho (Sadida m, Aniripsa f); mirar la vista lateral |
 | hombro a la altura del busto con pelo alrededor del cuello | el pelo cae junto al cuello y el cuello mide el doble: «bajo el cuello» queda bajo | `--joints` con `upper_arm.S`, `shoulder.S` (y `forearm.S`) un radio de brazo bajo lo alto del hombro (Sadida f) |
@@ -154,8 +155,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 09_ocra_m | ocra_m | ✅ | `hand_tip.L/R` (±0,204, 0,048, 0,53), su propio valor | ✅ | ✅ | solo los pulgares |
 | 10_sadida_f | sadida_f | ✅ (corregido por el dueño) | `upper_arm`/`shoulder.L/R` z 0,975, `forearm.L/R` z 0,815, `hand_tip.L/R` | ✅ | ✅ | el pelo rodea el cuello en los mismos cortes: el cuello medía el doble y el hombro caía a la altura del busto (0,94); las pulseras pasan enteras al brazo |
 | 10_sadida_m | sadida_m | ✅ | `hand_tip.L/R`; `neck`/`head`/`top` y 0,035; `--arm_slack=0.06` | ✅ | ✅ | hojas del brazal sobre la falda; el cuello se iba 15 cm atrás, dentro de las rastas; quedan dos motas de puntas de la falda, aceptado |
-| 11_sacrogrito_f | sacrogrito_f | | | | | hay `_alt` |
-| 11_sacrogrito_m | sacrogrito_m | | | | | |
+| 11_sacrogrito_f | sacrogrito_f | ✅ | `hand_tip.L/R` (±0,269/0,27, 0,007, 0,60); `neck`/`head`/`top` y 0,02 | ✅ | ✅ | la coleta llevaba el cuello 5 cm atrás; hombros bien; la `_alt` sin tocar (alternativa del lote) |
+| 11_sacrogrito_m | sacrogrito_m | ✅ | `hand_tip.L/R` (±0,283/0,281, -0,061/-0,05, 0,60); `--arm_slack=0.06` | ✅ | ✅ | la cola de la bufanda colgaba junto al brazo izquierdo y el script la tomaba por el brazo: ya resuelto; guanteletes grandes con `--arm_slack` |
 | 12_pandawa_f | pandawa_f | | | | | |
 | 12_pandawa_m | pandawa_m | | | | | |
 | coach_7000_m | coach_7000 | | | | n/a | |

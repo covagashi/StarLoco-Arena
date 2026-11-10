@@ -282,8 +282,16 @@ def find_joints(ob):
         cl = table[round(z, 3)]
         if len(cl) < 3:
             continue
-        for S, c in (("R", cl[0]), ("L", cl[-1])):
+        mid = [c for c in cl if c["x0"] < 0 < c["x1"]]
+        for S, side in (("R", cl), ("L", cl[::-1])):
             X = 1 if S == "L" else -1
+            # the outermost piece, unless it hangs well behind the torso
+            # (a scarf's tail beside the arm): then the next one in
+            c = side[0]
+            for d in side:
+                if d["x0"] < 0 < d["x1"] or not mid or abs(d["cy"] - mid[0]["cy"]) < 0.10:
+                    c = d
+                    break
             if c["cx"] * X > 0.08 and not (c["x0"] < 0 < c["x1"]):
                 armrows[S].append((z, c["cx"], c["cy"], c["x0"], c["x1"]))
     for S in "LR":
