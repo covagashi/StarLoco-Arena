@@ -103,6 +103,7 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | `can't find arm X apart from the body` | brazos pegados al cuerpo en todo el alto | `--joints` con hombro, codo, muñeca y punta |
 | cadera en la rodilla | el pantalón se toca en la rodilla | ya resuelto (hueco más alto); si no, `--joints` |
 | la cadera en el bajo de una falda larga | solo bajo la falda hay hueco entre las piernas | `--joints` con `hips`, `spine`, `chest`, `thigh.S` y `shin.S` (Anutrof f) |
+| alas a la espalda tomadas por brazos (axila = alto del hombro, hombro en el cuello) | las alas salen a los lados por encima de los brazos | ya resuelto: un tramo más de 10 cm por detrás del torso no es brazo (Aniripsa m) |
 | un rizo de pelo junto a la cara tomado por el brazo | una pieza suelta bajo 0,72 del alto | ya resuelto: el brazo es un tramo de 3 cortes o más |
 | "alas" o trozos de armadura que se quedan en el pecho al subir los brazos | la armadura del brazo (aletas del brazal, codera) sobresale más de radio + 3 cm del hueso | `--arm_slack=0.06` (Xelor f y m) |
 | pulgares flotando junto a la cadera | el pulgar es una pieza aparte, delante de la mano | ya resuelto en `extend_hand` (suma piezas pequeñas pegadas a la mano y da 5 cm de holgura bajo la muñeca); hace falta `--joints` con `hand_tip.S` (vale su propio valor, el de la línea `[meshy]`) |
@@ -139,8 +140,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 05_xelor_m | xelor_m | ✅ | `hand_tip.L/R` (±0,238/0,239, 0,005, 0,52), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | aletas del brazal hacían "alas" sin `--arm_slack`; trae mapa de metal (2 texturas, 1,1 MB): bien en Godot, oscuro en `four_views` (sin entorno) |
 | 06_zurcarak_f | zurcarak_f | ✅ | `hips` 0,58, `spine`, `chest`, `upper_arm`/`shoulder` 1,03, `forearm` 0,85, `thigh`/`shin`, `hand_tip` 0,60 | ✅ | ✅ | cola grande: tapa el hueco entre las piernas (entrepierna en 0,39) y una pierna se iba a la cola; con `--joints` la cola va rígida con la cadera al andar |
 | 06_zurcarak_m | zurcarak_m | ✅ | `hand_tip.L/R` (±0,249, 0,041, 0,51), su propio valor | ✅ | ✅ | solo los pulgares |
-| 07_aniripsa_f | aniripsa_f | | | | | alas |
-| 07_aniripsa_m | aniripsa_m | | | | | alas |
+| 07_aniripsa_f | aniripsa_f | ✅ | `hand_tip.L/R` (±0,223, 0,056, 0,58), su propio valor | ✅ | ✅ | alas pequeñas a la espalda, van con el pecho; cintura muy fina (0,90): los hombros del script (0,95) son buenos, no bajarlos; migas de pétalos en las manos, no se ven a escala de juego |
+| 07_aniripsa_m | aniripsa_m | ✅ | `hand_tip.L/R` (±0,219, 0,038, 0,50), su propio valor | ✅ | ✅ | alas de espinas a la espalda: el script las tomaba por brazos (hombro en 1,06); ya resuelto |
 | 08_yopuka_f | yopuka_f | | | | | |
 | 08_yopuka_m | yopuka_m | | | | | |
 | 09_ocra_f | ocra_f | | | | | |

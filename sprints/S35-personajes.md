@@ -557,3 +557,11 @@ pierna, y los hombros salían en el cuello: todo por `--joints`. El m,
 solo los pulgares. `anim_sheet.gd` ahora sale con error ante una
 animación que no existe (antes se quedaba colgado).
 
+**2026-11-10 — Aniripsa f y m (S35b).** Las alas no hicieron falta como
+huesos: las de los dos son pequeñas y van rígidas con el pecho. Las del m
+(espinas a la espalda) salían a los lados por encima de los brazos y el
+script las tomaba por brazos; ahora un tramo de cortes más de 10 cm por
+detrás del torso no es brazo (los doce anteriores salen idénticos). En la
+f probé a bajar los hombros con `--joints` y fue un error mío (su cintura
+es muy fina y la confundí con el pecho); quedan los del script.
+

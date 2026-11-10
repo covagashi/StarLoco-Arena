@@ -295,8 +295,16 @@ def find_joints(ob):
                 runs.append([r])
         if not runs:
             raise SystemExit(f"[meshy] can't find arm {S} apart from the body")
-        # a lone piece or two up there is a hair curl beside the face
-        arm = max([r for r in runs if len(r) >= 3] or runs, key=lambda run: (run[-1][0], len(run)))
+        # a lone piece or two up there is a hair curl beside the face; a
+        # run well behind the torso is a wing (or a cape's edge)
+        def beside(run):
+            off = []
+            for r in run:
+                mid = [c for c in table[round(r[0], 3)] if c["x0"] < 0 < c["x1"]]
+                if mid:
+                    off.append(abs(r[2] - mid[0]["cy"]))
+            return not off or sorted(off)[len(off) // 2] < 0.10
+        arm = max([r for r in runs if len(r) >= 3 and beside(r)] or runs, key=lambda run: (run[-1][0], len(run)))
         line = fit_line([r[:3] for r in arm])
         top = arm[-1][0]
         keep = list(arm)
