@@ -627,3 +627,16 @@ y el respaldo también puede dar el hueso del brazo. Las dos opciones no
 hacen nada sin pasarlas: las 22 figuras anteriores no cambian. Faltan
 los dos coaches.
 
+**2026-11-10 — Coaches 7000 y 7001 (S35b).** El 7000, limpio con
+`hand_tip`. La 7001 tiene el brazo muy fino: entre la axila y el
+brazalete quedaban tiras de piel con el pecho al subir los brazos.
+Probé más holgura de corte y quitar caras puente; no era eso. Era la
+altura del corte (axila − 3 cm): por encima, los pesos de calor mezclan
+brazo y pecho. Opción nueva `--cut=<z>` (0,83 en ella).
+
+**Invocaciones, decisiones del dueño (2026-11-10):** más pequeñas que un
+luchador, unas 0,9 celdas (gólem y árbol ~1,2). Pollito 8005, oveja 8006
+y pangolín 8004 llevan un esqueleto corto propio (cuerpo, cabeza, patas)
+con las 10 animaciones adaptadas; muñecos 8001/8002, saco 8003, gólem
+8007 y árbol 8009 van con el esqueleto humano.
+

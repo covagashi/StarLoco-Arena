@@ -5,7 +5,7 @@ texture budget of the web demo, fitted with the common 20-bone skeleton
 rig_anims.py.
 
     blender -b -P tools/blender/characters/meshy_fighter.py -- <in.glb> <out.glb>
-        [--tris=5000] [--tex=1024] [--joints=<overrides.json>] [--arm_slack=0.03] [--thumb=0] [--sleeve=2.2] [--debug=<dir>]
+        [--tris=5000] [--tex=1024] [--joints=<overrides.json>] [--arm_slack=0.03] [--thumb=0] [--sleeve=2.2] [--cut=<z>] [--debug=<dir>]
         [--overhead_out=40]   (raised arms open into a V: short arms, big head)
 
 What it does, in order:
@@ -36,7 +36,7 @@ sys.path.insert(0, HERE)
 import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "debug": "", "overhead_out": "40"}
+OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40"}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -654,6 +654,8 @@ def arm_vertices(ob, segs):
 def cut_height():
     """Below this the arms are cut free and weighted strictly; above it
     (the armpit and shoulder) Blender's heat weights blend arm and body."""
+    if OPT["cut"]:  # --cut: lower, for a thin arm with few vertices under the armpit
+        return float(OPT["cut"])
     return min(ARM["L"]["pit"], ARM["R"]["pit"]) - 0.03
 
 

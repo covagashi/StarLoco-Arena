@@ -1,6 +1,6 @@
 # S35b — Pipeline Meshy → luchador (una clase por sesión)
 
-**Planificado:** 2026-11-10 · **Hito:** M7 — Arte propio · **Tamaño:** S por figura · **Estado:** 🔵 abierto (piloto Feca f y m aprobado por el dueño, 2026-11-10)
+**Planificado:** 2026-11-10 · **Hito:** M7 — Arte propio · **Tamaño:** S por figura · **Estado:** 🔵 abierto: 12 clases y 2 coaches hechos (2026-11-10); faltan las invocaciones
 
 Receta para empezar **limpio**: una sesión por figura (o por clase, f y m),
 sin releer S35 entero. Todo lo de aquí se probó en el piloto Feca (S35,
@@ -114,6 +114,7 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | "alas" o trozos de armadura que se quedan en el pecho al subir los brazos | la armadura del brazo (aletas del brazal, codera) sobresale más de radio + 3 cm del hueso | `--arm_slack=0.06` (Xelor f y m) |
 | mangas de volante (decoración del bíceps) que se quedan en el pecho al subir los brazos | por encima del corte el brazo solo alcanza 2,2 radios, y los vértices que el cálculo de pesos pierde van al cuerpo | `--sleeve=3.5` (Pandawa f) |
 | pulgar fundido con el cuerpo delante de la mano | queda unos mm fuera de la pieza de la mano | `--thumb=0.01` (Pandawa m); más se lleva la ropa de al lado |
+| tiras de piel del brazo colgando junto al pecho al subir los brazos (brazo fino) | entre la axila y el corte (axila − 3 cm) los pesos de calor mezclan brazo y pecho | `--cut=<z>` más bajo, unos 11 cm bajo la axila (coach 7001) |
 | un arma en la mano se queda a trozos | el filo se sale de la holgura del hueso | ya resuelto: una pieza suelta de la malla que es más de la mitad brazo va entera con él; `hand_tip` en la punta del arma para que el hueso de la mano la cubra (Yopuka f) |
 | pulgares flotando junto a la cadera | el pulgar es una pieza aparte, delante de la mano | ya resuelto en `extend_hand` (suma piezas pequeñas pegadas a la mano y da 5 cm de holgura bajo la muñeca); hace falta `--joints` con `hand_tip.S` (vale su propio valor, el de la línea `[meshy]`) |
 | la mano corta o larga | la mano toca la ropa (se alarga 6,5 % del alto) | `--joints` con `hand.S` y `hand_tip.S` |
@@ -161,8 +162,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 11_sacrogrito_m | sacrogrito_m | ✅ | `hand_tip.L/R` (±0,283/0,281, -0,061/-0,05, 0,60); `--arm_slack=0.06` | ✅ | ✅ | la cola de la bufanda colgaba junto al brazo izquierdo y el script la tomaba por el brazo: ya resuelto; guanteletes grandes con `--arm_slack` |
 | 12_pandawa_f | pandawa_f | ✅ (corregido por el dueño) | `--sleeve=3.5` | ✅ | ✅ | mangas de volante: se quedaban en el pecho al subir los brazos y el hombro parecía estar en la decoración del bíceps; el cálculo de pesos falla en 1.564 vértices (cabeza grande) y el respaldo nunca daba hueso de brazo |
 | 12_pandawa_m | pandawa_m | ✅ | `forearm`/`hand` del lado izq. copiados del der.; `hand_tip.L/R` (±0,215, 0,02, 0,55); `--thumb=0.01` | ✅ | ✅ | la mano izq. se cortaba en el puño; yemas bajo la punta del hueso; el pulgar fundido con el cuerpo delante de la mano (`--thumb`); con 0,02 se llevaba la bolsa |
-| coach_7000_m | coach_7000 | | | | n/a | |
-| coach_7001_f | coach_7001 | | | | n/a | |
+| coach_7000_m | coach_7000 | ✅ | `hand_tip.L/R` (±0,208, 0,011, 0,52), su propio valor | ✅ | n/a | limpio |
+| coach_7001_f | coach_7001 | ✅ | `hand_tip.L/R`; `--arm_slack=0.06`; `--cut=0.83` | ✅ | n/a | brazo fino: entre axila y brazalete quedaban tiras de piel con el pecho; con el corte más bajo van con el brazo |
 
 ## Criterio de cierre
 
