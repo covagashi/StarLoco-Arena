@@ -614,3 +614,16 @@ mueve 1 mm en un hombro. Guanteletes con `--arm_slack=0.06`; la bufanda
 se queda con el cuerpo. La f: la coleta llevaba el cuello 5 cm atrás,
 `--joints`. Hombros y cuellos mirados de cerca, como acordado.
 
+**2026-11-10 — Pandawa f y m (S35b); las 12 clases en 3D.** El m: la mano
+izquierda se cortaba en el puño (copiada del lado derecho), las yemas
+quedaban bajo la punta del hueso y el pulgar, fundido con el cuerpo
+delante de la mano, caía unos mm fuera: opción nueva `--thumb`. La f,
+corrección del dueño: "los hombros están en la decoración de los
+bíceps". Las mangas de volante se quedaban en el pecho y el brazo salía
+por debajo; el cálculo de pesos falla en 1.564 vértices (cabeza enorme)
+y el respaldo solo daba huesos del cuerpo. Opción nueva `--sleeve` (2,2
+radios por defecto, sin cambios): con 3,5 el brazo alcanza los volantes
+y el respaldo también puede dar el hueso del brazo. Las dos opciones no
+hacen nada sin pasarlas: las 22 figuras anteriores no cambian. Faltan
+los dos coaches.
+

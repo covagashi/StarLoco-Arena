@@ -112,6 +112,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | un rizo de pelo junto a la cara tomado por el brazo | una pieza suelta bajo 0,72 del alto | ya resuelto: el brazo es un tramo de 3 cortes o más |
 | esquirlas en la cintura al subir los brazos | el codo toca la cintura y sus caras se quedan con el cuerpo | `--arm_slack=0.06` (Ocra f) |
 | "alas" o trozos de armadura que se quedan en el pecho al subir los brazos | la armadura del brazo (aletas del brazal, codera) sobresale más de radio + 3 cm del hueso | `--arm_slack=0.06` (Xelor f y m) |
+| mangas de volante (decoración del bíceps) que se quedan en el pecho al subir los brazos | por encima del corte el brazo solo alcanza 2,2 radios, y los vértices que el cálculo de pesos pierde van al cuerpo | `--sleeve=3.5` (Pandawa f) |
+| pulgar fundido con el cuerpo delante de la mano | queda unos mm fuera de la pieza de la mano | `--thumb=0.01` (Pandawa m); más se lleva la ropa de al lado |
 | un arma en la mano se queda a trozos | el filo se sale de la holgura del hueso | ya resuelto: una pieza suelta de la malla que es más de la mitad brazo va entera con él; `hand_tip` en la punta del arma para que el hueso de la mano la cubra (Yopuka f) |
 | pulgares flotando junto a la cadera | el pulgar es una pieza aparte, delante de la mano | ya resuelto en `extend_hand` (suma piezas pequeñas pegadas a la mano y da 5 cm de holgura bajo la muñeca); hace falta `--joints` con `hand_tip.S` (vale su propio valor, el de la línea `[meshy]`) |
 | la mano corta o larga | la mano toca la ropa (se alarga 6,5 % del alto) | `--joints` con `hand.S` y `hand_tip.S` |
@@ -157,8 +159,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 10_sadida_m | sadida_m | ✅ | `hand_tip.L/R`; `neck`/`head`/`top` y 0,035; `--arm_slack=0.06` | ✅ | ✅ | hojas del brazal sobre la falda; el cuello se iba 15 cm atrás, dentro de las rastas; quedan dos motas de puntas de la falda, aceptado |
 | 11_sacrogrito_f | sacrogrito_f | ✅ | `hand_tip.L/R` (±0,269/0,27, 0,007, 0,60); `neck`/`head`/`top` y 0,02 | ✅ | ✅ | la coleta llevaba el cuello 5 cm atrás; hombros bien; la `_alt` sin tocar (alternativa del lote) |
 | 11_sacrogrito_m | sacrogrito_m | ✅ | `hand_tip.L/R` (±0,283/0,281, -0,061/-0,05, 0,60); `--arm_slack=0.06` | ✅ | ✅ | la cola de la bufanda colgaba junto al brazo izquierdo y el script la tomaba por el brazo: ya resuelto; guanteletes grandes con `--arm_slack` |
-| 12_pandawa_f | pandawa_f | | | | | |
-| 12_pandawa_m | pandawa_m | | | | | |
+| 12_pandawa_f | pandawa_f | ✅ (corregido por el dueño) | `--sleeve=3.5` | ✅ | ✅ | mangas de volante: se quedaban en el pecho al subir los brazos y el hombro parecía estar en la decoración del bíceps; el cálculo de pesos falla en 1.564 vértices (cabeza grande) y el respaldo nunca daba hueso de brazo |
+| 12_pandawa_m | pandawa_m | ✅ | `forearm`/`hand` del lado izq. copiados del der.; `hand_tip.L/R` (±0,215, 0,02, 0,55); `--thumb=0.01` | ✅ | ✅ | la mano izq. se cortaba en el puño; yemas bajo la punta del hueso; el pulgar fundido con el cuerpo delante de la mano (`--thumb`); con 0,02 se llevaba la bolsa |
 | coach_7000_m | coach_7000 | | | | n/a | |
 | coach_7001_f | coach_7001 | | | | n/a | |
 

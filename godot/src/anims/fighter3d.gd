@@ -34,7 +34,7 @@ const MODELS := {1: ["feca_m", "feca_f"], 2: ["osamodas_m", "osamodas_f"],
 		5: ["xelor_m", "xelor_f"], 6: ["zurcarak_m", "zurcarak_f"],
 		7: ["aniripsa_m", "aniripsa_f"], 8: ["yopuka_m", "yopuka_f"],
 		9: ["ocra_m", "ocra_f"], 10: ["sadida_m", "sadida_f"],
-		11: ["sacrogrito_m", "sacrogrito_f"]}
+		11: ["sacrogrito_m", "sacrogrito_f"], 12: ["pandawa_m", "pandawa_f"]}
 const MODEL_DIR := "res://art/characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)

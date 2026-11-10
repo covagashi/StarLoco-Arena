@@ -5,7 +5,7 @@ texture budget of the web demo, fitted with the common 20-bone skeleton
 rig_anims.py.
 
     blender -b -P tools/blender/characters/meshy_fighter.py -- <in.glb> <out.glb>
-        [--tris=5000] [--tex=1024] [--joints=<overrides.json>] [--arm_slack=0.03] [--debug=<dir>]
+        [--tris=5000] [--tex=1024] [--joints=<overrides.json>] [--arm_slack=0.03] [--thumb=0] [--sleeve=2.2] [--debug=<dir>]
         [--overhead_out=40]   (raised arms open into a V: short arms, big head)
 
 What it does, in order:
@@ -36,7 +36,7 @@ sys.path.insert(0, HERE)
 import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "debug": "", "overhead_out": "40"}
+OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "debug": "", "overhead_out": "40"}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -503,6 +503,14 @@ def extend_hand(S, J, table):
             hi = pieces[min(k for k in free if k > z)]
             c = outer(z)
             pieces[z] = (max(lo[0], hi[0]), c["x1"]) if S == "L" else (c["x0"], min(lo[1], hi[1]))
+    # --thumb: a thumb fused to the body in front of the hand is that much
+    # inside the hand's pieces (Pandawa m)
+    t = float(OPT["thumb"])
+    if t:
+        for z in pieces:
+            if z <= J[f"hand.{S}"].z:
+                x0, x1 = pieces[z]
+                pieces[z] = (x0 - t, x1) if S == "L" else (x0, x1 + t)
     known = sorted(pieces)
     a["tip"] = min(known[0] - 0.015, J[f"hand_tip.{S}"].z)
     a["hand_z"] = J[f"hand.{S}"].z + 0.03  # below: the hand's pieces bound it
@@ -750,6 +758,10 @@ def skin(ob, rig, J):
         if name not in vg:
             vg[name] = ob.vertex_groups.new(name=name)
     head_z = J["head"].z
+    # above the cut, arm weights only this many arm radii from its bones
+    # (--sleeve: more, for a puffed sleeve that must lift with the arm; then
+    # a vertex the heat solve missed may also take the arm bone)
+    reach = float(OPT["sleeve"])
     unweighted = 0
     for v in ob.data.vertices:
         p = v.co
@@ -769,10 +781,11 @@ def skin(ob, rig, J):
             w = {n: x for n, x in w.items() if n.split(".")[0] not in ARM_CHAIN + ("shoulder",)}
         else:  # shoulder and above: arm bones only close to the arm (not a backpack)
             w = {n: x for n, x in w.items()
-                 if n.split(".")[0] not in ARM_CHAIN or d[n] < 2.2 * ARM[n[-1]]["half"]}
+                 if n.split(".")[0] not in ARM_CHAIN or d[n] < reach * ARM[n[-1]]["half"]}
         if not w:
             unweighted += 1
-            body = {n: x for n, x in d.items() if n.split(".")[0] not in ARM_CHAIN}
+            body = {n: x for n, x in d.items() if n.split(".")[0] not in ARM_CHAIN
+                    or (OPT["sleeve"] != "2.2" and p.z >= ARM["cut"] and x < reach * ARM[n[-1]]["half"])}
             w = {min(body, key=body.get): 1.0}
         top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
         tot = sum(x for _, x in top)
@@ -792,7 +805,7 @@ def skin(ob, rig, J):
             vg["head"].add([v.index], 1.0, "REPLACE")
         elif v.index not in arm_of or v.co.z >= ARM["cut"]:
             far = lambda n: (v.co.z < ARM["cut"]
-                             or seg_dist(v.co, *segs[n]) >= 2.2 * ARM[n[-1]]["half"])
+                             or seg_dist(v.co, *segs[n]) >= reach * ARM[n[-1]]["half"])
             gone = [g for g in v.groups if names[g.group].split(".")[0] in ARM_CHAIN and far(names[g.group])]
             if gone and len(gone) < len(v.groups):
                 for g in gone:
