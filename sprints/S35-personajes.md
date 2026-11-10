@@ -583,3 +583,8 @@ rehicieron sus hojas; las otras trece salen idénticas. La mano izquierda
 de la f toca el muslo y el script la estiraba hasta la rodilla: `--joints`.
 El m, solo los pulgares. Hombros mirados de cerca en los dos: bien.
 
+**2026-11-10 — Ocra f y m (S35b).** Sin cambios en el script. Hombros
+mirados de cerca: bien en los dos. Los pulgares, como siempre, con
+`hand_tip`; la f además apoya el codo en la cintura y necesitó
+`--arm_slack=0.06`.
+
