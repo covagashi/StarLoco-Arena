@@ -533,3 +533,10 @@ el puño y el pulgar es una pieza aparte. `extend_hand` ahora suma esas
 piezas pequeñas y da más holgura bajo la muñeca. El Osamodas m se
 reconstruyó con esto y sigue limpio; los Feca no cambian (sin `--joints`).
 
+**2026-11-10 — Sram f y m (S35b).** Huesos y pesos bien a la primera;
+solo el pulgar, una pieza aparte en el corte, se quedaba junto al muslo
+al subir los brazos. Con `hand_tip` en `--joints` (su propio valor) lo
+recoge `extend_hand`. Repasados los Feca con la misma mirada: la f deja
+dos puntitos junto a la falda con los brazos arriba; pequeño, el piloto
+está aprobado, no se toca salvo que el dueño lo pida.
+

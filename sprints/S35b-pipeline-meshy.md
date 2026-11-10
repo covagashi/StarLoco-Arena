@@ -98,7 +98,7 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | cadera en la rodilla | el pantalón se toca en la rodilla | ya resuelto (hueco más alto); si no, `--joints` |
 | la cadera en el bajo de una falda larga | solo bajo la falda hay hueco entre las piernas | `--joints` con `hips`, `spine`, `chest`, `thigh.S` y `shin.S` (Anutrof f) |
 | un rizo de pelo junto a la cara tomado por el brazo | una pieza suelta bajo 0,72 del alto | ya resuelto: el brazo es un tramo de 3 cortes o más |
-| pulgares flotando junto a la cadera | el pulgar es una pieza aparte, delante de la mano | ya resuelto en `extend_hand` (suma piezas pequeñas pegadas a la mano y da 5 cm de holgura bajo la muñeca); hace falta `--joints` con `hand_tip.S` |
+| pulgares flotando junto a la cadera | el pulgar es una pieza aparte, delante de la mano | ya resuelto en `extend_hand` (suma piezas pequeñas pegadas a la mano y da 5 cm de holgura bajo la muñeca); hace falta `--joints` con `hand_tip.S` (vale su propio valor, el de la línea `[meshy]`) |
 | la mano corta o larga | la mano toca la ropa (se alarga 6,5 % del alto) | `--joints` con `hand.S` y `hand_tip.S` |
 | manos sin pintar bajo un brazal fundido al cinturón (`hand_hidden` y la mano por debajo) | el brazo solo se ve suelto por encima; la mano, más estrecha que el brazal, no entra | `--joints` con `hand.S` y `hand_tip.S` más abajo: `extend_hand()` suma las piezas de la mano y, en el tramo fundido, el borde interior más estrecho y el exterior de la pieza fundida (Osamodas m) |
 | migas de ropa en las manos | Meshy fundió la ropa con la mano | aceptado a escala de juego; anotarlo |
@@ -125,8 +125,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 02_osamodas_m | osamodas_m | ✅ | `hand.L/R` (±0,215, 0,055, 0,625), `hand_tip.L/R` (±0,205, 0,04, 0,52) | ✅ | ✅ | brazales fundidos con las borlas del cinturón: sin `--joints` las manos quedaban fuera del brazo; con ellas, `extend_hand` (abajo) |
 | 03_anutrof_f | anutrof_f | ✅ | `hips` 0,52, `spine` 0,624, `chest` 0,75, `thigh.L/R` 0,52, `shin.L/R` 0,30 | ✅ | ✅ | falda larga: la entrepierna sale en el bajo (0,36); las manos agarran las bolsas (fundidas): esquirlas de bolsa al subir los brazos, aceptado a escala de juego |
 | 03_anutrof_m | anutrof_m | ✅ | `forearm.L/R` (±0,193, 0,08, 0,85), `hand.L/R` (±0,24, 0,035, 0,64), `hand_tip.L/R` (±0,23, 0,03, 0,55) | ✅ | ✅ | guanteletes anchos: la mano se cortaba en el puño; el pulgar (pieza aparte, delante) se quedaba en la cadera |
-| 04_sram_f | sram_f | | | | | |
-| 04_sram_m | sram_m | | | | | |
+| 04_sram_f | sram_f | ✅ | `hand_tip.L/R` (±0,233, 0,011, 0,53), su propio valor | ✅ | ✅ | el pulgar (pieza aparte) flotaba junto al muslo; `hand_tip` en `--joints` activa `extend_hand` |
+| 04_sram_m | sram_m | ✅ | `hand_tip.L/R` (±0,238, 0,072, 0,51), su propio valor | ✅ | ✅ | igual que la f |
 | 05_xelor_f | xelor_f | | | | | |
 | 05_xelor_m | xelor_m | | | | | |
 | 06_zurcarak_f | zurcarak_f | | | | | |
