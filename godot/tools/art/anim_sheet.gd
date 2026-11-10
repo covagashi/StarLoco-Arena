@@ -94,6 +94,11 @@ func _run() -> void:
 	var names: Array = Array(player.get_animation_list()) if player else ["rest"]
 	if opts.anims != "":
 		names = Array(String(opts.anims).split(","))
+		for anim: String in names:
+			if player and not player.has_animation(anim):  # else the script errors and never quits
+				printerr("[anim_sheet] no animation '%s' (has: %s)" % [anim, ", ".join(player.get_animation_list())])
+				quit(1)
+				return
 	var index := {}
 	var fps := 30.0
 	for anim: String in names:

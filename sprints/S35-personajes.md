@@ -549,3 +549,11 @@ la cadera y el m el pulgar suelto: `--joints` con la mano. El m conserva
 el mapa de metal de Meshy (segunda textura); en Godot el dorado brilla
 bien, solo `four_views.sh` (Blender sin entorno) lo enseña oscuro.
 
+**2026-11-10 — Zurcarák f y m (S35b).** La f tiene una cola grande; la
+receta decía parar con figuras no humanas, pero es humana con cola y la
+cola no necesita huesos propios: va rígida con la cadera (comprobado en
+`walk_loop` y `jump`). La cola tapaba la entrepierna y desviaba una
+pierna, y los hombros salían en el cuello: todo por `--joints`. El m,
+solo los pulgares. `anim_sheet.gd` ahora sale con error ante una
+animación que no existe (antes se quedaba colgado).
+

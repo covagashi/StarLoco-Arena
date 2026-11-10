@@ -61,6 +61,9 @@ xvfb-run -a -s "-screen 0 1280x720x24" godot --path . -s tools/art/anim_sheet.gd
     --size=500x600 --focus=0.8 --anims=carry_loop,celebrate,melee
 ```
 
+(Los nombres son los del GLB: `idle_loop`, `walk_loop`, `cast`, `melee`,
+`hit`, `die`, `jump`, `celebrate`, `carry_loop`, `throw`.)
+
 Buscar: telas estiradas ("alas") de la mano a la cadera, hilos, esquirlas
 bajo el hombro, ropa o mochila que sube con los brazos, brazos que se
 cruzan delante del pecho.
@@ -108,7 +111,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | migas de ropa en las manos | Meshy fundió la ropa con la mano | aceptado a escala de juego; anotarlo |
 | agujeritos oscuros en cintura/abrigo | el corte de las uniones fundidas | aceptado; anotarlo |
 | algo grande sube con los brazos (capa, alas, mochila) | pesos de brazo por encima del corte | revisar el render de pesos; bajar el 2,2 × radio en `skin()` solo si hace falta |
-| figura sin forma humana (alas grandes, cola, criatura) | el ajuste busca dos brazos y dos piernas | parar y preguntar al dueño |
+| una cola entre las piernas | tapa el hueco de la entrepierna; la pierna busca la pieza más cercana al centro | `--joints` con cadera, columna, muslos y rodillas (Zurcarák f); la cola queda con la cadera |
+| figura sin forma humana (alas grandes, criatura) | el ajuste busca dos brazos y dos piernas | parar y preguntar al dueño |
 
 ## Fuera de esta receta
 
@@ -133,8 +137,8 @@ tabla de abajo y una línea en S35 si salió algo nuevo; commit y push.
 | 04_sram_m | sram_m | ✅ | `hand_tip.L/R` (±0,238, 0,072, 0,51), su propio valor | ✅ | ✅ | igual que la f |
 | 05_xelor_f | xelor_f | ✅ | `hand.L/R` (±0,19, 0,066, 0,60), `hand_tip.L/R` (±0,185, 0,058, 0,49); `--arm_slack=0.06` | ✅ | ✅ | manos fundidas con la cadera; piezas del codo sueltas en el pecho sin `--arm_slack` |
 | 05_xelor_m | xelor_m | ✅ | `hand_tip.L/R` (±0,238/0,239, 0,005, 0,52), su propio valor; `--arm_slack=0.06` | ✅ | ✅ | aletas del brazal hacían "alas" sin `--arm_slack`; trae mapa de metal (2 texturas, 1,1 MB): bien en Godot, oscuro en `four_views` (sin entorno) |
-| 06_zurcarak_f | zurcarak_f | | | | | |
-| 06_zurcarak_m | zurcarak_m | | | | | |
+| 06_zurcarak_f | zurcarak_f | ✅ | `hips` 0,58, `spine`, `chest`, `upper_arm`/`shoulder` 1,03, `forearm` 0,85, `thigh`/`shin`, `hand_tip` 0,60 | ✅ | ✅ | cola grande: tapa el hueco entre las piernas (entrepierna en 0,39) y una pierna se iba a la cola; con `--joints` la cola va rígida con la cadera al andar |
+| 06_zurcarak_m | zurcarak_m | ✅ | `hand_tip.L/R` (±0,249, 0,041, 0,51), su propio valor | ✅ | ✅ | solo los pulgares |
 | 07_aniripsa_f | aniripsa_f | | | | | alas |
 | 07_aniripsa_m | aniripsa_m | | | | | alas |
 | 08_yopuka_f | yopuka_f | | | | | |
