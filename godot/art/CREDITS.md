@@ -25,7 +25,7 @@ third-party and keep their own licences, listed at the end.
 
 | What | Where | Made by | Notes |
 |---|---|---|---|
-| The 35 Meshy figures (24 fighters, 2 coaches, 8 summons): `<folder>/<folder>.glb` | Homelab art repository `pippop-arena-assets` (`//debian/codigo/pippop-arena-assets`); local copy `~/codigo/capturas/s35/meshy` (`PIPPOP_MESHY`) | The owner: reference images in Flow, meshes and textures generated with Meshy (S35b) | Kept out of git because of their size (5–30 MB each; no Git LFS, AGENTS.md). Made on the owner's Meshy Pro plan, with private assets (owner, 2026-11-11): cleared for commercial use. |
+| The 35 Meshy figures (24 fighters, 2 coaches, 8 summons): `<folder>/<folder>.glb` | Homelab art repository `pippop-arena-assets` (`//debian/codigo/pippop-arena-assets`); local copy `~/codigo/capturas/s35/meshy` (`PIPPOP_MESHY`) | The owner: reference images in Flow, meshes and textures generated with Meshy (S35b) | Kept out of git because of their size (5–30 MB each; no Git LFS, AGENTS.md). Made on the owner's paid Meshy Pro plan as private assets (owner, 2026-11-11): they belong to the owner and are cleared for commercial use. (Meshy's free-tier assets are public under CC BY 4.0; none of ours are.) |
 | Summon 8010 (the crystal) | none: `tools/blender/characters/crystal_8010.py` models it | Written for this project | |
 
 ## Tools (their licences, not the art's)
