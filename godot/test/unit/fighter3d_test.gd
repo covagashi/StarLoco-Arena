@@ -69,7 +69,7 @@ func _art_root(t) -> void:
 func _equipment(t) -> void:
 	var w := Fighter3D.fighter_pieces([{"slot": 0, "id": 108}, {"slot": 1, "id": 118}])
 	t.eq(w.get("hat"), "hat_straw", "card 108 (hat) shows the straw hat")
-	t.eq(w.get("dofus"), "dofus_green", "card 118 (dofus) shows the green dofus")
+	t.eq(w.get("dofus"), "dofus_emerald", "card 118 (dofus) shows the Esmeralda dofus")
 	t.eq(Fighter3D.fighter_pieces([{"slot": 0, "id": 1}]).get("weapon"), "sword_raciela", "card 1 (weapon) shows the Raciela sword")
 	t.ok(Fighter3D.fighter_pieces([{"slot": 0, "id": 99999}]).is_empty(), "an unknown card shows nothing")
 	var fc := preload("res://src/gamedata/fightercards.gd")
@@ -77,7 +77,7 @@ func _equipment(t) -> void:
 	# modelled in art/equipment (kit.kx.js and its includes)
 	var pieces: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/equipment/pieces.json"))
 	var src := ""
-	for f in ["kit", "hats", "weapons"]:
+	for f in ["kit", "hats", "weapons", "capes", "pets", "dofus"]:
 		src += FileAccess.get_file_as_string("res://art/equipment/%s.kx.js" % f)
 	for cid in pieces.fighter:
 		t.ok(Fighter3D.FIGHTER_SLOT.has(fc.slot_type(int(cid))), "card %s has a fighter slot" % cid)

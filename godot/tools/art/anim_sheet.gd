@@ -17,7 +17,7 @@ extends SceneTree
 ##       [--height=1.45]  (scale the model to this height, e.g. a Mixamo figure in metres)
 ##       [--hide=Icosphere]   (comma-separated nodes to leave out, e.g. a stray helper)
 ##       [--cards=108,118]    (S35c: wear these fighter equipment cards, art/equipment/pieces.json)
-##       [--pieces=hat:hat_straw,dofus:dofus_green]   (or name the pieces straight)
+##       [--pieces=hat:hat_straw,dofus:dofus_emerald]   (or name the pieces straight)
 ##
 ## Output: <dir>/<anim>/<dir>_<nn>.png and <dir>/index.json.
 

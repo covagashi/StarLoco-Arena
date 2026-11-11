@@ -222,25 +222,49 @@ dagas, dos arcos, dos bastones, martillo) y `s35c-armas-23-piezas.png`.
 
 Dueño, al ver las armas: "creo que necesitarías una animación para el
 arco… ¿no crees?". De acuerdo: hoy el golpe de arma con arco es `melee`, un
-tajo. **Pendiente (paso 6):** una animación `shoot` en `rig_anims.py`
+tajo. **Pendiente (paso 7):** una animación `shoot` en `rig_anims.py`
 (tensar con la izquierda, la cuerda hasta la cara con la derecha, soltar),
 la misma para las 24 figuras (reconstruirlas); `Fighter3D.take` pone
 `shoot` en lugar de `melee` cuando el arma puesta es `bow_`. Bastones:
 `cast` ya vale. Va antes que las capas, mascotas y dofus solo si el dueño
 lo pide; si no, después.
 
+## Paso 6: capas, mascotas y dofus de luchador (2026-11-11)
+
+Dueño: "sigue con S35c".
+
+| Cambio | Fichero |
+|---|---|
+| Las 15 capas en kiln, diseño propio: N'terarroza (harapo oliva), Gallo Umbo (azul con greca), Taz (rayas en punta), Tofu Loco (flecos de plumas), Dofustadora (blanca con borde naranja), Wey Wabbit (naranja con piel), La Harapa (capucha y remiendos), Abracapa (escamas de corteza), Jalosa (vellón con lazo y pezuñas), Vegacapa (una hoja), Champ Champ (baba que gotea), Mochila del Pequeño Moskito (mochila con casco y gafas), Crujicapa (piedra agrietada), Prespic (piel con púas y zarpas), Plumobardes (plumas en punta). 130–710 triángulos | `art/equipment/capes.kx.js` |
+| Una capa son tiras planas alrededor de un cilindro (abraza la espalda), el bajo con forma propia, inclinada 4–8° hacia atrás para que las piernas no la atraviesen | `capes.kx.js` (`cape`, `on`) |
+| Las 15 mascotas: Wauwau, Miaumiau, Wabbit, los cuatro Bwak, Moon, Buhordilla, Rayalkulo, Fotasma, Kwoko, Cuerbako, Tortuga, Abra. 170–570 triángulos | `art/equipment/pets.kx.js` |
+| Los 6 dofus: Esmeralda (espiral), Turquesa (casquete helado), Púrpura (brasa con llamas), Zanahowia (anillo), Vulbis (corona de hojas oscuras), de los Hielos (cristales). 80–450 triángulos. El dofus piloto pasa a ser el Esmeralda | `art/equipment/dofus.kx.js`, `kit.kx.js` |
+| Las 36 cartas → su pieza | `pieces.json` |
+| La capa va en la espalda a la altura de los hombros, escalada al ancho del torso (0,85–1,2); la mascota sobre el hombro izquierdo, 10 cm por fuera de la articulación del brazo, a 1,4× (a escala de juego, al lado de la cabeza, se perdía). La caja medida de la cabeza pasa a ser por huesos (`_bones_box`) y sirve también para el torso y el hombro | `fighter3d.gd` (`CAPE_*`, `PET_*`) |
+| Cada `.kx.js` nuevo va en un bloque `{ }` para que sus ayudas no choquen con las de los otros includes | `capes/pets/dofus.kx.js` |
+
+Corregido al revisar: la mascota salía dentro del cuello y el pelo (la caja del
+torso es estrecha y alta); el hocico del Wauwau era una caja suelta (ahora
+redondo); la cola del Fotasma parecía un hueso (ahora un cono); el huevo de
+los dofus era casi una bola (más alto, 0,19 m); el casquete del Turquesa
+parecía una seta (más pequeño).
+
+Hojas: `~/codigo/capturas/s35c/s35c-capas-15-1.png` y `-2.png` (cada capa en
+una figura: de espaldas, de perfil y de frente), `s35c-mascotas-15-1.png` y
+`-2.png` (de frente por los dos lados y de espaldas), `s35c-dofus-6.png`, y
+las piezas solas en `s35c-{capas-15,mascotas-15,dofus-6}-piezas*.png` (las
+capas se ven por dentro: la cara de fuera está en la hoja con figura).
+`run_tests.sh`: 821 checks, 0 fallos.
+
+Para el dueño: la capa es rígida (cuelga del pecho, no ondea); la Mochila
+Moskito es una mochila, no una capa. ¿Valen así?
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
-1. **Capas (15), mascotas (15) y dofus (6) de luchador** en kiln, un
-   `.kx.js` por tipo incluido desde `art/equipment/kit.kx.js`, una hoja por
-   tipo para el dueño (como `s35c-sombreros-16.png`). Ideas:
-   `~/codigo/capturas/s35/flow/accesorios/{capas,mascotas,dofus}-1.png`;
-   cartas en `fightercards.json` (tipo 2 mascota, 3 capa, 5 dofus). Capa y
-   mascota cuelgan de `chest` (`BONE_OF`; falta su colocación en `hang()`,
-   como el sombrero), el dofus flota (`DOFUS_AT`). Añadir el fichero nuevo a
-   la lista de `_equipment()` en `test/unit/fighter3d_test.gd`.
-2. Paso 6: la animación `shoot` del arco (arriba).
+1. ~~Capas, mascotas y dofus~~: hecho (paso 6), a falta de que el dueño
+   revise las hojas.
+2. Paso 7: la animación `shoot` del arco (arriba).
 3. El equipo del coach (campo nuevo en el servidor para verlo en combate),
    las 91 prendas que se deforman y las 13 marcas; `art/equipment` en
    `tools/art/build.py`.

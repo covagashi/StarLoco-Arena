@@ -54,12 +54,13 @@ const MODEL_DIR := "characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)
 static var _masks := {}       # path -> {tex, skin_ref, hair_ref} or {} (no mask beside it)
-static var _heads := {}       # path -> AABB of the head (and hair) in skeleton space
+static var _boxes := {}       # "path|bones" -> AABB of those bones' vertices in skeleton space
 
 ## S35c: rigid equipment pieces (art/equipment, kiln) hung from a bone of
 ## the common rig, so a change of equipment swaps one node, not the figure.
 ## A hat sits on the figure's own head (its size measured on the mesh); a
-## dofus floats beside the figure, with no bone.
+## dofus floats beside the figure, with no bone. A cape hangs on the back
+## and a pet rides the left shoulder, both placed on the torso as measured.
 const EQUIP_DIR := "equipment/out/models/%s.glb"
 const BONE_OF := {"hat": "head", "weapon": "hand.R", "cape": "chest", "pet": "chest"}
 const HAT_CROWN := 0.27      # inner width of a hat's crown as modelled (m)
@@ -68,6 +69,17 @@ const HAT_SINK := 0.36       # how far down the head (of its height) a hat sits
 ## up, so its scale stays near the modelled size.
 const HAT_MIN := 0.8
 const HAT_MAX := 1.15
+## A cape (art/equipment/capes.kx.js) is modelled with the middle of its
+## collar at the origin, hanging down -Y behind -Z; it sits on the back at
+## shoulder height, scaled to the torso's width.
+const CAPE_WIDTH := 0.34     # shoulder width a cape is modelled for (m)
+const CAPE_TOP := 0.05       # how far below the torso's top the collar sits (m)
+const CAPE_MIN := 0.85
+const CAPE_MAX := 1.2
+## A pet (art/equipment/pets.kx.js) stands on its feet at the origin,
+## facing +Z, on the left shoulder.
+const PET_OUT := 0.1         # how far out from the arm's joint it stands (m)
+const PET_SCALE := 1.4       # modelled small: at game scale it reads beside the head
 const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest height
 ## A weapon is modelled upright with the middle of its grip at the origin
 ## (art/equipment/weapons.kx.js): held in the middle of the hand, the blade
@@ -391,13 +403,26 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	att.bone_name = BONE_OF[slot]
 	skel.add_child(att)
 	att.add_child(p)
+	var k := 1.0
+	var at := Vector3.ZERO
 	if slot == "hat":
-		var head := _head_box(model, path, skel)
-		var k := clampf(head.size.x * 0.85 / HAT_CROWN, HAT_MIN, HAT_MAX)
-		var at := Vector3(head.get_center().x, head.end.y - head.size.y * HAT_SINK, head.get_center().z)
-		# skeleton space → the head bone's rest frame
-		var rest := skel.get_bone_global_rest(bone)
-		p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
+		var head := _bones_box(model, path, skel, ["head"])
+		k = clampf(head.size.x * 0.85 / HAT_CROWN, HAT_MIN, HAT_MAX)
+		at = Vector3(head.get_center().x, head.end.y - head.size.y * HAT_SINK, head.get_center().z)
+	else:
+		var torso := _bones_box(model, path, skel, ["spine", "chest"])
+		if slot == "cape":
+			k = clampf(torso.size.x / CAPE_WIDTH, CAPE_MIN, CAPE_MAX)
+			at = Vector3(torso.get_center().x, torso.end.y - CAPE_TOP, torso.position.z)
+		else:   # pet: on top of the left shoulder, out from the arm's joint
+			var arm := skel.find_bone("upper_arm.L")
+			var j := skel.get_bone_global_rest(arm).origin if arm >= 0 else Vector3(torso.end.x, torso.end.y, 0)
+			var top := _bones_box(model, path, skel, ["shoulder.L", "upper_arm.L"]).end.y
+			at = Vector3(j.x + PET_OUT * signf(j.x), maxf(top, j.y), torso.get_center().z)
+			k = PET_SCALE
+	# skeleton space → the bone's rest frame
+	var rest := skel.get_bone_global_rest(bone)
+	p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
 	return att
 
 
@@ -433,23 +458,24 @@ static func _skeleton(model: Node3D) -> Skeleton3D:
 	return all[0] if not all.is_empty() else null
 
 
-## The box around every vertex the head bone moves most (head and hair),
-## in skeleton space, measured once per model.
-static func _head_box(model: Node3D, path: String, skel: Skeleton3D) -> AABB:
-	if _heads.has(path):
-		return _heads[path]
+## The box of the vertices mostly weighted to `names` (e.g. the head with
+## its hair, or the torso), in skeleton space; measured once per figure.
+static func _bones_box(model: Node3D, path: String, skel: Skeleton3D, names: Array) -> AABB:
+	var key := path + "|" + ",".join(names)
+	if _boxes.has(key):
+		return _boxes[key]
 	var box := AABB()
 	var first := true
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if mi.skin == null:
 			continue
-		var head_binds := {}
+		var own := {}
 		for b in mi.skin.get_bind_count():
 			var bn := String(mi.skin.get_bind_name(b))
 			if bn == "":
 				bn = skel.get_bone_name(mi.skin.get_bind_bone(b))
-			if bn == "head":
-				head_binds[b] = true
+			if bn in names:
+				own[b] = true
 		# mesh space → skeleton space (both under the model)
 		var to_skel := _rel(model, skel).affine_inverse() * _rel(model, mi)
 		for s in mi.mesh.get_surface_count():
@@ -465,7 +491,7 @@ static func _head_box(model: Node3D, path: String, skel: Skeleton3D) -> AABB:
 				for j in per:
 					if weights[i * per + j] > weights[i * per + best]:
 						best = j
-				if not head_binds.has(int(bones[i * per + best])):
+				if not own.has(int(bones[i * per + best])):
 					continue
 				var v := to_skel * verts[i]
 				if first:
@@ -473,7 +499,7 @@ static func _head_box(model: Node3D, path: String, skel: Skeleton3D) -> AABB:
 					first = false
 				else:
 					box = box.expand(v)
-	_heads[path] = box
+	_boxes[key] = box
 	return box
 
 
