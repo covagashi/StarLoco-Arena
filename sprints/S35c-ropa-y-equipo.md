@@ -228,3 +228,23 @@ la misma para las 24 figuras (reconstruirlas); `Fighter3D.take` pone
 `shoot` en lugar de `melee` cuando el arma puesta es `bow_`. Bastones:
 `cast` ya vale. Va antes que las capas, mascotas y dofus solo si el dueño
 lo pide; si no, después.
+
+## Para retomar (2026-11-11)
+
+Dueño: "sigue el orden de los sprints". Orden que queda:
+1. **Capas (15), mascotas (15) y dofus (6) de luchador** en kiln, un
+   `.kx.js` por tipo incluido desde `art/equipment/kit.kx.js`, una hoja por
+   tipo para el dueño (como `s35c-sombreros-16.png`). Ideas:
+   `~/codigo/capturas/s35/flow/accesorios/{capas,mascotas,dofus}-1.png`;
+   cartas en `fightercards.json` (tipo 2 mascota, 3 capa, 5 dofus). Capa y
+   mascota cuelgan de `chest` (`BONE_OF`; falta su colocación en `hang()`,
+   como el sombrero), el dofus flota (`DOFUS_AT`). Añadir el fichero nuevo a
+   la lista de `_equipment()` en `test/unit/fighter3d_test.gd`.
+2. Paso 6: la animación `shoot` del arco (arriba).
+3. El equipo del coach (campo nuevo en el servidor para verlo en combate),
+   las 91 prendas que se deforman y las 13 marcas; `art/equipment` en
+   `tools/art/build.py`.
+
+Herramientas: `anim_sheet.gd --pieces=<slot>:<pieza>` o `--cards=`,
+`test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Construir:
+`cd godot/art/equipment && node ~/.claude/skills/kiln/bin/kiln.js build kit.kx.js`.
