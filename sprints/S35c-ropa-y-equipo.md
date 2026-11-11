@@ -259,6 +259,15 @@ capas se ven por dentro: la cara de fuera está en la hoja con figura).
 Para el dueño: la capa es rígida (cuelga del pecho, no ondea); la Mochila
 Moskito es una mochila, no una capa. ¿Valen así?
 
+Dueño: "estaría bien que ondeen, pero si es complejo, déjalo rígido"; la
+Mochila Moskito vale. **Hecho, barato:** la capa sigue rígida pero cuelga de
+una bisagra en el cuello (`Fighter3D._swing`): quieta se mece ±2°; al andar
+se levanta 12° hacia atrás y aletea ±4°, con suavizado al empezar y parar. Una
+tela que se doble de verdad (varios huesos o simulación) queda fuera.
+`fighter_equip_preview` pone capa y mascota, hace andar al luchador y falla si
+la capa no se mueve (15,3° al andar); captura `s35c-capa-ondea.png`. También
+pedido: apuntar en S16 la limpieza de los contenedores viejos del VPS (hecho).
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:

@@ -80,6 +80,12 @@ const CAPE_MAX := 1.2
 ## facing +Z, on the left shoulder.
 const PET_OUT := 0.1         # how far out from the arm's joint it stands (m)
 const PET_SCALE := 1.4       # modelled small: at game scale it reads beside the head
+## A cape is rigid but swings from its collar (owner, 2026-11-11: "estaría
+## bien que ondeen"): a slow sway standing, flared back and fluttering
+## while walking. Degrees about the model's X; + lifts the hem backwards.
+const CAPE_SWAY := 2.0
+const CAPE_WALK := 12.0
+const CAPE_FLUTTER := 4.0
 const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest height
 ## A weapon is modelled upright with the middle of its grip at the origin
 ## (art/equipment/weapons.kx.js): held in the middle of the hand, the blade
@@ -105,6 +111,7 @@ var _worn := {}               # slot -> the piece's node
 var _path := ""
 var _worn_piece := {}         # slot -> piece name (wear_fighter_cards)
 var _t := 0.0
+var _cape_flare := 0.0       # degrees the cape is lifted back now (_swing)
 
 var anim := ""
 var _dir := 1
@@ -423,6 +430,7 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	# skeleton space → the bone's rest frame
 	var rest := skel.get_bone_global_rest(bone)
 	p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
+	p.set_meta("rest", p.transform)   # a cape swings about it (_swing)
 	return att
 
 
@@ -577,11 +585,25 @@ static func anim_for(base: String) -> String:
 
 func _process(dt: float) -> void:
 	_face()
+	_t += dt
+	if _worn.has("cape"):
+		_swing(dt)
 	if _worn.has("dofus"):   # a slow bob and turn
-		_t += dt
 		var d: Node3D = _worn.dofus
 		d.position = DOFUS_AT + Vector3(0, sin(_t * 2.0) * 0.03, 0)
 		d.rotation.y = _t * 0.8
+
+
+## The cape eases towards its flare (walking or not) and flutters about it.
+func _swing(dt: float) -> void:
+	var att: Node3D = _worn.cape
+	if att.get_child_count() == 0:
+		return
+	var p := att.get_child(0) as Node3D
+	var walking := anim == "walk_loop"
+	_cape_flare = lerpf(_cape_flare, CAPE_WALK if walking else 0.0, minf(1.0, dt * 4.0))
+	var wave := sin(_t * 9.0) * CAPE_FLUTTER if walking else sin(_t * 1.7) * CAPE_SWAY
+	p.transform = (p.get_meta("rest") as Transform3D) * Transform3D(Basis(Vector3.RIGHT, deg_to_rad(_cape_flare + wave)), Vector3.ZERO)
 
 
 func _draw() -> void:   # drawn before the child sprite: under the feet

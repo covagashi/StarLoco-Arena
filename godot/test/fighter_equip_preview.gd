@@ -3,7 +3,8 @@ extends Node
 ## S35c: the fighter equipment panel (lobby_panels._equipment) with its 3D
 ## figure wearing the cards, without a server. Shoots it, swaps the hat card
 ## for none and the weapon in, and checks the figure was kept (only the
-## pieces change), then shoots again.
+## pieces change), then shoots again. Last, a cape and a pet: the figure
+## walks and the cape must swing back from its rest.
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --resolution 1280x720 test/fighter_equip_preview.tscn -- \
 ##       [--out=/tmp/fe] [--breed=8] [--sex=1]
 
@@ -79,5 +80,22 @@ func _run() -> void:
 	elif m3d != null and (m3d.worn().has("hat") or not m3d.worn().has("weapon")):
 		_fails += 1
 		push_error("[fe] after the swap: %s" % m3d.worn().keys())
+	model.set_value("teamManagement", _fighter({"cloakEquipment": 97, "petEquipment": 92}), "editableFighter")
+	panel.refresh()
+	if m3d != null:
+		if not m3d.worn().has("cape") or not m3d.worn().has("pet"):
+			_fails += 1
+			push_error("[fe] cape and pet not worn: %s" % m3d.worn().keys())
+		else:
+			m3d.take("1_AnimMarche", false, false)
+			for i in 40:
+				await get_tree().process_frame
+			var p: Node3D = m3d.worn().cape.get_child(0)
+			var lift := rad_to_deg((p.get_meta("rest") as Transform3D).basis.get_rotation_quaternion().angle_to(p.transform.basis.get_rotation_quaternion()))
+			print("[fe] cape lifted %.1f deg walking" % lift)
+			if lift < 3.0:
+				_fails += 1
+				push_error("[fe] the cape doesn't swing while walking")
+	await _shot(out + "-3.png")
 	print("[fe] %s" % ("ok" if _fails == 0 else "%d failure(s)" % _fails))
 	get_tree().quit(1 if _fails else 0)

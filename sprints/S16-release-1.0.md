@@ -40,6 +40,12 @@ configurada de forma segura y documentación para jugadores y operadores.
 - [ ] TLS en el proxy inverso. El protocolo del juego va en claro, contraseña
       incluida, y no se puede cambiar sin romper el cliente retail. Con el
       cliente Godot sí se podría: decidirlo.
+- [ ] **Limpiar el VPS del dueño antes del deploy** (dueño, 2026-11-11: "así
+      no me olvido"). Quitar estos contenedores viejos:
+      `deploy-arena-1` (Up 5 weeks), `pippop-arena-server` (Up 2 months),
+      `pippop-arena-redis` (Up 3 months) y `pippop-arena-postgres` (Up 3
+      months). Antes de borrar el de Postgres, sacar una copia de su base por
+      si hay algo que conservar.
 
 ## Documentación y legal
 
