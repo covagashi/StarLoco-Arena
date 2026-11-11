@@ -802,3 +802,8 @@ func _check_equipment(fight_scene: Node) -> void:
 		print("[smoke] %s EQUIP %s cards=%s pieces=%s worn=%s" % [
 			"OK  " if keys == have else "FAIL", f.get("name", fid),
 			f.get("cards", []).map(func(c): return int(c.id)), want, have])
+		# S35c: a fighter holding a bow shoots it on a weapon strike
+		if String(want.get("weapon", "")).begins_with("bow_"):
+			fight_scene._play_weapon(fid, "110")
+			print("[smoke] %s SHOOT %s plays %s" % ["OK  " if spr.model3d.anim == "shoot" else "FAIL",
+				f.get("name", fid), spr.model3d.anim])

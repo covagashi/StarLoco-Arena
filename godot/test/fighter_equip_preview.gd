@@ -4,7 +4,8 @@ extends Node
 ## figure wearing the cards, without a server. Shoots it, swaps the hat card
 ## for none and the weapon in, and checks the figure was kept (only the
 ## pieces change), then shoots again. Last, a cape and a pet: the figure
-## walks and the cape must swing back from its rest.
+## walks and the cape must swing back from its rest. Then a bow: a weapon
+## strike must shoot it, not swing it; without a bow, the swing.
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --resolution 1280x720 test/fighter_equip_preview.tscn -- \
 ##       [--out=/tmp/fe] [--breed=8] [--sex=1]
 
@@ -97,5 +98,21 @@ func _run() -> void:
 				_fails += 1
 				push_error("[fe] the cape doesn't swing while walking")
 	await _shot(out + "-3.png")
+	if m3d != null:
+		m3d.take("1_AnimStatique03-110", true, false)
+		if m3d.anim != "melee":
+			_fails += 1
+			push_error("[fe] a strike without a bow plays %s, not melee" % m3d.anim)
+		model.set_value("teamManagement", _fighter({"weaponEquipment": 28}), "editableFighter")
+		panel.refresh()
+		m3d.take("1_AnimStatique03-110", true, false)
+		print("[fe] a strike with the bow plays %s" % m3d.anim)
+		if m3d.anim != "shoot":
+			_fails += 1
+			push_error("[fe] a strike with a bow plays %s, not shoot" % m3d.anim)
+		m3d.take("1_AnimStatique03-219", true, false)
+		if m3d.anim != "melee":
+			_fails += 1
+			push_error("[fe] bare fists with a bow play %s, not melee" % m3d.anim)
 	print("[fe] %s" % ("ok" if _fails == 0 else "%d failure(s)" % _fails))
 	get_tree().quit(1 if _fails else 0)

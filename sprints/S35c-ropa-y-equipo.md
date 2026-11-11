@@ -268,15 +268,42 @@ tela que se doble de verdad (varios huesos o simulación) queda fuera.
 la capa no se mueve (15,3° al andar); captura `s35c-capa-ondea.png`. También
 pedido: apuntar en S16 la limpieza de los contenedores viejos del VPS (hecho).
 
+## Paso 7: el arco dispara (2026-11-11)
+
+Dueño: "continúa con el paso 7".
+
+| Cambio | Fichero |
+|---|---|
+| Animación `shoot`, la misma para las 24 figuras: el brazo izquierdo sube al frente con el arco, la mano derecha tensa la cuerda hasta la cara, aguanta, suelta y vuelve (36 fotogramas). El arco va en la mano a lo largo del brazo, así que la muñeca izquierda se dobla 85° para que siga vertical con el brazo levantado | `tools/blender/characters/rig_anims.py` |
+| Las 35 figuras reconstruidas (`build.py`: `rig_anims.py` cambiado); las de luchador traen 11 animaciones. Invocaciones y coaches no la usan | `art/characters/out/` (fuera de git) |
+| Un golpe de arma (`AnimStatique03-<fam>`) con un `bow_` puesto hace `shoot` en lugar de `melee`; los puños (`-219`) siguen con `melee`. `equip()` apunta la pieza de cada hueco | `fighter3d.gd` (`_shoots`, `take`) |
+| `art/equipment/` en `art/CREDITS.md`: `build.py` fallaba en la comprobación de créditos desde que existe la carpeta | `art/CREDITS.md` |
+
+Probado:
+- `run_tests.sh`: 873 checks, 0 fallos (nuevo: cada carta de sombrero, capa,
+  mascota o dofus enseña una pieza de su tipo).
+- `fighter_equip_preview`: sin arco, `melee`; con la carta 28 (La Cuerda),
+  `shoot`; con arco y puños, `melee`.
+- Combate real (`fight_smoke`, reto 34, servidor local): a los Humo les puse
+  arco 28, mascota 92 y capa 97 en `fighter_objects` (185 filas, borradas
+  después); `EQUIP OK` y `SHOOT OK … plays shoot` en los dos.
+- `build.py` completo en verde (0 fallos).
+
+Hoja: `~/codigo/capturas/s35c/s35c-arco-dispara.png` (Ocra m y Sadida f con el
+Arco Ángel y la capa Plumobardes; cada fila, siete momentos del disparo, de
+frente y de perfil). En las figuras de brazos cortos la mano llega a la
+altura del pecho, no de la mejilla. No hay flecha: la cuerda no se mueve con
+la mano (el arco es una pieza rígida).
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
 1. ~~Capas, mascotas y dofus~~: hecho (paso 6), a falta de que el dueño
    revise las hojas.
-2. Paso 7: la animación `shoot` del arco (arriba).
+2. ~~Paso 7: la animación `shoot` del arco~~: hecho.
 3. El equipo del coach (campo nuevo en el servidor para verlo en combate),
    las 91 prendas que se deforman y las 13 marcas; `art/equipment` en
-   `tools/art/build.py`.
+   `tools/art/build.py` (hoy se construye a mano con kiln). Es el siguiente.
 
 Herramientas: `anim_sheet.gd --pieces=<slot>:<pieza>` o `--cards=`,
 `test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Construir:

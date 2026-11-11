@@ -16,6 +16,7 @@ third-party and keep their own licences, listed at the end.
 | `arena1/`, `arena2/`, `arena5/`, `arena6/`, `arena7/`, `arena8/`, `arena9/`, `arena10/`, `arena11/`, `arena12/` | Arena kits (arenas 3 and 4 reuse them): kiln models (`kit.kx.js`), loom textures (`*.tx.js`), the editor's piece list (`kit.json`) | Written for this project (S36), from the owner's notes on each piece | Shapes were modelled looking at the retail pieces they replace (`gfx` in `kit.json`), never copied from them. `arena1/glyphs.py` draws Baybayin glyphs with the Noto font below. `arena1/paint/` and `arena1/vex/` are S36 trials, not built. |
 | `common/` | Shared kiln shapes the kits include | Written for this project | |
 | `characters/` | `figures.json` (how each 3D figure is built), `joints/` (the bone fixes reviewed in S35b), `meshy_map.json` (which Meshy figure is which class), `fighter1.tx.js` (the S35 pilot's cloth) | Written for this project | The figures' meshes and textures come from the owner's Meshy files below. |
+| `equipment/` | The fighters' equipment pieces (S35c): kiln models of the hats, weapons, capes, pets and dofus (`kit.kx.js` and its includes), and `pieces.json` (which card shows which piece) | Written for this project | Own designs; the retail card illustrations only gave the idea. |
 | `layouts/` | Where each piece sits in arenas 1–12 | The owner in the map editor, from drafts of mine (S36) | |
 | `shapes/` | Each arena's walkable cells (the fight grid) | Frozen in S43 from the retail map data the server already plays (cell numbers only, no art) | Leaves with the retail data (S40–S43). |
 | `fonts/` | `NotoSansTagalog-Regular.ttf` | The Noto Project Authors | SIL Open Font License 1.1, `fonts/OFL.txt`. Used only to draw glyph textures. |
@@ -32,7 +33,7 @@ third-party and keep their own licences, listed at the end.
 
 | Tool | Licence | Used for |
 |---|---|---|
-| kiln (uilianks/kiln) | MIT | Arena models |
+| kiln (uilianks/kiln) | MIT | Arena models, equipment pieces |
 | loom (uilianks/loom) | MIT | Textures |
 | Blender 5.2 | GPL (the program; what it outputs is ours) | Curved pieces, AO, rigging and animation |
 | Meshy | Commercial service, owner's Pro plan (private assets) | Figure meshes |

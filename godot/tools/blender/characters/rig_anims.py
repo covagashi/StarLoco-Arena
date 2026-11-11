@@ -1,4 +1,4 @@
-"""S35: the common skeleton's poses and the 10 base animations, shared by
+"""S35: the common skeleton's poses and the 11 base animations, shared by
 every rigged character (fighter1.py, meshy_fighter.py). A rig only needs
 the 20 bones of fighter1.BONES (any proportions: pose() works from each
 bone's rest frame) and, for the feet-on-the-floor fix, ANKLE and TOE: the
@@ -200,6 +200,17 @@ def animate(rig):
     down = dict(base, lean=28, twist=22, arm_R=(40, 0), elbow_R=15, hand_R=20, arm_L=(-25, 20), elbow_L=30,
                 leg_L=30, knee_L=35, leg_R=-15, knee_R=10, y=-0.08, bob=-0.07, head=-10)
     keys(rig, "melee", [(0, base), (8, up), (12, down), (16, mix(down, base, 0.2)), (24, base)], False)
+
+    # shoot (S35c, a bow's attack): the bow arm (left) comes up level, the
+    # right hand draws the string back to the cheek, holds, lets go. The bow
+    # is gripped along the hand (Fighter3D: upright with the arm down), so
+    # the left wrist bends down to keep it upright with the arm raised.
+    aim = dict(base, lean=-2, twist=-18, head_turn=14, arm_L=(88, 8), elbow_L=4, hand_L=85,
+               arm_R=(80, -12), elbow_R=95, leg_out_L=12, leg_out_R=10, knee_L=6, knee_R=8)
+    draw = dict(aim, lean=-5, twist=-26, head_turn=20, arm_R=(86, 22), elbow_R=150, bob=-0.02)
+    loose = dict(draw, twist=-22, arm_R=(70, 45), elbow_R=70, hand_R=-25, lean=-2)
+    keys(rig, "shoot", [(0, base), (7, aim), (14, draw), (20, draw), (22, loose), (27, mix(loose, base, 0.3)),
+                        (36, base)], False)
 
     # hit: knocked back, then recovers (the game adds the flash and shake)
     hit = dict(base, lean=-18, head=-22, head_tilt=8, arm_L=(35, 30), arm_R=(30, 35), elbow_L=40, elbow_R=40,

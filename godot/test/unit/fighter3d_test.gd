@@ -82,3 +82,6 @@ func _equipment(t) -> void:
 	for cid in pieces.fighter:
 		t.ok(Fighter3D.FIGHTER_SLOT.has(fc.slot_type(int(cid))), "card %s has a fighter slot" % cid)
 		t.ok(src.contains('model("%s"' % pieces.fighter[cid]), "card %s: %s is modelled" % [cid, pieces.fighter[cid]])
+		var slot: String = Fighter3D.FIGHTER_SLOT.get(fc.slot_type(int(cid)), "")
+		if slot in ["hat", "cape", "pet", "dofus"]:
+			t.ok(String(pieces.fighter[cid]).begins_with(slot + "_"), "card %s (%s) shows a %s piece" % [cid, slot, slot])

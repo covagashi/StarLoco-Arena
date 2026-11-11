@@ -25,7 +25,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from rig_anims import animate  # noqa: E402  (the 10 base animations)
+from rig_anims import animate  # noqa: E402  (the 11 base animations)
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = args[0] if args else os.path.normpath(os.path.join(HERE, "..", "..", "..", "art", "characters", "out", "fighter1.glb"))
 FPS = 30

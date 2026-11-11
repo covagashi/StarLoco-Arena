@@ -1,7 +1,7 @@
 """S35: a Meshy figure (owner's Flow → Meshy pipeline) made into a game
 fighter: cleaned, scaled to the game's 1.45 cells, cut to the triangle and
 texture budget of the web demo, fitted with the common 20-bone skeleton
-(fighter1.BONES names and parents) and given the 10 base animations of
+(fighter1.BONES names and parents) and given the 11 base animations of
 rig_anims.py.
 
     blender -b -P tools/blender/characters/meshy_fighter.py -- <in.glb> <out.glb>

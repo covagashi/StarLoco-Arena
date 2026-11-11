@@ -1,7 +1,7 @@
 extends Node2D
 
 ## S35 pilot: a rigged 3D fighter (tools/blender/characters/meshy_fighter.py:
-## the common 20 bones, the 10 base animations) drawn inside the fight.
+## the common 20 bones, the 11 base animations) drawn inside the fight.
 ## S33's technique A: the model lives in its own small transparent
 ## SubViewport with the arena's light and the game's orthographic camera,
 ## shown as a sprite whose origin is the feet. It hangs off an AnmSprite
@@ -109,7 +109,7 @@ const PIECES := "equipment/pieces.json"
 static var _pieces = null
 var _worn := {}               # slot -> the piece's node
 var _path := ""
-var _worn_piece := {}         # slot -> piece name (wear_fighter_cards)
+var _worn_piece := {}         # slot -> piece name asked for (equip)
 var _t := 0.0
 var _cape_flare := 0.0       # degrees the cape is lifted back now (_swing)
 
@@ -336,6 +336,7 @@ func equip(slot: String, piece: String) -> void:
 	var n := hang(_model, _path, slot, piece)
 	if n != null:
 		_worn[slot] = n
+	_worn_piece[slot] = piece
 
 
 ## The piece a card shows ("fighter" or "coach" table), or "".
@@ -365,7 +366,6 @@ func wear_fighter_cards(cards: Array) -> void:
 	for slot in FIGHTER_SLOT.values():
 		if String(want.get(slot, "")) != String(_worn_piece.get(slot, "")):
 			equip(slot, want.get(slot, ""))
-			_worn_piece[slot] = want.get(slot, "")
 
 
 func worn() -> Dictionary:
@@ -531,6 +531,8 @@ func take(action: String, once: bool, hold: bool) -> bool:
 	var a := anim_for(base)
 	if a == "":
 		return false
+	if a == "melee" and _shoots(base):
+		a = "shoot"
 	_dir = int(action.substr(0, cut))
 	var end := a == "die_end"
 	if end:
@@ -552,6 +554,14 @@ func take(action: String, once: bool, hold: bool) -> bool:
 				finished.emit())
 	_face()
 	return true
+
+
+## S35c: a weapon strike (fight_view._play_weapon: AnimStatique03-<fam>,
+## not the bare fists' -219) by a fighter holding a bow shoots it instead
+## of the melee swing.
+func _shoots(base: String) -> bool:
+	return base.begins_with("AnimStatique03") and not base.ends_with("-219") and _worn.has("weapon") \
+		and String(_worn_piece.get("weapon", "")).begins_with("bow_") and _player.has_animation("shoot")
 
 
 static func anim_for(base: String) -> String:
