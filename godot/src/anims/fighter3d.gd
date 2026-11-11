@@ -17,6 +17,7 @@ extends Node2D
 const ArenaScene := preload("res://src/maps/arena_scene.gd")
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 const Toon := preload("res://src/anims/toon.gd")
+const FighterCards := preload("res://src/gamedata/fightercards.gd")
 
 signal finished
 
@@ -53,6 +54,27 @@ const MODEL_DIR := "characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)
 static var _masks := {}       # path -> {tex, skin_ref, hair_ref} or {} (no mask beside it)
+static var _heads := {}       # path -> AABB of the head (and hair) in skeleton space
+
+## S35c: rigid equipment pieces (art/equipment, kiln) hung from a bone of
+## the common rig, so a change of equipment swaps one node, not the figure.
+## A hat sits on the figure's own head (its size measured on the mesh); a
+## dofus floats beside the figure, with no bone.
+const EQUIP_DIR := "equipment/out/models/%s.glb"
+const BONE_OF := {"hat": "head", "weapon": "hand.R", "cape": "chest", "pet": "chest"}
+const HAT_CROWN := 0.27      # inner width of a hat's crown as modelled (m)
+const HAT_SINK := 0.45       # how far down the head (of its height) a hat sits
+const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest height
+## Fighter equipment card type (fightercards.json) → slot.
+const FIGHTER_SLOT := {1: "weapon", 2: "pet", 3: "cape", 4: "hat", 5: "dofus"}
+## Which piece each card shows: art/equipment/pieces.json
+## {"fighter": {"<card id>": "<piece>"}, "coach": {…}}.
+const PIECES := "equipment/pieces.json"
+static var _pieces = null
+var _worn := {}               # slot -> the piece's node
+var _path := ""
+var _worn_piece := {}         # slot -> piece name (wear_fighter_cards)
+var _t := 0.0
 
 var anim := ""
 var _dir := 1
@@ -191,6 +213,7 @@ static func create(path: String, tints := {}, scale := 1.0, res := RES) -> Node2
 	m.scale = Vector3.ONE * scale
 	f._res = res
 	f._shadow_r = SHADOW_R * scale
+	f._path = path
 	f.use_parent_material = true   # the arena occluder hides the shadow too
 	f._build(m, tints, _mask(path))
 	return f
@@ -256,6 +279,152 @@ func _build(model: Node3D, tints: Dictionary, mask := {}) -> void:
 	add_child(_spr)
 
 
+## The path of a built equipment piece by name, or "" when it isn't built.
+static func piece_path(piece: String) -> String:
+	if old_art() or piece == "":
+		return ""
+	var path := ArenaLayout.root().path_join(EQUIP_DIR % piece)
+	return path if FileAccess.file_exists(path) else ""
+
+
+## Put `piece` (an art/equipment model name) on `slot`, or take the slot
+## off with "". Unknown pieces leave the slot empty.
+func equip(slot: String, piece: String) -> void:
+	if _worn.has(slot):
+		(_worn[slot] as Node).queue_free()
+		_worn.erase(slot)
+	var n := hang(_model, _path, slot, piece)
+	if n != null:
+		_worn[slot] = n
+
+
+## The piece a card shows ("fighter" or "coach" table), or "".
+static func piece_of(table: String, card: int) -> String:
+	if _pieces == null:
+		_pieces = JSON.parse_string(FileAccess.get_file_as_string(ArenaLayout.root().path_join(PIECES)))
+		if not (_pieces is Dictionary):
+			_pieces = {}
+	return String((_pieces as Dictionary).get(table, {}).get(str(card), ""))
+
+
+## The slot → piece a fighter's equipped cards ([{slot, id}], ET2) show.
+static func fighter_pieces(cards: Array) -> Dictionary:
+	var out := {}
+	for c in cards:
+		var cid := int(c.get("id", -1))
+		var slot: String = FIGHTER_SLOT.get(FighterCards.slot_type(cid), "")
+		if slot != "" and piece_of("fighter", cid) != "":
+			out[slot] = piece_of("fighter", cid)
+	return out
+
+
+## Dress a fighter in its equipped cards: every slot it has a piece for,
+## the others taken off.
+func wear_fighter_cards(cards: Array) -> void:
+	var want := fighter_pieces(cards)
+	for slot in FIGHTER_SLOT.values():
+		if String(want.get(slot, "")) != String(_worn_piece.get(slot, "")):
+			equip(slot, want.get(slot, ""))
+			_worn_piece[slot] = want.get(slot, "")
+
+
+func worn() -> Dictionary:
+	return _worn
+
+
+## Hang `piece` on `model` (built from `path`) at `slot`; returns the node
+## that holds it (free it to take it off), or null.
+static func hang(model: Node3D, path: String, slot: String, piece: String) -> Node3D:
+	var pp := piece_path(piece)
+	var t := _template(pp) if pp != "" else null
+	if t == null or model == null:
+		return null
+	var p: Node3D = t.duplicate()
+	Toon.dress(p)
+	var skel := _skeleton(model)
+	if slot == "dofus" or skel == null or not BONE_OF.has(slot):
+		var holder := Node3D.new()
+		holder.name = "dofus"
+		holder.position = DOFUS_AT
+		holder.add_child(p)
+		model.add_child(holder)
+		return holder
+	var bone := skel.find_bone(BONE_OF[slot])
+	if bone < 0:
+		p.free()
+		return null
+	var att := BoneAttachment3D.new()
+	att.bone_name = BONE_OF[slot]
+	skel.add_child(att)
+	att.add_child(p)
+	if slot == "hat":
+		var head := _head_box(model, path, skel)
+		var k := clampf(head.size.x * 0.85 / HAT_CROWN, 0.5, 1.6)
+		var at := Vector3(head.get_center().x, head.end.y - head.size.y * HAT_SINK, head.get_center().z)
+		# skeleton space → the head bone's rest frame
+		var rest := skel.get_bone_global_rest(bone)
+		p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
+	return att
+
+
+static func _skeleton(model: Node3D) -> Skeleton3D:
+	var all := model.find_children("*", "Skeleton3D", true, false)
+	return all[0] if not all.is_empty() else null
+
+
+## The box around every vertex the head bone moves most (head and hair),
+## in skeleton space, measured once per model.
+static func _head_box(model: Node3D, path: String, skel: Skeleton3D) -> AABB:
+	if _heads.has(path):
+		return _heads[path]
+	var box := AABB()
+	var first := true
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.skin == null:
+			continue
+		var head_binds := {}
+		for b in mi.skin.get_bind_count():
+			var bn := String(mi.skin.get_bind_name(b))
+			if bn == "":
+				bn = skel.get_bone_name(mi.skin.get_bind_bone(b))
+			if bn == "head":
+				head_binds[b] = true
+		# mesh space → skeleton space (both under the model)
+		var to_skel := _rel(model, skel).affine_inverse() * _rel(model, mi)
+		for s in mi.mesh.get_surface_count():
+			var a := mi.mesh.surface_get_arrays(s)
+			var verts: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var bones = a[Mesh.ARRAY_BONES]
+			var weights = a[Mesh.ARRAY_WEIGHTS]
+			if bones == null or weights == null:
+				continue
+			var per: int = bones.size() / verts.size()
+			for i in verts.size():
+				var best := 0
+				for j in per:
+					if weights[i * per + j] > weights[i * per + best]:
+						best = j
+				if not head_binds.has(int(bones[i * per + best])):
+					continue
+				var v := to_skel * verts[i]
+				if first:
+					box = AABB(v, Vector3.ZERO)
+					first = false
+				else:
+					box = box.expand(v)
+	_heads[path] = box
+	return box
+
+
+## A node's transform relative to the model root.
+static func _rel(model: Node3D, n: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	while n != null and n != model:
+		t = n.transform * t
+		n = n.get_parent() as Node3D
+	return t
+
+
 ## Retail action → animation: "<dir>_<Name>" as fight_view asks for it.
 ## Returns false for an action the model has no counterpart for, so the
 ## caller's fallback chain goes on.
@@ -319,8 +488,13 @@ static func anim_for(base: String) -> String:
 	return ""
 
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
 	_face()
+	if _worn.has("dofus"):   # a slow bob and turn
+		_t += dt
+		var d: Node3D = _worn.dofus
+		d.position = DOFUS_AT + Vector3(0, sin(_t * 2.0) * 0.03, 0)
+		d.rotation.y = _t * 0.8
 
 
 func _draw() -> void:   # drawn before the child sprite: under the feet

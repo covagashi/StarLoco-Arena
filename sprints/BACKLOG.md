@@ -255,3 +255,13 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
       23 cartas de color del retail (tipo 29: 10 de pelo, el resto de piel y
       ojos), que desbloqueaban un color para un hueco al crear luchador. El
       selector de colores se quitó en S07; volvería solo como premio.
+
+## 12. Deuda técnica
+
+- [ ] **B-189: un árbol de la arena tapa al luchador** (dueño, 2026-11-11, visto en
+      [S35c](./S35c-ropa-y-equipo.md) paso 1). En la vista del combate
+      (`test/fight_ui_preview.tscn`, arena 10, `FIGHT_UI_FECA=1 FIGHT_UI_FOCUS=1,3`)
+      Arel queda entero detrás de la copa del árbol. Un luchador nunca debería
+      quedar oculto por la decoración: la copa tendría que aclararse o recortarse
+      sobre él (o dibujarse su silueta), como hace el ocultador de la arena
+      (`ArenaScene.occluder`) con el resto. Sin mirar aún la causa.

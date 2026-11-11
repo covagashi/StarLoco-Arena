@@ -34,6 +34,7 @@ func run(t) -> void:
 		t.ok(float(fig.get("scale", 1.0)) < 1.0, "summon %d is smaller than a fighter" % look)
 	t.ok(Fighter3D.figure_of("anims/portrait_nilo").is_empty(), "a portrait stays retail")
 	_art_root(t)
+	_equipment(t)
 	# the retail channel tints come back as the creation screen's swatches
 	for skin in [0, 3, 10]:
 		for hair in [0, 5, 13]:
@@ -62,3 +63,14 @@ func _art_root(t) -> void:
 	OS.unset_environment("PIPPOP_OLD_ART")
 	ArenaLayout.set_root("")
 	DirAccess.remove_absolute(glb)
+
+
+## S35c: equipment cards → pieces on the figure's slots.
+func _equipment(t) -> void:
+	var w := Fighter3D.fighter_pieces([{"slot": 0, "id": 108}, {"slot": 1, "id": 118}])
+	t.eq(w.get("hat"), "hat_straw", "card 108 (hat) shows the straw hat")
+	t.eq(w.get("dofus"), "dofus_green", "card 118 (dofus) shows the green dofus")
+	t.ok(Fighter3D.fighter_pieces([{"slot": 0, "id": 1}]).is_empty(), "a card with no piece shows nothing")
+	var fc := preload("res://src/gamedata/fightercards.gd")
+	for cid in ["108", "118"]:   # the pieces table names real cards, in the slot they show
+		t.ok(Fighter3D.FIGHTER_SLOT.has(fc.slot_type(int(cid))), "card %s has a fighter slot" % cid)

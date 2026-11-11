@@ -962,6 +962,8 @@ func _attach_model3d(spr: AnmSprite, f: Dictionary) -> void:
 	var path := Fighter3D.model_for(int(f.get("breed", 0)), int(f.get("sex", 0)))
 	if path != "":
 		spr.model3d = Fighter3D.create(path)
+		if spr.model3d != null:   # S35c: its equipment on the figure
+			spr.model3d.wear_fighter_cards(f.get("cards", []))
 
 
 ## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.

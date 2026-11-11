@@ -16,6 +16,8 @@ extends SceneTree
 ##       [--spin=120]     (turntable: N frames of one full turn, first frame of each anim)
 ##       [--height=1.45]  (scale the model to this height, e.g. a Mixamo figure in metres)
 ##       [--hide=Icosphere]   (comma-separated nodes to leave out, e.g. a stray helper)
+##       [--cards=108,118]    (S35c: wear these fighter equipment cards, art/equipment/pieces.json)
+##       [--pieces=hat:hat_straw,dofus:dofus_green]   (or name the pieces straight)
 ##
 ## Output: <dir>/<anim>/<dir>_<nn>.png and <dir>/index.json.
 
@@ -29,7 +31,7 @@ const PX := 43.0 * 1.41421356
 const YAW := {"S": 45.0, "SE": 90.0, "E": 135.0, "NE": 180.0, "N": 225.0, "NW": 270.0, "W": 315.0, "SW": 0.0}
 
 var opts := {"model": "art/characters/out/mannequin.glb", "out": "/tmp/anim_sheet", "frames": "6",
-	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62", "lift": "0", "pitch": "30", "bg": "", "skin": "", "hair": "", "height": "", "hide": ""}
+	"dirs": "SE", "size": "200x240", "zoom": "1.6", "anims": "", "focus": "0.62", "lift": "0", "pitch": "30", "bg": "", "skin": "", "hair": "", "height": "", "hide": "", "cards": "", "pieces": ""}
 var cam := Camera3D.new()
 var model: Node3D
 var player: AnimationPlayer
@@ -81,6 +83,13 @@ func _run() -> void:
 		# a Meshy coach tints through its mask (tools/art/coach_masks.py)
 		Toon.dress(model, tints, Fighter3D._mask("res://" + String(opts.model)))
 	root.add_child(model)
+	var wear := Fighter3D.fighter_pieces(Array(String(opts.cards).split(",", false)).map(
+		func(c): return {"id": int(c)}))
+	for kv in String(opts.pieces).split(",", false):
+		wear[kv.get_slice(":", 0)] = kv.get_slice(":", 1)
+	for slot in wear:
+		if Fighter3D.hang(model, "res://" + String(opts.model), slot, wear[slot]) == null:
+			printerr("[anim_sheet] no piece '%s' for %s" % [wear[slot], slot])
 	if opts.height != "":
 		var top := -INF
 		var bottom := INF

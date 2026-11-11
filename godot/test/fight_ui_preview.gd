@@ -17,7 +17,8 @@ extends Node2D
 ## 8002), FIGHT_UI_FOCUS=<fid>[,<zoom>] (camera on
 ## that fighter, default zoom 2). FIGHT_UI_TACTICS=spell (Arel's spell 4
 ## armed, the pointer on a castable cell: reach, AoE, hover, plus a placed
-## trap) or =move (the walk preview and its MP cost).
+## trap) or =move (the walk preview and its MP cost). FIGHT_UI_CARDS=108,118
+## (S35c: Arel and Brune wear those fighter cards, on the 3D figure).
 
 const State := preload("res://src/state.gd")
 
@@ -53,6 +54,9 @@ func _ready() -> void:
 		State.fighters[r[0]] = {"id": r[0], "name": r[1], "coach": r[2],
 			"team": r[3], "breed": r[4], "sex": r[5], "spells": r[6], "cards": []}
 		timeline.append(r[0])
+	for cid in OS.get_environment("FIGHT_UI_CARDS").split(",", false):
+		for fid in [1, 2]:
+			State.fighters[fid].cards.append({"slot": 0, "id": int(cid)})
 	# a summon of Cael's, right after its caster (insertSummonIntoTimeline)
 	State.fighters[7] = {"id": 7, "name": "Bouftou", "coach": 7, "team": 0,
 		"look": 8002 if OS.get_environment("FIGHT_UI_SUMMON") == "" else int(OS.get_environment("FIGHT_UI_SUMMON")),
