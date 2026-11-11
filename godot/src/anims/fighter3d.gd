@@ -55,6 +55,7 @@ const MODEL_DIR := "characters/out/%s.glb"
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)
 static var _masks := {}       # path -> {tex, skin_ref, hair_ref} or {} (no mask beside it)
 static var _boxes := {}       # "path|bones" -> AABB of those bones' vertices in skeleton space
+static var _radii := {}       # "path|bone" -> how thick that limb is (m)
 
 ## S35c: rigid equipment pieces (art/equipment, kiln) hung from a bone of
 ## the common rig, so a change of equipment swaps one node, not the figure.
@@ -62,7 +63,8 @@ static var _boxes := {}       # "path|bones" -> AABB of those bones' vertices in
 ## dofus floats beside the figure, with no bone. A cape hangs on the back
 ## and a pet rides the left shoulder, both placed on the torso as measured.
 const EQUIP_DIR := "equipment/out/models/%s.glb"
-const BONE_OF := {"hat": "head", "weapon": "hand.R", "cape": "chest", "pet": "chest"}
+const BONE_OF := {"hat": "head", "weapon": "hand.R", "cape": "chest", "pet": "chest",
+	"shoulders": "upper_arm.L", "bracelets": "forearm.L"}
 const HAT_CROWN := 0.27      # inner width of a hat's crown as modelled (m)
 const HAT_SINK := 0.36       # how far down the head (of its height) a hat sits
 ## The head box counts hair, horns and ears: a wide one would blow the hat
@@ -87,6 +89,21 @@ const CAPE_SWAY := 2.0
 const CAPE_WALK := 12.0
 const CAPE_FLUTTER := 4.0
 const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest height
+## The coach's shoulderpads and bracelets come in pairs, one per arm, on the
+## upper arm and the forearm (they follow the arm when it lifts). A piece is
+## modelled for the left arm, its outside towards +X; the right arm wears it
+## mirrored, or "<piece>_r" when the pair differs (Jalatranki, yellow and
+## red). Both are scaled to the arm's thickness as measured on the figure.
+## A shoulderpad (coach_shoulders.kx.js): upright, over the top of the
+## shoulder joint at the origin, facing +Z. A bracelet
+## (coach_bracelets.kx.js): a sleeve about +Y (along the forearm, +Y towards
+## the elbow), centred on the origin, facing +Z, set down the forearm.
+const PAD_ARM := 0.05         # upper arm radius a shoulderpad is modelled for (m)
+const PAD_UP := 0.02          # how far above the shoulder joint it sits (m)
+const CUFF_ARM := 0.04        # forearm radius a bracelet is modelled for (m)
+const CUFF_AT := 0.6          # how far down the forearm (of its length) it sits
+const ARM_MIN := 0.75
+const ARM_MAX := 1.4
 ## A weapon is modelled upright with the middle of its grip at the origin
 ## (art/equipment/weapons.kx.js): held in the middle of the hand, the blade
 ## forward and a little down. Its family (the name's prefix) can change the
@@ -109,10 +126,10 @@ const WEAPON_STYLES := {
 ## Fighter equipment card type (fightercards.json) → slot.
 const FIGHTER_SLOT := {1: "weapon", 2: "pet", 3: "cape", 4: "hat", 5: "dofus"}
 ## Coach equipment slot (5201's 0-based, as 5200 and 60040 carry it) → the
-## piece slot on the figure: hat, staff (held like a weapon), cape, pet. The
-## shoulderpads (3), bracelets (4), garments (5, 6, 10, 11) and marks (1) come
-## with their own pieces (S35c step 8); hair (2) is only a colour.
-const COACH_SLOT := {0: "hat", 7: "weapon", 8: "cape", 9: "pet"}
+## piece slot on the figure: hat, shoulderpads, bracelets, staff (held like a
+## weapon), cape, pet. The garments (5, 6, 10, 11) and marks (1) come with
+## their own pieces (S35c step 8); hair (2) is only a colour.
+const COACH_SLOT := {0: "hat", 3: "shoulders", 4: "bracelets", 7: "weapon", 8: "cape", 9: "pet"}
 ## Which piece each card shows: art/equipment/pieces.json
 ## {"fighter": {"<card id>": "<piece>"}, "coach": {…}}.
 const PIECES := "equipment/pieces.json"
@@ -424,6 +441,20 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 			if twin != null:
 				hold.set_meta("twin", twin)
 		return hold
+	if slot in ["shoulders", "bracelets"] and skel != null:
+		var left := _on_arm(model, path, skel, slot, p, ".L")
+		if left == null:
+			p.free()
+			return null
+		var rp := piece_path(piece + "_r")
+		var p2: Node3D = (_template(rp) if rp != "" else t).duplicate()
+		Toon.dress(p2)
+		var right := _on_arm(model, path, skel, slot, p2, ".R")
+		if right != null:
+			left.set_meta("twin", right)
+		else:
+			p2.free()
+		return left
 	if slot != "dofus" and (skel == null or not BONE_OF.has(slot)):
 		p.free()   # a slot with no bone (yet) shows nothing
 		return null
@@ -464,6 +495,57 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
 	p.set_meta("rest", p.transform)   # a cape swings about it (_swing)
 	return att
+
+
+## `p` (a shoulderpad or a bracelet, modelled for the left arm) on the arm
+## of `side` (".L" or ".R"), mirrored on the arm whose outside is -X; null
+## without the bones.
+static func _on_arm(model: Node3D, path: String, skel: Skeleton3D, slot: String, p: Node3D, side: String) -> BoneAttachment3D:
+	var name := ("upper_arm" if slot == "shoulders" else "forearm") + side
+	var bone := skel.find_bone(name)
+	var next := skel.find_bone(("forearm" if slot == "shoulders" else "hand") + side)
+	if bone < 0 or next < 0:
+		return null
+	var att := BoneAttachment3D.new()
+	att.bone_name = name
+	skel.add_child(att)
+	att.add_child(p)
+	var a := skel.get_bone_global_rest(bone).origin
+	var b := skel.get_bone_global_rest(next).origin
+	var out := signf(a.x) if a.x != 0.0 else 1.0
+	var r := _limb_radius(model, path, skel, name, a, b)
+	var place: Transform3D
+	if slot == "shoulders":
+		var k := clampf(r / PAD_ARM, ARM_MIN, ARM_MAX)
+		place = Transform3D(Basis.from_scale(Vector3(out * k, k, k)), a + Vector3(0, PAD_UP, 0))
+	else:   # along the forearm, +Y to the elbow, +Z to the front
+		var k := clampf(r / CUFF_ARM, ARM_MIN, ARM_MAX)
+		var y := (a - b).normalized()
+		var x := y.cross(Vector3.BACK).normalized()
+		var z := x.cross(y)
+		place = Transform3D(Basis(x, y, z) * Basis.from_scale(Vector3(out * k, k, k)), a.lerp(b, CUFF_AT))
+	var rest := skel.get_bone_global_rest(bone)
+	p.transform = rest.affine_inverse() * place
+	return att
+
+
+## How thick the limb `name` (from joint `a` to joint `b`) is: the median
+## distance from that line of the vertices mostly weighted to it, in
+## skeleton space; measured once per figure.
+static func _limb_radius(model: Node3D, path: String, skel: Skeleton3D, name: String, a: Vector3, b: Vector3) -> float:
+	var key := path + "|" + name
+	if _radii.has(key):
+		return _radii[key]
+	var d: Array[float] = []
+	var ab := b - a
+	for v in _owned_verts(model, skel, [name]):
+		var u := clampf((v - a).dot(ab) / ab.length_squared(), 0.0, 1.0)
+		if u > 0.15 and u < 0.85:   # off the joints, where the next limb bulges
+			d.append(v.distance_to(a + ab * u))
+	d.sort()
+	var r: float = d[d.size() / 2] if not d.is_empty() else 0.0
+	_radii[key] = r
+	return r
 
 
 ## A weapon's family by its name: {hand, dir, pair}, all optional.
@@ -508,6 +590,19 @@ static func _bones_box(model: Node3D, path: String, skel: Skeleton3D, names: Arr
 		return _boxes[key]
 	var box := AABB()
 	var first := true
+	for v in _owned_verts(model, skel, names):
+		if first:
+			box = AABB(v, Vector3.ZERO)
+			first = false
+		else:
+			box = box.expand(v)
+	_boxes[key] = box
+	return box
+
+
+## The vertices mostly weighted to `names`, in skeleton space.
+static func _owned_verts(model: Node3D, skel: Skeleton3D, names: Array) -> PackedVector3Array:
+	var out := PackedVector3Array()
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if mi.skin == null:
 			continue
@@ -533,16 +628,9 @@ static func _bones_box(model: Node3D, path: String, skel: Skeleton3D, names: Arr
 				for j in per:
 					if weights[i * per + j] > weights[i * per + best]:
 						best = j
-				if not own.has(int(bones[i * per + best])):
-					continue
-				var v := to_skel * verts[i]
-				if first:
-					box = AABB(v, Vector3.ZERO)
-					first = false
-				else:
-					box = box.expand(v)
-	_boxes[key] = box
-	return box
+				if own.has(int(bones[i * per + best])):
+					out.append(to_skel * verts[i])
+	return out
 
 
 ## A node's transform relative to the model root.

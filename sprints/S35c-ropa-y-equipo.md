@@ -437,6 +437,43 @@ Hojas rehechas: `s35c-coach-estandartes-12.png`,
 `s35c-coach-estandartes-mascotas-piezas-1.png` … `-3.png` (dos diagonales y
 perfil). `run_tests.sh`: 1072 checks, 0 fallos.
 
+## Paso 8e: las 13 hombreras y los 13 brazaletes del coach (2026-11-11)
+
+Dueño: "continúa con las hombreras y brazalete".
+
+| Cambio | Fichero |
+|---|---|
+| Huecos 3 (hombreras) y 4 (brazaletes) del coach → `shoulders` y `bracelets`. Van por pares, uno en cada brazo: la hombrera en `upper_arm`, el brazalete a 0,6 del `forearm` (siguen al brazo cuando se levanta). La pieza se modela para el brazo izquierdo con su cara de fuera hacia +X; el derecho la lleva en espejo, o `<pieza>_r` si el par es distinto (Jalatranki: amarilla y roja; La Moralizadora: ala y garra). Quitarla quita las dos, como las dagas | `src/anims/fighter3d.gd` (`COACH_SLOT`, `_on_arm`) |
+| Las dos escalan al grosor del brazo medido en la figura: mediana de la distancia al eje del hueso de sus vértices (`_limb_radius`; 0,75–1,4). La caja de huesos y esta medida comparten `_owned_verts` | `fighter3d.gd` (`PAD_*`, `CUFF_*`, `ARM_*`) |
+| Las 13 hombreras en kiln, diseño propio: Yoghi (cabeza de bicho con melena), Jalatranki (lana), La Moralizadora (ala / garra roja), Kepika (cuerno), Krono (engranaje), Sedforme (mano roja), Rompedoras (cuero con parche y costuras), Alu-Card (calavera, aro y colmillos), de guerra (cuerno y borde de acero), Stasis (placas de piedra), Superjefe (casco dorado con flecos naranjas), Sámara (semilla alada), Nubosas (nube). 78–560 triángulos | `art/equipment/coach_shoulders.kx.js` |
+| Los 13 brazaletes: de fuerza (cuero con tachón), Jalatranki (rollos de lana amarillos / rojos), Alambrada espinosa (tablillas y alambre de espino), Kepika (cuerno), Krono (cresta dorada), Sedforme (placa y correas, aleta verde), Rompedores (bajo dentado y pinchos), escudero (tela con banda y flecos), Campeón y Campierrele (franjas), Alu-Card (pincho), Superjefe (brazal largo), Lolomg (anillos de piedra). 104–338 triángulos | `art/equipment/coach_bracelets.kx.js` |
+| Las 26 cartas → su pieza; la tabla del coach tiene ya todas las rígidas (92) | `pieces.json` (`coach`) |
+| Prueba: cartas de hombreras y brazaletes, de su tipo; los huecos 3 y 4 pintan su pieza, el 5 (prenda) aún nada | `test/unit/fighter3d_test.gd` |
+
+Corregido al revisar las piezas: las plumas del ala de La Moralizadora
+flotaban sobre la cúpula; el parche de la Rompedora y las placas del
+Superjefe quedaban dentro (el punto sobre la cúpula no seguía su
+inclinación); los flecos del escudero colgaban sueltos.
+
+Probado:
+- `run_tests.sh`: 1150 checks, 0 fallos. `build.py equipment` y `check.py`:
+  0 fallos (165 GLB, 3,3 MB).
+- Combate real (`fight_smoke`, servidor local): al coach `test` le puse las
+  hombreras de guerra (506) y los brazaletes de Krono (121) en `coach_cards`
+  (2 filas, borradas después); `COACH EQUIP OK test cards=[55, 506, 121] …
+  worn=[bracelets, hat, shoulders]`.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-shoulders-13-1.png` y `-2.png`,
+`s35c-coach-bracelets-13-1.png` y `-2.png` (de cerca, en coach_7000 y
+coach_7001: de frente y en las dos diagonales), y las piezas solas en
+`s35c-coach-{shoulders,bracelets}-13-piezas-1.png` … `-3.png`.
+
+Para el dueño: a escala de juego las hombreras se ven como manchas de color
+en el hombro y los brazaletes como un anillo; ¿más grandes, o valen así?
+
+Siguiente: las 91 prendas que se deforman (Meshy → pesos del cuerpo) y las
+13 marcas.
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
@@ -444,8 +481,8 @@ Dueño: "sigue el orden de los sprints". Orden que queda:
    revise las hojas.
 2. ~~Paso 7: la animación `shoot` del arco~~: hecho.
 3. El equipo del coach: la fontanería y `art/equipment` en `build.py`,
-   hechos (paso 8a); faltan sus piezas (paso 8b), las 91 prendas que se
-   deforman y las 13 marcas.
+   hechos (paso 8a); las 92 piezas rígidas, hechas (pasos 8b–8e); faltan
+   las 91 prendas que se deforman y las 13 marcas.
 
 Herramientas: `anim_sheet.gd --pieces=<slot>:<pieza>` o `--cards=`,
 `test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Construir:

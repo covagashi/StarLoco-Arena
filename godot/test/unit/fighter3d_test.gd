@@ -77,20 +77,21 @@ func _equipment(t) -> void:
 	# modelled in art/equipment (kit.kx.js and its includes)
 	var pieces: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/equipment/pieces.json"))
 	var src := ""
-	for f in ["kit", "hats", "weapons", "capes", "pets", "dofus", "coach_hats", "coach_capes", "coach_staffs", "coach_pets"]:
+	for f in ["kit", "hats", "weapons", "capes", "pets", "dofus", "coach_hats", "coach_capes", "coach_staffs", "coach_pets", "coach_shoulders", "coach_bracelets"]:
 		src += FileAccess.get_file_as_string("res://art/equipment/%s.kx.js" % f)
 	# S35c: the coach table — real coach cards, the piece modelled and of
 	# the card's slot (Fighter3D.COACH_SLOT through 5201's slot of its type)
 	var cards: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/gamedata/cards.json"))
-	const COACH_TYPE := {11: "hat", 12: "weapon", 8: "cape", 13: "pet"}
+	const COACH_TYPE := {11: "hat", 12: "weapon", 8: "cape", 13: "pet", 7: "shoulders", 5: "bracelets"}
 	for cid in pieces.coach:
 		var ctype := int(cards.get(cid, {}).get("type", -1))
-		t.ok(COACH_TYPE.has(ctype), "coach card %s is a hat, staff, cape or pet card" % cid)
+		t.ok(COACH_TYPE.has(ctype), "coach card %s is a hat, shoulderpads, bracelets, staff, cape or pet card" % cid)
 		t.ok(src.contains('model("%s"' % pieces.coach[cid]), "coach card %s: %s is modelled" % [cid, pieces.coach[cid]])
-		var want: Array = {"hat": ["hat_"], "weapon": ["staff_", "banner_"], "cape": ["cape_"], "pet": ["pet_"]}.get(COACH_TYPE.get(ctype, ""), [])
+		var want: Array = {"hat": ["hat_"], "weapon": ["staff_", "banner_"], "cape": ["cape_"], "pet": ["pet_"], "shoulders": ["shoulders_"], "bracelets": ["bracelets_"]}.get(COACH_TYPE.get(ctype, ""), [])
 		t.ok(want.any(func(w): return String(pieces.coach[cid]).begins_with(w)), "coach card %s shows a %s piece" % [cid, want])
-	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}]),
-		{"hat": "hat_horned", "cape": "cape_jalatranki"}, "coach slots 0 and 8 show a hat and a cape; 3 (shoulders) nothing yet")
+	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}, {"slot": 4, "id": 7}, {"slot": 5, "id": 30}]),
+		{"hat": "hat_horned", "cape": "cape_jalatranki", "shoulders": "shoulders_yoghi", "bracelets": "bracelets_strength"},
+		"coach slots 0, 8, 3 and 4 show a hat, a cape, shoulderpads and bracelets; 5 (a garment) nothing yet")
 	for cid in pieces.fighter:
 		t.ok(Fighter3D.FIGHTER_SLOT.has(fc.slot_type(int(cid))), "card %s has a fighter slot" % cid)
 		t.ok(src.contains('model("%s"' % pieces.fighter[cid]), "card %s: %s is modelled" % [cid, pieces.fighter[cid]])
