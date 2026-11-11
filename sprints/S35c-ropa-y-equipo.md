@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); siguiente: las 75 piezas de luchador
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (los 16 sombreros de luchador) esperando al dueño
 
 ## Por qué
 
@@ -176,3 +176,26 @@ Pendiente de este sprint:
   nuevo en el servidor para ver el equipo de los demás coaches.
 - Las prendas que se deforman (91) y las marcas (13).
 - Meter `art/equipment` en `tools/art/build.py`.
+
+## Paso 4: los 16 sombreros de luchador (2026-11-11)
+
+| Cambio | Fichero |
+|---|---|
+| Los 15 que faltaban, en kiln, diseño propio (la ilustración retail solo como idea): Kritter (calavera con cuernos), Dora (gorro con borde de hojas), Dantgul (gorro naranja cosido), Dragosombrero (cáscara de huevo), Champo (seta plana), Clint (vaquero), Caparasombrero (caparazón), Cuerbosombrero (yelmo con pico), Melenuda (cabeza de pájaro con melena), Jalató (lana y cuernos), Champisombrero (seta roja con cuernos), Moskitogarruleto (capucha con gafas), Prespic (capucha de púas), El Cascruj (piedras), Corona de Sidán (aro con pinchos). 100–700 triángulos cada uno | `art/equipment/hats.kx.js` |
+| Convención: `pivot: "origin"`, `y = 0` es donde apoya en la cabeza; un casco o máscara baja por debajo de 0 | `hats.kx.js` (cabecera) |
+| Las 16 cartas (108–133, 157) → su sombrero | `art/equipment/pieces.json` |
+| La caja de la cabeza cuenta pelo, cuernos y orejas: con la cabeza ancha de la Osamodas f el sombrero salía al 160 %. Escala limitada a 0,8–1,15 | `fighter3d.gd` (`HAT_MIN`, `HAT_MAX`) |
+
+Corregido al revisar las piezas: el ala del Clint flotaba suelta a los lados
+(ahora un ala entera doblada hacia arriba), los dientes del borde del
+Dragosombrero parecían patas (más cortos y más), los ojos del Kritter
+abultaban (aplastados).
+
+Hojas: `~/codigo/capturas/s35c/s35c-sombreros-16.png` (cada sombrero en una
+figura distinta, de frente y de perfil, con el nombre de la figura debajo) y
+`s35c-sombreros-16-piezas.png` (las piezas solas). `run_tests.sh`: 674
+checks, 0 fallos.
+
+Para el dueño: Jalató y Prespic tapan media cara en las cabezas pequeñas
+(Sacrogrito m, Osamodas m) y el Dragosombrero cubre el casco del Xelor m;
+¿subirlos o se quedan como máscaras?

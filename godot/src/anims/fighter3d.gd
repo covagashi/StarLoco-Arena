@@ -64,6 +64,10 @@ const EQUIP_DIR := "equipment/out/models/%s.glb"
 const BONE_OF := {"hat": "head", "weapon": "hand.R", "cape": "chest", "pet": "chest"}
 const HAT_CROWN := 0.27      # inner width of a hat's crown as modelled (m)
 const HAT_SINK := 0.36       # how far down the head (of its height) a hat sits
+## The head box counts hair, horns and ears: a wide one would blow the hat
+## up, so its scale stays near the modelled size.
+const HAT_MIN := 0.8
+const HAT_MAX := 1.15
 const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest height
 ## A weapon is modelled upright with its grip at the base: held in the
 ## middle of the hand, the blade forward and a little down. No figure holds
@@ -366,7 +370,7 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	att.add_child(p)
 	if slot == "hat":
 		var head := _head_box(model, path, skel)
-		var k := clampf(head.size.x * 0.85 / HAT_CROWN, 0.5, 1.6)
+		var k := clampf(head.size.x * 0.85 / HAT_CROWN, HAT_MIN, HAT_MAX)
 		var at := Vector3(head.get_center().x, head.end.y - head.size.y * HAT_SINK, head.get_center().z)
 		# skeleton space → the head bone's rest frame
 		var rest := skel.get_bone_global_rest(bone)

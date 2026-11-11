@@ -23,3 +23,5 @@ model("sword_short",
   box(0.15, 0.03, 0.04, { mat: "gold", pos: [0, 0.11, 0] }),
   extrude([-0.03, 0, 0.03, 0, 0.026, 0.42, 0, 0.5, -0.026, 0.42], 0.014, { mat: "steel", pos: [0, 0.14, -0.007] }),
   box(0.012, 0.36, 0.018, { mat: "steelD", pos: [0, 0.15, 0] }))
+
+include("hats.kx.js")

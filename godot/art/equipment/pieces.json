@@ -3,7 +3,22 @@
  "fighter": {
   "1": "sword_short",
   "108": "hat_straw",
-  "118": "dofus_green"
+  "109": "hat_kritter",
+  "110": "hat_dora",
+  "111": "hat_dantgul",
+  "112": "hat_dragoshell",
+  "113": "hat_champo",
+  "114": "hat_clint",
+  "115": "hat_carapace",
+  "116": "hat_crowhelm",
+  "117": "hat_maned",
+  "118": "dofus_green",
+  "125": "hat_jalato",
+  "126": "hat_shroom",
+  "128": "hat_mosquito",
+  "132": "hat_prespic",
+  "133": "hat_stones",
+  "157": "hat_sidan"
  },
  "coach": {}
 }
