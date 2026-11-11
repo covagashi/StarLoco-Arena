@@ -342,6 +342,36 @@ hoja cada uno como las del luchador: 31 sombreros, 14 capas (sin La Jalosa),
 brazaletes, que necesitan su colocación nueva (hombro y antebrazo). Después
 las 91 prendas que se deforman y las 13 marcas.
 
+## Paso 8b: los 31 sombreros del coach (2026-11-11)
+
+Dueño: "continúa".
+
+| Cambio | Fichero |
+|---|---|
+| Los 31 en kiln, diseño propio (la ilustración retail de `ropa-coach/11-cascos` solo como idea): Hornudo, Jalatranki, cascabeles, pasamontañas rojo, puntiagudo (con aureola), Chaferombi, Champi, Sgrim (bombín), Kepika (púas), gelatina, Sedforme (guante sobre una diadema), Rompedor (aviador), orejas de wabbit, escudero, Campeón, Campierrele, Grilembore (birrete), L.Men'Tal (cazador), Dragón Blanco, Alu-Card, Gosbaster, de guerra, Kamas (moneda), Stasis, pío rojo, Superjefe, Lolomg, wonejo, Sámara, leñoso, Nuboso. 80–720 triángulos | `art/equipment/coach_hats.kx.js` |
+| Las 31 cartas (tipo 11) → su sombrero; el coach los lleva por el hueco 0 (paso 8a), con el mismo ajuste a la cabeza que el luchador | `pieces.json` (`coach`) |
+| Prueba: cada carta de la tabla del coach es de sombrero, bastón, capa o mascota, su pieza está modelada y es de su tipo; `coach_pieces` con hombreras aún no pinta nada | `test/unit/fighter3d_test.gd` |
+
+Corregido al revisar las piezas: las motas del Champi quedaban dentro del
+sombrero; las púas del Kepika apuntaban hacia dentro (signo de la rotación
+al revés); las puntadas del aviador y los arañazos del escudero flotaban; la
+barra del escudero y los colmillos del Campeón sobresalían del borde. La
+aureola del puntiagudo flota a propósito.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-sombreros-31-1.png`, `-2.png` y
+`-3.png` (cada sombrero en coach_7000 o coach_7001, de frente y de perfil) y
+las piezas solas en `s35c-coach-sombreros-31-piezas-1.png` … `-6.png`.
+`run_tests.sh`: 976 checks, 0 fallos; `build.py equipment` y `check.py`: 0
+fallos.
+
+Para el dueño: la gelatina y el pasamontañas tapan la cabeza entera, como en
+la ilustración; la moneda del Kamas es enorme a propósito. ¿Valen así?
+
+Aparte (dueño): prueba de otro modelo con un solo sombrero, el Dragón Blanco
+(213), con el mismo pipeline; recorte de la ilustración en
+`~/codigo/capturas/s35c/prueba-fable/213-casco-dragon-blanco.png`. Fuera del
+juego: `prueba_fable.kx.js`, sin carta ni include.
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
