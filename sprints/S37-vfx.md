@@ -12,6 +12,13 @@
   gestos por hechizo que no casaban de nombre (S31).
 - Feedback del combate: números de daño, golpes, muerte, cámara (S24).
 
+## Notas del dueño
+
+- 2026-11-11, tras decidir que los peinados del coach no cambian (solo el
+  color, S35c): "poner vfx al pelo me parece bien". Efectos sobre el pelo
+  del coach (por aclarar con el dueño: ¿brillo o partículas, quizá como
+  cosmético de S30, o que el pelo se mueva?).
+
 ## Criterio de cierre
 
 Cada hechizo de las 12 clases se ve con un efecto de la librería; `XpsFx`
