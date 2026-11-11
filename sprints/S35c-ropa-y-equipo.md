@@ -374,8 +374,8 @@ este pipeline).
 
 Aparte (dueño): prueba de otro modelo con un solo sombrero, el Dragón Blanco
 (213), con el mismo pipeline; recorte de la ilustración en
-`~/codigo/capturas/s35c/prueba-fable/213-casco-dragon-blanco.png`. Fuera del
-juego: `prueba_fable.kx.js`, sin carta ni include.
+`~/codigo/capturas/s35c/prueba-fable/`. Fuera del juego. Borrada después,
+con sus capturas (dueño: "puedes eliminar esa prueba").
 
 ## Paso 8c: las 15 capas del coach (2026-11-11)
 
