@@ -415,14 +415,27 @@ de la Sacrificada flotaba sobre la cabeza (ahora la rodea). Probé a colgar la
 tela de los estandartes al otro lado del asta: tapaba la cara y el cuerpo, así
 que se queda por fuera, donde pisa un poco el brazo.
 
-Hojas: `~/codigo/capturas/s35c/s35c-coach-bastones-13-1.png` y `-2.png` (de
-frente y de perfil), `s35c-coach-mascotas-7.png` (las 7, por los dos lados) y
-`s35c-coach-bastones-mascotas-piezas-1.png` … `-3.png`. `run_tests.sh`: 1072
+Hojas: `s35c-coach-mascotas-7.png` (las 7, por los dos lados); las de los
+bastones se rehicieron después (abajo). `run_tests.sh`: 1072
 checks, 0 fallos; `build.py equipment`: 0 fallos.
 
 Siguiente: las 13 hombreras y los 13 brazaletes (necesitan su colocación nueva,
 en el hombro y el antebrazo); después las 91 prendas que se deforman y las 13
 marcas.
+
+Dueño: "los estandartes están bien, pero pasa lo mismo que con el arco: la
+tela va hacia el cuerpo, no hacia fuera". Visto en vistas rectas: de frente
+la tela salía hacia fuera, pero la cámara isométrica mira en diagonal y la
+proyectaba sobre el cuerpo. **Arreglado:** los estandartes son ahora
+`banner_` (el Rompedor sigue `staff_`), una familia nueva de
+`Fighter3D.WEAPON_STYLES` que los lleva en vertical y los gira 55° sobre el
+asta (`_grip` acepta un giro), así que la tela cae hacia fuera y hacia atrás:
+en una diagonal se ve de lado, en la otra de canto junto al asta, de perfil
+queda detrás. El primer giro (-55°) la ponía delante de la cara; es +55°.
+Hojas rehechas: `s35c-coach-estandartes-12.png`,
+`s35c-coach-baston-rompedor.png` y
+`s35c-coach-estandartes-mascotas-piezas-1.png` … `-3.png` (dos diagonales y
+perfil). `run_tests.sh`: 1072 checks, 0 fallos.
 
 ## Para retomar (2026-11-11)
 

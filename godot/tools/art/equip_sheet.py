@@ -68,7 +68,7 @@ def figures(slot, out, opts, extra):
             subprocess.run(["xvfb-run", "-a", "-s", "-screen 0 1280x720x24", godot, "--path", ".",
                             "-s", "tools/art/anim_sheet.gd", "--", f"--model=art/characters/out/{fig}.glb",
                             f"--out={d}", "--frames=1", "--anims=idle_loop", f"--dirs={','.join(dirs)}",
-                            f"--pieces={'weapon' if slot == 'staff' else slot}:{piece}", *extra],
+                            f"--pieces={'weapon' if slot in ('staff', 'banner') else slot}:{piece}", *extra],
                            capture_output=True, check=False)
             ims = [Image.open(f"{d}/idle_loop/{x}_00.png").convert("RGB") for x in dirs]
             w, h = ims[0].size

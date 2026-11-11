@@ -90,7 +90,8 @@ const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest heigh
 ## A weapon is modelled upright with the middle of its grip at the origin
 ## (art/equipment/weapons.kx.js): held in the middle of the hand, the blade
 ## forward and a little down. Its family (the name's prefix) can change the
-## hand and the direction: a bow in the left hand, upright; a staff upright;
+## hand and the direction: a bow in the left hand, upright; a staff upright
+## (a standard too, turned so its cloth hangs out and back);
 ## daggers come in pairs, one per hand. No figure holds a weapon of its own
 ## (owner, 2026-11-11: meshy_fighter.py --drop_weapon=1 took the Yopuka f's
 ## sword out).
@@ -99,6 +100,10 @@ const WEAPON_DIR := Vector3(0, -0.35, 1)
 const WEAPON_STYLES := {
 	"bow_": {"hand": "hand.L", "dir": Vector3(0, 1, 0.15)},
 	"staff_": {"dir": Vector3(0, 1, 0.35)},
+	# a standard (coach_staffs.kx.js): upright like a staff, its cloth (on the
+	# piece's -X) turned about the pole to hang out and back; straight out, the
+	# isometric camera drew it across the body (owner, 2026-11-11)
+	"banner_": {"dir": Vector3(0, 1, 0.2), "turn": 55.0},
 	"dagger_": {"pair": true},
 }
 ## Fighter equipment card type (fightercards.json) → slot.
@@ -408,14 +413,14 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	var skel := _skeleton(model)
 	if slot == "weapon" and skel != null:
 		var st := weapon_style(piece)
-		var hold := _grip(skel, p, st.get("hand", "hand.R"), st.get("dir", WEAPON_DIR))
+		var hold := _grip(skel, p, st.get("hand", "hand.R"), st.get("dir", WEAPON_DIR), st.get("turn", 0.0))
 		if hold == null:
 			p.free()
 			return null
 		if st.get("pair", false):
 			var p2: Node3D = t.duplicate()
 			Toon.dress(p2)
-			var twin := _grip(skel, p2, "hand.L", st.get("dir", WEAPON_DIR))
+			var twin := _grip(skel, p2, "hand.L", st.get("dir", WEAPON_DIR), st.get("turn", 0.0))
 			if twin != null:
 				hold.set_meta("twin", twin)
 		return hold
@@ -470,8 +475,9 @@ static func weapon_style(piece: String) -> Dictionary:
 
 
 ## `p` held in `hand`, its grip (the origin) in the middle of the hand and
-## its +Y along `dir` (model space, at rest), or null without that bone.
-static func _grip(skel: Skeleton3D, p: Node3D, hand: String, dir: Vector3) -> BoneAttachment3D:
+## its +Y along `dir` (model space, at rest), turned `turn` degrees about
+## that axis, or null without that bone.
+static func _grip(skel: Skeleton3D, p: Node3D, hand: String, dir: Vector3, turn := 0.0) -> BoneAttachment3D:
 	var bone := skel.find_bone(hand)
 	if bone < 0:
 		return null
@@ -484,7 +490,8 @@ static func _grip(skel: Skeleton3D, p: Node3D, hand: String, dir: Vector3) -> Bo
 	var x := Vector3.RIGHT
 	var z := x.cross(y).normalized()
 	x = y.cross(z)
-	p.transform = rest.affine_inverse() * Transform3D(Basis(x, y, z), rest * Vector3(0, WEAPON_HAND, 0))
+	var b := Basis(x, y, z) * Basis(Vector3.UP, deg_to_rad(turn))
+	p.transform = rest.affine_inverse() * Transform3D(b, rest * Vector3(0, WEAPON_HAND, 0))
 	return att
 
 

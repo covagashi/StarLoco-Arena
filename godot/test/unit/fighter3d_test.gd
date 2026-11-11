@@ -87,8 +87,8 @@ func _equipment(t) -> void:
 		var ctype := int(cards.get(cid, {}).get("type", -1))
 		t.ok(COACH_TYPE.has(ctype), "coach card %s is a hat, staff, cape or pet card" % cid)
 		t.ok(src.contains('model("%s"' % pieces.coach[cid]), "coach card %s: %s is modelled" % [cid, pieces.coach[cid]])
-		var want: String = {"hat": "hat_", "weapon": "staff_", "cape": "cape_", "pet": "pet_"}.get(COACH_TYPE.get(ctype, ""), "?")
-		t.ok(String(pieces.coach[cid]).begins_with(want), "coach card %s shows a %s piece" % [cid, want])
+		var want: Array = {"hat": ["hat_"], "weapon": ["staff_", "banner_"], "cape": ["cape_"], "pet": ["pet_"]}.get(COACH_TYPE.get(ctype, ""), [])
+		t.ok(want.any(func(w): return String(pieces.coach[cid]).begins_with(w)), "coach card %s shows a %s piece" % [cid, want])
 	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}]),
 		{"hat": "hat_horned", "cape": "cape_jalatranki"}, "coach slots 0 and 8 show a hat and a cape; 3 (shoulders) nothing yet")
 	for cid in pieces.fighter:
