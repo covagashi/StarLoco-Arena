@@ -471,6 +471,23 @@ coach_7001: de frente y en las dos diagonales), y las piezas solas en
 Para el dueño: a escala de juego las hombreras se ven como manchas de color
 en el hombro y los brazaletes como un anillo; ¿más grandes, o valen así?
 
+Dueño: "ajusta mejor las hombreras". Medido en las figuras: flotaban unos
+4 cm por encima de la piel (coach_7000: articulación a 1,021 m, piel del
+hombro a 1,045 m, cúpula hasta 1,086 m) y su centro, sobre la articulación,
+las metía hacia el cuello; en la coach_7001 llegaban a la barbilla.
+**Arreglado:** el origen de la hombrera es ahora la piel de arriba del
+hombro (el vértice más alto del hombro y del brazo justo encima de la
+articulación, medido por figura: `_shoulder_top`), 0,3 radios del brazo
+hacia fuera; cada pieza baja lo que sube su interior (`pad(nombre, hundido,
+…)`) y la cúpula se inclina 38° hacia fuera (antes 28°), sobre el
+deltoides. El engranaje del Krono se inclina como las demás. Con los brazos
+arriba (`celebrate`, `cast`) la hombrera sigue al brazo sin tocar la cabeza.
+Hojas rehechas: `s35c-coach-shoulders-13-1.png`, `-2.png` y
+`s35c-coach-shoulders-13-piezas-1.png` … `-3.png`. `run_tests.sh`: 1150
+checks, 0 fallos; `check.py`: 0 fallos.
+
+Dueño, al verlo: "ok mejor".
+
 Siguiente: las 91 prendas que se deforman (Meshy → pesos del cuerpo) y las
 13 marcas.
 

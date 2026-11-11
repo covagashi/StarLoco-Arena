@@ -86,7 +86,8 @@ func _equipment(t) -> void:
 	for cid in pieces.coach:
 		var ctype := int(cards.get(cid, {}).get("type", -1))
 		t.ok(COACH_TYPE.has(ctype), "coach card %s is a hat, shoulderpads, bracelets, staff, cape or pet card" % cid)
-		t.ok(src.contains('model("%s"' % pieces.coach[cid]), "coach card %s: %s is modelled" % [cid, pieces.coach[cid]])
+		# (coach_shoulders.kx.js declares its models through pad())
+		t.ok(src.contains('model("%s"' % pieces.coach[cid]) or src.contains('pad("%s"' % pieces.coach[cid]), "coach card %s: %s is modelled" % [cid, pieces.coach[cid]])
 		var want: Array = {"hat": ["hat_"], "weapon": ["staff_", "banner_"], "cape": ["cape_"], "pet": ["pet_"], "shoulders": ["shoulders_"], "bracelets": ["bracelets_"]}.get(COACH_TYPE.get(ctype, ""), [])
 		t.ok(want.any(func(w): return String(pieces.coach[cid]).begins_with(w)), "coach card %s shows a %s piece" % [cid, want])
 	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}, {"slot": 4, "id": 7}, {"slot": 5, "id": 30}]),

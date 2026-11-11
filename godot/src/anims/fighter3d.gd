@@ -94,12 +94,13 @@ const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest heigh
 ## modelled for the left arm, its outside towards +X; the right arm wears it
 ## mirrored, or "<piece>_r" when the pair differs (Jalatranki, yellow and
 ## red). Both are scaled to the arm's thickness as measured on the figure.
-## A shoulderpad (coach_shoulders.kx.js): upright, over the top of the
-## shoulder joint at the origin, facing +Z. A bracelet
+## A shoulderpad (coach_shoulders.kx.js): upright, facing +Z, its origin
+## on the skin at the top of the shoulder (measured on the figure), a little
+## out from the joint, over the deltoid. A bracelet
 ## (coach_bracelets.kx.js): a sleeve about +Y (along the forearm, +Y towards
 ## the elbow), centred on the origin, facing +Z, set down the forearm.
 const PAD_ARM := 0.05         # upper arm radius a shoulderpad is modelled for (m)
-const PAD_UP := 0.02          # how far above the shoulder joint it sits (m)
+const PAD_OUT := 0.3          # how far out from the joint it sits (of the arm's radius)
 const CUFF_ARM := 0.04        # forearm radius a bracelet is modelled for (m)
 const CUFF_AT := 0.6          # how far down the forearm (of its length) it sits
 const ARM_MIN := 0.75
@@ -517,7 +518,8 @@ static func _on_arm(model: Node3D, path: String, skel: Skeleton3D, slot: String,
 	var place: Transform3D
 	if slot == "shoulders":
 		var k := clampf(r / PAD_ARM, ARM_MIN, ARM_MAX)
-		place = Transform3D(Basis.from_scale(Vector3(out * k, k, k)), a + Vector3(0, PAD_UP, 0))
+		var top := _shoulder_top(model, path, skel, side, a, r)
+		place = Transform3D(Basis.from_scale(Vector3(out * k, k, k)), Vector3(a.x + out * r * PAD_OUT, top, a.z))
 	else:   # along the forearm, +Y to the elbow, +Z to the front
 		var k := clampf(r / CUFF_ARM, ARM_MIN, ARM_MAX)
 		var y := (a - b).normalized()
@@ -546,6 +548,23 @@ static func _limb_radius(model: Node3D, path: String, skel: Skeleton3D, name: St
 	var r: float = d[d.size() / 2] if not d.is_empty() else 0.0
 	_radii[key] = r
 	return r
+
+
+## The height of the skin on top of the shoulder: the highest vertex of the
+## shoulder and the upper arm right over the joint `a` (within half the arm's
+## radius `r` across); measured once per figure.
+static func _shoulder_top(model: Node3D, path: String, skel: Skeleton3D, side: String, a: Vector3, r: float) -> float:
+	var key := path + "|top" + side
+	if _radii.has(key):
+		return _radii[key]
+	var top := a.y + r
+	var found := false
+	for v in _owned_verts(model, skel, ["shoulder" + side, "upper_arm" + side]):
+		if absf(v.x - a.x) < r * 0.5 and absf(v.z - a.z) < r:
+			top = v.y if not found else maxf(top, v.y)
+			found = true
+	_radii[key] = top
+	return top
 
 
 ## A weapon's family by its name: {hand, dir, pair}, all optional.
