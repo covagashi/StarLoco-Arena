@@ -204,8 +204,8 @@ def animate(rig):
     # shoot (S35c, a bow's attack): the bow arm (left) comes up level, the
     # right hand draws the string back to the cheek, holds, lets go. The bow
     # is gripped along the hand (Fighter3D: upright with the arm down), so
-    # the left wrist bends down to keep it upright with the arm raised.
-    aim = dict(base, lean=-2, twist=-18, head_turn=14, arm_L=(88, 8), elbow_L=4, hand_L=85,
+    # the left wrist bends up to keep it upright, belly out, with the arm raised.
+    aim = dict(base, lean=-2, twist=-18, head_turn=14, arm_L=(88, 8), elbow_L=4, hand_L=-85,
                arm_R=(80, -12), elbow_R=95, leg_out_L=12, leg_out_R=10, knee_L=6, knee_R=8)
     draw = dict(aim, lean=-5, twist=-26, head_turn=20, arm_R=(86, 22), elbow_R=150, bob=-0.02)
     loose = dict(draw, twist=-22, arm_R=(70, 45), elbow_R=70, hand_R=-25, lean=-2)

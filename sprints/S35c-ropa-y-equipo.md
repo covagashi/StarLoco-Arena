@@ -295,6 +295,13 @@ frente y de perfil). En las figuras de brazos cortos la mano llega a la
 altura del pecho, no de la mejilla. No hay flecha: la cuerda no se mueve con
 la mano (el arco es una pieza rígida).
 
+Dueño: "el arco está girado". Cierto: la panza miraba al arquero y la cuerda
+al blanco (la muñeca se doblaba hacia abajo y el arco, simétrico, quedaba
+boca abajo). **Arreglado:** la muñeca se dobla hacia arriba (`hand_L=-85`);
+ahora la panza va hacia delante y la cuerda hacia la cara, y el arco sigue
+vertical al bajar el brazo. Figuras reconstruidas (`build.py` en verde),
+`fighter_equip_preview` ok, hoja `s35c-arco-dispara.png` rehecha.
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
