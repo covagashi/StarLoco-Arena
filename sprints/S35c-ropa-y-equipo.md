@@ -486,7 +486,8 @@ Hojas rehechas: `s35c-coach-shoulders-13-1.png`, `-2.png` y
 `s35c-coach-shoulders-13-piezas-1.png` … `-3.png`. `run_tests.sh`: 1150
 checks, 0 fallos; `check.py`: 0 fallos.
 
-Dueño, al verlo: "ok mejor".
+Dueño: "ok mejor"; con las hojas: "si, todo ok". **Las 13 hombreras y los
+13 brazaletes aprobados.**
 
 Siguiente: las 91 prendas que se deforman (Meshy → pesos del cuerpo) y las
 13 marcas.
