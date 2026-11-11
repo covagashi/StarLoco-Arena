@@ -11,10 +11,13 @@ extends SceneTree
 ##   art/<kit>/out/models/*.glb  every model it places, in its loom, and the
 ##                               columns under its blocks (textures inside)
 ##   art/fight/<world>.json      the fight shapes (server/.../gamedata/arenas)
-## Builds the models first (kiln build, build_models.py, bake_kits.py): a
-## missing GLB fails the pack.
+##   art/characters/out/*.glb    every 3D figure (Fighter3D: fighters,
+##                               summons, coaches) and the coaches' masks
+## Build the art first (python3 tools/art/build.py): a missing file fails
+## the pack.
 
 const Layout := preload("res://src/maps/arena_layout.gd")
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 
 
 func _initialize() -> void:
@@ -44,6 +47,13 @@ func _initialize() -> void:
 				_model(files, it.kit, it.piece, it.loom)
 				if pc.get("kind", "") == "tile" and pc.get("col", "") != "":
 					_model(files, it.kit, pc.col, it.loom)
+	for model in _figures():
+		var src: String = Layout.ART_DIR.path_join(Fighter3D.MODEL_DIR % model)
+		files[src] = src.trim_prefix(Layout.ART_DIR + "/")
+		if model in Fighter3D.COACHES.values():
+			for ext: String in ["_mask.png", "_mask.json"]:
+				var m: String = src.get_basename() + ext
+				files[m] = m.trim_prefix(Layout.ART_DIR + "/")
 	var bytes := 0
 	for src: String in files:
 		if not FileAccess.file_exists(src):
@@ -66,6 +76,17 @@ func _initialize() -> void:
 		bytes += FileAccess.get_file_as_bytes(to).size()
 	print("[pack] %d files, %.1f MB -> %s" % [files.size(), bytes / 1048576.0, dest])
 	quit(0)
+
+
+## Every figure the game can draw in 3D.
+func _figures() -> Array:
+	var out := []
+	for pair: Array in Fighter3D.MODELS.values():
+		out.append_array(pair)
+	for s: Array in Fighter3D.SUMMONS.values():
+		out.append(s[0])
+	out.append_array(Fighter3D.COACHES.values())
+	return out
 
 
 func _model(files: Dictionary, kit: String, name: String, loom: String) -> void:

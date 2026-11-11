@@ -15,6 +15,7 @@ extends Node2D
 ## retail sprites.
 
 const ArenaScene := preload("res://src/maps/arena_scene.gd")
+const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 const Toon := preload("res://src/anims/toon.gd")
 
 signal finished
@@ -46,7 +47,9 @@ const SUMMONS := {8001: ["summon_8001", 0.9], 8002: ["summon_8002", 0.9], 8003: 
 ## tinted through <model>_mask.png, tools/art/coach_masks.py).
 const COACHES := {0: "coach_7000", 1: "coach_7001"}
 const BUILT_HEIGHT := 1.45
-const MODEL_DIR := "res://art/characters/out/%s.glb"
+## Under the art root (ArenaLayout.root(): res://art in the editor, the
+## art/ folder beside an exported game's executable, tools/art/pack_arenas.gd).
+const MODEL_DIR := "characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)
 static var _masks := {}       # path -> {tex, skin_ref, hair_ref} or {} (no mask beside it)
@@ -69,26 +72,38 @@ const SHADOW := Color(0.05, 0.04, 0.1, 0.4)
 var _shadow_r := SHADOW_R
 
 
+## S34: `--old-art` on the command line (after `--`) or PIPPOP_OLD_ART=1
+## plays with the retail sprites while both kinds of art live side by side:
+## every lookup below then answers "not built".
+static func old_art() -> bool:
+	return OS.get_environment("PIPPOP_OLD_ART") == "1" or "--old-art" in OS.get_cmdline_user_args()
+
+
+## The path of a built model by name, or "" when it isn't built.
+static func model_path(model: String) -> String:
+	if old_art():
+		return ""
+	var path := ArenaLayout.root().path_join(MODEL_DIR % model)
+	return path if FileAccess.file_exists(path) else ""
+
+
 ## The model path for a breed/sex, or "" when none is built.
 static func model_for(breed: int, sex: int) -> String:
 	if not MODELS.has(breed):
 		return ""
-	var path := MODEL_DIR % MODELS[breed][clampi(sex, 0, 1)]
-	return path if FileAccess.file_exists(path) else ""
+	return model_path(MODELS[breed][clampi(sex, 0, 1)])
 
 
 ## The model path for a summon look, or "" when none is built.
 static func summon_for(look: int) -> String:
 	if not SUMMONS.has(look):
 		return ""
-	var path := MODEL_DIR % SUMMONS[look][0]
-	return path if FileAccess.file_exists(path) else ""
+	return model_path(SUMMONS[look][0])
 
 
 ## The coach model path for a sex, or "" when none is built.
 static func coach_for(sex: int) -> String:
-	var path := MODEL_DIR % COACHES[clampi(sex, 0, 1)]
-	return path if FileAccess.file_exists(path) else ""
+	return model_path(COACHES[clampi(sex, 0, 1)])
 
 
 ## The coach's picked skin and hair (Palettes.SKIN / HAIR, the swatches of
@@ -106,8 +121,8 @@ static func for_set(set_dir: String) -> Dictionary:
 	var fig := figure_of(set_dir)
 	if fig.is_empty():
 		return {}
-	var path := MODEL_DIR % fig.model
-	if not FileAccess.file_exists(path):
+	var path := model_path(fig.model)
+	if path == "":
 		return {}
 	return {"path": path, "scale": fig.scale, "coach": fig.coach}
 

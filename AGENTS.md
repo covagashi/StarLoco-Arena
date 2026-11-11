@@ -132,6 +132,39 @@ go run ./cmd/seedaccount --login test --password test123
   Open stores in tests with `storetest.Open(t, path)`, not `store.Open`, or the
   test silently stays on SQLite.
 
+## Art: from source to game (from `godot/`)
+
+The client's own art (M7) is code and small data under `godot/art/`; what
+the tools build from it (`out/` folders: GLBs, textures) is git-ignored and
+rebuilt with **one command**:
+
+```sh
+python3 tools/art/build.py                 # build what is stale, then run the checks
+python3 tools/art/build.py arena5 feca_f   # only these kits / figures
+python3 tools/art/build.py --dry-run       # what is stale
+python3 tools/art/build.py --show 5:1      # then a real fight on arena 5 with the Feca, to art-show.png
+python3 tools/art/build.py --pack ../dist/linux   # then copy the art beside an export
+python3 -I tools/art/check.py              # the checks alone
+```
+
+- Steps: loom textures → kiln models → Blender (`art/blender.json`,
+  `art/ao.json`) → 3D figures (`art/characters/figures.json`, Blender) →
+  checks (names, scale and pivots, triangle/bone/texture budgets, weight per
+  arena, credits). Each step is stamped by the **content** it read, so a
+  checkout never leaves an output stale; a kit drags along the kits that
+  read its textures. A full build from nothing takes about five minutes.
+  On a fresh clone `--show` first runs one `godot --import`.
+- Needs `node` with the kiln and loom skills (`KILN`/`LOOM`), `blender`
+  (`BLENDER`), `godot` (`GODOT`) and, for the figures, the owner's Meshy
+  originals (`PIPPOP_MESHY`, default `~/codigo/capturas/s35/meshy`; they live
+  in the homelab art repository, not in git: too big, and no LFS). Without
+  them the figures already built are kept.
+- **Every new source folder or font goes in `godot/art/CREDITS.md`** with who
+  made it and on what terms; the checks fail otherwise.
+- An exported game reads the art from the `art/` folder beside its executable
+  (`tools/art/pack_arenas.gd`: arenas and figures). `--old-art` (after `--`)
+  or `PIPPOP_OLD_ART=1` plays with the retail sprites while both coexist.
+
 ## Releases
 
 Fully automated; **do not tag by hand**. Conventional-Commit messages on `v2.70`
@@ -159,8 +192,9 @@ Two constraints worth knowing before editing the workflows:
 
 The end-to-end check is the Godot client against a real server: the
 `godot/test/*_smoke.gd` scripts log in, fight and drive the lobby over a real
-socket (see `godot/README.md`). They need art that a fresh clone does not have
-until M7 lands, and skip without it. Unit and E2E tests are not a substitute
+socket (see `godot/README.md`). The M7 art is rebuilt with
+`python3 tools/art/build.py` (above); what is still retail a fresh clone does
+not have, and the smokes that need it skip without it. Unit and E2E tests are not a substitute
 for a live run.
 
 ## Conventions

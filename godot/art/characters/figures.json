@@ -1,0 +1,238 @@
+{
+ "_doc": "S34: how every 3D figure under out/ is built (tools/art/build.py characters). script: godot/tools/blender/characters/<script>. src: the owner's Meshy folder, <PIPPOP_MESHY>/<src>/<src>.glb (default ~/codigo/capturas/s35/meshy; the originals live in the homelab art repo pippop-arena-assets, outside git: no LFS). joints: joints/<src>.json is passed as --joints (the bone fixes reviewed in S35b). opts: the other flags, from the S35b figure table. No src: the script models the figure itself.",
+ "figures": {
+  "feca_f": {
+   "script": "meshy_fighter.py",
+   "src": "01_feca_f",
+   "opts": {}
+  },
+  "feca_m": {
+   "script": "meshy_fighter.py",
+   "src": "01_feca_m",
+   "opts": {}
+  },
+  "osamodas_f": {
+   "script": "meshy_fighter.py",
+   "src": "02_osamodas_f",
+   "opts": {}
+  },
+  "osamodas_m": {
+   "script": "meshy_fighter.py",
+   "src": "02_osamodas_m",
+   "opts": {},
+   "joints": true
+  },
+  "anutrof_f": {
+   "script": "meshy_fighter.py",
+   "src": "03_anutrof_f",
+   "opts": {},
+   "joints": true
+  },
+  "anutrof_m": {
+   "script": "meshy_fighter.py",
+   "src": "03_anutrof_m",
+   "opts": {},
+   "joints": true
+  },
+  "sram_f": {
+   "script": "meshy_fighter.py",
+   "src": "04_sram_f",
+   "opts": {},
+   "joints": true
+  },
+  "sram_m": {
+   "script": "meshy_fighter.py",
+   "src": "04_sram_m",
+   "opts": {},
+   "joints": true
+  },
+  "xelor_f": {
+   "script": "meshy_fighter.py",
+   "src": "05_xelor_f",
+   "opts": {
+    "arm_slack": "0.06"
+   },
+   "joints": true
+  },
+  "xelor_m": {
+   "script": "meshy_fighter.py",
+   "src": "05_xelor_m",
+   "opts": {
+    "arm_slack": "0.06"
+   },
+   "joints": true
+  },
+  "zurcarak_f": {
+   "script": "meshy_fighter.py",
+   "src": "06_zurcarak_f",
+   "opts": {},
+   "joints": true
+  },
+  "zurcarak_m": {
+   "script": "meshy_fighter.py",
+   "src": "06_zurcarak_m",
+   "opts": {},
+   "joints": true
+  },
+  "aniripsa_f": {
+   "script": "meshy_fighter.py",
+   "src": "07_aniripsa_f",
+   "opts": {},
+   "joints": true
+  },
+  "aniripsa_m": {
+   "script": "meshy_fighter.py",
+   "src": "07_aniripsa_m",
+   "opts": {},
+   "joints": true
+  },
+  "yopuka_f": {
+   "script": "meshy_fighter.py",
+   "src": "08_yopuka_f",
+   "opts": {},
+   "joints": true
+  },
+  "yopuka_m": {
+   "script": "meshy_fighter.py",
+   "src": "08_yopuka_m",
+   "opts": {},
+   "joints": true
+  },
+  "ocra_f": {
+   "script": "meshy_fighter.py",
+   "src": "09_ocra_f",
+   "opts": {
+    "arm_slack": "0.06"
+   },
+   "joints": true
+  },
+  "ocra_m": {
+   "script": "meshy_fighter.py",
+   "src": "09_ocra_m",
+   "opts": {},
+   "joints": true
+  },
+  "sadida_f": {
+   "script": "meshy_fighter.py",
+   "src": "10_sadida_f",
+   "opts": {},
+   "joints": true
+  },
+  "sadida_m": {
+   "script": "meshy_fighter.py",
+   "src": "10_sadida_m",
+   "opts": {
+    "arm_slack": "0.06"
+   },
+   "joints": true
+  },
+  "sacrogrito_f": {
+   "script": "meshy_fighter.py",
+   "src": "11_sacrogrito_f",
+   "opts": {},
+   "joints": true
+  },
+  "sacrogrito_m": {
+   "script": "meshy_fighter.py",
+   "src": "11_sacrogrito_m",
+   "opts": {
+    "arm_slack": "0.06"
+   },
+   "joints": true
+  },
+  "pandawa_f": {
+   "script": "meshy_fighter.py",
+   "src": "12_pandawa_f",
+   "opts": {
+    "sleeve": "3.5"
+   }
+  },
+  "pandawa_m": {
+   "script": "meshy_fighter.py",
+   "src": "12_pandawa_m",
+   "opts": {
+    "thumb": "0.01"
+   },
+   "joints": true
+  },
+  "coach_7000": {
+   "script": "meshy_fighter.py",
+   "src": "coach_7000_m",
+   "opts": {},
+   "joints": true
+  },
+  "coach_7001": {
+   "script": "meshy_fighter.py",
+   "src": "coach_7001_f",
+   "opts": {
+    "arm_slack": "0.06",
+    "cut": "0.83"
+   },
+   "joints": true
+  },
+  "summon_8001": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8001",
+   "opts": {},
+   "joints": true
+  },
+  "summon_8002": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8002",
+   "opts": {},
+   "joints": true
+  },
+  "summon_8003": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8003",
+   "opts": {
+    "strict_arms": "1",
+    "arm_max": "110"
+   },
+   "joints": true
+  },
+  "summon_8004": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8004",
+   "opts": {
+    "shape": "creature"
+   },
+   "joints": true
+  },
+  "summon_8005": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8005",
+   "opts": {
+    "shape": "creature"
+   },
+   "joints": true
+  },
+  "summon_8006": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8006",
+   "opts": {
+    "shape": "creature"
+   },
+   "joints": true
+  },
+  "summon_8007": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8007",
+   "opts": {
+    "head_r": "0.2",
+    "rigid_islands": "0.2"
+   },
+   "joints": true
+  },
+  "summon_8009": {
+   "script": "meshy_summon.py",
+   "src": "invocacion_8009",
+   "opts": {},
+   "joints": true
+  },
+  "summon_8010": {
+   "script": "crystal_8010.py",
+   "opts": {}
+  }
+ }
+}

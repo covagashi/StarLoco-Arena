@@ -98,7 +98,7 @@ Linux y Windows).
 | [S27](./S27-supermensajes.md) | M6 | M | ⛔ descartado (dueño, 2026-10-25) | Supermensajes, como en Mobile Legends, en lugar de los fuegos artificiales |
 | [S32](./S32-fuera-el-retail.md) | M7 | M | 🟢 cerrado | Fuera la extracción del retail: `tools/` borrado, docs reescritos; los `dump*` se quedan hasta S40 (leen `data-dist`) |
 | [S33](./S33-plan-de-arte.md) | M7 | M | 🟢 cerrado (2026-11-04) | Plan de arte: estilo, técnica (3D/cutout, VFX en tiempo real, animación procedural) y prototipo vertical |
-| [S34](./S34-pipeline-de-assets.md) | M7 | M | ⚪ esbozo | Pipeline nuevo: de la fuente al juego en un comando, licencias, comprobaciones |
+| [S34](./S34-pipeline-de-assets.md) | M7 | M | 🟢 cerrado (2026-11-11) | Pipeline: `tools/art/build.py` de la fuente al juego en un comando (sellos por contenido), comprobaciones, `CREDITS.md`, figuras en el juego exportado, `--old-art` |
 | [S35](./S35-personajes.md) | M7 | L | ✅ cerrado (2026-11-11) | Personajes: 24 luchadores, 9 invocaciones, 2 coaches en 3D en combate y en menús; piel y pelo del coach teñibles; sombra en el suelo |
 | [S35b](./S35b-pipeline-meshy.md) | M7 | S por figura | ✅ cerrado (2026-11-10) | Receta Meshy → luchador: 24 clases, 2 coaches y 9 invocaciones en 3D |
 | [S35b-marketing](./S35b-marketing.md) | M7 | M | ✅ cerrado (2026-11-11) | Tanda 3 de posts (Instagram + TikTok): cómo se hicieron los esqueletos |

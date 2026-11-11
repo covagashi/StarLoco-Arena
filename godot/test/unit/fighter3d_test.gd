@@ -7,6 +7,7 @@ extends RefCounted
 
 const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const FightView := preload("res://src/fight/fight_view.gd")
+const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 
 
 func run(t) -> void:
@@ -32,6 +33,7 @@ func run(t) -> void:
 		t.eq(fig.get("model"), Fighter3D.SUMMONS[look][0], "summon %d" % look)
 		t.ok(float(fig.get("scale", 1.0)) < 1.0, "summon %d is smaller than a fighter" % look)
 	t.ok(Fighter3D.figure_of("anims/portrait_nilo").is_empty(), "a portrait stays retail")
+	_art_root(t)
 	# the retail channel tints come back as the creation screen's swatches
 	for skin in [0, 3, 10]:
 		for hair in [0, 5, 13]:
@@ -39,3 +41,24 @@ func run(t) -> void:
 			var want := Fighter3D.coach_tints(skin, hair)
 			t.ok((back.skin as Color).is_equal_approx(want.skin) and (back.hair as Color).is_equal_approx(want.hair),
 				"skin %d hair %d round-trips" % [skin, hair])
+
+
+## S34: the figures are read under the art root (an exported game's art/
+## beside the executable), and --old-art / PIPPOP_OLD_ART=1 turns them off.
+func _art_root(t) -> void:
+	var dir := OS.get_user_data_dir().path_join("fighter3d_test_art")
+	DirAccess.make_dir_recursive_absolute(dir.path_join("characters/out"))
+	var glb := dir.path_join("characters/out/feca_f.glb")
+	var f := FileAccess.open(glb, FileAccess.WRITE)
+	f.store_string("glTF")
+	f.close()
+	ArenaLayout.set_root(dir)
+	t.eq(Fighter3D.model_for(1, 1), glb, "a figure is read under the art root")
+	t.eq(Fighter3D.model_for(1, 0), "", "a figure missing there is not built")
+	t.eq(Fighter3D.for_set("anims/fighter_-111").get("path", ""), glb, "for_set follows the art root")
+	OS.set_environment("PIPPOP_OLD_ART", "1")
+	t.eq(Fighter3D.model_for(1, 1), "", "PIPPOP_OLD_ART=1 plays the retail sprites")
+	t.ok(Fighter3D.for_set("anims/fighter_-111").is_empty(), "and AnmSprite keeps the frames")
+	OS.unset_environment("PIPPOP_OLD_ART")
+	ArenaLayout.set_root("")
+	DirAccess.remove_absolute(glb)

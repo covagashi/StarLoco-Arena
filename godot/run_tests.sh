@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 ## Single entry point for the Godot client's two test lanes.
 ##
-##   --headless   Lint + unit lane: the B-173 path guard, then
+##   --headless   Lint + unit lane: the B-173 path guard, the art pipeline
+##                tests (tools/art/test_check.py), then
 ##                res://test/unit/unit_runner.tscn under --headless. No
 ##                git-ignored assets required — this is the CI lane.
 ##   --visual     Windowed preview lane only: test/ui_review_preview.tscn and
@@ -83,6 +84,13 @@ run_lint() {
 	return 0
 }
 
+## S34: the asset checks' own tests (tools/art/check.py on made-up GLBs).
+## Standard library only, no built art: part of the CI lane.
+run_art_tests() {
+	echo "=== art pipeline tests (tools/art/test_check.py) ==="
+	python3 -I tools/art/test_check.py
+}
+
 run_headless() {
 	echo "=== headless unit lane ==="
 	local rc=0
@@ -131,6 +139,7 @@ case "$mode" in
 	--headless)
 		rc=0
 		run_lint || rc=$?
+		run_art_tests || rc=$?
 		run_headless || rc=$?
 		exit "$rc"
 		;;
@@ -142,6 +151,7 @@ case "$mode" in
 	"")
 		headless_rc=0
 		run_lint || headless_rc=$?
+		run_art_tests || headless_rc=$?
 		run_headless || headless_rc=$?
 
 		visual_rc=0
