@@ -90,7 +90,7 @@
    "script": "meshy_fighter.py",
    "src": "08_yopuka_f",
    "opts": {
-    "weapon": "1"
+    "drop_weapon": "1"
    },
    "joints": true
   },

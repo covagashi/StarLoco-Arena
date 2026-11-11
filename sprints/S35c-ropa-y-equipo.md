@@ -122,7 +122,7 @@ equipo con su equipo) y la primera tanda de piezas.
 | Sombrero más alto (respuesta 2): hundido 0,36 del alto de la cabeza (antes 0,45) | `fighter3d.gd` (`HAT_SINK`) |
 | Inventario de armas fundidas en las 24 figuras (frente y perfil): **solo la Yopuka f** (la espada). Las bolsas de la Anutrof f no son arma | — |
 | `meshy_fighter.py --weapon=1`: la pieza suelta de más de 25 cm que va entera con un brazo sale como malla propia `class_weapon`, con los mismos pesos (Yopuka f: 226 vértices) | `tools/blender/characters/meshy_fighter.py`, `art/characters/figures.json` |
-| Arma equipada en `hand.R`, a 6 cm de la muñeca, la hoja hacia delante y un poco abajo; mientras se lleva, `class_weapon` se oculta y vuelve al quitarla (respuesta 3) | `fighter3d.gd` (`WEAPON_*`, `show_class_weapon`) |
+| Arma equipada en `hand.R`, a 6 cm de la muñeca, la hoja hacia delante y un poco abajo; mientras se lleva, `class_weapon` se oculta y vuelve al quitarla (respuesta 3; luego sustituido: abajo) | `fighter3d.gd` (`WEAPON_*`, `show_class_weapon`) |
 | Espada corta piloto en kiln (carta 1) | `art/equipment/kit.kx.js`, `pieces.json` |
 
 Hojas: `~/codigo/capturas/s35c/s35c-sombrero-altura.png` (las seis
@@ -134,6 +134,13 @@ Sadida m; arriba en reposo, abajo golpeando). `run_tests.sh`: 674 checks,
 Visto: en la Yopuka f la espada de la clase desaparece entera y la nueva va en
 la misma mano. El pelo de punta del Sram m apenas asoma por la copa. El brazo
 que atraviesa el ala al celebrar se queda así (respuesta 1).
+
+Dueño, después: "¿podrías quitarle la espada a la Yopuka f?". **Hecho:** la
+figura ya no lleva arma propia; `--weapon=1` pasa a `--drop_weapon=1`, que
+borra la pieza (226 vértices) en vez de separarla, y sobra el ocultar
+`class_weapon` del juego. Ninguna figura lleva arma: el arma es solo la de la
+carta. Hoja: `~/codigo/capturas/s35c/s35c-yopuka-f-sin-espada.png` (sin
+carta, en reposo y golpeando; con la espada corta, igual).
 
 Siguiente: el lobby (la figura de la gestión de equipo con su equipo) y las
 75 piezas de luchador en kiln, por ranura: primero los 16 sombreros, en una
