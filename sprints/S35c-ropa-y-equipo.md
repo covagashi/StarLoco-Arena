@@ -219,3 +219,12 @@ Hojas: `~/codigo/capturas/s35c/s35c-armas-23-1.png` y `-2.png` (cada arma en
 una figura, en reposo y golpeando), `s35c-armas-familias.png` (de cerca:
 dagas, dos arcos, dos bastones, martillo) y `s35c-armas-23-piezas.png`.
 `run_tests.sh`: 751 checks, 0 fallos.
+
+Dueño, al ver las armas: "creo que necesitarías una animación para el
+arco… ¿no crees?". De acuerdo: hoy el golpe de arma con arco es `melee`, un
+tajo. **Pendiente (paso 6):** una animación `shoot` en `rig_anims.py`
+(tensar con la izquierda, la cuerda hasta la cara con la derecha, soltar),
+la misma para las 24 figuras (reconstruirlas); `Fighter3D.take` pone
+`shoot` en lugar de `melee` cuando el arma puesta es `bow_`. Bastones:
+`cast` ya vale. Va antes que las capas, mascotas y dofus solo si el dueño
+lo pide; si no, después.
