@@ -1,6 +1,6 @@
 # S35b-marketing — Tanda 3: cómo se le pone esqueleto a una figura
 
-**Planificado:** 2026-11-10 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 abierto (empieza en la próxima sesión)
+**Planificado:** 2026-11-10 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ✅ cerrado 2026-11-11: los 9 posts en `tanda-3/`
 
 Dueño, 2026-11-10: "crear la 3ª tanda de posts para el marketing, sobre
 todo sobre cómo has hecho los esqueletos, que se vean las capturas o cosas
@@ -73,3 +73,48 @@ se apunta aquí por qué.
 Los 9 posts (o los que queden tras la revisión) en `tanda-3/` con su
 `texto.txt`, `LEEME.md` con el orden y el ritmo, y las herramientas
 nuevas en el repo.
+
+## Hecho (2026-11-11)
+
+Los 9 posts en `~/codigo/marketing/tanda-3/` con `texto.txt` y `LEEME.md`.
+Herramientas nuevas (todas leen los GLB del juego, ninguna los toca):
+
+- `godot/tools/blender/characters/promo_bones.py`: capas por fotograma
+  (arcilla, radiografía, textura, mapa de pesos) y las articulaciones en
+  pantalla (`joints.json`); los huesos se dibujan luego en PIL, así el
+  estilo cambia sin volver a renderizar.
+- `promo_slices.py`: las lonchas de `Slicer` como anillos de colores por
+  número de piezas, con las alturas de tobillo/cadera/axila/cuello.
+- `promo_naive.py`: la figura con solo los pesos automáticos de Blender
+  (para comparar; ver abajo por qué no se usó).
+- `promo_crystal.py`: el 8010 pieza a pieza con las funciones de
+  `crystal_8010.py` (que ahora solo construye con `__main__`).
+- `godot/tools/promo/fight_promo.gd/.tscn`: combate en escena, 6
+  luchadores 3D y una oveja invocada, HUD oculto, para el movie maker.
+- `godot/tools/promo/tanda3_render.sh` (renders a
+  `~/codigo/marketing/_fuentes/raw3/`) y `tanda3.py` (montaje, mismo tipo
+  y colores que la tanda 2).
+
+## Decisiones (sin dueño, por heurística)
+
+- **32 no compara con los pesos de Blender a pelo**: probados en 5
+  figuras (`promo_naive.py`), salen casi iguales que los míos a tamaño
+  móvil; los fallos de verdad vinieron de dónde caían los huesos. El
+  antes/después del 32 es la bufanda (script anterior a `0d5f2420`), con
+  el mapa de pesos al lado.
+- **33 con 5 bugs, no 7**: cada "antes" es real: `meshy_fighter.py` del
+  commit anterior al arreglo (`git archive`) o la opción quitada
+  (sin `hand_tip` en la Sram f). Fuera las aletas del Xelor m (sin
+  `--arm_slack`), las mangas de la Pandawa f (sin `--sleeve`) y las tiras
+  del coach 7001 (sin `--cut`): a tamaño móvil no se ven. (Con solo los
+  pesos de Blender la Pandawa f sale sin esqueleto: el cálculo falla.) Los hombros de la Aniripsa f van en
+  radiografía (con textura no se nota).
+- **Ningún nombre de clase en imagen ni texto** (son del retail): la
+  línea del log del 37 dice `fighter_01`; los rótulos del 38 dicen "a
+  summon", "a strike"…
+- **38 es un combate en escena, no uno real**: no hay servidor en esta
+  máquina y las repeticiones guardadas son de antes de las arenas 1–6.
+  Arena 5, HUD oculto (la arena 3D es un CanvasLayer de capa -1: solo se
+  ocultan las capas ≥ 0).
+- El 34 acerca la rejilla 2,2× y pasa a un primer plano renderizado
+  grande: con zoom de imagen se pixelaba.

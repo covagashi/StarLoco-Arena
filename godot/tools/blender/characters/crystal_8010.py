@@ -186,4 +186,5 @@ def main():
                                          os.path.getsize(OUT) // 1024))
 
 
-main()
+if __name__ == "__main__":  # promo_crystal.py imports the parts
+    main()
