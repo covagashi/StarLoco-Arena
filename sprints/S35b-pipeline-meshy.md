@@ -173,7 +173,7 @@ cambia la invocación de Cael (fid 7) y `FIGHT_UI_FOCUS=7,2` la enfoca.
 - **Coaches** 7000/7001: en combate no pasan por `Fighter3D` (son el
   jugador, no luchadores).
 - Viewport compartido para 12 luchadores y la sombra en el suelo: trabajo
-  aparte.
+  aparte (la sombra, hecha al cerrar S35, 2026-11-11).
 
 ## Tabla de figuras
 

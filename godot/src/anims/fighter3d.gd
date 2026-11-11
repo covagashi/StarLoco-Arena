@@ -42,10 +42,14 @@ const MODELS := {1: ["feca_m", "feca_f"], 2: ["osamodas_m", "osamodas_f"],
 const SUMMONS := {8001: ["summon_8001", 0.9], 8002: ["summon_8002", 0.9], 8003: ["summon_8003", 0.9],
 		8004: ["summon_8004", 0.9], 8005: ["summon_8005", 0.9], 8006: ["summon_8006", 0.9],
 		8007: ["summon_8007", 1.2], 8009: ["summon_8009", 1.2], 8010: ["summon_8010", 1.3]}
+## coach sex → model (S35b: Meshy, one baked texture; skin and hair are
+## tinted through <model>_mask.png, tools/art/coach_masks.py).
+const COACHES := {0: "coach_7000", 1: "coach_7001"}
 const BUILT_HEIGHT := 1.45
 const MODEL_DIR := "res://art/characters/out/%s.glb"
 
 static var _templates := {}   # path -> Node3D (generated once, duplicated per fighter)
+static var _masks := {}       # path -> {tex, skin_ref, hair_ref} or {} (no mask beside it)
 
 var anim := ""
 var _dir := 1
@@ -56,6 +60,13 @@ var _vp: SubViewport
 var _spr: Sprite2D
 var _model: Node3D
 var _player: AnimationPlayer
+var _res := RES
+## The shadow on the floor (S35b: the figure's viewport has no floor, and
+## the crystal 8010 floats): a soft ellipse under the feet, as wide as the
+## figure is tall.
+const SHADOW_R := 17.0            # px at zoom 1 for a fighter (1.45)
+const SHADOW := Color(0.05, 0.04, 0.1, 0.4)
+var _shadow_r := SHADOW_R
 
 
 ## The model path for a breed/sex, or "" when none is built.
@@ -72,6 +83,64 @@ static func summon_for(look: int) -> String:
 		return ""
 	var path := MODEL_DIR % SUMMONS[look][0]
 	return path if FileAccess.file_exists(path) else ""
+
+
+## The coach model path for a sex, or "" when none is built.
+static func coach_for(sex: int) -> String:
+	var path := MODEL_DIR % COACHES[clampi(sex, 0, 1)]
+	return path if FileAccess.file_exists(path) else ""
+
+
+## The coach's picked skin and hair (Palettes.SKIN / HAIR, the swatches of
+## the creation screen) as Toon tints.
+static func coach_tints(skin: int, hair: int) -> Dictionary:
+	var s: Vector3 = Palettes.pick(Palettes.SKIN, skin)
+	var h: Vector3 = Palettes.pick(Palettes.HAIR, hair)
+	return {"skin": Color(clampf(s.x, 0.0, 1.0), clampf(s.y, 0.0, 1.0), clampf(s.z, 0.0, 1.0)),
+		"hair": Color(clampf(h.x, 0.0, 1.0), clampf(h.y, 0.0, 1.0), clampf(h.z, 0.0, 1.0))}
+
+
+## The 3D figure for a retail anim set, or {} when none is built:
+## {path, scale, coach}.
+static func for_set(set_dir: String) -> Dictionary:
+	var fig := figure_of(set_dir)
+	if fig.is_empty():
+		return {}
+	var path := MODEL_DIR % fig.model
+	if not FileAccess.file_exists(path):
+		return {}
+	return {"path": path, "scale": fig.scale, "coach": fig.coach}
+
+
+## Which figure a retail anim set stands for, built or not: {model, scale,
+## coach}. "anims/coach_700<sex>" is a coach, and so is
+## "anims/fighter_700<sex>"; "anims/fighter_-1<breed><sex>" a fighter
+## (fight_view.FIGHTER_FILES); "anims/npc_<look>" a summon.
+static func figure_of(set_dir: String) -> Dictionary:
+	var name := set_dir.get_file()
+	if name in ["coach_7000", "coach_7001", "fighter_7000", "fighter_7001"]:
+		return {"model": COACHES[int(name.right(1))], "scale": 1.0, "coach": true}
+	if name.begins_with("fighter_-1") and name.length() >= 12:
+		var code := name.substr(10)
+		var breed := int(code.left(-1))
+		if MODELS.has(breed):
+			return {"model": MODELS[breed][clampi(int(code.right(1)), 0, 1)], "scale": 1.0, "coach": false}
+	elif name.begins_with("npc_"):
+		var look := int(name.substr(4))
+		if SUMMONS.has(look):
+			return {"model": SUMMONS[look][0], "scale": summon_scale(look), "coach": false}
+	return {}
+
+
+## Retail channel tints (Palettes.coach_tints: {1: skin, 2: hair}, ×1.25)
+## back to the swatch colours Toon tints with.
+static func from_channels(tints: Dictionary) -> Dictionary:
+	var out := {}
+	for pair in [[1, "skin"], [2, "hair"]]:
+		if tints.get(pair[0]) is Vector3:
+			var v: Vector3 = tints[pair[0]] / 1.25
+			out[pair[1]] = Color(clampf(v.x, 0.0, 1.0), clampf(v.y, 0.0, 1.0), clampf(v.z, 0.0, 1.0))
+	return out
 
 
 ## A summon's height relative to a fighter's.
@@ -96,24 +165,51 @@ static func _template(path: String) -> Node3D:
 
 
 ## A fighter for `path`, or null when the GLB can't be read.
-static func create(path: String, tints := {}, scale := 1.0) -> Node2D:
+## `res`: render scale; a menu that draws the figure 2.5× big asks for
+## 2.5 so it stays crisp.
+static func create(path: String, tints := {}, scale := 1.0, res := RES) -> Node2D:
 	var t := _template(path)
 	if t == null:
 		return null
 	var f: Node2D = (load("res://src/anims/fighter3d.gd") as GDScript).new()
 	var m: Node3D = t.duplicate()
 	m.scale = Vector3.ONE * scale
-	f._build(m, tints)
+	f._res = res
+	f._shadow_r = SHADOW_R * scale
+	f.use_parent_material = true   # the arena occluder hides the shadow too
+	f._build(m, tints, _mask(path))
 	return f
 
 
-func _build(model: Node3D, tints: Dictionary) -> void:
+## The skin/hair mask beside a model (coach_masks.py), or {}.
+static func _mask(path: String) -> Dictionary:
+	if _masks.has(path):
+		return _masks[path]
+	var out := {}
+	var png := path.get_basename() + "_mask.png"
+	if FileAccess.file_exists(png):
+		var img := Image.load_from_file(ProjectSettings.globalize_path(png))
+		if img != null:
+			out = {"tex": ImageTexture.create_from_image(img)}
+			var refs = JSON.parse_string(FileAccess.get_file_as_string(path.get_basename() + "_mask.json"))
+			if refs is Dictionary:
+				out.merge(refs)
+	_masks[path] = out
+	return out
+
+
+## Retint a built figure (the creation screen's swatches) without a rebuild.
+func retint(tints: Dictionary, path: String) -> void:
+	Toon.dress(_model, tints, _mask(path))
+
+
+func _build(model: Node3D, tints: Dictionary, mask := {}) -> void:
 	_vp = SubViewport.new()
 	_vp.transparent_bg = true
 	_vp.own_world_3d = true
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_vp.msaa_3d = Viewport.MSAA_4X
-	_vp.size = Vector2i(roundi(BASE.x * RES), roundi(BASE.y * RES))
+	_vp.size = Vector2i(roundi(BASE.x * _res), roundi(BASE.y * _res))
 	add_child(_vp)
 	ArenaScene.add_lights(_vp)
 	for we: WorldEnvironment in _vp.find_children("*", "WorldEnvironment", false, false):
@@ -129,8 +225,8 @@ func _build(model: Node3D, tints: Dictionary) -> void:
 	cam.far = 60.0
 	_vp.add_child(cam)
 	_model = model
-	Toon.set_pixel(1.0 / (PX * RES))
-	Toon.dress(_model, tints)
+	Toon.set_pixel(1.0 / (PX * _res))
+	Toon.dress(_model, tints, mask)
 	_vp.add_child(_model)
 	var players := _model.find_children("*", "AnimationPlayer", true, false)
 	_player = players[0] if not players.is_empty() else null
@@ -139,7 +235,7 @@ func _build(model: Node3D, tints: Dictionary) -> void:
 	_spr = Sprite2D.new()
 	_spr.texture = _vp.get_texture()
 	_spr.centered = false
-	_spr.scale = Vector2.ONE / RES
+	_spr.scale = Vector2.ONE / _res
 	_spr.position = -Vector2(BASE) * FEET
 	_spr.use_parent_material = true   # the arena occluder on the AnmSprite
 	add_child(_spr)
@@ -210,6 +306,12 @@ static func anim_for(base: String) -> String:
 
 func _process(_dt: float) -> void:
 	_face()
+
+
+func _draw() -> void:   # drawn before the child sprite: under the feet
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.5))
+	draw_circle(Vector2.ZERO, _shadow_r, SHADOW, true, -1.0, true)
+	draw_circle(Vector2.ZERO, _shadow_r * 0.65, SHADOW, true, -1.0, true)
 
 
 ## The AnmSprite mirrors itself for directions 3, 4 and 7 (the retail sets

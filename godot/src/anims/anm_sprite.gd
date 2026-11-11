@@ -41,6 +41,7 @@ var tints := {}
 ## S35 pilot: a 3D fighter (fighter3d.gd) drawn in place of the frames.
 ## load_action / play_once hand it the retail action names; it plays its own
 ## animation and facing and signals the end of a one-shot.
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 var model3d: Node2D = null:
 	set(m):
 		if model3d != null:
@@ -51,6 +52,15 @@ var model3d: Node2D = null:
 			m.finished.connect(func():
 				playing = false
 				action_finished.emit())
+
+## S35: the set the model3d was made for and the tints it wears — a set of
+## a built figure (Fighter3D.for_set: coaches, fighters, summons) swaps the
+## retail frames for it on the first load_action, so every screen that
+## shows a coach or a fighter draws the 3D one. `auto_model = false` keeps
+## the frames (fight_view attaches its own, sized per summon).
+var auto_model := true
+var _model_set := ""
+var _model_tints := {}
 
 ## meta.json "sfx" — {frame index: [sound ids]} baked from Sons* parts.
 ## Played through a small round-robin pool; streams are cached by path.
@@ -79,6 +89,7 @@ static var _anm_scripts = null
 ## replaces like retail's divide/mul, it never stacks.  The explicit arg
 ## overrides `self.tints` only when non-empty.
 func load_action(set_dir: String, action: String, tints := {}) -> bool:
+	_auto_model(set_dir, tints if not tints.is_empty() else self.tints)
 	if model3d != null:
 		if not model3d.take(action, false, false):
 			return false
@@ -192,6 +203,7 @@ func load_action(set_dir: String, action: String, tints := {}) -> bool:
 ## Load + play a gesture once (cast/hit/death). Returns false when the set
 ## lacks the action — callers fall back silently, assets are optional.
 func play_once(set_dir: String, action: String, hold := false) -> bool:
+	_auto_model(set_dir, self.tints)
 	if model3d != null:
 		if not model3d.take(action, true, hold):
 			return false
@@ -205,6 +217,37 @@ func play_once(set_dir: String, action: String, hold := false) -> bool:
 	once = true
 	hold_last = hold
 	return true
+
+
+## Attach (or retint, or swap) the 3D figure for `set_dir`. A sprite that
+## got its model from elsewhere (fight_view) is left alone.
+func _auto_model(set_dir: String, eff: Dictionary) -> void:
+	if not auto_model or (model3d != null and _model_set == ""):
+		return
+	set_dir = AssetPaths.normalize(set_dir)
+	var fig := Fighter3D.for_set(set_dir)
+	if fig.is_empty():
+		if _model_set != "":   # a set with no figure: back to the frames
+			_model_set = ""
+			model3d = null
+		return
+	var tints: Dictionary = Fighter3D.from_channels(eff) if fig.coach else {}
+	if _model_set == fig.path and model3d != null:
+		if tints != _model_tints:
+			_model_tints = tints
+			model3d.retint(tints, fig.path)
+		return
+	# one viewport pixel per screen pixel at the sprite's scale (a menu draws
+	# the coach 2.5× big), never under the fight's 2×
+	var res := maxf(Fighter3D.RES, absf(scale.x))
+	var m := Fighter3D.create(fig.path, tints, fig.scale, res)
+	if m == null:
+		return
+	_model_tints = tints
+	model3d = m
+	_model_set = fig.path
+	_frames = []
+	queue_redraw()
 
 
 func _process(delta: float) -> void:

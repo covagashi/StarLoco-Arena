@@ -7,7 +7,9 @@ extends RefCounted
 ##
 ## Skin and hair are tint channels, like the retail's: materials named
 ## skin* / hair* take tints["skin"] / tints["hair"] (the brows follow the
-## hair, a little darker), so each fighter picks its own.
+## hair, a little darker), so each fighter picks its own. The Meshy coaches
+## have one baked texture instead: `mask` ({tex, skin_ref, hair_ref}, from
+## tools/art/coach_masks.py) says which texels are skin and hair.
 
 const TOON := preload("res://src/anims/toon.gdshader")
 const OUTLINE := preload("res://src/anims/toon_outline.gdshader")
@@ -27,13 +29,13 @@ static func set_pixel(size: float) -> void:
 		o.set_shader_parameter("px_world", size)
 
 
-static func dress(root: Node, tints := {}) -> void:
+static func dress(root: Node, tints := {}, mask := {}) -> void:
 	for mi in root.find_children("*", "MeshInstance3D", true, false) + ([root] if root is MeshInstance3D else []):
 		var m := mi as MeshInstance3D
 		for s in m.mesh.get_surface_count():
 			var src := m.mesh.surface_get_material(s) as BaseMaterial3D
 			if src != null and src.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED:
-				m.set_surface_override_material(s, material(src, tints))
+				m.set_surface_override_material(s, material(src, tints, mask))
 
 
 ## The tint a channel material takes, or its own colour.
@@ -47,17 +49,29 @@ static func _colour(src: BaseMaterial3D, tints: Dictionary) -> Color:
 	return src.albedo_color
 
 
-static func material(src: BaseMaterial3D, tints := {}) -> ShaderMaterial:
+static func material(src: BaseMaterial3D, tints := {}, mask := {}) -> ShaderMaterial:
 	var colour := _colour(src, tints)
 	var key := "%d/%s" % [src.get_instance_id(), colour.to_html()]
+	if mask.has("tex"):
+		key += "/m%s/%s" % [(tints.get("skin", Color.TRANSPARENT) as Color).to_html(),
+			(tints.get("hair", Color.TRANSPARENT) as Color).to_html()]
 	if _cache.has(key):
 		return _cache[key]
 	var t := ShaderMaterial.new()
 	t.shader = TOON
-	t.set_shader_parameter("albedo", colour)
+	t.set_shader_parameter("albedo", src.albedo_color if mask.has("tex") else colour)
 	if src.albedo_texture:
 		t.set_shader_parameter("albedo_tex", src.albedo_texture)
 		t.set_shader_parameter("has_tex", true)
+	if mask.has("tex"):
+		t.set_shader_parameter("mask_tex", mask.tex)
+		t.set_shader_parameter("has_mask", true)
+		t.set_shader_parameter("skin_ref", float(mask.get("skin_ref", 1.0)))
+		t.set_shader_parameter("hair_ref", float(mask.get("hair_ref", 1.0)))
+		for ch in ["skin", "hair"]:
+			if tints.has(ch):
+				t.set_shader_parameter("tint_" + ch, true)
+				t.set_shader_parameter(ch + "_tint", tints[ch])
 	if not NO_OUTLINE.has(src.resource_name.get_slice(".", 0)):
 		var o := ShaderMaterial.new()
 		o.shader = OUTLINE

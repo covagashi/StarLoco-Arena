@@ -491,20 +491,46 @@ func _spawn_actors() -> void:
 	# arrive via ACTOR_APPEAR (4102) and _place_actor owns the actors list.
 	if not State.fighters.is_empty():
 		return
+	var centre := _battlefield_centre()
 	for c in _fmd.get("coach", []):
 		if c.x <= -2047:
 			continue   # unused pedestal slot (arena.go emptyPedestalXY)
 		var spr := AnmSprite.new()
-		# authored .anm anchor on the cell centre, as the client draws it
-		# (see _place_actor)
-		# coaches stand on top of the pedestal they are parked on
-		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z + 1.0)
+		# feet on the pedestal's top, as a live fight's 4102 puts them (the
+		# cell's z is its surface; the retail stood the sprite one step up)
+		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z)
 		spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
-		spr.material = _arena.occluder(c.z + 1, true)
+		spr.material = _arena.occluder(c.z, true)
 		_actors.add_child(spr)
 		# pedestal spectators have no wire identity — palette defaults
 		spr.tints = Palettes.coach_tints(0, 0)
-		spr.load_action(COACH_SET, "5_AnimStatique")
+		# facing the battlefield, like the server's diagonalFacing
+		var dir := _facing(Vector2i(c.x, c.y), centre)
+		_set_flip(spr, DIR_FLIP.get(dir, false))
+		spr.load_action(COACH_SET, "%d_AnimStatique" % DIR_MAP.get(dir, 1))
+
+
+## The start cells' centroid (server arena.battlefieldCentre).
+func _battlefield_centre() -> Vector2i:
+	var sum := Vector2i.ZERO
+	var n := 0
+	for role in ["team0", "team1"]:
+		for c in _fmd.get(role, []):
+			sum += Vector2i(c.x, c.y)
+			n += 1
+	return sum / n if n > 0 else Vector2i.ZERO
+
+
+## The diagonal wire direction from `from` toward `centre` (server
+## fight_packets.diagonalFacing: 1 SE, 3 SW, 5 NW, 7 NE).
+static func _facing(from: Vector2i, centre: Vector2i) -> int:
+	var d := centre - from
+	if absi(d.x) >= absi(d.y):
+		if d.x != 0:
+			return 1 if d.x > 0 else 5
+	elif d.y != 0:
+		return 3 if d.y > 0 else 7
+	return 1
 
 
 ## --- live fight wiring -----------------------------------------------------

@@ -1,6 +1,6 @@
 # S35 — Personajes
 
-**Planificado:** 2026-10-25 · **Abierto:** 2026-11-04 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (piloto Feca f y m hecho, a la espera del dueño)
+**Planificado:** 2026-10-25 · **Abierto:** 2026-11-04 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ✅ cerrado 2026-11-11: luchadores, invocaciones y coaches en 3D en combate y en menús; la ropa y el equipo pasan a [S35c](./S35c-ropa-y-equipo.md)
 
 ## Alcance (lo que hoy se usa, S31)
 
@@ -9,7 +9,9 @@
 - 2 coaches (la figura del jugador).
 - Las ~10 animaciones por esqueleto que fije S33 (no 8 direcciones a mano).
 - Cambios de aspecto por equipo y por cosmético (S30): piezas o materiales
-  intercambiables, no un dibujo por combinación.
+  intercambiables, no un dibujo por combinación. **Movido a
+  [S35c](./S35c-ropa-y-equipo.md)** al cerrar (2026-11-11): hoy ninguna
+  pantalla dibuja el equipo sobre la figura, así que no se pierde nada.
 
 ## Orden
 
@@ -648,4 +650,71 @@ morir). Pollito, oveja y pangolín con el esqueleto corto de
 `creature_anims.py`. El juego las dibuja por su `look` y a su altura
 (`Fighter3D.SUMMONS`). Tabla en S35b. Pendiente fuera de S35b: la sombra
 en el suelo (el cristal flota y en el retail proyecta una).
+
+## Cierre (2026-11-11)
+
+Pedido: "termina S35". Lo que faltaba para el criterio de cierre: los coaches
+en 3D (en combate y fuera) y que ninguna pantalla pidiera ya al lector `.anm`
+un luchador.
+
+**Hecho:**
+
+- `AnmSprite` cambia solo al modelo 3D cuando le piden un set que tiene figura
+  (`Fighter3D.for_set`): `coach_700<sexo>`, `fighter_-1<clase><sexo>`,
+  `fighter_700<sexo>` y `npc_<look>` de las 9 invocaciones. Así pasan a 3D, sin
+  tocar cada pantalla, el lobby, la creación del coach, la subida de nivel, la
+  vista previa del luchador nuevo, el visor del GUI y los coaches en combate.
+  `fight_view` sigue poniendo sus figuras (las invocaciones a su tamaño) y
+  `AnmSprite` no las toca. Las caras de diálogo (`portrait_*`) no son
+  luchadores: siguen siendo retail hasta S43.
+- **Piel y pelo de los coaches.** Los coaches de Meshy traen una sola textura,
+  así que no tienen los canales `skin*`/`hair*`. `tools/art/coach_masks.py`
+  pinta una máscara (R piel, G pelo) junto al GLB: cada triángulo vota por el
+  color de sus texels; el pelo arranca encima del cuello y crece por la malla
+  por triángulos blancos (coleta, nuca); dentro de la cara un texel blanco no
+  cuenta como piel (el blanco del ojo). `toon.gdshader` cambia el color de los
+  texels de la máscara al de la muestra elegida y conserva su sombreado (el
+  brillo del texel sobre el percentil 80 de la máscara, con tope 1,1).
+  Las muestras de la pantalla de creación salen con su color.
+- **Sombra en el suelo** (pendiente de S35b): una elipse suave bajo los pies de
+  cada figura, tan ancha como su tamaño; el oclusor de la arena también la
+  tapa. El cristal 8010 flota sobre la suya.
+- **Coaches en los pedestales** (dueño: "el coach no está centrado en el
+  cuadrado y no está mirando el campo de batalla"). Cuando `fight_view` dibuja
+  la arena sin servidor (vista previa, capturas), ponía al coach un escalón por
+  encima de la superficie (`c.z + 1`, como el sprite retail) y siempre mirando
+  al NO, de espaldas al campo. Ahora va a la altura de la superficie y mira al
+  centro de las casillas de salida, con la misma regla que el servidor
+  (`diagonalFacing`). En un combate real ya salía bien: el 4102 trae la
+  altura y la dirección.
+- En los menús, la figura se dibuja a la escala del sprite (2,5 en el lobby):
+  un píxel del viewport por píxel de pantalla, nunca menos que el 2× del
+  combate.
+
+**Decisiones (heurística, el dueño puede cambiarlas):**
+
+- Las placas blancas del pecho y los hombros del coach 7000 son armadura del
+  diseño, no piel: no se tiñen.
+- Una figura de menú cuesta un viewport propio de ~550×500. Compartir un
+  viewport entre luchadores sigue pendiente (S44, demo web).
+- Sin el canal de ojos (8) en los coaches: el ojo de Meshy se queda como está.
+
+**Probado:**
+
+- `godot/run_tests.sh`: 21 suites, 662 checks, 0 fallos (+110 de
+  `test/unit/fighter3d_test.gd`: los 26 sets de luchador, los 2 coaches y las
+  9 invocaciones tienen figura y está construida; los tintes vuelven a las
+  muestras).
+- Contra el servidor local: `coach_turn_smoke` (lobby y creación, 4 OK),
+  `report_smoke` (subida de nivel, 8 OK), `fight_smoke`, `summon_smoke`,
+  `carry_smoke` (rc 0).
+- Capturas revisadas: lobby, creación, subida de nivel, vista previa del
+  luchador (Feca 3D), arena 5 con los seis coaches en sus pedestales (cruz de
+  depuración en el origen, centrados y mirando al campo), combate con el
+  cristal y su sombra, paleta de 5 combinaciones piel/pelo en los dos coaches.
+
+**No verificado:**
+
+- El visor del GUI retail (`widget.gd` `animatedElementViewer`) no tiene
+  pantalla viva que lo abra; usa el mismo camino de `AnmSprite`.
 

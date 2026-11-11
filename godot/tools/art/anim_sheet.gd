@@ -22,6 +22,7 @@ extends SceneTree
 const ArenaScene := preload("res://src/maps/arena_scene.gd")
 const Dress := preload("res://src/maps/kit_dress.gd")
 const Toon := preload("res://src/anims/toon.gd")
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const PX := 43.0 * 1.41421356
 ## Screen direction → model yaw (the model faces +Z; the camera sits at
 ## yaw 45, so yaw 45 faces the viewer).
@@ -77,7 +78,8 @@ func _run() -> void:
 		for ch in ["skin", "hair"]:
 			if opts[ch] != "":
 				tints[ch] = Color.html(opts[ch])
-		Toon.dress(model, tints)
+		# a Meshy coach tints through its mask (tools/art/coach_masks.py)
+		Toon.dress(model, tints, Fighter3D._mask("res://" + String(opts.model)))
 	root.add_child(model)
 	if opts.height != "":
 		var top := -INF
