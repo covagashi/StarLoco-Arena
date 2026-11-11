@@ -1,6 +1,7 @@
 {
  "_doc": "S35c: which art/equipment piece (kit.kx.js model) each equipment card shows on the 3D figure. fighter: fightercards.json ids (type 1 weapon, 2 pet, 3 cape, 4 hat, 5 dofus); coach: cards.json ids. A card not listed shows nothing.",
  "fighter": {
+  "1": "sword_short",
   "108": "hat_straw",
   "118": "dofus_green"
  },

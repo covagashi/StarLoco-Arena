@@ -89,7 +89,9 @@
   "yopuka_f": {
    "script": "meshy_fighter.py",
    "src": "08_yopuka_f",
-   "opts": {},
+   "opts": {
+    "weapon": "1"
+   },
    "joints": true
   },
   "yopuka_m": {

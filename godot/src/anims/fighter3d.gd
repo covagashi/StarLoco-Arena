@@ -63,8 +63,16 @@ static var _heads := {}       # path -> AABB of the head (and hair) in skeleton 
 const EQUIP_DIR := "equipment/out/models/%s.glb"
 const BONE_OF := {"hat": "head", "weapon": "hand.R", "cape": "chest", "pet": "chest"}
 const HAT_CROWN := 0.27      # inner width of a hat's crown as modelled (m)
-const HAT_SINK := 0.45       # how far down the head (of its height) a hat sits
+const HAT_SINK := 0.36       # how far down the head (of its height) a hat sits
 const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest height
+## A weapon is modelled upright with its grip at the base: held in the
+## middle of the hand, the blade forward and a little down. It replaces the
+## class's own weapon (owner, 2026-11-11): meshy_fighter.py --weapon=1 cuts
+## that one out as the "class_weapon" mesh, hidden while a weapon is worn.
+const WEAPON_GRIP := 0.06     # grip centre above the piece's base (m)
+const WEAPON_HAND := 0.06     # how far down the hand bone the grip sits (m)
+const WEAPON_DIR := Vector3(0, -0.35, 1)
+const CLASS_WEAPON := "class_weapon"
 ## Fighter equipment card type (fightercards.json) → slot.
 const FIGHTER_SLOT := {1: "weapon", 2: "pet", 3: "cape", 4: "hat", 5: "dofus"}
 ## Which piece each card shows: art/equipment/pieces.json
@@ -293,6 +301,8 @@ func equip(slot: String, piece: String) -> void:
 	if _worn.has(slot):
 		(_worn[slot] as Node).queue_free()
 		_worn.erase(slot)
+		if slot == "weapon":
+			show_class_weapon(_model, true)
 	var n := hang(_model, _path, slot, piece)
 	if n != null:
 		_worn[slot] = n
@@ -364,7 +374,22 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 		# skeleton space → the head bone's rest frame
 		var rest := skel.get_bone_global_rest(bone)
 		p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
+	elif slot == "weapon":
+		var rest := skel.get_bone_global_rest(bone)
+		var grip := rest * Vector3(0, WEAPON_HAND, 0)
+		var y := WEAPON_DIR.normalized()
+		var x := Vector3.RIGHT
+		var z := x.cross(y).normalized()
+		var b := Basis(x, y, z)
+		p.transform = rest.affine_inverse() * Transform3D(b, grip - y * WEAPON_GRIP)
+		show_class_weapon(model, false)
 	return att
+
+
+## Show or hide the class's own weapon (a mesh cut out by meshy_fighter.py).
+static func show_class_weapon(model: Node3D, on: bool) -> void:
+	for n in model.find_children(CLASS_WEAPON + "*", "MeshInstance3D", true, false):
+		(n as Node3D).visible = on
 
 
 static func _skeleton(model: Node3D) -> Skeleton3D:

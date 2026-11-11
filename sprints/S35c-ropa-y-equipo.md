@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: paso 1 (piezas rígidas, piloto) hecho; esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–2 (piezas rígidas, piloto; arma que sustituye a la de la clase) hechos; esperando al dueño
 
 ## Por qué
 
@@ -101,5 +101,40 @@ Visto en la hoja:
    (Yopuka f, la espada). ¿El arma equipada sustituye a la de la clase (hay
    que separarla de la malla) o se lleva en la otra mano / a la espalda?
 
-Siguiente, cuando el dueño responda: el lobby (la figura de la gestión de
+### Respuestas del dueño (2026-11-11)
+
+1. **Las piezas las hago yo en kiln** ("tú las puedes hacer… hacerlo con
+   Meshy es demasiado"). El sombrero piloto vale; ajustar un poco la altura.
+   El brazo que atraviesa el sombrero al celebrar: arreglarlo **o dejarlo**,
+   "al fin y al cabo es un lowpoly".
+2. **Pelo que atraviesa la copa:** subir el sombrero un poco ("se podría
+   subir el sombrero un poco hacia arriba"), no aplastar el pelo.
+3. **El arma equipada sustituye a la de la clase**: el arma fundida en la
+   malla de Meshy se oculta cuando el luchador lleva un arma.
+
+Siguiente (antes de las respuestas): el lobby (la figura de la gestión de
 equipo con su equipo) y la primera tanda de piezas.
+
+## Paso 2: altura del sombrero y arma que sustituye (2026-11-11)
+
+| Cambio | Fichero |
+|---|---|
+| Sombrero más alto (respuesta 2): hundido 0,36 del alto de la cabeza (antes 0,45) | `fighter3d.gd` (`HAT_SINK`) |
+| Inventario de armas fundidas en las 24 figuras (frente y perfil): **solo la Yopuka f** (la espada). Las bolsas de la Anutrof f no son arma | — |
+| `meshy_fighter.py --weapon=1`: la pieza suelta de más de 25 cm que va entera con un brazo sale como malla propia `class_weapon`, con los mismos pesos (Yopuka f: 226 vértices) | `tools/blender/characters/meshy_fighter.py`, `art/characters/figures.json` |
+| Arma equipada en `hand.R`, a 6 cm de la muñeca, la hoja hacia delante y un poco abajo; mientras se lleva, `class_weapon` se oculta y vuelve al quitarla (respuesta 3) | `fighter3d.gd` (`WEAPON_*`, `show_class_weapon`) |
+| Espada corta piloto en kiln (carta 1) | `art/equipment/kit.kx.js`, `pieces.json` |
+
+Hojas: `~/codigo/capturas/s35c/s35c-sombrero-altura.png` (las seis
+figuras, frente y perfil) y `s35c-arma-sustituye.png` (Yopuka f sin carta
+con su espada, Yopuka f con la espada corta, Feca m con espada y sombrero,
+Sadida m; arriba en reposo, abajo golpeando). `run_tests.sh`: 674 checks,
+0 fallos.
+
+Visto: en la Yopuka f la espada de la clase desaparece entera y la nueva va en
+la misma mano. El pelo de punta del Sram m apenas asoma por la copa. El brazo
+que atraviesa el ala al celebrar se queda así (respuesta 1).
+
+Siguiente: el lobby (la figura de la gestión de equipo con su equipo) y las
+75 piezas de luchador en kiln, por ranura: primero los 16 sombreros, en una
+hoja para el dueño.

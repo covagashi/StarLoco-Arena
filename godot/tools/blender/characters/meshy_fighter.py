@@ -36,7 +36,7 @@ sys.path.insert(0, HERE)
 import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40"}
+OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "weapon": ""}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -648,6 +648,7 @@ def arm_vertices(ob, segs):
                 for j in comp:
                     arm_of[j] = S
                 LOG.setdefault("loose_to_arm", []).append(len(comp))
+                ARM.setdefault("loose", []).append(comp)
     return arm_of, cand
 
 
@@ -910,13 +911,48 @@ def main():
     rig_anims.TOE = (J["toe.L"].z + J["toe.R"].z) / 2
     rig_anims.OVERHEAD_OUT = float(OPT["overhead_out"])
     rig_anims.animate(rig)
-    export(ob, rig, J)
+    weapon = split_weapon(ob) if OPT["weapon"] else None
+    export(ob, rig, J, weapon)
 
 
-def export(ob, rig, J):
+def split_weapon(ob):
+    """S35c (--weapon=1): the class's weapon fused in the hand (the loose
+    piece longer than 25 cm that went whole with an arm) becomes its own
+    mesh, "class_weapon", skinned the same: the game hides it when the
+    fighter wears a weapon card."""
+    me = ob.data
+    pick = set()
+    for comp in ARM.get("loose", []):
+        zs = [me.vertices[j].co for j in comp]
+        span = max((a - b).length for a in zs[:: max(1, len(zs) // 40)] for b in zs[:: max(1, len(zs) // 40)])
+        if span > 0.25:
+            pick.update(comp)
+    LOG["weapon_verts"] = len(pick)
+    if not pick:
+        return None
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="DESELECT")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for i in pick:
+        me.vertices[i].select = True
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.separate(type="SELECTED")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    w = [o for o in bpy.context.selected_objects if o is not ob][0]
+    w.name = "class_weapon"
+    w.data.name = "class_weapon"
+    return w
+
+
+def export(ob, rig, J, weapon=None):
     os.makedirs(os.path.dirname(os.path.abspath(OUT)), exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
     ob.select_set(True)
+    if weapon is not None:
+        weapon.select_set(True)
     rig.select_set(True)
     bpy.ops.export_scene.gltf(filepath=OUT, export_format="GLB", use_selection=True,
                               export_animations=True, export_animation_mode="NLA_TRACKS",

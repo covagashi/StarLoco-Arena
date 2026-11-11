@@ -70,7 +70,8 @@ func _equipment(t) -> void:
 	var w := Fighter3D.fighter_pieces([{"slot": 0, "id": 108}, {"slot": 1, "id": 118}])
 	t.eq(w.get("hat"), "hat_straw", "card 108 (hat) shows the straw hat")
 	t.eq(w.get("dofus"), "dofus_green", "card 118 (dofus) shows the green dofus")
-	t.ok(Fighter3D.fighter_pieces([{"slot": 0, "id": 1}]).is_empty(), "a card with no piece shows nothing")
+	t.eq(Fighter3D.fighter_pieces([{"slot": 0, "id": 1}]).get("weapon"), "sword_short", "card 1 (weapon) shows the short sword")
+	t.ok(Fighter3D.fighter_pieces([{"slot": 0, "id": 2}]).is_empty(), "a card with no piece shows nothing")
 	var fc := preload("res://src/gamedata/fightercards.gd")
-	for cid in ["108", "118"]:   # the pieces table names real cards, in the slot they show
+	for cid in ["1", "108", "118"]:   # the pieces table names real cards, in the slot they show
 		t.ok(Fighter3D.FIGHTER_SLOT.has(fc.slot_type(int(cid))), "card %s has a fighter slot" % cid)
