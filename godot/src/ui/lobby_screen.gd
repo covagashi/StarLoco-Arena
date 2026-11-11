@@ -8,7 +8,7 @@ extends Control
 ## the chat plus the six everyday panels below. Built for 1280x720 scaled,
 ## mouse, keyboard and pad (the Ally).
 ##
-## Reads `localCoach` and `hub` {story:{titulars, bench}, ranked:{teams:[{id,
+## Reads `localCoach` (its `worn` cards dress the 3D coach, S35c) and `hub` {story:{titulars, bench}, ranked:{teams:[{id,
 ## name}], selected}, tourn:{registered, label, search_tid}} from the model;
 ## emits action_requested(evo|fight|practice|ghost|team_story|team_elite|
 ## tourn_search|cancel_search), dialog_requested(name) and team_picked(id).
@@ -485,6 +485,9 @@ func _sync() -> void:
 		var lib := "anims/coach_700%d" % int(coach.get("sex", 0))
 		if not Direction8.load_idle(_spr, lib, _dir):
 			Direction8.load_idle_any(_spr, lib)
+	# S35c: the 3D figure wears the coach's cards (main._push_coach_worn)
+	if _spr.model3d != null and _spr.model3d.has_method("wear_coach_cards"):
+		_spr.model3d.wear_coach_cards(coach.get("worn", []))
 
 
 func _rotate(delta: int) -> void:

@@ -537,6 +537,9 @@ static func _facing(from: Vector2i, centre: Vector2i) -> int:
 
 ## Server opcodes consumed here after scene entry.
 const OP_ACTOR_APPEAR := 4102
+## S35c, Godot only: each coach's worn cards, right after 8000 (the server's
+## fight_packets.go buildFightCoachLooks). [u8 n]{[i64 coachId][u8 m]{[u8 slot][i32 card]}}
+const OP_FIGHT_COACH_LOOKS := 60040
 const OP_PLACEMENT := 8022
 const OP_START_PRESENTATION := 8010
 const OP_END_PRESENTATION := 8018
@@ -658,6 +661,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 	if opcode >= 8010 and opcode <= 8040:
 		DebugLog.add("fight: phase op %d" % opcode)
 	match opcode:
+		OP_FIGHT_COACH_LOOKS:
+			_coach_looks(payload)
 		OP_ACTOR_APPEAR:
 			var d := Codec.decode(opcode, payload)
 			for a in d.get("actors", []):
@@ -990,6 +995,7 @@ func _place_actor(a: Dictionary) -> void:
 	else:
 		spr.tints = _coach_tints(int(a.id))
 		spr.load_action(_coach_set(int(a.id)), "%d_AnimStatique" % dir)
+		_dress_coach(int(a.id))
 	spr.position = _iso(a.x + 0.5, a.y + 0.5, a.z)
 	spr.z_index = clampi(int(a.x + a.y) * 4 + 1, -4096, 4096)
 	spr.material = _arena.occluder(a.z, true)
@@ -2844,6 +2850,35 @@ func _cast_sfx(fid: int, sid: int) -> void:
 		else:
 			get_tree().create_timer(t).timeout.connect(
 				spr.play_sound.bind(snd))
+
+
+## 60040: what every coach wears, kept on its 8000 entry (State.coach_ids)
+## and put on its figure if it's already placed (a resync).
+func _coach_looks(payload: WireReader) -> void:
+	var n := payload.get_u8() if payload.remaining() >= 1 else 0
+	for i in n:
+		if payload.remaining() < 9:
+			return
+		var id := int(payload.get_i64())
+		var cards := []
+		for j in payload.get_u8():
+			if payload.remaining() < 5:
+				return
+			cards.append({"slot": payload.get_u8(), "id": payload.get_i32()})
+		if id == 0:
+			continue
+		if not State.coach_ids.has(id):
+			State.coach_ids[id] = {"id": id}
+		State.coach_ids[id]["cards"] = cards
+		_dress_coach(id)
+
+
+## S35c: the coach's 3D figure wears its cards (Fighter3D.wear_coach_cards).
+func _dress_coach(id: int) -> void:
+	var spr: AnmSprite = _sprites.get(id)
+	if spr == null or spr.model3d == null or not spr.model3d.has_method("wear_coach_cards"):
+		return
+	spr.model3d.wear_coach_cards(State.coach_ids.get(id, {}).get("cards", []))
 
 
 ## Weapon swing — card scripts 800x play AnimStatique03(-Debut)-<fam> on the

@@ -99,6 +99,7 @@ func (d *Deps) sendFightResync(sess *Session, f *Fight, spectator bool) {
 	if create, err := buildCreateFight(f, deckCoach, spectator); err == nil {
 		_ = sess.Send(create)
 	}
+	sendFightCoachLooks(f, sess)
 	// 3. Insert + show every actor at its CURRENT cell.
 	if appear, err := buildActorAppearForFight(f); err == nil {
 		_ = sess.Send(appear)

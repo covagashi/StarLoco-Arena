@@ -701,6 +701,9 @@ func _on_message(opcode: int, payload) -> void:
 		1024:
 			if decoded.get("result") == 0:
 				print("[smoke] 1024 auth OK")
+				# like main.gd: say we're the Godot client (60000), so the
+				# server sends the Godot-only frames (60040 coach looks)
+				client.send_message(60000, PackedByteArray(), 3)
 			else:
 				_finish(1, "auth refused %s" % decoded.get("result"))
 		2048:
@@ -789,6 +792,20 @@ func _finish(code: int, msg: String) -> void:
 ## S35c: every 3D fighter wears the pieces its 8000 cards map to.
 func _check_equipment(fight_scene: Node) -> void:
 	const Fighter3D := preload("res://src/anims/fighter3d.gd")
+	# S35c: every coach figure wears the pieces of its 60040 cards
+	for cid in State.coach_ids:
+		var cspr = fight_scene._sprites.get(cid)
+		if cspr == null or cspr.model3d == null or not cspr.model3d.has_method("worn"):
+			continue
+		var cards: Array = State.coach_ids[cid].get("cards", [])
+		var cwant := Fighter3D.coach_pieces(cards)
+		var chave: Array = cspr.model3d.worn().keys()
+		chave.sort()
+		var ckeys := cwant.keys()
+		ckeys.sort()
+		print("[smoke] %s COACH EQUIP %s cards=%s pieces=%s worn=%s" % [
+			"OK  " if ckeys == chave else "FAIL", State.coach_ids[cid].get("name", cid),
+			cards.map(func(c): return int(c.id)), cwant, chave])
 	for fid in State.fighters:
 		var f: Dictionary = State.fighters[fid]
 		var spr = fight_scene._sprites.get(fid)

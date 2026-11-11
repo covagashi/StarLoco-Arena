@@ -14,6 +14,8 @@ extends "res://test/world_smoke.gd"
 ## 5. The nine menus: six below, three in the top bar, each opens its panel.
 ## 6. Pad / keyboard: from Ranking's Jugar, right reaches Torneos' button and
 ##    down reaches the six panels.
+## 7. S35c: the coach's 3D figure wears the pieces of the cards it has on
+##    (5200 → localCoach.worn).
 
 
 func _audit() -> void:
@@ -37,6 +39,17 @@ func _audit() -> void:
 		"Historia '%s' · Ranking '%s' · Torneos '%s'" % [c.story.team.text,
 			c.ranked.pick.get_item_text(c.ranked.pick.selected) if c.ranked.pick.item_count > 0 else c.ranked.team.text,
 			c.tourn.team.text])
+	# 7. the coach wears its cards
+	var lc = _main._gui.gui.model.get_value("localCoach")
+	var worn: Array = lc.get("worn", []) if lc is Dictionary else []
+	var want: Dictionary = preload("res://src/anims/fighter3d.gd").coach_pieces(worn)
+	var m3d = lobby._spr.model3d
+	var have: Array = m3d.worn().keys() if m3d != null and m3d.has_method("worn") else []
+	have.sort()
+	var wkeys := want.keys()
+	wkeys.sort()
+	_record(0, "coach dressed", m3d != null and have == wkeys,
+		"cards %s → pieces %s, the figure wears %s" % [worn.map(func(c): return int(c.id)), want, have])
 	# 2. the Ranking team
 	var pick: OptionButton = c.ranked.pick
 	if pick.item_count >= 1:

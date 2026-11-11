@@ -504,3 +504,43 @@ func buildFighterTurnBegin(uid int32, wireID int64) ([]byte, error) {
 	w := protocol.NewWriter().I32(uid).I32(-1).I64(wireID)
 	return protocol.EncodeS2C(protocol.OpFighterTurnBegin, w.Bytes())
 }
+
+// buildFightCoachLooks is 60040 (S35c, Godot only): every coach in the fight
+// with the cards it wears, in 5201's 0-based slots, so the client dresses
+// the 3D coach figures. A coach with nothing on (or a synthetic one) is
+// listed with none. [u8 n]{[i64 coachId][u8 m]{[u8 slot][i32 cardId]}}
+func buildFightCoachLooks(f *Fight) ([]byte, error) {
+	w := protocol.NewWriter()
+	members := f.members()
+	w.U8(uint8(len(members)))
+	for _, m := range members {
+		if m.Coach == nil {
+			w.I64(0)
+			w.U8(0)
+			continue
+		}
+		w.I64(int64(m.Coach.ID))
+		worn := make([]domain.CoachCard, 0, 14)
+		for _, c := range m.Coach.Inventory {
+			if c.Pos > 0 && c.Pos <= 14 {
+				worn = append(worn, c)
+			}
+		}
+		w.U8(uint8(len(worn)))
+		for _, c := range worn {
+			w.U8(uint8(c.Pos - 1))
+			w.I32(c.TemplateID)
+		}
+	}
+	return protocol.EncodeS2C(protocol.OpFightCoachLooks, w.Bytes())
+}
+
+// sendFightCoachLooks sends 60040 to a Godot session (see Session.godot).
+func sendFightCoachLooks(f *Fight, s *Session) {
+	if s == nil || !s.godot.Load() {
+		return
+	}
+	if looks, err := buildFightCoachLooks(f); err == nil {
+		_ = s.Send(looks)
+	}
+}

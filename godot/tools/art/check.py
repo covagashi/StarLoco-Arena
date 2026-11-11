@@ -15,6 +15,8 @@ What is checked (budgets below, from S33/S35b and the web demo, S44):
   the feet on the floor and near the centre, the 10 animations, the
   triangle / bone / texture / weight budget; every figure Fighter3D draws
   has a recipe; the coaches have their masks;
+- the equipment (art/equipment/pieces.json): every piece a card names is
+  built, within its budget, and up to date with kit.kx.js;
 - art/CREDITS.md names every source folder of art/ and every font;
 - the weight each prototype arena ships (pack_arenas.gd), against S44.
 """
@@ -42,6 +44,9 @@ FIG_BONES = 20
 FIG_TEX = 1024
 FIG_KB = 1200
 FIG_HEIGHT = 1.45
+# An equipment piece (S35c): small, flat-coloured kiln, no texture.
+EQUIP_TRIS = 1500
+EQUIP_KB = 256
 ANIMS = ["idle_loop", "walk_loop", "cast", "melee", "hit", "die", "jump", "celebrate", "carry_loop", "throw"]
 # One arena's models as shipped (S44: ≤ 50 MB first load for the whole demo;
 # arenas load on demand, so this is per arena).
@@ -220,6 +225,31 @@ def stale_figure(name, fig):
     return not build.Stamp(d).fresh("figure:" + name, build.digest(*inputs, extra=extra))
 
 
+def check_equipment(r):
+    d = build.EQUIPMENT
+    with open(os.path.join(d, "pieces.json")) as f:
+        tables = json.load(f)
+    size = 0
+    pieces = sorted({p for t in ("fighter", "coach") for p in tables.get(t, {}).values()})
+    for name in pieces:
+        if not NAME.match(name):
+            r.fail(f"equipment {name}: name is not lower_snake_case")
+        path = os.path.join(d, "out", "models", name + ".glb")
+        if not os.path.exists(path):
+            r.fail(f"equipment {name}: not built (python3 tools/art/build.py equipment)")
+            continue
+        g = Glb(path)
+        size += g.size
+        if g.tris > EQUIP_TRIS:
+            r.fail(f"equipment {name}: {g.tris} triangles > {EQUIP_TRIS}")
+        if g.size > EQUIP_KB * 1024:
+            r.fail(f"equipment {name}: {g.size // 1024} KB > {EQUIP_KB} KB")
+    if not build.Stamp(d).fresh("kiln", build.equipment_hash()):
+        r.fail("equipment: out of date with kit.kx.js: python3 tools/art/build.py equipment")
+    r.note(f"  equipment {len(pieces):3} GLB, {size / 1048576:5.1f} MB")
+    return size
+
+
 def check_credits(r):
     path = os.path.join(ART, "CREDITS.md")
     if not os.path.exists(path):
@@ -250,6 +280,8 @@ def main():
     check_layouts(r)
     r.note("[check] figures")
     figs_size = check_figures(r)
+    r.note("[check] equipment")
+    figs_size += check_equipment(r)
     check_credits(r)
     for w in r.warns:
         print("warning:", w)

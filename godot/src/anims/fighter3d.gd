@@ -103,6 +103,11 @@ const WEAPON_STYLES := {
 }
 ## Fighter equipment card type (fightercards.json) → slot.
 const FIGHTER_SLOT := {1: "weapon", 2: "pet", 3: "cape", 4: "hat", 5: "dofus"}
+## Coach equipment slot (5201's 0-based, as 5200 and 60040 carry it) → the
+## piece slot on the figure: hat, staff (held like a weapon), cape, pet. The
+## shoulderpads (3), bracelets (4), garments (5, 6, 10, 11) and marks (1) come
+## with their own pieces (S35c step 8); hair (2) is only a colour.
+const COACH_SLOT := {0: "hat", 7: "weapon", 8: "cape", 9: "pet"}
 ## Which piece each card shows: art/equipment/pieces.json
 ## {"fighter": {"<card id>": "<piece>"}, "coach": {…}}.
 const PIECES := "equipment/pieces.json"
@@ -359,11 +364,30 @@ static func fighter_pieces(cards: Array) -> Dictionary:
 	return out
 
 
+## The slot → piece a coach's worn cards ([{slot, id}], 5200 / 60040) show.
+static func coach_pieces(cards: Array) -> Dictionary:
+	var out := {}
+	for c in cards:
+		var slot: String = COACH_SLOT.get(int(c.get("slot", -1)), "")
+		var piece := piece_of("coach", int(c.get("id", -1)))
+		if slot != "" and piece != "":
+			out[slot] = piece
+	return out
+
+
 ## Dress a fighter in its equipped cards: every slot it has a piece for,
 ## the others taken off.
 func wear_fighter_cards(cards: Array) -> void:
-	var want := fighter_pieces(cards)
-	for slot in FIGHTER_SLOT.values():
+	_wear(fighter_pieces(cards), FIGHTER_SLOT.values())
+
+
+## Dress a coach in its worn cards, the same way.
+func wear_coach_cards(cards: Array) -> void:
+	_wear(coach_pieces(cards), COACH_SLOT.values())
+
+
+func _wear(want: Dictionary, slots: Array) -> void:
+	for slot in slots:
 		if String(want.get(slot, "")) != String(_worn_piece.get(slot, "")):
 			equip(slot, want.get(slot, ""))
 
@@ -395,7 +419,10 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 			if twin != null:
 				hold.set_meta("twin", twin)
 		return hold
-	if slot == "dofus" or skel == null or not BONE_OF.has(slot):
+	if slot != "dofus" and (skel == null or not BONE_OF.has(slot)):
+		p.free()   # a slot with no bone (yet) shows nothing
+		return null
+	if slot == "dofus":
 		var holder := Node3D.new()
 		holder.name = "dofus"
 		holder.position = DOFUS_AT

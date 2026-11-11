@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 365 |
+| Rows in the master table | 366 |
 | **C2S handled (H)** | 124 |
-| **S2C emitted (E)** | 164 |
+| **S2C emitted (E)** | 165 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -554,6 +554,7 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60033 | S2C | E | Godot extension (no retail class) | the fixtures the server played offline - `[i64 tid][u8 n] n×{[i32 slot][str winner][str loser][i32 rounds]}` (u8-length UTF-8) |
 | 60034 | C2S | H | Godot extension (no retail class) | `handleTournReplayRequest` (S29) - `[i64 tid][i32 slot]`; answered by 60035 × count |
 | 60035 | S2C | E | Godot extension (no retail class) | one chunk of a fixture's recording (gzipped SLRP) - `[i64 tid][i32 slot][u16 index][u16 count][bytes]` |
+| 60040 | S2C | E | Godot extension (no retail class) | the coaches' worn equipment in a fight (S35c), right after 8000 to a session that sent 60000 - `[u8 n] n×{[i64 coachId][u8 m] m×{[u8 slot (5201's, 0-based)][i32 cardId]}}`; the 3D coach figures wear it |
 
 ---
 

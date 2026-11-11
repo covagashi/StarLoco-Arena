@@ -146,6 +146,7 @@ func (d *Deps) startFightWithTeamsSeeded(a *arena, teamA, teamB *FightTeam, prac
 			if createFrame, err := buildCreateFight(f, m.Coach, false); err == nil {
 				_ = m.Session.Send(createFrame)
 			}
+			sendFightCoachLooks(f, m.Session)
 		}
 		// ACTOR_APPEAR (4102): insert coach + fighter avatars into the client's
 		// iso render list + show them. The avatars are created HIDDEN during the

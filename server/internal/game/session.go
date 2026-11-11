@@ -8,6 +8,7 @@ import (
 	"net"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
@@ -72,6 +73,10 @@ type Session struct {
 	// added to Coach.TotalPlaySecs. Zero once credited, so it counts once.
 	// Touched only by this session's own goroutine.
 	playSince time.Time
+	// godot is set once the client sends 60000, which only the Godot client
+	// does: Godot-only frames the server pushes unasked (60040) go to such
+	// sessions alone. Read from the fight actor, so atomic.
+	godot atomic.Bool
 }
 
 // writeQueueSize bounds a session's pending outbound frames. A client that

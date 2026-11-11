@@ -302,15 +302,55 @@ ahora la panza va hacia delante y la cuerda hacia la cara, y el arco sigue
 vertical al bajar el brazo. Figuras reconstruidas (`build.py` en verde),
 `fighter_equip_preview` ok, hoja `s35c-arco-dispara.png` rehecha.
 
+## Paso 8a: el coach lleva su equipo, en el lobby y en combate (2026-11-11)
+
+Dueño: "continúa". El paso 8 es grande (unas 92 piezas rígidas del coach, 91
+prendas, 13 marcas y el campo nuevo del servidor); va por tandas. Esta es la
+fontanería: que lo que lleva cada coach llegue y se pinte.
+
+| Cambio | Fichero |
+|---|---|
+| Mensaje nuevo **60040** (solo Godot): justo después del 8000, cada coach del combate con sus cartas puestas (hueco de 5201, carta). El bloque del coach del 8000 retail no tiene sitio y el cliente retail aún existe (S43 sin cerrar), así que va aparte y solo a la sesión que mandó el 60000 (el cliente Godot); también al reconectar | `server/internal/game/fight_packets.go` (`buildFightCoachLooks`), `handlers_fight.go`, `handlers_reconnect.go`, `session.go` (`godot`), `handlers_clientconfig.go`, `protocol/opcodes.go`, `docs/OPCODE-INVENTORY.md` |
+| El combate guarda el 60040 en el coach (`State.coach_ids[id].cards`) y viste su figura al colocarlo (4102) | `src/fight/fight_view.gd` (`_coach_looks`, `_dress_coach`) |
+| `Fighter3D.wear_coach_cards()` / `coach_pieces()`: hueco del coach → pieza (0 sombrero, 7 bastón en la mano como un arma, 8 capa, 9 mascota). Un hueco sin hueso (hombreras, brazaletes, todavía) no pinta nada; antes habría flotado como un dofus | `src/anims/fighter3d.gd` (`COACH_SLOT`) |
+| El coach del lobby lleva lo que dice el 5200 (`localCoach.worn`) | `src/main.gd` (`_push_coach_worn`), `src/ui/lobby_screen.gd` |
+| Piloto con las tres cartas de coach que ya tienen pieza aprobada: capa La Jalosa (18) → `cape_jalosa`, Miaumiau (75) → `pet_miaumiau`, Wauwau (80) → `pet_wauwau` | `art/equipment/pieces.json` (`coach`) |
+| `art/equipment` entra en el pipeline: `build.py equipment` (o el build entero) lo construye con kiln; `check.py` comprueba que cada pieza de `pieces.json` está construida, dentro de presupuesto (1500 triángulos, 256 KB) y al día; `pack_arenas.gd` copia `pieces.json` y sus piezas junto a la release (sin esto un juego exportado no llevaba el equipo) | `tools/art/build.py`, `check.py`, `pack_arenas.gd` |
+
+Probado:
+- Go: `go test ./...` en verde; nuevas `TestFightCoachLooksListsWornCards`
+  (cartas puestas sí, la bolsa no; el lado sintético sin nada) y
+  `TestFightCoachLooksOnlyToGodot` (una sesión retail no recibe el 60040).
+- `run_tests.sh`: 873 checks, 0 fallos. `build.py` y `check.py`: 0 fallos
+  (equipo: 75 GLB, 1,6 MB). `pack_arenas.gd` a una carpeta: 276 ficheros,
+  con `equipment/pieces.json` y las 75 piezas.
+- Combate real (`fight_smoke`, ahora manda el 60000 como el juego): al coach
+  `test` le puse la capa 18 y la mascota 75 en `coach_cards` (2 filas,
+  borradas después); `COACH EQUIP OK test cards=[55, 18, 75] … worn=[cape,
+  pet]` (el sombrero 55 aún no tiene pieza).
+- Lobby en vivo (`hub_smoke`, paso 7 nuevo): `coach dressed` OK; captura
+  `~/codigo/capturas/s35c/s35c-coach-lobby.png` (el coach con la Miaumiau al
+  hombro; la capa queda detrás).
+
+Visto de paso, no es de este sprint: `go vet` avisa en `store/seasons.go`
+(54 y 102: el `range` copia un `domain.Coach`, que lleva un `sync.Mutex`); ya
+estaba antes de este cambio.
+
+Siguiente (paso 8b): las piezas rígidas del coach en kiln, por tipo y con una
+hoja cada uno como las del luchador: 31 sombreros, 14 capas (sin La Jalosa),
+13 bastones, 5 mascotas (sin Miaumiau ni Wauwau), y luego 13 hombreras y 13
+brazaletes, que necesitan su colocación nueva (hombro y antebrazo). Después
+las 91 prendas que se deforman y las 13 marcas.
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
 1. ~~Capas, mascotas y dofus~~: hecho (paso 6), a falta de que el dueño
    revise las hojas.
 2. ~~Paso 7: la animación `shoot` del arco~~: hecho.
-3. El equipo del coach (campo nuevo en el servidor para verlo en combate),
-   las 91 prendas que se deforman y las 13 marcas; `art/equipment` en
-   `tools/art/build.py` (hoy se construye a mano con kiln). Es el siguiente.
+3. El equipo del coach: la fontanería y `art/equipment` en `build.py`,
+   hechos (paso 8a); faltan sus piezas (paso 8b), las 91 prendas que se
+   deforman y las 13 marcas.
 
 Herramientas: `anim_sheet.gd --pieces=<slot>:<pieza>` o `--cards=`,
 `test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Construir:

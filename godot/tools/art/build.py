@@ -3,6 +3,7 @@
 
     python3 tools/art/build.py                 build what is stale, then check
     python3 tools/art/build.py arena5 feca_f   only these kits / figures
+    python3 tools/art/build.py equipment       only the equipment pieces
     python3 tools/art/build.py --dry-run       list what is stale, build nothing
     python3 tools/art/build.py --force         rebuild everything selected
     python3 tools/art/build.py --pack <dist>   then pack it beside an export
@@ -15,6 +16,8 @@ Run from godot/. The steps, in order (each skips what is up to date):
 3. kiln:     kiln build of the kit's kit.kx.js (out/models/*.glb).
 4. blender:  tools/blender/build_models.py (art/blender.json), then
              tools/blender/bake_kits.py (art/ao.json), on what kiln rebuilt.
+4b. equipment: kiln build of art/equipment/kit.kx.js (the pieces a figure
+             wears, S35c; no Blender step).
 5. figures:  every 3D figure of art/characters/figures.json in Blender
              (meshy_fighter.py / meshy_summon.py / crystal_8010.py), then
              the coaches' skin and hair masks (coach_masks.py).
@@ -235,6 +238,29 @@ def build_blender(kits_built, a):
         run([sys.executable, os.path.join(BLENDER_TOOLS, "bake_kits.py"), "--kit", k, "-j", str(a.jobs)], GODOT, f"{k} ambient occlusion")
 
 
+# ------------------------------------------------------------ equipment
+
+EQUIPMENT = os.path.join(ART, "equipment")
+
+
+def equipment_hash():
+    return digest(*includes(os.path.join(EQUIPMENT, "kit.kx.js")), os.path.join(EQUIPMENT, "pieces.json"))
+
+
+def build_equipment(a, kiln):
+    """S35c: the rigid pieces the figures wear (Fighter3D.hang)."""
+    st = Stamp(EQUIPMENT)
+    h = equipment_hash()
+    if not a.force and st.fresh("kiln", h) and os.path.isdir(os.path.join(EQUIPMENT, "out", "models")):
+        return False
+    if a.dry_run:
+        log("stale: equipment kit.kx.js")
+        return False
+    run(kiln + ["build", "kit.kx.js", "--no-preview"], EQUIPMENT, "equipment kiln")
+    st.set("kiln", h)
+    return True
+
+
 # ------------------------------------------------------------ figures
 
 def build_figures(names, a):
@@ -346,7 +372,7 @@ def main():
     all_kits = kits()
     with open(os.path.join(ART, "characters", "figures.json")) as f:
         all_figs = list(json.load(f)["figures"])
-    bad = [o for o in a.only if o not in all_kits and o not in all_figs and o != "characters"]
+    bad = [o for o in a.only if o not in all_kits and o not in all_figs and o not in ("characters", "equipment")]
     if bad:
         sys.exit(f"unknown: {', '.join(bad)} (kits: {', '.join(all_kits)}; figures: art/characters/figures.json)")
     sel_kits = [k for k in all_kits if not a.only or k in a.only]
@@ -354,13 +380,16 @@ def main():
     # ../arena6/out) is rebuilt with it
     sel_kits = [k for k in all_kits if k in sel_kits or set(texture_kits(k)) & set(sel_kits)]
     sel_figs = [f for f in all_figs if not a.only or f in a.only or "characters" in a.only]
+    sel_equipment = not a.only or "equipment" in a.only
     loom = tool("LOOM", "loom") if sel_kits else None
-    kiln = tool("KILN", "kiln") if sel_kits else None
+    kiln = tool("KILN", "kiln") if sel_kits or sel_equipment else None
     # textures first, of every kit a selected kit reads from
     tex_kits = sorted({t for k in sel_kits for t in texture_kits(k)}, key=all_kits.index)
     changed = {k for k in tex_kits if build_textures(k, a, loom)}
     rebuilt = [k for k in sel_kits if build_kiln(k, a, kiln, bool(changed & set(texture_kits(k))))]
     build_blender(rebuilt, a)
+    if sel_equipment:
+        build_equipment(a, kiln)
     if sel_figs:
         build_figures(set(sel_figs) if a.only else set(), a)
     if a.dry_run:

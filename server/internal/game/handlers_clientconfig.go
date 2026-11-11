@@ -21,6 +21,7 @@ func registerClientConfigHandlers(r *Router, d *Deps) {
 }
 
 func handleClientConfigRequest(s *Session, _ *protocol.C2SFrame) error {
+	s.godot.Store(true)
 	w := protocol.NewWriter()
 	keys := 0
 	if s.deps.WebBaseURL != "" {

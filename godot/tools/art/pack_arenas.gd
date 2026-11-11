@@ -13,6 +13,8 @@ extends SceneTree
 ##   art/fight/<world>.json      the fight shapes (server/.../gamedata/arenas)
 ##   art/characters/out/*.glb    every 3D figure (Fighter3D: fighters,
 ##                               summons, coaches) and the coaches' masks
+##   art/equipment/pieces.json   which card shows which piece (S35c), and
+##   art/equipment/out/models/*.glb  every piece it names
 ## Build the art first (python3 tools/art/build.py): a missing file fails
 ## the pack.
 
@@ -54,6 +56,14 @@ func _initialize() -> void:
 			for ext: String in ["_mask.png", "_mask.json"]:
 				var m: String = src.get_basename() + ext
 				files[m] = m.trim_prefix(Layout.ART_DIR + "/")
+	var pieces_src: String = Layout.ART_DIR.path_join(Fighter3D.PIECES)
+	files[pieces_src] = Fighter3D.PIECES
+	var tables = JSON.parse_string(FileAccess.get_file_as_string(pieces_src))
+	if tables is Dictionary:
+		for table: Dictionary in [tables.get("fighter", {}), tables.get("coach", {})]:
+			for piece: String in table.values():
+				var src: String = Layout.ART_DIR.path_join(Fighter3D.EQUIP_DIR % piece)
+				files[src] = src.trim_prefix(Layout.ART_DIR + "/")
 	var bytes := 0
 	for src: String in files:
 		if not FileAccess.file_exists(src):

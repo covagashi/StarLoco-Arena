@@ -639,6 +639,12 @@ const (
 	OpTournMatches        = 60033 // S2C
 	OpTournReplayRequest  = 60034 // C2S
 	OpTournReplayChunk    = 60035 // S2C
+
+	// The coaches' worn equipment in a fight (S35c, game/fight_packets.go) —
+	// Godot only, sent right after 8000 to a session that asked 60000 (the
+	// retail 8000 coach block has no room for it). The 3D coach figures wear
+	// it. [u8 n]{[i64 coachId][u8 m]{[u8 slot (5201's, 0-based)][i32 cardId]}}
+	OpFightCoachLooks = 60040 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

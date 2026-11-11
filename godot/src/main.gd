@@ -1152,6 +1152,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				if int(e.slot) >= 0 and int(e.slot) < 14:
 					_equip_slots[int(e.slot)] = int(e.card_id)
 			_equip_draft = _equip_slots.duplicate()
+			_push_coach_worn()
 			if _gui.is_open("coachEquipDialog"):
 				_push_equip_model()
 			if _gui.is_open("cardMasterDialog"):
@@ -2108,6 +2109,19 @@ const COACH_SLOT_NAMES := {0: "slot.hat", 1: "slot.tattoo", 2: "slot.hair",
 	10: "slot.boots", 11: "slot.shirt"}
 
 var _equip_slots: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # worn (5200)
+
+
+## S35c: the hub's coach figure wears what 5200 says it wears
+## (localCoach.worn = [{slot, id}], lobby_screen → Fighter3D.wear_coach_cards).
+func _push_coach_worn() -> void:
+	var lc = _gui.gui.model.get_value("localCoach")
+	if not (lc is Dictionary):
+		return
+	var worn := []
+	for i in _equip_slots.size():
+		if int(_equip_slots[i]) > 0:
+			worn.append({"slot": i, "id": int(_equip_slots[i])})
+	_gui.gui.model.set_value("localCoach", worn, "worn")
 var _equip_draft: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # being edited
 
 
