@@ -399,6 +399,31 @@ checks, 0 fallos; `build.py equipment`: 0 fallos (121 piezas, 2,4 MB).
 
 Siguiente: los 13 bastones y las 5 mascotas del coach.
 
+Dueño: "doy mi ok a las capas". **Las 15 aprobadas.**
+
+## Paso 8d: los 13 bastones y las 5 mascotas del coach (2026-11-11)
+
+| Cambio | Fichero |
+|---|---|
+| Los 13 "bastones" (tipo 12) son estandartes en la ilustración, salvo el Bastón Rompedor (un asta con punta dentada). En kiln, diseño propio: Laúd (lira dorada), Maza claveteada (bola con pinchos y calavera), Cetro de cascabeles (banderín de bufón), Deshueso (hueso), Mh'Asalto (verde azulado con ganchos), Cetro roído (bordes mordidos y engranaje), Aurea flamma (llama), Rompedor, Campeón y Campierrele (oscuros con franjas), Alu-Card (morado con calavera y colas), jálabol (cara de oveja), Lolomg (manchas rojas). 84–400 triángulos. Todos `staff_`: en la mano derecha y en vertical, como los bastones del luchador | `art/equipment/coach_staffs.kx.js` |
+| Las 5 mascotas sin gemela de luchador (no hay ilustración: diseño desde el nombre): Zanahowia pataleante (zanahoria con patas), Demonita, Diablotín, Reloj (reloj de bolsillo con patas), Sacrificada (muñeca de trapo con venda). Miaumiau y Wauwau siguen con las del luchador | `art/equipment/coach_pets.kx.js` |
+| Las 18 cartas → su pieza; la tabla del coach tiene ya 66 cartas (todas las rígidas menos hombreras y brazaletes) | `pieces.json` (`coach`) |
+
+Corregido al revisar: el hueso del Deshueso tenía los nudillos sueltos (la
+caja apoya en su base: el grupo gira ahora en el centro del hueso); la venda
+de la Sacrificada flotaba sobre la cabeza (ahora la rodea). Probé a colgar la
+tela de los estandartes al otro lado del asta: tapaba la cara y el cuerpo, así
+que se queda por fuera, donde pisa un poco el brazo.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-bastones-13-1.png` y `-2.png` (de
+frente y de perfil), `s35c-coach-mascotas-7.png` (las 7, por los dos lados) y
+`s35c-coach-bastones-mascotas-piezas-1.png` … `-3.png`. `run_tests.sh`: 1072
+checks, 0 fallos; `build.py equipment`: 0 fallos.
+
+Siguiente: las 13 hombreras y los 13 brazaletes (necesitan su colocación nueva,
+en el hombro y el antebrazo); después las 91 prendas que se deforman y las 13
+marcas.
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:

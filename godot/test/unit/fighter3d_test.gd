@@ -77,7 +77,7 @@ func _equipment(t) -> void:
 	# modelled in art/equipment (kit.kx.js and its includes)
 	var pieces: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/equipment/pieces.json"))
 	var src := ""
-	for f in ["kit", "hats", "weapons", "capes", "pets", "dofus", "coach_hats", "coach_capes"]:
+	for f in ["kit", "hats", "weapons", "capes", "pets", "dofus", "coach_hats", "coach_capes", "coach_staffs", "coach_pets"]:
 		src += FileAccess.get_file_as_string("res://art/equipment/%s.kx.js" % f)
 	# S35c: the coach table — real coach cards, the piece modelled and of
 	# the card's slot (Fighter3D.COACH_SLOT through 5201's slot of its type)
