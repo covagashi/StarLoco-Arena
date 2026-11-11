@@ -69,13 +69,20 @@ const HAT_SINK := 0.36       # how far down the head (of its height) a hat sits
 const HAT_MIN := 0.8
 const HAT_MAX := 1.15
 const DOFUS_AT := Vector3(0.38, 0.95, 0.1)   # beside the figure, at chest height
-## A weapon is modelled upright with its grip at the base: held in the
-## middle of the hand, the blade forward and a little down. No figure holds
-## a weapon of its own (owner, 2026-11-11: meshy_fighter.py --drop_weapon=1
-## took the Yopuka f's sword out).
-const WEAPON_GRIP := 0.06     # grip centre above the piece's base (m)
+## A weapon is modelled upright with the middle of its grip at the origin
+## (art/equipment/weapons.kx.js): held in the middle of the hand, the blade
+## forward and a little down. Its family (the name's prefix) can change the
+## hand and the direction: a bow in the left hand, upright; a staff upright;
+## daggers come in pairs, one per hand. No figure holds a weapon of its own
+## (owner, 2026-11-11: meshy_fighter.py --drop_weapon=1 took the Yopuka f's
+## sword out).
 const WEAPON_HAND := 0.06     # how far down the hand bone the grip sits (m)
 const WEAPON_DIR := Vector3(0, -0.35, 1)
+const WEAPON_STYLES := {
+	"bow_": {"hand": "hand.L", "dir": Vector3(0, 1, 0.15)},
+	"staff_": {"dir": Vector3(0, 1, 0.35)},
+	"dagger_": {"pair": true},
+}
 ## Fighter equipment card type (fightercards.json) → slot.
 const FIGHTER_SLOT := {1: "weapon", 2: "pet", 3: "cape", 4: "hat", 5: "dofus"}
 ## Which piece each card shows: art/equipment/pieces.json
@@ -302,7 +309,10 @@ static func piece_path(piece: String) -> String:
 ## off with "". Unknown pieces leave the slot empty.
 func equip(slot: String, piece: String) -> void:
 	if _worn.has(slot):
-		(_worn[slot] as Node).queue_free()
+		var old: Node = _worn[slot]
+		if old.has_meta("twin"):   # the left dagger of a pair
+			(old.get_meta("twin") as Node).queue_free()
+		old.queue_free()
 		_worn.erase(slot)
 	var n := hang(_model, _path, slot, piece)
 	if n != null:
@@ -353,6 +363,19 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	var p: Node3D = t.duplicate()
 	Toon.dress(p)
 	var skel := _skeleton(model)
+	if slot == "weapon" and skel != null:
+		var st := weapon_style(piece)
+		var hold := _grip(skel, p, st.get("hand", "hand.R"), st.get("dir", WEAPON_DIR))
+		if hold == null:
+			p.free()
+			return null
+		if st.get("pair", false):
+			var p2: Node3D = t.duplicate()
+			Toon.dress(p2)
+			var twin := _grip(skel, p2, "hand.L", st.get("dir", WEAPON_DIR))
+			if twin != null:
+				hold.set_meta("twin", twin)
+		return hold
 	if slot == "dofus" or skel == null or not BONE_OF.has(slot):
 		var holder := Node3D.new()
 		holder.name = "dofus"
@@ -375,14 +398,33 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 		# skeleton space → the head bone's rest frame
 		var rest := skel.get_bone_global_rest(bone)
 		p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
-	elif slot == "weapon":
-		var rest := skel.get_bone_global_rest(bone)
-		var grip := rest * Vector3(0, WEAPON_HAND, 0)
-		var y := WEAPON_DIR.normalized()
-		var x := Vector3.RIGHT
-		var z := x.cross(y).normalized()
-		var b := Basis(x, y, z)
-		p.transform = rest.affine_inverse() * Transform3D(b, grip - y * WEAPON_GRIP)
+	return att
+
+
+## A weapon's family by its name: {hand, dir, pair}, all optional.
+static func weapon_style(piece: String) -> Dictionary:
+	for pre in WEAPON_STYLES:
+		if piece.begins_with(pre):
+			return WEAPON_STYLES[pre]
+	return {}
+
+
+## `p` held in `hand`, its grip (the origin) in the middle of the hand and
+## its +Y along `dir` (model space, at rest), or null without that bone.
+static func _grip(skel: Skeleton3D, p: Node3D, hand: String, dir: Vector3) -> BoneAttachment3D:
+	var bone := skel.find_bone(hand)
+	if bone < 0:
+		return null
+	var att := BoneAttachment3D.new()
+	att.bone_name = hand
+	skel.add_child(att)
+	att.add_child(p)
+	var rest := skel.get_bone_global_rest(bone)
+	var y := dir.normalized()
+	var x := Vector3.RIGHT
+	var z := x.cross(y).normalized()
+	x = y.cross(z)
+	p.transform = rest.affine_inverse() * Transform3D(Basis(x, y, z), rest * Vector3(0, WEAPON_HAND, 0))
 	return att
 
 

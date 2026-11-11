@@ -16,12 +16,5 @@ model("dofus_green",
   lathe([0, 0, 0.05, 0.02, 0.075, 0.07, 0.07, 0.11, 0.045, 0.15, 0, 0.165], { mat: "gem", sides: 10 }),
   torus(0.076, 0.008, { mat: "gold", pos: [0, 0.07, 0], sides: 12 }))
 
-// a short sword: grip at the origin's end (y 0-0.11), guard, blade up to 0.62
-model("sword_short",
-  cyl(0.018, 0.11, { mat: "leather", sides: 6 }),
-  sphere(0.026, { mat: "gold", pos: [0, -0.005, 0], detail: 0 }),
-  box(0.15, 0.03, 0.04, { mat: "gold", pos: [0, 0.11, 0] }),
-  extrude([-0.03, 0, 0.03, 0, 0.026, 0.42, 0, 0.5, -0.026, 0.42], 0.014, { mat: "steel", pos: [0, 0.14, -0.007] }),
-  box(0.012, 0.36, 0.018, { mat: "steelD", pos: [0, 0.15, 0] }))
-
 include("hats.kx.js")
+include("weapons.kx.js")

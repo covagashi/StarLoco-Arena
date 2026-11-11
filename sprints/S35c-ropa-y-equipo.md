@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (los 16 sombreros de luchador) esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; paso 5 (las 23 armas) esperando al dueño
 
 ## Por qué
 
@@ -199,3 +199,23 @@ checks, 0 fallos.
 Para el dueño: Jalató y Prespic tapan media cara en las cabezas pequeñas
 (Sacrogrito m, Osamodas m) y el Dragosombrero cubre el casco del Xelor m;
 ¿subirlos o se quedan como máscaras?
+
+Dueño: "si tapan la cara no pasa nada… todo ok". **Los 16 sombreros
+aprobados tal cual**, máscaras incluidas.
+
+## Paso 5: las 23 armas de luchador (2026-11-11)
+
+| Cambio | Fichero |
+|---|---|
+| Las 23 en kiln, diseño propio, por familia: 4 espadas (Raciela, Kwakhoja, Llyoda Da, Jaley), 4 pares de dagas (Bashers, Taimadagas, Ajadoras, Olynaa), 4 arcos (La Cuerda, Arco Desade, Cotazo, Arco Ángel), 3 bastones (Celestina, Varita de Líder, Pataflón), 4 martillos (Cerbero, Falistos, Parteghuls, Xelorillo), 4 hachas y palas (Pala Enredaderada, Enterradora Infiel, Luna Roja, Solitaria). 58–376 triángulos | `art/equipment/weapons.kx.js` |
+| Convención nueva: el origen es el centro de la empuñadura (antes la base); la espada piloto pasa a ser la Raciela | `weapons.kx.js` (cabecera) |
+| La familia sale del nombre: `bow_` en la mano izquierda y vertical, `staff_` hacia arriba, `dagger_` a pares (una por mano; quitarla quita las dos), el resto hacia delante y un poco abajo | `fighter3d.gd` (`WEAPON_STYLES`, `_grip`) |
+| Las 23 cartas → su arma; la prueba comprueba que cada carta del `pieces.json` es real y su pieza está modelada | `pieces.json`, `test/unit/fighter3d_test.gd` |
+
+Corregido al revisar: los mangos de martillos y hachas empezaban en la
+mano (la bola del Xelorillo flotaba debajo); ahora bajan 20 cm.
+
+Hojas: `~/codigo/capturas/s35c/s35c-armas-23-1.png` y `-2.png` (cada arma en
+una figura, en reposo y golpeando), `s35c-armas-familias.png` (de cerca:
+dagas, dos arcos, dos bastones, martillo) y `s35c-armas-23-piezas.png`.
+`run_tests.sh`: 751 checks, 0 fallos.
