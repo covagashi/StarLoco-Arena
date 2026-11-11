@@ -14,7 +14,9 @@ model("hat_straw",
 
 include("hats.kx.js")
 include("weapons.kx.js")
+include("cape_kit.kx.js")
 include("capes.kx.js")
 include("pets.kx.js")
 include("dofus.kx.js")
 include("coach_hats.kx.js")
+include("coach_capes.kx.js")

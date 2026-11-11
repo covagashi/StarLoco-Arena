@@ -77,7 +77,7 @@ func _equipment(t) -> void:
 	# modelled in art/equipment (kit.kx.js and its includes)
 	var pieces: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/equipment/pieces.json"))
 	var src := ""
-	for f in ["kit", "hats", "weapons", "capes", "pets", "dofus", "coach_hats"]:
+	for f in ["kit", "hats", "weapons", "capes", "pets", "dofus", "coach_hats", "coach_capes"]:
 		src += FileAccess.get_file_as_string("res://art/equipment/%s.kx.js" % f)
 	# S35c: the coach table — real coach cards, the piece modelled and of
 	# the card's slot (Fighter3D.COACH_SLOT through 5201's slot of its type)
@@ -90,7 +90,7 @@ func _equipment(t) -> void:
 		var want: String = {"hat": "hat_", "weapon": "staff_", "cape": "cape_", "pet": "pet_"}.get(COACH_TYPE.get(ctype, ""), "?")
 		t.ok(String(pieces.coach[cid]).begins_with(want), "coach card %s shows a %s piece" % [cid, want])
 	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}]),
-		{"hat": "hat_horned", "cape": "cape_jalosa"}, "coach slots 0 and 8 show a hat and a cape; 3 (shoulders) nothing yet")
+		{"hat": "hat_horned", "cape": "cape_jalatranki"}, "coach slots 0 and 8 show a hat and a cape; 3 (shoulders) nothing yet")
 	for cid in pieces.fighter:
 		t.ok(Fighter3D.FIGHTER_SLOT.has(fc.slot_type(int(cid))), "card %s has a fighter slot" % cid)
 		t.ok(src.contains('model("%s"' % pieces.fighter[cid]), "card %s: %s is modelled" % [cid, pieces.fighter[cid]])

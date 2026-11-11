@@ -367,10 +367,37 @@ fallos.
 Para el dueño: la gelatina y el pasamontañas tapan la cabeza entera, como en
 la ilustración; la moneda del Kamas es enorme a propósito. ¿Valen así?
 
+Dueño: "no te preocupes de si se ve la cara o no, es un juego isométrico".
+**Los 31 aprobados tal cual.** De la prueba con otro modelo: "pone más
+detalles pero no es ningún wow, así que nos quedamos igual" (seguimos con
+este pipeline).
+
 Aparte (dueño): prueba de otro modelo con un solo sombrero, el Dragón Blanco
 (213), con el mismo pipeline; recorte de la ilustración en
 `~/codigo/capturas/s35c/prueba-fable/213-casco-dragon-blanco.png`. Fuera del
 juego: `prueba_fable.kx.js`, sin carta ni include.
+
+## Paso 8c: las 15 capas del coach (2026-11-11)
+
+Dueño, sobre los sombreros: aprobados; seguimos.
+
+| Cambio | Fichero |
+|---|---|
+| Las 15 en kiln, diseño propio: Arlan Txin (lavanda con borde dorado), La Jalosa (columna de lana roja, amarilla y verde, a juego con el gorro Jalatranki), Profión (blanca con cuello de pelo y puntas rojas), Ciguador (larga, ocre con borde verde y escudo), Kepika (púas), Krono (gris verdoso con flecha), Sedforme (flecos), Rompedora (costuras y remiendo), Campeón y Campierrele (melena de hojas y borlas), Alu-Card (negra en picos), Gosbaster (mechones cian), pío rojo (plumas), Cobija Nubosa (nube), Zar (ancha, a rayas, broche de estrella). 150–640 triángulos | `art/equipment/coach_capes.kx.js` |
+| La carta 18 deja de usar la capa del luchador (`cape_jalosa`, un vellón): la del coach es otra cosa en la ilustración | `pieces.json` (`coach`) |
+| La forma común de las capas sale a un fichero propio que el kit incluye una vez; las 15 del luchador salen idénticas (mismos triángulos) | `art/equipment/cape_kit.kx.js`, `capes.kx.js`, `kit.kx.js` |
+| Las hojas de revisión pasan a ser una herramienta del repo (antes eran scripts sueltos): `equip_sheet.py figures <ranura> …` y `pieces …`, por páginas | `tools/art/equip_sheet.py` |
+
+Corregido al revisar: las franjas laterales de la Arlan Txin y la Ciguador
+subían por encima del cuello; las borlas del Campeón y el Campierrele no
+seguían el bajo en zigzag y algunas quedaban sueltas debajo.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-capas-15-1.png` y `-2.png` (de
+espaldas, de perfil y de frente) y `s35c-coach-capas-15-piezas-1.png` …
+`-3.png` (vistas de kiln: se ve la cara de dentro). `run_tests.sh`: 1018
+checks, 0 fallos; `build.py equipment`: 0 fallos (121 piezas, 2,4 MB).
+
+Siguiente: los 13 bastones y las 5 mascotas del coach.
 
 ## Para retomar (2026-11-11)
 
