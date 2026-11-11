@@ -33,6 +33,8 @@ const TITLES := {
 	"storyDialog": "panel.story",
 }
 var _preview
+var _eq_fig = null            # S35c: the equipment panel's figure (AnmSprite)
+var _eq_fig_set := ""
 var _preview_look := ""
 var _preview_dir := Direction8.FRONT
 
@@ -65,10 +67,17 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		schedule_refresh()
 
 
+func _exit_tree() -> void:
+	if is_instance_valid(_eq_fig) and _eq_fig.get_parent() == null:
+		_eq_fig.free()
+
+
 func refresh() -> void:
 	super.refresh()
 	if body == null:
 		return
+	if is_instance_valid(_eq_fig) and _eq_fig.get_parent() != null:
+		_eq_fig.get_parent().remove_child(_eq_fig)   # kept: _equip_figure
 	clear_body()
 	var key: String = TITLES.get(panel_name, "")
 	title.text = I18n.t(key) if key != "" else panel_name
@@ -1345,37 +1354,42 @@ func _team_name() -> void:
 ## for the picked slot below, a click puts one on. "Guardar" sends it all.
 func _equipment() -> void:
 	var fighter: Dictionary = data("teamManagement.editableFighter", {})
-	var head := row(body)
+	var split := row(body)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var main := column(split)
+	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_equip_figure(split, fighter)
+	var head := row(main)
 	label(head, str(fighter.get("name", "")), 24)
 	var budget := label(head, I18n.t("fe.budget", {"n": int(fighter.get("value", 0))}), 16)
 	budget.add_theme_color_override("font_color", UiStyle.MUTED)
-	tabs(body, [I18n.t("fe.spells"), I18n.t("fe.equip")])
+	tabs(main, [I18n.t("fe.spells"), I18n.t("fe.equip")])
 	if tab == 0:
 		var spells: Array = data("teamManagement.editableFighter.breedSpells", [])
 		var on: Array = spells.filter(func(sp): return bool(sp.get("equipped", false)))
 		var off: Array = spells.filter(func(sp): return not bool(sp.get("equipped", false)))
-		label(body, I18n.t("fe.equipped_n", {"n": on.size()}), 18)
+		label(main, I18n.t("fe.equipped_n", {"n": on.size()}), 18)
 		var top := HFlowContainer.new()
 		top.name = "SpellsOn"
-		body.add_child(top)
+		main.add_child(top)
 		if on.is_empty():
 			_muted(top, I18n.t("fe.no_spells"))
 		for sp in on:
 			_spell_tile(top, sp, true, false)
-		label(body, I18n.t("fe.available"), 18)
+		label(main, I18n.t("fe.available"), 18)
 		var rest := HFlowContainer.new()
 		rest.name = "SpellsOff"
-		body.add_child(rest)
+		main.add_child(rest)
 		for sp in off:
 			_spell_tile(rest, sp, false, on.size() >= 6)
-		_muted(body, I18n.t("fe.spell_hint"))
+		_muted(main, I18n.t("fe.spell_hint"))
 	else:
 		var slots := [I18n.t("fe.slot_weapon"), I18n.t("fe.slot_pet"), I18n.t("fe.slot_cloak"), I18n.t("fe.slot_hat"), I18n.t("fe.slot_dofus")]
 		var slot := int(data("teamManagement.selectedItemCardListType", 0))
 		var bar := HBoxContainer.new()
 		bar.name = "Slots"
 		bar.add_theme_constant_override("separation", 8)
-		body.add_child(bar)
+		main.add_child(bar)
 		for i in slots.size():
 			var worn: Dictionary = data("teamManagement.editableFighter." + EQ_FIELDS[i], {})
 			var b := _tile(bar, {"id": int(worn.get("id", 0)), "fighter": true,
@@ -1385,7 +1399,7 @@ func _equipment() -> void:
 			var idx := i
 			b.pressed.connect(func(): selected = {}; send("changeItemCardType", [idx]))
 		var equipped: Dictionary = data("teamManagement.editableFighter." + EQ_FIELDS[slot], {})
-		var line := row(body)
+		var line := row(main)
 		label(line, I18n.t("fe.equipped_x", {"name": str(equipped.get("name", I18n.t("fe.none")))}), 17)
 		button(line, I18n.t("fe.unequip"), func(): send("removeEquipment", [slot]), not equipped.is_empty()).name = "Unequip"
 		var pool: Array = data("teamManagement.selectedItemCardList", [])
@@ -1393,7 +1407,7 @@ func _equipment() -> void:
 		grid.name = "Pool"
 		grid.add_theme_constant_override("h_separation", 8)
 		grid.add_theme_constant_override("v_separation", 8)
-		body.add_child(grid)
+		main.add_child(grid)
 		if pool.is_empty():
 			_muted(grid, I18n.t("fe.no_cards"))
 		for it in pool:
@@ -1402,7 +1416,7 @@ func _equipment() -> void:
 			t.name = "Card%d" % int(it.get("id", 0))
 			var item: Dictionary = it
 			t.pressed.connect(func(): send("addEquipment", [], item))
-		var nav := row(body)
+		var nav := row(main)
 		button(nav, I18n.t("ladder.prev"), func(): send("decreaseList"))
 		button(nav, I18n.t("ladder.next"), func(): send("increaseList"))
 	# The save says what happened (S20): enabled only with changes, then
@@ -1430,6 +1444,43 @@ func _equipment() -> void:
 
 ## One spell as a tile: its icon, name and AP; a click equips it or takes it
 ## off (full = six equipped, so the rest are offered but disabled).
+
+## S35c: the fighter in 3D wearing its equipment, beside the slots. The
+## figure is kept across the panel's refreshes: a change of card swaps that
+## piece (Fighter3D.wear_fighter_cards), not the figure.
+func _equip_figure(parent: Control, fighter: Dictionary) -> void:
+	var lib := str(fighter.get("actorDescriptorLibrary", ""))
+	if lib.is_empty():
+		return
+	var stage := Control.new()
+	stage.name = "Figure"
+	stage.custom_minimum_size = Vector2(260, 330)
+	parent.add_child(stage)
+	var set_dir := AssetPaths.normalize(lib)
+	if not set_dir.begins_with("anims/"):
+		set_dir = "anims/" + set_dir
+	if not is_instance_valid(_eq_fig) or _eq_fig_set != set_dir:
+		if is_instance_valid(_eq_fig):
+			_eq_fig.queue_free()
+		_eq_fig = preload("res://src/anims/anm_sprite.gd").new()
+		_eq_fig.foot_pivot = true
+		_eq_fig.scale = Vector2(2.2, 2.2)
+		_eq_fig_set = set_dir
+		_eq_fig.tints = fighter.get("actorMaterial", {})
+		_eq_fig.position = Vector2(130, 300)
+		stage.add_child(_eq_fig)
+		if not Direction8.load_idle(_eq_fig, set_dir, Direction8.FRONT):
+			Direction8.load_idle_any(_eq_fig, set_dir)
+	else:
+		stage.add_child(_eq_fig)
+	if _eq_fig.model3d != null and _eq_fig.model3d.has_method("wear_fighter_cards"):
+		var cards: Array = []
+		for f in EQ_FIELDS:
+			var worn = fighter.get(f)   # null for an empty slot
+			if worn is Dictionary and int(worn.get("id", 0)) > 0:
+				cards.append({"id": int(worn.id)})
+		_eq_fig.model3d.wear_fighter_cards(cards)
+
 func _spell_tile(parent: Node, sp: Dictionary, equipped: bool, full: bool) -> void:
 	var b := Button.new()
 	b.name = "Spell%d" % int(sp.get("id", 0))

@@ -126,6 +126,7 @@ func _show_fight() -> void:
 		await create_timer(0.25).timeout
 		deadline += 0.25
 	await create_timer(1.5).timeout   # let a couple of turns land
+	_check_equipment(fight_scene)
 	# The dummy/headless renderer has no viewport texture — skip the capture
 	# rather than error on root.get_texture().
 	if DisplayServer.get_name() != "headless":
@@ -783,3 +784,21 @@ func _finish(code: int, msg: String) -> void:
 		root.get_node("I18n").set_locale(_lang_before)   # set_locale persists it
 	print("[smoke] %s" % msg)
 	quit(code)
+
+
+## S35c: every 3D fighter wears the pieces its 8000 cards map to.
+func _check_equipment(fight_scene: Node) -> void:
+	const Fighter3D := preload("res://src/anims/fighter3d.gd")
+	for fid in State.fighters:
+		var f: Dictionary = State.fighters[fid]
+		var spr = fight_scene._sprites.get(fid)
+		if spr == null or spr.model3d == null or not spr.model3d.has_method("worn"):
+			continue
+		var want := Fighter3D.fighter_pieces(f.get("cards", []))
+		var have: Array = spr.model3d.worn().keys()
+		have.sort()
+		var keys := want.keys()
+		keys.sort()
+		print("[smoke] %s EQUIP %s cards=%s pieces=%s worn=%s" % [
+			"OK  " if keys == have else "FAIL", f.get("name", fid),
+			f.get("cards", []).map(func(c): return int(c.id)), want, have])

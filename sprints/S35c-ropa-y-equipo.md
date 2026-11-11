@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–2 (piezas rígidas, piloto; arma que sustituye a la de la clase) hechos; esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); siguiente: las 75 piezas de luchador
 
 ## Por qué
 
@@ -145,3 +145,34 @@ carta, en reposo y golpeando; con la espada corta, igual).
 Siguiente: el lobby (la figura de la gestión de equipo con su equipo) y las
 75 piezas de luchador en kiln, por ranura: primero los 16 sombreros, en una
 hoja para el dueño.
+
+## Paso 3: el luchador vestido en el lobby y en combate (2026-11-11)
+
+Dueño: "continúa con tu trabajo".
+
+| Cambio | Fichero |
+|---|---|
+| "Equipo del luchador" lleva a la derecha la figura 3D con sus cinco cartas puestas. La figura se guarda entre los redibujados del panel: al poner o quitar una carta cambia esa pieza, no la figura (criterio de cierre) | `src/ui/lobby_panels.gd` (`_equip_figure`) |
+| Vista sin servidor del panel: sombrero y dofus, luego espada y sin sombrero; falla si la figura se reconstruye | `test/fighter_equip_preview.tscn` |
+| `fight_smoke` comprueba que cada figura 3D lleva las piezas de las cartas del 8000 (los luchadores de los dos equipos traen sus cartas) | `test/fight_smoke.gd` (`_check_equipment`) |
+
+Probado:
+- `run_tests.sh`: 674 checks, 0 fallos.
+- `fighter_equip_preview`: ok (misma figura tras el cambio; `worn` = dofus y
+  espada). Capturas `~/codigo/capturas/s35c/s35c-lobby-equipo-1.png` y `-2.png`.
+- Servidor local: `loadout_smoke` 7 OK, 0 errores de script (un hueco vacío
+  llega como `null`, no `{}`: arreglado); captura
+  `s35c-lobby-equipo-servidor.png` (Humo, Yopuka m, con Raciela → espada corta).
+- Combate real (`fight_smoke`, reto 34): con la base local los Humo del
+  combate no tenían cartas; les puse 1, 108 y 118 en `fighter_objects` (183
+  filas), y los dos Humo salieron con espada, sombrero y dofus
+  (`EQUIP OK`); filas borradas después. Captura `s35c-combate-real.png`
+  (los dos sombreros abajo a la izquierda, junto al HUD).
+
+Pendiente de este sprint:
+- Las 75 piezas de luchador en kiln (por ranura, una hoja por ranura).
+- El coach: sus cartas solo llegan para uno mismo (5200); en combate, el
+  8000 trae de cada coach piel, pelo y sexo, sin equipo: hace falta un campo
+  nuevo en el servidor para ver el equipo de los demás coaches.
+- Las prendas que se deforman (91) y las marcas (13).
+- Meter `art/equipment` en `tools/art/build.py`.
