@@ -73,10 +73,10 @@ scratchpad, sin ninguna salida):
 | ¿`fighter1` (el piloto de S35)? | Fuera de `figures.json`: no sale en el juego | Construir solo lo que el juego usa |
 | Carpetas de biomas sin revisar (`art/{lava,pradera,…}`) | Fuera del build (solo `arena<N>/` con `kit.json`) y sin tocar | S36 las dejó "sin subir y sin revisar" |
 
-## Pendiente del dueño
+## Respuesta del dueño
 
-- Confirmar que el plan de Meshy permite el uso comercial de las figuras
-  (anotado en `CREDITS.md`; necesario antes de S16).
+- Uso comercial de las figuras de Meshy: "Meshy tiene pro, tiene el
+  privado, no te preocupes" (2026-11-11). Anotado en `CREDITS.md`.
 
 ## Criterio de cierre
 
