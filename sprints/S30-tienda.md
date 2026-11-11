@@ -38,3 +38,8 @@ premio.
 - Tienda de cosméticos con pesetas (servidor y panel).
 - Arte propio de los cosméticos.
 - Pagos: proveedor, impuestos, menores; actualizar `DISCLAIMER.md`.
+
+## Nota (2026-11-11)
+
+- Cosméticos de pelo del coach: efectos sobre el pelo (fuego, escarcha…),
+  de la librería de S37 (dueño: "poner vfx al pelo me parece bien").
