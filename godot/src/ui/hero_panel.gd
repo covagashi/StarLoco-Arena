@@ -7,7 +7,6 @@ extends "res://src/ui/card_panel.gd"
 ## (title, body, close_button, refresh, the row/label/button helpers), so a
 ## panel moves here by extending this instead.
 
-const StyleB := preload("res://src/ui/style_b.gd")
 const HREF := Vector2(1280, 720)
 const R_SHEET := Rect2(820, 100, 430, 480)
 
