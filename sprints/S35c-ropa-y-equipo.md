@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (los 19 pantalones) esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; pasos 9b–9c (19 pantalones, 19 faldas) esperando al dueño
 
 ## Por qué
 
@@ -593,6 +593,32 @@ Partes sueltas apuntadas (paso 9f):
 - Pantalón de gelatina (126): dos o tres burbujas grandes.
 
 Siguiente: las 19 faldas.
+
+## Paso 9c: las 19 faldas del coach (2026-11-12)
+
+Las 19 cartas de falda (tipo 2) son tres cosas: 9 faldas, 8 cinturones (con
+hebilla o adorno), el calzoncillo del Superjefe y la colita de wabbit.
+
+| Cambio | Fichero |
+|---|---|
+| La falda gana bajo dentado (`teeth`: una columna sí y otra no, más larga) y solapas que cuelgan más (`flaps`: [{ang, width, extra}]), con su color (`flap_col`) | `tools/blender/characters/coach_garment.py` |
+| Las 18 que faltaban, diseño propio: Paño elegante (crudo con cordón, dentado), Jalatranki (la Gobkool del piloto, ahora roja con el bajo verde), dentada roja (con lazada delante), al viento (verde azulado con vuelo, panel claro delante), Sudario (dorado pálido), Tribuno (gris verdoso con franjas blancas), Kepika (crudo con manchas sobre cuero, dentado), Sedforme (óxido, dentado); cinturones Campeón y Campierrele (gris con franja naranja), jálabol (negro), Kamas (cuero), Gosbaster (azul hielo), wonejo (blanco), Nuboso (blanco y naranja), Lolomg (taparrabos con una tira delante), colita de wabbit (cinto blanco); Alu-Card (corta negra con solapa morada delante); el calzoncillo del Superjefe se corta como pantalón corto (la prueba lo admite en el hueco de la falda) | `art/equipment/garments.json`, `pieces.json` (`coach`), `test/unit/fighter3d_test.gd` |
+
+Corregido al revisar: los dientes no se veían (20 columnas, poco hondos):
+ahora 14 columnas y más hondos; la solapa del Alu-Card salía del color de la
+falda (ahora `flap_col`).
+
+Partes sueltas apuntadas para el paso 9f: la hebilla de cada cinturón (el
+emblema del jálabol, la moneda Kamas, el cristal Gosbaster, la gema del
+Nuboso, el lazo del wonejo, las bolsas y flechas del Campeón y el
+Campierrele) y la colita de wabbit (una bola de pelo atrás).
+
+Probado: `run_tests.sh`: 1235 checks, 0 fallos. `build.py equipment` y
+`check.py`: 0 fallos (80 prendas, 4,4 MB).
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-faldas-19-1.png` y `-2.png`.
+
+Siguiente: los 26 torsos.
 
 ## Para retomar (2026-11-11)
 

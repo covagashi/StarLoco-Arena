@@ -91,7 +91,9 @@ func _equipment(t) -> void:
 		t.ok(COACH_TYPE.has(ctype), "coach card %s is a hat, shoulderpads, bracelets, staff, cape, pet or garment card" % cid)
 		var slot: String = COACH_TYPE.get(ctype, "")
 		if slot in Fighter3D.GARMENTS:
-			t.eq(String(garments.get(pieces.coach[cid], {}).get("kind", "")), slot, "coach card %s: %s is a %s recipe" % [cid, pieces.coach[cid], slot])
+			# (a skirt card can be cut as short trousers: the Superjefe's underpants)
+			var kind := String(garments.get(pieces.coach[cid], {}).get("kind", ""))
+			t.ok(kind == slot or (slot == "skirt" and kind == "pants"), "coach card %s: %s is a %s recipe" % [cid, pieces.coach[cid], slot])
 			continue
 		# (coach_shoulders.kx.js declares its models through pad())
 		t.ok(src.contains('model("%s"' % pieces.coach[cid]) or src.contains('pad("%s"' % pieces.coach[cid]), "coach card %s: %s is modelled" % [cid, pieces.coach[cid]])

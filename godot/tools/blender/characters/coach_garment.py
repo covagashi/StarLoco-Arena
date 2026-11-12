@@ -49,7 +49,7 @@ DEFAULTS = {
     "torso": {"ease": 0.012, "thick": 0.0, "top": 0.0, "bottom": 0.0, "sleeve": 0.45},
     "pants": {"ease": 0.012, "thick": 0.0, "top": 0.0, "start": 0.0, "hem": 0.95, "flare": 0.0, "bag": 0.0},
     "boots": {"ease": 0.016, "thick": 0.0, "top": 0.25, "cuff": 0.0},
-    "skirt": {"ease": 0.02, "thick": 0.006, "top": 0.0, "length": 0.45, "flare": 0.06, "sides": 20, "rings": 6},
+    "skirt": {"ease": 0.02, "teeth": 0.0, "thick": 0.006, "top": 0.0, "length": 0.45, "flare": 0.06, "sides": 20, "rings": 6},
 }
 
 
@@ -300,22 +300,37 @@ def skirt(K, r):
         rad = [x if x > 0 else m for x in rad]
         return [max(rad[i], (rad[i - 1] + rad[(i + 1) % sides]) / 2) for i in range(sides)]
 
+    def reach(i):
+        """How long column i runs, of the skirt's length: `teeth` (a hem
+        cut in points, every other column `depth` longer) and `flaps`
+        (a panel hanging longer: [{ang, width, extra}], ang as in where())."""
+        a = math.degrees((i + 0.5) / sides * 2 * math.pi)
+        k = 1.0
+        if r.get("teeth") and i % 2 == 0:
+            k += r["teeth"]
+        for fl in r.get("flaps", []):
+            off = abs((a - fl["ang"] + 180) % 360 - 180)
+            if off <= fl["width"] / 2:
+                k += fl["extra"] * (1 - 0.3 * off / max(fl["width"] / 2, 1e-6))
+        return k
+
     bm = bmesh.new()
     deform = bm.verts.layers.deform.verify()
     widest = [0.0] * sides
     grid = []
     for j in range(rings + 1):
         t = j / rings
-        z = top + (hem - top) * t
-        o = outline(min(z, top - 0.01))
+        o = outline(min(top + (hem - top) * t, top - 0.01))
         widest = [max(a, b) for a, b in zip(widest, o)]   # never narrower going down
         row = []
         for i in range(sides):
             a = (i + 0.5) / sides * 2 * math.pi
-            rr = widest[i] + r["ease"] + r["flare"] * t
+            tl = t * reach(i)
+            z = top + (hem - top) * tl
+            rr = widest[i] + r["ease"] + r["flare"] * min(tl, 1.0)
             v = bm.verts.new((cx + rr * math.cos(a), cy + rr * math.sin(a), z))
             x = math.cos(a)
-            follow = 0.5 * t * t
+            follow = 0.5 * min(tl, 1.0) ** 2
             lean = min(abs(x) * 1.6, 1.0) * (1 if x > 0 else -1)   # front and back follow both legs
             v[deform][gi["hips"]] = 1.0 - follow
             v[deform][gi["thigh.L"]] = follow * (0.5 + 0.5 * lean)
@@ -366,7 +381,8 @@ def paint(K, kind, r, t, co):
       front   [{width, col, from?, to?}]      down the front
       diamonds {cols: [a, b], n, rows, from?, to?}   harlequin
       patches [{leg?, t, ang, r, col}]        a round spot (r in t units)
-      leg     {"R": col}                      one leg another colour"""
+      leg     {"R": col}                      one leg another colour
+      flap_col                                a skirt's flaps, below the hem"""
     side, ang = where(K, kind, co)
     h = r.get("leg", {}).get(side, r["base"])
     dia = r.get("diamonds")
@@ -377,6 +393,8 @@ def paint(K, kind, r, t, co):
     for t0, t1, c in r.get("bands", []):
         if t0 <= t <= t1:
             h = c
+    if r.get("flap_col") and t > 1.0:   # a skirt's flap, below the hem
+        h = r["flap_col"]
     for st in r.get("stripes", []):
         if st["from"] <= t <= st.get("to", 1.0) and int((t - st["from"]) / st["every"]) % 2 == 0:
             h = st["col"]
