@@ -169,7 +169,7 @@ func _dress(slots: Array) -> void:
 		_look = look
 		_spr.tints = Palettes.coach_tints(int(lc.get("skin", 0)), int(lc.get("hair", 0)))
 		var lib := "anims/coach_700%d" % int(lc.get("sex", 0))
-		if not Direction8.load_idle(_spr, lib, Direction8.FRONT):
+		if not Direction8.load_idle(_spr, lib, Direction8.FRONT, "AnimMenu"):
 			Direction8.load_idle_any(_spr, lib)
 	if _spr.model3d != null and _spr.model3d.has_method("wear_coach_cards"):
 		var worn: Array = []

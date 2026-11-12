@@ -15,6 +15,7 @@ signal submit
 signal closed
 
 const UiStyle := preload("res://src/ui/ui_style.gd")
+const Direction8 := preload("res://src/util/direction8.gd")
 const REF := Vector2(1280, 720)
 const R_PED := Rect2(352, 590, 470, 96)
 const DOLL_POS := Vector2(587, 636)
@@ -342,14 +343,12 @@ func _sync_doll(lc: Dictionary) -> void:
 		"coach_7000")))
 	if not lib.begins_with("anims/"):
 		lib = "anims/" + lib
-	var dir: int = int(lc.get("actorDirection", 3))
+	var dir: int = int(lc.get("actorDirection", 3)) & 7
 	if lc.get("actorMaterial") is Dictionary:
 		_spr.tints = lc["actorMaterial"]
-	if not _spr.load_action(lib, "%d_AnimStatique" % dir):
-		for d in [5, 2, 0, 6, 1, 3, 7, 4]:
-			if _spr.load_action(lib, "%d_AnimStatique" % d):
-				break
-	_spr.scale.x = absf(DOLL_SCALE) * (-1.0 if dir in [1, 2, 3] else 1.0)
+	# the same wire table as the lobby (Direction8): 1–3 face the camera
+	if not Direction8.load_idle(_spr, lib, dir, "AnimMenu"):
+		Direction8.load_idle_any(_spr, lib)
 
 
 func _relayout() -> void:

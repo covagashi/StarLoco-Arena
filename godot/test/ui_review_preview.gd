@@ -70,6 +70,7 @@ func _run() -> void:
 	add_child(lobby)
 	lobby.bind_model(model, chat)
 	await get_tree().process_frame
+	await get_tree().create_timer(1.4).timeout   # S45: its entrance plays first
 	await _shot("lobby")
 	var vp := get_viewport().get_visible_rect().size
 	for name in Panels.TITLES:

@@ -256,3 +256,36 @@ def animate(rig):
     toss = dict(lean=24, arm_L=(100, 15), arm_R=(100, 15), elbow_L=5, elbow_R=5, leg_L=25, knee_L=25,
                 leg_R=-15, y=-0.05, bob=-0.05, head=-8)
     keys(rig, "throw", [(0, fr[0][1]), (6, back), (11, toss), (16, mix(toss, base, 0.3)), (26, base)], False)
+
+    # ---------------------------------------------------------- menus (S45)
+    # The figure in the lobby, coach creation and the hero screens (owner:
+    # "no lo pongas rígido"). Its own idle: weight on the right leg, the left
+    # hand on the hip, breathing, a slow look around and a weight shift.
+    # (short arms under a big head: no hand on the hip, it pokes out sideways)
+    stand = dict(arm_L=(2, 15, -10), elbow_L=28, hand_L=8, arm_R=(10, 11), elbow_R=22,
+                 leg_out_L=12, leg_L=8, knee_L=16, leg_out_R=4, x=0.015, tilt=-3, head_tilt=3)
+    fr = []
+    for i in range(0, 97, 8):
+        w = 2 * math.pi * i / 96
+        fr.append((i, dict(stand, bob=-0.006 + 0.006 * math.cos(2 * w), lean=1 + 1.2 * math.sin(w),
+                           tilt=-3 + 1.5 * math.sin(w), twist=4 * math.sin(w + 0.6),
+                           head=-1.5 * math.sin(2 * w), head_turn=12 * math.sin(w),
+                           head_tilt=3 * math.sin(w + 1.2), x=0.015 + 0.008 * math.sin(w),
+                           arm_R=(6 + 3 * math.sin(w + 0.4), 9), elbow_R=16 + 6 * math.sin(w))))
+    keys(rig, "menu", fr, True)
+
+    # greet: the right hand up, three waves, back to the menu stance
+    # (the upper arm opens to the side, turned so the elbow bends the forearm
+    # up beside the head, not over it: these heads are big. On the Meshy
+    # rigs the right arm's "out" turns it in, so it goes negative)
+    up = dict(stand, arm_R=(30, -112, -90), elbow_R=100, hand_R=-8, head_tilt=8, head_turn=-8, lean=-3, tilt=1)
+    wave_a = dict(up, arm_R=(30, -106, -90), elbow_R=82)
+    wave_b = dict(up, arm_R=(30, -118, -90), elbow_R=118)
+    keys(rig, "greet", [(0, stand), (8, up), (12, wave_a), (16, wave_b), (20, wave_a), (24, wave_b),
+                        (28, wave_a), (34, up), (46, stand)], False)
+
+    # pose: a confident point towards the screen's right (the modes), held
+    point = dict(stand, arm_L=(80, 40), elbow_L=8, hand_L=-12, arm_R=(18, 16), elbow_R=40,
+                 twist=18, lean=5, head_turn=22, head=4, leg_L=12, knee_L=12, tilt=-5)
+    keys(rig, "pose", [(0, stand), (9, mix(stand, point, 0.85)), (13, point), (30, point),
+                       (42, stand)], False)

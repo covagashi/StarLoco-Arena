@@ -870,7 +870,9 @@ func take(action: String, once: bool, hold: bool) -> bool:
 	if end:
 		a = "die"
 	if not _player.has_animation(a):
-		return false
+		if a != "menu_loop" or not _player.has_animation("idle_loop"):
+			return false
+		a = "idle_loop"   # a figure built before the menu clips (S45)
 	_once = once or end
 	_hold = hold or end
 	anim = a
@@ -922,6 +924,13 @@ static func anim_for(base: String) -> String:
 		return "cast"
 	if base.begins_with("AnimEmote"):
 		return "celebrate"
+	# S45: the menus' own clips (rig_anims "menu", "greet", "pose")
+	if base == "AnimMenu":
+		return "menu_loop"
+	if base == "AnimSalut":
+		return "greet"
+	if base == "AnimPose":
+		return "pose"
 	return ""
 
 

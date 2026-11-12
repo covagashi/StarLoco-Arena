@@ -33,9 +33,19 @@ const SLOT := Color("e8d3a6")          # a darker band of paper (slots, rows, fo
 const BROWN := Color("7a4a1e")         # secondary text on paper
 const ACCENT_INK := Color("b23a12")    # what stands out on paper (gold's role there)
 
+# style B (S45, owner 2026-11-12): light, minimal, technical lines, one accent
+const B_BG := Color("e9ecf1")
+const B_INK := Color("1c2030")
+const B_MUTE := Color("6b7183")
+const B_FAINT := Color("9aa0b0")
+const B_CORAL := Color("ff4d6d")
+const B_BLUE := Color("2f74f0")
+const B_GOLD := Color("d99a2b")
+
 const KIT := "ui/kit/"
 const FONT_TITLE := "ui/fonts/LilitaOne-Regular.ttf"
 const FONT_BODY := "ui/fonts/Nunito-Variable.ttf"
+const FONT_DISPLAY := "ui/fonts/SairaCondensed-ExtraBold.ttf"
 
 static var _card_art_cache := {}   # card id -> Texture2D (null when missing)
 static var _kit_cache := {}        # asset path -> Texture2D (null when missing)
@@ -350,7 +360,7 @@ static func gem_button(d: float, col: Color) -> Button:
 
 ## The sun chevron that turns a figure (the mockup's .chev), pointing right
 ## or, `left`, left.
-static func chevron_button(left: bool) -> Button:
+static func chevron_button(left: bool, col := SUN) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(54, 76)
 	b.size = b.custom_minimum_size
@@ -372,8 +382,8 @@ static func chevron_button(left: bool) -> Button:
 			face.append(p + Vector2(0, dy))
 		if not b.is_pressed():
 			b.draw_colored_polygon(sh, OUTLINE)
-		var col := SUN.lightened(0.15) if b.is_hovered() else SUN
-		b.draw_colored_polygon(face, col)
+		var fill := col.lightened(0.15) if b.is_hovered() else col
+		b.draw_colored_polygon(face, fill)
 		if b.has_focus():
 			b.draw_polyline(face + PackedVector2Array([face[0]]), INK, 2.0, true))
 	b.mouse_entered.connect(b.queue_redraw)
@@ -706,6 +716,39 @@ static func _file(rel: String, fallback: String) -> FontFile:
 ## Text: Nunito, always bold (800).
 static func body_font() -> Font:
 	return _body(800)
+
+
+## Style B's titles: Saira Condensed ExtraBold, leaning (the family has
+## no italic, so the glyphs are sheared).
+static func display_font() -> Font:
+	if not _fonts.has("display"):
+		var f := FontVariation.new()
+		f.base_font = _file(FONT_DISPLAY, FONT_TITLE)
+		f.variation_transform = Transform2D(Vector2(1, 0), Vector2(-0.2, 1), Vector2.ZERO)
+		f.spacing_glyph = 1
+		_fonts["display"] = f
+	return _fonts["display"]
+
+
+## A style B title: big, leaning, uppercase, in ink (or `colour`).
+static func display(l: Label, font_size := 32, colour := B_INK) -> void:
+	l.add_theme_font_override("font", display_font())
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", colour)
+	l.add_theme_constant_override("outline_size", 0)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))
+	l.uppercase = true
+
+
+## A style B tag: tiny, bold, widely spaced, grey ("STORY · 01").
+static func tag(text: String, colour := B_MUTE) -> Label:
+	var l := Label.new()
+	l.text = text.to_upper()
+	l.add_theme_font_override("font", _body(800, 3))
+	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_color_override("font_color", colour)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
 
 
 ## Titles and buttons: Lilita One.

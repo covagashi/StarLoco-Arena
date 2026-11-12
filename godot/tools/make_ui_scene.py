@@ -39,6 +39,16 @@ def main():
     for n in FIGURES:
         shadowed(Image.open(f'{SRC}/{n}.webp').convert('RGBA')).save(f'{OUT}/{n}.png')
         print(f'{OUT}/{n}.png')
+    # style B (S45): the coach's ghost behind the lobby — grey, soft, faint
+    c = Image.open(f'{SRC}/coach.webp').convert('RGBA')
+    a = c.split()[3]
+    g = Image.new('RGBA', c.size, (28, 32, 48, 0))
+    g.putalpha(a.point(lambda v: v * 40 // 255))
+    pad = 60
+    out = Image.new('RGBA', (c.width + 2 * pad, c.height + 2 * pad), (0, 0, 0, 0))
+    out.alpha_composite(g, (pad, pad))
+    out.filter(ImageFilter.GaussianBlur(14)).save(f'{OUT}/coach_ghost.png')
+    print(f'{OUT}/coach_ghost.png')
 
 
 if __name__ == '__main__':
