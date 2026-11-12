@@ -117,6 +117,8 @@ y `screens_smoke` (el panel cambia de fuego a escarcha y vuelve; 12/0).
 Encontrado por el camino: `_push_local_coach` rehacía `localCoach` y perdía
 el efecto; ahora va en el modelo.
 
+Dueño, 2026-11-12, sobre la hoja y el panel: "el pelo ok".
+
 Pendiente en S30: venderlos (precio en pesetas, la tienda).
 
 ## Criterio de cierre
