@@ -48,7 +48,7 @@ SRC, RECIPES, OUT_DIR = pos[:3]
 DEFAULTS = {
     "torso": {"ease": 0.012, "thick": 0.0, "top": 0.0, "bottom": 0.0, "sleeve": 0.45},
     "pants": {"ease": 0.012, "thick": 0.0, "top": 0.0, "start": 0.0, "hem": 0.95, "flare": 0.0, "bag": 0.0},
-    "boots": {"ease": 0.016, "thick": 0.0, "top": 0.25, "cuff": 0.0},
+    "boots": {"ease": 0.016, "thick": 0.0, "top": 0.25, "cuff": 0.0, "smooth": 24},
     "skirt": {"ease": 0.02, "teeth": 0.0, "thick": 0.006, "top": 0.0, "length": 0.45, "flare": 0.06, "sides": 20, "rings": 6},
 }
 
@@ -264,6 +264,21 @@ def from_body(K, r):
             a, b = B["hips"][0], B["chest"][1]   # the trunk's axis
         return closest_on(v.co, a, b)
     push(bm, ease, out_of)
+    if kind == "boots" and r["smooth"] > 0:
+        # the male coach is barefoot: a boot copied from his foot had toes.
+        # Relax the foot (below the ankle, the hem left alone), letting each
+        # vertex move only outwards: the gaps between the toes fill in and
+        # no toe tip comes through
+        bm.normal_update()
+        foot = [v for v in bm.verts if tpar(v.co) > 0.55 and not v.is_boundary]
+        home = {v: (v.co.copy(), v.normal.copy()) for v in foot}
+        for _ in range(int(r["smooth"])):
+            bmesh.ops.smooth_vert(bm, verts=foot, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+            for v in foot:
+                co, n = home[v]
+                inward = (v.co - co).dot(n)
+                if inward < 0:
+                    v.co -= n * inward
     # one shell, drawn from outside only: every face faces away from its bone
     bm.normal_update()
     for f in bm.faces:

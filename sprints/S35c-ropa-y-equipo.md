@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) en curso
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) esperando al dueño
 
 ## Por qué
 
@@ -643,6 +643,28 @@ Siguiente: las 27 botas.
 
 Dueño (2026-11-12), sobre faldas y torsos: "doy mi ok a los dos". **Las
 19 faldas y los 26 torsos aprobados.**
+
+## Paso 9e: las 27 botas del coach (2026-11-12)
+
+| Cambio | Fichero |
+|---|---|
+| El coach chico va descalzo y la bota copiaba sus dedos (se veían rayas y, al suavizar a secas, asomaban las puntas). Ahora el pie de la bota se relaja (`smooth`, 24 pasadas) pero cada vértice solo puede moverse hacia fuera: los huecos entre dedos se rellenan y ninguna punta sale. Quedan unas rayitas en la punta, que a escala de juego casi no se ven | `tools/blender/characters/coach_garment.py` |
+| Las 26 que faltaban, diseño propio: Botines (cuero oscuro con hebilla), Botalabazas (calabaza naranja con rayas verdes y pie verde), Jalabotas (vuelta roja y verde), Babuchas (bajas, borde amarillo), Sandalias claveteadas (negras con tiras), Salteadorillo (verde azulado con vuelta), dañadas (grises con parches), Aplastacampis (rosa pálido con pelo blanco), Kepika (naranja con vuelta oscura), gelatina (rosa abultadas), Sedforme (tiras rojas sobre crudo), Rompedoras (mostaza), pies de wabbit (blancos y mullidos), Campeón y Campierrele (gris con franjas), Grilembore (zapato rojo bajo), L.Men'Tal (calcetín blanco y zapato marrón), Alu-Card (negro, gris y morado), jálabol (calcetín a rayas y zapato rojo), Stasis (piedra), pío rojo, Superjefe (oro con borde naranja), zapatillas wonejo, leñosas (verde y madera), Nubosas (blancas con borde naranja), Zar (turquesa a rayas) | `art/equipment/garments.json`, `pieces.json` (`coach`) |
+
+Con esto las 91 prendas que se deforman están hechas: la tabla del coach
+tiene 183 cartas, todas las de equipo salvo las 13 marcas.
+
+Probado: `run_tests.sh`: 1337 checks, 0 fallos. `build.py equipment` y
+`check.py`: 0 fallos (182 prendas, 11,9 MB, las dos figuras).
+
+Partes sueltas apuntadas para el paso 9f: los cuernos de las botas Kepika,
+los pinchos del Campeón, el Campierrele y el Superjefe, las puntas del
+Alu-Card, los remaches del Stasis, la calavera de las Aplastacampis, la
+cruz del wonejo y la leñosa.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-botas-27-1.png` … `-3.png`.
+
+Siguiente: las 13 marcas, luego las partes sueltas (paso 9f).
 
 ## Para retomar (2026-11-11)
 
