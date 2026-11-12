@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) aprobado; paso 9g (13 marcas) esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) aprobado; paso 9g (13 marcas) aprobado; paso 9f (partes sueltas) en curso
 
 ## Por qué
 
@@ -694,6 +694,8 @@ Probado: `run_tests.sh`: 1364 checks, 0 fallos. `build.py equipment` y
 Hojas: `~/codigo/capturas/s35c/s35c-coach-marcas-13-1.png` y `-2.png`.
 
 Siguiente: las partes sueltas apuntadas (paso 9f).
+
+Dueño (2026-11-12): "ok a mis marcas". **Las 13 aprobadas.**
 
 ## Para retomar (2026-11-11)
 
