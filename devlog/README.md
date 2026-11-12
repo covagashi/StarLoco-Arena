@@ -58,3 +58,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-11-10 | [S35b: las 26 figuras y las 9 invocaciones en 3D; plan de la tanda 3 de marketing](./2026-11-10-s35b.md) |
 | 2026-11-11 | [S35b-marketing: la tanda 3 de posts, sobre los esqueletos](./2026-11-11-s35b-marketing.md) |
 | 2026-11-11 | [S35 cerrado: coaches en 3D, tinte de piel y pelo, pedestales](./2026-11-11-s35-cierre.md) |
+| 2026-11-12 | [S35c cerrado: el coach vestido entero (prendas, marcas, partes sueltas)](./2026-11-12-s35c-cierre.md) |

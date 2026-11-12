@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) aprobado; paso 9g (13 marcas) aprobado; paso 9f (partes sueltas) esperando al dueño; con él se cierra el sprint
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ✅ cerrado 2026-11-12: todo el equipo del luchador (75 piezas) y del coach (196 cartas: 92 piezas rígidas, 91 prendas que se doblan, 13 marcas, 23 partes sueltas) sobre la figura, en combate y en el lobby; todo aprobado por el dueño
 
 ## Por qué
 
@@ -732,16 +732,32 @@ Hojas: `~/codigo/capturas/s35c/s35c-partes-pantalones.png`,
 Con esto queda hecho todo el alcance del sprint. Para cerrar: el ok del
 dueño a las partes sueltas.
 
-## Para retomar (2026-11-11)
+## Cierre (2026-11-12)
 
-Dueño: "sigue el orden de los sprints". Orden que queda:
-1. ~~Capas, mascotas y dofus~~: hecho (paso 6), aprobado.
-2. ~~Paso 7: la animación `shoot` del arco~~: hecho.
-3. El equipo del coach: la fontanería y `art/equipment` en `build.py`,
-   hechos (paso 8a); las 92 piezas rígidas, hechas (pasos 8b–8e); faltan
-   las 91 prendas que se deforman (piloto aprobado, paso 9a) y las 13
-   marcas.
+Dueño, sobre las partes sueltas: "me parece bien tus dibujos". **Todo
+aprobado; sprint cerrado.**
 
-Herramientas: `anim_sheet.gd --pieces=<slot>:<pieza>` o `--cards=`,
-`test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Construir:
-`cd godot/art/equipment && node ~/.claude/skills/kiln/bin/kiln.js build kit.kx.js`.
+Criterio de cierre, cumplido:
+- Un coach y un luchador con su equipo puesto, en combate y en el lobby:
+  `fight_smoke` (`EQUIP OK` de los luchadores, `COACH EQUIP OK` del coach con
+  sombrero, torso, pantalón y botas) y `hub_smoke` (`coach dressed`), contra
+  el servidor local (pasos 3, 8a, 8e y 9a).
+- Al cambiar de equipo cambia la figura sin reconstruirla: `Fighter3D.equip`
+  quita y pone un nodo (pieza rígida) o una malla en el esqueleto (prenda,
+  marca); prueba en `test/unit/fighter3d_test.gd` (el pantalón se pone y se
+  quita).
+
+Lo que queda, en otros sprints:
+- VFX de unas pocas piezas (gelatina, brillo del Superjefe, llama de la
+  Aurea flamma): [`S37-vfx.md`](./S37-vfx.md).
+- Peso: las 182 prendas y marcas de los dos coaches suman 12,5 MB; un coach
+  vestido entero lleva unos 7500 triángulos de ropa sobre los 5000 de la
+  figura. Para la demo web (S44, ≤50 MB de primera carga) habrá que cargar
+  solo lo que lleva puesto cada coach del combate, o aligerar.
+- B-189 (el árbol que tapa al muñeco, paso 1): en `BACKLOG.md`.
+
+Herramientas que quedan: `anim_sheet.gd --pieces=<slot>:<pieza>` o
+`--cards=`, `tools/art/equip_sheet.py figures <ranura> … --table=coach`,
+`test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Todo se
+construye con `python3 tools/art/build.py equipment` (kiln, emblemas de las
+marcas y prendas en Blender).

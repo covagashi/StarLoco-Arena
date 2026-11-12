@@ -102,7 +102,7 @@ Linux y Windows).
 | [S35](./S35-personajes.md) | M7 | L | ✅ cerrado (2026-11-11) | Personajes: 24 luchadores, 9 invocaciones, 2 coaches en 3D en combate y en menús; piel y pelo del coach teñibles; sombra en el suelo |
 | [S35b](./S35b-pipeline-meshy.md) | M7 | S por figura | ✅ cerrado (2026-11-10) | Receta Meshy → luchador: 24 clases, 2 coaches y 9 invocaciones en 3D |
 | [S35b-marketing](./S35b-marketing.md) | M7 | M | ✅ cerrado (2026-11-11) | Tanda 3 de posts (Instagram + TikTok): cómo se hicieron los esqueletos |
-| [S35c](./S35c-ropa-y-equipo.md) | M7 | L | ⚪ detallado | Ropa y equipo sobre la figura, todo el equipo en la 1.0: piezas rígidas por hueso, prendas con pesos; peinados no (solo color) |
+| [S35c](./S35c-ropa-y-equipo.md) | M7 | L | ✅ cerrado 2026-11-12 | Ropa y equipo sobre la figura, todo el equipo en la 1.0: piezas rígidas por hueso, prendas sacadas del propio coach con sus pesos, marcas como calcomanía; peinados no (solo color) |
 | [S36](./S36-arenas.md) | M7 | L | 🟢 cerrado (2026-11-04) | Arenas: **6 para el prototipo** (1–6), montadas por el dueño con nuestros assets kiln + loom y el editor; el combate las dibuja en 3D y el servidor sortea solo entre ellas. Las 7–12, más adelante. Quitar `MapGfx` y los `.jar` va en [S43](./S43-sin-cliente-antiguo.md) |
 | [S42](./S42-archivo-de-arenas.md) | M7 | S | 🟢 cerrado (2026-11-04, backup verificado en el RAID) | Archivo de las 47 arenas en PNG y JSON, fuera del repo y con dos copias; las herramientas de inventario lo leen sin el cliente antiguo |
 | [S37](./S37-vfx.md) | M7 | M | ⚪ esbozo | Librería de VFX por elemento y forma; cada hechizo, por datos |
