@@ -41,7 +41,7 @@ func refresh() -> void:
 	speech.add_theme_font_override("normal_font", UiStyle.body_font())
 	speech.add_theme_font_size_override("normal_font_size", 19)
 	speech.add_theme_font_size_override("bold_font_size", 19)
-	speech.add_theme_color_override("default_color", UiStyle.INK)
+	speech.add_theme_color_override("default_color", UiStyle.PAPER_INK)
 	speech.text = str(talk.get("text", ""))
 	# S23: the speaker's face beside what they say — "no sale la cara"
 	var face: Dictionary = talk.get("face", {})

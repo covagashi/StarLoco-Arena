@@ -107,7 +107,13 @@ func _ready() -> void:
 			fight.cam.position = fspr.position + Vector2(0, -40)
 			fight.cam.zoom = Vector2.ONE * (float(fz[1]) if fz.size() > 1 else 2.0)
 	if OS.get_environment("FIGHT_UI_HOVER") != "":
-		fight._on_card_hover(int(OS.get_environment("FIGHT_UI_HOVER")), true)
+		# as the pointer does: the card's own signal (the HUD's peek card and
+		# fight_view's name over the map both hang off it)
+		var hf := int(OS.get_environment("FIGHT_UI_HOVER"))
+		await get_tree().process_frame   # the HUD's cards come a frame later
+		await get_tree().process_frame
+		if fight._fight_hud.cards.has(hf):
+			fight._fight_hud.cards[hf].hovered.emit(hf, true)
 	if OS.get_environment("FIGHT_UI_CHAT") == "open":
 		fight._set_chat_open(true)
 		fight._fight_log("Brune lanza el hechizo Ataque nuboso.")

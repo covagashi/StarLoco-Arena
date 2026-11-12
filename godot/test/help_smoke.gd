@@ -35,7 +35,7 @@ func _audit() -> void:
 					"Historia, Ranking y Torneos explicados")
 				await _shot("help-modes")
 			"Combate":
-				_record(0, "fight", "40 %" in text and "PASAR" in text, "the fight's rules")
+				_record(0, "fight", "40 %" in text and i18n.t("fight.pass") in text, "the fight's rules")
 			"Paneles":
 				_record(0, "panels", i18n.t("help.panel_city") in text, "each lobby panel")
 	_record(0, "tabs", seen == names, "tabs: %s" % ", ".join(seen))

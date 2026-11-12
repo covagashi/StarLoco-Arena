@@ -124,8 +124,53 @@ se enseña hasta que se parece.
   Fuera de momento: "Recordar la cuenta", "Crear una cuenta" y "¿Olvidaste la
   contraseña?" (el cliente no los tiene; serían funciones nuevas) y el
   "Demo · v0.37".
-- Crea tu coach y lobby: siguientes, uno a uno.
+- **Crea tu coach ✅.** Escenario con foco, cabecera (medallón atrás + tira
+  pop; conecta por fin la señal `closed`, que nada emitía), tres rombos de
+  sección (cuerpo, pelo, piel), el coach 3D en grande sobre pedestal con los
+  chevrones que lo giran, el nombre escrito sobre la cinta, la hoja de papel
+  con cinta azul y gemas de color (o sexo), "Al azar" y "¡CREAR!".
+- **Lobby ✅.** Arena de fondo y el coach grande; arriba a la izquierda nivel
+  y nombre en cinta; arriba al centro la temporada (60031); arriba a la
+  derecha fichas y pesetas (la cartera, que ahora llega al modelo como
+  `wallet`) y Estadísticas, Social y Ayuda como medallones; a la izquierda el
+  riel de medallones de los seis paneles; a la derecha las losetas
+  ilustradas cortadas en diagonal (la loseta entera es su botón, con la acción
+  real en la píldora; el equipo de Ranking como chip desplegable;
+  Entrenamiento, Contra un fantasma y Ver torneos en su loseta; lo que gana y
+  su aviso, en el tooltip) y "¡A LUCHAR!" (Ranking directo). La búsqueda es
+  una hoja de papel con el reloj, Cancelar y la oferta de fantasma. Chat
+  abajo a la izquierda.
+  Decisiones: sin "+" en las monedas (no hay tienda todavía: S30) ni correo
+  en la barra (sigue en Servicios), para no dejar botones muertos.
 
+### Fase 3 — paneles ✅ (a revisar)
+
+- La base de todos los paneles (`lobby_panel.gd`) es la hoja de papel con
+  la cinta del título, "?" y cerrar como medallones en la esquina y el pie
+  en papel más oscuro; tema `UiStyle.paper_theme()` (texto tinta, campos y
+  tablas de papel, botones azules en relieve). Los colores puestos a mano en
+  los paneles pasan a su versión sobre papel (`BROWN`, `ACCENT_INK`); las
+  cartas siguen azules sobre el papel, como en la maqueta.
+- **Equipo del coach** es pantalla de héroe (`hero_panel.gd`): el coach en
+  pedestal con lo que lleva el borrador puesto, los 12 huecos como rombos con
+  su carta, la hoja con las cartas del hueco, "Deshacer" y "LLEVAR PUESTO".
+  Sin las pestañas Sets/Aspecto de la maqueta (no existen).
+
+### Fase 4 — combate ✅ (a revisar)
+
+- `fight_hud.gd`: el orden de turno arriba en una píldora (el que juega
+  primero y más grande, su reloj en insignia y un aro que se agota; los demás
+  con el aro de su equipo, que es su vida; KO en gris), "¡Te toca!" en pop o
+  de quién es el turno en azul, y la ficha crema al pasar el ratón. Azul
+  siempre somos nosotros, rojo el rival. Se van las columnas laterales.
+- `fight_medallion.gd`: retrato grande con la vida en aro, PA y PM en
+  medallones, nombre, vida y hasta tres efectos.
+- `fight_view.gd`: "Pasar turno" en píldora pop con su tecla, la barra de
+  hechizos en una píldora oscura con el coste en insignia azul, el menú en
+  botones redondos con icono. A 800×600 la barra sube una fila.
+  El tema del combate ya no sale de los paneles (ahora de papel).
+
+## Fuera
 ## Fuera
 
 - Las ilustraciones de las cartas y los iconos de hechizos: S38, ya con este

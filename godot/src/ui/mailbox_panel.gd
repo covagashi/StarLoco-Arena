@@ -120,7 +120,7 @@ func _reading(side: VBoxContainer, mails: Array, status: String) -> void:
 	var who := I18n.t("mb.to", {"name": open.get("receiver", ""), "date": open.get("date", "")}) \
 		if tab == 1 else I18n.t("mb.from", {"name": open.get("sender", ""), "date": open.get("date", "")})
 	var meta := label(side, who, 15)
-	meta.add_theme_color_override("font_color", UiStyle.MUTED)
+	meta.add_theme_color_override("font_color", UiStyle.BROWN)
 	side.add_child(HSeparator.new())
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -193,7 +193,7 @@ func _compose() -> void:
 		var ok := label(left, I18n.t("mb.found" if rid > 0 else "mb.not_found"), 15)
 		ok.name = "Found"
 		if rid < 0:
-			ok.add_theme_color_override("font_color", UiStyle.MUTED)
+			ok.add_theme_color_override("font_color", UiStyle.BROWN)
 	left.add_child(UiStyle.caption(I18n.t("mb.subject")))
 	var subject := field(left, "title", "")
 	subject.name = "Subject"
@@ -211,7 +211,7 @@ func _compose() -> void:
 	right.add_child(UiStyle.caption(I18n.t("mb.attach", {"n": staged.size(), "max": MAX_CARDS})))
 	if staged.is_empty():
 		var hint := label(right, I18n.t("mb.attach_hint"), 15)
-		hint.add_theme_color_override("font_color", UiStyle.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.BROWN)
 	var strip := HFlowContainer.new()
 	strip.add_theme_constant_override("h_separation", 8)
 	strip.add_theme_constant_override("v_separation", 8)
@@ -280,7 +280,7 @@ func _status(parent: Node, text: String) -> void:
 	var l := label(parent, text, 15)
 	l.name = "Status"
 	if not bool(data("mailbox.native.statusOk", false)):
-		l.add_theme_color_override("font_color", UiStyle.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.BROWN)
 
 
 ## A small card: its art over its name. A button when `clickable`.
@@ -288,13 +288,13 @@ func _mini_card(cid: int, card_name: String, clickable := false) -> Control:
 	var root: Control
 	if clickable:
 		var b := Button.new()
-		b.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 2, 4))
-		b.add_theme_stylebox_override("hover", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4, 4))
-		b.add_theme_stylebox_override("pressed", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4, 4))
+		b.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 2, 4))
+		b.add_theme_stylebox_override("hover", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 4, 4))
+		b.add_theme_stylebox_override("pressed", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 4, 4))
 		root = b
 	else:
 		var p := PanelContainer.new()
-		p.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 2, 4))
+		p.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 2, 4))
 		root = p
 	root.custom_minimum_size = Vector2(88, 96)
 	root.tooltip_text = card_name

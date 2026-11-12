@@ -218,7 +218,7 @@ func _barter_side(side: VBoxContainer) -> void:
 	side.add_child(list)
 	if staged.is_empty():
 		var hint := label(list, I18n.t("cm.offer_hint"), 16)
-		hint.add_theme_color_override("font_color", UiStyle.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.BROWN)
 	for s in staged:
 		var cid := int(s.get("id", 0))
 		var b := Button.new()
@@ -259,7 +259,7 @@ func _status(parent: Node) -> void:
 	var l := label(parent, text, 15)
 	l.name = "Status"
 	if not bool(data("cardMasterTrade.statusOk", false)):
-		l.add_theme_color_override("font_color", UiStyle.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.BROWN)
 
 
 # --- small pieces ------------------------------------------------------------

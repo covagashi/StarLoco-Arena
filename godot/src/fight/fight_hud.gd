@@ -1,47 +1,61 @@
 extends Control
-## Krosmaster-style fight HUD (sprints/S17). The fighters' information moves
-## off the map into fixed places:
+## The fight HUD, as in the S45 mockup ("5 · Combate"; S17 put the fighters'
+## information off the map, this keeps that and changes where it lives):
 ##
-##   - a column of cards per team down the screen sides (ours on the left),
-##     in initiative order — portrait, team frame, life, buffs;
-##   - the acting fighter's medallion bottom-left, with its live AP/MP/life;
-##   - a turn banner top-centre ("TURNO 7" + whose turn + the clock).
+##   - the turn order across the top in one dark pill: the acting fighter
+##     first and larger, its clock as a badge and a ring that runs out, then
+##     the others in the order they play, each in its team's ring that is
+##     also its life; a KO greys out;
+##   - under it, "¡Te toca!" in pop when the turn is yours, or whose turn it
+##     is in navy;
+##   - the acting fighter bottom-left: a large portrait with its life as a
+##     ring, AP and MP medallions, its name, life and effects.
 ##
 ## fight_view owns the fight state and pushes a plain model with set_model();
 ## this node only draws it and reports clicks/hovers. The spell bar, the PASS
 ## button, the menu and the chat stay fight_view nodes; it lays them out
-## around the rects this node publishes (medal_rect, column widths).
+## around the rects this node publishes (medal_rect, banner_rect).
 
 signal card_pressed(fid: int)
 signal card_hovered(fid: int, on: bool)
 
 const FighterCard := preload("res://src/fight/fighter_card.gd")
 const Medallion := preload("res://src/fight/fight_medallion.gd")
-const AssetPaths := preload("res://src/util/asset_paths.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 
-var hp_style: int = FighterCard.HpStyle.BAR
-var team_colors: Array = [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)]
+var hp_style: int = FighterCard.HpStyle.RING
+var team_colors: Array = [Color("4c8dff"), Color("ff4d5e")]
+var clock_max := 30.0   # a full turn, for the active fighter's ring
 
 ## Published by layout_hud() for fight_view's own nodes.
 var medal_rect := Rect2()
 var banner_rect := Rect2()
-var left_w := 0.0       # px the left column takes from the screen edge
+var left_w := 0.0       # no side columns any more: the map is the screen
 var right_w := 0.0
 
-var cards := {}         # fid -> FighterCard
+var cards := {}         # fid -> FighterCard, in initiative order
 var medallion: Control
 var banner: Control
+var _strip: Control     # the dark pill behind the turn order
+var _badges: Control    # the clock badge over the acting portrait
 var _order: Array = []  # fids, initiative order
+var _active := -1
 var _left_team := 0
 var _title := ""
 var _sub := ""
 var _sub_col := Color.WHITE
+var _mine := false
 var _clock := -1.0
-var _title_font: Font = null
+var _peek := -1         # the fighter under the pointer in the turn order
+var _peek_card: Control
+var _names := {}        # fid -> name, for the peek card
 
-const TOP := 62.0       # columns start under the menu row
-const MARGIN := 10.0
-const GAP := 5.0
+const TOP := 14.0
+const ACTIVE_SIDE := 56.0
+const SIDE := 40.0
+const SUMMON_SIDE := 32.0
+const GAP := 8.0
+const PAD := 10.0
 
 
 func _init() -> void:
@@ -51,11 +65,16 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	var path := AssetPaths.resolve("gui/fonts/COPRGTB.TTF")
-	if not path.is_empty() and FileAccess.file_exists(path):
-		var f := FontFile.new()
-		if f.load_dynamic_font(path) == OK:
-			_title_font = f
+	_strip = Control.new()
+	_strip.name = "Timeline"
+	_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_strip.draw.connect(_draw_strip)
+	add_child(_strip)
+	_badges = Control.new()
+	_badges.name = "Clock"
+	_badges.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_badges.draw.connect(_draw_badges)
+	add_child(_badges)
 	medallion = Medallion.new()
 	medallion.name = "Medallion"
 	add_child(medallion)
@@ -64,14 +83,20 @@ func _ready() -> void:
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.draw.connect(_draw_banner)
 	add_child(banner)
+	_peek_card = Control.new()
+	_peek_card.name = "Peek"
+	_peek_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_peek_card.draw.connect(_draw_peek)
+	add_child(_peek_card)
 
 
 ## model = {
-##   left_team: int,                 # the team drawn on the left (ours)
+##   left_team: int,                 # our team (blue)
 ##   order: [fid…],                  # initiative order
 ##   fighters: {fid: {team, name, hp, hp_max, lost, dead, invisible,
 ##                    summon, buffs: [str], portrait_key: {breed,sex,look}}},
 ##   active: fid or -1, ap, mp,
+##   mine: bool,                     # the acting fighter is ours to play
 ##   title, sub,                     # banner lines
 ## }
 func set_model(m: Dictionary) -> void:
@@ -82,11 +107,14 @@ func set_model(m: Dictionary) -> void:
 	if rebuilt:
 		_rebuild(order, fighters)
 	var active := int(m.get("active", -1))
+	var moved := active != _active
+	_active = active
 	for fid in _order:
 		var f: Dictionary = fighters.get(fid, {})
 		var c: FighterCard = cards[fid]
 		var team := clampi(int(f.get("team", 0)), 0, 1)
-		c.team_color = team_colors[team]
+		# blue is always us, red the rival
+		c.team_color = team_colors[0 if team == _left_team else 1]
 		c.inward = 1 if team == _left_team else -1
 		c.hp_max = int(f.get("hp_max", 0))
 		c.lost = int(f.get("lost", 0))
@@ -97,6 +125,7 @@ func set_model(m: Dictionary) -> void:
 		c.buffs = f.get("buffs", [])
 		c.active = int(fid) == active
 		c.tooltip_text = str(f.get("name", ""))
+		_names[fid] = str(f.get("name", ""))
 		c.queue_redraw()
 	var af: Dictionary = fighters.get(active, {})
 	medallion.shown = not af.is_empty()
@@ -104,7 +133,10 @@ func set_model(m: Dictionary) -> void:
 		var ac: FighterCard = cards.get(active)
 		medallion.portrait = ac.portrait if ac != null else null
 		medallion.initials = ac.initials if ac != null else ""
-		medallion.team_color = team_colors[clampi(int(af.get("team", 0)), 0, 1)]
+		var team := clampi(int(af.get("team", 0)), 0, 1)
+		medallion.team_color = team_colors[0 if team == _left_team else 1]
+		medallion.fighter_name = str(af.get("name", ""))
+		medallion.buffs = af.get("buffs", [])
 		medallion.hp_max = int(af.get("hp_max", 0))
 		medallion.lost = int(af.get("lost", 0))
 		medallion.hp = clampi(medallion.hp_max - medallion.lost, 0,
@@ -115,18 +147,18 @@ func set_model(m: Dictionary) -> void:
 	medallion.queue_redraw()
 	_title = str(m.get("title", ""))
 	_sub = str(m.get("sub", ""))
+	_mine = bool(m.get("mine", false))
 	banner.queue_redraw()
-	if rebuilt:
+	_badges.queue_redraw()
+	if rebuilt or moved:
 		layout_hud()
 
 
 func set_clock(seconds: float) -> void:
 	if is_equal_approx(seconds, _clock):
 		return
-	var redraw := ceili(seconds) != ceili(_clock) or (seconds < 0) != (_clock < 0)
 	_clock = seconds
-	if redraw:
-		banner.queue_redraw()
+	_badges.queue_redraw()
 
 
 func _rebuild(order: Array, fighters: Dictionary) -> void:
@@ -140,150 +172,213 @@ func _rebuild(order: Array, fighters: Dictionary) -> void:
 			c = FighterCard.new()
 			c.name = "Card%d" % int(fid)
 			c.fid = int(fid)
+			c.round = true
 			var f: Dictionary = fighters.get(fid, {})
 			c.portrait = FighterCard.portrait_for(f)
 			c.initials = str(f.get("name", "?")).left(2)
 			c.pressed.connect(func(id): card_pressed.emit(id))
-			c.hovered.connect(func(id, on): card_hovered.emit(id, on))
+			c.hovered.connect(func(id, on):
+				_peek = id if on else (-1 if _peek == id else _peek)
+				_peek_card.queue_redraw()
+				card_hovered.emit(id, on))
 			add_child(c)
 		c.hp_style = hp_style
 		kept[fid] = c
 	cards = kept
 	_order = order.duplicate()
+	move_child(_badges, get_child_count() - 1)
+	move_child(_peek_card, get_child_count() - 1)
 
 
-## Columns + medallion + banner for the current viewport. Card size shrinks
-## to fit the column (summons a step smaller); past ~9 a column wraps into
-## two so 8+ cards per side still fit at 800x600.
+## The turn order (from the acting fighter on), the banner under it and the
+## acting fighter's block bottom-left, for the current viewport.
 func layout_hud() -> void:
 	var vp := get_viewport_rect().size
-	var mr := clampf(vp.y * 0.065, 34.0, 50.0)
-	var ms: Vector2 = Medallion.size_for(mr)
-	medallion.radius = mr
-	medallion.position = Vector2(MARGIN - 4.0, vp.y - ms.y - 2.0)
-	medallion.size = ms
-	medal_rect = Rect2(medallion.position, ms)
-	var bw := clampf(vp.x * 0.3, 240.0, 360.0)
-	banner_rect = Rect2((vp.x - bw) * 0.5, 4.0, bw, 52.0)
+	# who plays from now on: the acting fighter, then the rest in order
+	var seq: Array = _order.duplicate()
+	var at := seq.find(_active)
+	if at > 0:
+		seq = seq.slice(at) + seq.slice(0, at)
+	var sides: Array = []
+	for fid in seq:
+		var c: FighterCard = cards[fid]
+		sides.append(ACTIVE_SIDE if int(fid) == _active else (SUMMON_SIDE if c.summon else SIDE))
+	# clear of the arena label (left) and the four round buttons (right)
+	var fit := fit_timeline(sides, at >= 0, vp.x - 2.0 * 285.0)
+	var k := fit.x
+	var shown := int(fit.y)
+	for i in seq.size():
+		cards[seq[i]].visible = i < shown
+	seq = seq.slice(0, shown)
+	sides = sides.slice(0, shown)
+	var total := _strip_width(sides, at >= 0)
+	var x := (vp.x - total * k) * 0.5 + PAD * k
+	var h := (ACTIVE_SIDE + 8.0) * k + 12.0
+	for i in seq.size():
+		var c: FighterCard = cards[seq[i]]
+		var side: float = floorf(sides[i] * k)
+		c.side = side
+		c.size = FighterCard.card_size(side, FighterCard.HpStyle.RING)
+		c.position = Vector2(x, TOP + (h - c.size.y) * 0.5)
+		x += c.size.x + GAP * k
+		if i == 0 and at >= 0:
+			x += 9.0 * k
+		c.queue_redraw()
+	_strip.position = Vector2((vp.x - total * k) * 0.5, TOP)
+	_strip.size = Vector2(total * k, h)
+	_strip.set_meta("rule", (cards[seq[0]].position.x + cards[seq[0]].size.x + 4.0 * k - _strip.position.x) if at >= 0 and not seq.is_empty() else -1.0)
+	_strip.queue_redraw()
+	_badges.size = vp
+	_peek_card.size = vp
+	var bw := clampf(vp.x * 0.42, 300.0, 520.0)
+	banner_rect = Rect2((vp.x - bw) * 0.5, TOP + h + 8.0, bw, 36.0)
 	banner.position = banner_rect.position
 	banner.size = banner_rect.size
-	var left: Array = []
-	var right: Array = []
-	for fid in _order:
-		var c: FighterCard = cards[fid]
-		(left if c.inward > 0 else right).append(c)
-	var lb := medal_rect.position.y - 8.0
-	var rb := vp.y - 10.0
-	# one card size for both sides, the smaller of the two fits, so the
-	# teams read as equals; each side wraps on its own
-	var lf := _column_fit(left, TOP, lb, vp)
-	var rf := _column_fit(right, TOP, rb, vp)
-	var p := minf(lf.x if not left.is_empty() else 999.0,
-		rf.x if not right.is_empty() else 999.0)
-	left_w = _layout_column(left, true, TOP, p, int(lf.y), vp)
-	right_w = _layout_column(right, false, TOP, p, int(rf.y), vp)
+	var ms := Vector2(340.0, 124.0)
+	medallion.position = Vector2(20.0, vp.y - ms.y - 16.0)
+	medallion.size = ms
+	medal_rect = Rect2(medallion.position, Vector2(medallion.used_width(), ms.y))
 
 
-## (portrait side, columns) that fits a column of cards between top and
-## bottom — summons count as 0.8 of a card.
-func _column_fit(col: Array, top: float, bottom: float, vp: Vector2) -> Vector2:
-	if col.is_empty():
-		return Vector2(0, 1)
-	var max_p := clampf(vp.y * 0.08, 40.0, 60.0)
-	var avail := bottom - top
-	var units := 0.0
-	for c in col:
-		units += 0.8 if c.summon else 1.0
-	var extra := FighterCard.card_size(0.0, hp_style).y + GAP
-	var p := floorf((avail - extra * col.size()) / units)
-	var cols := 1
-	if p < 30.0 and col.size() > 1:
-		cols = 2
-		# same split as _layout_column: the first `per` cards, then the rest;
-		# the heavier half (fewer summons) sets the size
-		var per := ceili(col.size() / 2.0)
-		var heavy := 0.0
-		for half in [col.slice(0, per), col.slice(per)]:
-			var u := 0.0
-			for c in half:
-				u += 0.8 if c.summon else 1.0
-			heavy = maxf(heavy, u)
-		p = floorf((avail - extra * per) / heavy)
-	return Vector2(clampf(p, 24.0, max_p), cols)
+## The turn order's scale and how many portraits fit in `room` px: everyone
+## a step smaller first (down to MIN_K), then only the next ones. Pure, for
+## the unit test.
+const MIN_K := 0.7
 
 
-func _layout_column(col: Array, is_left: bool, top: float, p: float,
-		cols: int, vp: Vector2) -> float:
-	if col.is_empty():
-		return 0.0
-	var col_w: float = FighterCard.card_size(p, hp_style).x
-	var y := top
-	var k := 0
-	var rows := ceili(col.size() / float(cols))
-	for c in col:
-		var side: float = floorf(p * (0.8 if c.summon else 1.0))
-		var sz: Vector2 = FighterCard.card_size(side, hp_style)
-		var ci := k / rows
-		if k % rows == 0:
-			y = top
-		var pad := (col_w - sz.x) * 0.5
-		var x_in := MARGIN + ci * (col_w + GAP) + pad
-		c.side = side
-		c.size = sz
-		c.position = Vector2(x_in if is_left else vp.x - x_in - sz.x, y)
-		# buff chips clear the whole block, not just this card
-		c.chip_gap = (cols - 1 - ci) * (col_w + GAP) + pad
-		c.slide = ci == cols - 1
-		y += sz.y + GAP
-		k += 1
-		c.queue_redraw()
-	return MARGIN + cols * col_w + (cols - 1) * GAP
+static func fit_timeline(sides: Array, has_active: bool, room: float) -> Vector2:
+	var total := _strip_width(sides, has_active)
+	var k := minf(1.0, room / maxf(total, 1.0))
+	if k >= MIN_K:
+		return Vector2(k, sides.size())
+	var n := sides.size()
+	while n > 1 and _strip_width(sides.slice(0, n), has_active) * MIN_K > room:
+		n -= 1
+	return Vector2(MIN_K, n)
 
 
-func _draw_banner() -> void:
-	var r := Rect2(Vector2.ZERO, banner.size)
-	var ink := Color("ad965a")
-	var plate := Color("292c20")
-	_draw_clock(r, ink, plate)
-	if _title.is_empty() and _sub.is_empty():
+static func _strip_width(sides: Array, has_active: bool) -> float:
+	var total := PAD * 2.0
+	for s in sides:
+		total += s + 8.0 + GAP
+	total -= GAP
+	if has_active:
+		total += 9.0   # the rule after the acting fighter
+	return total
+
+
+func _draw_strip() -> void:
+	if _order.is_empty():
 		return
-	# a ribbon: a box with notched ends
-	var n := 12.0
-	var pts := PackedVector2Array([Vector2(0, 0), Vector2(r.end.x, 0),
-		Vector2(r.end.x - n, r.size.y * 0.5), Vector2(r.end.x, r.size.y),
-		Vector2(0, r.size.y), Vector2(n, r.size.y * 0.5)])
-	banner.draw_colored_polygon(pts, Color(plate, 0.94))
-	var loop := pts.duplicate()
-	loop.append(pts[0])
-	banner.draw_polyline(loop, ink, 2.0, true)
-	var font: Font = _title_font if _title_font != null else get_theme_default_font()
-	var body := get_theme_default_font()
-	var tc := Color("f6dc8c")
-	_centered(font, _title, Vector2(r.size.x * 0.5, 23.0), 20, tc)
-	_centered(body, _sub, Vector2(r.size.x * 0.5, 43.0), 14,
-		_sub_col.lightened(0.25))
+	var r := Rect2(Vector2.ZERO, _strip.size)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.08, 0.16, 0.82)
+	sb.set_corner_radius_all(int(r.size.y * 0.5))
+	_strip.draw_style_box(sb, r)
+	var rule: float = _strip.get_meta("rule", -1.0)
+	if rule > 0.0:
+		_strip.draw_line(Vector2(rule, r.size.y * 0.22), Vector2(rule, r.size.y * 0.78),
+			Color(1, 1, 1, 0.15), 1.0)
 
 
-## The turn clock, a disc left of the ribbon (the top-right corner belongs to
-## the menu); it shows on its own too, e.g. before the first round.
-func _draw_clock(r: Rect2, ink: Color, plate: Color) -> void:
+## The clock: a pop badge on the acting portrait (or a disc of its own at the
+## pill's left when nobody acts, e.g. while placing).
+func _draw_badges() -> void:
 	if _clock < 0.0:
 		return
-	var body := get_theme_default_font()
-	var c := Vector2(-24.0, r.size.y * 0.5)
 	var urgent := _clock <= 5.5
-	banner.draw_circle(c, 18.0, plate)
-	banner.draw_arc(c, 18.0, 0.0, TAU, 40,
-		Color(1.0, 0.45, 0.3) if urgent else ink, 2.0, true)
-	_centered(body, str(ceili(_clock)), c + Vector2(0, 6), 16,
-		Color(1.0, 0.55, 0.4) if urgent else Color.WHITE)
+	var col := Color("ff4d5e") if urgent else UiStyle.POP
+	var c: FighterCard = cards.get(_active)
+	var at: Vector2
+	var r := 12.0
+	if c != null:
+		at = c.position + c.size - Vector2(8, 8)
+	else:
+		at = _strip.position + Vector2(-22, _strip.size.y * 0.5) if not _order.is_empty() \
+			else Vector2(get_viewport_rect().size.x * 0.5, TOP + 30)
+		r = 18.0
+	_badges.draw_circle(at, r + 2.0, UiStyle.NIGHT)
+	_badges.draw_circle(at, r, col)
+	var f := UiStyle.title_font()
+	var s := str(ceili(_clock))
+	var fs := int(r * 1.25)
+	var w := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	_badges.draw_string(f, at + Vector2(-w * 0.5, fs * 0.36), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("1a1206"))
+	# the acting portrait's ring runs out with the clock
+	if c != null and clock_max > 0.0:
+		var cc := c.position + c.size * 0.5
+		var rr := c.side * 0.5 + 4.0
+		var frac := clampf(_clock / clock_max, 0.0, 1.0)
+		_badges.draw_arc(cc, rr, -PI * 0.5 + TAU * frac, -PI * 0.5 + TAU, 48,
+			Color(1, 1, 1, 0.18), 4.0, true)
 
 
-func _centered(font: Font, s: String, at: Vector2, fs: int, col: Color) -> void:
-	if s.is_empty():
+## "¡Te toca!" (pop) or whose turn it is (navy), under the turn order.
+func _draw_banner() -> void:
+	if _title.is_empty() and _sub.is_empty():
 		return
-	var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	banner.draw_string(font, at + Vector2(-w * 0.5 + 1, 1), s,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.9))
-	banner.draw_string(font, at + Vector2(-w * 0.5, 0), s,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	var title := UiStyle.title_font()
+	var body := UiStyle.bold(800)
+	var head := I18n.t("fight.your_turn") if _mine else ""
+	var rest := _title
+	if not _mine and not _sub.is_empty():
+		rest = "%s · %s" % [_title, _sub] if not _title.is_empty() else _sub
+	var hw := title.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x if head != "" else 0.0
+	var rw := body.get_string_size(rest, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	var w := hw + rw + (10.0 if head != "" and rest != "" else 0.0) + 36.0
+	var r := Rect2((banner.size.x - w) * 0.5, 0, w, banner.size.y)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = UiStyle.POP if _mine else Color(0.07, 0.08, 0.16, 0.86)
+	sb.set_corner_radius_all(int(r.size.y * 0.5))
+	if not _mine:
+		sb.border_color = Color(_sub_col, 0.9)
+		sb.set_border_width_all(2)
+	banner.draw_style_box(sb, r)
+	var ink := Color("1a1206") if _mine else UiStyle.INK
+	var x := r.position.x + 18.0
+	var base := r.size.y * 0.5 + 6.0
+	if head != "":
+		banner.draw_string(title, Vector2(x, base), head, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, ink)
+		x += hw + 10.0
+	banner.draw_string(body, Vector2(x, base - 1.0), rest, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, ink)
+
+
+## The cream card under a portrait the pointer is on (the mockup's hover
+## card): its name and side, its life as a bar and in numbers.
+func _draw_peek() -> void:
+	var c: FighterCard = cards.get(_peek)
+	if c == null:
+		return
+	var w := 214.0
+	var h := 74.0
+	var x := clampf(c.position.x + c.size.x * 0.5 - w * 0.5, 8.0, _peek_card.size.x - w - 8.0)
+	# under the banner and the hint line, so neither is covered
+	var r := Rect2(x, banner_rect.end.y + 44.0, w, h)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("fff4e0")
+	sb.set_corner_radius_all(16)
+	sb.shadow_color = Color(0, 0, 0, 0.45)
+	sb.shadow_size = 12
+	sb.shadow_offset = Vector2(0, 6)
+	_peek_card.draw_style_box(sb, r)
+	var ink := Color("1e2142")
+	var soft := Color("5a5f86")
+	var b9 := UiStyle.bold(900)
+	var b8 := UiStyle.bold(800)
+	var ours := c.inward > 0
+	var dot := c.team_color
+	_peek_card.draw_circle(r.position + Vector2(19, 21), 5, dot)
+	_peek_card.draw_string(b9, r.position + Vector2(31, 27), str(_names.get(_peek, "")),
+		HORIZONTAL_ALIGNMENT_LEFT, w - 90, 15, ink)
+	var side := I18n.t("fi.ours" if ours else "fi.theirs")
+	var sw := b8.get_string_size(side, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	_peek_card.draw_string(b8, r.position + Vector2(w - 14 - sw, 26), side, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, soft)
+	var bar := Rect2(r.position + Vector2(14, 38), Vector2(w - 28, 8))
+	_peek_card.draw_rect(bar, Color("e3ddcb"))
+	if c.hp_max > 0:
+		_peek_card.draw_rect(Rect2(bar.position, Vector2(bar.size.x * c.hp_ratio(), bar.size.y)), dot)
+	var life := ("%d / %d %s" % [c.hp, c.hp_max, I18n.t("fight.hp_short")]) if c.hp_max > 0 \
+		else ("-%d %s" % [c.lost, I18n.t("fight.hp_short")] if c.lost > 0 else "?")
+	if c.dead:
+		life = "KO"
+	_peek_card.draw_string(b8, r.position + Vector2(14, 64), life, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("3b3f66"))

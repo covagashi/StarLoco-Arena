@@ -23,46 +23,85 @@ var selected: Dictionary = {}
 var draft := {}
 var _refresh_pending := false
 var _shade: Control
+var _sheet: Control     # the scaled sheet: the paper (frame), its ribbon
+var _ribbon: PanelContainer
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# a dark shade behind, and a stone window (src/ui/ui_style.gd)
+	# a dark shade behind, and the S45 sheet of paper (src/ui/ui_style.gd):
+	# the title on a ribbon across its top, "?" and close as medallions
 	_shade = UiStyle.shade()
 	# sized by hand in _layout (see there), so no full-rect anchors: they
 	# would make every size assignment warn
 	_shade.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	add_child(_shade)
+	_sheet = Control.new()
+	_sheet.name = "Sheet"
+	_sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_sheet)
 	frame = PanelContainer.new()
 	frame.theme = _theme()
-	frame.add_theme_stylebox_override("panel", UiStyle.window())
-	add_child(frame)
+	var ps: StyleBox = UiStyle.paper(0)
+	ps.content_margin_left = 30
+	ps.content_margin_right = 30
+	ps.content_margin_top = 62
+	ps.content_margin_bottom = 26
+	frame.add_theme_stylebox_override("panel", ps)
+	_sheet.add_child(frame)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 16)
+	column.add_theme_constant_override("separation", 12)
 	frame.add_child(column)
-	var header := row(column)
-	title = label(header, "", 28)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# the header (?, close, and what a panel adds there: the Card Master's
+	# wallet) sits in the sheet's top right corner, level with the ribbon
+	var header := row(_sheet)
+	header.name = "Header"
+	header.alignment = BoxContainer.ALIGNMENT_END
+	header.add_theme_constant_override("separation", 10)
+	header.theme = frame.theme
+	header.resized.connect(_place_header.bind(header))
+	_ribbon = PanelContainer.new()
+	_ribbon.name = "Ribbon"
+	_ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ribbon.add_theme_stylebox_override("panel", UiStyle.ribbon())
+	_ribbon.custom_minimum_size = Vector2(320, 54)
+	title = Label.new()
+	title.name = "Title"
+	UiStyle.title(title, 30)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
-	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	UiStyle.title(title, 32)
+	title.uppercase = true
+	_ribbon.add_child(title)
+	_sheet.add_child(_ribbon)
+	title.draw.connect(_place_ribbon)   # its text changes on every refresh
 	# "?" (S21): what this window is for, in two lines, where it is used —
 	# the help no longer lives only in the Ayuda panel
 	var help_key := "help.panel." + panel_name
 	if I18n.has(help_key):
-		var about := button(header, "?", func(): _about.visible = not _about.visible)
+		var about := UiStyle.medal_button(44, func(b: Button):
+			var f := UiStyle.title_font()
+			var at := Vector2(22, 31) - Vector2(f.get_string_size("?", HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x / 2.0, 0)
+			b.draw_string_outline(f, at, "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, UiStyle.OUTLINE)
+			b.draw_string(f, at, "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiStyle.SUN))
 		about.name = "About"
-		about.custom_minimum_size.x = 46
 		about.tooltip_text = I18n.t("help.about_tip")
-	close_button = button(header, I18n.t("panel.close"), func(): closed.emit())
+		about.pressed.connect(func(): _about.visible = not _about.visible)
+		header.add_child(about)
+	close_button = UiStyle.medal_button(44, func(b: Button):
+		var c := Vector2(22, 22)
+		for d in [Vector2(7, 7), Vector2(7, -7)]:
+			b.draw_line(c - d, c + d, UiStyle.INK, 3.6, true))
 	close_button.name = "Close"
+	close_button.tooltip_text = I18n.t("panel.close")
+	close_button.pressed.connect(func(): closed.emit())
+	header.add_child(close_button)
 	if I18n.has(help_key):
 		_about = label(column, I18n.t(help_key), 16)
 		_about.name = "AboutText"
-		_about.add_theme_color_override("font_color", UiStyle.GOLD)
+		_about.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 		_about.visible = false
-	column.add_child(HSeparator.new())
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -73,15 +112,15 @@ func _ready() -> void:
 	body.add_theme_constant_override("separation", 14)
 	scroll.add_child(body)
 	# The footer (S15, the owner: "no se nota el footer del modal"): its own
-	# darker band under a gold rule, holding the window's actions and the
-	# key hint, so they read apart from the content that scrolls above.
+	# band of darker paper under a brown rule, holding the window's actions
+	# and the key hint, so they read apart from the content that scrolls above.
 	var footer := PanelContainer.new()
 	footer.name = "Footer"
 	var fs := StyleBoxFlat.new()
-	fs.bg_color = UiStyle.PAPER.darkened(0.35)
-	fs.border_color = UiStyle.RIM
-	fs.border_width_top = 2
-	fs.set_corner_radius_all(8)
+	fs.bg_color = UiStyle.SLOT
+	fs.border_color = Color("3b2a1a")
+	fs.set_border_width_all(2)
+	fs.set_corner_radius_all(10)
 	fs.content_margin_left = 14
 	fs.content_margin_right = 14
 	fs.content_margin_top = 10
@@ -94,7 +133,7 @@ func _ready() -> void:
 	pinned_actions = row(foot)
 	pinned_actions.hide()
 	var hint := label(foot, I18n.t("panel.hint"), 13)
-	hint.add_theme_color_override("font_color", UiStyle.MUTED)
+	hint.add_theme_color_override("font_color", UiStyle.BROWN)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	model.changed.connect(_model_changed)
@@ -111,10 +150,34 @@ func _layout() -> void:
 	# have no parent rect and the shade came out 0x0.
 	_shade.position = -position
 	_shade.size = vp
-	var factor := minf(1.0, minf((vp.x - 32) / frame_size.x, (vp.y - 32) / frame_size.y))
+	# room above the sheet for its ribbon
+	var factor := minf(1.0, minf((vp.x - 32) / frame_size.x, (vp.y - 56) / (frame_size.y + 24)))
 	frame.size = frame_size
-	frame.scale = Vector2(factor, factor)
-	frame.position = (vp - frame_size * factor) / 2
+	_sheet.size = frame_size
+	_sheet.scale = Vector2(factor, factor)
+	_sheet.position = (vp - frame_size * factor) / 2 + Vector2(0, 12 * factor)
+	_place_ribbon()
+	var header := _sheet.get_node_or_null("Header")
+	if header != null:
+		_place_header(header)
+
+
+func _place_header(header: Control) -> void:
+	header.size = header.get_combined_minimum_size()
+	header.position = Vector2(frame_size.x - 20 - header.size.x, 10)
+
+
+## The ribbon fits its title (between 320 px and the sheet minus 140) and
+## sits centred across the sheet's top edge.
+func _place_ribbon() -> void:
+	if _ribbon == null or title == null:
+		return
+	var f := title.get_theme_font("font")
+	var want := f.get_string_size(title.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 90
+	var w := clampf(want, 320, frame_size.x - 140)
+	if _ribbon.size.x != w:
+		_ribbon.size = Vector2(w, 54)
+	_ribbon.position = Vector2((frame_size.x - w) / 2.0, -26)
 
 
 func _model_changed(_name: String, _field: String, _value: Variant) -> void:
@@ -298,7 +361,7 @@ func confirm_action(text: String, callback: Callable) -> void:
 
 
 func _theme() -> Theme:
-	return UiStyle.theme()
+	return UiStyle.paper_theme()
 
 
 ## Tab stays within the active modal instead of reaching the lobby behind it.

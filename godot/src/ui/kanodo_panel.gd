@@ -66,7 +66,7 @@ func refresh() -> void:
 	if status != "":
 		var s := label(side, status)
 		s.name = "Status"
-		s.add_theme_color_override("font_color", UiStyle.MUTED)
+		s.add_theme_color_override("font_color", UiStyle.BROWN)
 	pinned_actions.show()
 	var hint := label(pinned_actions, I18n.t("kanodo.legend"))
 	hint.autowrap_mode = TextServer.AUTOWRAP_OFF

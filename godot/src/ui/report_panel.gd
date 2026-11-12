@@ -36,7 +36,7 @@ func refresh() -> void:
 	hero.add_theme_font_override("font", UiStyle.title_font())
 	hero.add_theme_constant_override("outline_size", 10)
 	hero.add_theme_color_override("font_color",
-		UiStyle.GOLD if outcome == "victory" else (Color("c9583f") if outcome == "defeat" else UiStyle.INK))
+		UiStyle.ACCENT_INK if outcome == "victory" else (Color("8a2a2a") if outcome == "defeat" else UiStyle.PAPER_INK))
 	var summary: Array = r.get("summary", [])
 	if not summary.is_empty():
 		var sl := label(body, "   ·   ".join(summary), 18)
@@ -86,7 +86,7 @@ func refresh() -> void:
 			var l := label(lines, "%s%s — %s — %s %s" % ["▶ " if c.get("me", false) else "",
 				str(c.name), str(c.side), I18n.t("rp.col_strength"), str(c.strength)], 16)
 			if c.get("me", false):
-				l.add_theme_color_override("font_color", UiStyle.GOLD)
+				l.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 	pinned_actions.show()
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL

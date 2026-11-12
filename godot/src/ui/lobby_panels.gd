@@ -125,7 +125,7 @@ func _story() -> void:
 		var ch: Dictionary = Story.CHAPTERS[i]
 		var head := label(left, "%s  ·  %d/%d" % [I18n.t(str(ch.key)), Story.chapter_done(i, won),
 			ch.challenges.size()], 20)
-		head.add_theme_color_override("font_color", UiStyle.GOLD)
+		head.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 		for c in ch.challenges:
 			var id := int(c)
 			var state := Story.status(id, won)
@@ -149,7 +149,7 @@ func _story() -> void:
 	var stake := label(detail, I18n.t("story.stake_first") if state != "won" else I18n.t("story.stake_replay"))
 	stake.name = "Stake"
 	if state != "won":
-		stake.add_theme_color_override("font_color", UiStyle.GOLD)
+		stake.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 	label(detail, I18n.t("story.team", {"n": titulars}) if titulars > 0 else I18n.t("story.no_team"))
 	pinned_actions.show()
 	var spacer := Control.new()
@@ -375,7 +375,7 @@ func _revive_status_line(hint: Label) -> void:
 	hint.text = str(status.get("text", ""))
 	hint.name = "ReviveStatus"
 	if not bool(status.get("ok", true)):
-		hint.add_theme_color_override("font_color", UiStyle.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.BROWN)
 
 
 func _statistics() -> void:
@@ -473,7 +473,7 @@ func _inventory() -> void:
 	label(detail, str(selected.get("name", "")), 20).name = "CardName"
 	var kind := _inv_kind(int(selected.get("cardType", 0)))
 	var what := label(detail, I18n.t("inv.kind_%s" % kind), 16)
-	what.add_theme_color_override("font_color", UiStyle.GOLD)
+	what.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 	var use := label(detail, I18n.t("inv.use_%s" % kind))
 	use.name = "CardUse"
 	use.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -626,7 +626,7 @@ func _tournament_event(parent: Node, event: Dictionary, status: Dictionary, brac
 		var line := label(parent, str(status.get("text", "")))
 		line.name = "TournStatus%d" % tid
 		if not bool(status.get("ok", true)):
-			line.add_theme_color_override("font_color", UiStyle.MUTED)
+			line.add_theme_color_override("font_color", UiStyle.BROWN)
 	var matches: Dictionary = data("calendar.matches", {})
 	if int(matches.get("tid", -2)) == tid:
 		var rows: Array = matches.get("rows", [])
@@ -800,7 +800,7 @@ func _achievements() -> void:
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(bar)
 		var pts := _small(col, I18n.t("ach.pts", {"n": int(it.get("points", 0))}), 12)
-		pts.add_theme_color_override("font_color", UiStyle.GOLD if bool(it.get("done", false)) else UiStyle.MUTED)
+		pts.add_theme_color_override("font_color", UiStyle.ACCENT_INK if bool(it.get("done", false)) else UiStyle.BROWN)
 	var detail := column(split, false)
 	detail.custom_minimum_size.x = 300
 	if selected.is_empty():
@@ -1101,7 +1101,7 @@ func _city() -> void:
 	var right := column(split)
 	var g: Dictionary = groups[pick]
 	var h := label(right, str(g.get("name", "")), 24)
-	h.add_theme_color_override("font_color", UiStyle.GOLD)
+	h.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 	if str(g.get("desc", "")) != "":
 		var desc := _muted(right, str(g.desc))
 		desc.name = "GroupDesc"
@@ -1145,7 +1145,7 @@ func _help() -> void:
 		1:
 			for m in ["story", "ranked", "tourn"]:
 				var h := label(body, I18n.t("hub." + m), 24)
-				h.add_theme_color_override("font_color", UiStyle.GOLD)
+				h.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 				label(body, I18n.t("help.mode_%s" % m))
 		2:
 			for i in 6:
@@ -1154,7 +1154,7 @@ func _help() -> void:
 			for key in ["nav.team", "nav.inventory", "nav.ladder", "nav.calendar", "nav.achievements",
 					"nav.city", "nav.stats", "nav.social"]:
 				var h := label(body, I18n.t(key), 20)
-				h.add_theme_color_override("font_color", UiStyle.GOLD)
+				h.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 				label(body, I18n.t("help.panel_%s" % key.trim_prefix("nav.")))
 
 
@@ -1172,7 +1172,7 @@ func _first_steps() -> void:
 			NpcDialogs.achievement_name(aid), I18n.t("help.step_%d" % aid)])
 		line.name = "Step%d" % aid
 		if done:
-			line.add_theme_color_override("font_color", UiStyle.MUTED)
+			line.add_theme_color_override("font_color", UiStyle.BROWN)
 	if next < 0:
 		label(body, I18n.t("help.steps_done"))
 
@@ -1362,7 +1362,7 @@ func _equipment() -> void:
 	var head := row(main)
 	label(head, str(fighter.get("name", "")), 24)
 	var budget := label(head, I18n.t("fe.budget", {"n": int(fighter.get("value", 0))}), 16)
-	budget.add_theme_color_override("font_color", UiStyle.MUTED)
+	budget.add_theme_color_override("font_color", UiStyle.BROWN)
 	tabs(main, [I18n.t("fe.spells"), I18n.t("fe.equip")])
 	if tab == 0:
 		var spells: Array = data("teamManagement.editableFighter.breedSpells", [])
@@ -1513,7 +1513,7 @@ func _spell_tile(parent: Node, sp: Dictionary, equipped: bool, full: bool) -> vo
 	nm.clip_text = true
 	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var ap := _small(col, I18n.t("fe.ap", {"n": int(sp.get("actionPoints", 0))}), 12)
-	ap.add_theme_color_override("font_color", UiStyle.GOLD if equipped else UiStyle.MUTED)
+	ap.add_theme_color_override("font_color", UiStyle.ACCENT_INK if equipped else UiStyle.BROWN)
 	var item := sp
 	b.pressed.connect(func(): send("removeSpell" if equipped else "addSpell", [], item))
 

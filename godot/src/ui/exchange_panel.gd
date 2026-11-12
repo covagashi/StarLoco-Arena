@@ -56,7 +56,7 @@ func refresh() -> void:
 	if status != "":
 		var line := label(right, status)
 		line.name = "Status"
-		line.add_theme_color_override("font_color", UiStyle.MUTED)
+		line.add_theme_color_override("font_color", UiStyle.BROWN)
 	pinned_actions.show()
 	var hint := label(pinned_actions, I18n.t("ex.hint") if bool(d.get("accepted", false)) else I18n.t("ex.waiting", {"name": other}))
 	hint.autowrap_mode = TextServer.AUTOWRAP_OFF

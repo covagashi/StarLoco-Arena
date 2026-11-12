@@ -1151,6 +1151,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			for c in d.get("currencies", []):
 				State.wallet[int(c.type)] = int(c.amount)
+			_gui.gui.model.set_value("wallet", State.wallet.duplicate())   # S45: the lobby's coins
 			if _gui.is_open("cardMasterDialog"):
 				_push_cardmaster_model()
 		OP_INVENTORY:
@@ -1210,6 +1211,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			else:
 				for c in d.get("currencies", []):
 					State.wallet[int(c.type)] = int(c.amount)
+				_gui.gui.model.set_value("wallet", State.wallet.duplicate())
 				var msg := I18n.t(["shop.done", "shop.tokens"][res] if res <= 1
 					else "shop.refused", {"code": res})
 				_log_line("[color=%s]%s[/color]" % ["green" if res == 0 else "red", msg])

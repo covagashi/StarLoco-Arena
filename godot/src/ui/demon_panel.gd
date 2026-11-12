@@ -76,7 +76,7 @@ func refresh() -> void:
 		var line := label(right, str(status.get("text", "")))
 		line.name = "Status"
 		if not bool(status.get("ok", true)):
-			line.add_theme_color_override("font_color", UiStyle.MUTED)
+			line.add_theme_color_override("font_color", UiStyle.BROWN)
 	label(right, I18n.t("dm.ladder", {"demon": demon_name}), 18)
 	var ladder: Array = d.get("ladder", [])
 	var t3 := table(right, [I18n.t("ladder.col_clan"), I18n.t("ladder.col_rep")], ["name", "points"], ladder)

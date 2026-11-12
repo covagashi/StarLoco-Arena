@@ -12,9 +12,9 @@ extends "res://src/ui/lobby_panel.gd"
 ## Reads `fighterInfo` {fid, name, breed, team, ours, hp, hp_max, ap, mp,
 ## buffs[], cards[], spells[], summon}. Read-only: no events.
 
-const SIZE := Vector2(420, 540)
-const COLUMN := 96.0   # clear of the timeline cards along each edge
-const TOP := 64.0      # under the corner buttons
+const SIZE := Vector2(420, 500)
+const EDGE := 20.0     # from the screen side
+const TOP := 150.0     # under the turn order and its banner (S45)
 
 ## "left" (your side's column) or "right"
 var side := "left"
@@ -31,9 +31,10 @@ func _ready() -> void:
 func _layout() -> void:
 	super._layout()
 	var vp := get_viewport_rect().size
-	var w := frame_size.x * frame.scale.x
-	frame.position = Vector2(COLUMN if side == "left" else vp.x - COLUMN - w,
-		minf(TOP, maxf(0.0, vp.y - frame_size.y * frame.scale.y)))
+	var k := minf(1.0, (vp.y - TOP - 150.0) / frame_size.y)
+	_sheet.scale = Vector2(k, k)
+	var w := frame_size.x * k
+	_sheet.position = Vector2(EDGE if side == "left" else vp.x - EDGE - w, TOP)
 
 
 func _model_changed(model_name: String, _field: String, _value: Variant) -> void:

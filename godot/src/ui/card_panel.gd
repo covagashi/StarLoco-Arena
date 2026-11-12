@@ -17,7 +17,9 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	var b := Button.new()
 	b.custom_minimum_size = TILE
 	b.focus_mode = Control.FOCUS_ALL
-	var normal := UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4 if chosen else 2, 6)
+	var normal := UiStyle.box(UiStyle.PLATE, UiStyle.INK, 4 if chosen else 3, 6)
+	normal.shadow_color = UiStyle.OUTLINE
+	normal.shadow_offset = Vector2(0, 4)
 	if chosen:
 		normal.border_color = UiStyle.RIM_HI
 	var hover := normal.duplicate()
@@ -26,7 +28,7 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
 	b.add_theme_stylebox_override("hover_pressed", hover)
-	b.add_theme_stylebox_override("disabled", UiStyle.box(UiStyle.PAPER, UiStyle.MUTED, 1, 6))
+	b.add_theme_stylebox_override("disabled", UiStyle.box(Color("3a3f63"), UiStyle.INK, 3, 6))
 	b.add_theme_stylebox_override("focus", UiStyle.focus_ring())
 	parent.add_child(b)
 	var col := VBoxContainer.new()
@@ -43,6 +45,11 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 		(art as TextureRect).texture = UiStyle.fighter_card_art(int(item.get("id", 0)))
 	col.add_child(art)
 	var name_l := _small(col, str(item.get("name", "")), 13)
+	# a navy card on the paper (the mockup's .card): its name in cream, outlined
+	name_l.add_theme_font_override("font", UiStyle.title_font())
+	name_l.add_theme_color_override("font_color", UiStyle.INK)
+	name_l.add_theme_color_override("font_outline_color", UiStyle.OUTLINE)
+	name_l.add_theme_constant_override("outline_size", 5)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_l.max_lines_visible = 2
@@ -50,13 +57,16 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	if sub != "":
 		var s := _small(col, sub, 12)
 		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		s.add_theme_color_override("font_color", UiStyle.MUTED)
+		s.add_theme_color_override("font_color", UiStyle.MUTED)   # on the navy card
 	if badge != "":
 		var tag := Label.new()
 		tag.text = badge
 		tag.add_theme_font_size_override("font_size", 12)
-		tag.add_theme_color_override("font_color", UiStyle.PAPER)
-		tag.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.INK, UiStyle.INK, 0, 3))
+		tag.add_theme_font_override("font", UiStyle.bold(900))
+		tag.add_theme_color_override("font_color", UiStyle.PAPER_INK)
+		var ts := UiStyle.box(UiStyle.SUN, UiStyle.RIM, 2, 2)
+		ts.set_corner_radius_all(6)
+		tag.add_theme_stylebox_override("normal", ts)
 		tag.position = Vector2(TILE.x - 44, 4)
 		tag.size = Vector2(40, 18)
 		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -70,9 +80,9 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 func _meter(have: int, need: int) -> Control:
 	var box := Panel.new()
 	box.custom_minimum_size = Vector2(0, 16)
-	box.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.PAPER, UiStyle.INK, 2, 0))
+	box.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.FIELD, UiStyle.INK, 2, 0))
 	var fill := ColorRect.new()
-	fill.color = UiStyle.INK
+	fill.color = UiStyle.SUN
 	fill.anchor_bottom = 1.0
 	fill.anchor_right = clampf(float(have) / maxf(1.0, float(need)), 0.0, 1.0)
 	fill.offset_left = 4
@@ -121,7 +131,7 @@ func _small(parent: Node, text: String, font_size: int) -> Label:
 
 func _muted(parent: Node, text: String) -> Label:
 	var l := _small(parent, text, 16)
-	l.add_theme_color_override("font_color", UiStyle.MUTED)
+	l.add_theme_color_override("font_color", UiStyle.BROWN)
 	return l
 
 

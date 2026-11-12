@@ -32,6 +32,7 @@ var inward := 1             # +1: the map is to the right (left column), -1: lef
 var hp_style := HpStyle.BAR
 var side := 56.0            # portrait side in px; fight_hud picks it per column
 var chip_gap := 0.0         # extra px the chips skip (inner columns of a wrap)
+var round := false          # S45: a round portrait in the top turn order
 var slide := true           # the active card steps towards the map (not when
                             # another column of cards is in the way)
 
@@ -112,6 +113,9 @@ static func hp_color(ratio: float) -> Color:
 
 
 func _draw() -> void:
+	if round:
+		_draw_round()
+		return
 	var font := get_theme_default_font()
 	var box := side + FRAME * 2.0
 	var origin := Vector2(4.0, 4.0) if hp_style == HpStyle.RING else Vector2.ZERO
@@ -269,3 +273,47 @@ func _shadow_string(font: Font, at: Vector2, s: String, fs: int, col: Color) -> 
 	draw_string(font, at + Vector2(1, 1), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 		Color(0, 0, 0, 0.9))
 	draw_string(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+
+## S45: the turn-order look — a round portrait inside a ring in the team's
+## colour, the ring being its life (what is lost goes dark); greyed with "KO"
+## when out; a sun ring under the pointer or the focus.
+func _draw_round() -> void:
+	var c := size * 0.5
+	var r := side * 0.5
+	var mod := Color.WHITE
+	if dead:
+		mod = Color(0.35, 0.35, 0.38)
+	elif invisible:
+		mod = Color(1, 1, 1, 0.4)
+	draw_circle(c, r + 5.0, Color(0.05, 0.06, 0.12))
+	draw_circle(c, r, Color(0.3, 0.3, 0.32) if dead else team_color.darkened(0.72))
+	if portrait != null:
+		var pts := PackedVector2Array()
+		var uvs := PackedVector2Array()
+		for i in 40:
+			var d := Vector2.from_angle(TAU * i / 40.0)
+			pts.append(c + d * r)
+			# the face sits high in the portraits: crop to their top
+			uvs.append(Vector2(0.5, 0.42) + d * 0.46)
+		draw_colored_polygon(pts, mod, uvs, portrait)
+	else:
+		var font := get_theme_default_font()
+		var s := initials if not initials.is_empty() else "?"
+		var fs := int(r * 0.8)
+		var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string(font, c + Vector2(-w * 0.5, fs * 0.35), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, mod)
+	var ring := Color(0.45, 0.45, 0.48) if dead else team_color
+	var width := 4.0 if active else 3.0
+	draw_arc(c, r + 2.0, 0.0, TAU, 48, ring.darkened(0.6), width, true)
+	var ratio := 0.0 if dead else hp_ratio()
+	if ratio > 0.0:
+		draw_arc(c, r + 2.0, -PI * 0.5, -PI * 0.5 + TAU * ratio, 48, ring, width, true)
+	if dead:
+		var f: Font = preload("res://src/ui/ui_style.gd").title_font()
+		var fs := int(maxf(12.0, r * 0.6))
+		var w := f.get_string_size("KO", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string_outline(f, c + Vector2(-w * 0.5, fs * 0.36), "KO", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color.BLACK)
+		draw_string(f, c + Vector2(-w * 0.5, fs * 0.36), "KO", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("fff4e0"))
+	if _hover or has_focus():
+		draw_arc(c, r + 6.0, 0.0, TAU, 48, Color("ffc247"), 2.0, true)

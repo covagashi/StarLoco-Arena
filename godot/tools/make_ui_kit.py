@@ -253,6 +253,7 @@ def main():
           stitch=((110, 70, 30, 90), 10), lines=(120, 80, 30, 13))
     ribbon('ribbon', [(0, (255, 138, 85)), (1, (232, 80, 31))])
     ribbon('ribbon_sun', [(0, (255, 226, 140)), (1, (214, 148, 24))])
+    ribbon('ribbon_navy', [(0, (74, 84, 153)), (1, (43, 50, 104))])
     medal('medal')
     capsule('capsule')
     backdrop()

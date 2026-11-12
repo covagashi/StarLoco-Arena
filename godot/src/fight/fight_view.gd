@@ -28,6 +28,7 @@ const WireReader := preload("res://src/net/wire_reader.gd")
 const WireWriter := preload("res://src/net/wire_writer.gd")
 const DebugLog := preload("res://src/util/debug_log.gd")
 const Palettes := preload("res://src/gamedata/palettes.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 const LobbyPanel := preload("res://src/ui/lobby_panel.gd")
 
 ## Player coach paper-doll: Players/700<sex>.anm body + AnimCommunes
@@ -176,6 +177,7 @@ func _ready() -> void:
 	_fight_hud.team_colors = TEAM_TINTS
 	$UI.add_child(_fight_hud)
 	$UI.move_child(_fight_hud, 0)   # under the buttons, the chat and modals
+	_fight_hud.clock_max = TURN_CLOCK
 	_fight_hud.card_pressed.connect(_on_timeline_chip)
 	_fight_hud.card_hovered.connect(_on_card_hover)
 	# When we arrived here from a live fight the world id is the arena id.
@@ -243,18 +245,30 @@ func _skin_fight_ui() -> void:
 	# the hint sits on the map: a dark pill keeps it legible on any floor;
 	# empty text hides it with the label
 	var pill := StyleBoxFlat.new()
-	pill.bg_color = Color(0, 0, 0, 0.82)
-	pill.set_corner_radius_all(9)
-	pill.content_margin_left = 12
-	pill.content_margin_right = 12
+	pill.bg_color = Color(0.07, 0.08, 0.16, 0.82)
+	pill.set_corner_radius_all(17)
+	pill.content_margin_left = 14
+	pill.content_margin_right = 14
+	pill.content_margin_top = 4
+	pill.content_margin_bottom = 4
 	info.add_theme_stylebox_override("normal", pill)
 	info.add_theme_font_size_override("font_size", 15)
-	# the menu is secondary: small buttons in the corner
+	info.add_theme_font_override("font", UiStyle.bold(800))
+	# the menu is secondary: round buttons in the corner (S45)
 	for b in $UI/Menu.get_children():
 		if b is Button:
-			b.add_theme_font_size_override("font_size", 13)
-			b.custom_minimum_size = Vector2(0, 30)
+			_round_menu_button(b)
 	_style_pass_button()
+	# the spells sit in one dark pill (S45)
+	var bar_bg := StyleBoxFlat.new()
+	bar_bg.bg_color = Color(0.07, 0.08, 0.16, 0.86)
+	bar_bg.set_corner_radius_all(26)
+	bar_bg.content_margin_left = 12
+	bar_bg.content_margin_right = 12
+	bar_bg.content_margin_top = 12
+	bar_bg.content_margin_bottom = 12
+	$UI/SpellScroll.add_theme_stylebox_override("panel", bar_bg)
+	$UI/SpellScroll/SpellBar.add_theme_constant_override("separation", 8)
 	$UI/TopBar/MapId.custom_minimum_size.x = 76
 	$UI/TopBar/MapId.max_length = 6
 	var chat_bg := _chat_surface()
@@ -267,58 +281,127 @@ func _skin_fight_ui() -> void:
 		tab.add_theme_font_size_override("font_size", 13)
 
 
-## PASS (end turn / ready): the one big button, bottom-centre (S17).
+## PASS (end turn / ready): the one big button (S17), bottom-right in the
+## S45 pop pill with its key ("Espacio") on the right.
 func _style_pass_button() -> void:
 	var b := _end_turn
-	b.custom_minimum_size = Vector2(PASS_SIZE.x, PASS_SIZE.y)
-	b.add_theme_font_size_override("font_size", 18)
-	var path := AssetPaths.resolve("gui/fonts/COPRGTB.TTF")
-	if not path.is_empty() and FileAccess.file_exists(path):
-		var f := FontFile.new()
-		if f.load_dynamic_font(path) == OK:
-			b.add_theme_font_override("font", f)
-	var ink := Color("f6dc8c")
+	b.custom_minimum_size = PASS_SIZE
+	b.add_theme_font_size_override("font_size", 26)
+	b.add_theme_font_override("font", UiStyle.title_font())
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var base := StyleBoxFlat.new()
-	base.bg_color = Color("8a5a12")
-	base.border_color = ink
-	base.set_border_width_all(2)
-	base.set_corner_radius_all(10)
+	base.bg_color = UiStyle.POP
+	base.set_corner_radius_all(int(PASS_SIZE.y * 0.5))
+	base.shadow_color = Color("c4451f")
+	base.shadow_offset = Vector2(0, 5)
+	base.content_margin_left = 30
+	base.content_margin_right = 96
 	var hover := base.duplicate()
-	hover.bg_color = Color("a8701a")
+	hover.bg_color = Color("ff8a5c")
 	var pressed := base.duplicate()
-	pressed.bg_color = Color("6c4510")
+	pressed.bg_color = Color("e8501f")
+	pressed.shadow_offset = Vector2(0, 2)
 	var off := base.duplicate()
-	off.bg_color = Color("3a3426")
-	off.border_color = Color("6e6448")
-	var focus := base.duplicate()
+	off.bg_color = Color(0.2, 0.22, 0.36)
+	off.shadow_color = Color(0.07, 0.08, 0.16)
+	var focus := StyleBoxFlat.new()
 	focus.draw_center = false
-	focus.border_color = Color.WHITE
-	focus.set_border_width_all(2)
-	focus.expand_margin_left = 3
-	focus.expand_margin_right = 3
-	focus.expand_margin_top = 3
-	focus.expand_margin_bottom = 3
+	focus.border_color = UiStyle.SUN
+	focus.set_border_width_all(3)
+	focus.set_corner_radius_all(int(PASS_SIZE.y * 0.5) + 4)
+	focus.set_expand_margin_all(4)
 	for st in [["normal", base], ["hover", hover], ["pressed", pressed],
-			["disabled", off], ["focus", focus]]:
+			["hover_pressed", pressed], ["disabled", off], ["focus", focus]]:
 		b.add_theme_stylebox_override(st[0], st[1])
-	b.add_theme_color_override("font_color", Color("fff0c5"))
-	b.add_theme_color_override("font_hover_color", Color.WHITE)
-	b.add_theme_color_override("font_disabled_color", Color(0.55, 0.55, 0.55))
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(c, Color("1a1206"))
+	b.add_theme_color_override("font_disabled_color", UiStyle.MUTED)
+	b.add_theme_constant_override("outline_size", 0)
+	if not b.draw.is_connected(_draw_pass_key):
+		b.draw.connect(_draw_pass_key)
 
 
+## The key chip inside PASS: the end-turn shortcut.
+func _draw_pass_key() -> void:
+	var b := _end_turn
+	if b.disabled:
+		return
+	var f := UiStyle.bold(800)
+	var t := I18n.t("fight.key_space")
+	var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 16.0
+	var r := Rect2(b.size.x - 24.0 - w, (b.size.y - 24.0) * 0.5, w, 24.0)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.1, 0.07, 0.02, 0.18)
+	sb.set_corner_radius_all(8)
+	b.draw_style_box(sb, r)
+	b.draw_string(f, Vector2(r.position.x + 8.0, r.position.y + 16.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("1a1206"))
+
+
+## A menu button as a dark round button with its icon; its words move to
+## the tooltip (S45 mockup: chat, surrender, leave).
+func _round_menu_button(b: Button) -> void:
+	b.custom_minimum_size = Vector2(44, 44)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.08, 0.16, 0.82)
+	sb.set_corner_radius_all(22)
+	var hover := sb.duplicate()
+	hover.bg_color = Color(0.17, 0.2, 0.41, 0.95)
+	var on := sb.duplicate()
+	on.bg_color = UiStyle.PRESSED
+	var focus := StyleBoxFlat.new()
+	focus.draw_center = false
+	focus.border_color = UiStyle.SUN
+	focus.set_border_width_all(2)
+	focus.set_corner_radius_all(24)
+	focus.set_expand_margin_all(2)
+	for st in [["normal", sb], ["hover", hover], ["pressed", on], ["hover_pressed", on],
+			["disabled", sb], ["focus", focus]]:
+		b.add_theme_stylebox_override(st[0], st[1])
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color",
+			"font_hover_pressed_color", "font_disabled_color"]:
+		b.add_theme_color_override(c, Color(0, 0, 0, 0))
+	b.add_theme_font_size_override("font_size", 1)
+	b.clip_text = true
+	if not b.draw.is_connected(_draw_menu_icon.bind(b)):
+		b.draw.connect(_draw_menu_icon.bind(b))
+
+
+func _draw_menu_icon(b: Button) -> void:
+	var c := b.size * 0.5
+	var col := UiStyle.INK if not b.disabled else Color(UiStyle.MUTED, 0.5)
+	var w := 2.2
+	if b == _chat_btn:
+		b.draw_polyline(PackedVector2Array([c + Vector2(-8, -7), c + Vector2(8, -7), c + Vector2(8, 4),
+			c + Vector2(-3, 4), c + Vector2(-8, 8), c + Vector2(-8, -7)]), col, w, true)
+	elif b == _face_btn:
+		b.draw_arc(c, 8, -PI * 0.9, PI * 0.6, 20, col, w, true)
+		var tip := c + Vector2.from_angle(PI * 0.6) * 8
+		b.draw_polyline(PackedVector2Array([tip + Vector2(-5, -1), tip, tip + Vector2(1, -5)]), col, w, true)
+	elif b.name == "SurrenderBtn":
+		b.draw_line(c + Vector2(-6, 9), c + Vector2(-6, -8), col, w, true)
+		b.draw_polyline(PackedVector2Array([c + Vector2(-6, -8), c + Vector2(6, -8), c + Vector2(3, -4),
+			c + Vector2(6, 0), c + Vector2(-6, 0)]), col, w, true)
+	elif b.name == "BackBtn":
+		b.draw_polyline(PackedVector2Array([c + Vector2(2, -8), c + Vector2(7, -8), c + Vector2(7, 8),
+			c + Vector2(2, 8)]), col, w, true)
+		b.draw_polyline(PackedVector2Array([c + Vector2(-2, -4), c + Vector2(-6, 0), c + Vector2(-2, 4)]), col, w, true)
+		b.draw_line(c + Vector2(-6, 0), c + Vector2(4, 0), col, w, true)
+	else:
+		var f := UiStyle.title_font()
+		var t := b.text.left(1)
+		b.draw_string(f, c + Vector2(-5, 7), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, col)
+
+
+## The navy theme of the native screens (the panels' paper one would put
+## dark text on the map).
 func _lobby_theme() -> Theme:
-	var panel := LobbyPanel.new()
-	var theme: Theme = panel._theme()
-	panel.free()
-	return theme
+	return UiStyle.theme()
 
 
 func _chat_surface() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("20251d")
-	style.border_color = Color("656849")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
+	style.bg_color = Color(0.07, 0.08, 0.16, 0.82)
+	style.set_corner_radius_all(14)
 	style.content_margin_left = 8
 	style.content_margin_right = 8
 	style.content_margin_top = 6
@@ -326,8 +409,8 @@ func _chat_surface() -> StyleBoxFlat:
 	return style
 
 
-const PASS_SIZE := Vector2(156, 46)
-const SPELL_SIDE := 44.0
+const PASS_SIZE := Vector2(260, 64)
+const SPELL_SIDE := 56.0
 
 
 ## Everything around the HUD's own pieces (cards, medallion, banner):
@@ -346,7 +429,7 @@ func _layout_fight_ui() -> void:
 		# the pill hugs the name, trimmed (…) where the clock begins
 		var want := _map_lbl.get_theme_font("font").get_string_size(_map_lbl.text,
 			HORIZONTAL_ALIGNMENT_LEFT, -1,
-			_map_lbl.get_theme_font_size("font_size")).x + 26.0
+			_map_lbl.get_theme_font_size("font_size")).x + 44.0
 		_map_lbl.custom_minimum_size.x = minf(want, maxf(br.position.x - 64.0, 40.0))
 	var info_w := minf(vp.x - 40.0, 640.0)
 	# zero-width rect growing both ways: the pill hugs the text, centred
@@ -356,27 +439,36 @@ func _layout_fight_ui() -> void:
 	$UI/EventCards.alignment = BoxContainer.ALIGNMENT_CENTER
 	_anchor_rect($UI/EventCards, Vector4(0.5, 0, 0.5, 0),
 		Rect2(-info_w * 0.5, br.end.y + 30, info_w, 26))
-	# spells: one row from the medallion; PASS takes the centre if it is free
-	var bar_x := mr.end.x + 4.0
-	var bar_y := vp.y - SPELL_SIDE - 14.0
+	# PASS bottom-right; the spells in their pill, centred where there is room
+	# a small window: a shorter PASS, so the spells keep their row
+	var pass_size := PASS_SIZE if vp.x >= 1100.0 else Vector2(200, 56)
+	_end_turn.custom_minimum_size = pass_size
+	_end_turn.add_theme_font_size_override("font_size", 26 if pass_size == PASS_SIZE else 20)
+	var pass_pos := Vector2(vp.x - 20.0 - pass_size.x, vp.y - pass_size.y - 22.0)
+	_anchor_rect($UI/PassBtn, Vector4(0, 0, 0, 0), Rect2(pass_pos, pass_size))
 	var n := 0
 	for c in $UI/SpellScroll/SpellBar.get_children():
 		if c is Control and not c.is_queued_for_deletion():
 			n += 1
-	var spells_end := bar_x + n * (SPELL_SIDE + 4.0)
-	var pass_pos := Vector2((vp.x - PASS_SIZE.x) * 0.5, vp.y - PASS_SIZE.y - 12.0)
-	if pass_pos.x < spells_end + 12.0:
-		pass_pos.x = right_edge - PASS_SIZE.x
-	_anchor_rect($UI/PassBtn, Vector4(0, 0, 0, 0), Rect2(pass_pos, PASS_SIZE))
+	var pill_w := n * (SPELL_SIDE + 8.0) - 8.0 + 24.0
+	var room_l := mr.end.x + 12.0
+	var room_r := pass_pos.x - 12.0
+	var bar_x := clampf((vp.x - pill_w) * 0.5, room_l, maxf(room_l, room_r - pill_w))
+	var bar_y := vp.y - SPELL_SIDE - 24.0 - 20.0
+	if pill_w > room_r - room_l:
+		# no room between the portrait and PASS: one row up, centred
+		room_l = 12.0
+		room_r = vp.x - 12.0
+		bar_x = maxf(12.0, (vp.x - pill_w) * 0.5)
+		bar_y = minf(pass_pos.y, mr.position.y) - SPELL_SIDE - 24.0 - 8.0
 	if _replay_bar != null:
 		$UI/PassBtn.visible = false
 		var bar_size := _replay_bar.get_combined_minimum_size()
 		_replay_bar.position = Vector2((vp.x - bar_size.x) * 0.5,
 			vp.y - bar_size.y - 12.0)
 		_replay_bar.size = bar_size
-	var bar_end := pass_pos.x - 12.0 if pass_pos.x > bar_x else right_edge
 	_anchor_rect($UI/SpellScroll, Vector4(0, 0, 0, 0),
-		Rect2(bar_x, bar_y, maxf(bar_end - bar_x, SPELL_SIDE), SPELL_SIDE + 12.0))
+		Rect2(bar_x, bar_y, maxf(minf(pill_w, room_r - bar_x), SPELL_SIDE + 24.0), SPELL_SIDE + 24.0))
 	# chat: over the bottom-right, above the PASS row, inside the columns
 	var chat_w := minf(440.0, right_edge - _fight_hud.left_w - 16.0)
 	$UI/Chat/Display.custom_minimum_size.y = 64 if vp.y < 680 else 80
@@ -1941,6 +2033,7 @@ func fight_hud_model() -> Dictionary:
 		"mp": _mp_left if shown == _current_fid else int(_base_stats(cur)[2]),
 		"title": title,
 		"sub": str(cur.get("name", "")) if not _fight_over else "",
+		"mine": not State.spectating and not _fight_over and not _placement and _is_my_turn(),
 	}
 
 
@@ -2177,23 +2270,26 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 		b.text = label.left(4)
 		b.clip_text = true
 		b.add_theme_font_size_override("font_size", 11)
+	# S45: a rounded slot in the dark pill; the armed one glows in pop
 	var slot := StyleBoxFlat.new()
-	slot.bg_color = Color("1d2017")
-	slot.border_color = Color("ad965a")
-	slot.set_border_width_all(2)
-	slot.set_corner_radius_all(6)
-	slot.content_margin_left = 3
-	slot.content_margin_right = 3
-	slot.content_margin_top = 3
-	slot.content_margin_bottom = 3
+	slot.bg_color = Color("2c2a3a")
+	slot.set_corner_radius_all(16)
+	slot.content_margin_left = 8
+	slot.content_margin_right = 8
+	slot.content_margin_top = 8
+	slot.content_margin_bottom = 8
 	var hover := slot.duplicate()
-	hover.border_color = Color("f6dc8c")
-	hover.bg_color = slot.bg_color.lightened(0.12)
+	hover.bg_color = Color("3b3a52")
+	hover.border_color = UiStyle.SUN
+	hover.set_border_width_all(2)
 	var armed := slot.duplicate()
-	armed.border_color = Color(1.0, 0.85, 0.3)
+	armed.bg_color = Color("4a2416")
+	armed.border_color = UiStyle.POP
 	armed.set_border_width_all(3)
+	armed.shadow_color = Color(1.0, 0.42, 0.24, 0.6)
+	armed.shadow_size = 9
 	var off := slot.duplicate()
-	off.border_color = Color(0.35, 0.35, 0.33)
+	off.bg_color = Color("1c1b26")
 	for st in [["normal", slot], ["hover", hover], ["pressed", armed],
 			["hover_pressed", armed], ["disabled", off], ["focus", hover]]:
 		b.add_theme_stylebox_override(st[0], st[1])
@@ -2202,11 +2298,19 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 		var cost := Label.new()
 		cost.name = "Cost"
 		cost.text = str(ap)
-		cost.add_theme_font_size_override("font_size", 11)
+		cost.add_theme_font_override("font", UiStyle.bold(900))
+		cost.add_theme_font_size_override("font_size", 12)
 		cost.add_theme_color_override("font_color", Color.WHITE)
-		cost.add_theme_constant_override("outline_size", 4)
-		cost.add_theme_color_override("font_outline_color", Color(0.1, 0.2, 0.55))
-		cost.position = Vector2(SPELL_SIDE - 13, SPELL_SIDE - 19)
+		var badge := StyleBoxFlat.new()
+		badge.bg_color = Color("2f74f0")
+		badge.border_color = UiStyle.NIGHT
+		badge.set_border_width_all(2)
+		badge.set_corner_radius_all(12)
+		cost.add_theme_stylebox_override("normal", badge)
+		cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cost.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		cost.size = Vector2(24, 24)
+		cost.position = Vector2(SPELL_SIDE - 18, SPELL_SIDE - 18)
 		cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(cost)
 	return b

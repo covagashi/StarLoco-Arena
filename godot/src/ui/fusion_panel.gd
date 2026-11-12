@@ -21,7 +21,7 @@ func _ready() -> void:
 	# wallet: they are the altar's identity, not something to scroll past.
 	_lab_label = Label.new()
 	_lab_label.add_theme_font_size_override("font_size", 16)
-	_lab_label.add_theme_color_override("font_color", UiStyle.MUTED)
+	_lab_label.add_theme_color_override("font_color", UiStyle.BROWN)
 	var header := close_button.get_parent()
 	header.add_child(_lab_label)
 	header.move_child(_lab_label, close_button.get_index())
@@ -134,7 +134,7 @@ func _recipe_side(side: VBoxContainer) -> void:
 	var target := _target_item(sel)
 	if target.is_empty():
 		var pick := label(side, I18n.t("fus.pick_target"), 16)
-		pick.add_theme_color_override("font_color", UiStyle.MUTED)
+		pick.add_theme_color_override("font_color", UiStyle.BROWN)
 	else:
 		var head := row(side)
 		head.add_child(_framed_art(sel, Vector2(100, 75)))
@@ -155,7 +155,7 @@ func _recipe_side(side: VBoxContainer) -> void:
 		# the how-to, until there is a result to read instead
 		var hint := label(side, I18n.t("fus.given_hint",
 			{"n": int(data("fusionTrade.slotCount", 0))}), 15)
-		hint.add_theme_color_override("font_color", UiStyle.MUTED)
+		hint.add_theme_color_override("font_color", UiStyle.BROWN)
 	else:
 		# chips, several per line: the grid already shows them highlighted
 		var flow := HFlowContainer.new()
@@ -214,7 +214,7 @@ func _target_rows(side: VBoxContainer) -> void:
 		r.add_theme_constant_override("separation", 8)
 		var l := _small(r, I18n.t("fus." + key), 15)
 		l.custom_minimum_size.x = 76
-		l.add_theme_color_override("font_color", UiStyle.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.BROWN)
 		for t in groups[key]:
 			var cid := int(t.get("id", 0))
 			var fp := int(t.get("fusPower", 0))
@@ -253,7 +253,7 @@ func _recipe(side: VBoxContainer) -> void:
 	if reason != "" and reason != "fus.pick_target" and reason != "fus.need_two":
 		var why := label(facts, I18n.t(reason), 15)
 		why.name = "Reason"
-		why.add_theme_color_override("font_color", UiStyle.MUTED)
+		why.add_theme_color_override("font_color", UiStyle.BROWN)
 
 
 func _status(parent: Node) -> void:
@@ -263,7 +263,7 @@ func _status(parent: Node) -> void:
 	var l := label(parent, text, 15)
 	l.name = "Status"
 	if not bool(data("fusionTrade.statusOk", false)):
-		l.add_theme_color_override("font_color", UiStyle.MUTED)
+		l.add_theme_color_override("font_color", UiStyle.BROWN)
 
 
 ## A small text button; the chosen one gets the thick border and the hard
