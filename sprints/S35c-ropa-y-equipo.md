@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; paso 9c (19 faldas) esperando al dueño; paso 9d (26 torsos) esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) en curso
 
 ## Por qué
 
@@ -640,6 +640,9 @@ de la pechera Lolomg, la flor del wonejo, las gafas y aros del Zar.
 Hojas: `~/codigo/capturas/s35c/s35c-coach-torsos-26-1.png` … `-3.png`.
 
 Siguiente: las 27 botas.
+
+Dueño (2026-11-12), sobre faldas y torsos: "doy mi ok a los dos". **Las
+19 faldas y los 26 torsos aprobados.**
 
 ## Para retomar (2026-11-11)
 
