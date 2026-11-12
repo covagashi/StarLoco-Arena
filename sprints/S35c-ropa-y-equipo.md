@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; pasos 9b–9c (19 pantalones, 19 faldas) esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; paso 9c (19 faldas) esperando al dueño; paso 9d (26 torsos) en curso
 
 ## Por qué
 
