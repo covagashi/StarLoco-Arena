@@ -23,3 +23,9 @@
 ## Criterio de cierre
 
 Ningún panel muestra una imagen retail; `gui/` retail se puede borrar.
+
+## Desde S45 (2026-11-12)
+
+Las fuentes y el material de la interfaz van en S45 (Lilita One + Nunito,
+tinta, cintas, papel). Aquí, las cartas y los iconos se dibujan ya con ese
+estilo: borde de tinta y sombra dura.
