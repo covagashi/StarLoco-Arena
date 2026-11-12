@@ -7,7 +7,8 @@ extends "res://test/world_smoke.gd"
 ## 1. Coach equipment (Inventario → "Equipo del coach"): the client knows at
 ##    login what the coach wears (B-179: 5200's first section), shows it in
 ##    its slot, swaps the hat for another and wears it (5201 → 5200 says the
-##    new hat is on), then puts the first hat back.
+##    new hat is on), then puts the first hat back. S37: with two hair
+##    effects owned, a click switches the one shown (60042 → 60043) and back.
 ## 2. Kanodo (Equipo → Evolución → a fighter → "Esferas"): the board opens on
 ##    the fighter's spheres; picking a lit sphere enables "Comprar", which
 ##    sends 23009 and moves the fighter's cursor onto it.
@@ -151,6 +152,39 @@ func _equipment() -> void:
 		"Poner Weerdtrot Hat + Llevar puesto → 5201 → 5200: slot 0 = %d" % int(_main._equip_slots[0]))
 	await _wear(p, HAT_A)
 	_record(5200, "restore", int(_main._equip_slots[0]) == HAT_A, "the Sgrim Hat is back on")
+	p = _main._gui.dialogs.get("coachEquipDialog")
+	# S37: the hair effects it owns — a click puts one on (60042 → 60043),
+	# and the one it had goes back
+	var owned: Array = State.cosmetics.get("owned", [])
+	if owned.size() >= 2 and p != null:
+		var hair_slot: Button = p.find_child("Slot2", true, false)
+		if hair_slot != null:
+			hair_slot.pressed.emit()   # the effects sit on the Pelo slot
+		var was := int(State.cosmetics.get("hair_fx", 0))
+		var other := int(owned[0]) if int(owned[0]) != was else int(owned[1])
+		await _wait(func(): return p.find_child("Hair%d" % other, true, false) != null, 3.0)
+		var hb: Button = p.find_child("Hair%d" % other, true, false)
+		var found := hb != null   # the 60043 answer redraws the panel and frees it
+		if found:
+			hb.pressed.emit()
+		await _wait(func(): return int(State.cosmetics.get("hair_fx", 0)) == other, 3.0)
+		var lc = _main._gui.gui.model.get_value("localCoach")
+		_record(60043, "hair effect", found and int(State.cosmetics.get("hair_fx", 0)) == other
+			and lc is Dictionary and int(lc.get("hairFx", 0)) == other,
+			"owns %s, %d → %d (button %s, localCoach.hairFx %s)" % [owned, was,
+				int(State.cosmetics.get("hair_fx", 0)), found,
+				lc.get("hairFx", "—") if lc is Dictionary else "no model"])
+		await _wait(func(): return p.find_child("Hair%d" % was, true, false) != null, 3.0)
+		var back: Button = p.find_child("Hair%d" % was, true, false)
+		if back != null:
+			var row: Control = p.find_child("HairFx", true, false)
+			for sc: ScrollContainer in p.find_children("*", "ScrollContainer", true, false):
+				if row != null and sc.is_ancestor_of(row):
+					sc.ensure_control_visible(row)
+			await create_timer(0.2).timeout
+			await _shot("coach-hair")
+			back.pressed.emit()
+			await _wait(func(): return int(State.cosmetics.get("hair_fx", 0)) == was, 3.0)
 	_close_all()
 
 

@@ -34,6 +34,12 @@ uniform float softness = 0.03;
 uniform float jelly = 0.0;
 uniform float shine = 0.0;
 uniform float flame = 0.0;
+// S37: a hair effect cosmetic (Fighter3D.set_hair_fx): the mask's hair
+// texels take colour rgb at strength a and glow a little, pulsing at
+// hair_pulse (0 = steady). A tint, not only light: a white head of hair
+// can't get any brighter.
+uniform vec4 hair_glow : source_color = vec4(0.0);
+uniform float hair_pulse = 0.0;
 varying vec3 world_pos;
 
 #include "res://src/anims/live.gdshaderinc"
@@ -53,8 +59,9 @@ void fragment() {
 	if (has_tex) {
 		c *= texture(albedo_tex, UV);
 	}
+	vec2 m = vec2(0.0);
 	if (has_mask) {
-		vec2 m = texture(mask_tex, UV).rg;
+		m = texture(mask_tex, UV).rg;
 		float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
 		if (tint_skin) {
 			c.rgb = mix(c.rgb, skin_tint.rgb * min(lum / skin_ref, 1.1), m.r);
@@ -62,6 +69,12 @@ void fragment() {
 		if (tint_hair) {
 			c.rgb = mix(c.rgb, hair_tint.rgb * min(lum / hair_ref, 1.1), m.g);
 		}
+	}
+	float hair_k = 0.0;
+	if (hair_glow.a > 0.0) {
+		float pulse = 0.75 + 0.25 * sin(TIME * hair_pulse + world_pos.y * 18.0);
+		hair_k = m.g * hair_glow.a * pulse;
+		c.rgb = mix(c.rgb, hair_glow.rgb * (0.6 + 0.5 * dot(c.rgb, vec3(0.333))), hair_k);
 	}
 	ALBEDO = c.rgb;
 	ROUGHNESS = 1.0;
@@ -72,6 +85,7 @@ void fragment() {
 		float band = 1.0 - smoothstep(0.0, 0.05, abs(sweep - 0.5));
 		EMISSION = vec3(1.0, 0.9, 0.62) * band * gold * shine;
 	}
+	EMISSION += hair_glow.rgb * hair_k * 0.35;
 	if (flame > 0.0) {
 		EMISSION = c.rgb * flame * (0.8 + 0.4 * sin(TIME * 17.0) * sin(TIME * 5.3));
 	}

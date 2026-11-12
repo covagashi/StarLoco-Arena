@@ -14,6 +14,7 @@ extends Control
 ##   2052 CoachInfos     login burst begins; 4600 EnterInstance; 4516 Ready
 ##   8   InvalidVersion  [u8 2][u16 70] — server keeps socket open; we close it.
 
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const ReplayFile := preload("res://src/net/replay_file.gd")
 const Codec := preload("res://src/net/codec.gd")
@@ -55,6 +56,8 @@ const OP_GHOST_LADDER_REQ := 60016     # C2S empty
 const OP_STORY_REQUEST := 60020        # C2S empty (S21)
 const OP_STORY := 60021                # S2C [u16 n]{i32 challengeId} — the campaign challenges won
 const OP_SEASON_REQUEST := 60030       # C2S empty (S25)
+const OP_COSMETIC_EQUIP := 60042       # C2S [i32 hairFx] (S37)
+const OP_COSMETICS := 60043            # S2C [i32 hairFx shown][u8 n]{i32 owned}
 const OP_SEASON := 60031               # S2C [u16 number][i64 endsAt][u8 n]{u16 season, u8 ladder, i32 rank, i32 pesetas}
 const OP_TOURN_MATCHES_REQ := 60032    # C2S [i64 tid] (S29)
 const OP_TOURN_MATCHES := 60033        # S2C [i64 tid][u8 n]{i32 slot, str8 winner, str8 loser, i32 rounds}
@@ -828,6 +831,15 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TOURN_REPLAY_CHUNK:
 			_on_tourn_replay_chunk(payload.get_i64(), payload.get_i32(), payload.get_u16(),
 				payload.get_u16(), payload.get_rest())
+		OP_COSMETICS:
+			var fx := payload.get_i32() if payload.remaining() >= 4 else 0
+			var owned := []
+			for i in (payload.get_u8() if payload.remaining() >= 1 else 0):
+				if payload.remaining() >= 4:
+					owned.append(payload.get_i32())
+			State.cosmetics = {"hair_fx": fx, "owned": owned}
+			_gui.gui.model.set_value("localCoach", fx, "hairFx")
+			_push_equip_model()
 		OP_SEASON:
 			var season := {"number": payload.get_u16(), "ends": payload.get_i64(), "results": []}
 			for i in payload.get_u8():
@@ -2164,8 +2176,14 @@ func _push_equip_model() -> void:
 				"qty": int(have[cid]), "slot": int(COACH_SLOT_FOR_TYPE[t]),
 				"slotName": I18n.t(COACH_SLOT_NAMES[int(COACH_SLOT_FOR_TYPE[t])])})
 	owned.sort_custom(func(a, b): return a.slot < b.slot or (a.slot == b.slot and a.name < b.name))
+	# S37: the hair effects it owns (60043), shown at once on a click
+	var hair: Array = []
+	for id in State.cosmetics.get("owned", []):
+		if Fighter3D.HAIR_FX.has(int(id)):
+			hair.append({"id": int(id), "name": I18n.t("hairfx.%d" % int(id))})
 	_gui.gui.model.set_value("coachEquip", {"slots": slots, "owned": owned,
-		"dirty": _equip_draft != _equip_slots})
+		"dirty": _equip_draft != _equip_slots,
+		"hairFx": int(State.cosmetics.get("hair_fx", 0)), "hairOwned": hair})
 
 
 ## 5201 [14 × i32 card] — the whole layout; the server answers with a 5200.
@@ -5005,6 +5023,7 @@ func _local_coach_model() -> Dictionary:
 		"sex": int(look.get("sex", 0)),
 		"skin": int(look.get("skin", 0)),
 		"hair": int(look.get("hair", 0)),
+		"hairFx": int(State.cosmetics.get("hair_fx", 0)),   # S37 (60043)
 		"equipedEmotes": [],
 		"actorDescriptorLibrary": "coach_700%d" % int(look.get("sex", 0)),
 		"actorAnimation": "AnimStatique",
@@ -5484,6 +5503,11 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeEquipWear":
 			_on_equip_wear()
+			return
+		"nativeHairFx":
+			var w := WireWriter.new()
+			w.put_i32(int(args[0]))
+			State.net.send_message(OP_COSMETIC_EQUIP, w.raw(), 3)
 			return
 		"nativeKanodo":
 			_open_kanodo(int(args[0]))

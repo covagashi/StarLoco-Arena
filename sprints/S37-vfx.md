@@ -1,6 +1,6 @@
 # S37 — Efectos (VFX)
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🟡 en curso (desde 2026-11-12)
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ✅ cerrado 2026-11-12
 
 ## Alcance
 
@@ -87,8 +87,37 @@ contorno), parámetros a 0 salvo en las piezas de `Fighter3D.LIVE`:
   chispas 3D suben del banderín.
 Visto con `anim_sheet.gd` a varios zooms.
 
-Pendiente: el pelo con efecto como cosmético de S30 (necesita el objeto en
-el servidor y la tienda; se hace en su propio paso).
+## Paso 4 — efectos de pelo, cosmético (2026-11-12)
+
+Dueño: "ok haz eso del S37". La tienda de S30 no existe todavía, así que el
+cosmético se hace entero salvo la venta:
+- Servidor (`game/cosmetics.go`): cuatro efectos (1 fuego, 2 escarcha,
+  3 tormenta, 4 dorado). Lo que tiene cada coach en `coach_cosmetics`; el
+  que lleva, en `coaches.hair_fx` (migración 19). 60042 lo cambia (solo uno
+  que tenga, o 0), 60043 lo cuenta (va con cada 60001); el 60040 del combate
+  lleva el de cada coach. `/COSMETIC <coach> <id>` lo da mientras no hay
+  tienda.
+- Cliente: `Fighter3D.HAIR_FX` / `hair_fx()`: el pelo (canal G de la
+  máscara) toma el color del efecto y brilla un poco, y unas partículas
+  salen de la cabeza (llamas que suben, copos, chispas, destellos).
+  **Decidido**: teñir y no solo sumar luz, porque un pelo blanco no puede
+  brillar más; tormenta en azul eléctrico para que no se confunda con el
+  dorado.
+- Panel "Equipo del coach": al elegir la casilla Pelo salen los efectos que
+  tiene (y "Ninguno"); un clic lo pone al momento, sin pasar por "Llevar
+  puesto". Solo se ve si tiene alguno.
+- Hoja: `~/codigo/capturas/s37/pelo.png`; panel: `capturas/s37/panel/coach-hair.png`.
+
+Probado: `go test ./...` (cosmetics_test: equipar sin tenerlo, dar dos
+veces, guardar, quitar, 60043 solo al cliente Godot, `/COSMETIC`; 60040
+con el efecto); `run_tests.sh --headless` 1463/0. Contra el servidor local
+con dos efectos dados en la base (borrados después): `hub_smoke` (el coach
+del lobby lo muestra), `fight_smoke` (`COACH HAIR FX test want=1 shown=1`)
+y `screens_smoke` (el panel cambia de fuego a escarcha y vuelve; 12/0).
+Encontrado por el camino: `_push_local_coach` rehacía `localCoach` y perdía
+el efecto; ahora va en el modelo.
+
+Pendiente en S30: venderlos (precio en pesetas, la tienda).
 
 ## Criterio de cierre
 

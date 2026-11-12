@@ -43,3 +43,7 @@ premio.
 
 - Cosméticos de pelo del coach: efectos sobre el pelo (fuego, escarcha…),
   de la librería de S37 (dueño: "poner vfx al pelo me parece bien").
+  **Hechos en S37 (2026-11-12)** salvo la venta: 4 efectos, propiedad en
+  `coach_cosmetics`, puesto en `coaches.hair_fx`, 60042/60043, panel en la
+  casilla Pelo. La tienda solo tiene que llamar a `GrantCosmetic` al cobrar
+  (hoy lo hace el GM con `/COSMETIC`).

@@ -2811,7 +2811,8 @@ func _cast_sfx(fid: int, sid: int) -> void:
 
 
 ## 60040: what every coach wears, kept on its 8000 entry (State.coach_ids)
-## and put on its figure if it's already placed (a resync).
+## and put on its figure if it's already placed (a resync); then its hair
+## effect cosmetic (S37).
 func _coach_looks(payload: WireReader) -> void:
 	var n := payload.get_u8() if payload.remaining() >= 1 else 0
 	for i in n:
@@ -2823,11 +2824,13 @@ func _coach_looks(payload: WireReader) -> void:
 			if payload.remaining() < 5:
 				return
 			cards.append({"slot": payload.get_u8(), "id": payload.get_i32()})
+		var hair_fx := payload.get_i32() if payload.remaining() >= 4 else 0
 		if id == 0:
 			continue
 		if not State.coach_ids.has(id):
 			State.coach_ids[id] = {"id": id}
 		State.coach_ids[id]["cards"] = cards
+		State.coach_ids[id]["hair_fx"] = hair_fx
 		_dress_coach(id)
 
 
@@ -2837,6 +2840,7 @@ func _dress_coach(id: int) -> void:
 	if spr == null or spr.model3d == null or not spr.model3d.has_method("wear_coach_cards"):
 		return
 	spr.model3d.wear_coach_cards(State.coach_ids.get(id, {}).get("cards", []))
+	spr.model3d.set_hair_fx(int(State.coach_ids.get(id, {}).get("hair_fx", 0)))
 
 
 ## Weapon swing — card scripts 800x play AnimStatique03(-Debut)-<fam> on the

@@ -274,6 +274,15 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.TournamentMatch{})
 		},
 	},
+	{
+		// Cosmetics (S37): what each coach owns, and the hair effect it
+		// shows (a new coaches column, which AutoMigrate adds).
+		Version: 19,
+		Name:    "coach_cosmetics",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.CoachCosmetic{}, &domain.Coach{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

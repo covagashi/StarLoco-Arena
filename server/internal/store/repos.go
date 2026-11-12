@@ -514,6 +514,40 @@ func (r *CoachRepo) SyncTome(coachID uint, templateIDs []int32) (map[int32]bool,
 	return have, nil
 }
 
+// GrantCosmetic gives the coach a cosmetic; owning it already is not an error.
+func (r *CoachRepo) GrantCosmetic(coachID uint, id int32) error {
+	var n int64
+	if err := r.db.Model(&domain.CoachCosmetic{}).
+		Where("coach_id = ? AND cosmetic_id = ?", coachID, id).Count(&n).Error; err != nil {
+		return err
+	}
+	if n > 0 {
+		return nil
+	}
+	return r.db.Create(&domain.CoachCosmetic{CoachID: coachID, CosmeticID: id}).Error
+}
+
+// Cosmetics returns the cosmetics this coach owns, ascending.
+func (r *CoachRepo) Cosmetics(coachID uint) ([]int32, error) {
+	var rows []domain.CoachCosmetic
+	if err := r.db.Where("coach_id = ?", coachID).
+		Order("cosmetic_id asc").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]int32, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, row.CosmeticID)
+	}
+	return out, nil
+}
+
+// SetHairFx stores the hair effect the coach shows (0 = none). The caller
+// checks it owns it.
+func (r *CoachRepo) SetHairFx(coachID uint, id int32) error {
+	return r.db.Model(&domain.Coach{}).Where("id = ?", coachID).
+		Update("hair_fx", id).Error
+}
+
 // TomeCards returns the card templates this coach has ever owned, ascending.
 func (r *CoachRepo) TomeCards(coachID uint) ([]int32, error) {
 	var rows []domain.CoachTomeCard
@@ -669,6 +703,10 @@ func (r *CoachRepo) DeleteCoach(coachID uint) error {
 		}
 		if err := tx.Where("coach_id = ?", coachID).
 			Delete(&domain.CoachTomeCard{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("coach_id = ?", coachID).
+			Delete(&domain.CoachCosmetic{}).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("coach_id = ?", coachID).

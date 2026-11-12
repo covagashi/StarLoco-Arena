@@ -37,6 +37,9 @@ type Coach struct {
 	Hair uint8 `gorm:"not null;default:0"`
 	Skin uint8 `gorm:"not null;default:0"`
 	Sex  uint8 `gorm:"not null;default:0"`
+	// HairFx is the hair effect cosmetic the coach shows (S37, a
+	// CoachCosmetic it owns; 0 = none).
+	HairFx int32 `gorm:"not null;default:0"`
 
 	// World position
 	PosX int32 `gorm:"not null;default:1"`
@@ -80,6 +83,18 @@ type CoachStat struct {
 	StatID  int16 `gorm:"uniqueIndex:idx_stat_pair;not null"`
 	Value   int32 `gorm:"not null;default:0"`
 }
+
+// CoachCosmetic is one cosmetic the coach owns (S37: the hair effects, ids in
+// game/cosmetics.go). Pure looks: nothing in a fight reads it. The S30 shop
+// is meant to sell them; until then a GM grants them (/COSMETIC).
+type CoachCosmetic struct {
+	ID         uint  `gorm:"primaryKey"`
+	CoachID    uint  `gorm:"uniqueIndex:idx_coach_cosmetic;not null"`
+	CosmeticID int32 `gorm:"uniqueIndex:idx_coach_cosmetic;not null"`
+}
+
+// TableName pins the table name.
+func (CoachCosmetic) TableName() string { return "coach_cosmetics" }
 
 // CoachTomeCard is one card template the coach has EVER owned — the "grimoire"
 // the client keeps in aez_0.dBd.

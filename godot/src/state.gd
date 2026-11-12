@@ -63,6 +63,10 @@ static var elements := {}
 ## (unequipped stacks only — section 3 of the push).
 static var inventory := {}
 
+## S37: the coach's cosmetics from 60043 — {"hair_fx": id shown (0 none),
+## "owned": [ids]}.
+static var cosmetics := {}
+
 ## Wallet from 4001 WalletUpdate / 5403 ShopResult: {currencyType: amount}.
 static var wallet := {}
 

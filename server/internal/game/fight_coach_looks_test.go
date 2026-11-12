@@ -8,9 +8,10 @@ import (
 )
 
 // S35c: 60040 lists every coach of the fight with the cards it wears (5201's
-// 0-based slots), skipping its unequipped stacks; a synthetic side has none.
+// 0-based slots), skipping its unequipped stacks, then its hair effect (S37);
+// a synthetic side has none.
 func TestFightCoachLooksListsWornCards(t *testing.T) {
-	a := &domain.Coach{ID: 7, Inventory: []domain.CoachCard{
+	a := &domain.Coach{ID: 7, HairFx: CosmeticHairStorm, Inventory: []domain.CoachCard{
 		{TemplateID: 114, Pos: 1}, // hat
 		{TemplateID: 200, Pos: 0}, // in the bag
 		{TemplateID: 1, Pos: 9},   // cape
@@ -41,10 +42,17 @@ func TestFightCoachLooksListsWornCards(t *testing.T) {
 			t.Errorf("worn = slot %d card %d, want slot %d card %d", slot, card, w[0], w[1])
 		}
 	}
+	if fx, _ := r.I32(); fx != CosmeticHairStorm {
+		t.Errorf("hair effect = %d, want %d", fx, CosmeticHairStorm)
+	}
 	id, _ = r.I64()
 	m, _ = r.U8()
-	if id != 0 || m != 0 {
-		t.Errorf("synthetic side = %d with %d cards, want 0 with 0", id, m)
+	fx, _ := r.I32()
+	if id != 0 || m != 0 || fx != 0 {
+		t.Errorf("synthetic side = %d with %d cards, fx %d, want all 0", id, m, fx)
+	}
+	if r.Remaining() != 0 {
+		t.Errorf("%d bytes left over", r.Remaining())
 	}
 }
 

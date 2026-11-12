@@ -643,8 +643,15 @@ const (
 	// The coaches' worn equipment in a fight (S35c, game/fight_packets.go) —
 	// Godot only, sent right after 8000 to a session that asked 60000 (the
 	// retail 8000 coach block has no room for it). The 3D coach figures wear
-	// it. [u8 n]{[i64 coachId][u8 m]{[u8 slot (5201's, 0-based)][i32 cardId]}}
+	// it. [u8 n]{[i64 coachId][u8 m]{[u8 slot (5201's, 0-based)][i32 cardId]}[i32 hairFx]}
+	// (hairFx since S37: the coach's hair effect cosmetic, 0 = none)
 	OpFightCoachLooks = 60040 // S2C
+
+	// Cosmetics (S37, game/cosmetics.go) — Godot only. 60043 goes with every
+	// 60001 (the client asks 60000 on entering the lobby) and after each 60042.
+	// 60042 [i32 hairFx (0 = none)] → 60043 [i32 hairFx][u8 n]{[i32 owned id]}
+	OpCosmeticEquip = 60042 // C2S
+	OpCosmetics     = 60043 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

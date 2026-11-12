@@ -7,8 +7,13 @@ extends "res://src/ui/card_panel.gd"   # lobby_panel + the card tile helpers
 ## XP, morale…) count what the coach wears.
 ##
 ## Reads `coachEquip` {slots:[{slot, label, card, name}], owned:[{id, name,
-## qty, slot, slotName}], dirty}; answers nativeEquipPut [card] /
-## nativeEquipTake [slot] / nativeEquipReset / nativeEquipWear.
+## qty, slot, slotName}], dirty, hairFx, hairOwned:[{id, name}]}; answers
+## nativeEquipPut [card] / nativeEquipTake [slot] / nativeEquipReset /
+## nativeEquipWear, and nativeHairFx [id] (S37: a hair effect cosmetic it
+## owns, 0 = none; put on at once, not part of the draft).
+
+
+const HAIR_SLOT := 2   # 5201's 0-based hair slot (main.COACH_SLOT_NAMES)
 
 
 func _ready() -> void:
@@ -53,6 +58,8 @@ func refresh() -> void:
 	var take := button(line, I18n.t("ce.take_tip"), func(): send("nativeEquipTake", [pick]),
 		int(worn.get("card", 0)) != 0)
 	take.name = "Take"
+	if pick == HAIR_SLOT:
+		_hair_row(d)
 	var owned: Array = d.get("owned", []).filter(func(c): return int(c.get("slot", -1)) == pick)
 	var grid := HFlowContainer.new()
 	grid.name = "Owned"
@@ -76,3 +83,24 @@ func refresh() -> void:
 	wear.name = "Wear"
 	wear.custom_minimum_size.x = 190
 	UiStyle.primary(wear, 20)
+
+
+## S37: the hair effects the coach owns, on the Pelo slot above its hair
+## cards; shown only when it owns one.
+func _hair_row(d: Dictionary) -> void:
+	var owned: Array = d.get("hairOwned", [])
+	if owned.is_empty():
+		return
+	var on := int(d.get("hairFx", 0))
+	label(body, I18n.t("ce.hair_fx"), 20)
+	_muted(body, I18n.t("ce.hair_fx_tip"))
+	var line := HFlowContainer.new()
+	line.name = "HairFx"
+	line.add_theme_constant_override("h_separation", 8)
+	body.add_child(line)
+	for o in [{"id": 0, "name": I18n.t("ce.hair_none")}] + owned:
+		var id := int(o.id)
+		var b := button(line, str(o.name), func(): send("nativeHairFx", [id]), id != on)
+		b.name = "Hair%d" % id
+		if id == on:
+			UiStyle.primary(b, 18)

@@ -508,7 +508,8 @@ func buildFighterTurnBegin(uid int32, wireID int64) ([]byte, error) {
 // buildFightCoachLooks is 60040 (S35c, Godot only): every coach in the fight
 // with the cards it wears, in 5201's 0-based slots, so the client dresses
 // the 3D coach figures. A coach with nothing on (or a synthetic one) is
-// listed with none. [u8 n]{[i64 coachId][u8 m]{[u8 slot][i32 cardId]}}
+// listed with none. S37: then the hair effect it shows (cosmetics.go).
+// [u8 n]{[i64 coachId][u8 m]{[u8 slot][i32 cardId]}[i32 hairFx]}
 func buildFightCoachLooks(f *Fight) ([]byte, error) {
 	w := protocol.NewWriter()
 	members := f.members()
@@ -517,6 +518,7 @@ func buildFightCoachLooks(f *Fight) ([]byte, error) {
 		if m.Coach == nil {
 			w.I64(0)
 			w.U8(0)
+			w.I32(0)
 			continue
 		}
 		w.I64(int64(m.Coach.ID))
@@ -531,6 +533,7 @@ func buildFightCoachLooks(f *Fight) ([]byte, error) {
 			w.U8(uint8(c.Pos - 1))
 			w.I32(c.TemplateID)
 		}
+		w.I32(m.Coach.HairFx)
 	}
 	return protocol.EncodeS2C(protocol.OpFightCoachLooks, w.Bytes())
 }

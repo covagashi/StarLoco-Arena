@@ -144,6 +144,8 @@ const GARMENTS := ["skirt", "pants", "boots", "torso", "mark"]
 const PIECES := "equipment/pieces.json"
 static var _pieces = null
 var _worn := {}               # slot -> the piece's node
+var _hair_fx := 0             # S37: the hair effect shown (HAIR_FX id)
+var _hair_node: Node3D        # its particles, on the head bone
 var _path := ""
 var _worn_piece := {}         # slot -> piece name asked for (equip)
 var _t := 0.0
@@ -312,6 +314,8 @@ static func _mask(path: String) -> Dictionary:
 ## Retint a built figure (the creation screen's swatches) without a rebuild.
 func retint(tints: Dictionary, path: String) -> void:
 	Toon.dress(_model, tints, _mask(path))
+	if _hair_fx != 0:   # the dress swapped its own materials back in
+		set_hair_fx(_hair_fx)
 
 
 func _build(model: Node3D, tints: Dictionary, mask := {}) -> void:
@@ -442,48 +446,131 @@ const LIVE := {
 }
 
 
+## S37: the hair effect cosmetics (server game/cosmetics.go ids): the
+## hair texels of the coach's mask take a colour and glow (glow rgb +
+## strength, pulse speed) and a few particles come off the hair — sizes
+## and speeds in head widths, from `low` (of the head's height) under its top.
+const HAIR_FX := {
+	1: {"glow": Color(1.0, 0.45, 0.1, 0.65), "pulse": 9.0,      # fire
+		"n": 18, "life": 0.6, "speed": [1.0, 2.0], "lift": 1.4, "spread": 25.0, "size": 0.24, "low": 0.45,
+		"ramp": [Color(1.0, 0.92, 0.5), Color(1.0, 0.45, 0.08), Color(0.8, 0.1, 0.02, 0.0)]},
+	2: {"glow": Color(0.55, 0.85, 1.0, 0.5), "pulse": 1.5,      # frost
+		"n": 12, "life": 1.6, "speed": [0.3, 0.6], "lift": -0.25, "spread": 70.0, "size": 0.17, "low": 0.3,
+		"ramp": [Color(1.0, 1.0, 1.0), Color(0.7, 0.92, 1.0), Color(0.4, 0.7, 1.0, 0.0)]},
+	3: {"glow": Color(0.5, 0.62, 1.0, 0.6), "pulse": 30.0,      # storm
+		"n": 14, "life": 0.25, "speed": [2.0, 4.0], "lift": 0.0, "spread": 180.0, "size": 0.14, "low": 0.3,
+		"ramp": [Color(1.0, 1.0, 1.0), Color(0.6, 0.75, 1.0), Color(0.5, 0.4, 1.0, 0.0)]},
+	4: {"glow": Color(1.0, 0.8, 0.3, 0.5), "pulse": 3.0,        # gold
+		"n": 8, "life": 1.2, "speed": [0.2, 0.5], "lift": 0.3, "spread": 60.0, "size": 0.15, "low": 0.3,
+		"ramp": [Color(1.0, 1.0, 0.85), Color(1.0, 0.82, 0.3), Color(0.9, 0.6, 0.1, 0.0)]},
+}
+
+
+## Show hair effect `id` (HAIR_FX; 0 or unknown = none) on a coach figure
+## (one built from a masked Meshy coach; others have no hair texels).
+func set_hair_fx(id: int) -> void:
+	_hair_fx = id
+	if _hair_node != null:
+		_hair_node.queue_free()
+		_hair_node = null
+	if _model != null:
+		_hair_node = hair_fx(_model, _path, id)
+
+
+## The hair effect on `model` (built from `path`): its hair texels glow, and
+## the particles (returned, on the head bone; null without them) rise.
+static func hair_fx(model: Node3D, path: String, id: int) -> Node3D:
+	var fx: Dictionary = HAIR_FX.get(id, {})
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.has_meta("garment") or mi.mesh == null:
+			continue
+		for s in mi.mesh.get_surface_count():
+			var mat := mi.get_surface_override_material(s) as ShaderMaterial
+			if mat == null or not mat.get_shader_parameter("has_mask"):
+				continue
+			if not mat.has_meta("own"):   # toon.gd shares materials between figures
+				mat = mat.duplicate()
+				mat.set_meta("own", true)
+				mi.set_surface_override_material(s, mat)
+			mat.set_shader_parameter("hair_glow", fx.get("glow", Color(0, 0, 0, 0)))
+			mat.set_shader_parameter("hair_pulse", float(fx.get("pulse", 0.0)))
+	var skel := _skeleton(model)
+	var bone := skel.find_bone("head") if skel != null else -1
+	if fx.is_empty() or bone < 0:
+		return null
+	var head := _bones_box(model, path, skel, ["head"])
+	var w := head.size.x
+	var at := Vector3(head.get_center().x, head.end.y - head.size.y * float(fx.low), head.get_center().z)
+	var p := _sparks(fx.ramp, w * float(fx.size))
+	p.amount = int(fx.n)
+	p.lifetime = float(fx.life)
+	p.emission_sphere_radius = w * 0.38
+	p.spread = float(fx.spread)
+	p.initial_velocity_min = w * float(fx.speed[0])
+	p.initial_velocity_max = w * float(fx.speed[1])
+	p.gravity = Vector3(0, w * float(fx.lift), 0)
+	var att := BoneAttachment3D.new()
+	att.bone_name = "head"
+	skel.add_child(att)
+	att.add_child(p)
+	p.transform = skel.get_bone_global_rest(bone).affine_inverse() * Transform3D(Basis(), at)
+	return att
+
+
 ## A thin stream of sparks rising from `at` (piece space): ten unshaded
 ## billboards, light enough for the web demo.
 static func _embers(at: Vector3) -> CPUParticles3D:
-	var e := CPUParticles3D.new()
+	var e := _sparks([Color(1.0, 0.9, 0.45), Color(1.0, 0.45, 0.1), Color(0.9, 0.15, 0.05, 0.0)], 0.05)
 	e.position = at
 	e.amount = 10
 	e.lifetime = 0.9
-	e.lifetime_randomness = 0.4
-	var quad := QuadMesh.new()
-	quad.size = Vector2(0.05, 0.05)
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	m.vertex_color_use_as_albedo = true
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	var dot := GradientTexture2D.new()   # a soft round spark
-	dot.fill = GradientTexture2D.FILL_RADIAL
-	dot.fill_from = Vector2(0.5, 0.5)
-	dot.fill_to = Vector2(1.0, 0.5)
-	dot.gradient = Gradient.new()
-	dot.gradient.set_color(0, Color.WHITE)
-	dot.gradient.set_color(1, Color(1, 1, 1, 0))
-	dot.gradient.add_point(0.45, Color(1, 1, 1, 0.9))
-	dot.width = 16
-	dot.height = 16
-	m.albedo_texture = dot
-	quad.material = m
-	e.mesh = quad
-	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	e.emission_sphere_radius = 0.03
-	e.direction = Vector3.UP
 	e.spread = 25.0
 	e.initial_velocity_min = 0.18
 	e.initial_velocity_max = 0.32
 	e.gravity = Vector3(0, 0.2, 0)
+	return e
+
+
+static var _spark_mat: StandardMaterial3D
+
+
+## Soft round additive billboards going up, coloured by `ramp` (start, mid,
+## end); callers set the amount, life and motion.
+static func _sparks(ramp: Array, size: float) -> CPUParticles3D:
+	if _spark_mat == null:
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		m.vertex_color_use_as_albedo = true
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		var dot := GradientTexture2D.new()   # a soft round spark
+		dot.fill = GradientTexture2D.FILL_RADIAL
+		dot.fill_from = Vector2(0.5, 0.5)
+		dot.fill_to = Vector2(1.0, 0.5)
+		dot.gradient = Gradient.new()
+		dot.gradient.set_color(0, Color.WHITE)
+		dot.gradient.set_color(1, Color(1, 1, 1, 0))
+		dot.gradient.add_point(0.45, Color(1, 1, 1, 0.9))
+		dot.width = 16
+		dot.height = 16
+		m.albedo_texture = dot
+		_spark_mat = m
+	var e := CPUParticles3D.new()
+	e.lifetime_randomness = 0.4
+	var quad := QuadMesh.new()
+	quad.size = Vector2(size, size)
+	quad.material = _spark_mat
+	e.mesh = quad
+	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	e.direction = Vector3.UP
 	e.scale_amount_min = 0.5
 	e.scale_amount_max = 1.0
 	var g := Gradient.new()
-	g.set_color(0, Color(1.0, 0.9, 0.45))
-	g.set_color(1, Color(0.9, 0.15, 0.05, 0.0))
-	g.add_point(0.35, Color(1.0, 0.45, 0.1))
+	g.set_color(0, ramp[0])
+	g.set_color(1, ramp[2])
+	g.add_point(0.35, ramp[1])
 	e.color_ramp = g
 	return e
 

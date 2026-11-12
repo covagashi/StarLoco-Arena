@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 366 |
-| **C2S handled (H)** | 124 |
-| **S2C emitted (E)** | 165 |
+| Rows in the master table | 368 |
+| **C2S handled (H)** | 125 |
+| **S2C emitted (E)** | 166 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -554,7 +554,9 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60033 | S2C | E | Godot extension (no retail class) | the fixtures the server played offline - `[i64 tid][u8 n] n×{[i32 slot][str winner][str loser][i32 rounds]}` (u8-length UTF-8) |
 | 60034 | C2S | H | Godot extension (no retail class) | `handleTournReplayRequest` (S29) - `[i64 tid][i32 slot]`; answered by 60035 × count |
 | 60035 | S2C | E | Godot extension (no retail class) | one chunk of a fixture's recording (gzipped SLRP) - `[i64 tid][i32 slot][u16 index][u16 count][bytes]` |
-| 60040 | S2C | E | Godot extension (no retail class) | the coaches' worn equipment in a fight (S35c), right after 8000 to a session that sent 60000 - `[u8 n] n×{[i64 coachId][u8 m] m×{[u8 slot (5201's, 0-based)][i32 cardId]}}`; the 3D coach figures wear it |
+| 60040 | S2C | E | Godot extension (no retail class) | the coaches' worn equipment in a fight (S35c), right after 8000 to a session that sent 60000 - `[u8 n] n×{[i64 coachId][u8 m] m×{[u8 slot (5201's, 0-based)][i32 cardId]}[i32 hairFx (S37, 0 = none)]}`; the 3D coach figures wear it |
+| 60042 | C2S | H | Godot extension (no retail class) | `handleCosmeticEquip` (S37) - `[i32 hairFx]`, 0 takes it off; a cosmetic the coach doesn't own is refused; answered by 60043 |
+| 60043 | S2C | E | Godot extension (no retail class) | the coach's cosmetics (S37), with every 60001 and after 60042 - `[i32 hairFx shown][u8 n] n×{[i32 owned cosmetic id]}` |
 
 ---
 

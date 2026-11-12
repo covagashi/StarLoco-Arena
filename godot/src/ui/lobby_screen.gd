@@ -52,6 +52,8 @@ var _spr
 var _model
 var _chat: Control
 var _look := ""
+var _hair_fx := 0     # S37: the hair effect on the figure now
+var _hair_on: Object  # …and the figure it was put on (a rebuild drops it)
 var _dir := Direction8.FRONT    # wire dir the coach sprite faces
 var _subtitle: Label            # the search card's heading
 var _hint: Label
@@ -488,6 +490,11 @@ func _sync() -> void:
 	# S35c: the 3D figure wears the coach's cards (main._push_coach_worn)
 	if _spr.model3d != null and _spr.model3d.has_method("wear_coach_cards"):
 		_spr.model3d.wear_coach_cards(coach.get("worn", []))
+		# S37: its hair effect cosmetic (60043, main → localCoach.hairFx)
+		if int(coach.get("hairFx", 0)) != _hair_fx or _hair_on != _spr.model3d:
+			_hair_fx = int(coach.get("hairFx", 0))
+			_hair_on = _spr.model3d
+			_spr.model3d.set_hair_fx(_hair_fx)
 
 
 func _rotate(delta: int) -> void:

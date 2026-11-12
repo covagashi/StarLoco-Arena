@@ -829,6 +829,13 @@ func _check_equipment(fight_scene: Node) -> void:
 		print("[smoke] %s COACH EQUIP %s cards=%s pieces=%s worn=%s" % [
 			"OK  " if ckeys == chave else "FAIL", State.coach_ids[cid].get("name", cid),
 			cards.map(func(c): return int(c.id)), cwant, chave])
+		# S37: and the hair effect 60040 gives it
+		var hfx := int(State.coach_ids[cid].get("hair_fx", 0))
+		var hok: bool = cspr.model3d._hair_fx == hfx and (hfx == 0 or cspr.model3d._hair_node != null)
+		print("[smoke] %s COACH HAIR FX %s want=%d shown=%d" % ["OK  " if hok else "FAIL",
+			State.coach_ids[cid].get("name", cid), hfx, cspr.model3d._hair_fx])
+		if not hok:
+			push_error("coach hair effect: 60040 says %d, the figure shows %d" % [hfx, cspr.model3d._hair_fx])
 	for fid in State.fighters:
 		var f: Dictionary = State.fighters[fid]
 		var spr = fight_scene._sprites.get(fid)

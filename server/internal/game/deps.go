@@ -136,6 +136,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerClientConfigHandlers(r, d)
 	registerStoryHandlers(r, d)
 	registerSeasonHandlers(r, d)
+	registerCosmeticHandlers(r, d)
 	registerOfflineTournamentHandlers(r, d)
 	registerGhostHandlers(r, d)
 }

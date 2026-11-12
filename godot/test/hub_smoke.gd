@@ -50,6 +50,11 @@ func _audit() -> void:
 	wkeys.sort()
 	_record(0, "coach dressed", m3d != null and have == wkeys,
 		"cards %s → pieces %s, the figure wears %s" % [worn.map(func(c): return int(c.id)), want, have])
+	# S37: and its hair effect cosmetic (60043)
+	var hfx := int(State.cosmetics.get("hair_fx", 0))
+	_record(0, "hair effect", m3d != null and m3d._hair_fx == hfx and (hfx == 0 or m3d._hair_node != null),
+		"60043 shows %d (owns %s), the figure shows %d" % [hfx, State.cosmetics.get("owned", []),
+			m3d._hair_fx if m3d != null else -1])
 	# 2. the Ranking team
 	var pick: OptionButton = c.ranked.pick
 	if pick.item_count >= 1:
