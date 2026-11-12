@@ -114,7 +114,7 @@ func _ready() -> void:
 ## their fields and buttons, the title in the title font.
 func _theme() -> Theme:
 	var result: Theme = UiStyle.theme()
-	var win := UiStyle.window()
+	var win = UiStyle.window()   # StyleBoxTexture or StyleBoxFlat: both have expand margins
 	# the embedded window's title bar sits ABOVE its content rect: the frame
 	# must grow up to cover it, or the title floats over the backdrop
 	win.expand_margin_top = 44

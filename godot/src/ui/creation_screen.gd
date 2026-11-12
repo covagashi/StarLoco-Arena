@@ -43,10 +43,7 @@ func _init() -> void:
 	title.position = Vector2(0, 56)
 	title.size = Vector2(REF.x, 80)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_override("font", UiStyle.title_font())
-	title.add_theme_color_override("font_color", UiStyle.GOLD)
-	title.add_theme_font_size_override("font_size", 60)
-	title.add_theme_constant_override("outline_size", 12)
+	UiStyle.title(title, 60, UiStyle.GOLD)
 	_box.add_child(title)
 
 	var form := _window(R_FORM)

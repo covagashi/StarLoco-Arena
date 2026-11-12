@@ -1,6 +1,6 @@
 # S45 — Lavado de cara de la interfaz
 
-**Planificado:** 2026-11-12 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 siguiente
+**Planificado:** 2026-11-12 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (fase 1 hecha, 2026-11-12)
 
 ## Por qué
 
@@ -61,6 +61,44 @@ la siguiente.
 5. **Cierre.** Smokes con capturas de cada pantalla, `run_tests.sh` (también el
    carril de 800×600) y el peso para la demo web (S44: ≤ 50 MB de primera
    carga, móviles de 2 GB).
+
+## Progreso
+
+### Fase 0 — a la espera del dueño
+
+Lo que quiera "mejorar un poquito" de la maqueta no está dicho todavía. Por
+heurística (sprints autónomos) no bloquea la fase 1: la base (fuentes, paleta,
+piezas) no depende de esos retoques, y lo que el dueño pida se aplica encima.
+
+### Fase 1 — base (2026-11-12) ✅
+
+- Fuentes: `godot/assets/ui/fonts/LilitaOne-Regular.ttf` y
+  `Nunito-Variable.ttf` (OFL 1.1, de github.com/google/fonts, con sus
+  `OFL-*.txt`), en `godot/art/CREDITS.md`; `tools/art/check.py` también exige
+  el crédito de las fuentes de `assets/ui/fonts/`. De paso salen dos fuentes
+  retail de las pantallas (TAHOMA y COPRGTB quedan solo como reserva si no
+  están las nuestras, y en el combate hasta la fase 4).
+- `tools/make_ui_kit.py` dibuja las piezas en `godot/assets/ui/kit/` (27 PNG,
+  ~60 KB): botón en relieve con labio en pop, azul noche, verde y sol (normal,
+  encima, pulsado, apagado), la acción principal inclinada, campo hundido,
+  ventana, ficha, papel con pespunte y rayado, cinta, medallón y cápsula; y el
+  fondo noche `assets/ui/ui_bg.png` (sustituye la piedra).
+- `ui_style.gd` v2: paleta de la maqueta con los nombres de siempre (INK sigue
+  siendo el texto, PAPER el relleno…), así que los 21 ficheros que usan
+  `UiStyle` cambian sin tocarlos. Nuevo: `kit()`, `button_box()`, `field()`,
+  `paper()` y `title()` (Lilita con contorno y sombra dura). Botones y
+  desplegables en Lilita con contorno; el texto, Nunito 800; las etiquetas,
+  Nunito 900 espaciada. Sin el kit, cajas planas en la misma paleta.
+- Títulos de login, creación y de cada panel con `UiStyle.title()`.
+
+**Decisión (heurística):** en esta fase las ventanas son de noche azul con
+texto crema, no de papel. Pasar los paneles a papel obliga a cambiar el color
+del texto de cada uno (crema → tinta), y eso va por tandas en la fase 3; hacerlo
+aquí de golpe dejaría texto ilegible en los paneles que no se revisen.
+
+Evidencia: `run_tests.sh --headless` → `suites=22 checks=1463 failures=0`;
+`ui_review_preview` a 1280×720 sin fallos, 17 capturas antes/después en
+`~/codigo/capturas/s45/antes/` y `~/codigo/capturas/s45/fase1/`.
 
 ## Fuera
 

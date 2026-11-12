@@ -34,21 +34,14 @@ func _init() -> void:
 	brand.position = Vector2(0, 58)
 	brand.size = Vector2(REF.x, 44)
 	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	brand.add_theme_font_override("font", UiStyle.title_font())
-	brand.add_theme_color_override("font_color", UiStyle.GOLD)
-	brand.add_theme_font_size_override("font_size", 36)
-	brand.add_theme_constant_override("outline_size", 10)
+	UiStyle.title(brand, 36)
 	_box.add_child(brand)
 	var title := Label.new()
 	title.text = "ARENA"
 	title.position = Vector2(0, 92)
 	title.size = Vector2(REF.x, 110)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_override("font", UiStyle.title_font())
-	title.add_theme_color_override("font_color", UiStyle.GOLD)
-	title.add_theme_font_size_override("font_size", 96)
-	# a dark outline keeps the title clean over the stone
-	title.add_theme_constant_override("outline_size", 14)
+	UiStyle.title(title, 96, UiStyle.GOLD)
 	_box.add_child(title)
 	var tagline := Label.new()
 	tagline.text = I18n.t("login.tagline")

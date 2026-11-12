@@ -46,9 +46,7 @@ func _ready() -> void:
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var font := FontFile.new()
-	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
-	title.add_theme_font_override("font", font)
+	UiStyle.title(title, 32)
 	# "?" (S21): what this window is for, in two lines, where it is used —
 	# the help no longer lives only in the Ayuda panel
 	var help_key := "help.panel." + panel_name

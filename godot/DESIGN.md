@@ -1,15 +1,17 @@
 # Lobby visual contract
 
-**Since 2026-10-24 the screens outside combat use the stone-and-gold UI**
-(`src/ui/ui_style.gd`, the owner's call): it replaced the S18 1-bit system,
-which the owner dropped together with the 1-bit fights. It is direction A of
-the S18 sketches — the family of the retail-coloured fight HUD (S17): olive
-stone plates with a worn gold rim, rounded corners, soft shadows, cream text,
-gold titles and one gold primary button per screen (`UiStyle.primary`, the
-fight's PASS). Card art and the paper doll are in colour. Full screens sit on
-our own stonework backdrop, `assets/ui/ui_bg.png`, made by
-`tools/make_ui_bg.py` (the outer frame of the old baked screens, without their
-slots); without the file, an olive gradient.
+**Since 2026-11-12 (S45) the screens outside combat use the game-material UI**
+of the owner-reviewed mockup (`sprints/S45-lavado-de-cara.md`), in
+`src/ui/ui_style.gd` v2; it replaced the stone-and-gold UI of 2026-10-24.
+Night navy (`#12152A`) plates with a 3 px ink border (`#0B0D1C`) and a hard
+shadow, raised buttons with a lip, the one main action of a screen in pop
+orange and leaning (`UiStyle.primary`), titles in Lilita One with an ink
+outline (`UiStyle.title`), text in bold Nunito, sun (`#FFC247`) for rewards,
+hover and focus. The pieces are 9-slice textures drawn by
+`tools/make_ui_kit.py` into `assets/ui/kit/`, which also draws the night
+backdrop `assets/ui/ui_bg.png`; without them, flat boxes in the same palette.
+The fonts are in `assets/ui/fonts/` (OFL). The phases still to come (arena
+art behind the screens, paper panels, the fight HUD) are in the sprint.
 
 The lobby is the **hub** (S20B, 2026-10-24), a fixed 1280×720 composition,
 uniformly scaled and centred:

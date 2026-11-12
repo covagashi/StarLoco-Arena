@@ -285,9 +285,11 @@ def check_credits(r):
         if os.path.isdir(os.path.join(ART, d)) and not d.startswith(".") and d in tracked_dirs():
             if f"`{d}/" not in text:
                 r.fail(f"art/CREDITS.md does not say where art/{d}/ comes from")
-    for f in os.listdir(os.path.join(ART, "fonts")):
-        if f.endswith((".ttf", ".otf")) and f not in text:
-            r.fail(f"art/CREDITS.md does not credit the font {f}")
+    # the art's fonts, and the interface's (S45, assets/ui/fonts)
+    for d in [os.path.join(ART, "fonts"), os.path.join(GODOT, "assets", "ui", "fonts")]:
+        for f in os.listdir(d) if os.path.isdir(d) else []:
+            if f.endswith((".ttf", ".otf")) and f not in text:
+                r.fail(f"art/CREDITS.md does not credit the font {f}")
 
 
 def tracked_dirs():
