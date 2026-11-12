@@ -628,7 +628,7 @@ Siguiente: los 26 torsos.
 | El bajo del torso pasa a la cintura (`bottom` 0); antes bajaba 4 cm más y, sin pantalón, parecía un body. El torso del escudero del piloto conserva su largo (`bottom` 0,09) | `coach_garment.py`, `garments.json` |
 | Los 25 que faltaban, diseño propio: Camisa amplia (blanca, manga larga), Loción capilar (túnica oliva con etiqueta), Jalatranki (lana amarilla abultada), Joroba de la suerte (azul con girasol), Delantal ensangrentado, Tripas Alamodaken (chaleco con panel granate), La Justa (gris verdoso sin mangas), petos Kepika, gelatina, Gosbaster, de guerra, Kamas, Superjefe, Sámara (corto), leñosa y Zar (sin mangas, más separados del cuerpo), Sedforme (chaqueta abierta), Rompedora, Vellocino de wabbit (manga larga, panel negro), Grilembore (manga larga con cinto naranja), L.Men'Tal (chaleco rojo sobre camisa blanca), jálabol (camiseta roja con franja), pecheras Lolomg y wonejo (cortas), Nuboso (blanco abultado) | `art/equipment/garments.json`, `pieces.json` (`coach`) |
 
-Probado: `run_tests.sh`: 1287 checks, 0 fallos. `build.py equipment` y
+Probado: `run_tests.sh`: 1285 checks, 0 fallos. `build.py equipment` y
 `check.py`: 0 fallos (130 prendas). Manga larga (L.Men'Tal) con pantalón y
 botas, celebrando y lanzando: la manga sigue al brazo arriba sin abrirse.
 
