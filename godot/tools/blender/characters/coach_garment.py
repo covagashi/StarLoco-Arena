@@ -34,7 +34,7 @@ import sys
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OPT = {"only": ""}
@@ -47,6 +47,7 @@ for a in argv:
         pos.append(a)
 SRC, RECIPES, OUT_DIR = pos[:3]
 # the marks' emblems (tools/art/mark_emblems.py), beside the garments' folder
+MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT_DIR))), "models")
 MARKS_DIR = OPT.get("marks") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT_DIR))), "marks")
 
 DEFAULTS = {
@@ -492,7 +493,43 @@ def colour(K, bm, tpar, r, ob):
 
 
 MARK_DIRS = {"out": None, "front": Vector((0, -1, 0)), "back": Vector((0, 1, 0)),
-             "left": Vector((1, 0, 0)), "right": Vector((-1, 0, 0))}
+             "left": Vector((1, 0, 0)), "right": Vector((-1, 0, 0)), "up": Vector((0, 0, 1))}
+
+
+def skin_point(K, bm, at):
+    """The point on the skin for `at` {bone, t (along it), dir (out: away
+    from the body's middle; front, back, left, right)}: (hit, d, core, own,
+    bone) — the skin point, the direction, the point on the bone, the
+    vertices of the bone and its neighbours (a hand hanging beside the
+    thigh is not the thigh), the bone the point follows. `bm` is the welded
+    body."""
+    B = K.bones
+    a, b = B[at["bone"]]
+    core = a.lerp(b, at.get("t", 0.5))
+    d = MARK_DIRS[at.get("dir", "out")]
+    if d is None:
+        d = Vector((1 if core.x > 0 else -1, 0, 0))
+    deform = bm.verts.layers.deform.verify()
+    side = at["bone"][-2:] if at["bone"][-2:] in (".L", ".R") else ""
+    stem = at["bone"].split(".")[0]
+    family = {at["bone"]} | {n + side for n in {
+        "thigh": ["shin"], "shin": ["thigh", "foot"], "foot": ["shin"], "upper_arm": ["shoulder", "forearm"],
+        "forearm": ["upper_arm", "hand"]}.get(stem, [])}
+    if stem == "thigh":
+        family.add("hips")
+    if not side:
+        family |= {"hips", "spine", "chest", "neck", "shoulder.L", "shoulder.R"}
+    own = {v for v in bm.verts if dominant(v, deform, K.names) in family}
+    # the vertex furthest along d among those near the ray
+    near = [v for v in own if ((v.co - core) - d * (v.co - core).dot(d)).length < 0.03 and (v.co - core).dot(d) > 0]
+    # (none near it: the bone's own vertex furthest that way, never a point
+    # in the air — the toes stop short of the foot bone's tail)
+    pool = near or [v for v in own if dominant(v, deform, K.names) == at["bone"]] or list(own)
+    best = max(pool, key=lambda v: (v.co - core).dot(d)) if pool else None
+    hit = best.co.copy() if best else core
+    bone = dominant(best, deform, K.names) if best else at["bone"]
+    return hit, d, core, own, bone
+
 
 
 def mark(K, r, ob):
@@ -501,32 +538,11 @@ def mark(K, r, ob):
     projected flat on it, `size` metres across. The point: `at` {bone, t
     (along it), dir (out: away from the body's middle; front, back, left,
     right)}, taken on the skin."""
-    B = K.bones
-    at = r["at"]
-    a, b = B[at["bone"]]
-    core = a.lerp(b, at.get("t", 0.5))
-    d = MARK_DIRS[at.get("dir", "out")]
-    if d is None:
-        d = Vector((1 if core.x > 0 else -1, 0, 0))
     bm = bmesh.new()
     bm.from_mesh(K.ob.data)
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-4)
-    deform = bm.verts.layers.deform.verify()
     bm.normal_update()
-    # the skin point: the vertex furthest along d among those near the ray
-    # only the skin of the bone and its neighbours: a hand hanging beside
-    # the thigh is not the thigh
-    side = at["bone"][-2:] if at["bone"][-2:] in (".L", ".R") else ""
-    stem = at["bone"].split(".")[0]
-    family = {at["bone"]} | {n + side for n in {
-        "thigh": ["hips", "shin"], "shin": ["thigh", "foot"], "upper_arm": ["shoulder", "forearm"],
-        "forearm": ["upper_arm", "hand"]}.get(stem, [])}
-    if not side:
-        family |= {"hips", "spine", "chest", "neck", "shoulder.L", "shoulder.R"}
-    family = {n.replace(".L.L", ".L").replace(".R.R", ".R") for n in family} | ({"hips"} if stem == "thigh" else set())
-    own = {v for v in bm.verts if dominant(v, deform, K.names) in family}
-    near = [v for v in own if ((v.co - core) - d * (v.co - core).dot(d)).length < 0.03 and (v.co - core).dot(d) > 0]
-    hit = max(near, key=lambda v: (v.co - core).dot(d)).co.copy() if near else core + d * 0.05
+    hit, d, core, own, _ = skin_point(K, bm, r["at"])
     half = r["size"] / 2
     # every face reaching into the emblem's square (the corners too), on
     # the side facing d (not the far side of a thin arm)
@@ -564,6 +580,88 @@ def mark(K, r, ob):
     return bm
 
 
+def limb_radius(K, bm, own, core, axis):
+    """Median distance of the limb's vertices round `core` to its axis."""
+    rs = sorted(((v.co - core) - axis * (v.co - core).dot(axis)).length for v in own
+                if abs((v.co - core).dot(axis)) < 0.02)
+    return rs[len(rs) // 2] if rs else 0.05
+
+
+def add_extras(K, ob, r):
+    """The garment's rigid parts (`extras`), kiln models
+    (art/equipment/coach_extras.kx.js, out/models/<model>.glb) joined into
+    it, each wholly on one bone so it moves rigid with it:
+      {model, at: {bone, t, dir}, lift (m off the skin), scale, spin (deg
+       about the skin's normal), pair (and mirrored on the other side)}
+    A model stands on the skin at its origin, +Y (kiln up) out of it, +X up
+    the body. With `ring`, the model is a ring round kiln +Y, put round the
+    limb at the point (+Y along the bone, towards its head) and sized to it
+    (modelled for a 0.05 m limb)."""
+    todo = []
+    for e in r.get("extras", []):
+        todo.append(e)
+        if e.get("pair"):
+            at = dict(e["at"])
+            bone = at["bone"]
+            if bone.endswith((".L", ".R")):
+                at["bone"] = bone[:-2] + (".R" if bone.endswith(".L") else ".L")
+            if at.get("dir") in ("left", "right"):   # (a pair on the trunk: one each side)
+                at["dir"] = "right" if at["dir"] == "left" else "left"
+            todo.append({**e, "at": at, "pair": False, "mirror": True})
+    if not todo:
+        return
+    bm = bmesh.new()
+    bm.from_mesh(K.ob.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-4)
+    bm.normal_update()
+    parts = []
+    for e in todo:
+        hit, d, core, own, bone = skin_point(K, bm, e["at"])
+        before = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(MODELS_DIR, e["model"] + ".glb"))
+        new = [o for o in bpy.data.objects if o not in before]
+        k = e.get("scale", 1.0)
+        if e.get("ring"):
+            a, b = K.bones[e["at"]["bone"]]
+            axis = (a - b).normalized()
+            k *= limb_radius(K, bm, own, core, axis) / 0.05 * 1.05
+            z = axis
+            x = Vector((1, 0, 0)) if abs(z.x) < 0.9 else Vector((0, 1, 0))
+            x = (x - z * x.dot(z)).normalized()
+            where = core
+        else:
+            z = d   # out of the skin
+            up = Vector((0, 0, 1)) if abs(d.z) < 0.9 else Vector((0, -1, 0))   # (on top of a foot: +X forward)
+            x = (up - z * up.dot(z)).normalized()
+            where = hit + d * e.get("lift", 0.0)
+        y = z.cross(x)
+        rot = Matrix((x, y, z)).transposed()   # columns: local x, y, z
+        spin = Matrix.Rotation(math.radians(e.get("spin", 0.0)), 3, "Z")
+        mirror = Matrix.Diagonal((1, -1, 1)) if e.get("mirror") else Matrix.Identity(3)
+        # kiln +Y (out) is Blender +Z after the glTF import; kiln +X stays +X
+        m = Matrix.Translation(where) @ (rot @ spin @ mirror @ Matrix.Diagonal((k, k, k))).to_4x4()
+        for o in new:
+            if o.type != "MESH":
+                bpy.data.objects.remove(o)
+                continue
+            o.matrix_world = m @ o.matrix_world
+            parts.append((o, bone))
+    bm.free()
+    for o, bone in parts:
+        bpy.context.view_layer.objects.active = o
+        o.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        o.select_set(False)   # (a mirrored part's faces are turned back by the apply)
+        g = o.vertex_groups.new(name=bone)
+        g.add(range(len(o.data.vertices)), 1.0, "REPLACE")
+    bpy.ops.object.select_all(action="DESELECT")
+    for o, _ in parts:
+        o.select_set(True)
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.join()
+
+
 def build(K, rig, name, r):
     r = {**DEFAULTS[r["kind"]], **r}
     me = bpy.data.meshes.new(name)
@@ -593,6 +691,9 @@ def build(K, rig, name, r):
         sol.use_rim = True
         bpy.context.view_layer.objects.active = ob
         bpy.ops.object.modifier_apply(modifier="thick")
+    ob.parent = None   # joined in world space, then back on the rig
+    add_extras(K, ob, r)
+    ob.parent = rig
     arm = ob.modifiers.new("rig", "ARMATURE")
     arm.object = rig
     os.makedirs(OUT_DIR, exist_ok=True)

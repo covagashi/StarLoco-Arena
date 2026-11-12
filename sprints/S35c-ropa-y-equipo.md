@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) aprobado; paso 9g (13 marcas) aprobado; paso 9f (partes sueltas) en curso
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) aprobado; paso 9g (13 marcas) aprobado; paso 9f (partes sueltas) esperando al dueño; con él se cierra el sprint
 
 ## Por qué
 
@@ -696,6 +696,41 @@ Hojas: `~/codigo/capturas/s35c/s35c-coach-marcas-13-1.png` y `-2.png`.
 Siguiente: las partes sueltas apuntadas (paso 9f).
 
 Dueño (2026-11-12): "ok a mis marcas". **Las 13 aprobadas.**
+
+## Paso 9f: las partes sueltas de las prendas (2026-11-12)
+
+Lo que una prenda que se dobla no puede tener (decidido con el dueño: lo
+sólido como pieza rígida, los VFX solo para unas pocas en S37).
+
+| Cambio | Fichero |
+|---|---|
+| Una prenda lista sus `extras`: una pieza de kiln y dónde va (`at`: hueso, altura, dirección; `lift`, `scale`, `spin`, `pair` para el otro lado). coach_garment.py la pone sobre la piel (o, con `ring`, alrededor del miembro y a su grosor) y la une a la prenda, entera en un hueso: se mueve rígida con él. Godot no cambia: la pieza va dentro del GLB de la prenda | `tools/blender/characters/coach_garment.py` (`add_extras`, `skin_point`, `limb_radius`) |
+| El punto en la piel pasa a una función común con las marcas. Si el rayo no encuentra piel (los dedos acaban antes que el hueso del pie), se toma el vértice del hueso que más sale en esa dirección, nunca un punto en el aire. Con dirección "arriba" la pieza se orienta hacia delante (antes salía torcida y no se veía) | `coach_garment.py` |
+| 23 piezas nuevas, diseño propio: cuerno, coronas de pelo y de lana, burbuja de gelatina, hebillas (emblema jálabol, moneda, cristal de hielo, aro con gema, lazo), bolsa y flechas, colita, pinchos (gris y oro), remache de piedra, cresta, girasol, flor, plumas, calavera, gafas, collar de cuentas | `art/equipment/coach_extras.kx.js` (nuevo), `kit.kx.js` |
+| 29 prendas con partes: pantalones Kepika (cuernos en muslo y espinilla), Ladilla (pelo en rodilla y tobillo), Jalatranki (lana en el tobillo), gelatina (burbujas); cinturones jálabol, Kamas, Gosbaster, Nuboso, wonejo, Campeón y Campierrele (bolsa y flechas), colita de wabbit; torsos Kepika (cuernos), Joroba (girasol), Gosbaster (plumas), guerra (pinchos en los hombros), Kamas (monedas), Superjefe (cresta), Lolomg (collar), wonejo (flor), Zar (gafas subidas a la cabeza); botas Kepika, Campeón, Campierrele, Superjefe (pinchos), Alu-Card (punta), Stasis (remaches), Aplastacampis (calavera) | `art/equipment/garments.json` |
+| El hash de las prendas cuenta las piezas que unen; el límite de peso de una prenda sube a 256 KB (el de las piezas rígidas): una con partes llega a 228 KB | `tools/art/build.py`, `check.py` |
+
+Corregido al revisar: el cuerno y el cristal tenían tramos sin tocarse
+(ahora cada cono empieza dentro del anterior); las coronas de pelo pesaban
+800 triángulos cada una (200); los cuernos del pantalón eran pequeños
+(×1,5); los pinchos del Campeón quedaban por encima de la bota, sobre la
+piel; las gafas del Zar caían en la boca (el hueso de la cabeza es corto);
+la calavera quedaba dentro de la caña de la bota.
+
+Fuera, como dijo el dueño (VFX en S37): el temblor de la gelatina, el brillo
+del Superjefe, la llama de la Aurea flamma. Sin parte suelta, porque el
+dibujo ya basta: el pelo del Jalatranki en el torso (va abultado), la flor
+de la bota wonejo y la cruz de la leñosa (parches).
+
+Probado: `run_tests.sh`: 1364 checks, 0 fallos. `build.py equipment` y
+`check.py`: 0 fallos.
+
+Hojas: `~/codigo/capturas/s35c/s35c-partes-pantalones.png`,
+`s35c-partes-cinturones.png`, `s35c-partes-torsos.png`,
+`s35c-partes-botas.png`.
+
+Con esto queda hecho todo el alcance del sprint. Para cerrar: el ok del
+dueño a las partes sueltas.
 
 ## Para retomar (2026-11-11)
 

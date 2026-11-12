@@ -267,8 +267,13 @@ GARMENT_FIGS = ["coach_7000", "coach_7001"]
 
 
 def garments_hash(fig):
+    with open(os.path.join(EQUIPMENT, "garments.json")) as f:
+        recipes = json.load(f)
+    # the kiln parts a garment joins in (extras), as built
+    extras = sorted({e["model"] for k, r in recipes.items() if not k.startswith("_") for e in r.get("extras", [])})
+    parts = [p for p in (os.path.join(EQUIPMENT, "out", "models", m + ".glb") for m in extras) if os.path.exists(p)]
     return digest(os.path.join(EQUIPMENT, "garments.json"), os.path.join(CHAR_TOOLS, "coach_garment.py"),
-                  os.path.join(HERE, "mark_emblems.py"), os.path.join(ART, "characters", "out", fig + ".glb"))
+                  os.path.join(HERE, "mark_emblems.py"), os.path.join(ART, "characters", "out", fig + ".glb"), *parts)
 
 
 def build_garments(a):

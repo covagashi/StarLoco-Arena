@@ -49,7 +49,7 @@ EQUIP_TRIS = 1500
 EQUIP_KB = 256
 # A coach garment (coach_garment.py): the body's own faces, thickened.
 GARMENT_TRIS = 3500
-GARMENT_KB = 192
+GARMENT_KB = 256
 ANIMS = ["idle_loop", "walk_loop", "cast", "melee", "hit", "die", "jump", "celebrate", "carry_loop", "throw"]
 # One arena's models as shipped (S44: ≤ 50 MB first load for the whole demo;
 # arenas load on demand, so this is per arena).
