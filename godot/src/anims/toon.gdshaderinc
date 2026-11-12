@@ -27,6 +27,26 @@ uniform float hair_ref = 1.0;
 uniform vec3 shadow_tint : source_color = vec3(0.62, 0.56, 0.76);
 uniform float threshold = 0.05;
 uniform float softness = 0.03;
+// S37: a few garments are alive (Fighter3D.LIVE, toon.gd sets these; 0 =
+// off for everything else). jelly: metres the surface trembles along its
+// normal (gelatina); shine: a glint sweeping over the gold texels
+// (Superjefe); flame: the flame flickers and glows (Aurea flamma).
+uniform float jelly = 0.0;
+uniform float shine = 0.0;
+uniform float flame = 0.0;
+varying vec3 world_pos;
+
+#include "res://src/anims/live.gdshaderinc"
+
+void vertex() {
+	if (jelly > 0.0) {
+		VERTEX += NORMAL * jelly * jelly_wave(VERTEX, TIME);
+	}
+	if (flame > 0.0) {
+		VERTEX = flame_flicker(VERTEX, TIME, flame);
+	}
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
 
 void fragment() {
 	vec4 c = albedo;
@@ -45,6 +65,16 @@ void fragment() {
 	}
 	ALBEDO = c.rgb;
 	ROUGHNESS = 1.0;
+	if (shine > 0.0) {
+		// gold = warm and saturated: the band only lights those texels
+		float gold = clamp((min(c.r, c.g) - c.b) * 2.5, 0.0, 1.0);
+		float sweep = fract(TIME * 0.35 - dot(world_pos, vec3(0.9, 1.4, 0.0)));
+		float band = 1.0 - smoothstep(0.0, 0.05, abs(sweep - 0.5));
+		EMISSION = vec3(1.0, 0.9, 0.62) * band * gold * shine;
+	}
+	if (flame > 0.0) {
+		EMISSION = c.rgb * flame * (0.8 + 0.4 * sin(TIME * 17.0) * sin(TIME * 5.3));
+	}
 #ifdef CUT
 	ALPHA = c.a;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;

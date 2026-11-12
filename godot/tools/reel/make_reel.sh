@@ -7,7 +7,7 @@
 ##   e.g. tools/reel/make_reel.sh ~/.local/share/godot/app_userdata/StarLoco\ Arena/replays/x.slr \
 ##        ~/codigo/capturas/s11/reel.mp4 --speed=1.5 --hud=banner
 ##
-## No display needed: without $DISPLAY it runs under xvfb. Needs ffmpeg.
+## No display needed: without $DISPLAY it runs under gamescope (headless) or xvfb. Needs ffmpeg.
 ## A fight is recorded with tools/reel/record.gd (AI vs AI) or in the game.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
@@ -29,8 +29,14 @@ frames="$(mktemp -d)"
 trap 'rm -rf "$frames"; rm -f override.cfg' EXIT
 printf '[display]\n\nwindow/size/viewport_width=540\nwindow/size/viewport_height=960\n' > override.cfg
 wrap=()
+## Without a display: gamescope's headless backend renders on the GPU (the
+## Ally's radeonsi, not xvfb's software GL); xvfb otherwise.
 if [[ -z "${DISPLAY:-}" ]]; then
-	wrap=(xvfb-run -a -s "-screen 0 1200x1200x24")
+	if command -v gamescope >/dev/null 2>&1; then
+		wrap=(gamescope --backend headless -W 540 -H 960 --)
+	else
+		wrap=(xvfb-run -a -s "-screen 0 1200x1200x24")
+	fi
 fi
 ${wrap[@]+"${wrap[@]}"} "$GODOT" --accessibility disabled \
 	--path . --write-movie "$frames/f.png" --fixed-fps 30 \

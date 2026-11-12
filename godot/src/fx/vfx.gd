@@ -28,19 +28,22 @@ const ELEMS := ["neutral", "fire", "earth", "water", "air"]
 
 ## Per element: c = colour ramp (core, body, fade), g = gravity px/s²,
 ## add = additive glow, swirl = tangential accel, tex = particle texture.
+## Particles blend normally with saturated bodies, so they read on bright
+## floors too (snow washed the additive ones out, S37 step 2); only the
+## flashes and the bolt's glow add light.
 const ELEM := {
-	"neutral": {"c": [Color(1.0, 1.0, 0.94), Color(1.0, 0.86, 0.55), Color(0.75, 0.65, 0.5, 0.0)],
-		"g": 0.0, "add": true, "swirl": 0.0, "tex": "spark"},
-	"fire": {"c": [Color(1.0, 0.97, 0.7), Color(1.0, 0.5, 0.08), Color(0.55, 0.06, 0.02, 0.0)],
-		"g": -170.0, "add": true, "swirl": 0.0, "tex": "dot"},
+	"neutral": {"c": [Color(1.0, 0.97, 0.82), Color(1.0, 0.74, 0.28), Color(0.7, 0.45, 0.2, 0.0)],
+		"g": 0.0, "add": false, "swirl": 0.0, "tex": "spark"},
+	"fire": {"c": [Color(1.0, 0.92, 0.5), Color(1.0, 0.42, 0.04), Color(0.55, 0.06, 0.02, 0.0)],
+		"g": -170.0, "add": false, "swirl": 0.0, "tex": "dot"},
 	"earth": {"c": [Color(0.93, 0.82, 0.58), Color(0.58, 0.42, 0.24), Color(0.32, 0.24, 0.14, 0.0)],
 		"g": 560.0, "add": false, "swirl": 0.0, "tex": "chunk"},
-	"water": {"c": [Color(0.92, 1.0, 1.0), Color(0.32, 0.72, 1.0), Color(0.06, 0.22, 0.62, 0.0)],
-		"g": 320.0, "add": true, "swirl": 0.0, "tex": "spark"},
-	"air": {"c": [Color(1.0, 1.0, 1.0), Color(0.62, 1.0, 0.82), Color(0.3, 0.7, 0.62, 0.0)],
-		"g": -30.0, "add": true, "swirl": 280.0, "tex": "dot"},
+	"water": {"c": [Color(0.75, 0.95, 1.0), Color(0.12, 0.52, 1.0), Color(0.04, 0.18, 0.6, 0.0)],
+		"g": 320.0, "add": false, "swirl": 0.0, "tex": "spark"},
+	"air": {"c": [Color(0.85, 1.0, 0.92), Color(0.2, 0.82, 0.58), Color(0.1, 0.5, 0.45, 0.0)],
+		"g": -30.0, "add": false, "swirl": 280.0, "tex": "dot"},
 }
-const HEAL := [Color(1.0, 1.0, 0.85), Color(0.55, 1.0, 0.45), Color(0.9, 0.85, 0.3, 0.0)]
+const HEAL := [Color(0.95, 1.0, 0.7), Color(0.35, 0.85, 0.2), Color(0.85, 0.75, 0.15, 0.0)]
 const CURSE_TINT := Color(0.55, 0.3, 0.85)
 
 static var _tex := {}
@@ -49,10 +52,13 @@ static var _mat_add: CanvasItemMaterial
 
 ## Draw one spell. `from` / `to` are the caster's and the aimed cell's
 ## screen points (feet), `cells` the zone's cell centres for area / trap
-## (empty = one cell round `to`). Returns the seconds until the effect
-## lands on `to`, for callers that time a hit on it.
+## (empty = one cell round `to`). `ground`, when given, takes the floor
+## pieces (rings, glyphs, dust) so they sit under the fighters; `layer` is the
+## z_index of the rest. Returns the seconds until the effect lands on
+## `to`, for callers that time a hit on it.
 static func play(parent: Node2D, recipe: Dictionary, from: Vector2, to: Vector2,
-		cells: PackedVector2Array = PackedVector2Array()) -> float:
+		cells: PackedVector2Array = PackedVector2Array(), ground: Node2D = null,
+		layer := 20) -> float:
 	var shape := str(recipe.get("s", "hit"))
 	var elem := str(recipe.get("e", "neutral"))
 	if not ELEM.has(elem):
@@ -62,9 +68,14 @@ static func play(parent: Node2D, recipe: Dictionary, from: Vector2, to: Vector2,
 	if cells.is_empty():
 		cells = zone_cells(to, z)
 	var root := Node2D.new()
-	root.z_index = 20
+	root.z_index = layer
 	parent.add_child(root)
 	_free_after(root, 3.0)
+	if ground != null:
+		var floor_root := Node2D.new()
+		ground.add_child(floor_root)
+		_free_after(floor_root, 3.0)
+		root.set_meta("ground", floor_root)
 	match shape:
 		"bolt":
 			return _bolt(root, elem, k, from, to)
@@ -192,7 +203,7 @@ static func _aura(root: Node2D, elem: String, k: int, at: Vector2) -> void:
 	var tw := col.create_tween()
 	tw.tween_property(col, "modulate:a", 0.35, 0.2)
 	tw.tween_property(col, "modulate:a", 0.0, 0.8)
-	var p := _particles(root, at, e.c, "dot", 16 + 6 * k, 0.9, true)
+	var p := _particles(root, at, e.c, "dot", 16 + 6 * k, 0.9, false)
 	p.one_shot = true
 	p.explosiveness = 0.15
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RING
@@ -235,7 +246,7 @@ static func _curse(root: Node2D, elem: String, k: int, at: Vector2) -> void:
 static func _heal(root: Node2D, k: int, at: Vector2) -> void:
 	_ring(root, at, HEAL[1], HW * 0.3, HW * 0.9, 0.8, 3.0)
 	_flash(root, at + Vector2(0, -34), HEAL[1], 34.0, 0.45, 0.5)
-	var p := _particles(root, at + Vector2(0, -20), HEAL, "plus", 8 + 4 * k, 1.0, true)
+	var p := _particles(root, at + Vector2(0, -20), HEAL, "plus", 8 + 4 * k, 1.0, false)
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
 	p.emission_sphere_radius = 22.0
 	p.explosiveness = 0.4
@@ -256,7 +267,7 @@ static func _summon(root: Node2D, elem: String, k: int, at: Vector2) -> void:
 	glyph.cells = PackedVector2Array()
 	glyph.radius = HW * 0.95
 	glyph.dur = 0.9
-	root.add_child(glyph)
+	_floor(root).add_child(glyph)
 	var puff := func() -> void:
 		_flash(root, at + Vector2(0, -30), e.c[0], 46.0, 0.35)
 		var p := _particles(root, at, [Color(1, 1, 1, 0.9), e.c[1].lerp(Color.WHITE, 0.4),
@@ -285,7 +296,7 @@ static func _trap(root: Node2D, elem: String, k: int, at: Vector2,
 	for c in cells:
 		rel.append(c - at)
 	glyph.cells = rel
-	root.add_child(glyph)
+	_floor(root).add_child(glyph)
 	var p := _particles(root, Vector2.ZERO, e.c, "spark", mini(6 + 4 * cells.size() + 4 * k, 40),
 		0.5, e.add)
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINTS
@@ -303,7 +314,7 @@ static func _trap(root: Node2D, elem: String, k: int, at: Vector2,
 static func _tp(root: Node2D, elem: String, k: int, from: Vector2, to: Vector2) -> float:
 	var e: Dictionary = ELEM[elem]
 	var c: Array = [Color(1, 1, 1), e.c[1].lerp(Color(0.7, 0.85, 1.0), 0.5), Color(0.5, 0.6, 1.0, 0.0)]
-	var p := _particles(root, from + Vector2(0, -34), c, "dot", 16 + 4 * k, 0.3, true)
+	var p := _particles(root, from + Vector2(0, -34), c, "dot", 16 + 4 * k, 0.3, false)
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
 	p.emission_sphere_radius = 40.0
 	p.initial_velocity_min = 0.0
@@ -317,7 +328,7 @@ static func _tp(root: Node2D, elem: String, k: int, from: Vector2, to: Vector2) 
 	var arrive := func() -> void:
 		_flash(root, to + Vector2(0, -34), c[0], 40.0, 0.3)
 		_ring(root, to, c[1], 6.0, HW * 0.9, 0.4, 3.0)
-		var q := _particles(root, to + Vector2(0, -34), c, "spark", 14 + 4 * k, 0.45, true)
+		var q := _particles(root, to + Vector2(0, -34), c, "spark", 14 + 4 * k, 0.45, false)
 		q.initial_velocity_min = 100.0
 		q.initial_velocity_max = 200.0
 		q.damping_min = 120.0
@@ -383,7 +394,7 @@ static func _elem_motion(p: CPUParticles2D, elem: String) -> void:
 
 ## A puff of dust hugging the floor (earth).
 static func _dust(parent: Node2D, at: Vector2, k: int) -> void:
-	var p := _particles(parent, at, [Color(0.85, 0.78, 0.62, 0.7), Color(0.7, 0.62, 0.48, 0.5),
+	var p := _particles(_floor(parent), at, [Color(0.85, 0.78, 0.62, 0.7), Color(0.7, 0.62, 0.48, 0.5),
 		Color(0.6, 0.55, 0.45, 0.0)], "dot", 6 + 3 * k, 0.7, false)
 	p.scale = Vector2(1, 0.5)
 	p.initial_velocity_min = 30.0
@@ -408,6 +419,7 @@ static func _flash(parent: Node2D, at: Vector2, color: Color, size: float, dur: 
 static func _ring(parent: Node2D, at: Vector2, color: Color, r0: float, r1: float, dur: float,
 		width: float, delay := 0.0, hold := false) -> void:
 	var r := Ring.new()
+	parent = _floor(parent)
 	r.position = at
 	r.color = color
 	r.r0 = r0
@@ -430,6 +442,16 @@ static func _sprite(parent: Node2D, at: Vector2, texture: String, color: Color, 
 		sp.material = _additive()
 	parent.add_child(sp)
 	return sp
+
+
+## Where a floor piece goes: the play's ground root when it has one.
+static func _floor(n: Node2D) -> Node2D:
+	var at := n
+	while at != null:
+		if at.has_meta("ground"):
+			return at.get_meta("ground")
+		at = at.get_parent() as Node2D
+	return n
 
 
 static func _additive() -> CanvasItemMaterial:
@@ -520,6 +542,9 @@ class Ring extends Node2D:
 		var c := color
 		c.a *= a
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.5))
+		# a dark edge under the colour, so a pale ring shows on snow
+		draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, Color(0.1, 0.07, 0.05, 0.45 * a),
+			width * 2.0 + 3.0, true)
 		draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, c, width * 2.0, true)
 		var inner := c
 		inner.a *= 0.18
@@ -555,6 +580,7 @@ class Glyph extends Node2D:
 			draw_polyline(d, c, 2.0, true)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.5))
 		var r := radius * (0.6 + 0.4 * minf(t * 3.0, 1.0))
+		draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, Color(0.1, 0.07, 0.05, 0.45 * a), 7.0, true)
 		draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, c, 4.0, true)
 		draw_arc(Vector2.ZERO, r * 0.78, 0.0, TAU, 40, c, 2.0, true)
 		var spin := _t * 1.6

@@ -7,6 +7,7 @@ extends SceneTree
 ##
 ##   godot --path godot --write-movie <dir>/f.png --fixed-fps 30 \
 ##       -s tools/fx/vfx_sheet.gd -- [--secs=4.4] [--shapes=bolt,hit] [--elems=fire]
+##       [--floor=snow]   (a bright floor: effects must read on snow too)
 ## (the window size comes from override.cfg — see vfx_sheet.sh)
 
 const Vfx := preload("res://src/fx/vfx.gd")
@@ -14,11 +15,9 @@ const TILE := Vector2(200, 170)
 const HEAD := Vector2(70, 26)
 const LOOP := 2.0
 const BG := Color("20252b")
-const FLOOR := Color("454a50")
-const EDGE := Color("5b6168")
 const GOLD := Color("e2bd6e")
 
-var opts := {"secs": "4.4", "shapes": ",".join(Vfx.SHAPES), "elems": ",".join(Vfx.ELEMS)}
+var opts := {"floor": "stone", "secs": "4.4", "shapes": ",".join(Vfx.SHAPES), "elems": ",".join(Vfx.ELEMS)}
 var _tiles: Array = []   # [node, shape, elem, from, to]
 var _t := 0.0
 var _next := 0.3
@@ -51,6 +50,8 @@ func _build() -> void:
 			box.clip_contents = true
 			root.add_child(box)
 			var tile := Floor.new()
+			if opts.floor == "snow":
+				tile.colours = [Color("c9d4de"), Color("eef3f7"), Color("b5c3cf")]
 			box.add_child(tile)
 			var to := Vector2(128, 124)
 			var from := to + Vector2(-2 * Vfx.HW, 0)
@@ -93,9 +94,10 @@ class Floor extends Node2D:
 	var to := Vector2.ZERO
 	var from := Vector2.ZERO
 	var zone := 0
+	var colours := [Color("272c33"), Color("454a50"), Color("5b6168")]   # box, cell, edge
 
 	func _draw() -> void:
-		draw_rect(Rect2(2, 2, 196, 166), Color("272c33"))
+		draw_rect(Rect2(2, 2, 196, 166), colours[0])
 		for dx in range(-2, 3):
 			for dy in range(-2, 3):
 				if absi(dx) + absi(dy) > 2:
@@ -103,9 +105,9 @@ class Floor extends Node2D:
 				var c := to + Vector2((dx - dy) * 43.0, (dx + dy) * 21.5)
 				var d := PackedVector2Array([c + Vector2(0, -21.5), c + Vector2(43, 0),
 					c + Vector2(0, 21.5), c + Vector2(-43, 0)])
-				draw_colored_polygon(d, Color("454a50"))
+				draw_colored_polygon(d, colours[1])
 				d.append(d[0])
-				draw_polyline(d, Color("5b6168"), 1.0, true)
+				draw_polyline(d, colours[2], 1.0, true)
 		if from != to:
 			_dummy(from, Color("6f7f96"))
 		_dummy(to, Color("96806f"))

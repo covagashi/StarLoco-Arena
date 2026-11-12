@@ -5,7 +5,7 @@
 ##   tools/fx/vfx_sheet.sh <out prefix> [vfx_sheet.gd args…]
 ##   e.g. tools/fx/vfx_sheet.sh ~/codigo/capturas/s37/vfx
 ##
-## Without $DISPLAY it runs under xvfb. Needs ffmpeg and python3 + PIL.
+## Without $DISPLAY it runs under gamescope (headless) or xvfb. Needs ffmpeg and python3 + PIL.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 out="$1"
@@ -19,8 +19,14 @@ frames="$(mktemp -d)"
 trap 'rm -rf "$frames"; rm -f override.cfg' EXIT
 printf '[display]\n\nwindow/size/viewport_width=1870\nwindow/size/viewport_height=876\n' > override.cfg
 wrap=()
+## Without a display: gamescope's headless backend renders on the GPU (the
+## Ally's radeonsi, not xvfb's software GL); xvfb otherwise.
 if [[ -z "${DISPLAY:-}" ]]; then
-	wrap=(xvfb-run -a -s "-screen 0 1920x1080x24")
+	if command -v gamescope >/dev/null 2>&1; then
+		wrap=(gamescope --backend headless -W 1870 -H 876 --)
+	else
+		wrap=(xvfb-run -a -s "-screen 0 1920x1080x24")
+	fi
 fi
 ${wrap[@]+"${wrap[@]}"} "$GODOT" --accessibility disabled \
 	--path . --write-movie "$frames/f.png" --fixed-fps 30 \

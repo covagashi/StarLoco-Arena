@@ -9,7 +9,7 @@ extends Node2D
 const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const ReplayBar := preload("res://src/fight/replay_bar.gd")
 const AnmSprite := preload("res://src/anims/anm_sprite.gd")
-const XpsFx := preload("res://src/anims/xps_fx.gd")
+const Vfx := preload("res://src/fx/vfx.gd")
 const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArenaView := preload("res://src/maps/arena_view.gd")
@@ -91,6 +91,7 @@ var overlays_visible := true
 @onready var cam: Camera2D = $Camera
 @onready var info: Label = $UI/Info
 @onready var _actors: Node2D = $Actors
+var _fx_ground: Node2D
 @onready var _end_turn: Button = $UI/PassBtn
 @onready var _face_btn: Button = $UI/Menu/FaceBtn
 @onready var _chat_btn: Button = $UI/Menu/ChatBtn
@@ -165,6 +166,10 @@ func _ready() -> void:
 	_marks.name = "Marks"
 	add_child(_marks)
 	move_child(_marks, _actors.get_index())   # on the floor, under the fighters
+	_fx_ground = Node2D.new()
+	_fx_ground.name = "FxGround"   # S37: effect rings and glyphs, over the marks
+	add_child(_fx_ground)
+	move_child(_fx_ground, _actors.get_index())
 	_fight_hud = FightHud.new()
 	if ArtStyle.hud_life() == "ring":
 		_fight_hud.hp_style = FightHud.FighterCard.HpStyle.RING
@@ -806,6 +811,10 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				# akg_2 hard-codes script 8000 (AnimPoings): the unarmed
 				# fist strike is AnimStatique03-219 in the fighter's set
 				_play_weapon(atk, "219")
+				var wsrc: Vector3i = _actor_cells.get(atk, Vector3i.ZERO)
+				if waim.x > -999:
+					_play_fx({"s": "hit", "k": 2 if wcrit else 1}, wsrc,
+						Vector3i(waim.x, waim.y, int(_cells.get(waim, {}).get("alt", 0))))
 		OP_CARD_USE:
 			# [i32 uid][i32 -1][i64 user][i32 card][i8 miss](+crit+target)
 			payload.get_i32()
@@ -2753,86 +2762,35 @@ func _zoom_punch(fid: int, cell: Vector2i) -> void:
 	_zoom_tween.parallel().tween_property(cam, "zoom", _zoom_level, 0.3)
 
 
-## Timed .xps events from the cast script (spell_fx.json):
-##   [t_ms, id, anchor]            burst at caster / aimed cell
-##   [t_ms, id, "tw", angle, coef] avw_0 ballistic projectile caster→aimed
-##   ["tw#i+k", id, anchor]        k ms after the i-th "tw" row lands
-## id may be a {dir:xpsId} dictionary picked by the caster's Direction8.
+## S37: the spell drawn by the effect library from its recipe (spells.json
+## "fx": shape + element + intensity), over the spell's real zone
+## (`zn`, as the AoE preview) round the aimed cell.
 func _cast_fx(fid: int, sid: int, aimed: Vector2i) -> void:
-	var tw_count := 0
-	var pending: Array = []                # [tween idx, extra ms, id, anchor]
-	for ev in Spells.fx_events(sid):
-		var xps := XpsFx.pick_id(ev[1], int(_actor_dir.get(fid, 5)))
-		if xps <= 0:
-			continue
-		var t: Variant = ev[0]
-		if t is String:
-			# "tw#i[+k]" — fires k ms after tween row i lands
-			var s: String = (t as String).substr(3)
-			var cut := s.length()
-			for c in ["+", "-"]:
-				var p := s.find(c, 1)
-				if p > 0 and p < cut:
-					cut = p
-			var idx := int(s.substr(0, cut))
-			var off := int(s.substr(cut)) if cut < s.length() else 0
-			pending.append([idx, off, xps, str(ev[2])])
-			continue
-		var launch := float(t) / 1000.0
-		if len(ev) > 3 and str(ev[2]) == "tw":
-			var tw_idx := tw_count
-			tw_count += 1
-			var cb := _launch_xps.bind(
-				fid, xps, aimed, float(ev[3]), float(ev[4]),
-				tw_idx, pending)
-			if launch <= 0.0:
-				cb.call()
-			else:
-				get_tree().create_timer(launch).timeout.connect(cb)
-		else:
-			var anchor: String = str(ev[2])
-			var cb := _spawn_xps.bind(fid, xps, anchor, aimed)
-			if launch <= 0.0:
-				cb.call()
-			else:
-				get_tree().create_timer(launch).timeout.connect(cb)
-
-
-func _launch_xps(fid: int, xps_id: int, aimed: Vector2i, angle: float,
-		coef: float, tw_idx: int, pending: Array) -> void:
-	var c0: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
-	var c1 := c0
+	var meta: Dictionary = Spells.meta(sid)
+	var recipe: Dictionary = meta.get("fx", {})
+	if recipe.is_empty():
+		recipe = {"s": "hit"}
+	var src: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
+	var aim := src
 	if aimed.x > -9000:
-		var c: Dictionary = _cells.get(Vector2i(aimed.x, aimed.y), {})
-		c1 = Vector3i(aimed.x, aimed.y, int(c.get("alt", 0)))
-	var proj: Node2D = XpsFx.spawn_projectile(self, xps_id,
-		Vector3(c0.x + 0.5, c0.y + 0.5, float(c0.z)),
-		Vector3(c1.x + 0.5, c1.y + 0.5, float(c1.z)),
-		angle, coef, _iso)
-	proj.arrived.connect(
-		_xps_arrived.bind(tw_idx, pending, fid, aimed))
+		aim = Vector3i(aimed.x, aimed.y,
+			int(_cells.get(Vector2i(aimed.x, aimed.y), {}).get("alt", 0)))
+	var cells := PackedVector2Array()
+	for zn in meta.get("zn", []):
+		for cell: Vector2i in Areas.footprint_cells(int(zn[0]), zn.slice(1), aim, src):
+			if _cells.has(cell):
+				var p := _iso(cell.x + 0.5, cell.y + 0.5, int(_cells[cell].get("alt", 0)))
+				if not p in cells:
+					cells.append(p)
+	_play_fx(recipe, src, aim, cells)
 
 
-func _xps_arrived(tw_idx: int, pending: Array, fid: int,
-		aimed: Vector2i) -> void:
-	for ev in pending:
-		if int(ev[0]) != tw_idx:
-			continue
-		var cb := _spawn_xps.bind(fid, int(ev[2]), str(ev[3]), aimed)
-		var off := float(ev[1]) / 1000.0
-		if off <= 0.0:
-			cb.call()
-		else:
-			get_tree().create_timer(off).timeout.connect(cb)
-
-
-func _spawn_xps(fid: int, xps_id: int, anchor: String, aimed: Vector2i) -> void:
-	var cell: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
-	if anchor == "target" and aimed.x > -9000:
-		var c: Dictionary = _cells.get(Vector2i(aimed.x, aimed.y), {})
-		cell = Vector3i(aimed.x, aimed.y, int(c.get("alt", 0)))
-	var at := _iso(cell.x + 0.5, cell.y + 0.5, cell.z)
-	XpsFx.spawn(self, xps_id, at)
+## One library effect from cell `src` to cell `aim`, the floor pieces on
+## FxGround (under the fighters), the rest over every fighter.
+func _play_fx(recipe: Dictionary, src: Vector3i, aim: Vector3i,
+		cells := PackedVector2Array()) -> void:
+	Vfx.play(self, recipe, _iso(src.x + 0.5, src.y + 0.5, src.z),
+		_iso(aim.x + 0.5, aim.y + 0.5, aim.z), cells, _fx_ground, 4000)
 
 
 ## The cast script's Sound.playSound ids with their invoke() delays

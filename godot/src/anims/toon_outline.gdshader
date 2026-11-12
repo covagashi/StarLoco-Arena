@@ -10,8 +10,19 @@ uniform float width_px = 1.3;
 // world size of one screen pixel, set by toon.gd from the camera (the
 // projection matrix doesn't give it reliably in the compatibility renderer)
 uniform float px_world = 0.016;
+// S37: the live garments' motion, as on the body (toon.gd copies them)
+uniform float jelly = 0.0;
+uniform float flame = 0.0;
+
+#include "res://src/anims/live.gdshaderinc"
 
 void vertex() {
+	if (jelly > 0.0) {
+		VERTEX += NORMAL * jelly * jelly_wave(VERTEX, TIME);
+	}
+	if (flame > 0.0) {
+		VERTEX = flame_flicker(VERTEX, TIME, flame);
+	}
 	VERTEX += NORMAL * px_world * width_px;
 }
 

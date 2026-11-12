@@ -5,6 +5,8 @@ extends SceneTree
 ## consumes State.net.message_received itself: 4102 placements, phase
 ## acks (8011/8023), everything after.
 ##   godot --headless --path godot -s test/fight_smoke.gd
+## S37: under xvfb, `-- --fx-shots=<dir>` photographs every spell cast and
+## close-combat hit (8110/8112) at 0.15, 0.35 and 0.6 s, for the effects.
 
 const ArenaClient := preload("res://src/net/arena_client.gd")
 const Codec := preload("res://src/net/codec.gd")
@@ -39,9 +41,15 @@ var _cd_seen := false
 ## The checks compare English labels ("+3 AP"); the player's own language is
 ## put back by _finish.
 var _lang_before := ""
+var _fx_dir := ""
+var _fx_n := 0
 
 
 func _init() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--fx-shots="):
+			_fx_dir = a.substr(11)
+			DirAccess.make_dir_recursive_absolute(_fx_dir)
 	client = ArenaClient.new()
 	root.add_child(client)
 	# NOTE: the Session autoload still gets instantiated under -s (only the
@@ -695,8 +703,23 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 			fight_scene.request_end_turn())
 
 
+func _fx_shots(opcode: int) -> void:
+	_fx_n += 1
+	var n := _fx_n
+	var last := 0.0
+	for t in [0.15, 0.35, 0.6]:
+		await create_timer(t - last).timeout
+		last = t
+		var img := root.get_texture().get_image()
+		var path := "%s/%02d-%d-%.2f.png" % [_fx_dir, n, opcode, t]
+		img.save_png(path)
+		print("[smoke] fx shot -> " + path)
+
+
 func _on_message(opcode: int, payload) -> void:
 	var decoded := Codec.decode(opcode, WireReader.new(payload))
+	if (opcode == 8110 or opcode == 8112) and _fx_dir != "":
+		_fx_shots(opcode)
 	match opcode:
 		1024:
 			if decoded.get("result") == 0:

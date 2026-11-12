@@ -53,9 +53,42 @@ Cualquier otra que salga al hacer las prendas se apunta aquí.
   por elemento, siete momentos).
 - `test/unit/vfx_test.gd`: cada forma × elemento se crea y se libera.
 
-Pendiente: la opinión del dueño sobre la hoja; luego, conectar la librería
-al combate en lugar de `XpsFx` (zona real del hechizo, anillos detrás de
-las figuras) y los efectos especiales de prendas y pelo.
+Dueño, 2026-11-12, sobre la hoja: "me gustan, confío en tu criterio".
+
+## Paso 2 — en el combate (2026-11-12)
+
+- `fight_view._cast_fx` dibuja la receta del hechizo sobre su zona real
+  (`zn` + `Areas.footprint_cells`, la misma que la vista previa de AoE).
+  Anillos, glifos y polvo van en `FxGround`, bajo las figuras; el resto,
+  por encima de todas (z 4000).
+- El golpe cuerpo a cuerpo (8112) lleva un `hit` neutro (intensidad 2 si
+  es crítico).
+- `XpsFx` (`src/anims/xps_fx.gd`) y la lectura de `spell_fx.json` borrados:
+  ningún efecto retail queda en el combate.
+- `fight_smoke -- --fx-shots=<dir>` fotografía cada hechizo y golpe.
+- Visto en un combate real IA contra IA (arena 36, nieve) renderizado con
+  `make_reel.sh` → `~/codigo/capturas/s37/combate.mp4`. **Decidido** tras
+  verlo: sobre la nieve los efectos aditivos se perdían; las partículas
+  pasan a mezcla normal con colores saturados (solo destellos y el brillo
+  del proyectil suman luz) y los anillos llevan un borde oscuro debajo.
+  `vfx_sheet.sh --floor=snow` (hoja `v2-nieve`) lo comprueba; `v2` en piedra.
+- `make_reel.sh` y `vfx_sheet.sh` usan gamescope headless (la GPU del Ally)
+  si está; xvfb con llvmpipe iba a ~3 s por fotograma en la arena 3D.
+
+## Paso 3 — prendas vivas (2026-11-12)
+
+En el shader toon (`toon.gdshaderinc` + `live.gdshaderinc`, también en el
+contorno), parámetros a 0 salvo en las piezas de `Fighter3D.LIVE`:
+- Gelatina (pantalón 126, y también torso, botas y gorro de gelatina —
+  **decidido**: mismo set, mismo temblor): tiembla solo hacia fuera; hacia
+  dentro dejaba asomar la piel por la prenda.
+- Superjefe (862): una franja de brillo recorre los texeles dorados.
+- Aurea flamma (53): el emblema de la llama parpadea y brilla, y diez
+  chispas 3D suben del banderín.
+Visto con `anim_sheet.gd` a varios zooms.
+
+Pendiente: el pelo con efecto como cosmético de S30 (necesita el objeto en
+el servidor y la tienda; se hace en su propio paso).
 
 ## Criterio de cierre
 

@@ -429,6 +429,65 @@ func worn() -> Dictionary:
 
 ## Hang `piece` on `model` (built from `path`) at `slot`; returns the node
 ## that holds it (free it to take it off), or null.
+## S37: the few garments that are alive, by piece — Toon.dress's `live`:
+## gelatina trembles, the Superjefe's gold glints, the Aurea flamma burns
+## ("embers": where, in the piece, a few sparks rise from its flame).
+const LIVE := {
+	"pants_gelatina": {"jelly": 0.014},
+	"torso_gelatina": {"jelly": 0.01},
+	"boots_gelatina": {"jelly": 0.009},
+	"hat_jelly": {"jelly": 0.012},
+	"pants_superjefe": {"shine": 1.4},
+	"banner_flame": {"flame": 1.0, "only": "flameR", "embers": Vector3(-0.08, 0.62, 0.0)},
+}
+
+
+## A thin stream of sparks rising from `at` (piece space): ten unshaded
+## billboards, light enough for the web demo.
+static func _embers(at: Vector3) -> CPUParticles3D:
+	var e := CPUParticles3D.new()
+	e.position = at
+	e.amount = 10
+	e.lifetime = 0.9
+	e.lifetime_randomness = 0.4
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.05, 0.05)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.vertex_color_use_as_albedo = true
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	var dot := GradientTexture2D.new()   # a soft round spark
+	dot.fill = GradientTexture2D.FILL_RADIAL
+	dot.fill_from = Vector2(0.5, 0.5)
+	dot.fill_to = Vector2(1.0, 0.5)
+	dot.gradient = Gradient.new()
+	dot.gradient.set_color(0, Color.WHITE)
+	dot.gradient.set_color(1, Color(1, 1, 1, 0))
+	dot.gradient.add_point(0.45, Color(1, 1, 1, 0.9))
+	dot.width = 16
+	dot.height = 16
+	m.albedo_texture = dot
+	quad.material = m
+	e.mesh = quad
+	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	e.emission_sphere_radius = 0.03
+	e.direction = Vector3.UP
+	e.spread = 25.0
+	e.initial_velocity_min = 0.18
+	e.initial_velocity_max = 0.32
+	e.gravity = Vector3(0, 0.2, 0)
+	e.scale_amount_min = 0.5
+	e.scale_amount_max = 1.0
+	var g := Gradient.new()
+	g.set_color(0, Color(1.0, 0.9, 0.45))
+	g.set_color(1, Color(0.9, 0.15, 0.05, 0.0))
+	g.add_point(0.35, Color(1.0, 0.45, 0.1))
+	e.color_ramp = g
+	return e
+
+
 static func hang(model: Node3D, path: String, slot: String, piece: String) -> Node3D:
 	if slot in GARMENTS:
 		return _dress_garment(model, path, piece)
@@ -437,7 +496,9 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	if t == null or model == null:
 		return null
 	var p: Node3D = t.duplicate()
-	Toon.dress(p)
+	Toon.dress(p, {}, {}, LIVE.get(piece, {}))
+	if LIVE.get(piece, {}).has("embers"):
+		p.add_child(_embers(LIVE[piece].embers))
 	var skel := _skeleton(model)
 	if slot == "weapon" and skel != null:
 		var st := weapon_style(piece)
@@ -537,7 +598,7 @@ static func _dress_garment(model: Node3D, path: String, piece: String) -> Node3D
 	g.transform = body.transform
 	body.get_parent().add_child(g)
 	g.skeleton = g.get_path_to(skel)
-	Toon.dress(g)
+	Toon.dress(g, {}, {}, LIVE.get(piece, {}))
 	return g
 
 

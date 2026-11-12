@@ -32,13 +32,19 @@ static func set_pixel(size: float) -> void:
 		o.set_shader_parameter("px_world", size)
 
 
-static func dress(root: Node, tints := {}, mask := {}) -> void:
+## `live` (S37, Fighter3D.LIVE): shader motion for a live garment —
+## {"jelly": m, "shine": k, "flame": k}, on every material, or only on those
+## named `"only"`.
+static func dress(root: Node, tints := {}, mask := {}, live := {}) -> void:
 	for mi in root.find_children("*", "MeshInstance3D", true, false) + ([root] if root is MeshInstance3D else []):
 		var m := mi as MeshInstance3D
 		for s in m.mesh.get_surface_count():
 			var src := m.mesh.surface_get_material(s) as BaseMaterial3D
 			if src != null and src.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED:
-				m.set_surface_override_material(s, material(src, tints, mask))
+				var lv := live
+				if live.has("only") and not src.resource_name.begins_with(str(live.only)):
+					lv = {}
+				m.set_surface_override_material(s, material(src, tints, mask, lv))
 
 
 ## The tint a channel material takes, or its own colour.
@@ -52,12 +58,14 @@ static func _colour(src: BaseMaterial3D, tints: Dictionary) -> Color:
 	return src.albedo_color
 
 
-static func material(src: BaseMaterial3D, tints := {}, mask := {}) -> ShaderMaterial:
+static func material(src: BaseMaterial3D, tints := {}, mask := {}, live := {}) -> ShaderMaterial:
 	var colour := _colour(src, tints)
 	var key := "%d/%s" % [src.get_instance_id(), colour.to_html()]
 	if mask.has("tex"):
 		key += "/m%s/%s" % [(tints.get("skin", Color.TRANSPARENT) as Color).to_html(),
 			(tints.get("hair", Color.TRANSPARENT) as Color).to_html()]
+	if not live.is_empty():
+		key += "/live%s" % str(live)
 	if _cache.has(key):
 		return _cache[key]
 	var t := ShaderMaterial.new()
@@ -80,7 +88,13 @@ static func material(src: BaseMaterial3D, tints := {}, mask := {}) -> ShaderMate
 		var o := ShaderMaterial.new()
 		o.shader = OUTLINE
 		o.set_shader_parameter("px_world", px_world)
+		for k in ["jelly", "flame"]:
+			if live.has(k):
+				o.set_shader_parameter(k, float(live[k]))
 		_outlines.append(o)
 		t.next_pass = o
+	for k in ["jelly", "shine", "flame"]:
+		if live.has(k):
+			t.set_shader_parameter(k, float(live[k]))
 	_cache[key] = t
 	return t
