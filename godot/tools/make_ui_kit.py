@@ -23,10 +23,10 @@ CREAM = (255, 246, 230)        # #FFF6E6
 
 # body gradients, top -> middle -> bottom (the mockup's .pop/.navy/.green)
 FILLS = {
-    'pop': [(0, (255, 154, 99)), (0.55, (255, 107, 61)), (1, (232, 80, 31))],
-    'navy': [(0, (74, 84, 153)), (0.6, (43, 50, 104)), (1, (32, 38, 79))],
+    'pop': [(0, (240, 146, 98)), (0.55, (222, 100, 58)), (1, (180, 68, 32))],
+    'navy': [(0, (72, 78, 124)), (0.6, (44, 49, 86)), (1, (31, 35, 64))],
     'green': [(0, (127, 240, 184)), (0.55, (54, 201, 138)), (1, (30, 158, 102))],
-    'sun': [(0, (255, 226, 140)), (0.55, (255, 194, 71)), (1, (214, 148, 24))],
+    'sun': [(0, (247, 214, 132)), (0.55, (233, 180, 76)), (1, (190, 132, 34))],
     'off': [(0, (78, 82, 112)), (1, (52, 56, 84))],
 }
 
@@ -191,6 +191,124 @@ def ribbon(name, stops, w=96, h=48, notch=12):
     save(down(img), name)
 
 
+BROWN_INK = (43, 29, 16)
+GOLD = (201, 156, 72)
+GOLD_HI = (241, 212, 140)
+
+
+def corner_scroll(size):
+    """The top-left gold filigree: two rules that meet in a scroll (a curl
+    turned twice) with a diamond in its eye. Mirrored to the other corners."""
+    c = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(c)
+    u = size / 40.0
+    w = max(1, round(2.2 * u))
+    # the rules leaving the scroll
+    d.line([(14 * u, 6 * u), (40 * u, 6 * u)], fill=GOLD, width=w)
+    d.line([(6 * u, 14 * u), (6 * u, 40 * u)], fill=GOLD, width=w)
+    # the scroll: arcs of shrinking radius around the eye
+    ex, ey = 14 * u, 14 * u
+    for rad, a0, a1 in [(8, 180, 450), (5, 270, 540), (2.6, 0, 300)]:
+        d.arc([ex - rad * u, ey - rad * u, ex + rad * u, ey + rad * u], a0, a1, fill=GOLD, width=w)
+    d.polygon([(ex, ey - 2.4 * u), (ex + 2.4 * u, ey), (ex, ey + 2.4 * u), (ex - 2.4 * u, ey)], fill=GOLD_HI)
+    # leaves along the rules
+    for (lx, ly, horiz) in [(26 * u, 6 * u, True), (6 * u, 26 * u, False)]:
+        if horiz:
+            d.polygon([(lx - 5 * u, ly), (lx, ly - 3 * u), (lx + 5 * u, ly), (lx, ly + 3 * u)], fill=GOLD)
+        else:
+            d.polygon([(lx, ly - 5 * u), (lx + 3 * u, ly), (lx, ly + 5 * u), (lx - 3 * u, ly)], fill=GOLD)
+    return c
+
+
+def parchment(name, w=160, h=160, lip=6, r=14):
+    """Aged paper (the references: Hagelberg, Moonlighter): mottled, burnt
+    towards the edges, a rough dark-brown edge, a double gold rule inside
+    and filigree in the corners (which the 9-slice never stretches)."""
+    W, H = w * S, (h + lip) * S
+    body_h = h * S
+    import random
+    rnd = random.Random(45)
+    # the rough edge: a rounded rect nibbled by noise
+    base = rrect_mask((W, H), [0, 0, W - 1, body_h - 1], r * S)
+    nib = Image.effect_noise((W, H), 90).filter(ImageFilter.GaussianBlur(S * 1.2))
+    edge = ImageChops.subtract(base, base.filter(ImageFilter.MinFilter(S * 4 + 1)))
+    bite = ImageChops.multiply(edge, nib.point(lambda v: 255 if v > 138 else 0))
+    mask = ImageChops.subtract(base, bite)
+    outline = mask.filter(ImageFilter.MaxFilter(S * 6 + 1))
+    img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    shadow = Image.new('L', (W, H), 0)
+    shadow.paste(outline, (0, lip * S))
+    img.paste(BROWN_INK + (255,), (0, 0), shadow)
+    img.paste(BROWN_INK + (255,), (0, 0), outline)
+    # the paper: a warm cream, mottled, darker and browner at the edges
+    face = vgrad((W, H), [(0, (246, 232, 198)), (1, (238, 220, 180))]).convert('RGB')
+    mott = Image.effect_noise((W // 8, H // 8), 60).resize((W, H), Image.BICUBIC) \
+        .filter(ImageFilter.GaussianBlur(S * 3)).point(lambda v: 236 + (v - 128) // 6)
+    face = ImageChops.multiply(face, Image.merge('RGB', [mott] * 3))
+    grain = Image.effect_noise((W, H), 40).point(lambda v: 240 + v // 16)
+    face = ImageChops.multiply(face, Image.merge('RGB', [grain] * 3))
+    burn = mask.filter(ImageFilter.MinFilter(S * 6 + 1)).filter(ImageFilter.GaussianBlur(S * 7))
+    burn = ImageChops.invert(burn)
+    burn = ImageChops.multiply(burn, mask).point(lambda v: min(255, v * 200 // 255))
+    face.paste((150, 98, 46), (0, 0), burn)
+    img.paste(face, (0, 0), mask)
+    # the double gold rule and the corner filigree
+    d = ImageDraw.Draw(img)
+    o = 4 * S + round(6 * S)    # the scrolls' rules continue as one gold line
+    lw = max(1, round(2.2 * S * (40 * S / 40.0) / S))
+    d.line([(44 * S, o), (W - 44 * S, o)], fill=GOLD, width=lw)
+    d.line([(44 * S, body_h - 1 - o), (W - 44 * S, body_h - 1 - o)], fill=GOLD, width=lw)
+    d.line([(o, 44 * S), (o, body_h - 44 * S)], fill=GOLD, width=lw)
+    d.line([(W - 1 - o, 44 * S), (W - 1 - o, body_h - 44 * S)], fill=GOLD, width=lw)
+    cs = 40 * S
+    tl = corner_scroll(cs)
+    o = 4 * S
+    img.alpha_composite(tl, (o, o))
+    img.alpha_composite(tl.transpose(Image.FLIP_LEFT_RIGHT), (W - cs - o, o))
+    img.alpha_composite(tl.transpose(Image.FLIP_TOP_BOTTOM), (o, body_h - cs - o))
+    img.alpha_composite(tl.transpose(Image.ROTATE_180), (W - cs - o, body_h - cs - o))
+    save(down(img), name)
+
+
+def banner(name, stops, w=128, h=60, notch=12, tail=18):
+    """A fabric title ribbon: the band, gold trim along it and folded tails
+    behind both ends, a shade lower (the references' cloth banners)."""
+    W, H = w * S, h * S
+    t = tail * S
+    n = notch * S
+    top, bot = 4 * S, H - 12 * S
+    img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    dark = tuple(round(c * 0.62) for c in stops[-1][1])
+    d = ImageDraw.Draw(img)
+    for side in (0, 1):
+        x0 = 0 if side == 0 else W - t - 6 * S
+        pts = [(x0, top + 8 * S), (x0 + t + 6 * S, top + 8 * S), (x0 + t + 6 * S, bot + 8 * S), (x0, bot + 8 * S)]
+        if side == 0:
+            pts[0] = (x0, top + 8 * S)
+            notch_pt = (x0 + n * 0.8, (top + bot) / 2 + 8 * S)
+            poly = [pts[0], pts[1], pts[2], pts[3], notch_pt]
+        else:
+            notch_pt = (W - n * 0.8, (top + bot) / 2 + 8 * S)
+            poly = [pts[0], pts[1], notch_pt, pts[2], pts[3]]
+        d.polygon(poly, fill=INK + (255,))
+        inner = [(px + (3 * S if px < W / 2 else -3 * S), py + (3 * S if py < (top + bot) / 2 + 8 * S else -3 * S)) for px, py in poly]
+        d.polygon(inner, fill=dark + (255,))
+    # the band itself
+    band = Image.new('L', (W, H), 0)
+    ImageDraw.Draw(band).rectangle([t - 2 * S, top, W - t + 2 * S, bot], fill=255)
+    face = vgrad((W, H), stops).convert('RGBA')
+    fd = ImageDraw.Draw(face)
+    fd.rectangle([0, top, W, top + 3 * S - 1], fill=INK)
+    fd.rectangle([0, bot - 3 * S + 1, W, bot], fill=INK)
+    fd.rectangle([0, top + 5 * S, W, top + 6 * S], fill=GOLD_HI + (255,))
+    fd.rectangle([0, bot - 6 * S, W, bot - 5 * S], fill=GOLD + (255,))
+    fd.rectangle([0, bot - 11 * S, W, bot - 7 * S], fill=tuple(round(c * 0.85) for c in stops[-1][1]) + (255,))
+    img.paste(face, (0, 0), band)
+    d.line([(t - 2 * S, top), (t - 2 * S, bot)], fill=INK, width=3 * S)
+    d.line([(W - t + 2 * S, top), (W - t + 2 * S, bot)], fill=INK, width=3 * S)
+    save(down(img), name)
+
+
 def medal(name, ring=(233, 169, 58), d=64, lip=4):
     """A round medallion: ink rim, gold ring inside, navy face lit from above."""
     D = d * S
@@ -246,14 +364,13 @@ def main():
     buttons()
     field((12, 14, 30), INK, 'field')
     field((12, 14, 30), (255, 194, 71), 'field_focus')
-    field((243, 221, 178), (59, 42, 26), 'slot_paper', inset=(0, 0, 0, 30))
+    field((232, 211, 166), (59, 42, 26), 'slot_paper', inset=(0, 0, 0, 30))
     plate('window', [(0, (40, 47, 98)), (1, (26, 31, 70))])
     plate('card', [(0, (32, 37, 76)), (1, (22, 26, 54))], r=12, lip=4, w=48, h=48)
-    plate('paper', [(0, (255, 241, 214)), (1, (255, 236, 200))], r=12,
-          stitch=((110, 70, 30, 90), 10), lines=(120, 80, 30, 13))
-    ribbon('ribbon', [(0, (255, 138, 85)), (1, (232, 80, 31))])
-    ribbon('ribbon_sun', [(0, (255, 226, 140)), (1, (214, 148, 24))])
-    ribbon('ribbon_navy', [(0, (74, 84, 153)), (1, (43, 50, 104))])
+    parchment('paper')
+    banner('ribbon', [(0, (232, 128, 84)), (1, (186, 72, 36))])
+    banner('ribbon_sun', [(0, (243, 208, 124)), (1, (186, 130, 36))])
+    banner('ribbon_navy', [(0, (72, 78, 124)), (1, (40, 45, 80))])
     medal('medal')
     capsule('capsule')
     backdrop()

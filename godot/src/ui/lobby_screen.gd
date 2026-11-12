@@ -216,8 +216,8 @@ func _identity() -> void:
 		medal.draw_arc(c + Vector2(0, 20), 17, PI, TAU, 24, UiStyle.INK, 3.0, true))
 	_box.add_child(medal)
 	var rib := PanelContainer.new()
-	rib.position = Vector2(80, 18)
-	rib.custom_minimum_size = Vector2(150, 34)
+	rib.position = Vector2(80, 12)
+	rib.custom_minimum_size = Vector2(160, 46)
 	rib.add_theme_stylebox_override("panel", UiStyle.ribbon())
 	_name = Label.new()
 	_name.name = "CoachName"
@@ -227,7 +227,7 @@ func _identity() -> void:
 	_box.add_child(rib)
 	_box.move_child(rib, medal.get_index())   # the medallion overlaps the ribbon
 	var chip := PanelContainer.new()
-	chip.position = Vector2(98, 58)
+	chip.position = Vector2(106, 60)
 	var cs := UiStyle.box(UiStyle.SUN, UiStyle.RIM, 2, 2)
 	cs.set_corner_radius_all(6)
 	cs.content_margin_left = 8
@@ -247,7 +247,7 @@ func _season_ribbon() -> void:
 	_season = PanelContainer.new()
 	_season.name = "Season"
 	_season.add_theme_stylebox_override("panel", UiStyle.ribbon("navy"))
-	_season.custom_minimum_size.y = 40
+	_season.custom_minimum_size.y = 46
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_season_n = Label.new()
@@ -568,6 +568,10 @@ func _draw_play(play: Button, cut: Callable) -> void:
 	var at := Vector2(x + 18, y + ph / 2 + s.y * 0.32)
 	play.draw_string_outline(f, at, play.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 6, UiStyle.OUTLINE)
 	play.draw_string(f, at, play.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, UiStyle.INK if not dis else UiStyle.MUTED)
+	# the gold trim inside the ink frame (the references' framed panels)
+	var trim: PackedVector2Array = cut.call(9.0)
+	trim.append(trim[0])
+	play.draw_polyline(trim, Color(UiStyle.SUN, 0.85), 2.0, true)
 	if play.has_focus():
 		var pts: PackedVector2Array = cut.call(-3.0)
 		pts.append(pts[0])

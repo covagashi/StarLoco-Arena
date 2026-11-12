@@ -10,26 +10,26 @@ extends RefCounted
 ## takes the new look unchanged: INK is still the text, PAPER the fill.
 
 const INK := Color("fff6e6")        # text (cream), and the light side of a selection
-const PAPER := Color("1b2048")      # plates and window fill (navy)
+const PAPER := Color("1d2140")      # plates and window fill (navy)
 const MUTED := Color("b9bee0")      # secondary text
 const ACCENT := Color("4c8dff")     # the player's own team blue (ally)
-const GOLD := Color("ffc247")       # titles and rewards (sun)
+const GOLD := Color("e9b44c")       # titles and rewards (old gold)
 const RIM := Color("0b0d1c")        # borders: the ink
-const RIM_HI := Color("ffc247")     # hover / focus border
-const PLATE := Color("2b3268")      # buttons and fields
-const PRESSED := Color("e8501f")    # pressed / toggled (pop, dark)
+const RIM_HI := Color("e9b44c")     # hover / focus border
+const PLATE := Color("2c3156")      # buttons and fields
+const PRESSED := Color("b8471f")    # pressed / toggled (pop, dark)
 const RADIUS := 10
 # S45 palette
 const NIGHT := Color("12152a")
-const POP := Color("ff6b3d")        # only for the action
-const SUN := Color("ffc247")
+const POP := Color("de643a")        # only for the action (a terracotta pop)
+const SUN := Color("e9b44c")
 const RIVAL := Color("ff4d5e")
 const OK := Color("36c98a")
 const OUTLINE := Color("0b0d1c")    # the ink
-const PAPER_SHEET := Color("fff1d6")   # the cream paper (forms and sheets)
+const PAPER_SHEET := Color("f3e3c0")   # the cream paper (forms and sheets)
 const PAPER_INK := Color("2b1d10")     # text on paper
 const FIELD := Color("0c0e1e")
-const SLOT := Color("f3ddb2")          # a darker band of paper (slots, rows, footers)
+const SLOT := Color("e8d3a6")          # a darker band of paper (slots, rows, footers)
 const BROWN := Color("7a4a1e")         # secondary text on paper
 const ACCENT_INK := Color("b23a12")    # what stands out on paper (gold's role there)
 
@@ -132,7 +132,9 @@ static func window(margin := 22) -> StyleBox:
 ## A sheet of cream paper with its stitch (forms, sheets): dark text on it
 ## (PAPER_INK). Phase 3 turns the panels into these.
 static func paper(margin := 22) -> StyleBox:
-	var s := kit("paper", Vector4(24, 24, 24, 30), Vector4(margin, margin, margin, margin + 6), true)
+	# aged parchment (S45 finish): its corners hold the filigree, the rest
+	# stretches (the mottling would show seams if tiled)
+	var s := kit("paper", Vector4(40, 40, 40, 46), Vector4(margin, margin, margin, margin + 6))
 	if s != null:
 		return s
 	var f := box(PAPER_SHEET, RIM, 3, margin)
@@ -153,7 +155,8 @@ static func field(pad := 10, focus := false) -> StyleBox:
 ## A title ribbon with notched ends (the mockup's .ribbon): "pop", "sun"
 ## (rewards) or "navy". Its label goes on top, centred.
 static func ribbon(kind := "pop") -> StyleBox:
-	var s := kit("ribbon" if kind == "pop" else "ribbon_" + kind, Vector4(16, 10, 16, 10), Vector4(30, 0, 30, 2))
+	# a cloth band with folded tails behind its ends (S45 finish)
+	var s := kit("ribbon" if kind == "pop" else "ribbon_" + kind, Vector4(28, 16, 28, 18), Vector4(40, 0, 40, 8))
 	if s != null:
 		return s
 	return box({"sun": SUN, "navy": PLATE}.get(kind, PRESSED), RIM, 3, 8)

@@ -90,8 +90,8 @@ func _scene() -> void:
 ## PIPPOP on a pop ribbon, ARENA large in sun, two sparkles.
 func _logo() -> void:
 	var rib := PanelContainer.new()
-	rib.position = Vector2(78, 24)
-	rib.custom_minimum_size.y = 40
+	rib.position = Vector2(78, 18)
+	rib.custom_minimum_size.y = 48
 	rib.add_theme_stylebox_override("panel", UiStyle.ribbon())
 	var brand := Label.new()
 	brand.text = "PIPPOP"
