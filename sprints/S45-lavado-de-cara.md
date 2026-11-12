@@ -182,6 +182,48 @@ coral), **con fondos propios por pantalla, sin reciclar arenas**. El dueño
 ofrece referencias de Pinterest para los fondos. Herramientas en la mesa:
 vex y AniCraft (editor de animación vectorial con CLI y MCP).
 
+### Estilo B en todo el cliente (noche del 2026-11-12 al 13, el dueño dormía)
+
+Referencias del dueño (Pinterest: COTA, Arknights, una ficha coreana, Ms.
+Moissan): "es como minimalista pero buenas animaciones". Hoja B claro del
+lobby aprobada ("sí, claro. sí con lobby"); después "puedes ir avanzando toda
+la noche con los sprints", así que lo demás lo decidí yo con lo acordado:
+
+- `src/ui/style_b.gd`: fondo claro propio por pantalla (gris perla, una
+  palabra gigante en contorno que deriva, fantasma suave, franja coral,
+  líneas técnicas con cruces y una etiqueta `PPA // …`), botón inclinado
+  (coral la acción, tinta el resto), campo con regla de tinta debajo, placa
+  blanca con regla arriba y las entradas en cascada. Títulos en Saira
+  Condensed ExtraBold inclinada (OFL, `assets/ui/fonts/`); el texto sigue en
+  Nunito (Zen Kaku Gothic New pesa varios MB por los glifos japoneses: la
+  demo web tiene un tope de 50 MB).
+- **Lobby**: lista numerada de paneles, losetas pálidas con trama de puntos
+  que se mueve, "¡A LUCHAR!" coral. Entrada: el coach entra con una estela,
+  la barra baja, la lista y las losetas en cascada; las losetas se inclinan
+  hacia el puntero; el fondo deriva. Vídeo grabado del propio juego
+  (`test/lobby_motion.tscn` con el movie maker de Godot).
+- **El coach no está rígido** (dueño): `rig_anims.py` tiene tres clips de
+  menú, solo en los coaches (`figures.json` opts `menu`; en todos se pasaba
+  del tope de tamaño de una figura): `menu` (de pie relajado, el peso en una
+  pierna, respira y mira), `greet` (saluda al entrar al lobby) y `pose`
+  (señala los modos de vez en cuando). Para estas proporciones (cabeza
+  grande, brazos cortos) la mano a la cadera y el saludo por encima de la
+  cabeza no funcionan: el brazo se abre de lado y gira para que el antebrazo
+  suba junto a la cabeza.
+- **"¿Por qué siempre de espaldas?"** (dueño): Crea tu coach cargaba la
+  dirección en bruto y la espejaba con su propia regla; ahora usa la misma
+  tabla que el lobby (`Direction8`: 1–3 miran a cámara).
+- **Inicio de sesión, Crea tu coach** (con una regla de tallas detrás del
+  coach), **todos los paneles** (hoja blanca con etiqueta y título grande;
+  las constantes que ya usaban los paneles toman los valores B, así que
+  cambian los veinte a la vez), **equipo del coach** (pantalla propia
+  clara) y **HUD de combate** (misma disposición, en colores y formas B).
+
+Pendiente para el dueño: si el combate debe ir más lejos (acciones con
+dibujo y nombre), y fondos ilustrados por pantalla con AniCraft o vex cuando
+haya referencias de cada una; hoy cada pantalla tiene su palabra y su
+composición, ninguna arena reciclada.
+
 ## Fuera
 ### Giro de estilo (dueño, 2026-11-12)
 
@@ -194,6 +236,48 @@ títulos en cursiva condensada con etiquetas pequeñas, menú como lista, acento
 coral), **con fondos propios por pantalla, sin reciclar arenas**. El dueño
 ofrece referencias de Pinterest para los fondos. Herramientas en la mesa:
 vex y AniCraft (editor de animación vectorial con CLI y MCP).
+
+### Estilo B en todo el cliente (noche del 2026-11-12 al 13, el dueño dormía)
+
+Referencias del dueño (Pinterest: COTA, Arknights, una ficha coreana, Ms.
+Moissan): "es como minimalista pero buenas animaciones". Hoja B claro del
+lobby aprobada ("sí, claro. sí con lobby"); después "puedes ir avanzando toda
+la noche con los sprints", así que lo demás lo decidí yo con lo acordado:
+
+- `src/ui/style_b.gd`: fondo claro propio por pantalla (gris perla, una
+  palabra gigante en contorno que deriva, fantasma suave, franja coral,
+  líneas técnicas con cruces y una etiqueta `PPA // …`), botón inclinado
+  (coral la acción, tinta el resto), campo con regla de tinta debajo, placa
+  blanca con regla arriba y las entradas en cascada. Títulos en Saira
+  Condensed ExtraBold inclinada (OFL, `assets/ui/fonts/`); el texto sigue en
+  Nunito (Zen Kaku Gothic New pesa varios MB por los glifos japoneses: la
+  demo web tiene un tope de 50 MB).
+- **Lobby**: lista numerada de paneles, losetas pálidas con trama de puntos
+  que se mueve, "¡A LUCHAR!" coral. Entrada: el coach entra con una estela,
+  la barra baja, la lista y las losetas en cascada; las losetas se inclinan
+  hacia el puntero; el fondo deriva. Vídeo grabado del propio juego
+  (`test/lobby_motion.tscn` con el movie maker de Godot).
+- **El coach no está rígido** (dueño): `rig_anims.py` tiene tres clips de
+  menú, solo en los coaches (`figures.json` opts `menu`; en todos se pasaba
+  del tope de tamaño de una figura): `menu` (de pie relajado, el peso en una
+  pierna, respira y mira), `greet` (saluda al entrar al lobby) y `pose`
+  (señala los modos de vez en cuando). Para estas proporciones (cabeza
+  grande, brazos cortos) la mano a la cadera y el saludo por encima de la
+  cabeza no funcionan: el brazo se abre de lado y gira para que el antebrazo
+  suba junto a la cabeza.
+- **"¿Por qué siempre de espaldas?"** (dueño): Crea tu coach cargaba la
+  dirección en bruto y la espejaba con su propia regla; ahora usa la misma
+  tabla que el lobby (`Direction8`: 1–3 miran a cámara).
+- **Inicio de sesión, Crea tu coach** (con una regla de tallas detrás del
+  coach), **todos los paneles** (hoja blanca con etiqueta y título grande;
+  las constantes que ya usaban los paneles toman los valores B, así que
+  cambian los veinte a la vez), **equipo del coach** (pantalla propia
+  clara) y **HUD de combate** (misma disposición, en colores y formas B).
+
+Pendiente para el dueño: si el combate debe ir más lejos (acciones con
+dibujo y nombre), y fondos ilustrados por pantalla con AniCraft o vex cuando
+haya referencias de cada una; hoy cada pantalla tiene su palabra y su
+composición, ninguna arena reciclada.
 
 ## Fuera
 
