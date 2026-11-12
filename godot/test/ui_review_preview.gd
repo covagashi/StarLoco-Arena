@@ -43,6 +43,7 @@ func _run() -> void:
 	add_child(login_layer)
 	var login := Login.new()
 	login_layer.add_child(login)
+	login.set_proxies(["127.0.0.1:5555"], "127.0.0.1:5555")
 	await get_tree().process_frame
 	_check(get_viewport().gui_get_focus_owner() == login.name_edit,
 		"login initial focus")

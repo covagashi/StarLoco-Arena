@@ -772,6 +772,7 @@
   "login.enter_account": "Enter your account",
   "login.server": "Server",
   "login.tagline": "PvE and PvP leagues",
+  "login.ribbon": "TO THE ARENA!",
   "fight.arena": "Arena {id}",
   "fight.challenge": "challenge",
   "fight.no_arena": "map {id}: no arena data",

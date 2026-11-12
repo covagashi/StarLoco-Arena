@@ -35,7 +35,7 @@ const FONT_TITLE := "ui/fonts/LilitaOne-Regular.ttf"
 const FONT_BODY := "ui/fonts/Nunito-Variable.ttf"
 
 static var _card_art_cache := {}   # card id -> Texture2D (null when missing)
-static var _kit_cache := {}        # piece name -> Texture2D (null when missing)
+static var _kit_cache := {}        # asset path -> Texture2D (null when missing)
 static var _fonts := {}
 
 
@@ -55,10 +55,14 @@ static func box(fill := PAPER, border := INK, width := 3, margin := 10) -> Style
 
 ## One piece of the kit, or null when assets/ui/kit is not there.
 static func kit_texture(piece: String) -> Texture2D:
-	if not _kit_cache.has(piece):
-		var img := AssetPaths.load_image(KIT + piece + ".png")
-		_kit_cache[piece] = ImageTexture.create_from_image(img) if img != null else null
-	return _kit_cache[piece]
+	return _texture(KIT + piece + ".png")
+
+
+static func _texture(rel: String) -> Texture2D:
+	if not _kit_cache.has(rel):
+		var img := AssetPaths.load_image(rel)
+		_kit_cache[rel] = ImageTexture.create_from_image(img) if img != null else null
+	return _kit_cache[rel]
 
 
 ## A kit piece as a 9-slice: `slice` is its texture margins (left, top,
@@ -141,6 +145,102 @@ static func field(pad := 10, focus := false) -> StyleBox:
 	if s != null:
 		return s
 	return box(FIELD, RIM_HI if focus else RIM, 3, pad)
+
+
+## A title ribbon with notched ends (the mockup's .ribbon): `sun` for
+## rewards, otherwise pop. Its label goes on top, centred.
+static func ribbon(sun := false) -> StyleBox:
+	var s := kit("ribbon_sun" if sun else "ribbon", Vector4(16, 10, 16, 10), Vector4(30, 0, 30, 2))
+	if s != null:
+		return s
+	return box(SUN if sun else PRESSED, RIM, 3, 8)
+
+
+## A text slot on paper: cream, a brown rim, dark bold text.
+static func paper_field(e: LineEdit, font_size := 18) -> void:
+	var n: StyleBox = kit("slot_paper", Vector4(12, 12, 12, 12), Vector4(14, 8, 14, 8))
+	if n == null:
+		n = box(Color("f3ddb2"), Color("3b2a1a"), 3, 10)
+	e.add_theme_stylebox_override("normal", n)
+	e.add_theme_stylebox_override("focus", focus_ring())
+	e.add_theme_font_override("font", bold(900))
+	e.add_theme_font_size_override("font_size", font_size)
+	for c in ["font_color", "font_selected_color", "font_uneditable_color"]:
+		e.add_theme_color_override(c, PAPER_INK)
+	e.add_theme_color_override("font_placeholder_color", Color(PAPER_INK, 0.45))
+	e.add_theme_color_override("caret_color", PRESSED)
+	e.add_theme_color_override("selection_color", Color(1.0, 0.42, 0.24, 0.35))
+	e.add_theme_color_override("clear_button_color", Color("7a4a1e"))
+	e.add_theme_color_override("clear_button_color_pressed", PRESSED)
+
+
+## A caption on paper (CUENTA, CONTRASEÑA): brown, bold, spaced.
+static func paper_caption(text: String) -> Label:
+	var l := caption(text)
+	l.add_theme_color_override("font_color", Color("7a4a1e"))
+	return l
+
+
+## A round medallion button (back, language, mail): the kit's medal as its
+## face, an icon drawn by `draw_icon(button)` on top.
+static func medal_button(d: float, draw_icon: Callable) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(d, d)
+	b.size = Vector2(d, d)
+	b.focus_mode = Control.FOCUS_ALL
+	var tex := kit_texture("medal")
+	for st in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var e := StyleBoxEmpty.new()
+		b.add_theme_stylebox_override(st, e)
+	b.add_theme_stylebox_override("focus", focus_ring())
+	b.draw.connect(func():
+		var r := Rect2(Vector2.ZERO, Vector2(d, d * (68.0 / 64.0)))
+		if b.is_pressed() or b.button_pressed:
+			r.position.y += 2
+		if tex != null:
+			b.draw_texture_rect(tex, r, false,
+				Color(1.15, 1.15, 1.15) if b.is_hovered() else Color.WHITE)
+		else:
+			b.draw_circle(Vector2(d, d) / 2, d / 2, PLATE)
+		draw_icon.call(b))
+	b.mouse_entered.connect(b.queue_redraw)
+	b.mouse_exited.connect(b.queue_redraw)
+	return b
+
+
+## The four-pointed sparkle of rewards and logos (the mockup's .spark).
+static func draw_spark(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	var k := r * 0.2
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(k, -k),
+		c + Vector2(r, 0), c + Vector2(k, k), c + Vector2(0, r), c + Vector2(-k, k),
+		c + Vector2(-r, 0), c + Vector2(-k, -k)]), col)
+
+
+## The art behind the screens (tools/make_ui_scene.py), or null.
+static func scene_texture(n: String) -> Texture2D:
+	return _texture("ui/scene/" + n + ".png")
+
+
+## A piece of scene art placed as in the mockup: `pos` and `h` are the
+## mockup's (CSS) position and height; the baked shadow's pad is undone.
+const SCENE_PAD := 32
+
+
+static func figure(parent: Control, n: String, pos: Vector2, h: float) -> TextureRect:
+	var tex := scene_texture(n)
+	var t := TextureRect.new()
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if tex == null:
+		return t
+	var src_h := tex.get_height() - 2 * SCENE_PAD
+	var k := h / src_h
+	t.texture = tex
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_SCALE
+	t.size = Vector2(tex.get_width(), tex.get_height()) * k
+	t.position = pos - Vector2(SCENE_PAD, SCENE_PAD) * k
+	parent.add_child(t)
+	return t
 
 
 ## Focus ring: a sun outline just outside the control.
@@ -289,6 +389,25 @@ static func primary(b: Button, font_size := 24) -> void:
 	b.add_theme_font_size_override("font_size", font_size)
 
 
+## A raised button of the kit in `colour` (pop, navy, green, sun), its
+## label in the title font with an ink outline: "CONECTAR", "Al azar".
+static func raised(b: Button, colour := "pop", font_size := 24, pad := 12) -> void:
+	b.add_theme_stylebox_override("normal", button_box(colour, "", pad))
+	b.add_theme_stylebox_override("hover", button_box(colour, "hover", pad))
+	b.add_theme_stylebox_override("pressed", button_box(colour, "pressed", pad))
+	b.add_theme_stylebox_override("hover_pressed", button_box(colour, "pressed", pad))
+	b.add_theme_stylebox_override("disabled", button_box(colour, "off", pad))
+	b.add_theme_stylebox_override("focus", focus_ring())
+	for c in ["font_color", "font_hover_color", "font_focus_color",
+			"font_pressed_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(c, INK)
+	b.add_theme_color_override("font_disabled_color", MUTED)
+	b.add_theme_color_override("font_outline_color", OUTLINE)
+	b.add_theme_constant_override("outline_size", maxi(6, font_size / 3))
+	b.add_theme_font_override("font", title_font())
+	b.add_theme_font_size_override("font_size", font_size)
+
+
 ## A title in the game's voice: Lilita One, cream (or `colour`), an ink
 ## outline and a hard ink shadow straight down.
 static func title(l: Label, font_size := 28, colour := INK) -> void:
@@ -311,6 +430,11 @@ static func caption(text: String) -> Label:
 	l.add_theme_font_size_override("font_size", 13)
 	l.add_theme_color_override("font_color", MUTED)
 	return l
+
+
+## Nunito at a weight (700–900); see _body.
+static func bold(weight := 900) -> Font:
+	return _body(weight)
 
 
 ## Nunito at a weight (the variable font's wght axis), `spacing` extra px

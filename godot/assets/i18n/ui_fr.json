@@ -772,6 +772,7 @@
   "login.enter_account": "Entre ton compte",
   "login.server": "Serveur",
   "login.tagline": "Ligues JcE et JcJ",
+  "login.ribbon": "À L'ARÈNE !",
   "fight.arena": "Arène {id}",
   "fight.challenge": "défi",
   "fight.no_arena": "map {id} : pas de données d'arène",

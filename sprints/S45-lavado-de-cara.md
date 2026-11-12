@@ -100,6 +100,32 @@ Evidencia: `run_tests.sh --headless` → `suites=22 checks=1463 failures=0`;
 `ui_review_preview` a 1280×720 sin fallos, 17 capturas antes/después en
 `~/codigo/capturas/s45/antes/` y `~/codigo/capturas/s45/fase1/`.
 
+### Corrección del dueño (2026-11-12)
+
+Al ver la fase 1: "no se parece nada al artefacto". Tenía razón: la fase 1
+solo cambió colores y piezas sobre la composición vieja (cajas centradas),
+y lo que define la maqueta es la composición: el arte en grande, la arena de
+fondo, el papel inclinado con su cinta. **Regla desde aquí: cada pantalla se
+compara lado a lado con la maqueta renderizada** (la maqueta se renderiza en
+local con el chromium headless de Playwright a partir de los `.dc.html`) y no
+se enseña hasta que se parece.
+
+### Fase 2 — pantallas completas
+
+- **Inicio de sesión ✅ (a revisar por el dueño).** Como la maqueta: la arena
+  en 3D de fondo con su viñeta y el brillo cálido, el coach y dos luchadores en
+  grande, PIPPOP en cinta y ARENA en sol con destellos, el medallón del idioma
+  arriba a la derecha (abre los tres idiomas) y a la derecha la hoja de papel
+  inclinada 1,5° con el borde perforado, la cinta "¡A LA ARENA!", los campos
+  de papel, el servidor como chip verde y CONECTAR. Las imágenes son renders de
+  nuestro juego (`godot/art/ui/renders/`, sacados para la maqueta) que
+  `tools/make_ui_scene.py` pasa a `assets/ui/scene/` con la sombra horneada.
+  Captura lado a lado: `~/codigo/capturas/s45/fase2/login-maqueta-vs-juego.png`.
+  Fuera de momento: "Recordar la cuenta", "Crear una cuenta" y "¿Olvidaste la
+  contraseña?" (el cliente no los tiene; serían funciones nuevas) y el
+  "Demo · v0.37".
+- Crea tu coach y lobby: siguientes, uno a uno.
+
 ## Fuera
 
 - Las ilustraciones de las cartas y los iconos de hechizos: S38, ya con este
