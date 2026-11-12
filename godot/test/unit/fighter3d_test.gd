@@ -83,7 +83,7 @@ func _equipment(t) -> void:
 	# the card's slot (Fighter3D.COACH_SLOT through 5201's slot of its type)
 	var cards: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/gamedata/cards.json"))
 	const COACH_TYPE := {11: "hat", 12: "weapon", 8: "cape", 13: "pet", 7: "shoulders", 5: "bracelets",
-		2: "skirt", 9: "pants", 6: "boots", 10: "torso"}
+		2: "skirt", 9: "pants", 6: "boots", 10: "torso", 4: "mark"}
 	# the garments are recipes for coach_garment.py, not kiln models
 	var garments: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/equipment/garments.json"))
 	for cid in pieces.coach:
@@ -99,9 +99,10 @@ func _equipment(t) -> void:
 		t.ok(src.contains('model("%s"' % pieces.coach[cid]) or src.contains('pad("%s"' % pieces.coach[cid]), "coach card %s: %s is modelled" % [cid, pieces.coach[cid]])
 		var want: Array = {"hat": ["hat_"], "weapon": ["staff_", "banner_"], "cape": ["cape_"], "pet": ["pet_"], "shoulders": ["shoulders_"], "bracelets": ["bracelets_"]}.get(slot, [])
 		t.ok(want.any(func(w): return String(pieces.coach[cid]).begins_with(w)), "coach card %s shows a %s piece" % [cid, want])
-	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}, {"slot": 4, "id": 7}, {"slot": 1, "id": 14}]),
+	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}, {"slot": 4, "id": 7}, {"slot": 2, "id": 999}]),
 		{"hat": "hat_horned", "cape": "cape_jalatranki", "shoulders": "shoulders_yoghi", "bracelets": "bracelets_strength"},
-		"coach slots 0, 8, 3 and 4 show a hat, a cape, shoulderpads and bracelets; 1 (a mark) nothing yet")
+		"coach slots 0, 8, 3 and 4 show a hat, a cape, shoulderpads and bracelets; 2 (hair) nothing")
+	t.eq(Fighter3D.coach_pieces([{"slot": 1, "id": 36}]), {"mark": "mark_skull"}, "coach slot 1 shows a mark")
 	t.eq(Fighter3D.coach_pieces([{"slot": 11, "id": 176}, {"slot": 6, "id": 197}, {"slot": 5, "id": 22}, {"slot": 10, "id": 178}]),
 		{"torso": "torso_squire", "pants": "pants_grilembore", "skirt": "skirt_gobkool", "boots": "boots_squire"},
 		"coach slots 11, 6, 5 and 10 show a torso, trousers, a skirt and boots")

@@ -10,6 +10,8 @@ For each garment in garments.json ({"<name>": {"kind": …, …}}):
   `ease`; one shell (a sleeve or a trouser leg has the body inside, so a
   `thick`ness only doubled the triangles). The faces keep the body's skin weights, so
   the cloth bends exactly as the skin under it and never lets it through.
+- mark: a tattoo or scars, the skin round a point with an emblem on it
+  (see mark()).
 - skirt: a tube from the waist down, as wide as the hips and flaring, with
   its weights going from the hips at the belt to half the nearest thigh at
   the hem (it follows the legs, less).
@@ -44,11 +46,14 @@ for a in argv:
     else:
         pos.append(a)
 SRC, RECIPES, OUT_DIR = pos[:3]
+# the marks' emblems (tools/art/mark_emblems.py), beside the garments' folder
+MARKS_DIR = OPT.get("marks") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT_DIR))), "marks")
 
 DEFAULTS = {
     "torso": {"ease": 0.012, "thick": 0.0, "top": 0.0, "bottom": 0.0, "sleeve": 0.45},
     "pants": {"ease": 0.012, "thick": 0.0, "top": 0.0, "start": 0.0, "hem": 0.95, "flare": 0.0, "bag": 0.0},
     "boots": {"ease": 0.016, "thick": 0.0, "top": 0.25, "cuff": 0.0, "smooth": 24},
+    "mark": {"ease": 0.003, "thick": 0.0, "size": 0.09},
     "skirt": {"ease": 0.02, "teeth": 0.0, "thick": 0.006, "top": 0.0, "length": 0.45, "flare": 0.06, "sides": 20, "rings": 6},
 }
 
@@ -486,15 +491,91 @@ def colour(K, bm, tpar, r, ob):
         f.material_index = order.index(h)
 
 
+MARK_DIRS = {"out": None, "front": Vector((0, -1, 0)), "back": Vector((0, 1, 0)),
+             "left": Vector((1, 0, 0)), "right": Vector((-1, 0, 0))}
+
+
+def mark(K, r, ob):
+    """A mark (a tattoo, scars): the skin round a point, `ease` off it, the
+    emblem (art/equipment/out/marks/<emblem>.png, tools/art/mark_emblems.py)
+    projected flat on it, `size` metres across. The point: `at` {bone, t
+    (along it), dir (out: away from the body's middle; front, back, left,
+    right)}, taken on the skin."""
+    B = K.bones
+    at = r["at"]
+    a, b = B[at["bone"]]
+    core = a.lerp(b, at.get("t", 0.5))
+    d = MARK_DIRS[at.get("dir", "out")]
+    if d is None:
+        d = Vector((1 if core.x > 0 else -1, 0, 0))
+    bm = bmesh.new()
+    bm.from_mesh(K.ob.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-4)
+    deform = bm.verts.layers.deform.verify()
+    bm.normal_update()
+    # the skin point: the vertex furthest along d among those near the ray
+    # only the skin of the bone and its neighbours: a hand hanging beside
+    # the thigh is not the thigh
+    side = at["bone"][-2:] if at["bone"][-2:] in (".L", ".R") else ""
+    stem = at["bone"].split(".")[0]
+    family = {at["bone"]} | {n + side for n in {
+        "thigh": ["hips", "shin"], "shin": ["thigh", "foot"], "upper_arm": ["shoulder", "forearm"],
+        "forearm": ["upper_arm", "hand"]}.get(stem, [])}
+    if not side:
+        family |= {"hips", "spine", "chest", "neck", "shoulder.L", "shoulder.R"}
+    family = {n.replace(".L.L", ".L").replace(".R.R", ".R") for n in family} | ({"hips"} if stem == "thigh" else set())
+    own = {v for v in bm.verts if dominant(v, deform, K.names) in family}
+    near = [v for v in own if ((v.co - core) - d * (v.co - core).dot(d)).length < 0.03 and (v.co - core).dot(d) > 0]
+    hit = max(near, key=lambda v: (v.co - core).dot(d)).co.copy() if near else core + d * 0.05
+    half = r["size"] / 2
+    # every face reaching into the emblem's square (the corners too), on
+    # the side facing d (not the far side of a thin arm)
+    gone = [f for f in bm.faces
+            if min(max(abs((v.co - hit).dot(e)) for e in (Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))))
+                   for v in f.verts) > half * 1.05 or f.normal.dot(d) < 0.2 or not all(v in own for v in f.verts)]
+    bmesh.ops.delete(bm, geom=gone, context="FACES_ONLY")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    up = Vector((0, 0, 1))
+    up = (up - d * up.dot(d)).normalized()
+    right = up.cross(d)   # seen from outside, +u to the viewer's right
+
+    def out_of(v):
+        return core
+    push(bm, lambda v: r["ease"], out_of)
+    uv = bm.loops.layers.uv.verify()
+    for f in bm.faces:
+        if f.normal.dot(d) < 0:
+            f.normal_flip()
+        for lp in f.loops:
+            q = lp.vert.co - hit
+            lp[uv].uv = (0.5 - q.dot(right) / r["size"], 0.5 + q.dot(up) / r["size"])
+    img = bpy.data.images.load(os.path.join(MARKS_DIR, r["emblem"] + ".png"))
+    m = bpy.data.materials.new("mark_" + r["emblem"])   # toon.gd: cut by its alpha, no outline
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    tex.extension = "CLIP"
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
+    bsdf.inputs["Roughness"].default_value = 1.0
+    ob.data.materials.append(m)
+    return bm
+
+
 def build(K, rig, name, r):
     r = {**DEFAULTS[r["kind"]], **r}
-    bm, tpar = skirt(K, r) if r["kind"] == "skirt" else from_body(K, r)
     me = bpy.data.meshes.new(name)
     ob = bpy.data.objects.new(name, me)
     bpy.context.collection.objects.link(ob)
     for n in K.names:
         ob.vertex_groups.new(name=n)
-    colour(K, bm, tpar, r, ob)
+    if r["kind"] == "mark":
+        bm = mark(K, r, ob)
+    else:
+        bm, tpar = skirt(K, r) if r["kind"] == "skirt" else from_body(K, r)
+        colour(K, bm, tpar, r, ob)
     # the hem and colour cuts split faces; where both halves took one
     # colour the cut only costs triangles: dissolve it back
     bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(3.0), verts=bm.verts[:], edges=bm.edges[:],

@@ -1,5 +1,5 @@
 {
- "_doc": "S35c: the coach's clothes that bend with the body, built per coach figure by tools/blender/characters/coach_garment.py into out/garments/<figure>/<name>.glb. kind: torso | pants | skirt | boots. bands: [from, to, colour] along the garment (0 top hem, 1 bottom hem); base: the rest. The other keys tune the cut (see DEFAULTS in the script).",
+ "_doc": "S35c: the coach's clothes that bend with the body, built per coach figure by tools/blender/characters/coach_garment.py into out/garments/<figure>/<name>.glb. kind: torso | pants | skirt | boots | mark (a tattoo: an emblem of tools/art/mark_emblems.py on the skin round a point). bands: [from, to, colour] along the garment (0 top hem, 1 bottom hem); base: the rest. The other keys tune the cut (see DEFAULTS in the script).",
  "torso_squire": {"kind": "torso", "base": "#8a5a3c", "sleeve": 0.55, "bottom": 0.09, "bands": [[0.0, 0.08, "#d9c27a"], [0.86, 1.0, "#d9c27a"]]},
  "pants_grilembore": {"kind": "pants", "base": "#1f4f8a", "hem": 0.97, "flare": 0.03, "bands": [[0.0, 0.07, "#3d8fc9"]]},
  "skirt_gobkool": {"kind": "skirt", "base": "#c8302a", "length": 0.4, "flare": 0.06, "bands": [[0, 0.12, "#7a1d18"], [0.62, 1.3, "#5f9a3a"]]},
@@ -90,5 +90,18 @@
  "boots_wonejo": {"kind": "boots", "base": "#f4f0ea", "top": 0.2, "ease": 0.022, "puff": [[0.0, 1.0, 0.012]], "patches": [{"t": 0.65, "ang": -90, "r": 0.1, "col": "#4a3020"}]},
  "boots_lenosas": {"kind": "boots", "base": "#7a5a30", "top": 0.3, "ease": 0.018, "bands": [[0, 0.35, "#7ab82a"]], "patches": [{"t": 0.2, "ang": 0, "r": 0.08, "col": "#4a3018"}]},
  "boots_nubosas": {"kind": "boots", "base": "#f6f6f6", "top": 0.6, "puff": [[0.1, 0.55, 0.015], [0.55, 1.0, 0.015]], "bands": [[0, 0.12, "#e8961c"]], "cuff": 0.014},
- "boots_zar": {"kind": "boots", "base": "#3fc0b8", "top": 0.6, "bands": [[0, 0.1, "#2a9a92"]], "stripes": [{"from": 0.1, "to": 0.6, "every": 0.12, "col": "#f1efe8"}]}
+ "boots_zar": {"kind": "boots", "base": "#3fc0b8", "top": 0.6, "bands": [[0, 0.1, "#2a9a92"]], "stripes": [{"from": 0.1, "to": 0.6, "every": 0.12, "col": "#f1efe8"}]},
+ "mark_keltos": {"kind": "mark", "emblem": "keltos", "at": {"bone": "upper_arm.L", "t": 0.4, "dir": "out"}, "size": 0.135},
+ "mark_jalatranki": {"kind": "mark", "emblem": "jalatranki", "at": {"bone": "upper_arm.R", "t": 0.35, "dir": "out"}, "size": 0.12},
+ "mark_skull": {"kind": "mark", "emblem": "skull", "at": {"bone": "chest", "t": 0.5, "dir": "back"}, "size": 0.21},
+ "mark_salteadorillo": {"kind": "mark", "emblem": "salteadorillo", "at": {"bone": "upper_arm.R", "t": 0.4, "dir": "out"}, "size": 0.135},
+ "mark_scars": {"kind": "mark", "emblem": "scars", "at": {"bone": "chest", "t": 0.4, "dir": "front"}, "size": 0.21},
+ "mark_kepika": {"kind": "mark", "emblem": "kepika", "at": {"bone": "forearm.L", "t": 0.45, "dir": "out"}, "size": 0.112},
+ "mark_sedforme": {"kind": "mark", "emblem": "sedforme", "at": {"bone": "spine", "t": 0.8, "dir": "back"}, "size": 0.21},
+ "mark_claws": {"kind": "mark", "emblem": "claws", "at": {"bone": "thigh.L", "t": 0.3, "dir": "out"}, "size": 0.15},
+ "mark_mill": {"kind": "mark", "emblem": "mill", "at": {"bone": "upper_arm.L", "t": 0.4, "dir": "out"}, "size": 0.128},
+ "mark_paginas": {"kind": "mark", "emblem": "paginas", "at": {"bone": "chest", "t": 0.5, "dir": "back"}, "size": 0.195},
+ "mark_wings": {"kind": "mark", "emblem": "wings", "at": {"bone": "chest", "t": 0.75, "dir": "back"}, "size": 0.27},
+ "mark_feather": {"kind": "mark", "emblem": "feather", "at": {"bone": "forearm.R", "t": 0.45, "dir": "out"}, "size": 0.112},
+ "mark_lolomg": {"kind": "mark", "emblem": "lolomg", "at": {"bone": "thigh.R", "t": 0.3, "dir": "out"}, "size": 0.15}
 }

@@ -268,7 +268,7 @@ GARMENT_FIGS = ["coach_7000", "coach_7001"]
 
 def garments_hash(fig):
     return digest(os.path.join(EQUIPMENT, "garments.json"), os.path.join(CHAR_TOOLS, "coach_garment.py"),
-                  os.path.join(ART, "characters", "out", fig + ".glb"))
+                  os.path.join(HERE, "mark_emblems.py"), os.path.join(ART, "characters", "out", fig + ".glb"))
 
 
 def build_garments(a):
@@ -292,6 +292,9 @@ def build_garments(a):
             sys.exit("blender not found: put it on PATH or set BLENDER")
         if os.path.isdir(out):
             shutil.rmtree(out)   # a garment taken out of garments.json goes too
+        # the marks' emblems, which the marks project on the skin
+        run([sys.executable, os.path.join(HERE, "mark_emblems.py"), os.path.join(EQUIPMENT, "out", "marks")],
+            GODOT, "mark emblems")
         run([blender, "-b", "--python-exit-code", "1", "-P", os.path.join(CHAR_TOOLS, "coach_garment.py"), "--",
              glb, os.path.join(EQUIPMENT, "garments.json"), out], GODOT, f"garments of {fig}")
         st.set("garments:" + fig, h)

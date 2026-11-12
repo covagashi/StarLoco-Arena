@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) aprobado; paso 9g (13 marcas) en curso
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; pasos 9c–9d (19 faldas, 26 torsos) aprobados; paso 9e (27 botas) aprobado; paso 9g (13 marcas) esperando al dueño
 
 ## Por qué
 
@@ -667,6 +667,33 @@ Hojas: `~/codigo/capturas/s35c/s35c-coach-botas-27-1.png` … `-3.png`.
 Siguiente: las 13 marcas, luego las partes sueltas (paso 9f).
 
 Dueño (2026-11-12): "ok a las botas". **Las 27 aprobadas.**
+
+## Paso 9g: las 13 marcas del coach (2026-11-12)
+
+Las marcas son emblemas (una calavera, garras, espirales): pintadas por
+caras saldrían manchas, así que van como calcomanía.
+
+| Cambio | Fichero |
+|---|---|
+| Los 13 emblemas, diseño propio, dibujados en PNG de 256 px con transparencia: espirales Keltos, cuerno en un aro (Jalatranki), calavera, luna con olas (Salteadorillo), cortes cosidos, espiral Kepika, llama Sedforme, garras (Rompedora), escudo Mill, aro con zigzag (Páginas Amarillas), alas (Héroes), pluma (Tercera Edad), pinceladas (Lolomg). Dos primeros intentos se parecían a símbolos reales (el de la paz, un carácter chino): rehechos | `tools/art/mark_emblems.py` (nuevo) |
+| Prenda nueva `mark`: la piel de su hueso (y vecinos) alrededor de un punto del cuerpo (`at`: hueso, altura, hacia fuera / delante / detrás), a 3 mm, con el emblema proyectado plano (`size` m de lado). Solo la piel de su hueso: la marca del muslo se pegaba a la mano que cuelga al lado | `tools/blender/characters/coach_garment.py` (`mark`) |
+| Hueco 1 del coach → `mark`, que se pone como una prenda (en el esqueleto, con pesos) | `src/anims/fighter3d.gd` |
+| El shader toon pasa a un include; `toon_cut.gdshader` es el mismo con recorte por alfa (y la textura sin repetir). Un material `mark_*` lo usa y no lleva contorno | `src/anims/toon.gdshaderinc` (nuevo), `toon.gdshader`, `toon_cut.gdshader` (nuevo), `toon.gd` |
+| `build.py` dibuja los emblemas antes de las prendas (y su script entra en el hash) | `tools/art/build.py` |
+| Las 13 cartas → su marca: hombro (Keltos, Jalatranki, Salteadorillo, Mill), antebrazo (Kepika, Tercera Edad), pecho (cortes), espalda (calavera, Sedforme, Páginas, alas), muslo (garras, Lolomg) | `garments.json`, `pieces.json` (`coach`), `test/unit/fighter3d_test.gd` |
+
+Corregido al revisar: a ×1 se perdían a escala de juego (las garras no se
+veían): ×1,5.
+
+Con esto la tabla del coach tiene sus 196 cartas de equipo: todo lo que se
+pone, salvo el peinado (solo color).
+
+Probado: `run_tests.sh`: 1364 checks, 0 fallos. `build.py equipment` y
+`check.py`: 0 fallos.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-marcas-13-1.png` y `-2.png`.
+
+Siguiente: las partes sueltas apuntadas (paso 9f).
 
 ## Para retomar (2026-11-11)
 

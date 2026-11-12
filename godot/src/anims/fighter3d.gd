@@ -128,17 +128,17 @@ const WEAPON_STYLES := {
 const FIGHTER_SLOT := {1: "weapon", 2: "pet", 3: "cape", 4: "hat", 5: "dofus"}
 ## Coach equipment slot (5201's 0-based, as 5200 and 60040 carry it) → the
 ## piece slot on the figure: hat, shoulderpads, bracelets, staff (held like a
-## weapon), cape, pet, and the garments: skirt, trousers, boots, torso. The
-## marks (1) come with their own pieces (S35c step 8); hair (2) is only a
-## colour.
-const COACH_SLOT := {0: "hat", 3: "shoulders", 4: "bracelets", 5: "skirt", 6: "pants", 7: "weapon",
+## weapon), cape, pet, and the garments: skirt, trousers, boots, torso,
+## and the mark (a tattoo on the skin, made like a garment); hair (2) is
+## only a colour.
+const COACH_SLOT := {0: "hat", 1: "mark", 3: "shoulders", 4: "bracelets", 5: "skirt", 6: "pants", 7: "weapon",
 	8: "cape", 9: "pet", 10: "boots", 11: "torso"}
 ## S35c: the coach's garments bend with the body
 ## (tools/blender/characters/coach_garment.py): made from each coach figure
 ## with its skin weights, so the file is per figure; the garment's mesh goes
 ## on the figure's own skeleton, beside the body.
 const GARMENT_DIR := "equipment/out/garments/%s/%s.glb"
-const GARMENTS := ["skirt", "pants", "boots", "torso"]
+const GARMENTS := ["skirt", "pants", "boots", "torso", "mark"]
 ## Which piece each card shows: art/equipment/pieces.json
 ## {"fighter": {"<card id>": "<piece>"}, "coach": {…}}.
 const PIECES := "equipment/pieces.json"

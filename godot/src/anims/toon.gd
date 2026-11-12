@@ -12,6 +12,9 @@ extends RefCounted
 ## tools/art/coach_masks.py) says which texels are skin and hair.
 
 const TOON := preload("res://src/anims/toon.gdshader")
+## S35c: a coach's mark (material "mark_*", coach_garment.py): an emblem on
+## the skin, cut by its alpha, never outlined.
+const TOON_CUT := preload("res://src/anims/toon_cut.gdshader")
 const OUTLINE := preload("res://src/anims/toon_outline.gdshader")
 const NO_OUTLINE := ["sclera", "iris", "pupil", "glint", "lash", "hair_brow", "mouth", "eye"]
 
@@ -58,7 +61,8 @@ static func material(src: BaseMaterial3D, tints := {}, mask := {}) -> ShaderMate
 	if _cache.has(key):
 		return _cache[key]
 	var t := ShaderMaterial.new()
-	t.shader = TOON
+	var cut := src.resource_name.begins_with("mark_")
+	t.shader = TOON_CUT if cut else TOON
 	t.set_shader_parameter("albedo", src.albedo_color if mask.has("tex") else colour)
 	if src.albedo_texture:
 		t.set_shader_parameter("albedo_tex", src.albedo_texture)
@@ -72,7 +76,7 @@ static func material(src: BaseMaterial3D, tints := {}, mask := {}) -> ShaderMate
 			if tints.has(ch):
 				t.set_shader_parameter("tint_" + ch, true)
 				t.set_shader_parameter(ch + "_tint", tints[ch])
-	if not NO_OUTLINE.has(src.resource_name.get_slice(".", 0)):
+	if not cut and not NO_OUTLINE.has(src.resource_name.get_slice(".", 0)):
 		var o := ShaderMaterial.new()
 		o.shader = OUTLINE
 		o.set_shader_parameter("px_world", px_world)
