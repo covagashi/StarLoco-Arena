@@ -7,15 +7,18 @@ For each garment in garments.json ({"<name>": {"kind": …, …}}):
 
 - torso / pants / boots: the body's own faces in the garment's region
   (cut clean at the hems with planes), pushed out along their normals by
-  `ease` and given `thick`ness. The faces keep the body's skin weights, so
+  `ease`; one shell (a sleeve or a trouser leg has the body inside, so a
+  `thick`ness only doubled the triangles). The faces keep the body's skin weights, so
   the cloth bends exactly as the skin under it and never lets it through.
 - skirt: a tube from the waist down, as wide as the hips and flaring, with
   its weights going from the hips at the belt to half the nearest thigh at
   the hem (it follows the legs, less).
 
-Colour is flat, by bands along the garment (`bands`: [[from, to, "#hex"]],
-0 at the top hem and 1 at the bottom one; the rest is `base`), one material
-per colour, as the kiln pieces have: toon.gd outlines and shades them.
+Colour is flat, `base` with patterns on top (bands, stripes, side and
+front stripes, harlequin diamonds, patches, one leg in another colour: see
+paint()), along the garment from 0 at the top hem to 1 at the bottom one;
+one material per colour, as the kiln pieces have: toon.gd outlines and
+shades them. `puff` ([[from, to, metres]]) bulges the cloth out.
 
 The garment is exported with the coach's rig (no animations) to
 <out_dir>/<name>.glb; fighter3d.gd puts its mesh on the figure's own
@@ -43,9 +46,9 @@ for a in argv:
 SRC, RECIPES, OUT_DIR = pos[:3]
 
 DEFAULTS = {
-    "torso": {"ease": 0.012, "thick": 0.006, "top": 0.0, "bottom": 0.0, "sleeve": 0.45},
-    "pants": {"ease": 0.012, "thick": 0.006, "top": 0.0, "hem": 0.95, "flare": 0.0, "bag": 0.0},
-    "boots": {"ease": 0.016, "thick": 0.007, "top": 0.25, "cuff": 0.0},
+    "torso": {"ease": 0.012, "thick": 0.0, "top": 0.0, "bottom": 0.0, "sleeve": 0.45},
+    "pants": {"ease": 0.012, "thick": 0.0, "top": 0.0, "start": 0.0, "hem": 0.95, "flare": 0.0, "bag": 0.0},
+    "boots": {"ease": 0.016, "thick": 0.0, "top": 0.25, "cuff": 0.0},
     "skirt": {"ease": 0.02, "thick": 0.006, "top": 0.0, "length": 0.45, "flare": 0.06, "sides": 20, "rings": 6},
 }
 
@@ -201,8 +204,10 @@ def from_body(K, r):
             return d in ("hips", "spine", "chest", "root") or d.startswith("thigh")
         span = (top, bottom)
     elif kind == "pants":
-        top = K.waist - r["top"]
-        hem = top - (top - K.ankle) * r["hem"]
+        # start / hem: how far down from the belt to the ankle (0–1) the
+        # garment begins and ends (greaves start at the knee)
+        top = K.waist - (K.waist - K.ankle) * r["start"] - r["top"]
+        hem = K.waist - (K.waist - K.ankle) * r["hem"]
         cut(bm, Vector((0, 0, top)), up)
         cut(bm, Vector((0, 0, hem)), up)
 
@@ -222,10 +227,17 @@ def from_body(K, r):
             d = dominant(v, deform, K.names).split(".")[0]
             return d in ("shin", "foot")
         span = (top, -0.01)
-    for t0, t1, _ in r.get("bands", []):   # clean colour edges
-        for t in (t0, t1):
-            if 0 < t < 1:
-                cut(bm, Vector((0, 0, span[0] + (span[1] - span[0]) * t)), up)
+    edges = [t for t0, t1, _ in r.get("bands", []) for t in (t0, t1)]
+    for st in r.get("stripes", []):
+        x = st["from"]
+        while x < st.get("to", 1.0) - 1e-6:
+            edges.append(x)
+            x += st["every"]
+    for p in r.get("puff", []):
+        edges += [p[0], p[1]]
+    for t in edges:   # clean colour edges
+        if 0 < t < 1:
+            cut(bm, Vector((0, 0, span[0] + (span[1] - span[0]) * t)), up)
     keep_faces(bm, keep)
 
     def tpar(co):
@@ -238,6 +250,9 @@ def from_body(K, r):
             e += r["bag"] * math.sin(math.pi * min(t / 0.85, 1.0)) + r["flare"] * t * t
         if kind == "boots":
             e += r["cuff"] * max(0.0, (0.25 - t) / 0.25)
+        for t0, t1, extra in r.get("puff", []):   # a bulge: puffed shorts, fur at the hem
+            if t0 < t < t1:
+                e += extra * math.sin(math.pi * (t - t0) / (t1 - t0))
         return e
     def out_of(v):
         a, b = B.get(dominant(v, deform, K.names), B["spine"])
@@ -245,7 +260,12 @@ def from_body(K, r):
             a, b = B["hips"][0], B["chest"][1]   # the trunk's axis
         return closest_on(v.co, a, b)
     push(bm, ease, out_of)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    # one shell, drawn from outside only: every face faces away from its bone
+    bm.normal_update()
+    for f in bm.faces:
+        c = f.calc_center_median()
+        if f.normal.dot(c - out_of(f.verts[0])) < 0:
+            f.normal_flip()
     return bm, tpar
 
 
@@ -317,9 +337,68 @@ def skirt(K, r):
     return bm, tpar
 
 
-def colour(bm, tpar, r, ob):
-    cols = [r["base"]] + [b[2] for b in r.get("bands", [])]
-    order = list(dict.fromkeys(cols))
+def where(K, kind, co):
+    """(side, angle) of a point round its limb or the trunk: side "L" or
+    "R" (+X is the left), angle in degrees, 0 on the outside (the trunk's
+    left), -90 at the front (-Y), 90 at the back."""
+    B = K.bones
+    side = "L" if co.x > 0 else "R"
+    if kind in ("pants", "boots"):
+        a, b = B["thigh." + side][0], B["shin." + side][1]
+        if kind == "boots" or co.z < b.z:
+            a, b = B["shin." + side][0], B["foot." + side][0]
+    else:
+        a, b = B["hips"][0], B["chest"][1]
+        a, b = a.copy(), b.copy()
+        a.x = b.x = 0.0
+    d = co - closest_on(co, a, b)
+    out = 1.0 if (side == "L" or kind not in ("pants", "boots")) else -1.0
+    return side, math.degrees(math.atan2(d.y, d.x * out))
+
+
+def paint(K, kind, r, t, co):
+    """The colour of the cloth at `co` (t along the garment), from `base`
+    and the patterns, later ones on top:
+      bands   [[t0, t1, col]]                 across the garment
+      stripes [{from, to, every, col}]        repeating bands
+      side    [{width, col, from?, to?}]      down the outside of each leg
+                                              (the sides, on a torso)
+      front   [{width, col, from?, to?}]      down the front
+      diamonds {cols: [a, b], n, rows, from?, to?}   harlequin
+      patches [{leg?, t, ang, r, col}]        a round spot (r in t units)
+      leg     {"R": col}                      one leg another colour"""
+    side, ang = where(K, kind, co)
+    h = r.get("leg", {}).get(side, r["base"])
+    dia = r.get("diamonds")
+    if dia and dia.get("from", 0) <= t <= dia.get("to", 1):
+        u = ang / 360 * dia["n"] + t * dia["rows"]
+        v = ang / 360 * dia["n"] - t * dia["rows"]
+        h = dia["cols"][(math.floor(u) + math.floor(v)) % 2]
+    for t0, t1, c in r.get("bands", []):
+        if t0 <= t <= t1:
+            h = c
+    for st in r.get("stripes", []):
+        if st["from"] <= t <= st.get("to", 1.0) and int((t - st["from"]) / st["every"]) % 2 == 0:
+            h = st["col"]
+    for key, at in (("side", 0.0), ("front", -90.0)):
+        for st in r.get(key, []):
+            off = abs((ang - at + 180) % 360 - 180)
+            if key == "side" and kind not in ("pants", "boots"):
+                off = min(off, abs((ang - 180 + 180) % 360 - 180))   # both sides of the trunk
+            if off <= st["width"] / 2 and st.get("from", 0) <= t <= st.get("to", 1):
+                h = st["col"]
+    for p in r.get("patches", []):
+        if p.get("leg", side) != side:
+            continue
+        da = abs((ang - p["ang"] + 180) % 360 - 180) / 360
+        if math.hypot(t - p["t"], da * 1.2) <= p["r"]:
+            h = p["col"]
+    return h
+
+
+def colour(K, bm, tpar, r, ob):
+    faces = [(f, paint(K, r["kind"], r, tpar(f.calc_center_median()), f.calc_center_median())) for f in bm.faces]
+    order = list(dict.fromkeys([r["base"]] + [h for _, h in faces]))
     for h in order:
         m = bpy.data.materials.new("cloth_" + h.lstrip("#"))
         m.use_nodes = True
@@ -327,12 +406,7 @@ def colour(bm, tpar, r, ob):
         bsdf.inputs["Base Color"].default_value = hexcol(h)
         bsdf.inputs["Roughness"].default_value = 0.9
         ob.data.materials.append(m)
-    for f in bm.faces:
-        t = tpar(f.calc_center_median())
-        h = r["base"]
-        for t0, t1, c in r.get("bands", []):
-            if t0 <= t <= t1:
-                h = c
+    for f, h in faces:
         f.material_index = order.index(h)
 
 
@@ -344,18 +418,24 @@ def build(K, rig, name, r):
     bpy.context.collection.objects.link(ob)
     for n in K.names:
         ob.vertex_groups.new(name=n)
-    colour(bm, tpar, r, ob)
+    colour(K, bm, tpar, r, ob)
+    # the hem and colour cuts split faces; where both halves took one
+    # colour the cut only costs triangles: dissolve it back
+    bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(3.0), verts=bm.verts[:], edges=bm.edges[:],
+                             delimit={"MATERIAL"})
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bm.to_mesh(me)
     bm.free()
     for p in me.polygons:
         p.use_smooth = True
     ob.parent = rig
-    sol = ob.modifiers.new("thick", "SOLIDIFY")
-    sol.thickness = r["thick"]
-    sol.offset = -1.0      # inward, toward the skin it already clears
-    sol.use_rim = True
-    bpy.context.view_layer.objects.active = ob
-    bpy.ops.object.modifier_apply(modifier="thick")
+    if r["thick"] > 0:   # a skirt: seen from under, the inside shows
+        sol = ob.modifiers.new("thick", "SOLIDIFY")
+        sol.thickness = r["thick"]
+        sol.offset = -1.0      # inward, toward the skin it already clears
+        sol.use_rim = True
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.modifier_apply(modifier="thick")
     arm = ob.modifiers.new("rig", "ARMATURE")
     arm.object = rig
     os.makedirs(OUT_DIR, exist_ok=True)

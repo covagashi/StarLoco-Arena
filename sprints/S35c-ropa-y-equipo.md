@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (las 91 prendas) en curso
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (los 19 pantalones) esperando al dueño
 
 ## Por qué
 
@@ -551,6 +551,31 @@ técnica". **Piloto aprobado; el camino vale para las 91.**
 Siguiente: las 91 prendas por tipo (19 faldas,
 19 pantalones, 27 botas, 26 torsos), una hoja por tipo; luego las 13
 marcas.
+
+## Paso 9b: los 19 pantalones del coach (2026-11-12)
+
+| Cambio | Fichero |
+|---|---|
+| Patrones nuevos además de las franjas (`paint()`): rayas repetidas (`stripes`), franja por fuera de cada pierna (`side`) o por delante (`front`), rombos de arlequín (`diamonds`), parches redondos (`patches`), una pierna de otro color (`leg`); y `puff` (abulta la tela entre dos alturas: bombachos, pelo en el bajo, bultos de gelatina). `start` hace que la prenda empiece más abajo (las espinilleras) | `tools/blender/characters/coach_garment.py` |
+| Torso, pantalón y botas pasan a **una sola capa** (sin grosor): dentro de una manga o una pernera está el cuerpo, así que el grosor solo duplicaba los triángulos. Cada cara mira hacia fuera de su hueso. La falda conserva el grosor (por debajo se ve su interior). Los pantalones quedan en 430–2130 triángulos (antes hasta 4600 con rayas) | `coach_garment.py` |
+| Los 18 que faltaban, diseño propio (la ilustración solo como idea): Bombachos (rojos, cortos y abombados), Jalatranki (rojo con franja y bajo amarillo de lana), Gregüescos (abombados naranja hasta medio muslo, medias a rayas azul marino), Salteadorillo (verde azulado acampanado con franja clara), Ladilla (rosa pálido con pelo blanco en rodilla y tobillo), Tribuno (gris verdoso estrecho), Kepika (cuero con anillos de hueso), gelatina (tres bultos rosas, cinturilla verde de hojas), Sedforme (amarillo pálido con parches verdes), calzas Rezina (rombos naranja y gris), Rompedor (mostaza con parches), escudero (verde lima con parches), tubo de wabbit (negro con franja blanca abajo), L.Men'Tal (tostado ancho por la rodilla), Alu-Card (negro con franja morada y hebilla), jálabol (corto rojo con cinturilla blanca), espinilleras del Superjefe (oro, de la rodilla abajo, borde naranja), Lolomg (verde azulado oscuro con paneles) | `art/equipment/garments.json`, `pieces.json` (`coach`) |
+
+Corregido al revisar: los rombos del Rezina, pequeños, salían como manchas
+(la cara de la figura es grande para un dibujo fino): ahora son grandes;
+los parches eran demasiado pequeños para verse a escala de juego (×1,7).
+
+Probado: `run_tests.sh`: 1199 checks, 0 fallos. `build.py equipment` y
+`check.py`: 0 fallos (44 prendas, 3,5 MB). Las prendas del piloto, en una
+capa, rehechas y vistas andando (`walk_loop`): sin agujeros.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-pantalones-19-1.png` y `-2.png`
+(cada pantalón en un coach, de frente y en las dos diagonales).
+
+Para el dueño: no llevan volumen propio (los cuernos del Kepika, las
+burbujas de verdad de la gelatina): ¿así, o esas piezas sueltas encima como
+las hombreras?
+
+Siguiente: las 19 faldas.
 
 ## Para retomar (2026-11-11)
 
