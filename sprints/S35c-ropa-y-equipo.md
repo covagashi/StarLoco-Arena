@@ -575,6 +575,23 @@ Para el dueño: no llevan volumen propio (los cuernos del Kepika, las
 burbujas de verdad de la gelatina): ¿así, o esas piezas sueltas encima como
 las hombreras?
 
+Dueño: "¿crees que haciendo vfx quedaría mejor que poniendo partes
+sueltas?". Mi respuesta: según la parte. Lo sólido, como pieza rígida
+encima (con partículas un cuerno se lee como un hechizo, no como ropa, y se
+calcula en cada fotograma); los VFX solo para lo que tiene que moverse o
+brillar, y en S37. Dueño: "ok hazlo como tú dices". **Decidido:**
+- Las prendas siguen como están; lo que necesita volumen propio se apunta
+  aquí y se hace en una tanda al final (paso 9f), como piezas rígidas en
+  el hueso de su sitio.
+- Los candidatos a VFX van a [`S37-vfx.md`](./S37-vfx.md) (gelatina que
+  tiembla, brillo del oro del Superjefe, llama de la Aurea flamma).
+
+Partes sueltas apuntadas (paso 9f):
+- Pantalón Kepika (119): cuernos de hueso en los muslos.
+- Pantalón Ladilla (54) y Jalatranki (24): un anillo de pelo o lana en el
+  bajo (el abultado de ahora, más esponjoso).
+- Pantalón de gelatina (126): dos o tres burbujas grandes.
+
 Siguiente: las 19 faldas.
 
 ## Para retomar (2026-11-11)

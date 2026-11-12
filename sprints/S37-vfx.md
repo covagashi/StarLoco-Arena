@@ -23,6 +23,18 @@
   mueva queda fuera: va fundido en la malla de Meshy, y moverlo pediría el
   pelo como pieza aparte, lo que el dueño descartó en S35c.
 
+## Desde S35c (2026-11-12)
+
+Dueño, sobre el volumen de las prendas del coach: "ok hazlo como tú dices".
+Lo sólido (cuernos, pinchos, pelo, burbujas grandes) va como pieza rígida en
+S35c; aquí, solo unas pocas piezas especiales donde "estar vivo" es la
+gracia, y barato (en la demo web cuentan los móviles de 2 GB):
+- Pantalón de gelatina (carta 126): que tiemble al andar, con un shader de
+  vértices en la propia prenda (sin piezas nuevas).
+- Espinilleras del Superjefe (862): un brillo del oro.
+- Aurea flamma (estandarte del coach): la llama.
+Cualquier otra que salga al hacer las prendas se apunta aquí.
+
 ## Criterio de cierre
 
 Cada hechizo de las 12 clases se ve con un efecto de la librería; `XpsFx`
