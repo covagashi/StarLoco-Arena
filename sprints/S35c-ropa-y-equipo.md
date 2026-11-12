@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; paso 9c (19 faldas) esperando al dueño; paso 9d (26 torsos) en curso
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (19 pantalones) aprobado; paso 9c (19 faldas) esperando al dueño; paso 9d (26 torsos) esperando al dueño
 
 ## Por qué
 
@@ -619,6 +619,27 @@ Probado: `run_tests.sh`: 1235 checks, 0 fallos. `build.py equipment` y
 Hojas: `~/codigo/capturas/s35c/s35c-coach-faldas-19-1.png` y `-2.png`.
 
 Siguiente: los 26 torsos.
+
+## Paso 9d: los 26 torsos del coach (2026-11-12)
+
+| Cambio | Fichero |
+|---|---|
+| El torso gana: color de manga distinto del cuerpo (`sleeve_col`), puño al final de la manga (`cuff`), y aberturas por delante (`open`: un chaleco, una chaqueta abierta). Una manga larga baja por debajo del bajo (antes se cortaba a la altura de la cintura). `sleeve` < 0 corta en el hombro: sin mangas de verdad | `tools/blender/characters/coach_garment.py` (`colour`, `along_arm`) |
+| El bajo del torso pasa a la cintura (`bottom` 0); antes bajaba 4 cm más y, sin pantalón, parecía un body. El torso del escudero del piloto conserva su largo (`bottom` 0,09) | `coach_garment.py`, `garments.json` |
+| Los 25 que faltaban, diseño propio: Camisa amplia (blanca, manga larga), Loción capilar (túnica oliva con etiqueta), Jalatranki (lana amarilla abultada), Joroba de la suerte (azul con girasol), Delantal ensangrentado, Tripas Alamodaken (chaleco con panel granate), La Justa (gris verdoso sin mangas), petos Kepika, gelatina, Gosbaster, de guerra, Kamas, Superjefe, Sámara (corto), leñosa y Zar (sin mangas, más separados del cuerpo), Sedforme (chaqueta abierta), Rompedora, Vellocino de wabbit (manga larga, panel negro), Grilembore (manga larga con cinto naranja), L.Men'Tal (chaleco rojo sobre camisa blanca), jálabol (camiseta roja con franja), pecheras Lolomg y wonejo (cortas), Nuboso (blanco abultado) | `art/equipment/garments.json`, `pieces.json` (`coach`) |
+
+Probado: `run_tests.sh`: 1287 checks, 0 fallos. `build.py equipment` y
+`check.py`: 0 fallos (130 prendas). Manga larga (L.Men'Tal) con pantalón y
+botas, celebrando y lanzando: la manga sigue al brazo arriba sin abrirse.
+
+Partes sueltas apuntadas para el paso 9f: los cuernos del peto Kepika, el
+girasol de la Joroba, las plumas del Gosbaster, los pinchos y cadenas del
+peto de guerra, las monedas del Kamas, la cresta del Superjefe, las cuentas
+de la pechera Lolomg, la flor del wonejo, las gafas y aros del Zar.
+
+Hojas: `~/codigo/capturas/s35c/s35c-coach-torsos-26-1.png` … `-3.png`.
+
+Siguiente: las 27 botas.
 
 ## Para retomar (2026-11-11)
 

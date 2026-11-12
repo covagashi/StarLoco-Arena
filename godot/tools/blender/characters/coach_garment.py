@@ -178,12 +178,13 @@ def from_body(K, r):
     up = Vector((0, 0, 1))
     if kind == "torso":
         top = K.neck - r["top"]
-        bottom = K.waist - 0.04 - r["bottom"]
+        bottom = K.waist - r["bottom"]   # at the belt; + longer, - a crop top
         cut(bm, Vector((0, 0, top)), up)
         cut(bm, Vector((0, 0, bottom)), up)
         sleeve = {}
         for s in ".L", ".R":
-            # the sleeve ends `sleeve` down the arm: upper arm 0–1, forearm 1–2
+            # the sleeve ends `sleeve` down the arm: upper arm 0–1, forearm
+            # 1–2; below 0 it is cut into the shoulder (sleeveless)
             t = r["sleeve"]
             a, b = B["upper_arm" + s] if t <= 1 else B["forearm" + s]
             f = t if t <= 1 else t - 1
@@ -193,14 +194,17 @@ def from_body(K, r):
         arm_bones = {"upper_arm", "forearm", "hand"}
 
         def keep(v):
-            if v.co.z > top + 1e-4 or v.co.z < bottom - 1e-4:
+            if v.co.z > top + 1e-4:
                 return False
             d = dominant(v, deform, K.names)
             if d.split(".")[0] in ("head", "neck"):
                 return False
             if d.split(".")[0] in arm_bones or d.startswith("shoulder"):
+                # a long sleeve hangs below the hem: only its own cut ends it
                 at, n = sleeve[".L" if v.co.x > 0 else ".R"]
                 return (v.co - at).dot(n) <= 1e-4
+            if v.co.z < bottom - 1e-4:
+                return False
             return d in ("hips", "spine", "chest", "root") or d.startswith("thigh")
         span = (top, bottom)
     elif kind == "pants":
@@ -414,8 +418,47 @@ def paint(K, kind, r, t, co):
     return h
 
 
+def along_arm(K, co):
+    """How far down the arm a point is, in the units of a torso's `sleeve`
+    (0 the shoulder joint, 1 the elbow, 2 the wrist)."""
+    B = K.bones
+    side = ".L" if co.x > 0 else ".R"
+    a, b = B["upper_arm" + side]
+    c, d = B["forearm" + side]
+    t1 = (co - a).dot(b - a) / max((b - a).length_squared, 1e-9)
+    if t1 <= 1.0:
+        return max(t1, 0.0)
+    return 1.0 + min(max((co - c).dot(d - c) / max((d - c).length_squared, 1e-9), 0.0), 1.0)
+
+
 def colour(K, bm, tpar, r, ob):
-    faces = [(f, paint(K, r["kind"], r, tpar(f.calc_center_median()), f.calc_center_median())) for f in bm.faces]
+    """Paint every face (paint()); on a torso the arm's faces are the
+    sleeve: `sleeve_col` (else the body's colour) and a cuff at its end
+    (`cuff`: [length, col], in sleeve units). `open` ([{width, from?, to?}])
+    cuts the front open (a vest, an open jacket)."""
+    deform = bm.verts.layers.deform.verify()
+    faces, gone = [], []
+    for f in bm.faces:
+        c = f.calc_center_median()
+        t = tpar(c)
+        if r["kind"] == "torso":
+            _, ang = where(K, "torso", c)
+            if any(abs((ang + 270) % 360 - 180) <= o["width"] / 2 and o.get("from", 0) <= t <= o.get("to", 1)
+                   for o in r.get("open", [])):
+                gone.append(f)
+                continue
+        h = paint(K, r["kind"], r, t, c)
+        if r["kind"] == "torso":
+            d = dominant(f.verts[0], deform, K.names)
+            if d.startswith(("upper_arm", "forearm")):
+                h = r.get("sleeve_col", h)
+                cuff = r.get("cuff")
+                if cuff and along_arm(K, c) >= r["sleeve"] - cuff[0]:
+                    h = cuff[1]
+        faces.append((f, h))
+    if gone:
+        bmesh.ops.delete(bm, geom=gone, context="FACES_ONLY")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
     order = list(dict.fromkeys([r["base"]] + [h for _, h in faces]))
     for h in order:
         m = bpy.data.materials.new("cloth_" + h.lstrip("#"))
