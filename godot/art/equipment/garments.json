@@ -1,0 +1,11 @@
+{
+ "_doc": "S35c: the coach's clothes that bend with the body, built per coach figure by tools/blender/characters/coach_garment.py into out/garments/<figure>/<name>.glb. kind: torso | pants | skirt | boots. bands: [from, to, colour] along the garment (0 top hem, 1 bottom hem); base: the rest. The other keys tune the cut (see DEFAULTS in the script).",
+ "torso_squire": {"kind": "torso", "base": "#8a5a3c", "sleeve": 0.55, "bottom": 0.05,
+   "bands": [[0.0, 0.08, "#d9c27a"], [0.86, 1.0, "#d9c27a"]]},
+ "pants_grilembore": {"kind": "pants", "base": "#1f4f8a", "hem": 0.97, "flare": 0.03,
+   "bands": [[0.0, 0.07, "#3d8fc9"]]},
+ "skirt_gobkool": {"kind": "skirt", "base": "#5f8f3a", "length": 0.42, "flare": 0.07,
+   "bands": [[0.0, 0.14, "#6b4a2a"], [0.86, 1.0, "#3f6526"]]},
+ "boots_squire": {"kind": "boots", "base": "#5a3a24", "top": 0.55, "cuff": 0.012,
+   "bands": [[0.0, 0.16, "#8a6440"]]}
+}

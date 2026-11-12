@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; paso 5 (las 23 armas) esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 (las 167 piezas rígidas del luchador y del coach) aprobados; paso 9a (piloto de las prendas que se deforman) esperando al dueño
 
 ## Por qué
 
@@ -492,6 +492,62 @@ Dueño: "ok mejor"; con las hojas: "si, todo ok". **Las 13 hombreras y los
 Siguiente: las 91 prendas que se deforman (Meshy → pesos del cuerpo) y las
 13 marcas.
 
+## Paso 9a: las prendas que se deforman, piloto (2026-11-12)
+
+Dueño: "continúa con el sprint". Antes de las 91 prendas, una de cada tipo
+en los dos coaches, como el sombrero y el dofus del paso 1.
+
+Decisión (sin preguntar, el dueño ya dijo en el paso 1 "Meshy es
+demasiado"): las prendas no son GLB de Meshy, salen **del propio coach**.
+Los coaches base van en ropa interior, así que una prenda es la piel de su
+zona copiada con sus pesos, separada y con grosor; se dobla igual que la
+piel de debajo y no la deja asomar. Diseño propio, la ilustración retail
+solo como idea, como las piezas rígidas.
+
+| Cambio | Fichero |
+|---|---|
+| Generador nuevo en Blender: torso / pantalón / botas = las caras de la figura en la zona (cortadas limpias en el bajo con planos), empujadas `ease` hacia fuera y con grosor (`thick`); la falda es un tubo desde la cintura, ancho de cadera y con vuelo, con pesos de la cadera arriba a la mitad del muslo abajo. Color plano por franjas a lo largo de la prenda (`bands`), un material por color como las piezas de kiln. Se exporta con el rig del coach, sin animaciones | `tools/blender/characters/coach_garment.py` |
+| Recetas de las prendas (una entrada por prenda: `kind`, colores, corte) | `art/equipment/garments.json` |
+| Piloto, diseño propio: torso del escudero (176, marrón con cuello y bajo dorados, manga corta), pantalón de Grilembore (197, azul con cinturilla clara), falda Gobkool (22, verde con cinturón marrón), botas del escudero (178, cuero con vuelta) | `garments.json`, `pieces.json` (`coach`) |
+| Huecos del coach 5 falda, 6 pantalón, 10 botas, 11 torso. La prenda es por figura (`out/garments/<coach>/<prenda>.glb`); su malla va al esqueleto de la figura, junto al cuerpo; quitarla quita un nodo. Las medidas de la figura (`_owned_verts`) solo cuentan el cuerpo | `src/anims/fighter3d.gd` (`GARMENTS`, `_dress_garment`) |
+| Pipeline: `build.py equipment` (o el build entero) construye las prendas después de las figuras; `check.py` mira que cada prenda esté construida en los dos coaches, al día y en presupuesto (3500 triángulos, 192 KB); `pack_arenas.gd` las copia junto a la release | `tools/art/build.py`, `check.py`, `pack_arenas.gd` |
+| Prueba: cartas de prenda → receta de su tipo; los huecos 11, 6, 5 y 10 pintan su prenda; un coach construido lleva el pantalón en su esqueleto, con pesos, y se lo quita | `test/unit/fighter3d_test.gd` |
+
+Corregido al revisar: la primera tanda salía con agujeros en zigzag (muslos
+de atrás, vientre). El GLB parte la piel en cada costura de UV (425 islas)
+y el paso que borra migajas se comía trozos de tela; ahora se sueldan las
+costuras antes. De paso, la dirección del empuje se orienta lejos del
+hueso (Meshy trae alguna normal hacia dentro).
+
+Probado:
+- `run_tests.sh`: 1163 checks, 0 fallos. `build.py equipment` y `check.py`:
+  0 fallos (8 prendas, 0,8 MB). `pack_arenas.gd` a una carpeta: con
+  `equipment/out/garments/` de los dos coaches.
+- Combate real (`fight_smoke`, servidor local): al coach `test` le puse
+  torso 176, pantalón 197 y botas 178 en `coach_cards` (3 filas, borradas
+  después); `COACH EQUIP OK test cards=[55, 176, 197, 178] … worn=[boots,
+  hat, pants, torso]`.
+- Lobby en vivo (`hub_smoke`): `coach dressed` OK, el coach sale con
+  bombín, torso, pantalón y botas.
+
+Hojas: `~/codigo/capturas/s35c/s35c-prendas-piloto-1.png` (torso, pantalón
+y botas; coach_7000 y coach_7001, de espaldas y en las dos diagonales,
+quieto y andando), `s35c-prendas-piloto-2.png` (torso, falda y botas,
+andando y celebrando) y `s35c-prendas-lobby.png`.
+
+Para el dueño:
+1. ¿Vale este camino (la prenda sale del cuerpo, color plano por franjas)
+   para las 91? Es rápido y nunca deja asomar la piel; lo que no hace es
+   volumen propio (volantes, hombreras de la chaqueta, pinchos): eso iría
+   como pieza rígida encima, como las hombreras.
+2. Peso: torso + pantalón + botas suman unos 7500 triángulos sobre los 5000
+   del coach (el grosor duplica la tela). Para la demo web se pueden
+   aligerar después.
+
+Siguiente, cuando el dueño dé el ok: las 91 prendas por tipo (19 faldas,
+19 pantalones, 27 botas, 26 torsos), una hoja por tipo; luego las 13
+marcas.
+
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
@@ -500,7 +556,8 @@ Dueño: "sigue el orden de los sprints". Orden que queda:
 2. ~~Paso 7: la animación `shoot` del arco~~: hecho.
 3. El equipo del coach: la fontanería y `art/equipment` en `build.py`,
    hechos (paso 8a); las 92 piezas rígidas, hechas (pasos 8b–8e); faltan
-   las 91 prendas que se deforman y las 13 marcas.
+   las 91 prendas que se deforman (piloto en el paso 9a, esperando al
+   dueño) y las 13 marcas.
 
 Herramientas: `anim_sheet.gd --pieces=<slot>:<pieza>` o `--cards=`,
 `test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Construir:

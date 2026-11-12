@@ -14,7 +14,8 @@ extends SceneTree
 ##   art/characters/out/*.glb    every 3D figure (Fighter3D: fighters,
 ##                               summons, coaches) and the coaches' masks
 ##   art/equipment/pieces.json   which card shows which piece (S35c), and
-##   art/equipment/out/models/*.glb  every piece it names
+##   art/equipment/out/models/*.glb  every piece it names (a garment,
+##   art/equipment/garments.json: out/garments/<coach>/<piece>.glb)
 ## Build the art first (python3 tools/art/build.py): a missing file fails
 ## the pack.
 
@@ -59,10 +60,18 @@ func _initialize() -> void:
 	var pieces_src: String = Layout.ART_DIR.path_join(Fighter3D.PIECES)
 	files[pieces_src] = Fighter3D.PIECES
 	var tables = JSON.parse_string(FileAccess.get_file_as_string(pieces_src))
+	var garments = JSON.parse_string(FileAccess.get_file_as_string(Layout.ART_DIR.path_join("equipment/garments.json")))
+	if not garments is Dictionary:
+		garments = {}
 	if tables is Dictionary:
 		for table: Dictionary in [tables.get("fighter", {}), tables.get("coach", {})]:
 			for piece: String in table.values():
 				var src: String = Layout.ART_DIR.path_join(Fighter3D.EQUIP_DIR % piece)
+				if garments.has(piece):   # one per coach figure
+					for c: String in Fighter3D.COACHES.values():
+						src = Layout.ART_DIR.path_join(Fighter3D.GARMENT_DIR % [c.get_file().get_basename(), piece])
+						files[src] = src.trim_prefix(Layout.ART_DIR + "/")
+					continue
 				files[src] = src.trim_prefix(Layout.ART_DIR + "/")
 	var bytes := 0
 	for src: String in files:

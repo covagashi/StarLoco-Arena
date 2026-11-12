@@ -128,9 +128,17 @@ const WEAPON_STYLES := {
 const FIGHTER_SLOT := {1: "weapon", 2: "pet", 3: "cape", 4: "hat", 5: "dofus"}
 ## Coach equipment slot (5201's 0-based, as 5200 and 60040 carry it) → the
 ## piece slot on the figure: hat, shoulderpads, bracelets, staff (held like a
-## weapon), cape, pet. The garments (5, 6, 10, 11) and marks (1) come with
-## their own pieces (S35c step 8); hair (2) is only a colour.
-const COACH_SLOT := {0: "hat", 3: "shoulders", 4: "bracelets", 7: "weapon", 8: "cape", 9: "pet"}
+## weapon), cape, pet, and the garments: skirt, trousers, boots, torso. The
+## marks (1) come with their own pieces (S35c step 8); hair (2) is only a
+## colour.
+const COACH_SLOT := {0: "hat", 3: "shoulders", 4: "bracelets", 5: "skirt", 6: "pants", 7: "weapon",
+	8: "cape", 9: "pet", 10: "boots", 11: "torso"}
+## S35c: the coach's garments bend with the body
+## (tools/blender/characters/coach_garment.py): made from each coach figure
+## with its skin weights, so the file is per figure; the garment's mesh goes
+## on the figure's own skeleton, beside the body.
+const GARMENT_DIR := "equipment/out/garments/%s/%s.glb"
+const GARMENTS := ["skirt", "pants", "boots", "torso"]
 ## Which piece each card shows: art/equipment/pieces.json
 ## {"fighter": {"<card id>": "<piece>"}, "coach": {…}}.
 const PIECES := "equipment/pieces.json"
@@ -422,6 +430,8 @@ func worn() -> Dictionary:
 ## Hang `piece` on `model` (built from `path`) at `slot`; returns the node
 ## that holds it (free it to take it off), or null.
 static func hang(model: Node3D, path: String, slot: String, piece: String) -> Node3D:
+	if slot in GARMENTS:
+		return _dress_garment(model, path, piece)
 	var pp := piece_path(piece)
 	var t := _template(pp) if pp != "" else null
 	if t == null or model == null:
@@ -496,6 +506,39 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 	p.transform = rest.affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * k), at)
 	p.set_meta("rest", p.transform)   # a cape swings about it (_swing)
 	return att
+
+
+## The built garment `piece` for the figure at `path`, or "".
+static func garment_path(path: String, piece: String) -> String:
+	if old_art() or piece == "":
+		return ""
+	var p := ArenaLayout.root().path_join(GARMENT_DIR % [path.get_file().get_basename(), piece])
+	return p if FileAccess.file_exists(p) else ""
+
+
+## Put the garment's mesh on the figure's skeleton, beside the body (same
+## parent, same transform), bound by bone name; null without it.
+static func _dress_garment(model: Node3D, path: String, piece: String) -> Node3D:
+	var gp := garment_path(path, piece)
+	var t := _template(gp) if gp != "" else null
+	var skel := _skeleton(model)
+	if t == null or skel == null:
+		return null
+	var body: MeshInstance3D = null
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.skin != null and not mi.has_meta("garment"):
+			body = mi
+			break
+	var src := t.find_children("*", "MeshInstance3D", true, false)
+	if body == null or src.is_empty():
+		return null
+	var g: MeshInstance3D = (src[0] as MeshInstance3D).duplicate()
+	g.set_meta("garment", piece)
+	g.transform = body.transform
+	body.get_parent().add_child(g)
+	g.skeleton = g.get_path_to(skel)
+	Toon.dress(g)
+	return g
 
 
 ## `p` (a shoulderpad or a bracelet, modelled for the left arm) on the arm
@@ -623,7 +666,7 @@ static func _bones_box(model: Node3D, path: String, skel: Skeleton3D, names: Arr
 static func _owned_verts(model: Node3D, skel: Skeleton3D, names: Array) -> PackedVector3Array:
 	var out := PackedVector3Array()
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
-		if mi.skin == null:
+		if mi.skin == null or mi.has_meta("garment"):   # the body only
 			continue
 		var own := {}
 		for b in mi.skin.get_bind_count():

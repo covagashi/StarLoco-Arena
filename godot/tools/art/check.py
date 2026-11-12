@@ -47,6 +47,9 @@ FIG_HEIGHT = 1.45
 # An equipment piece (S35c): small, flat-coloured kiln, no texture.
 EQUIP_TRIS = 1500
 EQUIP_KB = 256
+# A coach garment (coach_garment.py): the body's own faces, thickened.
+GARMENT_TRIS = 3500
+GARMENT_KB = 192
 ANIMS = ["idle_loop", "walk_loop", "cast", "melee", "hit", "die", "jump", "celebrate", "carry_loop", "throw"]
 # One arena's models as shipped (S44: ≤ 50 MB first load for the whole demo;
 # arenas load on demand, so this is per arena).
@@ -230,10 +233,14 @@ def check_equipment(r):
     with open(os.path.join(d, "pieces.json")) as f:
         tables = json.load(f)
     size = 0
+    with open(os.path.join(d, "garments.json")) as f:
+        garments = {k for k in json.load(f) if not k.startswith("_")}
     pieces = sorted({p for t in ("fighter", "coach") for p in tables.get(t, {}).values()})
     for name in pieces:
         if not NAME.match(name):
             r.fail(f"equipment {name}: name is not lower_snake_case")
+        if name in garments:
+            continue
         path = os.path.join(d, "out", "models", name + ".glb")
         if not os.path.exists(path):
             r.fail(f"equipment {name}: not built (python3 tools/art/build.py equipment)")
@@ -247,7 +254,25 @@ def check_equipment(r):
     if not build.Stamp(d).fresh("kiln", build.equipment_hash()):
         r.fail("equipment: out of date with kit.kx.js: python3 tools/art/build.py equipment")
     r.note(f"  equipment {len(pieces):3} GLB, {size / 1048576:5.1f} MB")
-    return size
+    gsize = 0
+    for fig in build.GARMENT_FIGS:
+        for name in sorted(garments):
+            if not NAME.match(name):
+                r.fail(f"garment {name}: name is not lower_snake_case")
+            path = os.path.join(d, "out", "garments", fig, name + ".glb")
+            if not os.path.exists(path):
+                r.fail(f"garment {name} ({fig}): not built (python3 tools/art/build.py equipment)")
+                continue
+            g = Glb(path)
+            gsize += g.size
+            if g.tris > GARMENT_TRIS:
+                r.fail(f"garment {name} ({fig}): {g.tris} triangles > {GARMENT_TRIS}")
+            if g.size > GARMENT_KB * 1024:
+                r.fail(f"garment {name} ({fig}): {g.size // 1024} KB > {GARMENT_KB} KB")
+        if not build.Stamp(d).fresh("garments:" + fig, build.garments_hash(fig)):
+            r.fail(f"garments of {fig}: out of date: python3 tools/art/build.py equipment")
+    r.note(f"  garments {len(garments) * len(build.GARMENT_FIGS):3} GLB, {gsize / 1048576:5.1f} MB")
+    return size + gsize
 
 
 def check_credits(r):

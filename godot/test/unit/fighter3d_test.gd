@@ -82,20 +82,50 @@ func _equipment(t) -> void:
 	# S35c: the coach table — real coach cards, the piece modelled and of
 	# the card's slot (Fighter3D.COACH_SLOT through 5201's slot of its type)
 	var cards: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/gamedata/cards.json"))
-	const COACH_TYPE := {11: "hat", 12: "weapon", 8: "cape", 13: "pet", 7: "shoulders", 5: "bracelets"}
+	const COACH_TYPE := {11: "hat", 12: "weapon", 8: "cape", 13: "pet", 7: "shoulders", 5: "bracelets",
+		2: "skirt", 9: "pants", 6: "boots", 10: "torso"}
+	# the garments are recipes for coach_garment.py, not kiln models
+	var garments: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/equipment/garments.json"))
 	for cid in pieces.coach:
 		var ctype := int(cards.get(cid, {}).get("type", -1))
-		t.ok(COACH_TYPE.has(ctype), "coach card %s is a hat, shoulderpads, bracelets, staff, cape or pet card" % cid)
+		t.ok(COACH_TYPE.has(ctype), "coach card %s is a hat, shoulderpads, bracelets, staff, cape, pet or garment card" % cid)
+		var slot: String = COACH_TYPE.get(ctype, "")
+		if slot in Fighter3D.GARMENTS:
+			t.eq(String(garments.get(pieces.coach[cid], {}).get("kind", "")), slot, "coach card %s: %s is a %s recipe" % [cid, pieces.coach[cid], slot])
+			continue
 		# (coach_shoulders.kx.js declares its models through pad())
 		t.ok(src.contains('model("%s"' % pieces.coach[cid]) or src.contains('pad("%s"' % pieces.coach[cid]), "coach card %s: %s is modelled" % [cid, pieces.coach[cid]])
-		var want: Array = {"hat": ["hat_"], "weapon": ["staff_", "banner_"], "cape": ["cape_"], "pet": ["pet_"], "shoulders": ["shoulders_"], "bracelets": ["bracelets_"]}.get(COACH_TYPE.get(ctype, ""), [])
+		var want: Array = {"hat": ["hat_"], "weapon": ["staff_", "banner_"], "cape": ["cape_"], "pet": ["pet_"], "shoulders": ["shoulders_"], "bracelets": ["bracelets_"]}.get(slot, [])
 		t.ok(want.any(func(w): return String(pieces.coach[cid]).begins_with(w)), "coach card %s shows a %s piece" % [cid, want])
-	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}, {"slot": 4, "id": 7}, {"slot": 5, "id": 30}]),
+	t.eq(Fighter3D.coach_pieces([{"slot": 0, "id": 8}, {"slot": 8, "id": 18}, {"slot": 3, "id": 10}, {"slot": 4, "id": 7}, {"slot": 1, "id": 14}]),
 		{"hat": "hat_horned", "cape": "cape_jalatranki", "shoulders": "shoulders_yoghi", "bracelets": "bracelets_strength"},
-		"coach slots 0, 8, 3 and 4 show a hat, a cape, shoulderpads and bracelets; 5 (a garment) nothing yet")
+		"coach slots 0, 8, 3 and 4 show a hat, a cape, shoulderpads and bracelets; 1 (a mark) nothing yet")
+	t.eq(Fighter3D.coach_pieces([{"slot": 11, "id": 176}, {"slot": 6, "id": 197}, {"slot": 5, "id": 22}, {"slot": 10, "id": 178}]),
+		{"torso": "torso_squire", "pants": "pants_grilembore", "skirt": "skirt_gobkool", "boots": "boots_squire"},
+		"coach slots 11, 6, 5 and 10 show a torso, trousers, a skirt and boots")
 	for cid in pieces.fighter:
 		t.ok(Fighter3D.FIGHTER_SLOT.has(fc.slot_type(int(cid))), "card %s has a fighter slot" % cid)
 		t.ok(src.contains('model("%s"' % pieces.fighter[cid]), "card %s: %s is modelled" % [cid, pieces.fighter[cid]])
 		var slot: String = Fighter3D.FIGHTER_SLOT.get(fc.slot_type(int(cid)), "")
 		if slot in ["hat", "cape", "pet", "dofus"]:
 			t.ok(String(pieces.fighter[cid]).begins_with(slot + "_"), "card %s (%s) shows a %s piece" % [cid, slot, slot])
+	_garment(t)
+
+
+## S35c: a garment's mesh goes on the coach's own skeleton, beside the body,
+## and comes off again (only with the art built).
+func _garment(t) -> void:
+	var path := Fighter3D.model_path(Fighter3D.COACHES[0])
+	if path == "" or Fighter3D.garment_path(path, "pants_grilembore") == "":
+		return
+	var f := Fighter3D.create(path)
+	f.equip("pants", "pants_grilembore")
+	var g: MeshInstance3D = f.worn().get("pants")
+	t.ok(g != null and g.has_meta("garment"), "the coach wears the trousers")
+	if g != null:
+		var skel := g.get_node_or_null(g.skeleton)
+		t.ok(skel is Skeleton3D, "the trousers bend with the coach's skeleton")
+		t.ok(g.skin != null and g.skin.get_bind_count() > 0, "the trousers keep their skin weights")
+	f.equip("pants", "")
+	t.ok(not f.worn().has("pants"), "the trousers come off")
+	f.free()

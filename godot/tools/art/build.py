@@ -21,6 +21,8 @@ Run from godot/. The steps, in order (each skips what is up to date):
 5. figures:  every 3D figure of art/characters/figures.json in Blender
              (meshy_fighter.py / meshy_summon.py / crystal_8010.py), then
              the coaches' skin and hair masks (coach_masks.py).
+5b. garments: the coach's clothes that bend (art/equipment/garments.json),
+             made from each coach figure in Blender (coach_garment.py).
 6. checks:   tools/art/check.py on everything (names, scale, pivots,
              budgets, weight, credits). A failed check fails the build.
 
@@ -261,6 +263,40 @@ def build_equipment(a, kiln):
     return True
 
 
+GARMENT_FIGS = ["coach_7000", "coach_7001"]
+
+
+def garments_hash(fig):
+    return digest(os.path.join(EQUIPMENT, "garments.json"), os.path.join(CHAR_TOOLS, "coach_garment.py"),
+                  os.path.join(ART, "characters", "out", fig + ".glb"))
+
+
+def build_garments(a):
+    """S35c: the coach's garments, made from each coach figure
+    (coach_garment.py), so after the figures."""
+    st = Stamp(EQUIPMENT)
+    blender = os.environ.get("BLENDER") or shutil.which("blender")
+    for fig in GARMENT_FIGS:
+        glb = os.path.join(ART, "characters", "out", fig + ".glb")
+        out = os.path.join(EQUIPMENT, "out", "garments", fig)
+        if not os.path.exists(glb):
+            log(f"warning: garments: no {fig}.glb, skipped")
+            continue
+        h = garments_hash(fig)
+        if not a.force and st.fresh("garments:" + fig, h) and os.path.isdir(out):
+            continue
+        if a.dry_run:
+            log(f"stale: garments of {fig}")
+            continue
+        if not blender:
+            sys.exit("blender not found: put it on PATH or set BLENDER")
+        if os.path.isdir(out):
+            shutil.rmtree(out)   # a garment taken out of garments.json goes too
+        run([blender, "-b", "--python-exit-code", "1", "-P", os.path.join(CHAR_TOOLS, "coach_garment.py"), "--",
+             glb, os.path.join(EQUIPMENT, "garments.json"), out], GODOT, f"garments of {fig}")
+        st.set("garments:" + fig, h)
+
+
 # ------------------------------------------------------------ figures
 
 def build_figures(names, a):
@@ -392,6 +428,8 @@ def main():
         build_equipment(a, kiln)
     if sel_figs:
         build_figures(set(sel_figs) if a.only else set(), a)
+    if sel_equipment or set(sel_figs) & set(GARMENT_FIGS):
+        build_garments(a)
     if a.dry_run:
         log("[build] dry run: nothing built")
         return
