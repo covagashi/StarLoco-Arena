@@ -18,7 +18,7 @@ const RIM := Color("0b0d1c")        # borders: the ink
 const RIM_HI := Color("e9b44c")     # hover / focus border
 const PLATE := Color("2c3156")      # buttons and fields
 const PRESSED := Color("b8471f")    # pressed / toggled (pop, dark)
-const RADIUS := 10
+const RADIUS := 2      # style B: square-ish corners
 # S45 palette
 const NIGHT := Color("12152a")
 const POP := Color("de643a")        # only for the action (a terracotta pop)
@@ -27,11 +27,11 @@ const RIVAL := Color("ff4d5e")
 const OK := Color("36c98a")
 const OUTLINE := Color("0b0d1c")    # the ink
 const PAPER_SHEET := Color("f3e3c0")   # the cream paper (forms and sheets)
-const PAPER_INK := Color("2b1d10")     # text on paper
+const PAPER_INK := Color("1c2030")     # text on a sheet (style B ink)
 const FIELD := Color("0c0e1e")
-const SLOT := Color("e8d3a6")          # a darker band of paper (slots, rows, footers)
-const BROWN := Color("7a4a1e")         # secondary text on paper
-const ACCENT_INK := Color("b23a12")    # what stands out on paper (gold's role there)
+const SLOT := Color("f3f4f8")          # a band inside a sheet (slots, rows, footers)
+const BROWN := Color("6b7183")         # secondary text on a sheet (style B mute)
+const ACCENT_INK := Color("ff4d6d")    # what stands out on a sheet (style B coral)
 
 # style B (S45, owner 2026-11-12): light, minimal, technical lines, one accent
 const B_BG := Color("e9ecf1")
@@ -605,53 +605,48 @@ static func fighter_card_art(cid: int) -> Texture2D:
 	return _fighter_art_cache[cid]
 
 
-## The one primary action of a screen: the leaning pop button of the mockup
-## ("¡A LUCHAR!", "CONECTAR"), its label in the title font with an ink outline.
+## The one primary action of a screen (style B, S45): a slanted coral box
+## with its leaning white title ("Comprar", "Enviar", "Llevar puesto").
 static func primary(b: Button, font_size := 24) -> void:
-	var slice := Vector4(24, 14, 24, 20)
-	var pad := Vector4(28, 8, 28, 13)
-	var sunk := Vector4(28, 12, 28, 9)   # the face 4 px down, same total
-	var n: StyleBox = kit("btn_main", slice, pad)
-	var h: StyleBox = kit("btn_main_hover", slice, pad)
-	var p: StyleBox = kit("btn_main_pressed", slice, sunk)
-	var off: StyleBox = kit("btn_main_off", slice, pad)
-	if n == null:
-		n = button_box("pop", "", 12)
-		h = button_box("pop", "hover", 12)
-		p = button_box("pop", "pressed", 12)
-		off = button_box("pop", "off", 12)
-	b.add_theme_stylebox_override("normal", n)
-	b.add_theme_stylebox_override("hover", h)
-	b.add_theme_stylebox_override("focus", focus_ring())
-	b.add_theme_stylebox_override("pressed", p)
-	b.add_theme_stylebox_override("hover_pressed", p)
-	b.add_theme_stylebox_override("disabled", off)
-	for c in ["font_color", "font_hover_color", "font_focus_color",
-			"font_pressed_color", "font_hover_pressed_color"]:
-		b.add_theme_color_override(c, INK)
-	b.add_theme_color_override("font_disabled_color", MUTED)
-	b.add_theme_color_override("font_outline_color", OUTLINE)
-	b.add_theme_constant_override("outline_size", maxi(6, font_size / 3))
-	b.add_theme_font_override("font", title_font())
+	_b_boxes(b, B_CORAL, maxi(8, font_size / 2))
+	b.add_theme_font_override("font", display_font())
 	b.add_theme_font_size_override("font_size", font_size)
 
 
-## A raised button of the kit in `colour` (pop, navy, green, sun), its
-## label in the title font with an ink outline: "CONECTAR", "Al azar".
-static func raised(b: Button, colour := "pop", font_size := 24, pad := 12) -> void:
-	b.add_theme_stylebox_override("normal", button_box(colour, "", pad))
-	b.add_theme_stylebox_override("hover", button_box(colour, "hover", pad))
-	b.add_theme_stylebox_override("pressed", button_box(colour, "pressed", pad))
-	b.add_theme_stylebox_override("hover_pressed", button_box(colour, "pressed", pad))
-	b.add_theme_stylebox_override("disabled", button_box(colour, "off", pad))
-	b.add_theme_stylebox_override("focus", focus_ring())
+## The slanted box a style B button wears in each state, and white text.
+static func _b_boxes(b: Button, col: Color, pad := 10) -> void:
+	var make := func(c: Color) -> StyleBoxFlat:
+		var s := StyleBoxFlat.new()
+		s.bg_color = c
+		s.skew = Vector2(0.22, 0)
+		s.content_margin_left = pad + 12
+		s.content_margin_right = pad + 12
+		s.content_margin_top = maxf(2, pad * 0.5)
+		s.content_margin_bottom = maxf(2, pad * 0.5)
+		return s
+	b.add_theme_stylebox_override("normal", make.call(col))
+	b.add_theme_stylebox_override("hover", make.call(col.lightened(0.12)))
+	b.add_theme_stylebox_override("pressed", make.call(col.darkened(0.15)))
+	b.add_theme_stylebox_override("hover_pressed", make.call(col.darkened(0.15)))
+	b.add_theme_stylebox_override("disabled", make.call(Color("c3c7d1")))
+	var f: StyleBoxFlat = make.call(Color(0, 0, 0, 0))
+	f.draw_center = false
+	f.border_color = B_GOLD if col == B_CORAL else B_CORAL
+	f.set_border_width_all(2)
+	f.set_expand_margin_all(3)
+	b.add_theme_stylebox_override("focus", f)
 	for c in ["font_color", "font_hover_color", "font_focus_color",
 			"font_pressed_color", "font_hover_pressed_color"]:
-		b.add_theme_color_override(c, INK)
-	b.add_theme_color_override("font_disabled_color", MUTED)
-	b.add_theme_color_override("font_outline_color", OUTLINE)
-	b.add_theme_constant_override("outline_size", maxi(6, font_size / 3))
-	b.add_theme_font_override("font", title_font())
+		b.add_theme_color_override(c, Color.WHITE)
+	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.8))
+	b.add_theme_constant_override("outline_size", 0)
+
+
+## A style B button in `colour`'s role: "pop" (the action) coral, the
+## rest ink ("Al azar", "Deshacer").
+static func raised(b: Button, colour := "pop", font_size := 24, pad := 12) -> void:
+	_b_boxes(b, B_CORAL if colour == "pop" else B_INK, pad)
+	b.add_theme_font_override("font", display_font())
 	b.add_theme_font_size_override("font_size", font_size)
 
 
@@ -760,58 +755,193 @@ static func title_font() -> FontFile:
 ## pressed/toggled one in pop, ink borders everywhere, sun on hover and
 ## focus, sunk night fields, the selected row in pop.
 ## `pad` is the inner margin of buttons and fields (compact chat: 3).
-## The theme inside a sheet of paper (every panel, S45 phase 3): the same
-## controls with dark text, paper slots for fields and tables, and the
-## buttons still raised navy with cream text.
+## The theme inside a sheet (every panel; S45 style B since 2026-11-13):
+## ink text on white, buttons as slanted ink boxes (coral when pressed or
+## picked) with leaning white titles, fields with an ink rule under them,
+## tables with a thin header rule and the picked row in coral.
 static func paper_theme(pad := 10) -> Theme:
 	var t := theme(pad)
+	var ink := B_INK
 	for type in ["Label", "CheckButton", "CheckBox", "RichTextLabel", "ItemList", "Tree", "LinkButton"]:
 		for c in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color",
 				"font_hover_pressed_color", "default_color"]:
-			t.set_color(c, type, PAPER_INK)
-		t.set_color("font_disabled_color", type, Color(BROWN, 0.7))
+			t.set_color(c, type, ink)
+		t.set_color("font_disabled_color", type, B_FAINT)
 		t.set_color("font_outline_color", type, Color(1, 1, 1, 0))
-	t.set_color("font_selected_color", "Tree", INK)
-	t.set_color("font_selected_color", "ItemList", INK)
-	t.set_color("font_color", "Caption", BROWN)
-	var slot := box(SLOT, Color("3b2a1a"), 3, pad)
-	for type in ["LineEdit", "TextEdit"]:
-		var n: StyleBox = kit("slot_paper", Vector4(12, 12, 12, 12), Vector4(pad + 4, pad, pad + 4, pad))
-		t.set_stylebox("normal", type, n if n != null else slot)
-		var f: StyleBox = (n if n != null else slot).duplicate()
+	t.set_color("font_selected_color", "Tree", Color.WHITE)
+	t.set_color("font_selected_color", "ItemList", Color.WHITE)
+	t.set_color("font_color", "Caption", B_MUTE)
+	# buttons: a slanted ink box, coral when held or picked
+	var make := func(col: Color) -> StyleBoxFlat:
+		var b := StyleBoxFlat.new()
+		b.bg_color = col
+		b.skew = Vector2(0.22, 0)
+		b.content_margin_left = pad + 10
+		b.content_margin_right = pad + 10
+		b.content_margin_top = maxf(2, pad * 0.5)
+		b.content_margin_bottom = maxf(2, pad * 0.5)
+		return b
+	for type in ["Button", "OptionButton"]:
+		t.set_stylebox("normal", type, make.call(ink))
+		t.set_stylebox("hover", type, make.call(ink.lightened(0.15)))
+		t.set_stylebox("pressed", type, make.call(B_CORAL))
+		t.set_stylebox("hover_pressed", type, make.call(B_CORAL.lightened(0.1)))
+		t.set_stylebox("disabled", type, make.call(Color("c3c7d1")))
+		var f: StyleBoxFlat = make.call(Color(0, 0, 0, 0))
+		f.draw_center = false
+		f.border_color = B_CORAL
+		f.set_border_width_all(2)
+		f.set_expand_margin_all(3)
 		t.set_stylebox("focus", type, f)
-		t.set_stylebox("read_only", type, box(Color("ead2a4"), Color("9a7a52"), 2, pad))
+		t.set_font("font", type, display_font())
+		t.set_constant("outline_size", type, 0)
+		for c in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color", "font_hover_pressed_color"]:
+			t.set_color(c, type, Color.WHITE)
+		t.set_color("font_disabled_color", type, Color(1, 1, 1, 0.8))
+	t.set_stylebox("pressed", "OptionButton", make.call(ink.lightened(0.15)))
+	# check rows stay flat on the sheet
+	for type in ["CheckButton", "CheckBox"]:
+		for st in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			t.set_stylebox(st, type, StyleBoxEmpty.new())
+	var dim := Color("c3c7d1")
+	t.set_icon("unchecked", "CheckBox", _b_check(false, ink))
+	t.set_icon("checked", "CheckBox", _b_check(true, ink))
+	t.set_icon("unchecked_disabled", "CheckBox", _b_check(false, dim))
+	t.set_icon("checked_disabled", "CheckBox", _b_check(true, dim))
+	t.set_icon("unchecked", "CheckButton", _b_toggle(false, ink))
+	t.set_icon("checked", "CheckButton", _b_toggle(true, ink))
+	t.set_icon("unchecked_disabled", "CheckButton", _b_toggle(false, dim))
+	t.set_icon("checked_disabled", "CheckButton", _b_toggle(true, dim))
+	# fields: white with an ink rule (coral with the focus)
+	for type in ["LineEdit", "TextEdit"]:
+		var n := StyleBoxFlat.new()
+		n.bg_color = SLOT
+		n.border_color = ink
+		n.border_width_bottom = 2
+		n.content_margin_left = pad + 4
+		n.content_margin_right = pad + 4
+		n.content_margin_top = pad * 0.6
+		n.content_margin_bottom = pad * 0.6
+		var fo: StyleBoxFlat = n.duplicate()
+		fo.border_color = B_CORAL
+		fo.border_width_bottom = 3
+		t.set_stylebox("normal", type, n)
+		t.set_stylebox("focus", type, fo)
+		var ro: StyleBoxFlat = n.duplicate()
+		ro.border_color = Color(ink, 0.2)
+		t.set_stylebox("read_only", type, ro)
 		for c in ["font_color", "font_readonly_color", "font_selected_color", "font_uneditable_color"]:
-			t.set_color(c, type, PAPER_INK)
-		t.set_color("font_placeholder_color", type, Color(PAPER_INK, 0.45))
-		t.set_color("caret_color", type, PRESSED)
-		t.set_color("selection_color", type, Color(1.0, 0.42, 0.24, 0.35))
-		t.set_color("clear_button_color", type, BROWN)
-	t.set_font("font", "LineEdit", bold(900))
-	t.set_stylebox("panel", "Tree", box(SLOT, Color("3b2a1a"), 3, 4))
-	t.set_stylebox("panel", "ItemList", box(SLOT, Color("3b2a1a"), 3, 4))
-	t.set_color("guide_color", "Tree", Color(0.48, 0.29, 0.12, 0.15))
-	t.set_stylebox("cursor_unfocused", "Tree", box(Color(0, 0, 0, 0), BROWN, 2, 0))
+			t.set_color(c, type, ink)
+		t.set_color("font_placeholder_color", type, B_FAINT)
+		t.set_color("caret_color", type, B_CORAL)
+		t.set_color("selection_color", type, Color(B_CORAL, 0.25))
+		t.set_color("clear_button_color", type, B_MUTE)
+	t.set_font("font", "LineEdit", bold(800))
+	# tables: white, a thin header rule, the picked row coral
+	for type in ["Tree", "ItemList"]:
+		var p := StyleBoxFlat.new()
+		p.bg_color = Color.WHITE
+		p.border_color = Color(ink, 0.15)
+		p.set_border_width_all(1)
+		p.content_margin_left = 4
+		p.content_margin_right = 4
+		p.content_margin_top = 4
+		p.content_margin_bottom = 4
+		t.set_stylebox("panel", type, p)
+	var sel := StyleBoxFlat.new()
+	sel.bg_color = B_CORAL
+	t.set_stylebox("selected", "Tree", sel)
+	t.set_stylebox("selected_focus", "Tree", sel)
+	t.set_stylebox("selected", "ItemList", sel)
+	t.set_stylebox("selected_focus", "ItemList", sel)
+	t.set_stylebox("cursor", "Tree", box(Color(0, 0, 0, 0), B_CORAL, 1, 0))
+	t.set_stylebox("cursor_unfocused", "Tree", box(Color(0, 0, 0, 0), Color(ink, 0.2), 1, 0))
+	var head := StyleBoxFlat.new()
+	head.bg_color = Color.WHITE
+	head.border_color = ink
+	head.border_width_bottom = 2
+	head.content_margin_top = 6
+	head.content_margin_bottom = 6
+	for st in ["title_button_normal", "title_button_hover", "title_button_pressed"]:
+		t.set_stylebox(st, "Tree", head)
+	t.set_color("title_button_color", "Tree", B_MUTE)
+	t.set_font("title_button_font", "Tree", _body(800, 2))
+	t.set_font_size("title_button_font_size", "Tree", 11)
+	t.set_color("guide_color", "Tree", Color(ink, 0.06))
 	for bar in ["VScrollBar", "HScrollBar"]:
-		t.set_stylebox("scroll", bar, box(SLOT, Color("9a7a52"), 2, 2))
-		t.set_stylebox("scroll_focus", bar, box(SLOT, Color("9a7a52"), 2, 2))
-		t.set_stylebox("grabber", bar, box(BROWN, RIM, 2, 4))
-		t.set_stylebox("grabber_highlight", bar, box(BROWN.lightened(0.2), RIM, 2, 4))
+		var gut := StyleBoxFlat.new()
+		gut.bg_color = Color(ink, 0.06)
+		gut.content_margin_left = 3
+		gut.content_margin_right = 3
+		var grab := StyleBoxFlat.new()
+		grab.bg_color = Color(ink, 0.5)
+		grab.content_margin_left = 3
+		grab.content_margin_right = 3
+		var grab_h: StyleBoxFlat = grab.duplicate()
+		grab_h.bg_color = B_CORAL
+		t.set_stylebox("scroll", bar, gut)
+		t.set_stylebox("scroll_focus", bar, gut)
+		t.set_stylebox("grabber", bar, grab)
+		t.set_stylebox("grabber_highlight", bar, grab_h)
+		t.set_stylebox("grabber_pressed", bar, grab_h)
 	var rule := StyleBoxLine.new()
-	rule.color = Color(0.43, 0.27, 0.12, 0.35)
-	rule.thickness = 2
+	rule.color = Color(ink, 0.15)
+	rule.thickness = 1
 	t.set_stylebox("separator", "HSeparator", rule)
 	t.set_stylebox("separator", "VSeparator", rule)
-	# a box inside a sheet is a band of darker paper, not a navy window
-	var band := box(SLOT, Color("3b2a1a"), 2, 12)
-	band.set_corner_radius_all(10)
+	var band := StyleBoxFlat.new()
+	band.bg_color = SLOT
+	band.content_margin_left = 12
+	band.content_margin_right = 12
+	band.content_margin_top = 10
+	band.content_margin_bottom = 10
 	t.set_stylebox("panel", "PanelContainer", band)
 	t.set_stylebox("panel", "Panel", band)
-	var rail := box(Color("d9bf8c"), Color("3b2a1a"), 2, 0)
-	rail.content_margin_top = 3
-	rail.content_margin_bottom = 3
+	var rail := StyleBoxFlat.new()
+	rail.bg_color = Color(ink, 0.15)
+	rail.content_margin_top = 2
+	rail.content_margin_bottom = 2
 	t.set_stylebox("slider", "HSlider", rail)
+	var lit := StyleBoxFlat.new()
+	lit.bg_color = B_CORAL
+	lit.content_margin_top = 2
+	lit.content_margin_bottom = 2
+	t.set_stylebox("grabber_area", "HSlider", lit)
+	t.set_stylebox("grabber_area_highlight", "HSlider", lit)
+	t.set_icon("grabber", "HSlider", _b_grabber(ink))
+	t.set_icon("grabber_highlight", "HSlider", _b_grabber(B_CORAL))
+	t.set_icon("grabber_disabled", "HSlider", _b_grabber(B_FAINT))
+	t.set_stylebox("panel", "PopupMenu", box(Color.WHITE, Color(ink, 0.2), 1, 6))
+	t.set_stylebox("hover", "PopupMenu", box(B_CORAL, B_CORAL, 0, 4))
+	for c in ["font_color", "font_disabled_color"]:
+		t.set_color(c, "PopupMenu", ink)
+	t.set_color("font_hover_color", "PopupMenu", Color.WHITE)
 	return t
+
+
+static func _b_grabber(col: Color) -> ImageTexture:
+	var img := Image.create(10, 22, false, Image.FORMAT_RGBA8)
+	img.fill(col)
+	return ImageTexture.create_from_image(img)
+
+
+static func _b_check(on: bool, col: Color) -> ImageTexture:
+	var img := Image.create(20, 20, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	img.fill_rect(Rect2i(0, 0, 20, 20), col)
+	img.fill_rect(Rect2i(2, 2, 16, 16), Color.WHITE)
+	if on:
+		img.fill_rect(Rect2i(5, 5, 10, 10), B_CORAL)
+	return ImageTexture.create_from_image(img)
+
+
+static func _b_toggle(on: bool, col: Color) -> ImageTexture:
+	var img := Image.create(40, 20, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	img.fill_rect(Rect2i(0, 0, 40, 20), B_CORAL if on else col)
+	img.fill_rect(Rect2i(2, 2, 36, 16), B_CORAL if on else Color.WHITE)
+	img.fill_rect(Rect2i(22 if on else 4, 4, 14, 12), Color.WHITE if on else col)
+	return ImageTexture.create_from_image(img)
 
 
 static func theme(pad := 10) -> Theme:

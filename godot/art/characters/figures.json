@@ -160,7 +160,9 @@
   "coach_7000": {
    "script": "meshy_fighter.py",
    "src": "coach_7000_m",
-   "opts": {},
+   "opts": {
+    "menu": "1"
+   },
    "joints": true
   },
   "coach_7001": {
@@ -168,7 +170,8 @@
    "src": "coach_7001_f",
    "opts": {
     "arm_slack": "0.06",
-    "cut": "0.83"
+    "cut": "0.83",
+    "menu": "1"
    },
    "joints": true
   },

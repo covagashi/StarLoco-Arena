@@ -17,18 +17,24 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	var b := Button.new()
 	b.custom_minimum_size = TILE
 	b.focus_mode = Control.FOCUS_ALL
-	var normal := UiStyle.box(UiStyle.PLATE, UiStyle.INK, 4 if chosen else 3, 6)
-	normal.shadow_color = UiStyle.OUTLINE
-	normal.shadow_offset = Vector2(0, 4)
-	if chosen:
-		normal.border_color = UiStyle.RIM_HI
-	var hover := normal.duplicate()
-	hover.set_border_width_all(4)
+	# style B: a pale card, a thin rule; coral and thicker when chosen
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = UiStyle.SLOT
+	normal.border_color = UiStyle.B_CORAL if chosen else Color(UiStyle.B_INK, 0.15)
+	normal.set_border_width_all(3 if chosen else 1)
+	normal.border_width_top = 3 if chosen else 2
+	if not chosen:
+		normal.border_color = Color(UiStyle.B_INK, 0.2)
+	var hover: StyleBoxFlat = normal.duplicate()
+	hover.border_color = UiStyle.B_CORAL
+	hover.set_border_width_all(2)
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
 	b.add_theme_stylebox_override("hover_pressed", hover)
-	b.add_theme_stylebox_override("disabled", UiStyle.box(Color("3a3f63"), UiStyle.INK, 3, 6))
+	var off: StyleBoxFlat = normal.duplicate()
+	off.bg_color = Color("e4e6ec")
+	b.add_theme_stylebox_override("disabled", off)
 	b.add_theme_stylebox_override("focus", UiStyle.focus_ring())
 	parent.add_child(b)
 	var col := VBoxContainer.new()
@@ -46,10 +52,9 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	col.add_child(art)
 	var name_l := _small(col, str(item.get("name", "")), 13)
 	# a navy card on the paper (the mockup's .card): its name in cream, outlined
-	name_l.add_theme_font_override("font", UiStyle.title_font())
-	name_l.add_theme_color_override("font_color", UiStyle.INK)
-	name_l.add_theme_color_override("font_outline_color", UiStyle.OUTLINE)
-	name_l.add_theme_constant_override("outline_size", 5)
+	name_l.add_theme_font_override("font", UiStyle.display_font())
+	name_l.add_theme_color_override("font_color", UiStyle.B_INK)
+	name_l.add_theme_constant_override("outline_size", 0)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_l.max_lines_visible = 2
@@ -57,15 +62,17 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	if sub != "":
 		var s := _small(col, sub, 12)
 		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		s.add_theme_color_override("font_color", UiStyle.MUTED)   # on the navy card
+		s.add_theme_color_override("font_color", UiStyle.B_MUTE)
 	if badge != "":
 		var tag := Label.new()
 		tag.text = badge
 		tag.add_theme_font_size_override("font_size", 12)
 		tag.add_theme_font_override("font", UiStyle.bold(900))
-		tag.add_theme_color_override("font_color", UiStyle.PAPER_INK)
-		var ts := UiStyle.box(UiStyle.SUN, UiStyle.RIM, 2, 2)
-		ts.set_corner_radius_all(6)
+		tag.add_theme_color_override("font_color", Color.WHITE)
+		var ts := StyleBoxFlat.new()
+		ts.bg_color = UiStyle.B_INK
+		ts.content_margin_left = 4
+		ts.content_margin_right = 4
 		tag.add_theme_stylebox_override("normal", ts)
 		tag.position = Vector2(TILE.x - 44, 4)
 		tag.size = Vector2(40, 18)
@@ -80,9 +87,11 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 func _meter(have: int, need: int) -> Control:
 	var box := Panel.new()
 	box.custom_minimum_size = Vector2(0, 16)
-	box.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.FIELD, UiStyle.INK, 2, 0))
+	var rail := StyleBoxFlat.new()
+	rail.bg_color = Color(UiStyle.B_INK, 0.1)
+	box.add_theme_stylebox_override("panel", rail)
 	var fill := ColorRect.new()
-	fill.color = UiStyle.SUN
+	fill.color = UiStyle.B_CORAL
 	fill.anchor_bottom = 1.0
 	fill.anchor_right = clampf(float(have) / maxf(1.0, float(need)), 0.0, 1.0)
 	fill.offset_left = 4
@@ -138,8 +147,14 @@ func _muted(parent: Node, text: String) -> Label:
 ## The big art, in a box with the gold rim of the selected tile.
 func _framed_art(cid: int, size: Vector2) -> Control:
 	var frame_box := PanelContainer.new()
-	var st := UiStyle.box(UiStyle.PAPER, UiStyle.INK, 3, 8)
-	st.border_color = UiStyle.RIM_HI
+	var st := StyleBoxFlat.new()
+	st.bg_color = UiStyle.SLOT
+	st.border_color = UiStyle.B_INK
+	st.border_width_top = 3
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	st.content_margin_top = 8
+	st.content_margin_bottom = 8
 	frame_box.add_theme_stylebox_override("panel", st)
 	frame_box.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	frame_box.add_child(_art(cid, size))

@@ -271,9 +271,11 @@ func _draw_strip() -> void:
 	if _order.is_empty():
 		return
 	var r := Rect2(Vector2.ZERO, _strip.size)
+	# style B: a dark band with a white rule along its top
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.08, 0.16, 0.82)
-	sb.set_corner_radius_all(int(r.size.y * 0.5))
+	sb.border_color = Color(1, 1, 1, 0.85)
+	sb.border_width_top = 2
 	_strip.draw_style_box(sb, r)
 	var rule: float = _strip.get_meta("rule", -1.0)
 	if rule > 0.0:
@@ -287,7 +289,7 @@ func _draw_badges() -> void:
 	if _clock < 0.0:
 		return
 	var urgent := _clock <= 5.5
-	var col := Color("ff4d5e") if urgent else UiStyle.POP
+	var col := Color("e0283b") if urgent else UiStyle.B_CORAL
 	var c: FighterCard = cards.get(_active)
 	var at: Vector2
 	var r := 12.0
@@ -299,11 +301,11 @@ func _draw_badges() -> void:
 		r = 18.0
 	_badges.draw_circle(at, r + 2.0, UiStyle.NIGHT)
 	_badges.draw_circle(at, r, col)
-	var f := UiStyle.title_font()
+	var f := UiStyle.display_font()
 	var s := str(ceili(_clock))
 	var fs := int(r * 1.25)
 	var w := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	_badges.draw_string(f, at + Vector2(-w * 0.5, fs * 0.36), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("1a1206"))
+	_badges.draw_string(f, at + Vector2(-w * 0.5, fs * 0.36), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
 	# the acting portrait's ring runs out with the clock
 	if c != null and clock_max > 0.0:
 		var cc := c.position + c.size * 0.5
@@ -317,7 +319,7 @@ func _draw_badges() -> void:
 func _draw_banner() -> void:
 	if _title.is_empty() and _sub.is_empty():
 		return
-	var title := UiStyle.title_font()
+	var title := UiStyle.display_font()
 	var body := UiStyle.bold(800)
 	var head := I18n.t("fight.your_turn") if _mine else ""
 	var rest := _title
@@ -328,13 +330,13 @@ func _draw_banner() -> void:
 	var w := hw + rw + (10.0 if head != "" and rest != "" else 0.0) + 36.0
 	var r := Rect2((banner.size.x - w) * 0.5, 0, w, banner.size.y)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = UiStyle.POP if _mine else Color(0.07, 0.08, 0.16, 0.86)
-	sb.set_corner_radius_all(int(r.size.y * 0.5))
+	sb.bg_color = UiStyle.B_CORAL if _mine else Color(0.07, 0.08, 0.16, 0.86)
+	sb.skew = Vector2(0.3, 0)
 	if not _mine:
 		sb.border_color = Color(_sub_col, 0.9)
-		sb.set_border_width_all(2)
+		sb.border_width_bottom = 3
 	banner.draw_style_box(sb, r)
-	var ink := Color("1a1206") if _mine else UiStyle.INK
+	var ink := Color.WHITE
 	var x := r.position.x + 18.0
 	var base := r.size.y * 0.5 + 6.0
 	if head != "":
@@ -355,8 +357,9 @@ func _draw_peek() -> void:
 	# under the banner and the hint line, so neither is covered
 	var r := Rect2(x, banner_rect.end.y + 44.0, w, h)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("fff4e0")
-	sb.set_corner_radius_all(16)
+	sb.bg_color = Color.WHITE
+	sb.border_color = UiStyle.B_INK
+	sb.border_width_top = 3
 	sb.shadow_color = Color(0, 0, 0, 0.45)
 	sb.shadow_size = 12
 	sb.shadow_offset = Vector2(0, 6)

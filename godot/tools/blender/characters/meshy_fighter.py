@@ -36,7 +36,7 @@ sys.path.insert(0, HERE)
 import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": ""}
+OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": "", "menu": ""}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -910,6 +910,7 @@ def main():
     rig_anims.ANKLE = (J["foot.L"].z + J["foot.R"].z) / 2
     rig_anims.TOE = (J["toe.L"].z + J["toe.R"].z) / 2
     rig_anims.OVERHEAD_OUT = float(OPT["overhead_out"])
+    rig_anims.MENU_CLIPS = bool(OPT["menu"])
     rig_anims.animate(rig)
     if OPT["drop_weapon"]:
         drop_weapon(ob)

@@ -113,8 +113,8 @@ func _ready() -> void:
 ## The native theme (src/ui/ui_style.gd): the lobby panels' stone window,
 ## their fields and buttons, the title in the title font.
 func _theme() -> Theme:
-	var result: Theme = UiStyle.theme()
-	var win = UiStyle.window()   # StyleBoxTexture or StyleBoxFlat: both have expand margins
+	var result: Theme = UiStyle.paper_theme()
+	var win = preload("res://src/ui/style_b.gd").plate(0.98)   # style B (S45)
 	# the embedded window's title bar sits ABOVE its content rect: the frame
 	# must grow up to cover it, or the title floats over the backdrop
 	win.expand_margin_top = 44
@@ -122,11 +122,11 @@ func _theme() -> Theme:
 	win.expand_margin_right = 8
 	win.expand_margin_bottom = 8
 	result.set_constant("title_height", "Window", 40)
-	result.set_stylebox("panel", "AcceptDialog", UiStyle.box(UiStyle.PAPER, UiStyle.PAPER, 0, 18))
+	result.set_stylebox("panel", "AcceptDialog", UiStyle.box(Color.WHITE, Color.WHITE, 0, 18))
 	result.set_stylebox("embedded_border", "Window", win)
 	result.set_stylebox("embedded_unfocused_border", "Window", win)
-	result.set_color("title_color", "Window", UiStyle.INK)
-	result.set_font("title_font", "Window", UiStyle.title_font())
+	result.set_color("title_color", "Window", UiStyle.B_INK)
+	result.set_font("title_font", "Window", UiStyle.display_font())
 	result.set_font_size("title_font_size", "Window", 22)
 	return result
 

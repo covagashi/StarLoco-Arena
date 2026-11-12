@@ -273,9 +273,9 @@ func _chip(parent: Node, text: String, chosen: bool) -> Button:
 	b.text = text
 	b.custom_minimum_size = Vector2(60, 28)
 	b.add_theme_font_size_override("font_size", 15)
-	var normal := UiStyle.box(UiStyle.PAPER, UiStyle.INK, 4 if chosen else 2, 4)
+	var normal := UiStyle.box(UiStyle.B_INK, UiStyle.B_INK, 3 if chosen else 0, 4)
 	if chosen:
-		normal.border_color = UiStyle.RIM_HI
+		normal.border_color = UiStyle.B_CORAL
 	var hover := normal.duplicate()
 	hover.set_border_width_all(4)
 	b.add_theme_stylebox_override("normal", normal)

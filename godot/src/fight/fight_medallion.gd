@@ -38,7 +38,7 @@ func _ready() -> void:
 func used_width() -> float:
 	if not shown:
 		return radius * 2.0 + 24.0
-	var f := UiStyle.title_font()
+	var f := UiStyle.display_font()
 	var w := f.get_string_size(fighter_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
 	return minf(size.x, radius * 2.0 + 30.0 + maxf(w, 150.0))
 
@@ -53,7 +53,7 @@ func _draw() -> void:
 	if portrait != null:
 		_draw_round_texture(portrait, c, radius)
 	elif not initials.is_empty():
-		var font := UiStyle.title_font()
+		var font := UiStyle.display_font()
 		var fs := int(radius * 0.7)
 		var w := font.get_string_size(initials, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(font, c + Vector2(-w * 0.5, fs * 0.35), initials,
@@ -69,7 +69,7 @@ func _draw() -> void:
 	_medal(c + Vector2(-radius - 4.0, radius * 0.42), 19.0, str(mp), Color("1e9e66"))
 	# name, life, effects
 	var x := c.x + radius + RING_W + 14.0
-	var title := UiStyle.title_font()
+	var title := UiStyle.display_font()
 	var body := UiStyle.bold(800)
 	var y := size.y - 70.0
 	draw_string_outline(title, Vector2(x, y), fighter_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, 6, Color(0, 0, 0, 0.7))
@@ -89,7 +89,7 @@ func _draw() -> void:
 			break
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(0.07, 0.08, 0.16, 0.85)
-		sb.set_corner_radius_all(10)
+		sb.skew = Vector2(0.25, 0)
 		draw_style_box(sb, Rect2(cx, y + 34.0, w, 22.0))
 		draw_string(body, Vector2(cx + 9.0, y + 50.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiStyle.INK)
 		cx += w + 6.0
@@ -99,7 +99,7 @@ func _medal(at: Vector2, r: float, text: String, col: Color) -> void:
 	draw_circle(at, r + 3.0, Color(0.07, 0.08, 0.16))
 	draw_circle(at, r, col)
 	draw_arc(at, r - 3.0, PI * 1.15, PI * 1.85, 12, Color(1, 1, 1, 0.3), 2.5, true)
-	var f := UiStyle.title_font()
+	var f := UiStyle.display_font()
 	var fs := int(r * 1.05)
 	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	draw_string_outline(f, at + Vector2(-w * 0.5, fs * 0.36), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.6))

@@ -40,7 +40,12 @@ func _ready() -> void:
 	var ped := Control.new()
 	ped.size = HREF
 	ped.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ped.draw.connect(func(): UiStyle.draw_pedestal(ped, R_PED))
+	ped.draw.connect(func():
+		# style B: a soft shadow and a thin ring under the coach
+		ped.draw_set_transform(FOOT + Vector2(0, -4), 0.0, Vector2(1.0, 0.22))
+		ped.draw_circle(Vector2.ZERO, 150, Color(UiStyle.B_INK, 0.12))
+		ped.draw_arc(Vector2.ZERO, 175, 0, TAU, 64, Color(UiStyle.B_INK, 0.35), 3.0, true)
+		ped.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE))
 	stage.add_child(ped)
 	stage.move_child(ped, pinned_actions.get_index())
 	_spr = preload("res://src/anims/anm_sprite.gd").new()
@@ -51,6 +56,10 @@ func _ready() -> void:
 	stage.move_child(_spr, pinned_actions.get_index())
 	_built = true
 	refresh()
+
+
+func hero_word() -> String:
+	return "COACH"
 
 
 func _model_changed(model_name: String, _field: String, _value: Variant) -> void:
@@ -115,7 +124,7 @@ func _slots(slots: Array, pick: int) -> void:
 		var sid := int(sl.slot)
 		var b: Button = _slot_buttons.get(sid)
 		if b == null:
-			b = UiStyle.diamond_button(56, UiStyle.PLATE, _draw_slot.bind(sid), false)
+			b = UiStyle.diamond_button(56, Color.WHITE, _draw_slot.bind(sid), false)
 			b.name = "Slot%d" % sid
 			b.toggle_mode = true
 			b.position = SLOT_AT[mini(i, SLOT_AT.size() - 1)] - b.size / 2.0
@@ -129,17 +138,16 @@ func _slots(slots: Array, pick: int) -> void:
 			cap.size = Vector2(b.size.x + 60, 18)
 			cap.clip_text = true
 			cap.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			cap.add_theme_font_override("font", UiStyle.title_font())
-			cap.add_theme_font_size_override("font_size", 13)
-			cap.add_theme_constant_override("outline_size", 5)
-			cap.add_theme_color_override("font_outline_color", UiStyle.OUTLINE)
+			cap.add_theme_font_override("font", UiStyle.display_font())
+			cap.add_theme_font_size_override("font_size", 14)
+			cap.add_theme_constant_override("outline_size", 0)
 			cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			b.add_child(cap)
 			_slot_buttons[sid] = b
 		_slot_cards[sid] = int(sl.card)
 		var cap: Label = b.get_node("SlotName")
 		cap.text = str(sl.name) if int(sl.card) != 0 else str(sl.label)
-		cap.add_theme_color_override("font_color", UiStyle.INK if int(sl.card) != 0 else UiStyle.MUTED)
+		cap.add_theme_color_override("font_color", UiStyle.B_INK if int(sl.card) != 0 else UiStyle.B_FAINT)
 		b.tooltip_text = "%s: %s" % [str(sl.label), str(sl.name) if int(sl.card) != 0 else I18n.t("ce.empty")]
 		b.set_pressed_no_signal(sid == pick)
 		b.queue_redraw()
@@ -149,8 +157,8 @@ func _slots(slots: Array, pick: int) -> void:
 func _draw_slot(b: Button, c: Vector2, sid: int) -> void:
 	var cid := int(_slot_cards.get(sid, 0))
 	if cid == 0:
-		b.draw_line(c + Vector2(-8, 0), c + Vector2(8, 0), UiStyle.MUTED, 3.0, true)
-		b.draw_line(c + Vector2(0, -8), c + Vector2(0, 8), UiStyle.MUTED, 3.0, true)
+		b.draw_line(c + Vector2(-8, 0), c + Vector2(8, 0), UiStyle.B_FAINT, 3.0, true)
+		b.draw_line(c + Vector2(0, -8), c + Vector2(0, 8), UiStyle.B_FAINT, 3.0, true)
 		return
 	var art: Texture2D = UiStyle.card_art(cid)
 	if art != null:

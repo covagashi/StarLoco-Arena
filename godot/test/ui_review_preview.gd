@@ -34,7 +34,7 @@ func _shot(name: String) -> void:
 func _run() -> void:
 	var model := GuiModel.new()
 	model.set_value("localCoach", {"name": "Arel", "level": 8, "sex": 0,
-		"skin": 0, "hair": 0, "actorDirection": 5,
+		"skin": 0, "hair": 0, "actorDirection": 3,
 		"actorDescriptorLibrary": "coach_7000",
 		"actorMaterial": Palettes.coach_tints(0, 0)})
 	# on a CanvasLayer, as main.gd mounts it: the full-rect backdrop needs
@@ -45,6 +45,7 @@ func _run() -> void:
 	login_layer.add_child(login)
 	login.set_proxies(["127.0.0.1:5555"], "127.0.0.1:5555")
 	await get_tree().process_frame
+	await get_tree().create_timer(1.2).timeout   # S45: its entrance plays first
 	_check(get_viewport().gui_get_focus_owner() == login.name_edit,
 		"login initial focus")
 	_check(login.name_edit.focus_next != NodePath(""), "login tab order")
@@ -55,6 +56,7 @@ func _run() -> void:
 	add_child(creation)
 	creation.bind_model(model)
 	await get_tree().process_frame
+	await get_tree().create_timer(1.2).timeout   # S45: its entrance plays first
 	_check(get_viewport().gui_get_focus_owner() == creation.name_edit,
 		"creation initial focus")
 	for control in creation.get_child(0).get_children():

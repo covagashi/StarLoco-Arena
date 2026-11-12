@@ -18,6 +18,10 @@ OVERHEAD_OUT = 0.0
 # when raised far: arm raises above this many degrees scale down into it
 # (meshy_summon --arm_max). 180 = no limit.
 ARM_MAX = 180.0
+# S45: the menus' own clips (menu, greet, pose) only on the figures shown
+# in menus — the coaches (figures.json opts "menu"); the rest keep within
+# their size budget (check.py FIG_KB).
+MENU_CLIPS = False
 
 # ---------------------------------------------------------------- poses
 # A pose is {bone: rotation}. Turning a bone about an armature axis means
@@ -258,6 +262,8 @@ def animate(rig):
     keys(rig, "throw", [(0, fr[0][1]), (6, back), (11, toss), (16, mix(toss, base, 0.3)), (26, base)], False)
 
     # ---------------------------------------------------------- menus (S45)
+    if not MENU_CLIPS:
+        return
     # The figure in the lobby, coach creation and the hero screens (owner:
     # "no lo pongas rígido"). Its own idle: weight on the right leg, the left
     # hand on the hip, breathing, a slow look around and a weight shift.

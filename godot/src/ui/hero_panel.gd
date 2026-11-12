@@ -7,18 +7,21 @@ extends "res://src/ui/card_panel.gd"
 ## (title, body, close_button, refresh, the row/label/button helpers), so a
 ## panel moves here by extending this instead.
 
+const StyleB := preload("res://src/ui/style_b.gd")
 const HREF := Vector2(1280, 720)
 const R_SHEET := Rect2(820, 100, 430, 480)
 
 var stage: Control
 var sheet_title: Label
 var _header_title: Label
+var _drifts: Array = []
+var _t := 0.0
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_shade = ColorRect.new()
-	(_shade as ColorRect).color = UiStyle.NIGHT
+	(_shade as ColorRect).color = UiStyle.B_BG
 	_shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	_shade.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	add_child(_shade)
@@ -37,14 +40,26 @@ func _ready() -> void:
 	stage.custom_minimum_size = HREF
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(stage)
-	UiStyle.scene_backdrop(stage, "stage_bg", HREF)
-	UiStyle.vignette(stage, HREF, Vector2(512, 144), Vector2(358, 396),
-		Color(1.0, 0.86, 0.63, 0.3), Color(1.0, 0.86, 0.63, 0.0))
-	UiStyle.vignette(stage, HREF, Vector2(486, 396), Vector2(704, 576),
-		Color(0.07, 0.08, 0.16, 0.15), Color(0.047, 0.055, 0.118, 0.92))
-	close_button = UiStyle.header(stage, "", func(): closed.emit())
+	_drifts = StyleB.backdrop(stage, HREF, hero_word(), "PPA // " + panel_name.trim_suffix("Dialog").to_upper(),
+		"", Vector2(0.4, 0.45), 400.0)
+	# top left: back (an ink box), the tag and the title
+	close_button = StyleB.button(false, 26)
 	close_button.name = "Close"
-	title = close_button.get_meta("title")
+	close_button.text = "‹"
+	close_button.size = Vector2(58, 52)
+	close_button.position = Vector2(24, 20)
+	close_button.tooltip_text = I18n.t("panel.close")
+	close_button.pressed.connect(func(): closed.emit())
+	stage.add_child(close_button)
+	var head := VBoxContainer.new()
+	head.position = Vector2(96, 16)
+	head.add_theme_constant_override("separation", -4)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(UiStyle.tag(hero_tag()))
+	title = Label.new()
+	UiStyle.display(title, 44)
+	head.add_child(title)
+	stage.add_child(head)
 	# the sheet of paper at the right, its ribbon across the top
 	var sheet := Control.new()
 	sheet.name = "Sheet"
@@ -53,35 +68,31 @@ func _ready() -> void:
 	sheet.theme = UiStyle.paper_theme()
 	stage.add_child(sheet)
 	var paper := PanelContainer.new()
-	var ps: StyleBox = UiStyle.paper(0)
-	ps.content_margin_left = 22
-	ps.content_margin_right = 18
-	ps.content_margin_top = 42
-	ps.content_margin_bottom = 26
+	var ps := StyleB.plate()
+	ps.content_margin_left = 26
+	ps.content_margin_right = 22
+	ps.content_margin_top = 22
+	ps.content_margin_bottom = 22
 	paper.add_theme_stylebox_override("panel", ps)
 	paper.size = R_SHEET.size
 	sheet.add_child(paper)
+	var inner := VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 6)
+	paper.add_child(inner)
+	sheet_title = Label.new()
+	sheet_title.name = "SheetTitle"
+	UiStyle.display(sheet_title, 30)
+	sheet_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	inner.add_child(UiStyle.tag("SLOT"))
+	inner.add_child(sheet_title)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	paper.add_child(scroll)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	inner.add_child(scroll)
 	body = VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 12)
 	scroll.add_child(body)
-	var rib := PanelContainer.new()
-	rib.position = Vector2(50, -22)
-	rib.size = Vector2(R_SHEET.size.x - 100, 48)
-	rib.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rib.add_theme_stylebox_override("panel", UiStyle.ribbon())
-	sheet_title = Label.new()
-	sheet_title.name = "SheetTitle"
-	UiStyle.title(sheet_title, 26)
-	sheet_title.uppercase = true
-	sheet_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sheet_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	sheet_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	rib.add_child(sheet_title)
-	sheet.add_child(rib)
 	pinned_actions = HBoxContainer.new()
 	pinned_actions.name = "Actions"
 	pinned_actions.alignment = BoxContainer.ALIGNMENT_END
@@ -97,6 +108,23 @@ func _ready() -> void:
 	_layout.call_deferred()
 	_bind_focus.call_deferred()
 	close_button.grab_focus()
+	StyleB.enter(self, [sheet], Vector2(60, 0), 0.2, 0.0, 0.5)
+	StyleB.enter(self, [head], Vector2(0, -24), 0.1)
+
+
+## The word outlined behind the screen and the tag over the title; a
+## panel sets its own.
+func hero_word() -> String:
+	return "PIPPOP"
+
+
+func hero_tag() -> String:
+	return panel_name.trim_suffix("Dialog").to_upper()
+
+
+func _process(dt: float) -> void:
+	_t += dt
+	StyleB.drift(_drifts, _t)
 
 
 func _layout() -> void:
@@ -111,17 +139,15 @@ func _layout() -> void:
 ## A raised button for the actions row: "Deshacer" in navy, the main one
 ## leaning in pop.
 func hero_button(text: String, callback: Callable, enabled: bool, main := false) -> Button:
-	var b := Button.new()
+	var b := StyleB.button(main, 30 if main else 20)
 	b.text = text
 	b.disabled = not enabled
 	b.pressed.connect(callback)
 	if main:
-		b.custom_minimum_size = Vector2(260, 68)
-		UiStyle.primary(b, 28)
+		b.custom_minimum_size = Vector2(280, 66)
 	else:
-		b.custom_minimum_size = Vector2(0, 56)
+		b.custom_minimum_size = Vector2(170, 52)
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		UiStyle.raised(b, "navy", 20, 14)
 	pinned_actions.add_child(b)
 	return b
 

@@ -246,7 +246,6 @@ func _skin_fight_ui() -> void:
 	# empty text hides it with the label
 	var pill := StyleBoxFlat.new()
 	pill.bg_color = Color(0.07, 0.08, 0.16, 0.82)
-	pill.set_corner_radius_all(17)
 	pill.content_margin_left = 14
 	pill.content_margin_right = 14
 	pill.content_margin_top = 4
@@ -262,7 +261,8 @@ func _skin_fight_ui() -> void:
 	# the spells sit in one dark pill (S45)
 	var bar_bg := StyleBoxFlat.new()
 	bar_bg.bg_color = Color(0.07, 0.08, 0.16, 0.86)
-	bar_bg.set_corner_radius_all(26)
+	bar_bg.border_color = Color(1, 1, 1, 0.85)
+	bar_bg.border_width_top = 2
 	bar_bg.content_margin_left = 12
 	bar_bg.content_margin_right = 12
 	bar_bg.content_margin_top = 12
@@ -287,34 +287,35 @@ func _style_pass_button() -> void:
 	var b := _end_turn
 	b.custom_minimum_size = PASS_SIZE
 	b.add_theme_font_size_override("font_size", 26)
-	b.add_theme_font_override("font", UiStyle.title_font())
+	b.add_theme_font_override("font", UiStyle.display_font())
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	# style B: a slanted coral box with an ink shadow
 	var base := StyleBoxFlat.new()
-	base.bg_color = UiStyle.POP
-	base.set_corner_radius_all(int(PASS_SIZE.y * 0.5))
-	base.shadow_color = Color("c4451f")
-	base.shadow_offset = Vector2(0, 5)
+	base.bg_color = UiStyle.B_CORAL
+	base.skew = Vector2(0.25, 0)
+	base.shadow_color = Color(UiStyle.B_INK, 0.9)
+	base.shadow_offset = Vector2(5, 5)
 	base.content_margin_left = 30
 	base.content_margin_right = 96
 	var hover := base.duplicate()
-	hover.bg_color = Color("ff8a5c")
+	hover.bg_color = UiStyle.B_CORAL.lightened(0.12)
 	var pressed := base.duplicate()
-	pressed.bg_color = Color("e8501f")
+	pressed.bg_color = UiStyle.B_CORAL.darkened(0.15)
 	pressed.shadow_offset = Vector2(0, 2)
 	var off := base.duplicate()
 	off.bg_color = Color(0.2, 0.22, 0.36)
 	off.shadow_color = Color(0.07, 0.08, 0.16)
 	var focus := StyleBoxFlat.new()
 	focus.draw_center = false
-	focus.border_color = UiStyle.SUN
+	focus.border_color = UiStyle.B_GOLD
 	focus.set_border_width_all(3)
-	focus.set_corner_radius_all(int(PASS_SIZE.y * 0.5) + 4)
+	focus.skew = Vector2(0.25, 0)
 	focus.set_expand_margin_all(4)
 	for st in [["normal", base], ["hover", hover], ["pressed", pressed],
 			["hover_pressed", pressed], ["disabled", off], ["focus", focus]]:
 		b.add_theme_stylebox_override(st[0], st[1])
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
-		b.add_theme_color_override(c, Color("1a1206"))
+		b.add_theme_color_override(c, Color.WHITE)
 	b.add_theme_color_override("font_disabled_color", UiStyle.MUTED)
 	b.add_theme_constant_override("outline_size", 0)
 	if not b.draw.is_connected(_draw_pass_key):
@@ -331,10 +332,9 @@ func _draw_pass_key() -> void:
 	var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 16.0
 	var r := Rect2(b.size.x - 24.0 - w, (b.size.y - 24.0) * 0.5, w, 24.0)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.1, 0.07, 0.02, 0.18)
-	sb.set_corner_radius_all(8)
+	sb.bg_color = Color(UiStyle.B_INK, 0.25)
 	b.draw_style_box(sb, r)
-	b.draw_string(f, Vector2(r.position.x + 8.0, r.position.y + 16.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("1a1206"))
+	b.draw_string(f, Vector2(r.position.x + 8.0, r.position.y + 16.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 
 
 ## A menu button as a dark round button with its icon; its words move to
@@ -343,16 +343,16 @@ func _round_menu_button(b: Button) -> void:
 	b.custom_minimum_size = Vector2(44, 44)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.08, 0.16, 0.82)
-	sb.set_corner_radius_all(22)
+	sb.border_color = Color(1, 1, 1, 0.8)
+	sb.border_width_top = 2
 	var hover := sb.duplicate()
 	hover.bg_color = Color(0.17, 0.2, 0.41, 0.95)
 	var on := sb.duplicate()
-	on.bg_color = UiStyle.PRESSED
+	on.bg_color = UiStyle.B_CORAL
 	var focus := StyleBoxFlat.new()
 	focus.draw_center = false
-	focus.border_color = UiStyle.SUN
+	focus.border_color = UiStyle.B_CORAL
 	focus.set_border_width_all(2)
-	focus.set_corner_radius_all(24)
 	focus.set_expand_margin_all(2)
 	for st in [["normal", sb], ["hover", hover], ["pressed", on], ["hover_pressed", on],
 			["disabled", sb], ["focus", focus]]:
@@ -387,7 +387,7 @@ func _draw_menu_icon(b: Button) -> void:
 		b.draw_polyline(PackedVector2Array([c + Vector2(-2, -4), c + Vector2(-6, 0), c + Vector2(-2, 4)]), col, w, true)
 		b.draw_line(c + Vector2(-6, 0), c + Vector2(4, 0), col, w, true)
 	else:
-		var f := UiStyle.title_font()
+		var f := UiStyle.display_font()
 		var t := b.text.left(1)
 		b.draw_string(f, c + Vector2(-5, 7), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, col)
 
@@ -2273,20 +2273,20 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 	# S45: a rounded slot in the dark pill; the armed one glows in pop
 	var slot := StyleBoxFlat.new()
 	slot.bg_color = Color("2c2a3a")
-	slot.set_corner_radius_all(16)
+	slot.set_corner_radius_all(2)
 	slot.content_margin_left = 8
 	slot.content_margin_right = 8
 	slot.content_margin_top = 8
 	slot.content_margin_bottom = 8
 	var hover := slot.duplicate()
 	hover.bg_color = Color("3b3a52")
-	hover.border_color = UiStyle.SUN
+	hover.border_color = UiStyle.B_CORAL
 	hover.set_border_width_all(2)
 	var armed := slot.duplicate()
 	armed.bg_color = Color("4a2416")
-	armed.border_color = UiStyle.POP
+	armed.border_color = UiStyle.B_CORAL
 	armed.set_border_width_all(3)
-	armed.shadow_color = Color(1.0, 0.42, 0.24, 0.6)
+	armed.shadow_color = Color(1.0, 0.3, 0.43, 0.6)
 	armed.shadow_size = 9
 	var off := slot.duplicate()
 	off.bg_color = Color("1c1b26")

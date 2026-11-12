@@ -310,10 +310,10 @@ func _draw_round() -> void:
 	if ratio > 0.0:
 		draw_arc(c, r + 2.0, -PI * 0.5, -PI * 0.5 + TAU * ratio, 48, ring, width, true)
 	if dead:
-		var f: Font = preload("res://src/ui/ui_style.gd").title_font()
+		var f: Font = preload("res://src/ui/ui_style.gd").display_font()
 		var fs := int(maxf(12.0, r * 0.6))
 		var w := f.get_string_size("KO", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string_outline(f, c + Vector2(-w * 0.5, fs * 0.36), "KO", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color.BLACK)
 		draw_string(f, c + Vector2(-w * 0.5, fs * 0.36), "KO", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("fff4e0"))
 	if _hover or has_focus():
-		draw_arc(c, r + 6.0, 0.0, TAU, 48, Color("ffc247"), 2.0, true)
+		draw_arc(c, r + 6.0, 0.0, TAU, 48, Color("ff4d6d"), 2.0, true)
