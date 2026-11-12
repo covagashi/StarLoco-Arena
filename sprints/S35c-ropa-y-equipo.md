@@ -1,6 +1,6 @@
 # S35c — Ropa y equipo sobre la figura
 
-**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; las del coach aprobadas, las capas, mascotas y dofus del luchador sin revisar); paso 9a (piloto de las prendas que se deforman) esperando al dueño
+**Planificado:** 2026-11-11 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto 2026-11-11: pasos 1–3 hechos (piezas rígidas, arma, el luchador vestido en el lobby y en combate); paso 4 (sombreros) aprobado; pasos 5–8 hechos (las 167 piezas rígidas; todas aprobadas); paso 9a (piloto de las prendas que se deforman) aprobado; paso 9b (las 91 prendas) en curso
 
 ## Por qué
 
@@ -544,20 +544,23 @@ Para el dueño:
    del coach (el grosor duplica la tela). Para la demo web se pueden
    aligerar después.
 
-Siguiente, cuando el dueño dé el ok: las 91 prendas por tipo (19 faldas,
+Dueño (2026-11-12): las capas, mascotas y dofus del luchador ya los había
+aprobado; sobre las prendas: "sobre las piernas y el resto también, buena
+técnica". **Piloto aprobado; el camino vale para las 91.**
+
+Siguiente: las 91 prendas por tipo (19 faldas,
 19 pantalones, 27 botas, 26 torsos), una hoja por tipo; luego las 13
 marcas.
 
 ## Para retomar (2026-11-11)
 
 Dueño: "sigue el orden de los sprints". Orden que queda:
-1. ~~Capas, mascotas y dofus~~: hecho (paso 6), a falta de que el dueño
-   revise las hojas.
+1. ~~Capas, mascotas y dofus~~: hecho (paso 6), aprobado.
 2. ~~Paso 7: la animación `shoot` del arco~~: hecho.
 3. El equipo del coach: la fontanería y `art/equipment` en `build.py`,
    hechos (paso 8a); las 92 piezas rígidas, hechas (pasos 8b–8e); faltan
-   las 91 prendas que se deforman (piloto en el paso 9a, esperando al
-   dueño) y las 13 marcas.
+   las 91 prendas que se deforman (piloto aprobado, paso 9a) y las 13
+   marcas.
 
 Herramientas: `anim_sheet.gd --pieces=<slot>:<pieza>` o `--cards=`,
 `test/fighter_equip_preview.tscn`, `fight_smoke` (`EQUIP OK`). Construir:
