@@ -45,6 +45,8 @@ func main() {
 		// Effect zones for the Godot AoE preview — deduped [shape, size…]
 		// tuples from the spell's effects (point/empty/all produce no tint).
 		Zones [][]int32 `json:"zn,omitempty"`
+		// FX is the S37 effect-library recipe (vfx.go).
+		FX vfxRecipe `json:"fx"`
 	}
 	byBreed := map[int32][]rec{}
 	for _, s := range sp.All() {
@@ -54,7 +56,8 @@ func main() {
 		r := rec{ID: s.ID, AP: s.AP, Min: s.RangeMin, Max: s.RangeMax,
 			Value: s.Value, Script: s.ScriptID, LoS: s.TestLoS,
 			Line: s.OnlyLine,
-			Free: s.NeedFreeCell, NoBoost: s.RangeNotBoostable}
+			Free: s.NeedFreeCell, NoBoost: s.RangeNotBoostable,
+			FX: spellVfx(s)}
 		if s.EnforceTargetMasks {
 			r.Masks = s.TargetMasks
 		}
