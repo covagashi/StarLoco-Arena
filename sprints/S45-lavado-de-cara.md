@@ -170,7 +170,31 @@ se enseña hasta que se parece.
   botones redondos con icono. A 800×600 la barra sube una fila.
   El tema del combate ya no sale de los paneles (ahora de papel).
 
+### Giro de estilo (dueño, 2026-11-12)
+
+Tras la fase 4 y el acabado de pergamino: "usaría un poco más el estilo glass
+o el estilo japonés… lo que tú estás haciendo es más estilo
+cartoon-supercell", y "meter el mismo mapa de fondo para todo" no. Hoja de dos
+opciones del lobby (`~/codigo/capturas/s45/estilos/`): A glass, B japonés.
+**Elegida la B** (placas oscuras cortadas en diagonal con línea blanca,
+títulos en cursiva condensada con etiquetas pequeñas, menú como lista, acento
+coral), **con fondos propios por pantalla, sin reciclar arenas**. El dueño
+ofrece referencias de Pinterest para los fondos. Herramientas en la mesa:
+vex y AniCraft (editor de animación vectorial con CLI y MCP).
+
 ## Fuera
+### Giro de estilo (dueño, 2026-11-12)
+
+Tras la fase 4 y el acabado de pergamino: "usaría un poco más el estilo glass
+o el estilo japonés… lo que tú estás haciendo es más estilo
+cartoon-supercell", y "meter el mismo mapa de fondo para todo" no. Hoja de dos
+opciones del lobby (`~/codigo/capturas/s45/estilos/`): A glass, B japonés.
+**Elegida la B** (placas oscuras cortadas en diagonal con línea blanca,
+títulos en cursiva condensada con etiquetas pequeñas, menú como lista, acento
+coral), **con fondos propios por pantalla, sin reciclar arenas**. El dueño
+ofrece referencias de Pinterest para los fondos. Herramientas en la mesa:
+vex y AniCraft (editor de animación vectorial con CLI y MCP).
+
 ## Fuera
 
 - Las ilustraciones de las cartas y los iconos de hechizos: S38, ya con este
