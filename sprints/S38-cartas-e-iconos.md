@@ -209,6 +209,10 @@ presentación ya leída, luchadores ya reclutados, primeros pasos hechos).
 `b-nilo-dialogo.png`, `b-aldebran-dialogo.png`, `b-demonio1-dialogo.png`,
 `b-demonio3-dialogo.png`. Si algún día se animan: con AniCraft (dueño), aún
 sin instalar.
+De paso, las fichas de Servicios → Aprendizaje: Nilo tiene ya su cara, los
+maestros de clase el retrato nuestro de su clase (`ui/portraits/<clase×10>`,
+antes `fightTimeline` retail) y el Demonio III el suyo (antes la oveja).
+`tutorial_smoke` "learning" OK; captura `b-aprendizaje.png`.
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 

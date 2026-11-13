@@ -3839,17 +3839,17 @@ func _push_city_model() -> void:
 		if int(e.type) in LEARNING_KINDS:
 			var row := {"id": int(id), "label": _city_label(int(e.type), e), "kind": int(e.type)}
 			# S22: a face on each tile — the class master's class portrait,
-			# the Demon III's challenge art
+			# the Demon III's; S38b: ours (tools/portraits), not the retail art
 			var f := _desc_fields(str(e.get("desc", "")))
 			if int(e.type) == 5 and f.size() > 3 and f[3] >= 1 and f[3] <= 12:
-				row["portrait"] = "gui/images/breeds/fightTimeline/%d.png" % (int(f[3]) * 10)
+				row["portrait"] = "ui/portraits/%d.png" % (int(f[3]) * 10)
 			elif int(e.type) == 6:
-				row["portrait"] = "gui/images/challenges/illustrations/29.png"
+				row["portrait"] = str(FACE_DEMON3.image)
 			learning.append(row)
 	var baan: Variant = Elements.for_world(int(BAAN.world)).get(int(BAAN.id))
 	if baan != null:
 		learning.insert(0, {"id": int(BAAN.id), "label": _city_label(int(baan.type), baan),
-			"kind": int(baan.type)})
+			"kind": int(baan.type), "portrait": str(FACE_NILO.image)})
 	if not learning.is_empty():
 		groups.append({"kind": CITY_LEARNING, "services": learning,
 			"name": I18n.t("elem.learning"), "desc": I18n.t("city.desc.learning")})
