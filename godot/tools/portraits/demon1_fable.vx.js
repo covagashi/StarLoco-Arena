@@ -14,8 +14,8 @@
 
 pal({
   k: "#1c2030",                                                 // style B ink
-  i0: "#2a1b4e", i1: "#4b3480", i2: "#6e52a8", i3: "#9a80cc",   // indigo skin
-  m0: "#3b2a66", m1: "#5d4a92", m2: "#8673bb",                  // the mask-like face plate
+  i0: "#2a1b4e", i1: "#4f3888", i2: "#7558b0", i3: "#a088d4",   // indigo skin
+  m0: "#5a4a8c", m1: "#8577b8", m2: "#aa9fd4",                  // the mask-like face plate
   n0: "#8a7fa8", n1: "#bcb2d2", n2: "#dcd5ea", n3: "#f3effa",   // lavender-grey horns
   p0: "#4b2572", p1: "#7e3fa0", p2: "#b07fd0",                  // purple collar (Nilo's glasses purple)
   w0: "#a9b4d0", w1: "#eef0fb", w2: "#ffffff",                  // white bib, fangs
@@ -82,8 +82,9 @@ const flat = (sp) => sp.flat()
 
 // --- geometry ---------------------------------------------------------------
 // the left horn: rises from behind the head, leans in, the tip almost meets its twin at the top edge
-const HORN = [[46, 128], [38, 108], [36, 88], [40, 66], [48, 44], [59, 24], [70, 10], [78, 4]]
-const hornW = (i, t) => 40 - 28 * t ** 0.8
+const HORN = [[44, 138], [40, 112], [44, 84], [52, 58], [62, 34], [71, 16], [77, 5]]
+const HORNW = [42, 46, 42, 36, 27, 19, 12]
+const hornW = (i) => HORNW[i]
 const hornPts = band(HORN, hornW)
 const horn = (dx, dy, st) => blob(sh(hornPts, dx, dy), S(st, { smooth: 0.45 }))
 
@@ -97,29 +98,29 @@ const ear = (dx, dy, st) => blob(sh(EAR, dx, dy), S(st, { smooth: 0.3 }))
 const EARIN = [60, 86, 50, 70, 43, 54, 46, 74, 52, 92]
 
 // the mask-like face plate around the eyes and muzzle
-const MASK = [85, 92, 104, 94, 116, 104, 116, 120, 108, 136, 85, 142, 62, 136, 54, 120, 54, 104, 66, 94]
+const MASK = [85, 97, 97, 90, 111, 97, 118, 112, 114, 132, 100, 146, 85, 150, 70, 146, 56, 132, 52, 112, 59, 97, 73, 90]
 const mask = (dx, dy, st) => blob(sh(MASK, dx, dy), st)
 
 // the collar: high, flared, behind the chin
-const COLLAR = [36, 150, 60, 136, 85, 144, 110, 136, 134, 150, 128, 170, 42, 170]
-const collar = (dx, dy, st) => blob(sh(COLLAR, dx, dy), S(st, { smooth: 0.35 }))
+const COLLAR = [34, 158, 38, 118, 60, 138, 85, 146, 110, 138, 132, 118, 136, 158, 130, 174, 40, 174]
+const collar = (dx, dy, st) => blob(sh(COLLAR, dx, dy), S(st, { smooth: 0.3 }))
 
 // the bib: a white tunic front
 const BIB = [58, 156, 85, 150, 112, 156, 120, 200, 50, 200]
 const bib = (dx, dy, st) => blob(sh(BIB, dx, dy), S(st, { smooth: 0.4 }))
 
 // the left sleeve, a wide band from the shoulder out and down
-const SLEEVE = [[66, 158], [48, 162], [30, 170], [16, 182]]
-const sleeveW = (i, t) => 22 + 10 * t
+const SLEEVE = [[64, 160], [52, 163], [42, 170], [34, 180]]
+const sleeveW = (i, t) => 22 + 12 * t
 const sleevePts = band(SLEEVE, sleeveW, false)
 const sleeve = (dx, dy, st) => blob(sh(sleevePts, dx, dy), S(st, { smooth: 0.4 }))
 
 // three claws fanning out of the sleeve's end
 const CLAW = (x, y, a, len) => {
   const r = (a * Math.PI) / 180, tx = Math.cos(r), ty = Math.sin(r), nx = -ty, ny = tx
-  return [x + nx * 3.2, y + ny * 3.2, x + tx * len * 0.55 + nx * 1.6, y + ty * len * 0.55 + ny * 1.6, x + tx * len, y + ty * len, x + tx * len * 0.5 - nx * 2.4, y + ty * len * 0.5 - ny * 2.4, x - nx * 3.2, y - ny * 3.2]
+  return [x + nx * 4, y + ny * 4, x + tx * len * 0.5 + nx * 2.4, y + ty * len * 0.5 + ny * 2.4, x + tx * len * 0.95 + nx * 2, y + ty * len * 0.95 + ny * 2, x + tx * len, y + ty * len + 1, x + tx * len * 0.55 - nx * 2.6, y + ty * len * 0.55 - ny * 2.6, x - nx * 4, y - ny * 4]
 }
-const CLAWS = [[14, 172, 215, 16], [8, 182, 190, 17], [10, 194, 160, 15]]
+const CLAWS = [[30, 172, 222, 22], [28, 178, 190, 23], [30, 184, 158, 21]]
 
 // the skull on the crown
 const SKULL = [85, 56, 92, 58, 96, 64, 95, 72, 91, 78, 85, 79, 79, 78, 75, 72, 74, 64, 78, 58]
@@ -132,13 +133,13 @@ sprite("demon1", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, 
   // ---- behind everything: the horns ----
   sym(85,
     ...cel(horn, ["n0", "n1", "n2", "n3"], { sd: 6, hd: 7, rim: 2 }),
-    // ribs across the horn, the twisted-feather look
-    clip(horn(0, 0, "k"), ...HORN.slice(1, 7).map(([x, y], j) => {
-      const i = j + 1, [nx, ny] = normal(HORN, i), w = hornW(i, i / (HORN.length - 1)) / 2 + 3
-      const [tx, ty] = [-ny, nx]
+    // ribs across the horn, the twisted-feather look: arcs sagging between the edges
+    clip(horn(0, 0, "k"), ...[1, 2, 3, 4, 5].map((i) => {
+      const [x, y] = HORN[i], [nx, ny] = normal(HORN, i), w = hornW(i) / 2 + 3, [tx, ty] = [-ny, nx]
+      const sag = 11 - i * 1.2
       return [
-        curve([x + nx * w, y + ny * w, x + tx * 4, y + ty * 4, x - nx * w, y - ny * w], { stroke: "n0", sw: 2.2, opacity: 0.7, cap: "round" }),
-        curve([x + nx * w, y + ny * w + 2.5, x + tx * 4, y + ty * 4 + 2.5, x - nx * w, y - ny * w + 2.5], { stroke: "n3", sw: 1.4, opacity: 0.5, cap: "round" }),
+        curve([x + nx * w, y + ny * w, x - tx * sag, y - ty * sag, x - nx * w, y - ny * w], { stroke: "n0", sw: 2, opacity: 0.6, cap: "round" }),
+        curve([x + nx * w, y + ny * w + 3, x - tx * sag, y - ty * sag + 3, x - nx * w, y - ny * w + 3], { stroke: "n3", sw: 1.6, opacity: 0.55, cap: "round" }),
       ]
     })),
     // a long light stroke along the lit edge
@@ -157,10 +158,10 @@ sprite("demon1", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, 
     ...cel(sleeve, ["v0", "v1", "v2", "v3"], { sd: 6, hd: 6, rim: 1.6 }),
     // folds along the sleeve
     clip(sleeve(0, 0, "k"),
-      curve([54, 170, 40, 176, 26, 186], { stroke: "v0", sw: 1.6, opacity: 0.6, cap: "round" }),
-      curve([60, 152, 44, 156, 30, 162], { stroke: "v0", sw: 1.3, opacity: 0.5, cap: "round" }),
+      curve([58, 172, 50, 178, 44, 188], { stroke: "v0", sw: 1.6, opacity: 0.6, cap: "round" }),
+      curve([62, 156, 52, 160, 46, 166], { stroke: "v0", sw: 1.3, opacity: 0.5, cap: "round" }),
       // the cuff's dark band
-      poly([24, 160, 14, 164, 8, 196, 20, 198], { fill: "d1", opacity: 0.9 }),
+      poly([36, 166, 22, 172, 24, 198, 44, 198], { fill: "d1", opacity: 0.9 }),
     ),
     sleeve(0, 0, EDGE(2)),
   ),
@@ -180,8 +181,8 @@ sprite("demon1", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, 
   ),
   // ghost flames beside the skull
   sym(85,
-    blob([68, 72, 60, 62, 56, 48, 62, 54, 64, 42, 68, 54, 74, 58, 76, 70], { fill: "g0", smooth: 0.6, opacity: 0.75, glow: { r: 4, color: "g0" } }),
-    blob([68, 70, 63, 62, 61, 54, 66, 58, 70, 64, 74, 66], { fill: "g1", smooth: 0.6, opacity: 0.8 }),
+    blob([70, 74, 62, 66, 58, 56, 61, 46, 58, 39, 66, 44, 67, 36, 71, 48, 75, 56, 77, 68], { fill: "g0", smooth: 0.6, opacity: 0.7, glow: { r: 4, color: "g0" } }),
+    blob([70, 72, 65, 64, 63, 56, 66, 49, 69, 56, 73, 61, 75, 68], { fill: "g1", smooth: 0.6, opacity: 0.75 }),
   ),
   ...cel(skull, ["b0", "b1", "b2"], { sd: 3.5, hd: 4, rim: 0 }),
   // eye sockets, nose, teeth
@@ -212,20 +213,19 @@ sprite("demon1", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, 
     curve([60, 119, 70, 121, 80, 117], INK(1.4, 0.5)),
   ),
   // the nose: two small slits
-  sym(85, curve([81, 124, 83, 128], INK(1.5, 0.5))),
-  // ---- the grin ----
-  blob([60, 128, 72, 134, 85, 137, 98, 134, 110, 128, 106, 140, 95, 146, 85, 147, 75, 146, 64, 140], { fill: "x0", smooth: 0.5 }),
-  clip(blob([60, 128, 72, 134, 85, 137, 98, 134, 110, 128, 106, 140, 95, 146, 85, 147, 75, 146, 64, 140], { fill: "k", smooth: 0.5 }),
+  sym(85, curve([81.5, 125, 83, 128], INK(1.4, 0.5))),
+  // ---- the grin: ear to ear, the corners curling up ----
+  blob([54, 122, 66, 131, 85, 137, 104, 131, 116, 122, 114, 136, 102, 146, 85, 149, 68, 146, 56, 136], { fill: "x0", smooth: 0.5 }),
+  clip(blob([54, 122, 66, 131, 85, 137, 104, 131, 116, 122, 114, 136, 102, 146, 85, 149, 68, 146, 56, 136], { fill: "k", smooth: 0.5 }),
     // the fangs: two big at the corners, small teeth between
-    sym(85, poly([64, 131, 70, 133, 68, 143], "w2"), poly([73, 134, 78, 135, 76, 140], "w1")),
-    poly([82, 136, 88, 136, 85, 140], "w1"),
+    sym(85, poly([58, 126, 68, 131, 65, 145], "w2"), poly([71, 132, 78, 134, 75, 141], "w1"), poly([80, 134, 85, 135, 82.5, 139], "w1")),
     // the lower teeth
-    sym(85, poly([72, 145, 77, 146, 75, 141], "w1")),
+    sym(85, poly([66, 146, 73, 147, 70, 141], "w1"), poly([77, 148, 82, 148.5, 79.5, 144], "w1")),
     // the tongue's shadow
-    ellipse(85, 148, 14, 5, { fill: "i0", opacity: 0.6 }),
+    ellipse(85, 150, 16, 5, { fill: "i0", opacity: 0.6 }),
   ),
-  curve([58, 126, 72, 134, 85, 137, 98, 134, 112, 126], INK(2.6, 0.3)),
-  curve([62, 140, 75, 146, 85, 147, 95, 146, 108, 140], INK(1.8, 0.4)),
+  curve([52, 120, 66, 131, 85, 137, 104, 131, 118, 120], INK(2.6, 0.3)),
+  curve([56, 136, 68, 146, 85, 149, 102, 146, 114, 136], INK(1.8, 0.4)),
   // grin creases at the corners
-  sym(85, curve([56, 122, 54, 128, 58, 134], INK(1.4, 0.5))),
+  sym(85, curve([51, 114, 49, 121, 52, 128], INK(1.4, 0.5))),
 ))

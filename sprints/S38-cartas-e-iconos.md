@@ -183,6 +183,16 @@ agentes Fable en paralelo con `nilo_fable.vx.js` de guía de estilo; el
 Demonio III no tiene arte retail (el juego enseñaba la ilustración de un
 desafío, una oveja), así que se diseña como hermano del Demonio I, con su
 "III". Captura: `~/codigo/capturas/s38/b-nilo-dialogo.png`.
+Los tres hechos (`aldebran_fable.vx.js`, `demon1_fable.vx.js`,
+`demon3_fable.vx.js`, mismos ayudantes y lienzo que Nilo). Aldebrán: el
+gran sombrero greñudo con ramas, cara de pelo blanco, ojos con brillo de
+estrella, bolsa naranja y un amuleto de estrella. Demonio I: los dos cuernos
+altos de pluma, calavera con llamas cian, ojos rosa encendidos, sonrisa de
+colmillos, la "I". Demonio III (diseño nuevo, misma especie que el I): verde
+azulado, tres penachos por el "III", un reloj de arena en la coronilla, cejas
+severas y media sonrisa con un colmillo, manos juntas sobre la niebla. Hoja
+de los cuatro: `~/codigo/capturas/s38/npc-los-cuatro.png`; a la espera del
+dueño para conectarlos.
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 

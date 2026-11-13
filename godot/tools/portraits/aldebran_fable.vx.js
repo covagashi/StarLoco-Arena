@@ -71,32 +71,47 @@ function band(spine, width, cap = true) {
 const flat = (sp) => sp.flat()
 
 // --- geometry ---------------------------------------------------------------
-// The hat: a dome whose lower edge hangs in shaggy tufts. The top is an arc,
-// the bottom a zigzag of tufts (longer toward the middle, like a wet mop).
-const HAT_C = [85, 84], HAT_R = [76, 50]
-function hatPts() {
+// The hat: a bulging dome (a few bumps so it is not a perfect ellipse) whose
+// lower edge hangs in fat drooping tufts, longer toward the middle, like a
+// wet mop. The fringe is drawn twice: a dark back layer and a lit front one.
+const HAT_C = [85, 82], HAT_R = [76, 52]
+function domePts(dx = 0, dy = 0, bump = 1) {
   const P = []
-  for (let a = 182; a <= 358; a += 11) {                       // the dome, left → right over the top
-    const r = (a * Math.PI) / 180
-    P.push(HAT_C[0] + HAT_R[0] * Math.cos(r), HAT_C[1] + HAT_R[1] * Math.sin(r))
-  }
-  const tufts = [4, 9, 6, 11, 8, 12, 7, 13, 9, 14, 8, 12, 10, 13, 7, 11, 9, 12, 6, 10, 8, 5]
-  const n = tufts.length
-  for (let i = 0; i < n; i++) {                                 // the fringe, right → left
-    const t = i / (n - 1), x = 160 - 150 * t
-    const yb = 98 + 12 * (1 - ((x - 85) / 76) ** 2)            // the brim sags in the middle
-    P.push(x, yb, x - 3.4, yb + tufts[i])
+  for (let a = 184; a <= 356; a += 8) {                        // left → right over the top
+    const r = (a * Math.PI) / 180, k = 1 + bump * (0.035 * Math.sin(r * 3 + 0.8) + 0.02 * Math.sin(r * 7))
+    P.push(HAT_C[0] + HAT_R[0] * k * Math.cos(r) + dx, HAT_C[1] + HAT_R[1] * k * Math.sin(r) + dy)
   }
   return P
 }
-const HAT = hatPts()
-const hat = (dx, dy, st) => blob(sh(HAT, dx, dy), S(st, { smooth: 0.55 }))
+// tufts: [x of the tuft's root, its length, its half width]
+const TUFTS = [[158, 14, 5], [147, 34, 6.5], [134, 16, 5.5], [121, 19, 6.5], [108, 15, 6], [95, 21, 7], [81, 17, 6.5], [68, 22, 7], [55, 16, 6], [42, 19, 6.5], [30, 20, 5.5], [19, 38, 6], [10, 16, 4.5]]
+function hatPts(tuftScale = 1) {
+  const P = domePts()
+  for (const [x, len, hw] of TUFTS) {                           // the fringe, right → left
+    const yb = 95 + 10 * (1 - ((x - 85) / 76) ** 2)            // the brim sags in the middle
+    const l = len * tuftScale
+    P.push(x + hw, yb, x + hw * 0.55, yb + l * 0.8, x - 0.5, yb + l, x - hw * 0.6, yb + l * 0.75, x - hw, yb + 1)
+  }
+  return P
+}
+const HAT = hatPts(0.72)
+const hat = (dx, dy, st) => blob(sh(HAT, dx, dy), S(st, { smooth: 0.75 }))
+// the back fringe: the same tufts, offset half a tuft and longer, in shadow
+const HAT_BACK = (() => {
+  const P = domePts()
+  for (const [x, len, hw] of TUFTS) {
+    const xb = x - 6.5, yb = 95 + 10 * (1 - ((xb - 85) / 76) ** 2), l = len * 0.95 + 2
+    P.push(xb + hw, yb, xb + hw * 0.5, yb + l * 0.8, xb - 1, yb + l, xb - hw * 0.6, yb + l * 0.7, xb - hw, yb + 1)
+  }
+  return P
+})()
+const hatBack = (dx, dy, st) => blob(sh(HAT_BACK, dx, dy), S(st, { smooth: 0.75 }))
 
-// strands over the mop: curves from the crown down to the brim
+// strands over the mop: wavy clumps from the crown down to the brim
 const strands = []
-for (let i = 0; i < 11; i++) {
-  const t = i / 10, x1 = 16 + 138 * t, bend = (t - 0.5) * 30
-  strands.push([85 + bend * 0.3, 40, 85 + bend * 1.6, 62, x1 + (0.5 - t) * 10, 90, x1, 108])
+for (let i = 0; i < 9; i++) {
+  const t = i / 8, x1 = 18 + 134 * t, bend = (t - 0.5) * 34, wv = (i % 2 ? 1 : -1) * 4
+  strands.push([85 + bend * 0.25, 36, 85 + bend * 1.1 + wv, 54, 85 + bend * 1.9 - wv, 72, x1 + (0.5 - t) * 14 + wv * 0.5, 90, x1, 106])
 }
 
 // the sticks: two big branches on top, a stump on the hat's face, twigs on the sides
@@ -105,7 +120,7 @@ const STICK_R = band([[108, 52], [112, 34], [113, 18], [112, 4]], (i, t) => 11 -
 const STICK_RB = band([[112, 22], [120, 14], [126, 9]], (i, t) => 5.5 - 2 * t)      // a side shoot on the right stick
 const STUMP = band([[124, 82], [131, 70], [135, 62]], (i, t) => 8 - 2 * t)
 const TWIG_L = band([[22, 84], [12, 74], [6, 64]], (i, t) => 6.5 - 2 * t)
-const TWIG_R = band([[152, 86], [162, 80], [167, 72]], (i, t) => 6 - 2 * t)
+const TWIG_R = band([[152, 88], [160, 82], [164, 74]], (i, t) => 6 - 2 * t)
 const stick = (P) => (dx, dy, st) => poly(sh(P, dx, dy), st)
 
 // the face: a scalloped oval of white fur, the top hidden by the hat's fringe
@@ -117,12 +132,12 @@ function furPts(cx, cy, rx, ry, n, dip, phase = 0) {
   }
   return P
 }
-const FACE = furPts(85, 134, 37, 32, 22, 0.07, 8)
+const FACE = furPts(85, 136, 35, 31, 22, 0.07, 8)
 const face = (dx, dy, st) => blob(sh(FACE, dx, dy), S(st, { smooth: 0.8 }))
 
 // cheek tufts sticking out of the fur, left side (mirrored)
-const TUFT = [52, 126, 36, 122, 28, 132, 34, 146, 48, 152, 56, 142]
-const tuft = (dx, dy, st) => blob(sh(TUFT, dx, dy), S(st, { smooth: 0.55 }))
+const TUFT = [54, 124, 44, 120, 37, 126, 32, 135, 35, 146, 44, 153, 56, 150]
+const tuft = (dx, dy, st) => blob(sh(TUFT, dx, dy), S(st, { smooth: 0.7 }))
 
 // body, collar, arms, hands
 const BODY = [60, 160, 110, 160, 122, 174, 126, 200, 44, 200, 48, 174]
@@ -192,58 +207,67 @@ sprite("aldebran", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3
   collar(0, 0, EDGE(1.8)),
   sym(85,
     ...cel(tuft, ["w0", "w1", "w2"], { sd: 3.5, hd: 4, rim: 0 }),
-    curve([40, 128, 34, 134], INK(1.3, 0.5)), curve([38, 140, 44, 147], INK(1.3, 0.5)),
+    curve([42, 124, 38, 130], INK(1.3, 0.5)), curve([38, 136, 40, 143], INK(1.3, 0.5)), curve([44, 148, 50, 152], INK(1.2, 0.5)),
     tuft(0, 0, EDGE(1.8)),
   ),
   ...cel(face, ["w0", "w1", "w2"], { sd: 6, hd: 7, rim: 0 }),
   clip(face(0, 0, "k"),
     // the hat's cast shadow over the brow, the blush
-    blob([44, 96, 85, 100, 126, 96, 126, 118, 85, 122, 44, 118], { fill: "w0", opacity: 0.8 }),
-    sym(85, ellipse(62, 142, 8, 4.5, { fill: "r1", opacity: 0.35 })),
+    blob([44, 96, 85, 100, 126, 96, 126, 122, 85, 126, 44, 122], { fill: "w0", opacity: 0.8 }),
+    sym(85, ellipse(61, 146, 8, 4.5, { fill: "r1", opacity: 0.35 })),
   ),
   // a few fur strokes on the cheeks
   sym(85, curve([54, 150, 58, 156], INK(1.2, 0.5)), curve([60, 156, 65, 160], INK(1.2, 0.5))),
   face(0, 0, EDGE(2.2)),
   // ---- the eyes: wide and curious, a violet iris with a pale ring, a star catch-light ----
-  ...[[70, 128, 1], [101, 127, -1]].map(([cx, cy, s]) => [
-    ellipse(cx, cy, 8.8, 9.6, "w2"),
-    circle(cx + 1.2, cy + 1.2, 6.2, "e0"),
-    circle(cx + 1.2, cy + 1.2, 6.2, { fill: "none", stroke: "e1", sw: 1.6, opacity: 0.9 }),
-    circle(cx + 1.2, cy + 1.2, 4.6, { fill: "none", stroke: "e2", sw: 0.9, opacity: 0.55 }),
-    circle(cx + 1.5, cy + 1.6, 3.2, "k"),
-    star(cx - 1.4, cy - 1.6, 4, 3.2, 1.1, "w2"),
-    circle(cx + 4, cy + 4.5, 1.1, { fill: "w2", opacity: 0.8 }),
-    curve([cx - 9, cy - 2, cx - 3, cy - 9.5, cx + 6, cy - 9, cx + 9.5, cy - 3], INK(2.3, 0.3)),   // the upper lid
-    curve([cx - 7, cy + 7, cx, cy + 9.6, cx + 7.5, cy + 6.5], { ink: { c: "k", w: 1.2, taper: 0.5, wobble: 0 }, opacity: 0.7 }),
+  ...[[69, 133, 1], [102, 132, -1]].map(([cx, cy, s]) => [
+    ellipse(cx, cy, 9.6, 10.4, "w2"),
+    circle(cx + 1.2, cy + 1.4, 7, "e0"),
+    clip(circle(cx + 1.2, cy + 1.4, 7, "k"), circle(cx - 1, cy - 1, 7, "e1")),
+    circle(cx + 1.2, cy + 1.4, 5.1, { fill: "none", stroke: "e2", sw: 1, opacity: 0.6 }),
+    circle(cx + 1.5, cy + 1.8, 3.6, "k"),
+    star(cx - 1.6, cy - 1.6, 4, 3.6, 1.2, "w2"),
+    circle(cx + 4.4, cy + 5, 1.2, { fill: "w2", opacity: 0.85 }),
+    curve([cx - 10, cy - 2, cx - 3.5, cy - 10.4, cx + 6, cy - 9.8, cx + 10.5, cy - 3], INK(2.4, 0.3)),   // the upper lid
+    curve([cx - 7.5, cy + 7.8, cx, cy + 10.4, cx + 8, cy + 7], { ink: { c: "k", w: 1.2, taper: 0.5, wobble: 0 }, opacity: 0.7 }),
   ]),
   // the brows peek from under the fringe: his left one lifts (our right)
-  curve([60, 114, 68, 111, 76, 113], INK(1.9, 0.4)),
-  curve([95, 110, 103, 106, 110, 109], INK(1.9, 0.4)),
+  curve([59, 119, 68, 116, 77, 118], INK(1.9, 0.4)),
+  curve([95, 116, 103, 112, 111, 115], INK(1.9, 0.4)),
   // the nose, the mouth
-  blob([81.5, 139, 88.5, 139, 85, 144], { fill: "n0", smooth: 0.5 }),
-  circle(83.5, 140, 1, { fill: "w2", opacity: 0.6 }),
-  curve([85, 144, 85, 147], INK(1.3, 0.4)),
-  curve([77, 149, 85, 152, 93, 148], INK(1.9, 0.45)),
-  // ---- the hat, over the face: the mop, its strands, the stump ----
-  ...cel(hat, ["m0", "m1", "m2", "m3"], { sd: 8, hd: 9, rim: 2 }),
+  blob([81, 143, 89, 143, 85, 148.5], { fill: "n0", smooth: 0.5 }),
+  circle(83.5, 144, 1, { fill: "w2", opacity: 0.6 }),
+  curve([85, 148.5, 85, 151.5], INK(1.3, 0.4)),
+  curve([76, 152, 85, 157, 95, 151.5], INK(2, 0.4)),
+  curve([94, 151.5, 96.5, 149], INK(1.4, 0.5)),
+  // ---- the hat, over the face: the back fringe, the mop, its strands ----
+  hatBack(0, 0, "m0"),
+  clip(hatBack(0, 0, "k"), blob(sh(domePts(0, 0, 0), 0, 0), { fill: "m1", opacity: 0.0 }),
+    ...TUFTS.map(([x]) => curve([x - 4, 108, x - 7, 120], { stroke: "m1", sw: 1.4, opacity: 0.35 }))),
+  ...cel(hat, ["m1", "m2", "m3", "m3"], { sd: 8, hd: 9, rim: 2 }),
   clip(hat(0, 0, "k"),
-    // the fringe falls into shadow at its tips
-    blob([6, 100, 85, 108, 164, 100, 164, 125, 85, 128, 6, 125], { fill: "m0", opacity: 0.55 }),
-    ...strands.map((p, i) => curve(p, { stroke: "m0", sw: 1.5 + (i % 3) * 0.3, opacity: 0.45, cap: "round" })),
-    ...strands.filter((_, i) => i < 6).map((p) => curve(sh(p, -2.5, -1), { stroke: "m3", sw: 1.2, opacity: 0.5, cap: "round" })),
+    // the fringe falls into shadow at its tips, the bottom of the dome too
+    blob([0, 104, 85, 110, 170, 104, 170, 140, 85, 145, 0, 140], { fill: "m0", opacity: 0.5 }),
+    blob([0, 90, 85, 100, 170, 90, 170, 140, 85, 145, 0, 140], { fill: "m1", opacity: 0.55 }),
+    blob([118, 36, 150, 48, 166, 80, 164, 112, 140, 124, 128, 100, 126, 70], { fill: "m0", opacity: 0.3, smooth: 0.8 }),
+    ...strands.map((p, i) => curve(p, { stroke: "m1", sw: 1.5 + (i % 3) * 0.4, opacity: 0.42, cap: "round" })),
+    ...strands.filter((_, i) => i < 5).map((p) => curve(sh(p, -2.5, -1), { stroke: "m3", sw: 1.3, opacity: 0.6, cap: "round" })),
+    // short clumps of hair on the dome
+    ...[[30, 70], [50, 58], [70, 50], [96, 48], [118, 56], [140, 70], [60, 84], [112, 86], [86, 72]].map(([x, y], i) =>
+      curve([x - 3, y - 6, x + 1, y, x - 2, y + 7], { stroke: i < 5 ? "m3" : "m0", sw: 1.3, opacity: 0.45, cap: "round" })),
     // a sheen along the crown
-    blob([40, 46, 70, 38, 100, 40, 90, 50, 62, 54, 44, 56], { fill: "m3", opacity: 0.6, smooth: 0.8 }),
+    blob([36, 48, 64, 36, 98, 36, 88, 46, 60, 52, 40, 58], { fill: "m3", opacity: 0.65, smooth: 0.8 }),
   ),
-  // the tufts' own ink lines so the fringe reads as hanging strands
-  ...Array.from({ length: 10 }, (_, i) => { const x = 24 + i * 13.5; return curve([x, 106 - Math.abs(x - 85) * 0.08, x - 2, 114 - Math.abs(x - 85) * 0.08], INK(1.3, 0.5)) }),
+  // ink lines splitting the tufts so the fringe reads as hanging strands
+  ...TUFTS.slice(1, -1).map(([x, len]) => { const yb = 95 + 10 * (1 - ((x - 85) / 76) ** 2); return curve([x + 2.5, yb + 1, x + 1, yb + len * 0.42], INK(1.3, 0.5)) }),
   hat(0, 0, EDGE(2.2)),
   // the stump on the hat's face and the roots of the sticks sunk in the mop
   ...wood(STUMP, 1, 0.9),
   ellipse(135, 61.5, 3.3, 2, { fill: "d3" }), ellipse(135, 61.5, 3.3, 2, EDGE(1.1)),
   // ---- the floating glyph over the open hand: subtle, dimensional ----
-  star(150, 150, 4, 7, 2.4, { fill: "g0", opacity: 0.9, glow: { r: 4, color: "g0", strength: 2 } }),
+  star(150, 150, 4, 7, 2.4, { fill: "g0" }),
   star(150, 150, 4, 3.4, 1.2, { fill: "g1" }),
-  circle(141, 158, 1.4, { fill: "g0", opacity: 0.8, glow: { r: 2, color: "g0" } }),
-  circle(158, 143, 1.1, { fill: "g0", opacity: 0.7, glow: { r: 2, color: "g0" } }),
-  circle(150, 150, 10, { fill: "none", stroke: "g0", sw: 0.8, opacity: 0.4 }),
+  star(150, 150, 4, 7, 2.4, { fill: "none", stroke: "k", sw: 1.2, join: "round" }),
+  circle(140, 158, 1.5, { fill: "g0" }), circle(140, 158, 1.5, EDGE(1)),
+  circle(159, 142, 1.2, { fill: "g1" }), circle(159, 142, 1.2, EDGE(1)),
 ))
