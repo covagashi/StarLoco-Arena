@@ -235,6 +235,26 @@ pasada dio un quinto, el combate de la lección de Baan al cerrarse, con
 errores de `vfx.gd`: no es de aquí), `run_tests.sh` 1525/0. Capturas:
 `~/codigo/capturas/s38/dialogo-*.png`.
 
+### Nilo animado con AniCraft (2026-11-13, hoja al dueño)
+
+Dueño: "pues instala anicraft", "anima ahora". AniCraft 0.2.1 instalado en
+`~/.local/opt` (tarball de Linux con su suma comprobada; `anicraft` y
+`anicraft-cli` en `~/.local/bin`) y registrado como MCP de este proyecto
+(sus herramientas salen al reiniciar la sesión). Ciclo de reposo de Nilo, 48
+fotogramas a 24 fps (2 s): `godot/tools/portraits/nilo_anim.vx.js` dibuja
+las capas de encima (párpados cerrados, el brillo de la piedra recortado a
+la piedra, un destello) y `nilo_anim.py` monta la línea de tiempo en
+AniCraft por `anicraft-cli serve`: respiración (se estira 1,2 % desde los
+pies, tweens clásicos con easing), la piedra que se enciende y se apaga, un
+parpadeo en los fotogramas 31–34 y el destello que gira y se desvanece. Se
+importan los PNG ×2, no el SVG: el importador de SVG lo parte en 136 capas y
+se salta 14 recortes anidados. Un halo suave sobre la figura oscurecía la
+tinta y la madera de alrededor (mezcla sin premultiplicar), así que el
+brillo va recortado a la piedra. Salidas: `.anicraft`, GIF, hoja de sprites
+(2720 × 2400, transparente, 6,6 MB) y secuencia PNG. GIF y fotogramas en
+`~/codigo/capturas/s38/anim/`. Aún no está en el juego: la hoja pesa
+demasiado para la demo web (4 NPC ≈ 26 MB); a decidir con el dueño.
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
