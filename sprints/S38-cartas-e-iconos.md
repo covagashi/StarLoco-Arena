@@ -255,6 +255,24 @@ brillo va recortado a la piedra. Salidas: `.anicraft`, GIF, hoja de sprites
 `~/codigo/capturas/s38/anim/`. Aún no está en el juego: la hoja pesa
 demasiado para la demo web (4 NPC ≈ 26 MB); a decidir con el dueño.
 
+### Los cuatro NPC animados, en el juego ✅ (2026-11-14, dueño: "ok")
+
+Opción A (hoja ligera). Las capas de encima de Aldebrán, Demonio I y Demonio
+III las dibujaron tres agentes Fable con `nilo_anim.vx.js` de plantilla
+(`<npc>_anim.vx.js`: párpados que repintan la cara de debajo, brillo
+recortado a lo que brilla —el amuleto de estrella, los ojos rosas y las
+llamas, los ojos verdes y la arena del reloj—, y el destello con su
+`// SPARK_C`). `tools/portraits/npc_anim.py` (antes `nilo_anim.py`) monta los
+cuatro en AniCraft igual que Nilo, con el parpadeo a destiempo en cada uno, y
+empaqueta la hoja del juego: uno de cada dos fotogramas (12 fps; el ciclo es
+lento) en WebP, 8 columnas: 520–710 KB por NPC, 2,4 MB los cuatro (la hoja
+de AniCraft pesaba 6,6 MB cada una). `talk_panel.gd` la reproduce si hay un
+`<retrato>_idle.json` al lado (AtlasTexture y un Timer); sin él, el retrato
+queda quieto. Evidencia: los cuatro en la ventana de diálogo con la región
+del atlas avanzando (prueba de un solo uso contra el servidor local 4/4),
+`nilo_smoke` 5/5, `run_tests.sh` 1525/0. GIF de los cuatro:
+`~/codigo/capturas/s38/anim/los-cuatro-idle.gif`.
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso

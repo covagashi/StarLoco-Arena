@@ -3,7 +3,7 @@
 // portrait (same palette, same coordinates): the closed lids of the blink,
 // the warm halo behind the staff's stone, and a sparkle by the stone.
 //   node <vex>/bin/vex.js build tools/portraits/nilo_anim.vx.js --scales 1
-// tools/portraits/nilo_anim.py then builds the loop in AniCraft.
+// tools/portraits/npc_anim.py then builds the loop in AniCraft.
 
 pal({
   k: "#1c2030",
@@ -32,7 +32,8 @@ sprite("nilo_glow", { w: 170, h: 200 },
     ellipse(145, 108, 13, 18, { fill: rad(["#fffbe8", "#ffd88aee", "#ffc46600"], { cx: 0.45, cy: 0.4, r: 0.55 }) })))
 
 // a four-point sparkle by the stone
-// (its own small sprite, centred at 131, 94 on the portrait, so AniCraft
+// SPARK_C = [131, 94]
+// (its own small sprite, centred at SPARK_C on the portrait, so AniCraft
 // scales and turns it about its centre)
 sprite("nilo_spark", { w: 28, h: 28 },
   star(14, 14, 4, 10, 2.2, { fill: "w2", glow: { r: 5, color: "o2" } }))

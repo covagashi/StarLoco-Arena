@@ -270,6 +270,7 @@ func _show_face(face: Dictionary) -> bool:
 			_face_slot.position = PORTRAIT.position
 			tr.size = PORTRAIT.size
 			_face_slot.add_child(tr)
+			_play_idle(tr, str(face.image))
 		else:
 			_face_slot.position = MEDAL.position
 			var m := PanelContainer.new()
@@ -304,6 +305,35 @@ func _show_face(face: Dictionary) -> bool:
 	_face_slot.position = PORTRAIT.position
 	_face_slot.add_child(holder)
 	return true
+
+
+## Our portraits' idle loop (tools/portraits/npc_anim.py, made in AniCraft):
+## <portrait>_idle.webp, a sheet of `frames` cells in `columns`, played at
+## `fps` on the face. Without the sheet the portrait stays still.
+func _play_idle(tr: TextureRect, image_path: String) -> void:
+	var base := image_path.get_basename()
+	if not FileAccess.file_exists(AssetPaths.resolve(base + "_idle.json")):
+		return
+	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(AssetPaths.resolve(base + "_idle.json")))
+	var sheet := AssetPaths.load_image(base + "_idle.webp")
+	if not (meta is Dictionary) or sheet == null:
+		return
+	var atlas := AtlasTexture.new()
+	atlas.atlas = ImageTexture.create_from_image(sheet)
+	var w := float(meta.w)
+	var h := float(meta.h)
+	var cols := int(meta.columns)
+	var frames := int(meta.frames)
+	atlas.region = Rect2(0, 0, w, h)
+	tr.texture = atlas
+	var timer := Timer.new()
+	timer.wait_time = 1.0 / float(meta.fps)
+	var f := [0]
+	timer.timeout.connect(func():
+		f[0] = (f[0] + 1) % frames
+		atlas.region = Rect2((f[0] % cols) * w, (f[0] / cols) * h, w, h))
+	tr.add_child(timer)
+	timer.start()
 
 
 ## The plate, the ribbon, "who" and close, beside a face or across.
