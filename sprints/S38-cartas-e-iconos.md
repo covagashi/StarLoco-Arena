@@ -81,12 +81,38 @@ mascota, capa, sombrero, dofus); las armas largas, en diagonal. 664 KB en
 `godot/assets/ui/equip/`. `UiStyle.fighter_card_art()` y la barra del
 combate (cartas activas) los leen antes que el retail. Hoja para el dueño.
 
+### Iconos del equipo del coach (2026-11-13, hoja al dueño)
+
+Las 196 cartas del coach ya tienen icono propio en
+`godot/assets/ui/equip_coach/` (2,2 MB), y `UiStyle.card_art()` los lee antes
+que las ilustraciones retail (inventario, Equipo del coach, correo). Las 92
+piezas sueltas salen como las del luchador. Las 104 prendas:
+`tools/icons/garment_icons.tscn` congela la pose del coach, lo renderiza
+desnudo una vez (`_bare.png`) y luego con cada prenda sola, a cuadro entero,
+sin que la prenda proyecte sombra (su sombra sobre la piel cambiaba la banda
+del toon y contaba como prenda); `equip_icons.py --coach` se queda con la
+diferencia como contorno de la prenda, corta a su cuadrado y deja el cuerpo
+alrededor en gris pálido (sin la sombra del suelo). Las 13 marcas eran unos
+pocos píxeles, muchas en la espalda o en la cara de dentro del brazo: su icono
+es el emblema (`tools/art/mark_emblems.py`) sobre un parche de piel. Figura
+subida 40 px para que las botas no se corten en el borde del cuadro.
+Regenerar: `equip_icons.tscn -- --coach`, `garment_icons.tscn`,
+`equip_icons.py --coach`.
+Evidencia: `run_tests.sh --headless` 1525/0, `tools/art/check.py` 0 fallos,
+`screens_smoke` contra el servidor local: equipo del coach 5/5 (puesto al
+entrar, inventario, panel, cambio de sombrero, devolverlo); los 2 fallos del
+Kanodo son del estado de la cuenta `test` (ninguna esfera a su alcance), no
+de esto. Hoja y capturas en `~/codigo/capturas/s38/`: `equipo-coach.png`,
+`equipo-coach-panel.png`, `equipo-coach-inventario.png`. Nota: la vista
+grande del inventario estira el icono de 96 px a ~270; si se ve blando, subir
+`PX` para el coach. Paro aquí hasta que el dueño vea la hoja (regla del arte).
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
 cerrable solo:
 
-1. **Iconos de las cartas del coach (196).** Herramientas hechas:
+1. ✅ (salvo el visto bueno de la hoja, arriba) **Iconos de las cartas del coach (196).** Herramientas hechas:
    `equip_icons.tscn -- --coach` renderiza las 92 piezas sueltas (sombreros,
    capas, estandartes, hombreras, brazaletes, mascotas, bastón) y
    `tools/icons/garment_icons.tscn` las 104 prendas puestas en el coach

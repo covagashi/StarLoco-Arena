@@ -576,7 +576,8 @@ static func card_art(cid: int) -> Texture2D:
 	if _card_art_cache.has(cid):
 		return _card_art_cache[cid]
 	var tex: Texture2D = null
-	for dir in ["gui/images/equipments/coachs/illustrations/",
+	# S38: our own coach icon (the 3D piece, tools/icons) first
+	for dir in ["ui/equip_coach/", "gui/images/equipments/coachs/illustrations/",
 			"gui/images/equipments/fighters/illustrations/"]:
 		var img := AssetPaths.load_image(dir + "%d.png" % cid)
 		if img != null:
