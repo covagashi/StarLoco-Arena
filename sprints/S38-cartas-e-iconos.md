@@ -166,6 +166,12 @@ izquierda; 170 × 200 unidades, el `FACE_SIZE` de `talk_panel.gd`. Hoja:
 en la ventana). Aún sin conectar: si gusta, salen los otros tres igual,
 `--scales 2` a `assets/ui/portraits/npc/` y los `FACE_*` de `main.gd` pasan a
 `{"image": …}`.
+Segunda propuesta (el dueño pidió un agente Fable con vex): `godot/tools/
+portraits/nilo_fable.vx.js`, con más acabado (sombra con luz de borde,
+párpados a media asta y media sonrisa, una ceja alzada, barba, aro de oro,
+copa de garras en el bastón, el puño en la cadera). Hoja para elegir:
+`~/codigo/capturas/s38/npc-nilo-comparar.png` (retail, el mío, el de Fable,
+grandes y a su tamaño).
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
