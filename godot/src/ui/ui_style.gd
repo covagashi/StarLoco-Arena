@@ -302,24 +302,18 @@ static func diamond_button(d: float, fill: Color, draw_icon: Callable, empty := 
 	for st in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
 		b.add_theme_stylebox_override(st, StyleBoxEmpty.new())
 	b.draw.connect(func():
-		var c := b.size / 2.0 - Vector2(0, 2)
+		# style B (S45): a thin ink outline on white; coral when picked, a
+		# coral outline under the pointer or the focus
+		var c := b.size / 2.0
 		var half := d * 0.707
 		var on := b.toggle_mode and b.button_pressed
-		if on:
-			b.draw_colored_polygon(diamond_points(c, half + 6, 12), SUN)
-		if not empty:
-			b.draw_colored_polygon(diamond_points(c + Vector2(0, 4), half, 10), OUTLINE)
-		b.draw_colored_polygon(diamond_points(c, half, 10), OUTLINE if not empty else Color("6a71a8"))
-		var face := (POP if on else fill)
-		if b.is_hovered():
-			face = face.lightened(0.1)
-		b.draw_colored_polygon(diamond_points(c, half - 4.2, 7),
-			Color(0.07, 0.08, 0.16, 0.75) if empty else face)
-		if not empty:
-			b.draw_colored_polygon(diamond_points(c + Vector2(0, -half * 0.25), half * 0.55, 6),
-				Color(1, 1, 1, 0.12))
-		if b.has_focus():
-			b.draw_polyline(diamond_points(c, half + 3, 10) + PackedVector2Array([diamond_points(c, half + 3, 10)[0]]), SUN, 2.0, true)
+		var lit := b.is_hovered() or b.has_focus()
+		var face: Color = B_CORAL if on else (Color(1, 1, 1, 0.6) if empty else fill)
+		b.draw_colored_polygon(diamond_points(c, half, 4), face)
+		var loop := diamond_points(c, half, 4)
+		loop.append(loop[0])
+		var rim: Color = B_CORAL if lit and not on else (B_CORAL if on else Color(B_INK, 0.35 if empty else 0.8))
+		b.draw_polyline(loop, rim, 2.0 if not on else 3.0, true)
 		draw_icon.call(b, c))
 	b.mouse_entered.connect(b.queue_redraw)
 	b.mouse_exited.connect(b.queue_redraw)
@@ -854,6 +848,12 @@ static func paper_theme(pad := 10) -> Theme:
 	t.set_stylebox("selected_focus", "Tree", sel)
 	t.set_stylebox("selected", "ItemList", sel)
 	t.set_stylebox("selected_focus", "ItemList", sel)
+	# the row under the pointer: a faint coral tint (the default was a dark block)
+	var hov := StyleBoxFlat.new()
+	hov.bg_color = Color(B_CORAL, 0.12)
+	for st in ["hovered", "hovered_dimmed", "hovered_selected", "hovered_selected_focus"]:
+		t.set_stylebox(st, "Tree", hov)
+	t.set_stylebox("hovered", "ItemList", hov)
 	t.set_stylebox("cursor", "Tree", box(Color(0, 0, 0, 0), B_CORAL, 1, 0))
 	t.set_stylebox("cursor_unfocused", "Tree", box(Color(0, 0, 0, 0), Color(ink, 0.2), 1, 0))
 	var head := StyleBoxFlat.new()

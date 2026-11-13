@@ -22,6 +22,7 @@ third-party and keep their own licences, listed at the end.
 | `fonts/` | `NotoSansTagalog-Regular.ttf` | The Noto Project Authors | SIL Open Font License 1.1, `fonts/OFL.txt`. Used only to draw glyph textures. |
 | `ui/` | `renders/`: renders of our own game (an arena in 3D, the coach and fighters) taken for the S45 mockup; `tools/make_ui_scene.py` bakes them into `assets/ui/scene/` for the screens | Made by this project from its own art (the Meshy figures and the arena kits above) | Re-render from the game when the figures or arenas change. |
 | `../assets/ui/fonts/` (interface, S45) | `LilitaOne-Regular.ttf` (titles), `Nunito-Variable.ttf` (text), `SairaCondensed-ExtraBold.ttf` (style B titles) | Juan Montoreano (Lilita One); The Nunito Project Authors; The Saira Project Authors | SIL Open Font License 1.1, `OFL-LilitaOne.txt`, `OFL-Nunito.txt` and `OFL-SairaCondensed.txt` beside them. From github.com/google/fonts. |
+| `../assets/ui/portraits/` | The fight's portraits (24 fighters, 2 coaches, 9 summons), S38 | Rendered from our own 3D figures by `tools/portraits/portraits.tscn` | Re-render when a figure changes. |
 | `../assets/ui/kit/`, `../assets/ui/ui_bg.png` | The interface pieces (buttons, fields, window, paper, ribbon, medallion, capsule) and the night backdrop | Written for this project: `tools/make_ui_kit.py` draws them | |
 | `ao.json`, `blender.json`, `biomes.json` | Build settings | Written for this project | |
 

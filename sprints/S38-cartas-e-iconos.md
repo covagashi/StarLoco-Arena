@@ -1,6 +1,6 @@
 # S38 — Cartas, iconos e interfaz
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ⚪ esbozo
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (retratos hechos, 2026-11-13)
 
 ## Alcance
 
@@ -29,3 +29,22 @@ Ningún panel muestra una imagen retail; `gui/` retail se puede borrar.
 Las fuentes y el material de la interfaz van en S45 (Lilita One + Nunito,
 tinta, cintas, papel). Aquí, las cartas y los iconos se dibujan ya con ese
 estilo: borde de tinta y sombra dura.
+
+## Progreso
+
+### Retratos del combate ✅ (2026-11-13)
+
+`tools/portraits/portraits.tscn` renderiza cada figura 3D (24 luchadores, los
+2 coaches y las 9 invocaciones) sobre fondo transparente, busca su contorno
+y corta un cuadrado: cabeza y hombros en los humanoides, el cuerpo entero en
+las invocaciones. Salen 35 PNG de 160 px (1,1 MB) en
+`godot/assets/ui/portraits/`, con su fila en `art/CREDITS.md`.
+`FighterCard.portrait_for()` los lee antes que el arte retail, así que el
+medallón del luchador activo y la línea de turnos ya no enseñan el retail
+(lo que pidió el dueño el 2026-11-11). Un coach en combate (raza 7000/7001)
+también tiene el suyo.
+Evidencia: `fight_ui_preview` a 1280×720 con los retratos nuevos;
+`run_tests.sh --headless` 1525/0; `tools/art/check.py` 0 fallos.
+
+Siguiente: los iconos de hechizo (167) en el estilo B, y después los de equipo
+del luchador, logros y fichas; luego la plantilla de carta por familia.

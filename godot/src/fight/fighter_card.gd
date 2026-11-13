@@ -71,8 +71,10 @@ static func card_size(p: float, style: int) -> Vector2:
 	return Vector2(box, box + BAR_H + 3.0)
 
 
-## Retail portrait for a fighter record: players use the breed art
-## (breed*10 + sex), summons their look id; null when nothing matches.
+## Portrait for a fighter record: players use the breed art (breed*10 +
+## sex; 7000/7001 the coaches), summons their look id; ours first
+## (assets/ui/portraits), the retail art while a figure has none; null when
+## nothing matches.
 static func portrait_for(f: Dictionary) -> Texture2D:
 	var ids := []
 	var breed := int(f.get("breed", 0))
@@ -81,8 +83,12 @@ static func portrait_for(f: Dictionary) -> Texture2D:
 		ids.append(absi(look))
 	if breed >= 1 and breed <= 12:
 		ids.append(breed * 10 + clampi(int(f.get("sex", 0)), 0, 1))
+	elif breed == 7000 or breed == 7001:   # a coach in the fight
+		ids.append(breed)
 	for id in ids:
-		for dir in ["gui/images/theme/images/breeds/",
+		# S38: our own portraits, rendered from the 3D figures
+		# (tools/portraits), before the retail art
+		for dir in ["ui/portraits/", "gui/images/theme/images/breeds/",
 				"gui/images/breeds/fightTimeline/"]:
 			var rel: String = dir + "%d.png" % id
 			if not _portraits.has(rel):
