@@ -191,8 +191,24 @@ altos de pluma, calavera con llamas cian, ojos rosa encendidos, sonrisa de
 colmillos, la "I". Demonio III (diseño nuevo, misma especie que el I): verde
 azulado, tres penachos por el "III", un reloj de arena en la coronilla, cejas
 severas y media sonrisa con un colmillo, manos juntas sobre la niebla. Hoja
-de los cuatro: `~/codigo/capturas/s38/npc-los-cuatro.png`; a la espera del
-dueño para conectarlos.
+de los cuatro: `~/codigo/capturas/s38/npc-los-cuatro.png`.
+
+### Retratos de NPC ✅ (2026-11-13, dueño: "ok hazlo")
+
+Los cuatro en `godot/assets/ui/portraits/npc/` (exportación ×2, 340 × 400) y
+`FACE_ALDEBRAN`, `FACE_DEMON1`, `FACE_DEMON3` pasan a `{"image": …}`: la
+ventana de diálogo ya no enseña las animaciones retail ni la oveja del
+desafío. Evidencia contra el servidor local: `talk_smoke` 7/7 (Demonio III
+en la oferta del desafío), `nilo_smoke` 5/5, `narrator_smoke` 5/5 (ahora
+con captura del Demonio I), Aldebrán forzado con el escenario 0 (su
+presentación del tutorial, ya leída en la cuenta `test`): cara = la
+imagen. `tutorial_smoke` 6/10, los mismos 4 fallos sin este cambio
+(comprobado con `git stash`): son del estado de la cuenta `test` (la
+presentación ya leída, luchadores ya reclutados, primeros pasos hechos).
+`run_tests.sh --headless` 1525/0. Capturas en `~/codigo/capturas/s38/`:
+`b-nilo-dialogo.png`, `b-aldebran-dialogo.png`, `b-demonio1-dialogo.png`,
+`b-demonio3-dialogo.png`. Si algún día se animan: con AniCraft (dueño), aún
+sin instalar.
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
@@ -217,7 +233,7 @@ cerrable solo:
    `_ach_icon` y `achievementDialog` (S22); fichas: `card_panel.gd`
    `_token()` (tipo 1) y pesetas (tipo 10, hoy texto). Estilo B como los
    hechizos (`spell_icons.py`: pictograma blanco sobre color); hoja antes.
-3. (en curso: Nilo a la espera del dueño) **Retratos de NPC** (Nilo, Aldebrán, Demonio I, Señores del Tiempo) para
+3. ✅ **Retratos de NPC** (Nilo, Aldebrán, Demonio I, Señores del Tiempo) para
    `talk_panel.gd`: con `tools/portraits` si tienen figura 3D; si no,
    pedir al dueño.
 4. **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D

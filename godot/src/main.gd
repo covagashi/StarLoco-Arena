@@ -5928,9 +5928,9 @@ var _talk_seen := {}            # element id -> true once its intro scenario ran
 var _talk_face := {}
 # S38b: our own NPC portraits (tools/portraits/*_fable.vx.js, drawn in vex)
 const FACE_NILO := {"image": "ui/portraits/npc/nilo.png", "who": "talk.who.nilo"}
-const FACE_ALDEBRAN := {"anim": "anims/portrait_aldebran", "action": "1_AnimParle", "who": "talk.who.aldebran"}
-const FACE_DEMON1 := {"anim": "anims/portrait_demon1", "action": "0_AnimStatique", "who": "talk.who.demon1"}
-const FACE_DEMON3 := {"image": "gui/images/challenges/illustrations/29.png", "who": "talk.who.demon3"}
+const FACE_ALDEBRAN := {"image": "ui/portraits/npc/aldebran.png", "who": "talk.who.aldebran"}
+const FACE_DEMON1 := {"image": "ui/portraits/npc/demon1.png", "who": "talk.who.demon1"}
+const FACE_DEMON3 := {"image": "ui/portraits/npc/demon3.png", "who": "talk.who.demon3"}
 
 
 func _talk_show(speaker: String, text: String, choices: Array, page := 0, pages := 0) -> void:

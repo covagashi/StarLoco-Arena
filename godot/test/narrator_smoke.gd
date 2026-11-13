@@ -34,6 +34,7 @@ func _audit() -> void:
 	_record(34, "intro", _main._gui.is_open("npcTalkDialog") and str(npc.get("speaker", "")) == speaker
 		and npc.get("pages", []) == [251, 252, 253],
 		"'%s' pages %s" % [str(npc.get("speaker", "")), str(npc.get("pages", []))])
+	await _shot("narrator-demon1")   # S38b: his own portrait
 	_main._talk_close()
 	await create_timer(0.3).timeout
 	_main._story_won = won_before
