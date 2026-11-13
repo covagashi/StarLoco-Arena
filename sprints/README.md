@@ -107,7 +107,7 @@ Linux y Windows).
 | [S42](./S42-archivo-de-arenas.md) | M7 | S | 🟢 cerrado (2026-11-04, backup verificado en el RAID) | Archivo de las 47 arenas en PNG y JSON, fuera del repo y con dos copias; las herramientas de inventario lo leen sin el cliente antiguo |
 | [S37](./S37-vfx.md) | M7 | M | ✅ cerrado 2026-11-12 | Librería de VFX propia (9 formas × 5 elementos), cada hechizo por datos, `XpsFx` fuera; prendas vivas; efectos de pelo como cosmético (la venta, en S30) |
 | [S45](./S45-lavado-de-cara.md) | M7 | L | 🟡 a la espera del dueño (estilo B en todo el cliente; revisar) | Lavado de cara de la interfaz: sensación de juego (tinta, cintas, papel, medallones, losetas ilustradas), fuentes Lilita One + Nunito, el HUD de combate de la maqueta |
-| [S38](./S38-cartas-e-iconos.md) | M7 | L | 🔵 en curso (retratos del combate hechos) | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
+| [S38](./S38-cartas-e-iconos.md) | M7 | L | 🔵 en curso (retratos, hechizos y equipo del luchador hechos; sigue el mini sprint S38b del fichero) | Cartas (plantilla + ilustración por familia), iconos, retratos, fuentes |
 | [S39](./S39-sonido-y-musica.md) | M7 | M | ⚪ esbozo | Sonido y música propios |
 | [S40](./S40-cartas-propias.md) | M7 | L | ⚪ esbozo (tras el arte) | Cartas propias: diseño y datos fuera del retail |
 | [S41](./S41-textos-propios.md) | M7 | M | ⚪ esbozo (tras las cartas) | Textos propios en es/en/fr |

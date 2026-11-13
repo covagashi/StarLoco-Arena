@@ -2226,7 +2226,8 @@ func _build_spell_bar(f: Dictionary) -> void:
 			continue
 		var ab := FighterCards.ability(cid)
 		var eb := _action_button(FighterCards.label(cid),
-			"gui/images/equipments/fighters/icons/%d.png" % cid, int(ab.get("ap", -1)))
+			("ui/equip/%d.png" % cid) if AssetPaths.exists("ui/equip/%d.png" % cid)
+				else "gui/images/equipments/fighters/icons/%d.png" % cid, int(ab.get("ap", -1)))
 		eb.tooltip_text = I18n.t("fight.card_tip", {"name": eb.get_meta("label"),
 			"ap": int(ab.get("ap", -1)), "min": int(ab.get("min", 0)),
 			"max": int(ab.get("max", 0))})

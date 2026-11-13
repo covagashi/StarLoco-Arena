@@ -594,7 +594,10 @@ static var _fighter_art_cache := {}
 
 static func fighter_card_art(cid: int) -> Texture2D:
 	if not _fighter_art_cache.has(cid):
-		var img := AssetPaths.load_image("gui/images/equipments/fighters/icons/%d.png" % cid)
+		# S38: our own icon (the 3D piece, tools/icons/equip_icons) first
+		var img := AssetPaths.load_image("ui/equip/%d.png" % cid)
+		if img == null:
+			img = AssetPaths.load_image("gui/images/equipments/fighters/icons/%d.png" % cid)
 		_fighter_art_cache[cid] = ImageTexture.create_from_image(img) if img != null else null
 	return _fighter_art_cache[cid]
 

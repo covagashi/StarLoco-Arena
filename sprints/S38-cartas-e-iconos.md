@@ -65,10 +65,55 @@ dado, trébol, flecha con diana…) en blanco sobre el color de su elemento,
 cortado en diagonal, con la regla de tinta arriba. 840 KB en
 `godot/assets/ui/spells/`, con su fila en `art/CREDITS.md`. La barra del
 combate y la ficha de hechizos de los paneles los leen antes que el retail;
-la casilla del hechizo ya solo los enmarca. Hoja de los 120 para el dueño.
+la casilla del hechizo ya solo los enmarca. Hoja de los 120 para el dueño: "me parecen bien" (2026-11-13).
 Evidencia: `fight_ui_preview` con la barra nueva, `run_tests.sh --headless`
 1525/0, `tools/art/check.py` 0 fallos.
 
-Siguiente: los iconos de equipo del luchador (151), de logros y de fichas,
-en el mismo estilo, y después los de equipo
+### Iconos de equipo del luchador ✅ (2026-11-13)
+
+Los 75 equipos de luchador de los datos (no 151: es lo que hay en
+`fightercards.json`) salen de nuestras piezas 3D (S35c): `tools/icons/
+equip_icons.tscn` renderiza cada pieza en un estudio (tres cuartos, el
+sombreado toon con el contorno medido a esa cámara, fondo transparente) a
+`art/ui/out/equip/` (construido, fuera de git), y `tools/icons/
+equip_icons.py` la pone en la placa B con el tinte pálido de su hueco (arma,
+mascota, capa, sombrero, dofus); las armas largas, en diagonal. 664 KB en
+`godot/assets/ui/equip/`. `UiStyle.fighter_card_art()` y la barra del
+combate (cartas activas) los leen antes que el retail. Hoja para el dueño.
+
+## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
+
+El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
+cerrable solo:
+
+1. **Iconos de las cartas del coach (196).** Herramientas hechas:
+   `equip_icons.tscn -- --coach` renderiza las 92 piezas sueltas (sombreros,
+   capas, estandartes, hombreras, brazaletes, mascotas, bastón) y
+   `tools/icons/garment_icons.tscn` las 104 prendas puestas en el coach
+   (torso, pantalón, falda, botas, marcas), cortadas por la franja del cuerpo
+   que cubren; `equip_icons.py --coach` hace las placas en
+   `assets/ui/equip_coach/` (borrado al parar: se regenera con los tres
+   comandos). **Falta:** (a) el corte de las prendas aún enseña el cuerpo
+   entero de ancho: cortar también en horizontal al ancho de la prenda (su
+   contorno: render con y sin la prenda y quedarse con la diferencia), (b)
+   las marcas (13) casi no se ven sobre la piel: acercar el corte a la
+   marca o pintarla sobre un torso neutro, (c) conectar: `UiStyle.card_art()`
+   lee `ui/equip_coach/<id>.png` antes que las ilustraciones retail, y (d)
+   hoja al dueño.
+2. **Iconos de logros y de fichas/pesetas.** Logros: `lobby_panels.gd`
+   `_ach_icon` y `achievementDialog` (S22); fichas: `card_panel.gd`
+   `_token()` (tipo 1) y pesetas (tipo 10, hoy texto). Estilo B como los
+   hechizos (`spell_icons.py`: pictograma blanco sobre color); hoja antes.
+3. **Retratos de NPC** (Nilo, Aldebrán, Demonio I, Señores del Tiempo) para
+   `talk_panel.gd`: con `tools/portraits` si tienen figura 3D; si no,
+   pedir al dueño.
+4. **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D
+   o el pictograma), para el Card Master y el inventario.
+5. **Cierre de S38:** ningún panel con imagen retail (`grep gui/images` en
+   `src/`), `run_tests.sh`, smokes de inventario, cardmaster, mailbox y
+   fusión contra el servidor (uno a uno), capturas.
+
+Pendientes de S45 que no son de aquí: los tres fallos de
+`tournaments_smoke` (día del calendario, pregunta del arrastre 28618,
+periodo que se abre), que leen datos del servidor., y después los de equipo
 del luchador, logros y fichas; luego la plantilla de carta por familia.
