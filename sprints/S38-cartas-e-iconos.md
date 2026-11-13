@@ -214,6 +214,27 @@ maestros de clase el retrato nuestro de su clase (`ui/portraits/<clase×10>`,
 antes `fightTimeline` retail) y el Demonio III el suyo (antes la oveja).
 `tutorial_smoke` "learning" OK; captura `b-aprendizaje.png`.
 
+### La ventana de diálogo, rehecha (2026-11-13)
+
+Dueño: "el diálogo me parece un poco raro, ¿toda la pantalla blanca para ese
+poco texto? mira las imágenes de referencia" (las de S45: personajes grandes
+que llevan la pantalla, placas pequeñas al lado). `talk_panel.gd` ya no usa
+la hoja de los demás paneles: el lobby se ve detrás bajo un velo claro, quien
+habla está de pie y grande a la izquierda hasta el borde de abajo (un retrato
+cuadrado, como el de un maestro de clase, va en un medallón), lo que dice
+va en una placa abajo que crece con el texto hasta 330 de alto (medido con la
+fuente: en la reconstrucción la etiqueta aún no tiene ancho), su nombre en
+una cinta de tinta con raya coral y quién es al lado, las respuestas en una
+columna a la derecha sobre la placa (placas blancas inclinadas, coral con el
+foco) y Siguiente / Aceptar / Cerrar en la esquina. Sin cara, la placa ocupa
+el ancho. Entrada: el personaje entra desde la izquierda y la placa sube.
+El maestro de clase usa ya nuestro retrato de su clase. Evidencia:
+`nilo_smoke` 5/5, `talk_smoke` 7/7, `narrator_smoke` 5/5, Aldebrán forzado
+1/1, `tutorial_smoke` con sus 4 fallos de la cuenta `test` de siempre (una
+pasada dio un quinto, el combate de la lección de Baan al cerrarse, con
+errores de `vfx.gd`: no es de aquí), `run_tests.sh` 1525/0. Capturas:
+`~/codigo/capturas/s38/dialogo-*.png`.
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso

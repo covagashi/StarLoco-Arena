@@ -6182,7 +6182,7 @@ const DEMON3_GATES := {30: 280, 31: 281}
 ## Accept → 26330 {challengeId, 99}.
 func _open_breed_master(e: Dictionary) -> void:
 	var bf := _desc_fields(str(e.get("desc", "")))
-	_talk_face = {"image": "gui/images/breeds/fightTimeline/%d.png" % (int(bf[3]) * 10)} \
+	_talk_face = {"image": "ui/portraits/%d.png" % (int(bf[3]) * 10)} \
 		if bf.size() > 3 and bf[3] >= 1 and bf[3] <= 12 else {}
 	var fields := _desc_fields(str(e.get("desc", "")))
 	var chal := int(fields[4]) if fields.size() > 4 else -1
