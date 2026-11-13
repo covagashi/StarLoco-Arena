@@ -46,5 +46,16 @@ también tiene el suyo.
 Evidencia: `fight_ui_preview` a 1280×720 con los retratos nuevos;
 `run_tests.sh --headless` 1525/0; `tools/art/check.py` 0 fallos.
 
-Siguiente: los iconos de hechizo (167) en el estilo B, y después los de equipo
+### Iconos de hechizo: hoja de opciones (2026-11-13, a la espera del dueño)
+
+Piloto con los 10 hechizos del Yopuka, un dibujo propio por hechizo (no por
+forma de efecto: con forma + elemento saldrían 35 auras neutras iguales) y
+tres maneras de ponerlo en el estilo B: A trazo de tinta sobre el pálido del
+elemento, B blanco sobre el color del elemento, C tinta sobre blanco con una
+banda del elemento; abajo, B en la barra del combate a su tamaño. Hecha con
+`godot/tools/icons/spell_icon_options.py` (dibujo a código, sin imágenes a
+mano). Por la regla del arte (una cosa, enseñarla, esperar) no sigo con las
+otras 11 clases hasta que el dueño elija.
+
+Siguiente: los iconos de hechizo (120 en los datos de hoy) en el estilo elegido, y después los de equipo
 del luchador, logros y fichas; luego la plantilla de carta por familia.
