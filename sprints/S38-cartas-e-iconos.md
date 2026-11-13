@@ -81,7 +81,7 @@ mascota, capa, sombrero, dofus); las armas largas, en diagonal. 664 KB en
 `godot/assets/ui/equip/`. `UiStyle.fighter_card_art()` y la barra del
 combate (cartas activas) los leen antes que el retail. Hoja para el dueño.
 
-### Iconos del equipo del coach (2026-11-13, hoja al dueño)
+### Iconos del equipo del coach ✅ (2026-11-13, dueño: "sí, me gusta la estética")
 
 Las 196 cartas del coach ya tienen icono propio en
 `godot/assets/ui/equip_coach/` (2,2 MB), y `UiStyle.card_art()` los lee antes
@@ -105,14 +105,32 @@ Kanodo son del estado de la cuenta `test` (ninguna esfera a su alcance), no
 de esto. Hoja y capturas en `~/codigo/capturas/s38/`: `equipo-coach.png`,
 `equipo-coach-panel.png`, `equipo-coach-inventario.png`. Nota: la vista
 grande del inventario estira el icono de 96 px a ~270; si se ve blando, subir
-`PX` para el coach. Paro aquí hasta que el dueño vea la hoja (regla del arte).
+`PX` para el coach. Hoja vista y aprobada por el dueño el mismo día.
+
+### Logros, fichas y pesetas: hoja de opciones (2026-11-13, a la espera del dueño)
+
+`godot/tools/icons/badge_icon_options.py` (dibujado en código). Logros: un
+pictograma por categoría de los datos (`cat` de npcdialogs.json: 1 combate
+—pilares de clase y rachas—, 3 torneos, 5 hazañas, 6 colección, 8 progreso),
+el grado de hoy (puntos / 5, de 1 a 5) como metal (bronce, plata, oro, rubí,
+cristal, en lugar del oliva/cobre/plata/oro/cristal del retail) y un candado
+mientras está pendiente, como el retail. Tres maneras: A la placa inclinada
+de los hechizos en el metal del grado, B medallón (borde de metal, centro del
+color de la categoría), C escarapela (disco de metal, cintas de la
+categoría); a la derecha, cada una en la fila de la lista a su tamaño (52 px).
+Fichas (tipo 1, 845 cartas) y los tipos 2, 3 y 5 (pocas cartas) con una
+estrella, y pesetas (tipo 10, hoy solo texto) con la P cruzada, en tres
+monedas: A ficha plana con muescas, B moneda de tres cuartos, C ficha
+hexagonal; debajo, junto a una cantidad, al tamaño de las cartas y la barra
+de arriba. Hoja: `~/codigo/capturas/s38/logros-fichas-opciones.png`. Por la
+regla del arte no sigo hasta que el dueño elija.
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
 cerrable solo:
 
-1. ✅ (salvo el visto bueno de la hoja, arriba) **Iconos de las cartas del coach (196).** Herramientas hechas:
+1. ✅ **Iconos de las cartas del coach (196).** Herramientas hechas:
    `equip_icons.tscn -- --coach` renderiza las 92 piezas sueltas (sombreros,
    capas, estandartes, hombreras, brazaletes, mascotas, bastón) y
    `tools/icons/garment_icons.tscn` las 104 prendas puestas en el coach
