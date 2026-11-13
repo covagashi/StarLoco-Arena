@@ -172,6 +172,17 @@ párpados a media asta y media sonrisa, una ceja alzada, barba, aro de oro,
 copa de garras en el bastón, el puño en la cadera). Hoja para elegir:
 `~/codigo/capturas/s38/npc-nilo-comparar.png` (retail, el mío, el de Fable,
 grandes y a su tamaño).
+Dueño: "fable" (2026-11-13). Nilo conectado: `assets/ui/portraits/npc/
+nilo.png` (la exportación ×2, 340 × 400) y `FACE_NILO` pasa a
+`{"image": …}`; el marco de la cara en `talk_panel.gd` es ahora una placa
+clara con borde de tinta (sobre el azul noche el contorno de tinta del
+retrato desaparecía). `nilo_smoke` pide ya una imagen y no la animación
+retail: 5/5 contra el servidor local. Mi versión
+(`npc_portraits.vx.js`) borrada. Aldebrán, Demonio I y Demonio III: tres
+agentes Fable en paralelo con `nilo_fable.vx.js` de guía de estilo; el
+Demonio III no tiene arte retail (el juego enseñaba la ilustración de un
+desafío, una oveja), así que se diseña como hermano del Demonio I, con su
+"III". Captura: `~/codigo/capturas/s38/b-nilo-dialogo.png`.
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 

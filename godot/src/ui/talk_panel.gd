@@ -152,7 +152,9 @@ func _face_box(face: Dictionary, build := false) -> Control:
 
 func _framed(c: Control) -> Control:
 	var frame := PanelContainer.new()
-	frame.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.PAPER, UiStyle.RIM_HI, 2, 4))
+	# S38b: a light plate with an ink rim (style B), so the portraits' own
+	# ink outline reads (on the navy plate it vanished)
+	frame.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.SLOT, UiStyle.B_INK, 3, 4))
 	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	frame.add_child(c)
 	return frame

@@ -5922,10 +5922,12 @@ var _talk_seen := {}            # element id -> true once its intro scenario ran
 ## "primary" / "secondary" in the action row.
 ## Who is talking, as a face for the talk window (S23): {"anim": set dir,
 ## "action": …} for the retail portraits (the old importer's portraits.sh),
-## {"image": path} for a class portrait or a challenge's art. Each opener
+## {"image": path} for a class portrait, a challenge's art or one of our NPC
+## portraits. Each opener
 ## sets it; closing the window clears it.
 var _talk_face := {}
-const FACE_NILO := {"anim": "anims/portrait_nilo", "action": "1_AnimStatique", "who": "talk.who.nilo"}
+# S38b: our own NPC portraits (tools/portraits/*_fable.vx.js, drawn in vex)
+const FACE_NILO := {"image": "ui/portraits/npc/nilo.png", "who": "talk.who.nilo"}
 const FACE_ALDEBRAN := {"anim": "anims/portrait_aldebran", "action": "1_AnimParle", "who": "talk.who.aldebran"}
 const FACE_DEMON1 := {"anim": "anims/portrait_demon1", "action": "0_AnimStatique", "who": "talk.who.demon1"}
 const FACE_DEMON3 := {"image": "gui/images/challenges/illustrations/29.png", "who": "talk.who.demon3"}
