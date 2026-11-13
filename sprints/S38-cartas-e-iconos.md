@@ -57,5 +57,18 @@ banda del elemento; abajo, B en la barra del combate a su tamaño. Hecha con
 mano). Por la regla del arte (una cosa, enseñarla, esperar) no sigo con las
 otras 11 clases hasta que el dueño elija.
 
-Siguiente: los iconos de hechizo (120 en los datos de hoy) en el estilo elegido, y después los de equipo
+### Iconos de hechizo ✅ (2026-11-13, dueño: "b")
+
+`tools/icons/spell_icons.py` dibuja los 120 hechizos de los datos de hoy y la
+casilla del arma: un pictograma propio por hechizo (escudo con rayo, reloj,
+dado, trébol, flecha con diana…) en blanco sobre el color de su elemento,
+cortado en diagonal, con la regla de tinta arriba. 840 KB en
+`godot/assets/ui/spells/`, con su fila en `art/CREDITS.md`. La barra del
+combate y la ficha de hechizos de los paneles los leen antes que el retail;
+la casilla del hechizo ya solo los enmarca. Hoja de los 120 para el dueño.
+Evidencia: `fight_ui_preview` con la barra nueva, `run_tests.sh --headless`
+1525/0, `tools/art/check.py` 0 fallos.
+
+Siguiente: los iconos de equipo del luchador (151), de logros y de fichas,
+en el mismo estilo, y después los de equipo
 del luchador, logros y fichas; luego la plantilla de carta por familia.

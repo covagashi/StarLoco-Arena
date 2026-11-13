@@ -2202,7 +2202,7 @@ func _build_spell_bar(f: Dictionary) -> void:
 	for sid in f.get("spells", []):
 		var sm := Spells.meta(int(sid))
 		var b := _action_button(Spells.name_of(int(sid)),   # UI language (S22)
-			"gui/images/spells/icons/%d.png" % int(sid), int(sm.get("ap", -1)))
+			_spell_icon(int(sid)), int(sm.get("ap", -1)))
 		b.tooltip_text = I18n.t("fight.spell_tip", {"name": b.get_meta("label"),
 			"ap": int(sm.get("ap", -1)), "min": int(sm.get("min", 0)),
 			"max": int(sm.get("max", 0))})
@@ -2212,7 +2212,8 @@ func _build_spell_bar(f: Dictionary) -> void:
 		bar.add_child(b)
 		_spell_btns[int(sid)] = b
 	var wb := _action_button(I18n.t("fight.weapon_short"),
-		"gui/images/theme/images/closeCombatIcon.png", -1)
+		"ui/spells/weapon.png" if AssetPaths.exists("ui/spells/weapon.png")
+			else "gui/images/theme/images/closeCombatIcon.png", -1)
 	wb.tooltip_text = I18n.t("fight.weapon_tip")
 	wb.pressed.connect(_on_spell_button.bind(-2))
 	wb.set_meta("sid", -2)
@@ -2272,12 +2273,13 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 		b.add_theme_font_size_override("font_size", 11)
 	# S45: a rounded slot in the dark pill; the armed one glows in pop
 	var slot := StyleBoxFlat.new()
-	slot.bg_color = Color("2c2a3a")
+	slot.bg_color = Color(0, 0, 0, 0)
 	slot.set_corner_radius_all(2)
-	slot.content_margin_left = 8
-	slot.content_margin_right = 8
-	slot.content_margin_top = 8
-	slot.content_margin_bottom = 8
+	# our icons carry their own slanted box: the slot only frames them
+	slot.content_margin_left = 3
+	slot.content_margin_right = 3
+	slot.content_margin_top = 3
+	slot.content_margin_bottom = 3
 	var hover := slot.duplicate()
 	hover.bg_color = Color("3b3a52")
 	hover.border_color = UiStyle.B_CORAL
@@ -2314,6 +2316,12 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 		cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(cost)
 	return b
+
+
+## A spell's icon: ours (S38, tools/icons/spell_icons.py) before the retail one.
+static func _spell_icon(sid: int) -> String:
+	var own := "ui/spells/%d.png" % sid
+	return own if AssetPaths.exists(own) else "gui/images/spells/icons/%d.png" % sid
 
 
 func _clear_spell_bar() -> void:
