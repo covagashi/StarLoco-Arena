@@ -455,6 +455,7 @@ server-side; the condition is recovered, the arbitration is ours (see B-074).
 | 2026-10-22 | S19: type 400's `QA`–`QD` and `QF` decoded and named (linked achievement, xp, xpLimit); not used yet — the Demon III evolution chain that needs them is S10's. |
 | 2026-10-22 | S19: type 210 read to 13/13 (field 6, the trigger animation, the re-trigger delay; condition, field 6 and delay pinned at zero by test). B-185: an action-66 trap expires with its effect's duration. Trigger 10008 (stayed inside) wired; 10002/10003/10006 documented as not applied, with the reason. |
 | 2026-10-20 | B-179: 5200's first section now carries the worn coach cards `{i16 slot, i32 templateId}` (client `air_2` / `rb_2`); it was always sent empty. No decoder or record change. |
+| 2026-11-14 | `cmd/dumpcards` also exports each card's `rank` (field 18, `getRank()`, 0..10: the rarity frame colour) for the Godot card template (S38b). No decoder or wire change. |
 | 2026-10-20 | `cmd/dumpcards` also exports each firework card's `fwType` (field 7, `tl()`: 0 burst, 1 rocket, 2 fountain) and `fwColour` (field 8, `tk()`, RGB 0..255) so the Godot lobby can draw a 22094 on its sky. No decoder or wire change. |
 | 2026-10-20 | B-177: `gamedata.CardTypeEvolution` (24, client `aMK.dYy`) names the card type the graveyard may spend; the coach-card `Type` field (already decoded) now gates 22099. No decoder or wire change. |
 | 2026-10-06 | B-171: Godot combat HUD and result panel moved to the lobby's native visual family. No client data decoder, record coverage, or wire format changed. |

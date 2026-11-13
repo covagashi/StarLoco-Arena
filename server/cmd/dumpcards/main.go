@@ -1,6 +1,6 @@
 // dumpcards dumps every coach-card template into a JSON table for the Godot
 // client's shop/inventory UI: {"<id>": {"type","set","value","price":{t:amt}}},
-// plus the resurrection, fusion and firework fields the client uses.
+// plus the resurrection, fusion, firework and rarity (rank) fields the client uses.
 // Card display names come from i18n content.23 (merged by the old importer's card_names.py).
 //
 // Usage: go run ./cmd/dumpcards <data-dir> <cards.json> [fusionlabs.json]
@@ -29,6 +29,7 @@ type rec struct {
 	Tradable  bool            `json:"tradable"`            // !Bound && !Undestructible
 	Resurrect int32           `json:"resurrect,omitempty"` // % chance (action 13)
 	ReqLevel  int32           `json:"reqLevel,omitempty"`
+	Rank      int32           `json:"rank,omitempty"`     // the rarity frame (getRank)
 	FusPower  int16           `json:"fusPower,omitempty"` // fusion lab target/input power
 	FusQual   uint8           `json:"fusQuality,omitempty"`
 	// Firework cards (type 25): the particle kind (tl()) and its RGB colour
@@ -56,6 +57,7 @@ func main() {
 			Tradable:  !c.Bound && !c.Undestructible,
 			Resurrect: c.ResurrectPercent,
 			ReqLevel:  c.RequiredLevel,
+			Rank:      c.Rank,
 			FusPower:  c.FusionPower,
 			FusQual:   c.FusionQuality,
 			FwType:    c.FireworkType,

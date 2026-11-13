@@ -273,6 +273,34 @@ del atlas avanzando (prueba de un solo uso contra el servidor local 4/4),
 `nilo_smoke` 5/5, `run_tests.sh` 1525/0. GIF de los cuatro:
 `~/codigo/capturas/s38/anim/los-cuatro-idle.gif`.
 
+### Plantilla de carta por familia y rareza: hoja de opciones (2026-11-14, a la espera del dueño)
+
+**La rareza.** El juego le cuenta al jugador cuatro rarezas (negra, cobre,
+plata, oro: el texto de Nilo, `npc_text_fix.gd`), pero `cards.json` no la
+traía. Está en los datos: `Card.Rank` (campo 18, `getRank()`, "el color del
+marco de rareza"), de 0 a 10. `server/cmd/dumpcards` la exporta ya
+(`"rank"`), y como `gamedata/` es local y se conserva hasta S40 (S32: un
+volcado nuevo sale sin nombres), la mezclé en el `cards.json` de hoy sin
+tocar lo demás. **Decisión mía (no hay referencia de cómo el retail agrupaba
+los 11 rangos en 4 colores):** 0–2 negra, 3–5 cobre, 6–8 plata, 9–10 oro
+(268, 340, 198 y 101 cartas; en oro, el set Campeón). El cliente tomará una
+rareza que falte como 0.
+
+**Las familias**, las del filtro del inventario (`INV_KINDS`) más las
+arenas, cada una con su color y su pictograma: equipo del coach (azul, la
+túnica), consumible (verde, el frasco), regla de combate (coral, el
+pergamino), cosmético (violeta), fusión (turquesa, la gema), objeto DOFUS
+(dorado, el huevo), arena (verde hierba, la isla). El equipo del coach
+enseña su pieza 3D sin la placa de su icono; los demás, el pictograma.
+
+`godot/tools/icons/card_template_options.py`, tres maneras a tamaño de
+loseta (150 × 180) sobre siete cartas reales: A la placa clara de hoy con
+etiqueta de familia y regla de rareza arriba; B carta gacha (marco del metal
+de la rareza, la familia dentro, el nombre en cinta de tinta, rombos de
+rareza); C carta coleccionable (cabecera de familia, ventana de arte, pie del
+metal). Hoja: `~/codigo/capturas/s38/cartas-plantilla-opciones.png`. Por la
+regla del arte no sigo hasta que el dueño elija.
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
