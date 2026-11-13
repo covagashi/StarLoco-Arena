@@ -71,8 +71,10 @@ func _press(panel, kind: String, label := "") -> bool:
 
 
 func _demon1(services: Array) -> void:
+	# S26: Demon I left the Services panel (he narrates chapter 2;
+	# narrator_smoke covers him), so the panel must not offer him
 	if services.is_empty():
-		_record(9, "Demon I", false, "not in Services")
+		_record(9, "Demon I", true, "not in Services, as S26 decided (narrator_smoke has him)")
 		return
 	var panel = await _talk_open(int(services[0].id))
 	if panel == null:

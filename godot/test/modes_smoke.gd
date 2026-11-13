@@ -22,7 +22,7 @@ func _audit() -> void:
 		"cards: %s" % ", ".join(titles))
 	_close_all()
 	for b in lobby._menu_buttons:
-		if b.text.to_lower() == i18n.t("nav.team").to_lower():
+		if b.text == i18n.t("nav.team"):
 			b.pressed.emit()
 	await _wait(func(): return _main._gui.is_open("teamManagementDialog"), 3.0)
 	await create_timer(0.5).timeout

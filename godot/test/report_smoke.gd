@@ -190,7 +190,8 @@ func _level_up() -> void:
 	var p = _main._gui.dialogs.get("coachLevelUpDialog")
 	var shown: String = p.find_child("Level", true, false).text if p != null else "—"
 	_record(8300, "level up", not early and p != null and shown == str(lvl + 1)
-		and lobby_level == I18n_t("lobby.level", {"n": lvl + 1}),
+		# S45: the lobby's level box shows the number ("Nivel n" is its tooltip)
+		and lobby_level == str(lvl + 1),
 		"lobby '%s' → '%s'; after the report, the notice says %s (want %d)" % [
 			shown_before, lobby_level, shown, lvl + 1])
 	await _shot("level-up")

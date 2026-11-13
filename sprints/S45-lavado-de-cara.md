@@ -219,6 +219,26 @@ la noche con los sprints", así que lo demás lo decidí yo con lo acordado:
   cambian los veinte a la vez), **equipo del coach** (pantalla propia
   clara) y **HUD de combate** (misma disposición, en colores y formas B).
 
+**Pruebas contra el servidor local** (cada una sola; dos lotes a la vez sobre
+la misma cuenta se pisan): `hub` 9/9, `modes` 5/5, `screens` 11/11, `help`
+5/5, `achievements` 3/3, `inventory` 4/4, `mailbox` 8/8, `cardmaster` 6/6,
+`fusion` 5/5, `season` 2/2, `ghost` 5/5, `story` 4/4, `talk` 7/7, `narrator`
+5/5, `ask` 8/8, `world` 42/42, `coach_turn` 4/4, `colours` 2/2, `loadout` 7/7,
+`report` 6/6 y `fight` (versus, ficha del luchador, equipo en las figuras 3D,
+el combate entero hasta el 8300). `run_tests.sh --headless` 1525/0, con una
+suite nueva que compila todos los scripts de `src/` (un `hero_panel.gd`
+roto rompía `main.gd` y el carril unitario seguía en verde).
+Arreglado por el camino: la lista del lobby escribe sus nombres en mayúsculas
+ella misma (el texto sigue tal cual, las pruebas lo buscan), los chevrones
+llevan « » como texto oculto, el nivel del lobby es el número (con "Nivel n"
+de tooltip; `report_smoke` lo espera así) y `talk_smoke` ya espera al
+Demonio I fuera de Servicios, como decidió S26.
+`tournaments_smoke` con la siembra de S09 sobre una copia de la base: pasan
+la pestaña Torneos, buscar, cancelar y crear torneo; no pasan el día en el
+calendario, la pregunta del arrastre (28618 no llega) ni el periodo que se
+abre. Leen datos del servidor, no la interfaz, y este trabajo no tocó esa
+red: quedan apuntados para revisarlos aparte.
+
 Pendiente para el dueño: si el combate debe ir más lejos (acciones con
 dibujo y nombre), y fondos ilustrados por pantalla con AniCraft o vex cuando
 haya referencias de cada una; hoy cada pantalla tiene su palabra y su
@@ -273,6 +293,26 @@ la noche con los sprints", así que lo demás lo decidí yo con lo acordado:
   las constantes que ya usaban los paneles toman los valores B, así que
   cambian los veinte a la vez), **equipo del coach** (pantalla propia
   clara) y **HUD de combate** (misma disposición, en colores y formas B).
+
+**Pruebas contra el servidor local** (cada una sola; dos lotes a la vez sobre
+la misma cuenta se pisan): `hub` 9/9, `modes` 5/5, `screens` 11/11, `help`
+5/5, `achievements` 3/3, `inventory` 4/4, `mailbox` 8/8, `cardmaster` 6/6,
+`fusion` 5/5, `season` 2/2, `ghost` 5/5, `story` 4/4, `talk` 7/7, `narrator`
+5/5, `ask` 8/8, `world` 42/42, `coach_turn` 4/4, `colours` 2/2, `loadout` 7/7,
+`report` 6/6 y `fight` (versus, ficha del luchador, equipo en las figuras 3D,
+el combate entero hasta el 8300). `run_tests.sh --headless` 1525/0, con una
+suite nueva que compila todos los scripts de `src/` (un `hero_panel.gd`
+roto rompía `main.gd` y el carril unitario seguía en verde).
+Arreglado por el camino: la lista del lobby escribe sus nombres en mayúsculas
+ella misma (el texto sigue tal cual, las pruebas lo buscan), los chevrones
+llevan « » como texto oculto, el nivel del lobby es el número (con "Nivel n"
+de tooltip; `report_smoke` lo espera así) y `talk_smoke` ya espera al
+Demonio I fuera de Servicios, como decidió S26.
+`tournaments_smoke` con la siembra de S09 sobre una copia de la base: pasan
+la pestaña Torneos, buscar, cancelar y crear torneo; no pasan el día en el
+calendario, la pregunta del arrastre (28618 no llega) ni el periodo que se
+abre. Leen datos del servidor, no la interfaz, y este trabajo no tocó esa
+red: quedan apuntados para revisarlos aparte.
 
 Pendiente para el dueño: si el combate debe ir más lejos (acciones con
 dibujo y nombre), y fondos ilustrados por pantalla con AniCraft o vex cuando

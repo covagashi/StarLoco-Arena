@@ -237,6 +237,10 @@ func _coach() -> void:
 	for left in [true, false]:
 		var b := UiStyle.chevron_button(left, INK)
 		b.name = "TurnLeft" if left else "TurnRight"
+		# « » as its (hidden) text, as the old buttons had: tests find them by it
+		b.text = "«" if left else "»"
+		for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+			b.add_theme_color_override(col, Color(0, 0, 0, 0))
 		b.scale = Vector2(0.42, 0.42)
 		b.position = COACH_FOOT + Vector2(-150 if left else 128, -60)
 		b.tooltip_text = _t("lobby.rotate.tip")
@@ -380,15 +384,18 @@ func _rail(icons: Texture2D) -> void:
 		b.add_theme_font_override("font", _font)
 		b.add_theme_font_size_override("font_size", 21)
 		b.add_theme_constant_override("outline_size", 0)
-		for col in ["font_color", "font_pressed_color", "font_disabled_color"]:
-			b.add_theme_color_override(col, INK)
-		for col in ["font_hover_color", "font_focus_color", "font_hover_pressed_color"]:
-			b.add_theme_color_override(col, CORAL)
+		# the text stays as it is (tests and screen readers find it); it is
+		# drawn in capitals here
+		for col in ["font_color", "font_pressed_color", "font_disabled_color", "font_hover_color",
+				"font_focus_color", "font_hover_pressed_color"]:
+			b.add_theme_color_override(col, Color(0, 0, 0, 0))
 		var num := "%02d" % n
 		b.draw.connect(func():
 			var lit := b.is_hovered() or b.has_focus()
 			var f := UiStyle.bold(700)
 			b.draw_string(f, Vector2(0, 30), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UiStyle.B_FAINT)
+			b.draw_string(_font, Vector2(70, 33), b.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 21,
+				CORAL if lit else INK)
 			b.draw_texture_rect(atlas, Rect2(28, 11, 28, 28), false, CORAL if lit else INK)
 			if lit:
 				b.draw_line(Vector2(70, 42), Vector2(200, 42), CORAL, 2.0))
@@ -1155,7 +1162,7 @@ func _retranslate() -> void:
 	_cards.tourn.extra.text = _t("hub.tourn.view")
 	for i in range(_menu_buttons.size()):
 		_menu_buttons[i].tooltip_text = _t(str(MENUS[i][0]))
-		_menu_buttons[i].text = _t(str(MENUS[i][0])).to_upper() if str(MENUS[i][2]) == "nav" else ""
+		_menu_buttons[i].text = _t(str(MENUS[i][0])) if str(MENUS[i][2]) == "nav" else ""
 	for t in _coins:
 		_coins[t].get_parent().tooltip_text = _t("hub.tokens" if t == TOKENS else "hub.pesetas")
 	_sync_hub()
