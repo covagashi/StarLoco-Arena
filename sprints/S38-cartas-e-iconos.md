@@ -107,7 +107,7 @@ de esto. Hoja y capturas en `~/codigo/capturas/s38/`: `equipo-coach.png`,
 grande del inventario estira el icono de 96 px a ~270; si se ve blando, subir
 `PX` para el coach. Hoja vista y aprobada por el dueño el mismo día.
 
-### Logros, fichas y pesetas: hoja de opciones (2026-11-13, a la espera del dueño)
+### Logros, fichas y pesetas: hoja de opciones (2026-11-13; dueño: B para los dos)
 
 `godot/tools/icons/badge_icon_options.py` (dibujado en código). Logros: un
 pictograma por categoría de los datos (`cat` de npcdialogs.json: 1 combate
@@ -124,6 +124,32 @@ monedas: A ficha plana con muescas, B moneda de tres cuartos, C ficha
 hexagonal; debajo, junto a una cantidad, al tamaño de las cartas y la barra
 de arriba. Hoja: `~/codigo/capturas/s38/logros-fichas-opciones.png`. Por la
 regla del arte no sigo hasta que el dueño elija.
+
+### Logros, fichas y pesetas ✅ (2026-11-13, opción B)
+
+El dueño eligió B para los dos ("en 2026 se lleva más el estilo B").
+`tools/icons/badge_icons.py` hace 26 medallones en `godot/assets/ui/
+achievements/` (`<cat>_<grado>.png` de las 5 categorías y `pending.png`, el
+candado gris; 320 KB) y 5 monedas en `godot/assets/ui/tokens/` (40 KB). Las
+monedas llevan la cara más ancha y el canto más fino que en la hoja, para
+que la marca se lea a 26–28 px; la peseta es una P con una raya corta en el
+palo (la raya entera la hacía parecer un martillo a ese tamaño).
+Conectado: `main.gd` da a cada logro su medallón (o el candado si falta);
+`UiStyle.token_icon()` (nuevo, lo usan las cartas, el Card Master, el correo
+y la fusión) lee la moneda nuestra antes que la retail, así que las pesetas
+ya tienen icono en lugar de texto; la barra de arriba del lobby enseña la
+moneda junto a fichas y pesetas.
+Arreglos de paso: (1) el nombre de los logros no se veía en las fichas
+oscuras de la lista (tinta sobre azul noche): ahora crema, y tinta solo en
+la elegida; (2) la temporada centrada chocaba con las fichas al ganar ancho
+la moneda: ahora se aparta a la izquierda si centrada tocaría las monedas,
+y la entrada animada de la barra solo mueve en vertical (movía también en
+horizontal, a la posición vieja, y deshacía el apartado).
+Evidencia: `run_tests.sh --headless` 1525/0, `tools/art/check.py` 0 fallos,
+contra el servidor local `achievements_smoke` 3/3 y `cardmaster_smoke` 6/6
+(compra y trueque de verdad en la cuenta `test`). Capturas en
+`~/codigo/capturas/s38/`: `b-lobby.png`, `b-achievements.png`,
+`b-achievements-detail.png`, `b-cm-catalogue.png`.
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
@@ -144,7 +170,7 @@ cerrable solo:
    marca o pintarla sobre un torso neutro, (c) conectar: `UiStyle.card_art()`
    lee `ui/equip_coach/<id>.png` antes que las ilustraciones retail, y (d)
    hoja al dueño.
-2. **Iconos de logros y de fichas/pesetas.** Logros: `lobby_panels.gd`
+2. ✅ **Iconos de logros y de fichas/pesetas.** Logros: `lobby_panels.gd`
    `_ach_icon` y `achievementDialog` (S22); fichas: `card_panel.gd`
    `_token()` (tipo 1) y pesetas (tipo 10, hoy texto). Estilo B como los
    hechizos (`spell_icons.py`: pictograma blanco sobre color); hoja antes.

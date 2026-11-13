@@ -25,6 +25,8 @@ third-party and keep their own licences, listed at the end.
 | `../assets/ui/spells/` | The spell icons (120 spells and the weapon slot), S38, in the owner's option B | Drawn in code by `tools/icons/spell_icons.py` (one pictogram per spell) | |
 | `../assets/ui/equip/` | The fighter equipment icons (75 cards), S38 | Rendered from our own 3D pieces (`art/equipment`) by `tools/icons/equip_icons.tscn`, plated by `tools/icons/equip_icons.py` | `_raw/` keeps the bare renders |
 | `../assets/ui/equip_coach/` | The coach equipment icons (196 cards), S38 | Loose pieces rendered like the fighter's; garments by `tools/icons/garment_icons.tscn` (worn on the coach, cut to the difference with the bare coach); marks are their emblem (`tools/art/mark_emblems.py`) on a skin patch; plated by `tools/icons/equip_icons.py --coach` | |
+| `../assets/ui/achievements/` | The achievement medallions (5 categories × 5 grades, and the pending padlock), S38b, the owner's option B | Drawn in code by `tools/icons/badge_icons.py` | |
+| `../assets/ui/tokens/` | The coins (tokens 1, 2, 3, 5 and the pesetas), S38b, option B | Drawn in code by `tools/icons/badge_icons.py` | |
 | `../assets/ui/portraits/` | The fight's portraits (24 fighters, 2 coaches, 9 summons), S38 | Rendered from our own 3D figures by `tools/portraits/portraits.tscn` | Re-render when a figure changes. |
 | `../assets/ui/kit/`, `../assets/ui/ui_bg.png` | The interface pieces (buttons, fields, window, paper, ribbon, medallion, capsule) and the night backdrop | Written for this project: `tools/make_ui_kit.py` draws them | |
 | `ao.json`, `blender.json`, `biomes.json` | Build settings | Written for this project | |

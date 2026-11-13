@@ -793,6 +793,8 @@ func _achievements() -> void:
 		var nm := _small(col, str(it.get("name", "")), 14)
 		nm.clip_text = true
 		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		# the tile is the dark button: cream text, ink only on the picked (coral) one
+		nm.add_theme_color_override("font_color", UiStyle.B_INK if b.button_pressed else UiStyle.INK)
 		var bar := ProgressBar.new()
 		bar.value = float(it.get("completion", 0))
 		bar.show_percentage = false

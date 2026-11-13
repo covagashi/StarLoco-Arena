@@ -587,6 +587,21 @@ static func card_art(cid: int) -> Texture2D:
 	return tex
 
 
+## A coin's icon (wallet type: 1 the Card Master tokens, 2/3/5 the others,
+## 10 the pesetas), cached; ours (S38b, tools/icons/badge_icons.py) first,
+## then the retail one; null when neither is there.
+static var _token_cache := {}
+
+
+static func token_icon(type: int) -> Texture2D:
+	if not _token_cache.has(type):
+		var img := AssetPaths.load_image("ui/tokens/%d.png" % type)
+		if img == null:
+			img = AssetPaths.load_image("gui/images/tokens/icons/%d.png" % type)
+		_token_cache[type] = ImageTexture.create_from_image(img) if img != null else null
+	return _token_cache[type]
+
+
 ## A FIGHTER equipment card's art (equipments/fighters/icons). Its id is
 ## shared with a coach card whose illustration card_art() would find first,
 ## a different item (S22).

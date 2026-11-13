@@ -4367,14 +4367,16 @@ func _achievement_items() -> Array:
 				and int(info.get("sub", 0)) != _ach_sel["sub"]:
 			continue
 		var done := bool(r0.done)
-		# retail's icon (aea_1): min(points / 5, 5), the dimmed negative while
-		# not done; under 5 points it would be 0, which has no file (S22)
+		# the grade as retail's (aea_1): min(points / 5, 5), and 1 under 5
+		# points (S22); S38b: our medallion of its category and grade, the
+		# padlock one while not done
 		var grade := clampi(int(info.get("pts", 0)) / 5, 1, 5)
 		items.append({"id": aid,
 			"name": NpcDialogs.achievement_name(aid),
 			"points": int(info.get("pts", 0)),
 			"grade": int(info.get("cat", 0)),
-			"iconUrl": "gui/images/achievement/icons/%d.png" % (grade if done else -grade),
+			"iconUrl": "ui/achievements/%d_%d.png" % [int(info.get("cat", 0)), grade]
+				if done else "ui/achievements/pending.png",
 			"keyIconUrl": "gui/images/achievement/key/%d.png" % grade,
 			"done": done,
 			# what it asks, done or not (it was only filled once done)

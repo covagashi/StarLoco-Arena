@@ -108,6 +108,7 @@ var _last_action := ""
 var _ready_state := false
 var _sky: Control
 var _season: Control
+var _top_row: HBoxContainer   # the coins and the top icons, right-aligned
 var _season_n: Label
 var _season_left: Label
 var _coins := {}                # currency type -> Label
@@ -284,6 +285,16 @@ func _identity() -> void:
 	_top.append_array([lv, col])
 
 
+## The season centred, or moved left of the coins when centred it would
+## touch them (a long "quedan N días" beside big amounts).
+func _place_season() -> void:
+	var x := (REF.x - _season.size.x) / 2.0
+	if _top_row != null and _top_row.get_child_count() > 0:
+		var coins_left: float = _top_row.position.x + (_top_row.get_child(0) as Control).position.x
+		x = minf(x, coins_left - 28.0 - _season.size.x)
+	_season.position = Vector2(x, 18)
+
+
 ## Top centre: the season (60031), hidden without one.
 func _season_line() -> void:
 	var col := VBoxContainer.new()
@@ -305,8 +316,7 @@ func _season_line() -> void:
 	col.add_child(row)
 	_season = col
 	_season.visible = false
-	_season.resized.connect(func():
-		_season.position = Vector2((REF.x - _season.size.x) / 2.0, 18))
+	_season.resized.connect(_place_season)
 	_box.add_child(_season)
 	_top.append(col)
 
@@ -322,16 +332,33 @@ func _coins_and_top(icons: Texture2D) -> void:
 	row.position = Vector2(REF.x - 24 - 700, 18)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.add_child(row)
+	_top_row = row
+	# laid out again whenever an amount changes: the season keeps its gap
+	row.sort_children.connect(func(): if _season != null: _place_season())
 	for c in [[TOKENS, "hub.tokens"], [PESETAS, "hub.pesetas"]]:
 		var col := VBoxContainer.new()
 		col.name = "Coin_%d" % int(c[0])
 		col.add_theme_constant_override("separation", -2)
 		col.mouse_filter = Control.MOUSE_FILTER_PASS
 		col.add_child(UiStyle.tag(_t(str(c[1]))))
+		# S38b: the amount beside its coin (tools/icons/badge_icons.py)
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 6)
+		line.mouse_filter = Control.MOUSE_FILTER_PASS
+		col.add_child(line)
 		var amount := Label.new()
 		UiStyle.display(amount, 24)
 		amount.text = "0"
-		col.add_child(amount)
+		line.add_child(amount)
+		var coin := TextureRect.new()
+		coin.name = "Coin"
+		coin.texture = UiStyle.token_icon(int(c[0]))
+		coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		coin.custom_minimum_size = Vector2(28, 28)
+		coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.add_child(coin)
 		_coins[int(c[0])] = amount
 		row.add_child(col)
 	for i in MENUS.size():
@@ -815,10 +842,11 @@ func _intro() -> void:
 	var t2 := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	var k := 0
 	for node in _top:
-		var to: Vector2 = node.position
-		node.position = to - Vector2(0, 24)
+		# only y: the season may still move sideways to clear the coins
+		var to: float = node.position.y
+		node.position.y = to - 24.0
 		node.modulate.a = 0.0
-		t2.tween_property(node, "position", to, 0.5).set_delay(0.1 + 0.05 * k)
+		t2.tween_property(node, "position:y", to, 0.5).set_delay(0.1 + 0.05 * k)
 		t2.tween_property(node, "modulate:a", 1.0, 0.4).set_delay(0.1 + 0.05 * k)
 		k += 1
 	k = 0
@@ -1164,7 +1192,7 @@ func _retranslate() -> void:
 		_menu_buttons[i].tooltip_text = _t(str(MENUS[i][0]))
 		_menu_buttons[i].text = _t(str(MENUS[i][0])) if str(MENUS[i][2]) == "nav" else ""
 	for t in _coins:
-		_coins[t].get_parent().tooltip_text = _t("hub.tokens" if t == TOKENS else "hub.pesetas")
+		_coins[t].get_parent().get_parent().tooltip_text = _t("hub.tokens" if t == TOKENS else "hub.pesetas")
 	_sync_hub()
 	if _model != null:
 		_sync_season()

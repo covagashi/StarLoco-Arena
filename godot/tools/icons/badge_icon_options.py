@@ -113,11 +113,13 @@ def glyph(p, what, back):
             a = math.radians(i * 36 - 90)
             pts.append((.5 + r * math.cos(a), .52 + r * math.sin(a)))
         p.poly(*pts)
-    elif what == 'peseta':  # the peseta sign: a P crossed by a bar
+    elif what == 'peseta':  # a bold P, a short bar across its stem
         f = ImageFont.truetype(FONT, int(p.s * 1.05))
-        cx, cy = p.P(.5, .5)
+        cx, cy = p.P(.56, .5)
         p.d.text((cx, cy), 'P', font=f, fill=p.col, anchor='mm')
-        p.line((.1, .4), (.9, .4), k=1.0)
+        x0 = p.d.textbbox((cx, cy), 'P', font=f, anchor='mm')[0]
+        y = p.y + p.s * .42
+        p.d.line([(x0 - p.s * .2, y), (x0 + p.s * .36, y)], fill=p.col, width=int(p.w * 1.1))
 
 def plate(d, fill):
     k = int(N * 0.12)

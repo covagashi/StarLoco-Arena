@@ -7,9 +7,6 @@ extends "res://src/ui/lobby_panel.gd"
 
 const TILE := Vector2(150, 180)
 
-static var _token_cache := {}
-
-
 ## One card: art, name and an optional value line; a badge (copies) top
 ## right. Selected = a thick gold rim.
 func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
@@ -106,9 +103,8 @@ func _meter(have: int, need: int) -> Control:
 func _amount(parent: Node, type: int, amount: int, font_size: int) -> void:
 	var l := _small(parent, _thousands(amount), font_size)
 	l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var tex: Texture2D = _token(type)
+	var tex: Texture2D = UiStyle.token_icon(type)
 	if tex == null:
-		# pesetas (type 10, S25) are ours: the retail client has no icon for them
 		l.text += " " + (I18n.t("cur.pesetas") if type == 10 else "t%d" % type)
 		return
 	var icon := TextureRect.new()
@@ -169,10 +165,3 @@ func _art(cid: int, size: Vector2) -> Control:
 	tr.custom_minimum_size = size
 	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return tr
-
-
-static func _token(type: int) -> Texture2D:
-	if not _token_cache.has(type):
-		var img := AssetPaths.load_image("gui/images/tokens/icons/%d.png" % type)
-		_token_cache[type] = ImageTexture.create_from_image(img) if img != null else null
-	return _token_cache[type]
