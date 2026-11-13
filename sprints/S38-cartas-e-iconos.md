@@ -151,6 +151,22 @@ contra el servidor local `achievements_smoke` 3/3 y `cardmaster_smoke` 6/6
 `~/codigo/capturas/s38/`: `b-lobby.png`, `b-achievements.png`,
 `b-achievements-detail.png`, `b-cm-catalogue.png`.
 
+### Retratos de NPC: primera prueba con Nilo (2026-11-13, a la espera del dueño)
+
+Ningún NPC del diálogo (Nilo, Aldebrán, Demonio I, Demonio III) tiene figura
+3D, y el dueño no tiene crédito en Meshy: "hazlo con vex". Nilo primero
+(regla del arte: uno, enseñarlo, esperar), en
+`godot/tools/portraits/npc_portraits.vx.js`: dibujo nuestro sobre la forma
+del retrato retail (cuernos de carnero con triángulos de oro, dos rizos
+pálidos en la coronilla, gafas moradas, cejas blancas en sierra, bigote
+largo, orejas en punta, bastón con piedra naranja), estilo B: contorno de
+tinta, tinta fina entre piezas, dos tonos por material, luz arriba a la
+izquierda; 170 × 200 unidades, el `FACE_SIZE` de `talk_panel.gd`. Hoja:
+`~/codigo/capturas/s38/npc-nilo.png` (retail, el nuestro grande y a su tamaño
+en la ventana). Aún sin conectar: si gusta, salen los otros tres igual,
+`--scales 2` a `assets/ui/portraits/npc/` y los `FACE_*` de `main.gd` pasan a
+`{"image": …}`.
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
@@ -174,7 +190,7 @@ cerrable solo:
    `_ach_icon` y `achievementDialog` (S22); fichas: `card_panel.gd`
    `_token()` (tipo 1) y pesetas (tipo 10, hoy texto). Estilo B como los
    hechizos (`spell_icons.py`: pictograma blanco sobre color); hoja antes.
-3. **Retratos de NPC** (Nilo, Aldebrán, Demonio I, Señores del Tiempo) para
+3. (en curso: Nilo a la espera del dueño) **Retratos de NPC** (Nilo, Aldebrán, Demonio I, Señores del Tiempo) para
    `talk_panel.gd`: con `tools/portraits` si tienen figura 3D; si no,
    pedir al dueño.
 4. **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D
