@@ -103,4 +103,13 @@ de música).
 Que el dueño lo oiga todo (interfaz, hechizos, golpes, las dos músicas) y
 cambie lo que no le guste. Quitar `sounds/` y `musics/` retail cuando nada
 los lea (`anm_sprite._play_sfx` aún toca los sonidos de los sets 2D que
-queden; eso cae con S43). La pantalla de créditos (el CC-BY del lobby).
+queden; eso cae con S43).
+
+### Créditos en el juego (2026-11-14)
+
+Ayuda tiene una quinta pestaña, **Créditos** (es/en/fr): la música con su
+autor y licencia (Matthew Pablo, CC-BY 3.0, como pide su licencia; la de
+combate, CC0), los sonidos de Kenney (CC0) y que los de los hechizos son del
+propio juego, las fuentes (Saira Condensed, Lilita One y Nunito, OFL 1.1) y
+Godot (MIT, con su aviso). `help_smoke` 6/6 con la pestaña nueva; captura
+`~/codigo/capturas/s39/creditos.png`.

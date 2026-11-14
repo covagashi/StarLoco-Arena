@@ -1138,7 +1138,7 @@ func _city() -> void:
 ## also explains itself with its "?" (lobby_panel.gd).
 func _help() -> void:
 	tabs(body, [I18n.t("help.tab_start"), I18n.t("help.tab_modes"), I18n.t("help.tab_fight"),
-		I18n.t("help.tab_panels")])
+		I18n.t("help.tab_panels"), I18n.t("help.tab_credits")])
 	match tab:
 		0:
 			_first_steps()
@@ -1158,6 +1158,11 @@ func _help() -> void:
 				var h := label(body, I18n.t(key), 20)
 				h.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 				label(body, I18n.t("help.panel_%s" % key.trim_prefix("nav.")))
+		4:   # S39: what the game uses that others made, with what their licences ask
+			for key in ["music", "sounds", "fonts", "engine"]:
+				var h := label(body, I18n.t("credits.%s" % key), 20)
+				h.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
+				label(body, I18n.t("credits.%s_b" % key)).name = "Credits_%s" % key
 
 
 ## "Primeros pasos" (S10): the tutorial achievements in the order retail's

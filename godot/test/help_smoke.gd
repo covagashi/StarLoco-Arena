@@ -1,6 +1,7 @@
 extends "res://test/world_smoke.gd"
 
-## S21: the Ayuda in four tabs and every panel's "?", live. In Spanish.
+## S21: the Ayuda in its tabs and every panel's "?", live. In Spanish.
+## S39: the fifth tab, Créditos, credits the CC-BY music's author.
 ##
 ##   godot --path godot -s test/help_smoke.gd [-- --shot-dir=D]
 
@@ -14,7 +15,8 @@ func _audit() -> void:
 	_main._gui.open("tooltipDialog")
 	await create_timer(0.5).timeout
 	var p = _main._gui.dialogs.get("tooltipDialog")
-	var names := [i18n.t("help.tab_start"), i18n.t("help.tab_modes"), i18n.t("help.tab_fight"), i18n.t("help.tab_panels")]
+	var names := [i18n.t("help.tab_start"), i18n.t("help.tab_modes"), i18n.t("help.tab_fight"), i18n.t("help.tab_panels"),
+		i18n.t("help.tab_credits")]
 	var seen := []
 	for n in names:
 		var b: Button = null
@@ -38,6 +40,10 @@ func _audit() -> void:
 				_record(0, "fight", "40 %" in text and i18n.t("fight.pass") in text, "the fight's rules")
 			"Paneles":
 				_record(0, "panels", i18n.t("help.panel_city") in text, "each lobby panel")
+			"Créditos":
+				_record(0, "credits", "Matthew Pablo" in text and "CC-BY 3.0" in text and "Kenney" in text
+					and "Godot" in text, "the music's author and licence, the sounds, the engine")
+				await _shot("help-credits")
 	_record(0, "tabs", seen == names, "tabs: %s" % ", ".join(seen))
 	_close_all()
 	# 2. "?" on a panel
