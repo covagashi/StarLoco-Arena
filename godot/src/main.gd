@@ -4377,7 +4377,6 @@ func _achievement_items() -> Array:
 			"grade": int(info.get("cat", 0)),
 			"iconUrl": "ui/achievements/%d_%d.png" % [int(info.get("cat", 0)), grade]
 				if done else "ui/achievements/pending.png",
-			"keyIconUrl": "gui/images/achievement/key/%d.png" % grade,
 			"done": done,
 			# what it asks, done or not (it was only filled once done)
 			"desc": _achievement_asks(aid, info),

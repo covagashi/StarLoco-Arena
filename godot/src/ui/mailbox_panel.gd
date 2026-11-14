@@ -7,6 +7,7 @@ extends "res://src/ui/lobby_panel.gd"
 ## events — the wire stays in main.gd.
 ## Words: a mail is a "mensaje", a game card is a "carta".
 
+const CardFace := preload("res://src/ui/card_face.gd")
 const MAX_CARDS := 10   # domain.MailMaxAttachments, the client's own limit
 
 var _confirm_delete := -1   # mail id whose "Borrar" asks for a second click
@@ -283,45 +284,35 @@ func _status(parent: Node, text: String) -> void:
 		l.add_theme_color_override("font_color", UiStyle.BROWN)
 
 
-## A small card: its art over its name. A button when `clickable`.
+## A small card: the card template (S38b, card_face.gd) at 88 x 106. A
+## button when `clickable` (its ring coral on hover).
 func _mini_card(cid: int, card_name: String, clickable := false) -> Control:
 	var root: Control
+	var size := Vector2(88, 106)
 	if clickable:
 		var b := Button.new()
-		b.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 2, 4))
-		b.add_theme_stylebox_override("hover", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 4, 4))
-		b.add_theme_stylebox_override("pressed", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 4, 4))
+		var normal := StyleBoxFlat.new()
+		normal.bg_color = Color(0, 0, 0, 0)
+		normal.set_corner_radius_all(6)
+		var hover: StyleBoxFlat = normal.duplicate()
+		hover.border_color = UiStyle.B_CORAL
+		hover.set_border_width_all(2)
+		b.add_theme_stylebox_override("normal", normal)
+		b.add_theme_stylebox_override("hover", hover)
+		b.add_theme_stylebox_override("pressed", hover)
+		b.add_theme_stylebox_override("focus", UiStyle.focus_ring())
 		root = b
 	else:
-		var p := PanelContainer.new()
-		p.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.SLOT, UiStyle.INK, 2, 4))
-		root = p
-	root.custom_minimum_size = Vector2(88, 96)
+		root = Control.new()
+	root.custom_minimum_size = size
 	root.tooltip_text = card_name
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 2)
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if clickable:
-		col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		col.offset_left = 4
-		col.offset_top = 4
-		col.offset_right = -4
-		col.offset_bottom = -4
-	root.add_child(col)
-	var art := TextureRect.new()
-	art.texture = UiStyle.card_art(cid)
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	art.custom_minimum_size = Vector2(80, 60)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(art)
-	var n := Label.new()
+	var face := CardFace.make(cid, size - Vector2(4, 4), false, card_name)
+	face.position = Vector2(2, 2)
+	face.size = size - Vector2(4, 4)
+	root.add_child(face)
+	var n := Label.new()   # what the smokes look for
+	n.name = "CardName"
 	n.text = card_name
-	n.add_theme_font_size_override("font_size", 11)
-	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	n.clip_text = true
-	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	n.custom_minimum_size.x = 80
-	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(n)
+	n.visible = false
+	root.add_child(n)
 	return root

@@ -322,6 +322,25 @@ Evidencia: `cardmaster_smoke` 6/6, `inventory_smoke` 4/4, `screens_smoke`
 Pendiente (diseño, a un agente Fable como pidió el dueño): afinar los
 pictogramas (la isla, el pergamino, el peinado con la túnica).
 
+### Cierre de S38: paneles sin imagen retail (2026-11-14, el dueño dormía)
+
+`grep gui/images src/ui` ya no da nada. Quitados los respaldos retail de
+`UiStyle.card_art()` (solo nuestro icono del coach), `token_icon()` (las 5
+monedas son nuestras) y `fighter_card_art()` (los 75 nuestros), el de la
+ficha de hechizos (nuestros 120 cubren todos los de `spells.json`) y el
+`keyIconUrl` de los logros, que ningún panel nativo leía. El buzón dibuja sus
+cartas con la plantilla (`_mini_card`, 88 × 106), así que ninguna carta
+enseña ya una ilustración retail. Fuera de los paneles quedan respaldos
+retail en el HUD del combate (`fight_view.gd`, `fighter_card.gd`: van
+detrás de los nuestros, que ya cubren todo) y el motor XML antiguo
+(`src/gui/`), que S32 retira con M7.
+Smokes contra el servidor local, uno a uno: `inventory_smoke` 4/4,
+`cardmaster_smoke` 6/6, `mailbox_smoke` 8/8, `fusion_smoke` 5/5,
+`report_smoke` 5 OK (la pasada llegó a mi tope de tiempo antes de imprimir
+el resumen). `run_tests.sh` 1526/0. Capturas `~/codigo/capturas/s38/
+cierre-*.png`. Cabo suelto visto en el informe de combate, no de aquí: un
+cuadro oscuro en la columna de XP de la primera fila de luchadores.
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
@@ -350,7 +369,7 @@ cerrable solo:
    pedir al dueño.
 4. ✅ (falta el pulido de pictogramas) **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D
    o el pictograma), para el Card Master y el inventario.
-5. **Cierre de S38:** ningún panel con imagen retail (`grep gui/images` en
+5. ✅ **Cierre de S38:** ningún panel con imagen retail (`grep gui/images` en
    `src/`), `run_tests.sh`, smokes de inventario, cardmaster, mailbox y
    fusión contra el servidor (uno a uno), capturas.
 

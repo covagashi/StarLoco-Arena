@@ -1497,8 +1497,7 @@ func _spell_tile(parent: Node, sp: Dictionary, equipped: bool, full: bool) -> vo
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
 	var icon := TextureRect.new()
-	var own := "ui/spells/%d.png" % int(sp.get("id", 0))   # S38: ours first
-	icon.texture = _ach_icon(own if AssetPaths.exists(own) else "gui/images/spells/icons/%d.png" % int(sp.get("id", 0)))
+	icon.texture = _ach_icon("ui/spells/%d.png" % int(sp.get("id", 0)))   # S38: ours (all 120)
 	icon.custom_minimum_size = Vector2(48, 48)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

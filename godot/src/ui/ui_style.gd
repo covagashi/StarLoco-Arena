@@ -576,9 +576,9 @@ static func card_art(cid: int) -> Texture2D:
 	if _card_art_cache.has(cid):
 		return _card_art_cache[cid]
 	var tex: Texture2D = null
-	# S38: our own coach icon (the 3D piece, tools/icons) first
-	for dir in ["ui/equip_coach/", "gui/images/equipments/coachs/illustrations/",
-			"gui/images/equipments/fighters/illustrations/"]:
+	# S38: our own coach icon (the 3D piece, tools/icons); S38b: no retail
+	# illustration behind it — the other cards show the card template
+	for dir in ["ui/equip_coach/"]:
 		var img := AssetPaths.load_image(dir + "%d.png" % cid)
 		if img != null:
 			tex = ImageTexture.create_from_image(img)
@@ -589,15 +589,13 @@ static func card_art(cid: int) -> Texture2D:
 
 ## A coin's icon (wallet type: 1 the Card Master tokens, 2/3/5 the others,
 ## 10 the pesetas), cached; ours (S38b, tools/icons/badge_icons.py) first,
-## then the retail one; null when neither is there.
+## null for a type we have no coin for.
 static var _token_cache := {}
 
 
 static func token_icon(type: int) -> Texture2D:
 	if not _token_cache.has(type):
 		var img := AssetPaths.load_image("ui/tokens/%d.png" % type)
-		if img == null:
-			img = AssetPaths.load_image("gui/images/tokens/icons/%d.png" % type)
 		_token_cache[type] = ImageTexture.create_from_image(img) if img != null else null
 	return _token_cache[type]
 
@@ -612,8 +610,6 @@ static func fighter_card_art(cid: int) -> Texture2D:
 	if not _fighter_art_cache.has(cid):
 		# S38: our own icon (the 3D piece, tools/icons/equip_icons) first
 		var img := AssetPaths.load_image("ui/equip/%d.png" % cid)
-		if img == null:
-			img = AssetPaths.load_image("gui/images/equipments/fighters/icons/%d.png" % cid)
 		_fighter_art_cache[cid] = ImageTexture.create_from_image(img) if img != null else null
 	return _fighter_art_cache[cid]
 
