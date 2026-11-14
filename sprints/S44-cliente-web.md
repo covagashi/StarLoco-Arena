@@ -124,3 +124,15 @@ No depende de S43 (no publica nada), así que va ya.
 
 Pendiente del paso 2: repetir las demás e2e por WebSocket, y el proxy
 `wss://` en oracle-2 (eso, con el dueño: es producción).
+
+### Visto al preparar el paso 1 (2026-11-14)
+
+La prueba previa no se puede hacer tal cual: el cliente lee `assets/` y
+`art/` sueltos junto al ejecutable (`AssetPaths`, `ArenaLayout.root()`, y
+`export_presets.cfg` los deja fuera del `.pck` a propósito), y en el
+navegador no hay disco al lado. Dos maneras, a decidir con el dueño:
+meterlo todo en el `.pck` solo para medir (370 MB de `assets/`, con retail,
+sin publicar), o empezar por el paso 3: una raíz de assets por HTTP que
+descargue a `user://` lo que haga falta (el lobby y lo mínimo en la primera
+carga, cada arena al entrar en su combate). Las plantillas web de Godot
+4.7.1 ya están instaladas en la Ally.
