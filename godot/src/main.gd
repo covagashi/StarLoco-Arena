@@ -1204,6 +1204,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_log_line("[color=red]%s[/color]" % I18n.t("demon.failed"))
 				_demon_status = {"ok": res == 0,
 					"text": I18n.t("demon.accepted" if res == 0 else "demon.failed")}
+				Audio.ui("confirm" if res == 0 else "error")   # S39
 				if _gui.is_open("demonAffiliationDialog"):
 					_push_demon_model()
 				if _gui.is_open("socialDialog") or _gui.is_open("guildDialog"):
@@ -1219,6 +1220,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					if res == 0:
 						_cm_given = {}
 					_cm_status = {"text": msg, "ok": res == 0}
+					Audio.ui("coins" if res == 0 else "error")   # S39
 					_push_cardmaster_model()
 		OP_FUSION_RESULT:
 			var d := Codec.decode(opcode, payload)
@@ -1243,6 +1245,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				text = I18n.t("fusion.failed")
 			_log_line(("[color=green]%s[/color]" if got > 0 else "[color=red]%s[/color]") % text)
 			_fusion_status = {"text": text, "ok": got > 0}
+			Audio.ui("confirm" if got > 0 else "error")   # S39
 			# the tray is consumed either way — reset the lab
 			_fusion_inputs = []
 			_fusion_failed = int(d.get("obtained", 0)) <= 0 \
@@ -1288,6 +1291,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_registered_tids[tid] = true
 			_log_line(I18n.t("tourn.msg", {"tid": tid, "msg": msg}))
 			_tourn_status = {"tid": tid, "text": msg, "ok": int(d.code) == 0}
+			Audio.ui("confirm" if int(d.code) == 0 else "error")   # S39
 			_refresh_calendar()
 		OP_TOURN_SEARCH_PERIOD:
 			var d := Codec.decode(opcode, payload)
@@ -1325,6 +1329,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_TOURN_SEARCH_ERR:
 			var d := Codec.decode(opcode, payload)
 			_tourn_status = {"tid": _tourn_search_pending, "ok": false, "text": I18n.t("tourn.err")}
+			Audio.ui("error")   # S39
 			_tourn_search_tid = -1
 			_end_tourn_search()
 			DebugLog.add("tournament search error %d/%d" % [
@@ -1562,6 +1567,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if _gui.is_open("mailboxDialog"):
 				_mail_status = {"text": I18n.t("mb.sent_ok", {"to": d.mail.get("receiver", "?")})
 					if res > 0 else msg, "ok": res > 0}
+				Audio.ui("confirm" if res > 0 else "error")   # S39
 				if res > 0:
 					_mail_mode = "list"
 					_mail_loading = true
@@ -1585,6 +1591,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_mails[i]["cards"] = []
 			if _gui.is_open("mailboxDialog"):
 				if not d.cards.is_empty():
+					Audio.ui("card")   # S39: the cards come out of the mail
 					_mail_status = {"ok": true, "text": I18n.t("mail.collected",
 						{"list": ", ".join(d.cards.map(
 							func(c): return Cards.name_of(int(c))))})}
@@ -4341,6 +4348,7 @@ func _tourn_create(f: Dictionary) -> void:
 	w.put_u8(0)                   # no pro leagues
 	Session.send(OP_TOURN_CREATE, w.raw(), 3)
 	_tourn_status = {"tid": -1, "ok": true, "text": I18n.t("tourn.created")}
+	Audio.ui("confirm")   # S39
 	_log_line(I18n.t("tourn.created"))
 	# the new row arrives with the next list
 	Session.send(OP_TOURN_CAL, PackedByteArray(), 3)
@@ -5091,6 +5099,7 @@ func _log_line(s: String) -> void:
 ## Bottom-centre toast — retail's achievementDialog style: a small card that
 ## stacks upward and fades out after a few seconds.
 func _toast(text: String) -> void:
+	Audio.ui("toast")   # S39
 	# its own CanvasLayer above the dialogs (layer 10): under $UI a toast was
 	# hidden by whatever window had triggered it (S20)
 	var box := $Toasts/ToastBox

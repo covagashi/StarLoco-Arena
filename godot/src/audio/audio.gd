@@ -21,6 +21,13 @@ extends Node
 ##
 ## This node is an autoload because main.tscn and fight_view.tscn replace
 ## each other: the music has to outlive the scene change to fade across it.
+##
+## S39: the interface's own sounds (Kenney's CC0 packs, assets/audio/ui/):
+## ui(kind) on the SFX bus. Every button that enters the tree clicks when
+## pressed (a node can opt out with the meta "silent"); panels sound as they
+## open and close; toasts, confirmations and errors have theirs. One sound
+## per frame — the most important of those asked for — so a click that
+## opens a panel is heard once ("feedback on every action, no duplicates").
 
 const BUSES := ["Music", "SFX"]
 const TRACKS := ["island", "fight"]
@@ -34,6 +41,15 @@ var _tweens: Array = [null, null]
 var _active := 0
 var _streams := {}
 
+## ui kind → priority (the frame's highest one plays)
+const UI_KINDS := {"click": 1, "tab": 1, "back": 1, "card": 2, "open": 2, "close": 2,
+	"toast": 3, "coins": 4, "confirm": 4, "error": 5}
+var _ui_players: Array[AudioStreamPlayer] = []
+var _ui_next := 0
+var _ui_pending := ""
+## the last interface sounds played, newest last (the smokes read it)
+var ui_played: Array[String] = []
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -43,6 +59,58 @@ func _ready() -> void:
 		p.bus = "Music"
 		add_child(p)
 		_players.append(p)
+	for i in 4:
+		var u := AudioStreamPlayer.new()
+		u.bus = "SFX"
+		add_child(u)
+		_ui_players.append(u)
+	get_tree().node_added.connect(_on_node_added)
+
+
+## Every button clicks; a tab bar and a drop-down "switch" when they change.
+func _on_node_added(n: Node) -> void:
+	if n.has_meta("silent"):
+		return
+	if n is OptionButton:
+		(n as OptionButton).item_selected.connect(func(_i): ui("tab"))
+	elif n is BaseButton:
+		(n as BaseButton).pressed.connect(func(): ui("click"))
+	elif n is TabBar:
+		(n as TabBar).tab_changed.connect(func(_i): ui("tab"))
+
+
+## Ask for an interface sound; the frame's most important one plays at its end.
+func ui(kind: String) -> void:
+	if not UI_KINDS.has(kind):
+		return
+	if _ui_pending == "":
+		_flush_ui.call_deferred()
+	if _ui_pending == "" or int(UI_KINDS[kind]) > int(UI_KINDS[_ui_pending]):
+		_ui_pending = kind
+
+
+func _flush_ui() -> void:
+	var kind := _ui_pending
+	_ui_pending = ""
+	var st := _ui_stream(kind)
+	if st == null:
+		return
+	ui_played.append(kind)
+	if ui_played.size() > 16:
+		ui_played.pop_front()
+	var p := _ui_players[_ui_next]
+	_ui_next = (_ui_next + 1) % _ui_players.size()
+	p.stream = st
+	p.play()
+
+
+## The sound of an interface kind, or null without the file.
+func _ui_stream(kind: String) -> AudioStream:
+	var key := "ui/" + kind
+	if not _streams.has(key):
+		var rel := "audio/ui/%s.ogg" % kind
+		_streams[key] = AudioStreamOggVorbis.load_from_file(AssetPaths.resolve(rel)) if AssetPaths.exists(rel) else null
+	return _streams[key]
 
 
 static func ensure_buses() -> void:

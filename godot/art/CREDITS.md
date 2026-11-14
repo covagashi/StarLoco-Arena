@@ -28,6 +28,7 @@ third-party and keep their own licences, listed at the end.
 | `../assets/ui/achievements/` | The achievement medallions (5 categories × 5 grades, and the pending padlock), S38b, the owner's option B | Drawn in code by `tools/icons/badge_icons.py` | |
 | `../assets/ui/tokens/` | The coins (tokens 1, 2, 3, 5 and the pesetas), S38b, option B | Drawn in code by `tools/icons/badge_icons.py` | |
 | `../assets/ui/portraits/npc/` | The talk window's NPC portraits (Nilo, Aldebrán, Demon I, Demon III) and their idle loops (`*_idle.webp` + `.json`), S38b | Drawn in vex (`tools/portraits/*_fable.vx.js`, overlays `*_anim.vx.js`), animated in AniCraft by `tools/portraits/npc_anim.py` | |
+| `../assets/audio/ui/` | The interface sounds (click, tab, open, close, toast, confirm, error, coins, card, back), S39 | Kenney's *Interface Sounds* and *RPG Audio* packs (kenney.nl), **CC0**; renamed by what they do | No credit required; listed anyway |
 | `../assets/ui/portraits/` | The fight's portraits (24 fighters, 2 coaches, 9 summons), S38 | Rendered from our own 3D figures by `tools/portraits/portraits.tscn` | Re-render when a figure changes. |
 | `../assets/ui/kit/`, `../assets/ui/ui_bg.png` | The interface pieces (buttons, fields, window, paper, ribbon, medallion, capsule) and the night backdrop | Written for this project: `tools/make_ui_kit.py` draws them | |
 | `ao.json`, `blender.json`, `biomes.json` | Build settings | Written for this project | |

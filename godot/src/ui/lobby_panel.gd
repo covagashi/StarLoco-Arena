@@ -131,6 +131,9 @@ func _ready() -> void:
 	_layout.call_deferred()
 	_bind_focus.call_deferred()
 	close_button.grab_focus()
+	# S39: a panel sounds as it opens and as it goes
+	_sound("open")
+	tree_exiting.connect(func(): _sound("close"))
 	# the sheet rises in (S45: everything moves)
 	var to := _sheet.position
 	_sheet.position = to + Vector2(0, 24)
@@ -138,6 +141,13 @@ func _ready() -> void:
 	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_sheet, "position", to, 0.3)
 	tw.tween_property(_sheet, "modulate:a", 1.0, 0.22)
+
+
+## An interface sound (S39, the Audio autoload), when the autoload is there.
+func _sound(kind: String) -> void:
+	var a := get_node_or_null("/root/Audio")
+	if a != null:
+		a.ui(kind)
 
 
 ## A thin icon button of the header ("?" or a close cross), ink, coral
