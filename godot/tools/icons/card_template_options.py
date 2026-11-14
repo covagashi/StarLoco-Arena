@@ -39,33 +39,96 @@ def tier(rank):
     return 0 if rank <= 2 else 1 if rank <= 5 else 2 if rank <= 8 else 3
 
 
-def pictogram(d, family, box, col):
-    """The family's pictogram (white on its colour) in box (x, y, side)."""
-    p = opt.Pen(d, box, col, S * 4)
-    if family == "coach":           # a tunic
-        p.poly((.3, .12), (.42, .18), (.58, .18), (.7, .12), (.94, .3), (.82, .48), (.74, .42),
-               (.74, .9), (.26, .9), (.26, .42), (.18, .48), (.06, .3))
-    elif family == "consumable":    # a potion flask
-        p.rect(.5, .2, .2, .16, 0)
-        p.poly((.4, .28), (.6, .28), (.6, .42), (.84, .7), (.76, .92), (.24, .92), (.16, .7), (.4, .42))
-    elif family == "combat":        # a rule scroll, rolled at both ends
-        p.rect(.5, .5, .5, .62, 0)
-        for y in (.18, .82):
-            p.rect(.5, y, .74, .14, 0)
-        for y in (.38, .5, .62):
-            p.line((.36, y), (.64, y), k=.7)
-    elif family == "cosmetic":      # a sparkle
-        opt.glyph(p, "star", col)
-    elif family == "fusion":        # a cut gem
-        p.poly((.5, .08), (.86, .38), (.5, .92), (.14, .38))
-    elif family == "dofus":         # a dofus egg
-        p.d.ellipse([p.P(.2, .08), p.P(.8, .92)], fill=col)
-    elif family == "arena":         # a floating island: grass, its rock, a tree
-        p.poly((.1, .6), (.9, .6), (.74, .78), (.6, .82), (.5, .96), (.4, .82), (.26, .78))
-        p.d.ellipse([p.P(.08, .5), p.P(.92, .68)], fill=col)
-        p.rect(.62, .42, .06, .2, 0)
-        p.disc(.62, .3, .15)
-        p.disc(.48, .4, .1)
+def _sparkle(p, cx, cy, r, waist):
+    """A four-point sparkle with pinched sides."""
+    pts = []
+    for i in range(8):
+        rr = r if i % 2 == 0 else waist
+        a = math.radians(i * 45 - 90)
+        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    p.poly(*pts)
+
+
+def pictogram(d, family, box, col, back=(0, 0, 0, 0)):
+    """The family's pictogram in box (x, y, side): a white silhouette with
+    its details carved out in `back` (transparent for the card assets, the
+    colour under it when drawn straight onto a plate). One stroke logic for
+    the set: a solid shape that still reads at 18 px, carved lines of the
+    same weight that show from 60 px up."""
+    p = opt.Pen(d, box, col, S * 4)       # the white
+    q = opt.Pen(d, box, back, S * 4)      # the carving
+    if family == "coach":           # a jersey: round neck, short sleeves
+        p.poly((.3, .1), (.4, .1), (.5, .2), (.6, .1), (.7, .1), (.94, .28), (.84, .46), (.74, .4),
+               (.74, .9), (.26, .9), (.26, .4), (.16, .46), (.06, .28))
+        q.d.ellipse([q.P(.38, .0), q.P(.62, .17)], fill=back)
+        q.line((.26, .4), (.26, .52), k=1.0)
+        q.line((.74, .4), (.74, .52), k=1.0)
+    elif family == "consumable":    # a round potion flask with a cork
+        p.rect(.5, .1, .18, .1, 0)
+        p.rect(.5, .17, .3, .07, 0)
+        p.rect(.5, .3, .2, .22, 0)
+        p.disc(.5, .64, .31)
+        q.disc(.6, .55, .05)
+        q.disc(.67, .68, .035)
+    elif family == "combat":        # a rule scroll, rolled at top and bottom
+        p.rect(.5, .5, .6, .64, 0)
+        for y in (.17, .83):
+            p.rect(.5, y, .8, .17, 0)
+            p.disc(.1, y, .085)
+            p.disc(.9, y, .085)
+            q.disc(.1, y, .035)
+            q.disc(.9, y, .035)
+        for y, x1 in ((.4, .66), (.5, .66), (.6, .56)):
+            q.line((.34, y), (x1, y), k=1.0)
+    elif family == "cosmetic":      # sparkles
+        _sparkle(p, .42, .56, .44, .11)
+        _sparkle(p, .8, .2, .17, .045)
+    elif family == "fusion":        # a cut gem: table, crown, pavilion
+        p.poly((.24, .22), (.76, .22), (.95, .44), (.5, .92), (.05, .44))
+        q.line((.05, .44), (.95, .44), k=1.0)
+        q.line((.24, .22), (.35, .44), (.5, .92), k=1.0)
+        q.line((.76, .22), (.65, .44), (.5, .92), k=1.0)
+    elif family == "dofus":         # a dragon egg: a girdle band, a shine
+        pts = []
+        for i in range(72):
+            t = math.radians(i * 5)
+            pts.append((.5 + (.3 + .06 * math.sin(t)) * math.cos(t), .53 + .4 * math.sin(t)))
+        p.poly(*pts)
+        q.d.arc([q.P(.14, .4), q.P(.86, .74)], 0, 180, fill=back, width=int(q.w * 1.0))
+        q.d.arc([q.P(.2, .48), q.P(.8, .8)], 0, 180, fill=back, width=int(q.w * 1.0))
+        q.d.arc([q.P(.27, .22), q.P(.6, .6)], 200, 260, fill=back, width=int(q.w * 1.1))
+    elif family == "arena":         # a floating isometric field with a pennant
+        L, T, R, B = (.06, .62), (.5, .42), (.94, .62), (.5, .82)
+        p.poly(L, T, R, B)
+        p.poly((.14, .66), (.86, .66), (.72, .84), (.6, .88), (.5, 1.0), (.4, .88), (.28, .84))
+        q.line(L, B, R, k=.9)
+        e1, e2 = (T[0] - L[0], T[1] - L[1]), (B[0] - L[0], B[1] - L[1])
+        for a in (1 / 3, 2 / 3):
+            q.line((L[0] + a * e1[0], L[1] + a * e1[1]), (L[0] + a * e1[0] + e2[0], L[1] + a * e1[1] + e2[1]), k=.8)
+            q.line((L[0] + a * e2[0], L[1] + a * e2[1]), (L[0] + a * e2[0] + e1[0], L[1] + a * e2[1] + e1[1]), k=.8)
+        p.line((.5, .44), (.5, .08), k=1.1)
+        p.poly((.5, .06), (.8, .16), (.5, .26))
+    elif family == "other":         # a ticket: side notches, a perforation
+        d.rounded_rectangle([p.P(.06, .3), p.P(.94, .7)], radius=int(p.s * .06), fill=col)
+        q.disc(.5, .3, .07)
+        q.disc(.5, .7, .07)
+        for y in (.44, .54):
+            q.line((.5, y), (.5, y + .05), k=.9)
+        q.line((.18, .44), (.38, .44), k=.9)
+        q.line((.18, .56), (.32, .56), k=.9)
+    elif family == "fighter":       # crossed swords
+        opt.glyph(opt.Pen(d, box, col, S * 5), 1, back)
+    elif family == "hair":          # a haircut: a bob with a fringe over the face
+        p.disc(.5, .46, .36)
+        p.rect(.2, .66, .12, .42, 0)
+        p.rect(.8, .66, .12, .42, 0)
+        p.disc(.2, .87, .06)
+        p.disc(.8, .87, .06)
+        q.d.ellipse([q.P(.28, .36), q.P(.72, .9)], fill=back)
+        p.poly((.26, .3), (.74, .3), (.74, .46), (.67, .58), (.59, .45), (.51, .6), (.43, .46), (.35, .58),
+               (.26, .46))
+        q.d.arc([q.P(.2, .16), q.P(.6, .56)], 200, 255, fill=back, width=int(q.w * 1.0))
+
 
 def art(card_id, family, size, colour):
     """What sits in the art window: the coach card's bare 3D piece (the
@@ -115,7 +178,7 @@ def card(c, style, W=150, H=180):
         d.rectangle((0, 0, w, S * 4), fill=TIER[t][1])
         k = S * 8
         d.polygon([(S * 6 + k, S * 10), (S * 46, S * 10), (S * 46 - k, S * 34), (S * 6, S * 34)], fill=colour)
-        pictogram(d, fam, (S * 18, S * 11, S * 22), WHITE)
+        pictogram(d, fam, (S * 18, S * 11, S * 22), WHITE, colour)
         a = art(c["id"], fam, 96, colour)
         bg = Image.new("RGBA", (96 * S, 96 * S), (0, 0, 0, 0))
         ImageDraw.Draw(bg).polygon([(S * 12, 0), (96 * S, 0), (84 * S, 96 * S), (0, 96 * S)],
@@ -140,20 +203,20 @@ def card(c, style, W=150, H=180):
         # the family medallion, top left, and the tier's diamonds at the foot
         d.ellipse((S * 2, S * 2, S * 32, S * 32), fill=INK)
         d.ellipse((S * 4, S * 4, S * 30, S * 30), fill=colour)
-        pictogram(d, fam, (S * 8, S * 8, S * 18), WHITE)
+        pictogram(d, fam, (S * 8, S * 8, S * 18), WHITE, colour)
         for i in range(t + 1):
             cx = w / 2 + (i - t / 2) * S * 13
             d.polygon([(cx, S * 153), (cx + S * 5, S * 159), (cx, S * 165), (cx - S * 5, S * 159)], fill=TIER[t][2], outline=TIER[t][3])
     else:               # a trading card: white, a family header, a rarity foot
         d.rounded_rectangle((0, 0, w, h), radius=S * 4, fill=WHITE, outline=INK, width=S * 2)
         d.rectangle((S * 2, S * 2, w - S * 2, S * 26), fill=colour)
-        pictogram(d, fam, (S * 6, S * 5, S * 18), WHITE)
+        pictogram(d, fam, (S * 6, S * 5, S * 18), WHITE, colour)
         d.text((S * 30, S * 14), FAMILY[fam][0].upper(), font=ImageFont.truetype(FONT, 11 * S), fill=WHITE, anchor="lm")
         d.rectangle((S * 10, S * 32, w - S * 10, S * 120), fill=opt.lighter(colour, .82), outline=opt.lighter(colour, .4), width=S)
         img.alpha_composite(art(c["id"], fam, 84, colour if fam != "coach" else colour).resize((84 * S, 84 * S)), ((w - 84 * S) // 2, S * 34))
         if fam != "coach":   # the pictogram in the family colour on the pale window
             win = Image.new("RGBA", (84 * S, 84 * S), (0, 0, 0, 0))
-            pictogram(ImageDraw.Draw(win), fam, (84 * S * .14, 84 * S * .14, 84 * S * .72), colour)
+            pictogram(ImageDraw.Draw(win), fam, (84 * S * .14, 84 * S * .14, 84 * S * .72), colour, opt.lighter(colour, .82))
             img.alpha_composite(win, ((w - 84 * S) // 2, S * 34))
         d.text((w // 2, S * 136), c["name"], font=fit(d, c["name"], FONT, 15, w - S * 14), fill=INK, anchor="mm")
         metal(d, (S * 2, h - S * 26, w - S * 2, h - S * 2), t, S * 3)

@@ -3,7 +3,8 @@
 card_template_options.py; the frame, the ribbon and the name are drawn by
 src/ui/card_face.gd). Writes, into assets/ui/cards/:
   family/<family>.webp the family's white pictogram (160 px), for the art
-                       window of the cards without a piece and the medallion;
+                       window of the cards without a piece and the medallion
+                       (hair.webp: the haircuts and hair colours, no family);
   coach/<card>.webp    a coach card's bare 3D piece (its icon without the
                        plate; a mark is its emblem on skin), 160 px;
   fighter/<card>.webp  the same for the fighter equipment cards.
@@ -23,22 +24,13 @@ import equip_icons                     # noqa: E402  the bare pieces
 
 PX = 160
 OUT = "assets/ui/cards"
-FAMILIES = ["coach", "consumable", "combat", "cosmetic", "fusion", "dofus", "arena", "other", "fighter"]
+FAMILIES = ["coach", "consumable", "combat", "cosmetic", "fusion", "dofus", "arena", "other", "fighter", "hair"]
 
 
 def pictogram(fam):
     n = PX * opt.S
     img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    box = (n * .14, n * .14, n * .72)
-    if fam == "other":        # a ticket
-        p = opt.Pen(d, box, opt.WHITE, opt.S * 4)
-        p.poly((.08, .26), (.92, .26), (.92, .42), (.84, .5), (.92, .58), (.92, .74), (.08, .74),
-               (.08, .58), (.16, .5), (.08, .42))
-    elif fam == "fighter":    # crossed swords
-        opt.glyph(opt.Pen(d, box, opt.WHITE, opt.S * 5), 1, (0, 0, 0))
-    else:
-        tpl.pictogram(d, fam, box, opt.WHITE)
+    tpl.pictogram(ImageDraw.Draw(img), fam, (n * .14, n * .14, n * .72), opt.WHITE)
     return img.resize((PX, PX), Image.LANCZOS)
 
 

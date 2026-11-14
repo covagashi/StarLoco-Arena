@@ -319,8 +319,16 @@ del luchador, WebP, 2,4 MB). El inventario tiene ya el filtro "Arenas" (antes
 salían en "Otros"). Vista sin servidor: `test/card_face_preview.tscn`.
 Evidencia: `cardmaster_smoke` 6/6, `inventory_smoke` 4/4, `screens_smoke`
 9/11 (los 2 del Kanodo de siempre, la cuenta `test`), `run_tests.sh` 1526/0.
-Pendiente (diseño, a un agente Fable como pidió el dueño): afinar los
-pictogramas (la isla, el pergamino, el peinado con la túnica).
+Pulido (agente Fable, como pidió el dueño; 2026-11-14): pictogramas de un
+mismo trazo (camiseta, matraz con corcho, pergamino enrollado, destello de
+cuatro puntas, gema tallada, huevo con su faja, campo isométrico con
+banderín, entrada con perforado, espadas) y uno nuevo de pelo para los
+peinados y colores de pelo sin pieza; el marco con degradado y bisel por
+metal (el negro, laca oscura), un brillo suave tras el arte, una línea de
+tinta en la ventana, nombres largos en dos líneas antes de recortar, textos
+nítidos a cualquier tamaño, medallón más grande y rombos facetados. Las
+piezas 3D, idénticas (comprobado píxel a píxel). `run_tests.sh` 1526/0.
+Vista: `~/codigo/capturas/s38/cartas-pulidas.png`.
 
 ### Cierre de S38: paneles sin imagen retail (2026-11-14, el dueño dormía)
 
@@ -371,7 +379,7 @@ cerrable solo:
 3. ✅ **Retratos de NPC** (Nilo, Aldebrán, Demonio I, Señores del Tiempo) para
    `talk_panel.gd`: con `tools/portraits` si tienen figura 3D; si no,
    pedir al dueño.
-4. ✅ (falta el pulido de pictogramas) **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D
+4. ✅ **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D
    o el pictograma), para el Card Master y el inventario.
 5. ✅ **Cierre de S38:** ningún panel con imagen retail (`grep gui/images` en
    `src/`), `run_tests.sh`, smokes de inventario, cardmaster, mailbox y
