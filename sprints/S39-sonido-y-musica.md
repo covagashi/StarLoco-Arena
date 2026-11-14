@@ -1,6 +1,6 @@
 # S39 — Sonido y música
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🟢 hecho a falta del dueño (2026-11-14: interfaz, hechizos, combate y música propios; falta que lo oiga)
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ✅ cerrado (2026-11-14, por el dueño)
 
 ## Alcance
 
@@ -113,3 +113,35 @@ combate, CC0), los sonidos de Kenney (CC0) y que los de los hechizos son del
 propio juego, las fuentes (Saira Condensed, Lilita One y Nunito, OFL 1.1) y
 Godot (MIT, con su aviso). `help_smoke` 6/6 con la pestaña nueva; captura
 `~/codigo/capturas/s39/creditos.png`.
+
+## Cierre (2026-11-14)
+
+El dueño da S39 por cerrado tal como está. Lo que queda del criterio de
+cierre (borrar `sounds/` y `musics/` retail) pasa a
+[S43](./S43-sin-cliente-antiguo.md): `anm_sprite._play_sfx` aún toca los
+sonidos de los sets 2D que quedan, y cae con ellos.
+
+### chirp, para el audio que venga (dueño, 2026-11-14)
+
+El dueño propuso [chirp](https://github.com/uilianks/chirp) (MIT, del autor
+de vex, kiln y loom): un DSL en JS (`.cx.js`) que sintetiza efectos y música
+a WAV/OGG. Instalado como skill en `~/.claude/skills/chirp` (`npm install`,
+sus 16 pruebas en verde con Node 24).
+
+- **Lo probé con un hechizo nuestro:** `bolt_fire` rehecho en una docena de
+  líneas (ruido rosa en banda que sube, siete chispas, un golpe al llegar),
+  con `--ogg`. Cada build escribe un espectrograma y `chirp info` imprime
+  pico, RMS y el tono en el tiempo: lo mismo que hice a mano para
+  `spell_sfx.py`, pero de serie.
+- **Lo que más vale:** `chirp serve` abre un reproductor en el navegador
+  (127.0.0.1:4330) que se reconstruye al guardar, y su modo de anotar (`a`)
+  deja al dueño marcar trozos del espectrograma con una nota ("esto
+  sobra", "más grave") que yo leo en `out/_feedback/<sonido>.json`, con la
+  línea de la capa que más suena ahí. Resuelve el "no puedo escuchar" de
+  este sprint: el dueño oye y marca, yo corrijo.
+- **No reescribo lo de S39:** el sprint queda cerrado con lo que suena hoy.
+  Si un hechizo hay que cambiarlo, o llegan sonidos nuevos (música por
+  bioma, sonidos de la tienda de S30, jingles de temporada), se hacen en
+  chirp; `spell_sfx.py` se puede portar entonces familia a familia.
+- **Detalle:** el README usa `rnd()` como si viniera incluido, pero lo
+  define cada ejemplo (un mulberry32); hay que escribirlo en el `.cx.js`.
