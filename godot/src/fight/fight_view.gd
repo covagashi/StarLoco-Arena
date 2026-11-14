@@ -990,6 +990,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# channel and plays AnimTacle on the held fighter — a skeletal
 			# track in AnimCombat.anm, rendered for players via the
 			# composite bake; sets that lack it keep just the float.
+			Audio.fight("tackle")   # S39
 			_play_combat(tackled, "AnimTacle")
 			var tn := str(State.fighters.get(tackled, {}).get("name", ""))
 			_fight_log(I18n.t("fight.log_tackled", {"name": tn})
@@ -1229,6 +1230,7 @@ func _on_running_effect(d: Dictionary) -> void:
 		_hp_lost[target] = int(_hp_lost.get(target, 0)) + value
 		_refresh_nameplate(target)
 		_float_text(target, "-%d" % value, Color(1.0, 0.35, 0.3))
+		Audio.fight("hurt")                # S39: every fighter, 3D or not
 		_play_combat(target, "AnimHit")    # NPC sets carry it; players skip
 	elif FX_HP_GAIN.has(int(d.effect_id)):
 		_hp_lost[target] = int(_hp_lost.get(target, 0)) - value
@@ -1359,6 +1361,7 @@ func _apply_displacement(d: Dictionary) -> void:
 		if a.x >= 0 and b.x >= 0:
 			_move_actor(caster, b)
 			_move_actor(target, a)
+			Audio.fight("jump")   # S39
 			_play_combat(caster, "AnimSaut")   # both jump across
 			_play_combat(target, "AnimSaut")
 		return
@@ -1371,6 +1374,7 @@ func _apply_displacement(d: Dictionary) -> void:
 	if mover > 0 and _actor_cells.has(mover):
 		_move_actor(mover, dest)
 		if act == 39 or act == 153:      # teleports land in a jump pose
+			Audio.fight("jump")   # S39
 			_play_combat(mover, "AnimSaut")
 		for cid in _carried_by.keys():   # a displaced carrier takes its cargo
 			if _carried_by[cid] == mover:
@@ -1582,6 +1586,7 @@ func chat_bubble(coach_id: int, text: String) -> void:
 ## 4520 — grey out the corpse; its cell stays occupied for pathing.
 func _kill_actor(fid: int) -> void:
 	_dead[fid] = true
+	Audio.fight("death")   # S39
 	_buffs.erase(fid)                  # a dead fighter's icons are moot
 	_refresh_buffs(fid)
 	var spr: AnmSprite = _sprites.get(fid)
@@ -2794,6 +2799,7 @@ func _face_step(fid: int) -> void:
 	var cur: Vector3i = _actor_cells.get(fid, Vector3i.ZERO)
 	if path.is_empty():
 		return
+	Audio.fight("step", -8.0)   # S39: a footstep per cell, under the rest
 	var d := Vector2i(path[0].x - cur.x, path[0].y - cur.y)
 	var dir: int = STEP_DIR.get(d, -1)
 	var spr: AnmSprite = _sprites.get(fid)
@@ -2957,6 +2963,7 @@ func _dress_coach(id: int) -> void:
 ## attacker (the armed stance strike). Debut where authored (swords draw
 ## first), the plain gesture otherwise; fists (219) for the unarmed 8111.
 func _play_weapon(fid: int, fam: String) -> void:
+	Audio.fight("swing")   # S39
 	var spr: AnmSprite = _sprites.get(fid)
 	var f: Dictionary = State.fighters.get(fid, {})
 	if spr == null or f.is_empty():

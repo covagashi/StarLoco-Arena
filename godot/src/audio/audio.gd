@@ -135,6 +135,18 @@ func sfx(rel: String, volume_db := 0.0) -> void:
 		sfx_played.pop_front()
 
 
+## A combat sound of `kind` (S39, assets/audio/fight/<kind>_<n>.ogg, Kenney
+## CC0): one of its variations at random, so a walk or a flurry of hits
+## doesn't repeat the same sample.
+const FIGHT_VARIANTS := {"step": 5, "hurt": 5, "death": 5, "tackle": 5, "swing": 3, "jump": 2}
+
+
+func fight(kind: String, volume_db := 0.0) -> void:
+	var n := int(FIGHT_VARIANTS.get(kind, 0))
+	if n > 0:
+		sfx("audio/fight/%s_%d.ogg" % [kind, randi() % n], volume_db)
+
+
 ## The sound of an interface kind, or null without the file.
 func _ui_stream(kind: String) -> AudioStream:
 	var key := "ui/" + kind

@@ -68,8 +68,21 @@ it waits for the opponents" y un "previously freed" en el Versus: también
 sin los cambios de sonido (comprobado) y `fight_view.gd` no cambió hoy;
 parece de tiempos (la IA confirma antes del vistazo de 0,6 s). Apuntado.
 
+### Golpes, caídas, pasos (2026-11-14)
+
+Con las figuras 3D el combate estaba mudo fuera de los hechizos:
+`AnmSprite.play_once` toma el camino 3D antes de leer los sonidos de los
+fotogramas retail. `Audio.fight(kind)` toca una variación al azar de
+`godot/assets/audio/fight/` (Kenney CC0, 268 KB): `step` (footstep_grass,
+5, un paso por casilla y por debajo de lo demás, −8 dB), `hurt`
+(impactPunch_medium, 5, cada pérdida de vida), `death` (impactSoft_heavy, 5),
+`tackle` (impactGeneric_light, 5), `swing` (knifeSlice ×2 y drawKnife, el
+golpe de arma) y `jump` (cloth ×2, los saltos y los intercambios).
+Evidencia: los últimos 16 sonidos de un `fight_smoke` entero, todos nuestros
+(pasos, golpes, un salto, la muerte, rayos y teletransportes de aire).
+
 ### Siguiente
 
-Golpes, muerte y pasos (hoy los fotogramas retail de las animaciones
-`anm_sprite._play_sfx`), la música (lobby y combate, CC0 de OpenGameArt) y
-quitar `sounds/` y `musics/` retail.
+La música (lobby y combate, CC0 de OpenGameArt) y quitar `sounds/` y
+`musics/` retail cuando nada los lea (`anm_sprite._play_sfx` aún los toca
+para los sets 2D que queden; eso cae con S43).
