@@ -59,3 +59,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-11-11 | [S35b-marketing: la tanda 3 de posts, sobre los esqueletos](./2026-11-11-s35b-marketing.md) |
 | 2026-11-11 | [S35 cerrado: coaches en 3D, tinte de piel y pelo, pedestales](./2026-11-11-s35-cierre.md) |
 | 2026-11-12 | [S35c cerrado: el coach vestido entero (prendas, marcas, partes sueltas)](./2026-11-12-s35c-cierre.md) |
+| 2026-11-14 | [S38b entero, S39 sonido y música, S44 por WebSocket (noche, el dueño dormía)](./2026-11-14-s38b-s39-s44.md) |
