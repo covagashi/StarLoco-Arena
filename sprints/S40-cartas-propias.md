@@ -191,3 +191,15 @@ dice, con lo que hace hoy el servidor (leído en el código):
   mínimo de 5.000 (`minEvolutionTeamBudget`), por encima del tope de bronce.
 - De paso: el comentario de `computeFighterBudget` dice base 400 y el código
   usa 600.
+
+**Decisiones del dueño tras la medición (2026-11-14):**
+
+| Pregunta | Respuesta |
+|---|---|
+| Progresión de las cartas de coach | **Mismo tope para todas las rarezas** en cada efecto; las raras combinan efectos distintos, ninguna da el doble |
+| Cartas de luchador desviadas | **Ajustar solo las desviadas**, enseñando la lista antes |
+| Bronce con 4.000 | **Se mantiene** (6 luchadores sin equipo o menos luchadores mejor equipados) |
+| Garantía de rara | **En el botín** de después del combate: tras 10 botines sin rara, el siguiente trae una; las repetidas dan fichas según su rareza |
+
+Heurística mía: los topes por liga son para Ranking. Evolución conserva su regla
+(mínimo 5.000, máximo 6.000), que no cabe en bronce.

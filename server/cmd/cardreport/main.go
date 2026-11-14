@@ -120,6 +120,11 @@ func weaponDamage(c *gamedata.FighterCard) float64 {
 	return best
 }
 
+// allElem is what an all-element bonus (80-83) counts as, in single-element
+// points. A fighter fights in one or two elements, so 4 (every element) would
+// overprice it; 2 fits the data best (R² 0.87 → see the report header).
+const allElem = 2
+
 // The priced features. Element stats use the combat_stats.go ranges, each a
 // +/- pair per element (fire, earth, water, air): 21-28 flat resistance,
 // 29-36 resistance %, 40-47 flat damage, 48-55 damage %; 80/81 and 82/83 are
@@ -138,11 +143,11 @@ var stats = []stat{
 	}},
 	{"ResFlat", func(c *gamedata.FighterCard) float64 { return equipSum(c, ids(21, 27, 2), ids(22, 28, 2)) }},
 	{"Res%", func(c *gamedata.FighterCard) float64 {
-		return equipSum(c, ids(29, 35, 2), ids(30, 36, 2)) + 4*equipSum(c, []int32{80}, []int32{81})
+		return equipSum(c, ids(29, 35, 2), ids(30, 36, 2)) + allElem*equipSum(c, []int32{80}, []int32{81})
 	}},
 	{"DmgFlat", func(c *gamedata.FighterCard) float64 { return equipSum(c, ids(40, 46, 2), ids(41, 47, 2)) }},
 	{"Dmg%", func(c *gamedata.FighterCard) float64 {
-		return equipSum(c, ids(48, 54, 2), ids(49, 55, 2)) + 4*equipSum(c, []int32{82}, []int32{83})
+		return equipSum(c, ids(48, 54, 2), ids(49, 55, 2)) + allElem*equipSum(c, []int32{82}, []int32{83})
 	}},
 	{"Heal%", func(c *gamedata.FighterCard) float64 { return equipSum(c, []int32{78}, []int32{79}) }},
 	{"Rebound%", func(c *gamedata.FighterCard) float64 { return equipSum(c, []int32{89}, nil) }},
@@ -276,6 +281,34 @@ func fighterReport(fcs *gamedata.FighterCards) {
 	show("Cheapest for what they give (most power per budget)", rows[:m])
 	show("Dearest for what they give", rows[len(rows)-m:])
 
+	// Proposed values: the fitted worth rounded to 50 (every value is a
+	// multiple of 50), floor 50, only where the card is off by at least 50 and
+	// by a quarter of its worth. Cards whose only stat is initiative stay: the
+	// fit prices initiative at ~0, which says the data never charged for it,
+	// not that it is worthless.
+	fmt.Println("## Proposed values for the outliers")
+	fmt.Println()
+	fmt.Println("| Card | Type | Value | Proposed | Gives |")
+	fmt.Println("|---|---|---|---|---|")
+	sort.Slice(rows, func(i, j int) bool { return rows[i].c.ID < rows[j].c.ID })
+	for _, r := range rows {
+		prop := math.Max(50, math.Round(r.fit/50)*50)
+		off := float64(r.c.Value) - r.fit
+		if math.Abs(prop-float64(r.c.Value)) < 50 || math.Abs(off) < math.Max(50, r.fit/4) {
+			continue
+		}
+		if r.desc == "" || strings.HasPrefix(r.desc, "Init") && !strings.Contains(r.desc, ",") {
+			continue
+		}
+		// A weapon whose use is not damage (a buff, card 43's dodge) or an
+		// equip effect the score does not price: the fit cannot judge it.
+		if r.c.Usable() && weaponDamage(r.c) == 0 || hasUnpriced(r.c) {
+			continue
+		}
+		fmt.Printf("| %d | %d | %d | %.0f | %s |\n", r.c.ID, r.c.Type, r.c.Value, prop, r.desc)
+	}
+	fmt.Println()
+
 	// The budget a full fighter can reach.
 	bySlot := map[int16][]int32{}
 	for _, c := range cards {
@@ -298,6 +331,15 @@ func fighterReport(fcs *gamedata.FighterCards) {
 		maxFull += int(v[len(v)-1])
 	}
 	fmt.Printf("\nA fighter: 600 base; with the dearest card of every type, %d.\n\n", maxFull)
+}
+
+func hasUnpriced(c *gamedata.FighterCard) bool {
+	for _, e := range c.EquipEffects {
+		if !knownEquip[e.ActionID] {
+			return true
+		}
+	}
+	return false
 }
 
 func round1(v float64) float64 { return math.Round(v*10) / 10 }
