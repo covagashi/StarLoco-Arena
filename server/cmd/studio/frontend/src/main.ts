@@ -36,7 +36,7 @@ const LANG_OPTIONS = [
 let lang = "en";
 
 let current = "overview";
-let paths: Paths = { dataDir: "", clientDir: "", dataDirValid: false, clientDirValid: false };
+let paths: Paths = { dataDir: "", clientDir: "", dataDirValid: false, clientDirValid: false, contentDir: "" };
 let counts: DataCounts | null = null;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;

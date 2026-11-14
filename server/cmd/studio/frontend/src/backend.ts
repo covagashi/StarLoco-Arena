@@ -4,14 +4,15 @@
 // `window.go.main.App.<Method>()` returning a Promise. We type those calls here
 // and provide a graceful fallback (empty data + a "not connected" flag) so the
 // bundle still builds and can be previewed in a plain browser outside the Wails
-// webview. The 2.70 Studio is READ-ONLY: there are no setters beyond the data
-// directory picker.
+// webview. The game data is read-only, except the game's own cards (S40,
+// server/content/cards), which UpdateCoachCard / UpdateFighterCard save.
 
 export interface Paths {
   dataDir: string;
   dataDirValid: boolean;
   clientDir: string;
   clientDirValid: boolean;
+  contentDir: string; // server/content/cards; "" = embedded, read-only
 }
 
 export interface JarInfo {
@@ -192,6 +193,33 @@ export interface CoachCardDTO {
   rank: number;
   price: string;
   purchasable: boolean;
+  reqLevel: number;
+  inDraw: boolean;
+  dropPercent: number;
+  bound: boolean;
+  undestructible: boolean;
+}
+
+// CoachCardEdit is the editable part of a coach card (Go: CoachCardEdit).
+export interface CoachCardEdit {
+  id: number;
+  value: number;
+  rank: number;
+  price: string;
+  reqLevel: number;
+  inDraw: boolean;
+  dropPercent: number;
+  bound: boolean;
+  undestructible: boolean;
+}
+
+// FighterCardEdit is the editable part of a fighter card (Go: FighterCardEdit).
+export interface FighterCardEdit {
+  id: number;
+  value: number;
+  apCost: number;
+  rangeMin: number;
+  rangeMax: number;
 }
 
 export interface FighterCardDTO {
@@ -204,6 +232,10 @@ export interface FighterCardDTO {
   bonusInit: number;
   bonusRange: number;
   equipEffects: number;
+  apCost: number;
+  rangeMin: number;
+  rangeMax: number;
+  usable: boolean;
 }
 
 export interface SummoningDTO {
@@ -238,6 +270,8 @@ interface AppBindings {
   GetSpells(): Promise<SpellDTO[]>;
   GetCoachCards(): Promise<CoachCardDTO[]>;
   GetFighterCards(): Promise<FighterCardDTO[]>;
+  UpdateCoachCard(e: CoachCardEdit): Promise<void>;
+  UpdateFighterCard(e: FighterCardEdit): Promise<void>;
   GetSummonings(): Promise<SummoningDTO[]>;
   GetStaticEffects(): Promise<StaticEffectDTO[]>;
   ListJars(): Promise<JarInfo[]>;
@@ -261,7 +295,7 @@ function app(): AppBindings | null {
   return w.go?.main?.App ?? null;
 }
 
-const NO_PATHS: Paths = { dataDir: "", dataDirValid: false, clientDir: "", clientDirValid: false };
+const NO_PATHS: Paths = { dataDir: "", dataDirValid: false, clientDir: "", clientDirValid: false, contentDir: "" };
 const NO_ENV: Env = { version: "dev", os: "browser" };
 const NO_COUNTS: DataCounts = {
   spells: 0,
@@ -298,6 +332,16 @@ export function getCoachCards(): Promise<CoachCardDTO[]> {
 
 export function getFighterCards(): Promise<FighterCardDTO[]> {
   return app()?.GetFighterCards() ?? Promise.resolve([]);
+}
+
+const NOT_CONNECTED = new Error("Not connected to the Studio backend.");
+
+export function updateCoachCard(e: CoachCardEdit): Promise<void> {
+  return app()?.UpdateCoachCard(e) ?? Promise.reject(NOT_CONNECTED);
+}
+
+export function updateFighterCard(e: FighterCardEdit): Promise<void> {
+  return app()?.UpdateFighterCard(e) ?? Promise.reject(NOT_CONNECTED);
 }
 
 export function getSummonings(): Promise<SummoningDTO[]> {

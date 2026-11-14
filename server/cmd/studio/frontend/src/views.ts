@@ -1,7 +1,8 @@
 // Read-only game-data views for the 2.70 studio. Each reproduces the v2.04
 // design: a page head + the shared faceted, sortable, CSV-exporting table
 // (table.ts) with a right-side detail drawer. Data comes from the read-only
-// v2.70 backend DTOs; there are no editors.
+// v2.70 backend DTOs. The one editor is the cards' (S40): the drawer of a coach
+// or fighter card carries a form that saves to server/content/cards.
 
 import { mountTable, boolBadge, type Column, type Facet } from "./table";
 import { t } from "./i18n";
@@ -9,11 +10,16 @@ import {
   getSpells,
   getCoachCards,
   getFighterCards,
+  getPaths,
+  updateCoachCard,
+  updateFighterCard,
   getSummonings,
   getStaticEffects,
   type SpellDTO,
   type CoachCardDTO,
   type FighterCardDTO,
+  type CoachCardEdit,
+  type FighterCardEdit,
   type SummoningDTO,
   type StaticEffectDTO,
 } from "./backend";
@@ -122,12 +128,14 @@ export function viewSpells(container: HTMLElement): void {
 export function viewCards(container: HTMLElement): void {
   container.innerHTML =
     pageHead(t("nav.cards"), t("common.loading")) + `<div class="loading">${t("common.loading")}</div>`;
-  Promise.all([getCoachCards(), getFighterCards()])
-    .then(([coach, fighter]) => {
+  Promise.all([getCoachCards(), getFighterCards(), getPaths()])
+    .then(([coach, fighter, paths]) => {
+      const editable = paths.contentDir !== "";
       let tab: "coach" | "fighter" = "coach";
       const render = (): void => {
         container.innerHTML =
           pageHead(t("nav.cards"), t("view.cards.count", { coach: coach.length, fighter: fighter.length })) +
+          `<div class="card-source">${esc(editable ? t("cards.source", { dir: paths.contentDir }) : t("cards.readOnly"))}</div>` +
           `<div class="asset-chip-row cards-tabs">
              <button class="asset-chip ${tab === "coach" ? "on" : ""}" data-tab="coach">${esc(t("cards.tabCoach", { n: coach.length }))}</button>
              <button class="asset-chip ${tab === "fighter" ? "on" : ""}" data-tab="fighter">${esc(t("cards.tabFighter", { n: fighter.length }))}</button>
@@ -140,15 +148,104 @@ export function viewCards(container: HTMLElement): void {
           }),
         );
         const host = container.querySelector<HTMLElement>(".view-body")!;
-        if (tab === "coach") mountCoach(host, coach);
-        else mountFighter(host, fighter);
+        if (tab === "coach") mountCoach(host, coach, editable);
+        else mountFighter(host, fighter, editable);
       };
       render();
     })
     .catch((err) => showError(container, t("nav.cards"), err));
 }
 
-function mountCoach(host: HTMLElement, rows: CoachCardDTO[]): void {
+// --- card editor (S40) -------------------------------------------------------
+
+type EditValue = number | string | boolean;
+type Field = { key: string; label: string; kind: "int" | "text" | "bool"; value: EditValue };
+
+// editForm renders the drawer's edit form. Each input is named after its edit
+// field, so readForm can rebuild the edit from the form alone.
+function editForm(id: number, fields: Field[], editable: boolean): string {
+  const dis = editable ? "" : " disabled";
+  return (
+    `<form class="card-edit" data-id="${id}">` +
+    `<div class="card-edit-title">${esc(t("cards.edit"))}</div>` +
+    fields
+      .map((f) =>
+        f.kind === "bool"
+          ? `<label class="card-edit-row"><span>${esc(f.label)}</span><input type="checkbox" name="${f.key}"${f.value ? " checked" : ""}${dis}></label>`
+          : `<label class="card-edit-row"><span>${esc(f.label)}</span><input type="${f.kind === "int" ? "number" : "text"}" name="${f.key}" value="${esc(f.value)}"${f.kind === "int" ? ' step="1"' : ""}${dis}></label>`,
+      )
+      .join("") +
+    `<div class="card-edit-foot"><button type="submit" class="primary"${dis}>${esc(t("common.save"))}</button>` +
+    `<span class="card-edit-status" role="status"></span></div>` +
+    `</form>`
+  );
+}
+
+function readForm(form: HTMLFormElement, fields: Field[]): Record<string, EditValue> {
+  const out: Record<string, EditValue> = { id: Number(form.dataset.id) };
+  for (const f of fields) {
+    const el = form.elements.namedItem(f.key) as HTMLInputElement;
+    out[f.key] = f.kind === "bool" ? el.checked : f.kind === "int" ? Math.trunc(Number(el.value)) : el.value;
+  }
+  return out;
+}
+
+// wireForm hooks the drawer's form to save(); on success the row object takes
+// the saved values, so the table shows them on its next draw.
+function wireForm<T extends { id: number }>(
+  container: HTMLElement,
+  rows: T[],
+  fields: (r: T) => Field[],
+  save: (e: Record<string, EditValue>) => Promise<void>,
+  apply: (r: T, e: Record<string, EditValue>) => void,
+): void {
+  const form = container.querySelector<HTMLFormElement>("form.card-edit:not([data-wired])");
+  if (!form) return;
+  form.dataset.wired = "1";
+  const row = rows.find((r) => r.id === Number(form.dataset.id));
+  if (!row) return;
+  const status = form.querySelector<HTMLElement>(".card-edit-status")!;
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const edit = readForm(form, fields(row));
+    status.className = "card-edit-status";
+    status.textContent = t("common.loading");
+    save(edit)
+      .then(() => {
+        apply(row, edit);
+        status.classList.add("ok");
+        status.textContent = t("cards.saved");
+      })
+      .catch((err: unknown) => {
+        status.classList.add("bad");
+        status.textContent = err instanceof Error ? err.message : String(err);
+      });
+  });
+}
+
+function coachFields(r: CoachCardDTO): Field[] {
+  return [
+    { key: "value", label: t("cards.f.value"), kind: "int", value: r.value },
+    { key: "rank", label: t("cards.f.rank"), kind: "int", value: r.rank },
+    { key: "price", label: t("cards.f.price"), kind: "text", value: r.price },
+    { key: "reqLevel", label: t("cards.f.reqLevel"), kind: "int", value: r.reqLevel },
+    { key: "inDraw", label: t("cards.f.inDraw"), kind: "bool", value: r.inDraw },
+    { key: "dropPercent", label: t("cards.f.dropPercent"), kind: "int", value: r.dropPercent },
+    { key: "bound", label: t("cards.f.bound"), kind: "bool", value: r.bound },
+    { key: "undestructible", label: t("cards.f.undestructible"), kind: "bool", value: r.undestructible },
+  ];
+}
+
+function fighterFields(r: FighterCardDTO): Field[] {
+  return [
+    { key: "value", label: t("cards.f.value"), kind: "int", value: r.value },
+    { key: "apCost", label: t("cards.f.apCost"), kind: "int", value: r.apCost },
+    { key: "rangeMin", label: t("cards.f.rangeMin"), kind: "int", value: r.rangeMin },
+    { key: "rangeMax", label: t("cards.f.rangeMax"), kind: "int", value: r.rangeMax },
+  ];
+}
+
+function mountCoach(host: HTMLElement, rows: CoachCardDTO[], editable: boolean): void {
   mountTable<CoachCardDTO>(host, {
     rows,
     exportName: "coach-cards",
@@ -181,11 +278,22 @@ function mountCoach(host: HTMLElement, rows: CoachCardDTO[]): void {
         ["Rank", String(r.rank)],
         ["Price", r.price || "\u2014"],
         ["Purchasable", yn(r.purchasable)],
-      ]),
+      ]) + editForm(r.id, coachFields(r), editable),
+    onDraw: (c) =>
+      wireForm(
+        c,
+        rows,
+        coachFields,
+        (e) => updateCoachCard(e as unknown as CoachCardEdit),
+        (r, e) => {
+          const ed = e as unknown as CoachCardEdit;
+          Object.assign(r, ed, { purchasable: ed.price.trim() !== "" });
+        },
+      ),
   });
 }
 
-function mountFighter(host: HTMLElement, rows: FighterCardDTO[]): void {
+function mountFighter(host: HTMLElement, rows: FighterCardDTO[], editable: boolean): void {
   mountTable<FighterCardDTO>(host, {
     rows,
     exportName: "fighter-cards",
@@ -213,7 +321,16 @@ function mountFighter(host: HTMLElement, rows: FighterCardDTO[]): void {
         ["Bonus Init", String(r.bonusInit)],
         ["Bonus Range", String(r.bonusRange)],
         ["Equip effects", String(r.equipEffects)],
-      ]),
+        ["Usable (weapon attack)", yn(r.usable)],
+      ]) + editForm(r.id, fighterFields(r), editable),
+    onDraw: (c) =>
+      wireForm(
+        c,
+        rows,
+        fighterFields,
+        (e) => updateFighterCard(e as unknown as FighterCardEdit),
+        (r, e) => Object.assign(r, e),
+      ),
   });
 }
 

@@ -4853,3 +4853,54 @@ button.danger:disabled {
   gap: 6px;
   margin-top: 6px;
 }
+
+/* Card editor (S40): a form under the record detail in the drawer */
+.card-source {
+  margin: -6px 0 10px;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+.card-edit {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.card-edit-title {
+  font-weight: 700;
+  color: var(--accent);
+}
+.card-edit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.card-edit-row input[type="number"],
+.card-edit-row input[type="text"] {
+  width: 150px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+}
+.card-edit-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.card-edit-status.ok {
+  color: var(--good);
+}
+.card-edit-status.bad {
+  color: var(--bad);
+}

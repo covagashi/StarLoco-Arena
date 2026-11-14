@@ -32,14 +32,15 @@ func (a *App) GetDataCounts() DataCounts {
 	if err := a.ensureLoaded(); err != nil {
 		c.Error = err.Error()
 	}
+	if err := a.ensureCards(); err != nil && c.Error == "" {
+		c.Error = err.Error()
+	}
 	if a.spells != nil {
 		c.Spells = a.spells.Len()
 	}
-	if a.cards != nil {
-		c.CoachCards = a.cards.Len()
-	}
-	if a.fighterCards != nil {
-		c.FighterCards = a.fighterCards.Len()
+	if a.cardContent != nil {
+		c.CoachCards = a.cardContent.Cards.Len()
+		c.FighterCards = a.cardContent.Fighters.Len()
 	}
 	if a.summonings != nil {
 		c.Summonings = a.summonings.Len()
@@ -107,20 +108,24 @@ type CoachCardDTO struct {
 	Rank        int32  `json:"rank"`
 	Price       string `json:"price"`       // "currencyType:amount" pairs
 	Purchasable bool   `json:"purchasable"` // has a non-empty price
+	// The rest of the fields CoachCardEdit can change (S40).
+	RequiredLevel    int32 `json:"reqLevel"`
+	ObtainableInDraw bool  `json:"inDraw"`
+	DropPercent      int32 `json:"dropPercent"`
+	Bound            bool  `json:"bound"`
+	Undestructible   bool  `json:"undestructible"`
 }
 
 // GetCoachCards returns every coach-card template, sorted by ID.
 func (a *App) GetCoachCards() ([]CoachCardDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.ensureLoaded(); err != nil {
+	if err := a.ensureCards(); err != nil {
 		return nil, err
 	}
-	if a.cards == nil {
-		return []CoachCardDTO{}, nil
-	}
-	out := make([]CoachCardDTO, 0, a.cards.Len())
-	for _, cc := range a.cards.All() {
+	cards := a.cardContent.Cards
+	out := make([]CoachCardDTO, 0, cards.Len())
+	for _, cc := range cards.All() {
 		out = append(out, CoachCardDTO{
 			ID:          cc.ID,
 			CardType:    cc.Type,
@@ -129,6 +134,12 @@ func (a *App) GetCoachCards() ([]CoachCardDTO, error) {
 			Rank:        cc.Rank,
 			Price:       formatPrice(cc.Price),
 			Purchasable: len(cc.Price) > 0,
+
+			RequiredLevel:    cc.RequiredLevel,
+			ObtainableInDraw: cc.ObtainableInDraw,
+			DropPercent:      cc.DropPercent,
+			Bound:            cc.Bound,
+			Undestructible:   cc.Undestructible,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -146,20 +157,23 @@ type FighterCardDTO struct {
 	BonusInit    int32 `json:"bonusInit"`
 	BonusRange   int32 `json:"bonusRange"`
 	EquipEffects int   `json:"equipEffects"`
+	// The weapon-attack fields FighterCardEdit can change (S40).
+	APCost   int32 `json:"apCost"`
+	RangeMin int32 `json:"rangeMin"`
+	RangeMax int32 `json:"rangeMax"`
+	Usable   bool  `json:"usable"`
 }
 
 // GetFighterCards returns every fighter-card template, sorted by ID.
 func (a *App) GetFighterCards() ([]FighterCardDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.ensureLoaded(); err != nil {
+	if err := a.ensureCards(); err != nil {
 		return nil, err
 	}
-	if a.fighterCards == nil {
-		return []FighterCardDTO{}, nil
-	}
-	out := make([]FighterCardDTO, 0, a.fighterCards.Len())
-	for _, fc := range a.fighterCards.All() {
+	fighters := a.cardContent.Fighters
+	out := make([]FighterCardDTO, 0, fighters.Len())
+	for _, fc := range fighters.All() {
 		out = append(out, FighterCardDTO{
 			ID:           fc.ID,
 			Type:         int(fc.Type),
@@ -170,6 +184,10 @@ func (a *App) GetFighterCards() ([]FighterCardDTO, error) {
 			BonusInit:    fc.Bonus.Init,
 			BonusRange:   fc.Bonus.Range,
 			EquipEffects: len(fc.EquipEffects),
+			APCost:       fc.APCost,
+			RangeMin:     fc.RangeMin,
+			RangeMax:     fc.RangeMax,
+			Usable:       fc.Usable(),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })

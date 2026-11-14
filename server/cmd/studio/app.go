@@ -33,12 +33,13 @@ type App struct {
 	// decoded record sets. All are rebuilt whenever the data dir changes.
 	store         *gamedata.Store
 	spells        *gamedata.Spells
-	cards         *gamedata.Cards
-	fighterCards  *gamedata.FighterCards
 	summonings    *gamedata.Summonings
 	staticEffects *gamedata.StaticEffects
-	loadErr       string // last load error, surfaced to the UI
-	loaded        bool   // true once a load attempt completed for the current dir
+	// cardContent is the game's own cards (S40), loaded from paths.ContentDir
+	// apart from the store: see cardedit.go.
+	cardContent *gamedata.CardContent
+	loadErr     string // last load error, surfaced to the UI
+	loaded      bool   // true once a load attempt completed for the current dir
 
 	// jars memoizes opened client asset .jar (zip) readers, keyed by absolute
 	// path, for the asset/sprite browser (see assets.go).
@@ -71,6 +72,10 @@ type Paths struct {
 	// looks like the thing we expect (a sniff, not a guarantee).
 	DataDirValid   bool `json:"dataDirValid"`
 	ClientDirValid bool `json:"clientDirValid"`
+	// ContentDir is the checkout's server/content/cards, where the game's own
+	// cards live since S40 (see cardedit.go). Empty when the studio runs away
+	// from a checkout: it then shows the cards embedded in the binary, read-only.
+	ContentDir string `json:"contentDir"`
 }
 
 // NewApp constructs the backend with an auto-detected data directory
@@ -79,6 +84,7 @@ type Paths struct {
 func NewApp() *App {
 	a := &App{}
 	a.paths = detectPaths()
+	a.paths.ContentDir = detectContentDir()
 
 	cfg := loadConfig()
 	// Prefer a saved dir if it's still valid (lets the user pin a non-adjacent
@@ -142,8 +148,6 @@ func (a *App) SetClientDir(dir string) Paths {
 func (a *App) invalidate() {
 	a.store = nil
 	a.spells = nil
-	a.cards = nil
-	a.fighterCards = nil
 	a.summonings = nil
 	a.staticEffects = nil
 	a.loadErr = ""
@@ -151,7 +155,8 @@ func (a *App) invalidate() {
 }
 
 // ensureLoaded opens the store and decodes every catalog once, caching the
-// result. It returns an error phrased for surfacing in the UI. Caller holds
+// result (the cards are not in it: they load from the content tree, see
+// cardedit.go). It returns an error phrased for surfacing in the UI. Caller holds
 // a.mu. Individual catalog failures are recorded but do not abort the others,
 // so a partial store still browses.
 func (a *App) ensureLoaded() error {
@@ -178,12 +183,6 @@ func (a *App) ensureLoaded() error {
 	var firstErr error
 	if a.spells, err = store.LoadSpells(); err != nil && firstErr == nil {
 		firstErr = fmt.Errorf("spells: %w", err)
-	}
-	if a.cards, err = store.LoadCards(); err != nil && firstErr == nil {
-		firstErr = fmt.Errorf("coach cards: %w", err)
-	}
-	if a.fighterCards, err = store.LoadFighterCards(); err != nil && firstErr == nil {
-		firstErr = fmt.Errorf("fighter cards: %w", err)
 	}
 	if a.summonings, err = store.LoadSummonings(); err != nil && firstErr == nil {
 		firstErr = fmt.Errorf("summonings: %w", err)

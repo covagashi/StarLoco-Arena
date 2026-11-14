@@ -116,8 +116,19 @@ exportado (`assets/gamedata/*.json`, local, fuera de git). El studio
 
 ### Pendiente del paso 1
 
-- El **studio** aún edita las cartas en el `.bdat`; tiene que editar
-  `server/content/`.
+- ~~El studio~~ **hecho (2026-11-14):** lee las cartas de
+  `server/content/cards` (las busca desde el checkout, sin necesitar el
+  `.bdat`; fuera de un checkout enseña las embebidas, solo lectura) y el panel
+  lateral de cada carta trae un formulario para editarla. Coach: valor, rango
+  (0–10), precio, nivel requerido, sobres y peso de tirada, ligada,
+  indestructible. Luchador: valor, PA y alcance del arma. Los efectos no se
+  tocan aquí (eso es el rediseño del paso 2). Se valida en Go, y una edición
+  mala no cambia nada; al guardar solo cambia el fichero del set de esa carta
+  (reescribir el contenido sin cambios da los mismos bytes). Pruebas en
+  `cmd/studio/cardedit_test.go`; la interfaz, en Chromium con un backend
+  simulado: guarda, enseña el error y edita un luchador, sin errores de
+  página. Wails no está instalado en la Ally, así que la ventana de escritorio
+  no se ha abierto.
 - El **cliente** lee el JSON derivado (`assets/gamedata/cards.json`, local);
   puede leer `server/content/` directamente, como ya hace con las arenas.
 
