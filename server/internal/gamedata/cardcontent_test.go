@@ -12,10 +12,9 @@ import (
 	"github.com/StarLoco/arena-2.70/content"
 )
 
-// TestCardContentParity is S40's step-1 gate: the embedded content tree holds
-// exactly what the retail tables decode to, record by record. It holds until
-// the redesign starts changing cards on purpose; from then on, retire it set by
-// set (or pin the sets still untouched).
+// TestCardContentParity: the embedded content is exactly the retail tables
+// with the S40 rules applied (cardrules.go), record by record. A redesign that
+// changes cards on purpose goes in the rules, or retires this test set by set.
 func TestCardContentParity(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
 		t.Skip("no client data")
@@ -24,6 +23,8 @@ func TestCardContentParity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The content is the retail tables plus the S40 rules, nothing else.
+	ApplyCardRules(retail)
 	own, err := LoadCardContent(content.Cards)
 	if err != nil {
 		t.Fatal(err)
@@ -123,5 +124,59 @@ func TestBundleCardsWithoutRetailData(t *testing.T) {
 	}
 	if derived == 0 {
 		t.Fatal("no Card Master set card has a token price: ApplyCardMasterPrices did not run")
+	}
+}
+
+// TestCardContentObeysRules keeps every later edit (the studio, a redesign)
+// inside the S40 caps.
+func TestCardContentObeysRules(t *testing.T) {
+	cc, err := LoadCardContent(content.Cards)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range CardRuleViolations(cc) {
+		t.Error(v)
+	}
+}
+
+func TestApplyCardRules(t *testing.T) {
+	cc := &CardContent{
+		Cards: NewCards(
+			&CoachCard{ID: 1, Rank: 10, Effects: []CardSetEffect{{Action: 1, Params: []int32{50}}, {Action: 7, Params: []int32{-12}}, {Action: 5, Params: []int32{7}}}},
+			&CoachCard{ID: 2, HasUsableAction: true, ResurrectPercent: 100, Effects: []CardSetEffect{{Action: 13, Params: []int32{100}}, {Action: 9, Params: []int32{40}}}},
+			&CoachCard{ID: 3, HasUsableAction: true, ResurrectPercent: 1, Effects: []CardSetEffect{{Action: 13, Params: []int32{1}}}},
+		),
+		Sets:     NewCardSets(&CardSet{ID: 5, Effects: []CardSetEffect{{Action: 2, Params: []int32{50}}, {Action: 13, Params: []int32{20}}, {Action: 1, Params: []int32{-4}}}}),
+		Fighters: NewFighterCards(&FighterCard{ID: 28, Value: 200}, &FighterCard{ID: 9, Value: 300}),
+		Events:   NewEvents(),
+	}
+	if len(CardRuleViolations(cc)) == 0 {
+		t.Fatal("the raw fixture reports no violation")
+	}
+	ApplyCardRules(cc)
+	c1 := cc.Cards.Get(1)
+	if c1.Effects[0].Params[0] != 10 || c1.Effects[1].Params[0] != -5 || c1.Effects[2].Params[0] != 7 {
+		t.Fatalf("passive caps: %+v (XP 50 -> 10, death -12 -> -5, a wound malus +7 stays)", c1.Effects)
+	}
+	if c2 := cc.Cards.Get(2); c2.ResurrectPercent != 25 || c2.Effects[0].Params[0] != 25 || c2.Effects[1].Params[0] != 40 {
+		t.Fatalf("consumable: %+v (resurrection to 25, the potion's morale kept)", c2)
+	}
+	if c3 := cc.Cards.Get(3); c3.ResurrectPercent != 25 {
+		t.Fatalf("a 1 %% resurrection card: %d, want 25", c3.ResurrectPercent)
+	}
+	if s := cc.Sets.Get(5).Effects; s[0].Params[0] != 8 || s[1].Params[0] != 10 || s[2].Params[0] != -4 {
+		t.Fatalf("set caps: %+v", s)
+	}
+	if cc.Fighters.Get(28).Value != 150 || cc.Fighters.Get(9).Value != 300 {
+		t.Fatal("fighter-card values")
+	}
+	if v := CardRuleViolations(cc); len(v) != 0 {
+		t.Fatalf("after the rules: %v", v)
+	}
+	// Idempotent.
+	before := *cc.Cards.Get(1)
+	ApplyCardRules(cc)
+	if cc.Cards.Get(1).Effects[0].Params[0] != before.Effects[0].Params[0] {
+		t.Fatal("not idempotent")
 	}
 }

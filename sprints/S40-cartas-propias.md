@@ -203,3 +203,32 @@ dice, con lo que hace hoy el servidor (leído en el código):
 
 Heurística mía: los topes por liga son para Ranking. Evolución conserva su regla
 (mínimo 5.000, máximo 6.000), que no cabe en bronce.
+
+**Decisiones del dueño sobre los topes (2026-11-14):** las armas 28 y 34 a
+150 y 100; XP como mucho +10 %; resurrección al 25 % en todas las cartas;
+heridas, muerte, moral y fatiga con el tope de la rareza media.
+
+### Paso 2.2: los topes aplicados (2026-11-14)
+
+- `internal/gamedata/cardrules.go`: las reglas en código. Por efecto, el tope
+  en la dirección que ayuda (un malus se queda): XP % 10, XP fija 8, XP del
+  rival −8 % / −6, heridas propias −5, del rival +5, muerte propia −5, del
+  rival +5, moral +3, moral del rival −1, anular heridas 6 %, fatiga ±1,
+  botín 5. Resurrección: 25 % en toda carta (también los consumibles); lo que
+  un set suma encima, como mucho 10 (heurística: si no, un set la volvía
+  segura otra vez). Los demás consumibles (pociones de Historia, S21)
+  conservan su fuerza. Ojo: lo que se aplica después del combate sale de los
+  **efectos de set** (`sets.json`), no de cada carta, así que el tope va en
+  los dos.
+- `cmd/cardrules` las aplicó: **124 efectos por encima de su tope** en 26
+  ficheros, más las dos armas. `TestCardContentParity` comprueba ahora que el
+  contenido es exactamente el retail más estas reglas;
+  `TestCardContentObeysRules` impide que una edición posterior (el studio, el
+  rediseño) se salte un tope.
+- Cliente: `cards.json` (resurrección 25) y `fightercards.json` (28 y 34)
+  regenerados en local; `run_tests.sh` 1526/0; `go test ./...` en verde.
+- **Para S41:** las descripciones de las cartas en el cliente salen de los
+  textos retail, no de los datos, así que algunas aún dirán "+50 % XP" o
+  "100 % de resurrección".
+
+**Siguiente:** presupuesto por liga de Elo en `roster_rules.go`.
