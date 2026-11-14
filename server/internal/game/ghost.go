@@ -247,7 +247,8 @@ func (d *Deps) ghostSnapshot(coachID uint, lineup []uint) ([]domain.Fighter, []u
 		seen[fr.ID] = true
 		chosen = append(chosen, fr)
 	}
-	if len(chosen) == 0 || validateRoster(chosen, false) != rosterOK {
+	// S40: a ghost is held to its owner's ghost-ladder league budget.
+	if len(chosen) == 0 || validateRoster(chosen, false, d.ghostLeagueBudget(coachID)) != rosterOK {
 		return nil, nil, false
 	}
 	out := make([]domain.Fighter, 0, len(chosen))
@@ -369,7 +370,8 @@ func handleGhostFight(s *Session, frame *protocol.C2SFrame) error {
 		fightArena = s.deps.arenaFromSeed(seed)
 	}
 	roster := s.deps.titularRoster(s.Coach.ID, len(fightArena.team0))
-	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
+	teamA, err := s.deps.buildFightTeamCapped(s, 0, fightArena.team0, roster, false,
+		s.deps.ghostLeagueBudget(s.Coach.ID))
 	if err != nil {
 		return refuseFightError(err, s)
 	}
@@ -495,4 +497,16 @@ func (d *Deps) recordGhostFight(f *Fight, winnerTeam int8) {
 	if rec.ReplayOf == 0 {
 		d.rateGhostFight(rec.GhostID, rec.CoachID, rec.WinnerTeam)
 	}
+}
+
+// ghostLeagueBudget is the team budget of a coach's ghost-ladder league (S40).
+// An unreadable rating counts as the start, bronze.
+func (d *Deps) ghostLeagueBudget(coachID uint) int32 {
+	elo := domain.GhostEloStart
+	if d.Store != nil && d.Store.Ghosts != nil {
+		if r, err := d.Store.Ghosts.Rating(coachID); err == nil {
+			elo = r.Elo
+		}
+	}
+	return domain.GhostLeague(elo).Budget
 }

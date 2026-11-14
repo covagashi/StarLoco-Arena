@@ -55,7 +55,7 @@ func TestRosterRulesAreEnforcedServerSide(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := validateRoster(tc.roster, tc.evo)
+			got := validateRoster(tc.roster, tc.evo, maxTeamBudget)
 			if got != tc.want {
 				t.Fatalf("validateRoster = %v, want %v", got, tc.want)
 			}
@@ -74,7 +74,7 @@ func TestRosterRulesAreEnforcedServerSide(t *testing.T) {
 // another fighter's space.
 func TestRosterRejectsDuplicateFighters(t *testing.T) {
 	same := &domain.Fighter{ID: 7, BreedID: 1, Budget: 10}
-	if got := validateRoster([]*domain.Fighter{same, same}, false); got == rosterOK {
+	if got := validateRoster([]*domain.Fighter{same, same}, false, maxTeamBudget); got == rosterOK {
 		t.Error("the same fighter twice was accepted into a fight roster")
 	}
 }

@@ -21,7 +21,9 @@ import (
 // WARNS about the budget and submits anyway - so even honest clients were relying
 // on the server here.
 const (
-	// maxTeamBudget is the client's own cap (hu_2.java:456: `n4 > 6000`).
+	// maxTeamBudget is the client's own cap (hu_2.java:456: `n4 > 6000`), the
+	// budget of every mode without a league; the Ranking and the ghost ladder
+	// cap a team by the coach's league instead (domain.League, S40).
 	maxTeamBudget int32 = 6000
 	// minEvolutionTeamBudget mirrors hu_2.java:1073 and the client's rendering of
 	// code 78, which formats the message with the literal 5000.
@@ -79,7 +81,7 @@ func (v rosterViolation) String() string {
 // It takes already-resolved fighters (ownership having been established by the
 // caller) so that it is a pure function of the roster and therefore trivially
 // testable.
-func validateRoster(chosen []*domain.Fighter, evolution bool) rosterViolation {
+func validateRoster(chosen []*domain.Fighter, evolution bool, budgetCap int32) rosterViolation {
 	if len(chosen) == 0 {
 		return rosterEmpty
 	}
@@ -114,7 +116,7 @@ func validateRoster(chosen []*domain.Fighter, evolution bool) rosterViolation {
 		budget += int32(fr.Budget)
 	}
 
-	if budget > maxTeamBudget {
+	if budget > budgetCap {
 		return rosterOverBudget
 	}
 	if evolution && budget < minEvolutionTeamBudget {

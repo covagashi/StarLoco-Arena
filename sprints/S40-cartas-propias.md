@@ -231,4 +231,24 @@ heridas, muerte, moral y fatiga con el tope de la rareza media.
   textos retail, no de los datos, así que algunas aún dirán "+50 % XP" o
   "100 % de resurrección".
 
-**Siguiente:** presupuesto por liga de Elo en `roster_rules.go`.
+### Paso 2.3: presupuesto por liga (2026-11-14)
+
+- `domain.League`: cinco ligas por escalera, de 4.000 a 6.000 (+500).
+  Ranking 1v1 (`Coach.Strength`, 1000–3000, ±25 por combate): 200 puntos por
+  liga (bronce 1000–1199 … diamante desde 1800), ocho victorias netas;
+  sin clasificar = bronce. Escalera de fantasmas (Elo, empieza en 1000,
+  K 32): bronce por debajo de 1100 y luego 100 por liga (unas seis
+  victorias).
+- `validateRoster` recibe el tope. El matchmaker (siempre Ranking) usa la liga
+  del coach con la fuerza que tenía al entrar en la cola; el combate contra un
+  fantasma, la liga de fantasmas del que reta; y al guardar un fantasma, la
+  liga de fantasmas de su dueño. Práctica, retos PvE, Evolución y tótems
+  siguen con 6.000 (heurística: sin escalera no hay liga).
+- Pruebas: `internal/domain/league_test.go` (los límites de cada liga) y
+  `internal/game/league_budget_test.go` (un equipo de 4.400 no entra en bronce
+  y sí en plata, en el Ranking y en el fantasma; fuera de las escaleras, sí).
+  `go test ./...` en verde; `TestGhostFightReplaysWithItsSeed` se pasó una vez
+  de tiempo con toda la batería en paralelo y pasa sola y con su paquete
+  (combate IA contra IA lento bajo carga, no de este cambio).
+- **Falta en el cliente:** no enseña el tope; un coach de bronce que se pase
+  solo ve "presupuesto no válido".

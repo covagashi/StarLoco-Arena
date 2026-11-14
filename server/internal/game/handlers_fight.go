@@ -166,8 +166,12 @@ func (d *Deps) startFightWithTeamsSeeded(a *arena, teamA, teamB *FightTeam, prac
 
 // buildFightTeam creates a FightTeam from a searcher's roster, placing fighters
 // on the arena's start cells for its side.
+//
+// The matchmaker only makes Ranking fights, so the team is capped by the
+// coach's league (S40), read from the rating snapshotted on queueing.
 func (d *Deps) buildFightTeam(a *arena, sr *searcher, side uint8) (*FightTeam, error) {
-	return d.buildFightTeamFor(sr.session, side, a.startCells(side), sr.teamIDs)
+	return d.buildFightTeamCapped(sr.session, side, a.startCells(side), sr.teamIDs, false,
+		domain.RankedLeague(sr.strength).Budget)
 }
 
 // buildFightTeamFor creates a FightTeam for a session from an explicit list of
@@ -183,6 +187,12 @@ func (d *Deps) buildFightTeamFor(sess *Session, side uint8, cells []Pos, rosterI
 // buildFightTeamForMode is buildFightTeamFor with the evolution flag, which only
 // affects the MINIMUM budget rule (code 78).
 func (d *Deps) buildFightTeamForMode(sess *Session, side uint8, cells []Pos, rosterIDs []int64, evolution bool) (*FightTeam, error) {
+	return d.buildFightTeamCapped(sess, side, cells, rosterIDs, evolution, maxTeamBudget)
+}
+
+// buildFightTeamCapped is buildFightTeamForMode with the team budget cap: a
+// league's (S40) on the ladders, maxTeamBudget elsewhere.
+func (d *Deps) buildFightTeamCapped(sess *Session, side uint8, cells []Pos, rosterIDs []int64, evolution bool, budgetCap int32) (*FightTeam, error) {
 	coach := sess.Coach
 	team := &FightTeam{ID: side, Members: []*FightMember{{Coach: coach, Session: sess}}}
 
@@ -244,9 +254,9 @@ func (d *Deps) buildFightTeamForMode(sess *Session, side uint8, cells []Pos, ros
 	// collides with another fighter's space and corrupts targeting, HP and turn
 	// order. Enforcing at the choke point closes every entry at once, including
 	// ones added later.
-	if v := validateRoster(chosen, evolution); v != rosterOK {
+	if v := validateRoster(chosen, evolution, budgetCap); v != rosterOK {
 		d.Log.Warn("fight refused: illegal roster", "coach", coach.ID,
-			"reason", v.String(), "fighters", len(chosen))
+			"reason", v.String(), "fighters", len(chosen), "budgetCap", budgetCap)
 		return nil, rosterError{violation: v}
 	}
 

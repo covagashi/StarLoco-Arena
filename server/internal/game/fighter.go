@@ -116,7 +116,7 @@ func (s *Session) buildFighter(coachID uint, fb *FighterBlob) *domain.Fighter {
 	return f
 }
 
-// computeFighterBudget = breed base (400) + Σ card values (+ spell prices when
+// computeFighterBudget = breed base (breedBaseValue, 600) + Σ card values (+ spell prices when
 // spell gamedata is available). Clamped to int16. Values come from the FIGHTER-card
 // table — see computeLoadoutBudget for why using the coach-card table was wrong.
 func (s *Session) computeFighterBudget(f *domain.Fighter) int16 {
