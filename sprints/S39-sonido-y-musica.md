@@ -1,6 +1,6 @@
 # S39 — Sonido y música
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (2026-11-14: sonidos de interfaz hechos)
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🟢 hecho a falta del dueño (2026-11-14: interfaz, hechizos, combate y música propios; falta que lo oiga)
 
 ## Alcance
 
@@ -81,8 +81,26 @@ golpe de arma) y `jump` (cloth ×2, los saltos y los intercambios).
 Evidencia: los últimos 16 sonidos de un `fight_smoke` entero, todos nuestros
 (pasos, golpes, un salto, la muerte, rayos y teletransportes de aire).
 
+### Música (2026-11-14)
+
+Elegida a ciegas por la descripción de su autor (no puedo escucharla), y con
+preferencia por CC0; CC-BY vale (el cliente es propietario, pero el crédito
+basta), CC-BY-SA y GPL no.
+- **Lobby: "Enchanted Festival"**, Matthew Pablo, **CC-BY 3.0**: festiva y
+  juguetona ("para pueblos, menús, tutoriales"), trae versión en bucle.
+  **Pide crédito:** está en `CREDITS.md`, y el juego publicado tendrá que
+  mostrarlo (una pantalla de créditos antes de la demo pública, S44).
+- **Combate: "Battle Theme A"**, cynicmusic, CC0: cuerdas y metales épicos
+  para combates de RPG.
+`godot/assets/audio/music/` (2,9 MB, Ogg Vorbis). `Audio` las lee ahí (la
+pista de fuera del combate sigue llamándose "island") y ya no lee la música
+retail. `audio_smoke` 7/7 (contaba todos los reproductores de `Audio`
+sonando, y desde S39 también están los de efectos: ahora solo los del bus
+de música).
+
 ### Siguiente
 
-La música (lobby y combate, CC0 de OpenGameArt) y quitar `sounds/` y
-`musics/` retail cuando nada los lea (`anm_sprite._play_sfx` aún los toca
-para los sets 2D que queden; eso cae con S43).
+Que el dueño lo oiga todo (interfaz, hechizos, golpes, las dos músicas) y
+cambie lo que no le guste. Quitar `sounds/` y `musics/` retail cuando nada
+los lea (`anm_sprite._play_sfx` aún toca los sonidos de los sets 2D que
+queden; eso cae con S43). La pantalla de créditos (el CC-BY del lobby).

@@ -4,7 +4,7 @@ extends "res://test/world_smoke.gd"
 ##
 ##   godot --path godot -s test/audio_smoke.gd
 ##
-## Needs assets/musics/ (the old importer's musics.py). Under xvfb or
+## Needs assets/audio/music/ (ours since S39, in git). Under xvfb or
 ## --headless Godot still runs its audio mixer (dummy driver), so a player
 ## reports .playing like it would with speakers.
 ##  1. The lobby plays "island" (retail: track 1 outside a fight).
@@ -48,8 +48,10 @@ func _boot_volumes() -> void:
 func _check_track(where: String, want: String) -> void:
 	var p: AudioStreamPlayer = _audio.music_player()
 	var playing := 0
+	# the music players only: since S39 Audio also holds the interface and
+	# fight sounds' players (SFX bus), and a fight is never quiet
 	for c in _audio.get_children():
-		if c is AudioStreamPlayer and c.playing:
+		if c is AudioStreamPlayer and c.bus == "Music" and c.playing:
 			playing += 1
 	_record(0, "music in " + where, _audio.track == want and p.playing
 		and p.stream != null and playing == 1,

@@ -10,8 +10,9 @@ extends Node
 ## fight (aog_1 world entry, RO fight end), track 2 "fight" during one
 ## (aog_1 / tu_1 fight start). Track 0 "loading" ships but is never asked
 ## for. The retail cross-fades between them; so does this, on two players.
-## The oggs come from the player's own client (the old importer's musics.py,
-## assets/musics/); with none imported the game is simply silent.
+## S39: the tracks are ours to ship (assets/audio/music/: lobby "Enchanted
+## Festival" by Matthew Pablo, CC-BY 3.0; fight "Battle Theme A" by
+## cynicmusic, CC0 — godot/art/CREDITS.md); without them the game is silent.
 ##
 ## Volumes live in gamePreferences under the retail optionsDialog keys
 ## (musicMute/musicVolume, ambianceSoundsMute/ambianceSoundsVolume — the
@@ -31,6 +32,8 @@ extends Node
 
 const BUSES := ["Music", "SFX"]
 const TRACKS := ["island", "fight"]
+## track → our file in assets/audio/music/ (S39)
+const MUSIC_FILES := {"island": "lobby", "fight": "fight"}
 const FADE_S := 1.5
 
 ## The track playing (or fading in): "" while silent.
@@ -232,7 +235,9 @@ func _fade(i: int, to: float, stop_after: bool) -> void:
 func _stream(name: String) -> AudioStream:
 	if _streams.has(name):
 		return _streams[name]
-	var rel := "musics/%s.ogg" % name
+	# S39: our tracks (assets/audio/music/, OpenGameArt — CREDITS.md); the
+	# outside-a-fight track keeps the retail's name, "island"
+	var rel := "audio/music/%s.ogg" % MUSIC_FILES.get(name, name)
 	var st: AudioStreamOggVorbis = null
 	if AssetPaths.exists(rel):
 		st = AudioStreamOggVorbis.load_from_file(AssetPaths.resolve(rel))
