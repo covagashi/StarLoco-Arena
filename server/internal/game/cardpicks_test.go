@@ -74,7 +74,7 @@ func TestDrawPickOffer(t *testing.T) {
 				t.Fatalf("offer %v holds %+v", offer, c)
 			}
 			seen[id] = true
-			tiers[pickTier(c.Rank)] = true
+			tiers[domain.CardTier(c.Rank)] = true
 		}
 		if len(tiers) != pickOfferSize {
 			t.Fatalf("offer %v covers %d tiers, want %d", offer, len(tiers), pickOfferSize)

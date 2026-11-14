@@ -292,6 +292,14 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.CardPick{})
 		},
 	},
+	{
+		// Drop guarantee (S40): drops since the last rare one.
+		Version: 21,
+		Name:    "card_picks_drop_pity",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.CardPick{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

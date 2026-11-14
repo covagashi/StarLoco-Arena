@@ -11,7 +11,43 @@ type CardPick struct {
 	// Offer is the pending offer, card template ids joined by commas ("" =
 	// none). It waits until the coach picks, across sessions.
 	Offer string `gorm:"not null;default:''"`
+	// DropsSinceRare counts the post-fight drops since the last rare one
+	// (silver or gold, rank 6+): at DropPityAfter, the next is rare.
+	DropsSinceRare int32 `gorm:"not null;default:0"`
 }
+
+const (
+	// DropPityAfter: after this many drops without a rare card, the next one
+	// is rare (owner: one every 10 at worst).
+	DropPityAfter int32 = 10
+	// DropRareRank is the lowest rank that counts as rare (silver, tier 2).
+	DropRareRank int32 = 6
+	// DropKeepCopies is how many copies of a dropped card a coach keeps (for
+	// fusion and barter); further copies become tokens (DuplicateTokens).
+	DropKeepCopies = 2
+)
+
+// CardTier is the rarity tier the client shows for a card rank (cards.gd
+// tier_of, S38b): 0 black (rank 0-2), 1 copper (3-5), 2 silver (6-8), 3 gold
+// (9-10).
+func CardTier(rank int32) int {
+	switch {
+	case rank <= 2:
+		return 0
+	case rank <= 5:
+		return 1
+	case rank <= 8:
+		return 2
+	}
+	return 3
+}
+
+// duplicateTokens is what a duplicate drop pays by tier: a gold one is worth
+// a Ranking win.
+var duplicateTokens = [4]int32{5, 10, 25, 50}
+
+// DuplicateTokens is what a duplicate drop of that rank pays.
+func DuplicateTokens(rank int32) int32 { return duplicateTokens[CardTier(rank)] }
 
 // TableName pins the table name.
 func (CardPick) TableName() string { return "card_picks" }

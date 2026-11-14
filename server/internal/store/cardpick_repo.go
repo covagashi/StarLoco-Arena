@@ -23,7 +23,8 @@ func (r *CardPickRepo) Get(coachID uint) (domain.CardPick, error) {
 // Save stores a coach's progress (insert or update).
 func (r *CardPickRepo) Save(p domain.CardPick) error {
 	res := r.db.Model(&domain.CardPick{}).Where("coach_id = ?", p.CoachID).
-		Updates(map[string]any{"wins": p.Wins, "picks": p.Picks, "offer": p.Offer})
+		Updates(map[string]any{"wins": p.Wins, "picks": p.Picks, "offer": p.Offer,
+			"drops_since_rare": p.DropsSinceRare})
 	if res.Error != nil {
 		return res.Error
 	}

@@ -289,3 +289,29 @@ topes). **Cuentan también las victorias contra fantasmas.**
   cartas en el informe, elegir → 60045 sin oferta y la carta en el
   inventario). Capturas en `~/codigo/capturas/s40/`. `run_tests.sh` 1526/0,
   `go test ./...` en verde.
+
+**Decisiones del dueño sobre el botín (2026-11-14):** las repetidas pasan a
+fichas **desde la 3.ª copia** (las dos primeras sirven para fusión y
+trueque); "rara" para la garantía es **plata u oro** (rango 6+, 39 cartas en
+el botín; oro solo hay 5); fichas por repetida **5 / 10 / 25 / 50** (negra,
+cobre, plata, oro).
+
+### Paso 2.5: garantía y repetidas en el botín (2026-11-14)
+
+- `rollFightDrops`: tras 10 botines sin una rara, el siguiente sale de
+  `DrawTable.DrawRare` (las de rango 6+ hasta el nivel del coach, o las más
+  baratas por encima si no hay); el contador vive en `card_picks`
+  (migración 21) y sobrevive entre combates. Una carta de la que ya hay 2
+  copias se paga en fichas (`domain.DuplicateTokens`) y no se guarda.
+  `domain.CardTier` es el único sitio con los tramos de rareza del cliente.
+- Pruebas: `TestDropGuaranteeAndDuplicates` (120 botines con una rara al 0 %:
+  nunca más de 10 seguidos sin ella), `TestDuplicateTokensByTier`; dos
+  pruebas antiguas de botín se adaptan a la regla (la tercera copia paga 5
+  fichas; la de probabilidad borra la carta en cada vuelta para medir solo
+  la tirada).
+- Visto de paso: `TestGhostFightReplaysWithItsSeed` (e2e) **falla de forma
+  intermitente desde antes de S40**: 2 de 6 en el commit `bfb3643f`, sobre
+  todo con la batería completa en paralelo (el combate IA contra fantasma no
+  acaba en 120 s). Apuntado para revisarlo aparte.
+- Pendiente de interfaz: las repetidas convertidas no salen en la pantalla
+  de resultados (8300 solo lleva cartas); las fichas sí llegan al monedero.

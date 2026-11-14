@@ -125,13 +125,52 @@ func (d *Deps) rollFightDrops(f *Fight, coach *domain.Coach, sess *Session) []in
 		}
 	}
 
+	// S40: the guarantee (a rare card after DropPityAfter drops without one)
+	// and the duplicates (copies past DropKeepCopies pay tokens instead).
+	d.pickMu.Lock()
+	defer d.pickMu.Unlock()
+	var pity domain.CardPick
+	if d.Store.CardPicks != nil {
+		pity, _ = d.Store.CardPicks.Get(coach.ID)
+	}
+	have := map[int32]int{}
+	if fresh, err := d.Store.Coaches.Get(coach.ID); err == nil && fresh != nil {
+		for _, cc := range fresh.Inventory {
+			have[cc.TemplateID] += int(cc.Quantity)
+		}
+	}
 	var won []int32
+	var tokens int32
 	for i := 0; i < draws; i++ {
-		c := t.Draw(level, bonus)
+		var c *gamedata.CoachCard
+		if pity.DropsSinceRare >= domain.DropPityAfter {
+			c = t.DrawRare(level, domain.DropRareRank)
+		}
+		if c == nil {
+			c = t.Draw(level, bonus)
+		}
 		if c == nil {
 			break
 		}
+		if c.Rank >= domain.DropRareRank {
+			pity.DropsSinceRare = 0
+		} else {
+			pity.DropsSinceRare++
+		}
+		if have[c.ID] >= domain.DropKeepCopies {
+			tokens += domain.DuplicateTokens(c.Rank)
+			continue
+		}
+		have[c.ID]++
 		won = append(won, c.ID)
+	}
+	if d.Store.CardPicks != nil {
+		if err := d.Store.CardPicks.Save(pity); err != nil {
+			d.Log.Warn("drop guarantee not saved", "coach", coach.ID, "err", err)
+		}
+	}
+	if tokens > 0 {
+		d.creditTokens(coach.ID, sess, tokens, "duplicate drops")
 	}
 	if len(won) == 0 {
 		return nil
@@ -145,7 +184,7 @@ func (d *Deps) rollFightDrops(f *Fight, coach *domain.Coach, sess *Session) []in
 		return nil
 	}
 	d.Log.Info("fight drops", "coach", coach.Name, "level", level, "bonus", bonus,
-		"draws", draws, "cards", won)
+		"draws", draws, "cards", won, "duplicateTokens", tokens, "sinceRare", pity.DropsSinceRare)
 	// Same inventory refresh as awardChallengeRewards: the session's view stays
 	// stale without it even though the 8300 blob already names the won cards.
 	if sess != nil {

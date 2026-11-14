@@ -152,3 +152,41 @@ func (t *DrawTable) PoolLen() int {
 	}
 	return n
 }
+
+// DrawRare is the S40 guarantee's draw: a uniform pick among the pool's cards
+// of at least minRank, those at or below bucket n first (the coach's level, as
+// Draw), else the lowest-valued ones. No acceptance roll: the guarantee is the
+// point. Nil when the pool holds no such card.
+func (t *DrawTable) DrawRare(n int, minRank int32) *CoachCard {
+	if t == nil {
+		return nil
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	var within, above []int32
+	lowest := drawBuckets
+	for b := 0; b < drawBuckets; b++ {
+		for _, id := range t.buckets[b] {
+			c := t.byID[id]
+			if c == nil || c.Rank < minRank {
+				continue
+			}
+			switch {
+			case b <= n:
+				within = append(within, id)
+			case b < lowest:
+				lowest, above = b, []int32{id}
+			case b == lowest:
+				above = append(above, id)
+			}
+		}
+	}
+	pool := within
+	if len(pool) == 0 {
+		pool = above
+	}
+	if len(pool) == 0 {
+		return nil
+	}
+	return t.byID[pool[t.rng.Intn(len(pool))]]
+}

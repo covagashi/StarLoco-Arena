@@ -40,20 +40,6 @@ var pickableTypes = func() map[int32]bool {
 	return m
 }()
 
-// pickTier is the rarity tier the client shows (cards.gd tier_of): black,
-// copper, silver, gold.
-func pickTier(rank int32) int {
-	switch {
-	case rank <= 2:
-		return 0
-	case rank <= 5:
-		return 1
-	case rank <= 8:
-		return 2
-	}
-	return 3
-}
-
 // drawPickOffer chooses pickOfferSize distinct pickable cards, the coach's
 // unowned ones first, spread over as many rarity tiers as it can: a rare card
 // is different, not better, so an offer shows the range rather than a ladder.
@@ -88,11 +74,11 @@ func drawPickOffer(cards *gamedata.Cards, owned map[int32]bool, rng *rand.Rand) 
 			if len(out) == pickOfferSize {
 				break
 			}
-			if taken[c.ID] || pass == 0 && tiers[pickTier(c.Rank)] {
+			if taken[c.ID] || pass == 0 && tiers[domain.CardTier(c.Rank)] {
 				continue
 			}
 			taken[c.ID] = true
-			tiers[pickTier(c.Rank)] = true
+			tiers[domain.CardTier(c.Rank)] = true
 			out = append(out, c.ID)
 		}
 	}
