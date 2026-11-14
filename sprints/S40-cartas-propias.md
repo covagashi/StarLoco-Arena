@@ -132,7 +132,31 @@ exportado (`assets/gamedata/*.json`, local, fuera de git). El studio
 - El **cliente** lee el JSON derivado (`assets/gamedata/cards.json`, local);
   puede leer `server/content/` directamente, como ya hace con las arenas.
 
-### Paso 2 (siguiente): rebalanceo contra el pay to win
+### Paso 2: decisiones del dueño (2026-11-14, por preguntas)
+
+| Pregunta | Respuesta |
+|---|---|
+| Qué es una carta rara | **Distinta, no mejor**: otra forma de jugar con la misma potencia que una común de su coste |
+| Tope por equipo | **Sí, por liga**: presupuesto pequeño en las ligas bajas, que crece al subir |
+| Novatos frente a veteranos | **Desbloquear cartas jugando combates**; lo desbloqueado da variedad, no potencia |
+| Sobres | **Se quedan, con garantía**: las repetidas se convierten en fichas y cada cierto número de sobres sale una rara seguro |
+| Ligas del presupuesto | **Tramos de Elo** (bronce, plata, oro, platino, diamante); el presupuesto sube con la liga y se reinicia en parte con la temporada (S25) |
+| Presupuesto de la liga más baja | **4.000**, unos +500 por liga hasta el 6.000 de hoy (`maxTeamBudget`, el tope del cliente retail) |
+| Desbloqueo jugando | **Cada X victorias eliges 1 carta entre 3**, sin repetidas; rápido al principio, más lento después |
+| Garantía de los sobres | **Una rara cada 10 sobres** |
+| Inventarios existentes | **Se quedan**: las cartas cambian de valores para todos a la vez (mismos ids, sin migrar) |
+| Ritmo del desbloqueo | **Cada 3 victorias** las 10 primeras elecciones, **luego cada 5** |
+| Equipo inicial | **Lo justo**: luchadores sin equipo, todo se gana jugando (el dueño descartó mi propuesta de un equipo básico) |
+| Repetidas de sobre | **Fichas según su rareza** (p. ej. común 5, rara 50) |
+
+**Orden de trabajo (heurística):** 1) medir: potencia de cada carta frente a
+su rango, precio y valor, y cuánto cuesta hoy en victorias; 2) presupuesto por
+liga de Elo (4.000 en bronce, +500 por liga) en `roster_rules.go`;
+3) desbloqueo de 1 entre 3 cada 3/5 victorias; 4) garantía de rara cada 10
+sobres y repetidas a fichas; 5) igualar la potencia por coste set a set
+(raras distintas, no mejores), con simulaciones IA contra IA.
+
+### Paso 2: rebalanceo contra el pay to win
 
 Visto al hacer el paso 1: el retail ya tiene un **presupuesto de equipo**
 (`ParamTypeBudget`, "Modifie le budget", en `parameters.go`), que es el tope
