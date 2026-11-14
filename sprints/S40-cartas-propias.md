@@ -162,3 +162,32 @@ Visto al hacer el paso 1: el retail ya tiene un **presupuesto de equipo**
 (`ParamTypeBudget`, "Modifie le budget", en `parameters.go`), que es el tope
 por equipo de arriba. Antes de rediseñar, medir: potencia de cada carta frente
 a su rareza y su precio, y cuántas victorias cuesta cada una.
+
+### Paso 2.1: la medición (2026-11-14)
+
+`go run ./cmd/cardreport` (en `server/`) mide las cartas de `content`. Lo que
+dice, con lo que hace hoy el servidor (leído en el código):
+
+- **Solo las 75 cartas de luchador actúan en combate.** Su `Value` es lo que
+  cuestan en el presupuesto (600 de base por luchador, 6 luchadores como mucho,
+  6.000 por equipo). **Ya están bien pagadas:** el valor sigue a lo que dan con
+  R² = 0,87 (precio implícito: 1 PA ≈ 194, 1 PM ≈ 238, 1 de alcance ≈ 191,
+  1 PV ≈ 8, 1 % de daño ≈ 3,5, 1 de daño por PA del arma ≈ 74). Hay unas pocas
+  desviadas en ±50–100 (armas de 100 que valen ~150; cartas de solo iniciativa
+  que cuestan 50 y no dan casi nada).
+- **Las 907 cartas de coach no actúan en combate**: XP, heridas, muerte,
+  moral, fatiga, botín y resurrección, todo después del combate. Solo las de
+  "aplicar condición" (acción 15, consumibles de Historia) llegan al combate
+  por sus condiciones. **Aquí sí manda la rareza:** XP % 2–5 en rangos 0–4
+  y 40–50 en rangos 7–10; resurrección del 100 % desde el rango 6; menos
+  heridas y muerte al subir de rango. Es el patrón "rara = mejor" que hay que
+  quitar, y es progresión (quien tiene raras sube a sus luchadores más rápido).
+- **No hay sobres.** Las cartas al azar salen del botín después de cada
+  combate (`rollFightDrops`, por `ObtainableInDraw`/`DropPercent`) o se
+  compran una a una. Una victoria de Ranking da 50 fichas; las raras (rango
+  9–10) cuestan una mediana de 20–30 victorias.
+- **Choques con lo decidido:** un equipo completo sin equipo ya cuesta 3.600,
+  así que con 4.000 en bronce quedan 400 para equipo; y Evolución exige un
+  mínimo de 5.000 (`minEvolutionTeamBudget`), por encima del tope de bronce.
+- De paso: el comentario de `computeFighterBudget` dice base 400 y el código
+  usa 600.
