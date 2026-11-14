@@ -18,8 +18,10 @@ extends "res://test/totems_smoke.gd"
 ## 5. Player tournament: with a "Création de Tournoi" card (807), the
 ##    Calendar's form sends 17010 and the new tournament is listed.
 ##
-## Seeding (server stopped, on a COPY of arena.db; coach "test" = id 1) is
-## done by tools in the session that ran it; see the S09 sprint for the SQL.
+## Seeding (server stopped, on a COPY of arena.db; coach "test" = id 1):
+## test/seed_tournaments.py. The cups watched live (open search, a period
+## that opens) are Evolution ones: classic cups are played offline by the AI
+## the moment registration closes (S29).
 
 const CARRY_NEXT := "Copa Smoke II"
 const OPEN_CUP := "Copa Smoke Abierta"

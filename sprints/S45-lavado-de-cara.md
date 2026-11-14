@@ -238,6 +238,15 @@ la pestaña Torneos, buscar, cancelar y crear torneo; no pasan el día en el
 calendario, la pregunta del arrastre (28618 no llega) ni el periodo que se
 abre. Leen datos del servidor, no la interfaz, y este trabajo no tocó esa
 red: quedan apuntados para revisarlos aparte.
+**Resuelto (2026-11-14):** no era el servidor ni la interfaz, era la
+siembra. La de S09 (en el devlog) es anterior a S29, que juega los torneos
+clásicos sin conexión, IA contra IA, en cuanto se cierra la inscripción
+(`tournament_offline.go`): las copas "Abierta" y "Tarde", sembradas con la
+definición 1 (clásica) y dos inscritos, se jugaban y se cerraban al abrir su
+periodo, así que no estaban en la lista (y el arrastre fallaba si la copia
+era vieja). La siembra vive ya en el repo, `godot/test/seed_tournaments.py`,
+con esas dos copas en la definición 12 (Evolución, que sigue en vivo).
+`tournaments_smoke` sobre una copia recién sembrada: **10/10**.
 
 Pendiente para el dueño: si el combate debe ir más lejos (acciones con
 dibujo y nombre), y fondos ilustrados por pantalla con AniCraft o vex cuando
