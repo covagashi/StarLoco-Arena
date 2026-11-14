@@ -187,6 +187,14 @@ func (d *Deps) rateGhostFight(ghostID, challenger uint, winnerTeam int8) {
 	}
 	d.Log.Info("ghost fight rated", "coach", challenger, "elo", before, "to", me.Elo,
 		"ghost", g.ID, "ghost_elo", g.EloGhost, "filler", filler)
+	// S40: a ghost win counts towards the next card pick (owner), and the
+	// rating may have changed the ghost league.
+	if won {
+		d.cardPickWin(challenger)
+	}
+	if s := d.sessionForCoach(challenger); s != nil {
+		_ = s.sendLeague()
+	}
 }
 
 func max32(a, b int32) int32 {

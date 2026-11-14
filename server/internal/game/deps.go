@@ -2,6 +2,7 @@ package game
 
 import (
 	"log/slog"
+	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -13,6 +14,10 @@ import (
 type Deps struct {
 	// fillerOnce seeds the filler ghosts on the first ghost request (S14).
 	fillerOnce sync.Once
+	// pickMu serialises the card-pick read-modify-writes (S40); pickRng, when
+	// set (tests), makes the offers repeat.
+	pickMu  sync.Mutex
+	pickRng *rand.Rand
 	// Rules are the server-invented numbers (XP, standing, social caps). Zero
 	// value means "use DefaultRules" - see rules.go.
 	Rules Rules
@@ -137,6 +142,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerStoryHandlers(r, d)
 	registerSeasonHandlers(r, d)
 	registerCosmeticHandlers(r, d)
+	registerCardPickHandlers(r, d)
 	registerOfflineTournamentHandlers(r, d)
 	registerGhostHandlers(r, d)
 }

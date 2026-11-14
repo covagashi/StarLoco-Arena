@@ -283,6 +283,15 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.CoachCosmetic{}, &domain.Coach{})
 		},
 	},
+	{
+		// Card picks (S40): each coach's wins towards its next "pick one
+		// card of three", and the offer it has not taken yet.
+		Version: 20,
+		Name:    "card_picks",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.CardPick{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

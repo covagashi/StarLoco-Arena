@@ -881,6 +881,10 @@ func (d *Deps) checkFightEnd(f *Fight) {
 				}
 				if won { // faucet: award tokens + push the updated wallet (4001)
 					d.awardFightWin(mem.Coach.ID, mem.Session)
+					d.cardPickWin(mem.Coach.ID) // S40: towards the next "pick one of three"
+				}
+				if mem.Session != nil {
+					_ = mem.Session.sendLeague() // S40: the Strength may have changed league
 				}
 			}
 			// Challenge (PvE) rewards are granted even though the fight is unranked -

@@ -46,5 +46,12 @@ func handleClientConfigRequest(s *Session, _ *protocol.C2SFrame) error {
 	if err := s.Send(frame); err != nil {
 		return err
 	}
-	return s.sendCosmetics(nil) // S37: the coach's cosmetics ride along
+	if err := s.sendCosmetics(nil); err != nil { // S37: the coach's cosmetics ride along
+		return err
+	}
+	// S40: the card picks and the league ride along too.
+	if err := s.sendCardPicks(); err != nil {
+		return err
+	}
+	return s.sendLeague()
 }

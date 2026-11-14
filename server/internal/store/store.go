@@ -42,6 +42,8 @@ type Store struct {
 	Ghosts *GhostRepo
 	// Seasons are the ladder seasons and their results (S25).
 	Seasons *SeasonRepo
+	// CardPicks are the "pick one card of three" rewards (S40).
+	CardPicks *CardPickRepo
 }
 
 // Open connects to a SQLite database at path (dev convenience / tests) and
@@ -133,6 +135,7 @@ func OpenConfig(c Config) (*Store, error) {
 	s.Guilds = &GuildRepo{db: gdb}
 	s.BugReports = &BugReportRepo{db: gdb}
 	s.Ghosts = &GhostRepo{db: gdb}
+	s.CardPicks = &CardPickRepo{db: gdb}
 	s.Seasons = &SeasonRepo{db: gdb}
 
 	// A fresh database starts with the line-up that used to be compiled in, so

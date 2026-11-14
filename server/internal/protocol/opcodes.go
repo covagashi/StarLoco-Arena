@@ -652,6 +652,15 @@ const (
 	// 60042 [i32 hairFx (0 = none)] → 60043 [i32 hairFx][u8 n]{[i32 owned id]}
 	OpCosmeticEquip = 60042 // C2S
 	OpCosmetics     = 60043 // S2C
+
+	// Card picks and leagues (S40, game/cardpicks.go) — Godot only. 60045 and
+	// 60046 go with every 60001 and after each fight that moves them.
+	// 60044 [i32 cardId] → 60045 [u8 wins][u8 every][u8 n]{[i32 offered card]}
+	// 60046 [u8 rankedTier][i32 rankedBudget][u8 ghostTier][i32 ghostBudget]
+	// (tier 0 bronze .. 4 diamond)
+	OpCardPickChoose = 60044 // C2S
+	OpCardPicks      = 60045 // S2C
+	OpLeague         = 60046 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 368 |
-| **C2S handled (H)** | 125 |
-| **S2C emitted (E)** | 166 |
+| Rows in the master table | 371 |
+| **C2S handled (H)** | 126 |
+| **S2C emitted (E)** | 168 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -557,6 +557,9 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60040 | S2C | E | Godot extension (no retail class) | the coaches' worn equipment in a fight (S35c), right after 8000 to a session that sent 60000 - `[u8 n] n×{[i64 coachId][u8 m] m×{[u8 slot (5201's, 0-based)][i32 cardId]}[i32 hairFx (S37, 0 = none)]}`; the 3D coach figures wear it |
 | 60042 | C2S | H | Godot extension (no retail class) | `handleCosmeticEquip` (S37) - `[i32 hairFx]`, 0 takes it off; a cosmetic the coach doesn't own is refused; answered by 60043 |
 | 60043 | S2C | E | Godot extension (no retail class) | the coach's cosmetics (S37), with every 60001 and after 60042 - `[i32 hairFx shown][u8 n] n×{[i32 owned cosmetic id]}` |
+| 60044 | C2S | H | Godot extension (no retail class) | `handleCardPickChoose` (S40) - `[i32 cardId]`, one card of the pending "pick one of three" offer; a card outside it is refused; answered by 60045 |
+| 60045 | S2C | E | Godot extension (no retail class) | the coach's card picks (S40), with every 60001, after 60044 and when a win makes an offer - `[u8 wins][u8 every][u8 n] n×{[i32 offered coach card]}` (n = 0: none pending) |
+| 60046 | S2C | E | Godot extension (no retail class) | the coach's leagues (S40), with every 60001 and after each fight - `[u8 rankedTier][i32 rankedBudget][u8 ghostTier][i32 ghostBudget]`, tier 0 bronze .. 4 diamond, budget 4000..6000 |
 
 ---
 
