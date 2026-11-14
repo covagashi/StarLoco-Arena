@@ -301,6 +301,27 @@ rareza); C carta coleccionable (cabecera de familia, ventana de arte, pie del
 metal). Hoja: `~/codigo/capturas/s38/cartas-plantilla-opciones.png`. Por la
 regla del arte no sigo hasta que el dueño elija.
 
+### Plantilla de carta B, en el juego (2026-11-14, dueño: "concuerdo")
+
+`src/ui/card_face.gd` dibuja la carta B (marco del metal de la rareza, el
+color de la familia dentro, la pieza o el pictograma sobre una luz suave, el
+nombre en cinta de tinta que se encoge o se recorta si no cabe, el medallón
+de familia y de uno a cuatro rombos) a 150 × 180 escalada a lo que haga
+falta. `card_panel.gd` la usa en la loseta (el botón solo la rodea: coral y
+grueso la elegida, fino al pasar) y en el arte grande del detalle, así que
+cambian a la vez el Card Master, el inventario, la fusión, el equipo del
+coach y el informe. `Cards.family_of()` y `tier_of()`; las cartas de
+luchador no tienen rango y **decidí** cortarlas por valor (≤50 negra, ≤150
+cobre, ≤250 plata, más plata… oro: 17, 22, 23 y 13). El arte:
+`tools/icons/card_art.py` → `assets/ui/cards/` (los pictogramas blancos de
+las 9 familias y las piezas 3D sin placa de las 196 cartas del coach y las 75
+del luchador, WebP, 2,4 MB). El inventario tiene ya el filtro "Arenas" (antes
+salían en "Otros"). Vista sin servidor: `test/card_face_preview.tscn`.
+Evidencia: `cardmaster_smoke` 6/6, `inventory_smoke` 4/4, `screens_smoke`
+9/11 (los 2 del Kanodo de siempre, la cuenta `test`), `run_tests.sh` 1526/0.
+Pendiente (diseño, a un agente Fable como pidió el dueño): afinar los
+pictogramas (la isla, el pergamino, el peinado con la túnica).
+
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
 El dueño pidió parar por contexto. Lo que queda, en orden, cada paso
@@ -327,7 +348,7 @@ cerrable solo:
 3. ✅ **Retratos de NPC** (Nilo, Aldebrán, Demonio I, Señores del Tiempo) para
    `talk_panel.gd`: con `tools/portraits` si tienen figura 3D; si no,
    pedir al dueño.
-4. **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D
+4. ✅ (falta el pulido de pictogramas) **Plantilla de carta por familia** (marco por tipo y rareza + la pieza 3D
    o el pictograma), para el Card Master y el inventario.
 5. **Cierre de S38:** ningún panel con imagen retail (`grep gui/images` en
    `src/`), `run_tests.sh`, smokes de inventario, cardmaster, mailbox y

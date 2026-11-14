@@ -83,6 +83,31 @@ static func value_of(id: int) -> int:
 	return int(meta(id).get("value", 0))
 
 
+## S38b: what a card is for (the inventory's filter kinds, plus the arenas),
+## which picks its colour and pictogram in the card template (card_face.gd).
+const FAMILY := {
+	"coach": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+	"consumable": [24], "cosmetic": [1, 25, 28, 29], "combat": [26],
+	"fusion": [27], "dofus": [30], "arena": [20],
+}
+
+
+static func family_of(id: int) -> String:
+	var t := int(meta(id).get("type", -1))
+	for k in FAMILY:
+		if t in FAMILY[k]:
+			return k
+	return "other"
+
+
+## The rarity tier the player is told about (black, copper, silver, gold:
+## 0..3) from the card's rank (cards.json "rank", getRank(), 0..10; S38b's
+## cut, the retail one is not known: 0-2, 3-5, 6-8, 9-10). No rank → 0.
+static func tier_of(id: int) -> int:
+	var r := int(meta(id).get("rank", 0))
+	return 0 if r <= 2 else 1 if r <= 5 else 2 if r <= 8 else 3
+
+
 ## Every known card template id (sorted) — fusion target pickers iterate it.
 static func all_ids() -> Array:
 	_ensure()

@@ -399,7 +399,7 @@ func _statistics() -> void:
 const INV_KINDS := {
 	"coach": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
 	"consumable": [24], "cosmetic": [1, 25, 28, 29], "combat": [26],
-	"fusion": [27], "dofus": [30],
+	"fusion": [27], "dofus": [30], "arena": [20],
 }
 
 

@@ -612,6 +612,7 @@
   "inv.kind_combat": "Combat rules",
   "inv.kind_fusion": "Fusion",
   "inv.kind_dofus": "DOFUS items",
+  "inv.kind_arena": "Arenas",
   "inv.kind_other": "Other",
   "inv.sort_name": "By name",
   "inv.sort_value": "By value",

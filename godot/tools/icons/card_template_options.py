@@ -60,11 +60,12 @@ def pictogram(d, family, box, col):
         p.poly((.5, .08), (.86, .38), (.5, .92), (.14, .38))
     elif family == "dofus":         # a dofus egg
         p.d.ellipse([p.P(.2, .08), p.P(.8, .92)], fill=col)
-    elif family == "arena":         # an island with a tree
-        p.poly((.08, .62), (.92, .62), (.7, .9), (.3, .9))
-        p.rect(.56, .44, .06, .3, 0)
-        p.disc(.56, .32, .16)
-
+    elif family == "arena":         # a floating island: grass, its rock, a tree
+        p.poly((.1, .6), (.9, .6), (.74, .78), (.6, .82), (.5, .96), (.4, .82), (.26, .78))
+        p.d.ellipse([p.P(.08, .5), p.P(.92, .68)], fill=col)
+        p.rect(.62, .42, .06, .2, 0)
+        p.disc(.62, .3, .15)
+        p.disc(.48, .4, .1)
 
 def art(card_id, family, size, colour):
     """What sits in the art window: the coach card's bare 3D piece (the

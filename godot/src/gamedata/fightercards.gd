@@ -52,6 +52,13 @@ static func value_of(card_id: int) -> int:
 	return int(ability(card_id).get("value", 0))
 
 
+## S38b: the card template's rarity tier (0..3) for a fighter card: these
+## have no rank, so their value cuts it (50, 100–150, 200–250, 300+).
+static func tier_of(card_id: int) -> int:
+	var v := value_of(card_id)
+	return 0 if v <= 50 else 1 if v <= 150 else 2 if v <= 250 else 3
+
+
 static func all_ids() -> Array:
 	_ensure()
 	var ids := _by_id.keys()

@@ -6,6 +6,7 @@ extends "res://src/ui/lobby_panel.gd"
 ## field; the panels decide what each piece means.
 
 const TILE := Vector2(150, 180)
+const CardFace := preload("res://src/ui/card_face.gd")
 
 ## One card: art, name and an optional value line; a badge (copies) top
 ## right. Selected = a thick gold rim.
@@ -14,52 +15,46 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	var b := Button.new()
 	b.custom_minimum_size = TILE
 	b.focus_mode = Control.FOCUS_ALL
-	# style B: a pale card, a thin rule; coral and thicker when chosen
+	# S38b: the tile is the card (card_face.gd, the owner's template B); the
+	# button only rings it — coral and thick when chosen, thin on hover
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = UiStyle.SLOT
-	normal.border_color = UiStyle.B_CORAL if chosen else Color(UiStyle.B_INK, 0.15)
-	normal.set_border_width_all(3 if chosen else 1)
-	normal.border_width_top = 3 if chosen else 2
-	if not chosen:
-		normal.border_color = Color(UiStyle.B_INK, 0.2)
+	normal.bg_color = Color(0, 0, 0, 0)
+	normal.set_corner_radius_all(8)
+	if chosen:
+		normal.border_color = UiStyle.B_CORAL
+		normal.set_border_width_all(3)
 	var hover: StyleBoxFlat = normal.duplicate()
 	hover.border_color = UiStyle.B_CORAL
-	hover.set_border_width_all(2)
+	hover.set_border_width_all(3 if chosen else 2)
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
 	b.add_theme_stylebox_override("hover_pressed", hover)
-	var off: StyleBoxFlat = normal.duplicate()
-	off.bg_color = Color("e4e6ec")
-	b.add_theme_stylebox_override("disabled", off)
+	b.add_theme_stylebox_override("disabled", normal)
 	b.add_theme_stylebox_override("focus", UiStyle.focus_ring())
 	parent.add_child(b)
-	var col := VBoxContainer.new()
-	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	col.offset_left = 8
-	col.offset_right = -8
-	col.offset_top = 10
-	col.offset_bottom = -8
-	col.add_theme_constant_override("separation", 6)
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(col)
-	var art := _art(int(item.get("id", 0)), Vector2(TILE.x - 16, 100))
-	if bool(item.get("fighter", false)):   # fighter equipment: its own art (S22)
-		(art as TextureRect).texture = UiStyle.fighter_card_art(int(item.get("id", 0)))
-	col.add_child(art)
-	var name_l := _small(col, str(item.get("name", "")), 13)
-	# a navy card on the paper (the mockup's .card): its name in cream, outlined
-	name_l.add_theme_font_override("font", UiStyle.display_font())
-	name_l.add_theme_color_override("font_color", UiStyle.B_INK)
-	name_l.add_theme_constant_override("outline_size", 0)
-	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	name_l.max_lines_visible = 2
-	name_l.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var face := CardFace.make(int(item.get("id", 0)), TILE - Vector2(8, 8),
+		bool(item.get("fighter", false)), str(item.get("name", "")), sub)
+	face.name = "Face"
+	face.position = Vector2(4, 4)
+	face.size = TILE - Vector2(8, 8)
+	b.add_child(face)
+	# a disabled tile (a caller sets it after) fades its card; the button
+	# redraws when that changes
+	b.draw.connect(func(): face.modulate = Color(1, 1, 1, 0.45 if b.disabled else 1.0))
+	# the name and the foot as (hidden) labels too: what the smokes and a
+	# screen reader find on a tile
+	var name_l := Label.new()
+	name_l.name = "TileName"
+	name_l.text = str(item.get("name", ""))
+	name_l.visible = false
+	b.add_child(name_l)
 	if sub != "":
-		var s := _small(col, sub, 12)
-		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		s.add_theme_color_override("font_color", UiStyle.B_MUTE)
+		var s := Label.new()
+		s.name = "TileSub"
+		s.text = sub
+		s.visible = false
+		b.add_child(s)
 	if badge != "":
 		var tag := Label.new()
 		tag.text = badge
@@ -140,21 +135,13 @@ func _muted(parent: Node, text: String) -> Label:
 	return l
 
 
-## The big art, in a box with the gold rim of the selected tile.
+## The big art: the card itself (S38b template), as large as `size` allows
+## at the card's 5:6 shape.
 func _framed_art(cid: int, size: Vector2) -> Control:
-	var frame_box := PanelContainer.new()
-	var st := StyleBoxFlat.new()
-	st.bg_color = UiStyle.SLOT
-	st.border_color = UiStyle.B_INK
-	st.border_width_top = 3
-	st.content_margin_left = 8
-	st.content_margin_right = 8
-	st.content_margin_top = 8
-	st.content_margin_bottom = 8
-	frame_box.add_theme_stylebox_override("panel", st)
-	frame_box.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	frame_box.add_child(_art(cid, size))
-	return frame_box
+	var face := CardFace.make(cid, size)
+	face.name = "CardArt"
+	face.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	return face
 
 
 func _art(cid: int, size: Vector2) -> Control:
