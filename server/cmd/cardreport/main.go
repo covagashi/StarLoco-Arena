@@ -256,7 +256,9 @@ func fighterReport(fcs *gamedata.FighterCards) {
 	}
 	fmt.Printf("\nFit: R² = %.2f over %d cards (1 = the values follow the stats exactly).\n\n", 1-ssRes/ssTot, n)
 
-	sort.Slice(rows, func(i, j int) bool { return rows[i].res/math.Max(rows[i].fit, 50) < rows[j].res/math.Max(rows[j].fit, 50) })
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i].res/math.Max(rows[i].fit, 50) < rows[j].res/math.Max(rows[j].fit, 50)
+	})
 	show := func(title string, rs []row) {
 		fmt.Println("## " + title)
 		fmt.Println()
