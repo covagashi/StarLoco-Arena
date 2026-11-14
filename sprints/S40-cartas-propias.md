@@ -258,3 +258,34 @@ cartas que se ofrecen son **de luchador**; el desbloqueo es **una fuente
 más** (tienda y botín se quedan); la elección sale **al acabar el combate**,
 en los resultados, y si se cierra sin elegir queda guardada; la liga y el
 presupuesto **se ven en el equipo y en el Ranking**.
+
+**Corrección del dueño (2026-11-14):** los luchadores Élite ya pueden llevar
+las 75 cartas de luchador desde el principio, limitados solo por el
+presupuesto de su liga, así que **siguen todas libres**. El "1 de 3 cada 3/5
+victorias" ofrece **cartas de coach** (progresión, sets, cosmética, ya con
+topes). **Cuentan también las victorias contra fantasmas.**
+
+### Paso 2.4: elegir 1 carta de 3 y la liga en el cliente (2026-11-14)
+
+- Servidor (`game/cardpicks.go`, tabla `card_picks`, migración 20): cada
+  victoria de Ranking o contra un fantasma cuenta; a las 3 (las diez primeras
+  elecciones; luego 5) se ofrecen 3 cartas de coach, las que no tiene primero
+  y repartidas entre rarezas (una rara es distinta, no mejor: la oferta enseña
+  el abanico). Solo equipo de coach (2–13), consumibles (24) y cosmética (1,
+  25, 28); nunca las de color (29, premio de temporada), arenas, fusión,
+  combate ni dofus. La oferta espera, aunque se cierre la sesión; mientras
+  espera se acumula como mucho otra oferta de victorias.
+- Protocolo propio de Godot: 60044 elegir, 60045 el progreso y la oferta,
+  60046 las ligas (con cada 60001 y tras cada combate). En
+  `OPCODE-INVENTORY.md`.
+- Cliente: la pantalla de resultados enseña las 3 cartas (plantilla B) bajo
+  "Lo que ganaste", o "Próxima carta para elegir: 1/3 victorias"; el equipo
+  Élite, "Liga Bronce · presupuesto del equipo 2000 / 4000" (en rojo y con
+  aviso si se pasa); el Ranking y la escalera de fantasmas, su liga.
+- Pruebas: `cardpicks_test.go` (la oferta, el progreso, el banco de
+  victorias, elegir, cada 3 y luego 5, la liga en 60046);
+  `godot/test/cardpick_smoke.gd` contra un servidor local con una copia de la
+  base y una oferta sembrada: **6/6** (liga, oferta, equipo, Ranking, las 3
+  cartas en el informe, elegir → 60045 sin oferta y la carta en el
+  inventario). Capturas en `~/codigo/capturas/s40/`. `run_tests.sh` 1526/0,
+  `go test ./...` en verde.

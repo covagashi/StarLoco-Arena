@@ -58,6 +58,9 @@ const OP_STORY := 60021                # S2C [u16 n]{i32 challengeId} — the ca
 const OP_SEASON_REQUEST := 60030       # C2S empty (S25)
 const OP_COSMETIC_EQUIP := 60042       # C2S [i32 hairFx] (S37)
 const OP_COSMETICS := 60043            # S2C [i32 hairFx shown][u8 n]{i32 owned}
+const OP_CARD_PICK_CHOOSE := 60044     # C2S [i32 cardId] (S40)
+const OP_CARD_PICKS := 60045           # S2C [u8 wins][u8 every][u8 n]{i32 offered card}
+const OP_LEAGUE := 60046               # S2C [u8 tier][i32 budget][u8 ghostTier][i32 ghostBudget]
 const OP_SEASON := 60031               # S2C [u16 number][i64 endsAt][u8 n]{u16 season, u8 ladder, i32 rank, i32 pesetas}
 const OP_TOURN_MATCHES_REQ := 60032    # C2S [i64 tid] (S29)
 const OP_TOURN_MATCHES := 60033        # S2C [i64 tid][u8 n]{i32 slot, str8 winner, str8 loser, i32 rounds}
@@ -840,6 +843,23 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			State.cosmetics = {"hair_fx": fx, "owned": owned}
 			_gui.gui.model.set_value("localCoach", fx, "hairFx")
 			_push_equip_model()
+		OP_CARD_PICKS:
+			# S40: every few wins, one coach card of three to keep
+			var wins := payload.get_u8() if payload.remaining() >= 1 else 0
+			var every := payload.get_u8() if payload.remaining() >= 1 else 3
+			var offer := []
+			for i in (payload.get_u8() if payload.remaining() >= 1 else 0):
+				if payload.remaining() >= 4:
+					var cid := payload.get_i32()
+					offer.append({"id": cid, "name": Cards.name_of(cid)})
+			State.card_picks = {"wins": wins, "every": every, "offer": offer}
+			_gui.gui.model.set_value("cardPicks", State.card_picks)
+		OP_LEAGUE:
+			# S40: the team budget each ladder's league allows
+			if payload.remaining() >= 10:
+				State.league = {"tier": payload.get_u8(), "budget": payload.get_i32(),
+					"ghost_tier": payload.get_u8(), "ghost_budget": payload.get_i32()}
+				_gui.gui.model.set_value("league", State.league)
 		OP_SEASON:
 			var season := {"number": payload.get_u16(), "ends": payload.get_i64(), "results": []}
 			for i in payload.get_u8():
@@ -5515,6 +5535,11 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			return
 		"nativeEquipWear":
 			_on_equip_wear()
+			return
+		"nativeCardPick":
+			var pw := WireWriter.new()
+			pw.put_i32(int(args[0]))
+			State.net.send_message(OP_CARD_PICK_CHOOSE, pw.raw(), 3)
 			return
 		"nativeHairFx":
 			var w := WireWriter.new()

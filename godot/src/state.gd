@@ -67,6 +67,14 @@ static var inventory := {}
 ## "owned": [ids]}.
 static var cosmetics := {}
 
+## S40: the "pick one card of three" from 60045 — {"wins", "every",
+## "offer": [{id, name}]} (an empty offer: none waiting).
+static var card_picks := {}
+
+## S40: the leagues from 60046 — {"tier", "budget", "ghost_tier",
+## "ghost_budget"}; tier 0 bronze .. 4 diamond.
+static var league := {}
+
 ## Wallet from 4001 WalletUpdate / 5403 ShopResult: {currencyType: amount}.
 static var wallet := {}
 

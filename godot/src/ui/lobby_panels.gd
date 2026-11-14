@@ -50,17 +50,17 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 			_sync_preview()
 		return
 	var watched := {
-		"teamManagementDialog": ["teamManagement", "evolutionTeam", "tournamentSearch"],
+		"teamManagementDialog": ["teamManagement", "evolutionTeam", "tournamentSearch", "league"],
 		"evolutionDialog": ["teamManagement", "evolutionTeam", "tournamentSearch"],
 		"fighterEquipmentDialog": ["teamManagement"],
 		"coachStatisticsDialog": ["localCoach"], "cardBookDialog": ["localCoach", "tomeManager"],
-		"ladderInformationDialog": ["ladderManager"], "calendarDialog": ["calendar"],
+		"ladderInformationDialog": ["ladderManager", "league"], "calendarDialog": ["calendar"],
 		"achievementDialog": ["achievementManager"], "socialDialog": ["friends", "ignore", "guild"],
 		"guildDialog": ["friends", "ignore", "guild"],
 		"guildManagementDialog": ["guild", "guildSelectedRank"],
 		"guildCoachStatsDialog": ["guildCoachStats"],
 		"cityDialog": ["city"],
-		"ghostDialog": ["ghosts"],
+		"ghostDialog": ["ghosts", "league"],
 		"storyDialog": ["story", "evolutionTeam", "teamManagement"],
 	}
 	if model_name.split(".")[0] in watched.get(panel_name, []):
@@ -223,6 +223,8 @@ func _team() -> void:
 		item["breed_name"] = I18n.t("breed.%d" % clampi(int(item.get("breedId", 1)), 1, 12))
 		item["placement"] = (I18n.t("team.in_team") if item.get("teamMember", false) else I18n.t("team.reserve")) if classic else (I18n.t("team.bench") if int(item.get("state", 0)) in [1, 5] else I18n.t("team.starter"))
 		rows.append(item)
+	if tab == 1:
+		_league_budget(body, fighters)
 	var split := row(body)
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var roster := column(split)
@@ -491,11 +493,42 @@ func _season_line() -> void:
 	label(body, I18n.t("season.line", {"n": int(s.number), "days": days})).name = "Season"
 
 
+## S40: the Elite team's budget against its Ranking league's cap (60046) —
+## the Ranking refuses a team over it, so the screen says so before queueing.
+func _league_budget(parent: Control, fighters: Array) -> void:
+	var lg: Dictionary = data("league", {})
+	if lg.is_empty():
+		return
+	var used := 0
+	for f in fighters:
+		if f is Dictionary and f.get("teamMember", false):
+			used += int(f.get("budget", 0))
+	var cap := int(lg.get("budget", 0))
+	var l := label(parent, I18n.t("league.team", {"league": I18n.t("league.%d" % int(lg.get("tier", 0))),
+		"used": used, "cap": cap}), 18)
+	l.name = "LeagueBudget"
+	if used > cap:
+		l.add_theme_color_override("font_color", Color("8a2a2a"))
+		label(parent, I18n.t("league.over", {"cap": cap})).name = "LeagueOver"
+
+
+## S40: "Tu liga: Plata — equipos de hasta 4500" on a ladder.
+func _league_line(ghost: bool) -> void:
+	var lg: Dictionary = data("league", {})
+	if lg.is_empty():
+		return
+	var tier := int(lg.get("ghost_tier" if ghost else "tier", 0))
+	label(body, I18n.t("league.ghost" if ghost else "league.ranking", {
+		"league": I18n.t("league.%d" % tier),
+		"cap": int(lg.get("ghost_budget" if ghost else "budget", 0))}), 18).name = "League"
+
+
 func _ladder() -> void:
 	# tabs as buttons, your row marked, "Mi puesto" first among the pager
 	# (the S18 sketch, tools/mock_screens.py ranking)
 	if tab == 0:
 		_season_line()
+		_league_line(false)
 	tabs(body, [I18n.t("ladder.tab_1v1"), I18n.t("ladder.tab_boss"), I18n.t("ladder.tab_2v2"), I18n.t("ladder.tab_clans"), I18n.t("ladder.tab_tourn"), I18n.t("ladder.tab_pro"), I18n.t("ladder.tab_demon")], func(i): send("nativeLadderTab", [i]))
 	var fields := [["position", "coachName", "totalVictories", "totalDefeats"], ["position", "creatorCoachName", "reputation", "totalVictories"], ["position", "teamName", "totalVictories", "totalDefeats"], ["position", "name", "bossName", "strength"], ["position", "name", "points"], ["position", "coachName", "guildName", "rating"], ["position", "demonName", "guildName", "quarterlyReputationPoints"]]
 	var headings := [
@@ -937,6 +970,7 @@ func _ghost_ladder() -> void:
 		label(body, I18n.t("ghost.loading"))
 		return
 	_season_line()
+	_league_line(true)
 	var rank := int(l.get("rank", 0))
 	label(body, I18n.t("ghost.my_rating", {"elo": l.get("elo", 1000),
 		"rank": rank if rank > 0 else "—", "fights": l.get("fights", 0),

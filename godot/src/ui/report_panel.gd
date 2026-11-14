@@ -7,7 +7,9 @@ extends "res://src/ui/card_panel.gd"   # lobby_panel + the card tile helpers
 ## "Continuar" closes it.
 ##
 ## Reads `fightReport` {outcome, summary[], coaches[], fighters[], cards[{id,
-## name, qty}]} (main.gd _show_fight_result). Read-only: no events.
+## name, qty}]} (main.gd _show_fight_result), and `cardPicks` {wins, every,
+## offer[{id, name}]} (S40, 60045): with an offer waiting, its three cards
+## sit under what you won and a click keeps one (nativeCardPick [id]).
 
 
 func _ready() -> void:
@@ -16,7 +18,7 @@ func _ready() -> void:
 
 
 func _model_changed(model_name: String, _field: String, _value: Variant) -> void:
-	if model_name.split(".")[0] == "fightReport":
+	if model_name.split(".")[0] in ["fightReport", "cardPicks"]:
 		schedule_refresh()
 
 
@@ -62,6 +64,7 @@ func refresh() -> void:
 			var t := _tile(flow, {"id": int(c.get("id", 0)), "name": str(c.get("name", ""))}, false,
 				"×%d" % int(c.get("qty", 1)) if int(c.get("qty", 1)) > 1 else "")
 			t.focus_mode = Control.FOCUS_NONE
+	_card_pick(left)
 	var right := column(split)
 	var fighters: Array = r.get("fighters", [])
 	label(right, I18n.t("rp.fighters"), 20)
@@ -96,3 +99,26 @@ func refresh() -> void:
 	go.custom_minimum_size.x = 190
 	UiStyle.primary(go, 20)
 	go.grab_focus.call_deferred()
+
+
+## S40: the "pick one card of three" — the offer as tiles to click, or how
+## many wins the next one needs.
+func _card_pick(parent: Control) -> void:
+	var p: Dictionary = data("cardPicks", {})
+	if p.is_empty():
+		return
+	var offer: Array = p.get("offer", [])
+	if offer.is_empty():
+		_muted(parent, I18n.t("pick.progress", {"wins": int(p.get("wins", 0)),
+			"every": int(p.get("every", 3))})).name = "PickProgress"
+		return
+	label(parent, I18n.t("pick.title"), 20).name = "PickTitle"
+	var flow := HFlowContainer.new()
+	flow.name = "PickOffer"
+	flow.add_theme_constant_override("h_separation", 10)
+	parent.add_child(flow)
+	for c in offer:
+		var id := int(c.get("id", 0))
+		var t := _tile(flow, {"id": id, "name": str(c.get("name", ""))}, false)
+		t.pressed.connect(func(): send("nativeCardPick", [id]))
+	_muted(parent, I18n.t("pick.hint"))
