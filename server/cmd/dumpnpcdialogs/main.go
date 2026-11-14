@@ -26,6 +26,7 @@ import (
 	"os"
 	"sort"
 
+	"github.com/StarLoco/arena-2.70/content"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
 
@@ -149,7 +150,8 @@ func main() {
 	// each effect's duration, then content.27 if the event has an entry.
 	// The exporter renders it; this carries what it needs.
 	events := map[string]any{}
-	if evs, err := st.LoadEvents(); err == nil && evs != nil {
+	if cc, err := gamedata.LoadCardContent(content.Cards); err == nil { // S40: our event cards
+		evs := cc.Events
 		for _, id := range evs.IDs() {
 			ev := evs.Get(id)
 			effs := make([]map[string]any, 0, len(ev.Effects))

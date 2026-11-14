@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/StarLoco/arena-2.70/content"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
 
@@ -44,10 +45,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cards, err := st.LoadCards()
+	cc, err := gamedata.LoadCardContent(content.Cards) // S40: our cards, not data.bdat
 	if err != nil {
 		panic(err)
 	}
+	cards := cc.Cards
 	res := map[string]rec{}
 	for id, c := range cards.All() {
 		res[fmt.Sprint(id)] = rec{

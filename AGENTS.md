@@ -38,9 +38,10 @@ own code and tests (`server/internal/protocol`,
 | `sprints/` | **The roadmap**: `BACKLOG.md` (live work queue) + one `SNN-*.md` per sprint with its evidence | Yes, keep in sync with the work |
 | `devlog/` | The agent's per-session log — what was asked, done, found, and left unverified | Yes — add an entry per session |
 | `server/COVERAGE.md` | Per-opcode implemented / wire-audited / tested matrix | Yes, keep current |
+| `server/content/` | **Proprietary** data (all rights reserved, `server/content/LICENSE`; the `.go` embed file is MIT). The game's own cards since S40: `cards/coach/set_<id>.json`, `sets.json`, `fighter.json`, `events.json`, embedded in the server and read by `gamedata.LoadCardContent` instead of `data.bdat` | Yes — card design edits go here |
 | `server/data-dist/` | The redistributable server-data subset (`data.bdat` + `indexes.bdat`, maps) — ships in git and in releases | Occasionally, deliberately (see constraint 4) |
 | `server/data/` | Local scratch copy of game data for a dev build | No — **git-ignored**, local input only |
-| `server/cmd/dump*` | Export `server/data-dist/` tables as JSON for `godot/assets/gamedata/` | Occasionally (until S40/S41 replace the data) |
+| `server/cmd/dump*` | Export tables as JSON for `godot/assets/gamedata/` (cards from `server/content/` since S40, the rest from `data-dist/`) | Occasionally (until S40/S41/S46 replace the data) |
 | `server/cmd/studio` | Wails desktop data editor; its retail-asset viewer died with `client/` (see its `README.md`) | Rarely |
 | `docs/` | Game wiki (rules, breeds, spells, mechanics), console commands, `QUICKSTART.md` (ships inside releases) | Occasionally |
 | `.github/workflows/` | `ci.yml` (build/test on Linux+Windows), `release.yml` (release-please → GoReleaser) | Occasionally |

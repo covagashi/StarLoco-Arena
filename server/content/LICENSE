@@ -1,0 +1,11 @@
+Copyright (c) 2026 Daviaan. All rights reserved.
+
+The game content in this directory (server/content/: the card, card-set,
+fighter-card and event data files, and any design data added here later) is
+proprietary. It is NOT covered by the MIT License in the repository root,
+which applies to the Go server code under server/ — including content.go,
+the few lines that embed these files into the server binary.
+
+No permission is granted to copy, modify, distribute, sublicense or sell any
+part of it, in source or compiled form, without the copyright holder's prior
+written permission. Viewing it in this repository grants no licence.

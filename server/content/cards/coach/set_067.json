@@ -1,0 +1,3 @@
+[
+{"ID":429,"Type":24,"CardSet":67,"Value":22800,"Rank":10,"Price":{"1":0},"RequiredLevel":40,"FireworkType":0,"FireworkColour":null,"IsUnique":false,"ObtainableInDraw":false,"DropPercent":0,"Bound":false,"Undestructible":false,"HasUsableAction":true,"ResurrectPercent":0,"Effects":[{"Action":15,"Params":[78,3],"Condition":0,"Threshold":127},{"Action":15,"Params":[116,3],"Condition":0,"Threshold":127}],"Parameters":null,"Unknown19":0,"Unknown20":0,"FusionPower":0,"FusionQuality":0,"PetModelID":0,"ColourSlot":0,"ColourIndex":0}
+]

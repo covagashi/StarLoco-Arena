@@ -6,6 +6,8 @@ project documentation) licensed under the MIT License — see LICENSE.
 
 The Godot client under godot/ is proprietary: Copyright (c) 2026 Daviaan, all
 rights reserved. It is NOT covered by the MIT License — see godot/LICENSE.
+The game content under server/content/ (the game's own card data) is likewise
+proprietary and NOT covered by the MIT License — see server/content/LICENSE.
 
 It ALSO reproduces third-party and copyrighted material for preservation and
 interoperability purposes. That material is NOT covered by this project's MIT

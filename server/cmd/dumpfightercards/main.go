@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/StarLoco/arena-2.70/content"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
 
@@ -40,15 +41,14 @@ type rec struct {
 }
 
 func main() {
-	dir, out := os.Args[1], os.Args[2]
-	st, err := gamedata.Open(dir)
+	// os.Args[1], the data dir, is kept for the generator's call; since S40
+	// the fighter cards come from the embedded content.
+	out := os.Args[2]
+	cc, err := gamedata.LoadCardContent(content.Cards) // S40: our cards, not data.bdat
 	if err != nil {
 		panic(err)
 	}
-	fc, err := st.LoadFighterCards()
-	if err != nil {
-		panic(err)
-	}
+	fc := cc.Fighters
 	res := map[string]rec{}
 	for id, c := range fc.All() {
 		r := rec{

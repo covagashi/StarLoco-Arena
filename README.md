@@ -238,6 +238,7 @@ StarLoco-Arena/  (branch v2.70)
 │   ├── test/e2e/           End-to-end tests driving a real server over a real socket
 │   ├── docs/               STATUS.md (start here), BUGS.md, DATA-COVERAGE.md, …
 │   ├── COVERAGE.md         Per-opcode implemented / wire-audited / tested matrix
+│   ├── content/            The game's own cards (proprietary, embedded in the server)
 │   ├── data-dist/          Server game data (~2.5 MB) — COMMITTED, ships in releases
 │   └── data/               Local scratch copy of game data — NOT committed
 ├── godot/                  The Godot 4 client (Pippop Arena); assets/ is NOT committed
@@ -310,6 +311,10 @@ the work going. ☕
 - The **Godot client** under `godot/` is **proprietary — © 2026 Daviaan, all
   rights reserved** (see [`godot/LICENSE`](./godot/LICENSE)). It is not
   MIT-licensed; you may not copy, modify or distribute it without permission.
+- The **game content** under `server/content/` (the game's own cards, card
+  sets, fighter cards and events) is **proprietary — © 2026 Daviaan, all
+  rights reserved** too (see [`server/content/LICENSE`](./server/content/LICENSE)),
+  although the server binary embeds it.
 - This repository is an **independent, non-commercial** preservation and
   interoperability project and is **not affiliated with Ankama**.
   **DofusArena**, **Dofus**, and all related assets are the property of

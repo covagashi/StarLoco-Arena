@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/StarLoco/arena-2.70/content"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
 
@@ -48,10 +49,11 @@ func main() {
 			add(e)
 		}
 	}
-	fc, err := st.LoadFighterCards()
+	cc, err := gamedata.LoadCardContent(content.Cards) // S40: our cards, not data.bdat
 	if err != nil {
 		panic(err)
 	}
+	fc := cc.Fighters
 	for _, c := range fc.All() {
 		for _, e := range c.EquipEffects {
 			add(e)
