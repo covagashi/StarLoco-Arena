@@ -45,8 +45,31 @@ Evidencia: una prueba de un solo uso contra el servidor local — abrir el
 inventario suena "open" (una vez, no clic + abrir), una loseta "click", un
 aviso "toast", cerrar "close": 4/4; `run_tests.sh` 1526/0.
 
+### Hechizos por forma y elemento (2026-11-14)
+
+Ninguna librería CC0 a mano trae magia por elementos, así que son nuestros:
+`tools/audio/spell_sfx.py` los sintetiza (numpy y ffmpeg, con semilla): el
+elemento da la textura (fuego: ruido en banda resonante con chispas; agua:
+chirridos senoidales ascendentes sobre un chapoteo; aire: ruido por una
+banda resonante que barre; tierra: un golpe grave que cae y un retumbo;
+neutro: parciales brillantes con vibrato) y la forma su envolvente, duración
+y movimiento (el rayo vuela y llega con un golpe, el área retumba, la
+maldición cae, la cura sube con campanillas, la invocación acaba en un
+"pop", el teletransporte zumba, la trampa chasquea). 45 sonidos, 368 KB, en
+`godot/assets/audio/spells/<forma>_<elemento>.ogg`. `fight_view._cast_sfx`
+toca el de la receta S37 del hechizo (`Audio.sfx()`, varios a la vez en el
+bus SFX); sin receta (el arma) suena "golpe neutro". Los eventos retail de
+`spell_sfx.json` ya no se tocan. **A la espera de que el dueño los oiga**
+(no puedo escucharlos; los revisé con espectrogramas: el aire barre, la
+tierra se queda en los graves). Evidencia: `fight_smoke` de un combate
+entero — 16 de 16 sonidos de hechizo, nuestros (teletransporte y rayo de
+aire, golpe de tierra). En esa pasada `fight_smoke` dio "Ready did not say
+it waits for the opponents" y un "previously freed" en el Versus: también
+sin los cambios de sonido (comprobado) y `fight_view.gd` no cambió hoy;
+parece de tiempos (la IA confirma antes del vistazo de 0,6 s). Apuntado.
+
 ### Siguiente
 
-Combate: hechizos por elemento y forma (como S37), golpes, muerte, pasos;
-hoy `spell_sfx.json` manda sonidos retail. Después la música (lobby y
-combate) y quitar `sounds/` y `musics/` retail.
+Golpes, muerte y pasos (hoy los fotogramas retail de las animaciones
+`anm_sprite._play_sfx`), la música (lobby y combate, CC0 de OpenGameArt) y
+quitar `sounds/` y `musics/` retail.

@@ -2909,18 +2909,15 @@ func _play_fx(recipe: Dictionary, src: Vector3i, aim: Vector3i,
 ## The cast script's Sound.playSound ids with their invoke() delays
 ## (spell_sfx.json): t=0 fires with the gesture, later ones land with the
 ## scripted impact. Played on the caster's sprite pool.
-func _cast_sfx(fid: int, sid: int) -> void:
-	var spr: AnmSprite = _sprites.get(fid)
-	if spr == null:
-		return
-	for ev in Spells.sfx_events(sid):
-		var t := float(ev[0]) / 1000.0
-		var snd := int(ev[1])
-		if t <= 0.0:
-			spr.play_sound(snd)
-		else:
-			get_tree().create_timer(t).timeout.connect(
-				spr.play_sound.bind(snd))
+## S39: a spell sounds by its S37 effect recipe — our own sound for its
+## shape and element (tools/audio/spell_sfx.py, assets/audio/spells/); a
+## spell without a recipe (the weapon) sounds as a neutral hit. The retail
+## script events (spell_sfx.json) are no longer played.
+func _cast_sfx(_fid: int, sid: int) -> void:
+	var fx: Dictionary = Spells.meta(sid).get("fx", {})
+	var shape := str(fx.get("s", "hit"))
+	var element := str(fx.get("e", "neutral"))
+	Audio.sfx("audio/spells/%s_%s.ogg" % [shape, element])
 
 
 ## 60040: what every coach wears, kept on its 8000 entry (State.coach_ids)

@@ -49,6 +49,8 @@ var _ui_next := 0
 var _ui_pending := ""
 ## the last interface sounds played, newest last (the smokes read it)
 var ui_played: Array[String] = []
+var _sfx_players: Array[AudioStreamPlayer] = []
+var sfx_played: Array[String] = []   # the same for sfx()
 
 
 func _ready() -> void:
@@ -102,6 +104,35 @@ func _flush_ui() -> void:
 	_ui_next = (_ui_next + 1) % _ui_players.size()
 	p.stream = st
 	p.play()
+
+
+## A one-shot game sound (S39: a spell's, assets/audio/...) on the SFX bus;
+## unlike ui(), several can sound at once. Silent without the file.
+func sfx(rel: String, volume_db := 0.0) -> void:
+	if not _streams.has(rel):
+		_streams[rel] = AudioStreamOggVorbis.load_from_file(AssetPaths.resolve(rel)) if AssetPaths.exists(rel) else null
+	var st: AudioStream = _streams[rel]
+	if st == null:
+		return
+	var p: AudioStreamPlayer = null
+	for q in _sfx_players:
+		if not q.playing:
+			p = q
+			break
+	if p == null:
+		if _sfx_players.size() >= 8:
+			p = _sfx_players[0]
+		else:
+			p = AudioStreamPlayer.new()
+			p.bus = "SFX"
+			add_child(p)
+			_sfx_players.append(p)
+	p.stream = st
+	p.volume_db = volume_db
+	p.play()
+	sfx_played.append(rel)
+	if sfx_played.size() > 16:
+		sfx_played.pop_front()
 
 
 ## The sound of an interface kind, or null without the file.
