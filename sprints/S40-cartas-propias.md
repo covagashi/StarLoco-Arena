@@ -252,3 +252,9 @@ heridas, muerte, moral y fatiga con el tope de la rareza media.
   (combate IA contra IA lento bajo carga, no de este cambio).
 - **Falta en el cliente:** no enseña el tope; un coach de bronce que se pase
   solo ve "presupuesto no válido".
+
+**Decisiones del dueño sobre el desbloqueo y la liga (2026-11-14):** las 3
+cartas que se ofrecen son **de luchador**; el desbloqueo es **una fuente
+más** (tienda y botín se quedan); la elección sale **al acabar el combate**,
+en los resultados, y si se cierra sin elegir queda guardada; la liga y el
+presupuesto **se ven en el equipo y en el Ranking**.
