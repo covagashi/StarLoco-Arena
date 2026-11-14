@@ -869,6 +869,13 @@ static func paper_theme(pad := 10) -> Theme:
 	for st in ["hovered", "hovered_dimmed", "hovered_selected", "hovered_selected_focus"]:
 		t.set_stylebox(st, "Tree", hov)
 	t.set_stylebox("hovered", "ItemList", hov)
+	# the cell under the pointer and the hovered row's text: Godot's defaults
+	# (a dark block, white text on the faint tint) showed through (S38b)
+	for st in ["button_hover", "button_pressed", "custom_button", "custom_button_hover", "custom_button_pressed"]:
+		t.set_stylebox(st, "Tree", StyleBoxEmpty.new())
+	t.set_color("font_hovered_color", "Tree", ink)
+	t.set_color("font_hovered_dimmed_color", "Tree", ink)
+	t.set_color("font_hovered_selected_color", "Tree", Color.WHITE)
 	t.set_stylebox("cursor", "Tree", box(Color(0, 0, 0, 0), B_CORAL, 1, 0))
 	t.set_stylebox("cursor_unfocused", "Tree", box(Color(0, 0, 0, 0), Color(ink, 0.2), 1, 0))
 	var head := StyleBoxFlat.new()

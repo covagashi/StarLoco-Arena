@@ -338,8 +338,12 @@ Smokes contra el servidor local, uno a uno: `inventory_smoke` 4/4,
 `cardmaster_smoke` 6/6, `mailbox_smoke` 8/8, `fusion_smoke` 5/5,
 `report_smoke` 5 OK (la pasada llegó a mi tope de tiempo antes de imprimir
 el resumen). `run_tests.sh` 1526/0. Capturas `~/codigo/capturas/s38/
-cierre-*.png`. Cabo suelto visto en el informe de combate, no de aquí: un
-cuadro oscuro en la columna de XP de la primera fila de luchadores.
+cierre-*.png`. Cabo suelto visto en el informe de combate: un cuadro oscuro
+sobre la XP de la primera fila y su texto blanco sobre rosa pálido. Era la
+celda bajo el puntero de cualquier tabla (`Tree`): el tema de los paneles no
+definía `button_hover` ni los `font_hovered_*` y salían los de Godot (un
+bloque oscuro, texto blanco). Arreglado en `UiStyle.paper_theme()` para
+todas las tablas, comprobado con el puntero sobre una celda.
 
 ## Mini sprint para seguir (S38b, escrito al parar el 2026-11-13)
 
