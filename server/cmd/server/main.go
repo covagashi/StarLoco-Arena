@@ -26,6 +26,7 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/update"
 	"github.com/StarLoco/arena-2.70/internal/version"
 	"github.com/StarLoco/arena-2.70/internal/web"
+	"github.com/StarLoco/arena-2.70/internal/wsconn"
 )
 
 func main() {
@@ -150,6 +151,20 @@ func run(configPath, dataOverride string) error {
 	deps.WebBaseURL = webBaseURL(cfg, webLn)
 
 	srv.StartDebugInject(cfg.DebugAddr) // no-op unless debug_addr is set
+
+	// S44: the browser client's door — the same game over WebSocket.
+	if addr := strings.TrimSpace(cfg.WSAddr); addr != "" {
+		wsLn, err := wsconn.Listen(ctx, addr)
+		if err != nil {
+			return portInUse(addr, err)
+		}
+		log.Info("game over WebSocket (browser client)", "addr", wsLn.Addr().String())
+		go func() {
+			if err := srv.Serve(ctx, wsLn); err != nil {
+				log.Error("websocket listener stopped", "err", err)
+			}
+		}()
+	}
 
 	banner(cfg, gameLn, webLn, createdConfig, configPath, deps, dataLoc)
 

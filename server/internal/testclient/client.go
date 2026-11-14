@@ -12,6 +12,8 @@ import (
 	"io"
 	"net"
 	"time"
+
+	"github.com/StarLoco/arena-2.70/internal/wsconn"
 )
 
 // Client is a single scripted connection to the server.
@@ -23,6 +25,16 @@ type Client struct {
 // Dial connects to addr.
 func Dial(addr string) (*Client, error) {
 	conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{conn: conn, r: bufio.NewReader(conn)}, nil
+}
+
+// DialWS connects over WebSocket (S44, the browser client's transport):
+// url is "ws://host:port/". The framing inside is the same.
+func DialWS(url string) (*Client, error) {
+	conn, err := wsconn.Dial(url, 3*time.Second)
 	if err != nil {
 		return nil, err
 	}

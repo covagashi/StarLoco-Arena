@@ -1,6 +1,6 @@
 # S44 — Cliente web: la demo se juega en el navegador
 
-**Planificado:** 2026-11-04 · **Hito:** M5 — Release · **Tamaño:** M · **Estado:** ⚪ esbozo (tras S43)
+**Planificado:** 2026-11-04 · **Hito:** M5 — Release · **Tamaño:** M · **Estado:** 🔵 adelantado el paso 2 (2026-11-14: conexión por WebSocket); el resto, tras S43
 
 ## Decisión del dueño (2026-11-04)
 
@@ -97,3 +97,30 @@ Desde un enlace, en Chrome y Firefox de escritorio, alguien sin nada
 instalado pulsa "Jugar" (cuenta demo, sin registrarse), entra al lobby y juega un combate entero contra
 el servidor de producción por `wss://`. La primera carga es ≤ 50 MB y la
 pestaña se queda en ≤ 500 MB durante el combate de la arena 6.
+
+## Hecho por adelantado (2026-11-14, el dueño dormía)
+
+### 2. Conexión por WebSocket ✅
+
+No depende de S43 (no publica nada), así que va ya.
+- **Servidor:** `internal/wsconn` hace de un WebSocket un `net.Conn` (cada
+  mensaje binario lleva un trozo del mismo flujo que el TCP), así que
+  `Server.Serve`, el guardián por IP y las sesiones no cambian. Opción
+  `ws_addr` en `config.yaml` (y `ARENA_WS_ADDR`), vacía por defecto; en
+  producción, detrás del proxy TLS para `wss://`. Se acepta cualquier origen
+  (la demo vive en otra página; el protocolo se autentica solo y no viaja
+  ninguna cookie). Un cierre sin despedida (1006, una pestaña cerrada) es un
+  EOF corriente, como el FIN de TCP.
+- **Cliente:** `arena_client.gd` usa `WebSocketPeer` en la compilación web
+  (`ws://host:puerto`, o la URL entera si el host ya lo es, para `wss://`) y
+  `StreamPeerTCP` en escritorio; `--ws-url=<url>` fuerza WebSocket en
+  escritorio para las pruebas.
+- **Pruebas:** `internal/wsconn` (el flujo a través de varios mensajes),
+  `TestLoginToWorldOverWebSocket` en las e2e (el mismo recorrido que
+  `TestLoginToWorld` por TCP), la suite entera del servidor en verde, y
+  `cardmaster_smoke` desde el cliente Godot por WebSocket contra el servidor
+  local: 6/6 (y apuntado a un puerto vacío no llega al lobby: iba de verdad
+  por WebSocket). `run_tests.sh` 1526/0.
+
+Pendiente del paso 2: repetir las demás e2e por WebSocket, y el proxy
+`wss://` en oracle-2 (eso, con el dueño: es producción).

@@ -27,6 +27,12 @@
 #   proxyAddresses_1=YOUR-IP:5555,YOUR-IP:5555
 addr: "0.0.0.0:5555"
 
+# The same game over WebSocket, for the browser client (the web demo), as
+# "host:port". Empty (the default) leaves it off. In production put a TLS
+# proxy in front so the page connects with wss://.
+#   ws_addr: "0.0.0.0:5556"
+ws_addr: ""
+
 
 # -----------------------------------------------------------------------------
 #  Web portal - the page where players create their own accounts.

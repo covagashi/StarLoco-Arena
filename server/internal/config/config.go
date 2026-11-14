@@ -53,6 +53,10 @@ type Config struct {
 	DataDir string `yaml:"data_dir"`
 	// LogLevel: debug | info | warn | error.
 	LogLevel string `yaml:"log_level"`
+	// WSAddr, when non-empty, also serves the game protocol over WebSocket on
+	// this address (S44: the browser client cannot open TCP). Same messages,
+	// one binary WebSocket message per write; behind a TLS proxy for wss://.
+	WSAddr string `yaml:"ws_addr"`
 	// DebugAddr, when non-empty, starts a DEV-ONLY loopback HTTP endpoint for
 	// live packet injection (see internal/game/debug.go). Leave empty in prod.
 	DebugAddr string `yaml:"debug_addr"`
@@ -379,6 +383,9 @@ func (c *Config) applyEnv() {
 	}
 	if v := os.Getenv("ARENA_LOG_LEVEL"); v != "" {
 		c.LogLevel = v
+	}
+	if v := os.Getenv("ARENA_WS_ADDR"); v != "" {
+		c.WSAddr = v
 	}
 	if v := os.Getenv("ARENA_DEBUG_ADDR"); v != "" {
 		c.DebugAddr = v
