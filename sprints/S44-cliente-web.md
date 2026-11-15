@@ -214,12 +214,38 @@ PSS de los procesos, con recolección forzada antes de medir:
   figuras y el equipo se bajen al usarse en vez de en `boot` (son 46 de los
   65 MB), y medir el combate de la arena 6.
 
+#### Segunda medida, misma sesión
+
+- **Audio en modo stream**: Godot 4.7 en web reproduce por defecto cada
+  sonido como "sample" de Web Audio, que decodifica el OGG entero a PCM en
+  JavaScript (las dos músicas son 96 y 103 s). `project.godot`:
+  `audio/general/default_playback_type.web=0`. Lobby: 554 → 425 MB.
+- **Arena montada, modelos fuera**: tras montar la arena, `fight_view`
+  borra sus GLB de la memoria (`WebAssets.drop_models`) y `ArenaView`
+  suelta las plantillas del constructor (vale también en escritorio).
+- **El manifiesto, sin caché** (`?t=`): con el perfil del navegador
+  guardado pedía trozos de una compilación anterior (404).
+- Medido con PSS + SwapPss (la Ally está en swap y el PSS solo engañaba):
+
+| Momento | Pestaña | wasm | GPU |
+|---|---|---|---|
+| Lobby | 425–434 MB | 80 MB | 90–103 MB |
+| Combate, arena del mundo 10 (12 MB) | 476 MB | 115 MB | 122 MB |
+| Combate, arena del mundo 38 (10 MB) | 482–520 MB | 115 MB | 91–150 MB |
+| **Combate, arena 6 (mundo 36, 27,7 MB)** | **452–472 MB** | 115 MB | 82–89 MB |
+
+**Presupuesto de memoria cumplido en Chromium** con la arena más pesada
+(entrenamiento 1 contra 1). Falta Firefox, y un combate con más luchadores.
+
 ### Visto de paso
 
-- Los iconos que la interfaz dibuja con caracteres sueltos (los dados de
-  "Nuevo luchador", el de RECLUTAR) salen como cuadros en web: no hay
-  fuentes del sistema de las que tirar. Hace falta meter esos símbolos en
-  una fuente propia o dibujarlos.
+- Los iconos que la interfaz dibuja con caracteres sueltos (flechas,
+  triángulos, ✓, ✕, ●, ∞, ≤, ≥) salían como cuadros en web: ninguna de
+  nuestras tres fuentes los tiene y en escritorio los ponía una fuente del
+  sistema. **Arreglado**: `assets/ui/fonts/PippopSymbols*.ttf` (8 KB,
+  recortadas de Noto, OFL, `tools/fonts/make_symbols.py`) como respaldo de
+  todas las fuentes en `UiStyle._file`. Verificado en Chromium: el ▸ de
+  JUGAR ya se ve.
 - El tutorial de entrada son 8 + 4 páginas de Aldebrán y luego 10 de Nilo
   antes de la primera pelea; en una demo pesa. Lo apunto para el dueño, no
   lo toco.

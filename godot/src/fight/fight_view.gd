@@ -540,6 +540,8 @@ func _web_arena() -> void:
 func _load() -> void:
 	var map_id := int($UI/TopBar/MapId.text)
 	_arena_3d = _arena.load_world(map_id)
+	if WebAssets.active():   # built: its models only took memory now (S44)
+		WebAssets.drop_models(WebAssets.arena_group(map_id))
 	for l in _mark_layers.values():
 		l.queue_free()
 	_mark_layers = {}

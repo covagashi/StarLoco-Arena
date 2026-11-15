@@ -46,6 +46,10 @@ const KIT := "ui/kit/"
 const FONT_TITLE := "ui/fonts/LilitaOne-Regular.ttf"
 const FONT_BODY := "ui/fonts/Nunito-Variable.ttf"
 const FONT_DISPLAY := "ui/fonts/SairaCondensed-ExtraBold.ttf"
+## The arrows, triangles, ✓ ✕ ● ∞ ≤ ≥ the three fonts above lack, cut from
+## Noto (tools/fonts/make_symbols.py). A desktop finds them in the system's
+## fonts anyway; the browser has none to offer (S44).
+const FONT_SYMBOLS := ["ui/fonts/PippopSymbols.ttf", "ui/fonts/PippopSymbols2.ttf"]
 
 static var _card_art_cache := {}   # card id -> Texture2D (null when missing)
 static var _kit_cache := {}        # asset path -> Texture2D (null when missing)
@@ -703,13 +707,19 @@ static func _body(weight: int, spacing := 0) -> Font:
 	return _fonts[key]
 
 
-## One of our font files (assets/ui/fonts), cached.
+## One of our font files (assets/ui/fonts), cached, with the symbol cuts
+## as its fallbacks.
 static func _file(rel: String) -> FontFile:
 	var key := "file:" + rel
 	if not _fonts.has(key):
 		var f := FontFile.new()
 		f.load_dynamic_font(AssetPaths.resolve(rel))
 		f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+		if not rel in FONT_SYMBOLS:
+			var fb: Array[Font] = []
+			for s: String in FONT_SYMBOLS:
+				fb.append(_file(s))
+			f.fallbacks = fb
 		_fonts[key] = f
 	return _fonts[key]
 

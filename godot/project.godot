@@ -10,6 +10,13 @@ run/main_scene="res://src/main.tscn"
 run/main_scene.web="res://src/web/web_boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[audio]
+
+; S44: in the browser Godot 4.7 plays every stream as a Web Audio "sample"
+; by default, which decodes it whole into float PCM in JavaScript (a few
+; minutes of music is tens of MB). Streams mix in the audio worklet instead.
+general/default_playback_type.web=0
+
 [autoload]
 
 I18n="*res://src/i18n/i18n.gd"

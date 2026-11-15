@@ -171,6 +171,7 @@ func load_world(world_id: int) -> bool:
 			continue
 		cells.add_child(_builder.build_cell(p, shape.cells[p], layout.cells[p], shape.floor_y))
 	_root.add_child(_builder.flatten(cells))
+	_builder = ArenaScene.new()   # its templates: the flattened copy is all a fight needs
 	cells.free()
 	_cam = ArenaScene.game_camera(720.0, 1.0, Vector3.ZERO)
 	_cam.cull_mask &= ~DEPTH_LAYER

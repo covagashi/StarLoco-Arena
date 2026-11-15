@@ -23,6 +23,8 @@ const ARENA_PREFIX := "arena-"
 static var _manifest := {}
 ## group -> paths it unpacked under ROOT
 static var _have := {}
+## what drop_models left of an arena, deleted with the next one
+static var _leftover := []
 static var _req: HTTPRequest
 ## the group being downloaded, its size and what of it is done, for
 ## progress()
@@ -92,13 +94,19 @@ static func ensure(groups: Array) -> bool:
 			for old: String in _have.keys():
 				if old.begins_with(ARENA_PREFIX):
 					_drop(old)
+			for p: String in _leftover:
+				DirAccess.remove_absolute(p)
+			_leftover.clear()
 		if not await _fetch(g):
 			return false
 	return true
 
 
+## The manifest names the parts of this build, so it must never come from
+## the browser's cache (the parts themselves are cached for good: their
+## names carry their hash).
 static func _load_manifest() -> bool:
-	var body: Variant = await _http_get(base_url() + "manifest.json")
+	var body: Variant = await _http_get(base_url() + "manifest.json?t=%d" % int(Time.get_unix_time_from_system()))
 	if not body is PackedByteArray:
 		return false
 	var m: Variant = JSON.parse_string((body as PackedByteArray).get_string_from_utf8())
@@ -160,6 +168,23 @@ static func _unpack(url: String, paths: Array) -> bool:
 	zip.close()
 	DirAccess.remove_absolute(tmp)
 	return true
+
+
+## Deletes a group's models (.glb) once they are built into the scene: the
+## browser keeps every unpacked file in memory. The group counts as gone, so
+## a rebuild downloads it again (from the browser's cache); its small JSON
+## files stay until the next arena replaces them.
+static func drop_models(group: String) -> void:
+	if not _have.has(group):
+		return
+	var rest := []
+	for p: String in _have[group]:
+		if p.get_extension() == "glb":
+			DirAccess.remove_absolute(p)
+		else:
+			rest.append(p)
+	_have.erase(group)
+	_leftover.append_array(rest)
 
 
 ## Forgets a group's files. Runs before the next arena unpacks, so a kit
