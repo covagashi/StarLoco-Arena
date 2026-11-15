@@ -16,6 +16,11 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 ; by default, which decodes it whole into float PCM in JavaScript (a few
 ; minutes of music is tens of MB). Streams mix in the audio worklet instead.
 general/default_playback_type.web=0
+; A stream is mixed on the main thread (the web build has no other), so a
+; frame longer than the output buffer cut the music: opening the inventory
+; on a slower machine did it. The music can wait a quarter of a second;
+; the short sounds are samples (audio.gd SHORT) and don't wait for this.
+driver/output_latency.web=250
 
 [autoload]
 

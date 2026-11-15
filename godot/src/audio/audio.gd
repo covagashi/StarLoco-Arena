@@ -35,6 +35,11 @@ const TRACKS := ["island", "fight"]
 ## track → our file in assets/audio/music/ (S39)
 const MUSIC_FILES := {"island": "lobby", "fight": "fight"}
 const FADE_S := 1.5
+## Interface and fight sounds play as Web Audio samples in the browser (S44):
+## they start at once and keep sounding whatever the frame rate. The music
+## stays a stream (project.godot): as a sample it would be decoded whole
+## into memory. Only the web build has samples; elsewhere this is a stream.
+const SHORT := AudioServer.PLAYBACK_TYPE_SAMPLE
 
 ## The track playing (or fading in): "" while silent.
 var track := ""
@@ -67,6 +72,7 @@ func _ready() -> void:
 	for i in 4:
 		var u := AudioStreamPlayer.new()
 		u.bus = "SFX"
+		u.playback_type = SHORT
 		add_child(u)
 		_ui_players.append(u)
 	get_tree().node_added.connect(_on_node_added)
@@ -128,6 +134,7 @@ func sfx(rel: String, volume_db := 0.0) -> void:
 		else:
 			p = AudioStreamPlayer.new()
 			p.bus = "SFX"
+			p.playback_type = SHORT
 			add_child(p)
 			_sfx_players.append(p)
 	p.stream = st

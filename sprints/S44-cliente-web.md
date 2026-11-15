@@ -288,3 +288,24 @@ va ahí: **https://140.238.172.196/**
 Falta para cerrar: Firefox, un combate entero contra oracle-2 y que la
 primera carga baje con holgura de 50 MB. Un dominio propio quitaría el
 certificado de IP (decisión del dueño, como itch.io).
+
+### Música entrecortada al abrir el inventario (2026-11-15)
+
+Dueño: "dice mi hermano que cuando entra a inventario la música se empieza
+a escuchar entrecortada" (demo en oracle-2, su equipo).
+
+- Causa: la compilación web no tiene hilos, así que Godot mezcla el audio
+  en el hilo principal, y en web su búfer de salida es de 50 ms: cualquier
+  fotograma más largo corta la música. Al pasar el audio a modo stream (por
+  memoria) quedó expuesto a eso. Abrir el inventario (decodificar las
+  imágenes de las cartas y dibujarlas) da fotogramas largos; en la Ally, a
+  60 fps incluso con la CPU ×4, solo uno de 50 ms al abrir, pero en un equipo
+  más flojo pasa de largo.
+- Arreglo: `audio/driver/output_latency.web=250` (la música aguanta un
+  cuarto de segundo de fotograma lento) y los sonidos cortos (interfaz y
+  combate, `Audio.SHORT`) como "sample" de Web Audio: suenan al instante y
+  no dependen de los fps. La música sigue en stream (como sample se
+  decodificaba entera en memoria). Memoria igual: lobby 435 MB, inventario
+  407 MB.
+- Subido a oracle-2. No lo he oído (aquí no hay salida de audio): queda que
+  el hermano lo pruebe.
