@@ -67,3 +67,19 @@ IP del jugador de `X-Forwarded-For` cuando viene del proxy local.
 - **S44 cerrado.** Lo que espera al dueño, en `sprints/BACKLOG.md` §13.
 - Pedido a un agente Fable: propuesta de bienvenida (3 páginas) y un
   luchador en vex, en `~/codigo/capturas/s44/arte/`, sin tocar el juego.
+
+## Noche (el dueño dormía), S46 adelantado
+
+- La IA juega el ataque de su arma (S46, de lo que dejó S40). Al medirlo
+  salió **B-190**: un efecto de un solo objetivo no miraba su propia
+  máscara; el arma 34 pegaba 112 en vez de 8 y los hechizos 30 y 443 daban
+  al enemigo el extra del lanzador. Arreglado, probado y subido a oracle-2.
+- Con eso, las 23 armas quedan al 46–54 % contra el espejo: pesan poco
+  frente a los hechizos. Preguntas de diseño para el dueño, en S46.
+- La propuesta del agente Fable (bienvenida en 3 páginas y un luchador en
+  vex) está en `~/codigo/capturas/s44/arte/`, sin tocar el juego. Sus tres
+  preguntas, en el resumen al dueño.
+
+Verificado: `go test ./...` en verde (una e2e de fantasma superó su plazo
+con la máquina cargada; sola, y el paquete entero después, pasan);
+`run_tests.sh` 1491/0; smokes `hub`, `talk`, `inventory`, `fight` OK.
