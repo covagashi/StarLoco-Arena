@@ -32,3 +32,12 @@ cartas, y este los hechizos.
 
 El servidor no lee ningún hechizo de `data-dist/`; las partidas siguen
 equilibradas (simulaciones IA contra IA, como S29).
+
+## Llega de S41 (2026-11-15)
+
+Los nombres de los hechizos ya son nuestros (`spell.<id>` en
+`godot/assets/i18n/content_<lang>.json`) y las clases también (`breed.N`:
+Bastión, Domador, Buscaoro, Sombra, Relojero, Tahúr, Curandero, Espadachín,
+Arquero, Jardinero, Furia, Panda). Las cartas de regla que prohíben o
+encarecen un hechizo apuntan a él (`@spell:<id>`): si el rediseño cambia ids,
+hay que actualizar esas referencias.

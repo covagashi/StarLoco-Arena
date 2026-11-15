@@ -4,8 +4,10 @@ extends RefCounted
 ## assets/i18n/content_<lang>.json (tracked, like ui_<lang>.json) holds a
 ## flat {"<kind>.<id>": text} map: card.<id> (coach cards), fcard.<id>
 ## (fighter equipment, which shares ids with coach cards but names other
-## items), set.<id> (collections) and cond.<id> (fighter conditions). They
-## replace the retail content.* tables GameText read; a name missing in the
+## items), set.<id> (collections), cond.<id> (fighter conditions), spell.<id>,
+## and the NpcDialogs texts (npc, chal, dlg/dlgr, ach/achd, crit, summon,
+## event/eventd/eventl). They replace the retail content.* tables GameText
+## read; a name missing in the
 ## UI language falls back to English, then to the caller's fallback.
 ##
 ## A value "@spell:<id>", "@breed:<n>" or "@fcard:<id>" names a combat rule
@@ -33,7 +35,11 @@ static func _table(lang: String) -> Dictionary:
 
 ## The `kind`.`id` text in the UI language, else English, else `fallback`.
 static func get_text(kind: String, id: int, fallback: String) -> String:
-	var key := "%s.%d" % [kind, id]
+	return get_key("%s.%d" % [kind, id], fallback)
+
+
+## The text under any key (e.g. "dlgr.12.0", a dialog's reply).
+static func get_key(key: String, fallback: String) -> String:
 	var t := str(_table(State.locale).get(key, ""))
 	if t == "":
 		t = str(_table("en").get(key, ""))

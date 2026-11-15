@@ -204,10 +204,9 @@ func _on_placement() -> void:
 ## S07: the versus screen comes up on 8010 with both sides, hands over to
 ## placement on its own (no click) and is gone once placement opens.
 ## S08: the server's French AI names come out in the UI language — the
-## demon from the retail table (content.29.262), its fighters as breed.N.
+## demon by its npc.262 name (ours since S41), its fighters as breed.N.
 func _check_ai_names(d: Dictionary) -> void:
 	var AiNames = load("res://src/gamedata/ai_names.gd")
-	var GameText = load("res://src/gamedata/game_text.gd")
 	# S26: the time demons carry Maya names, the same in every language
 	var want_demon: String = load("res://src/gamedata/npcdialogs.gd").npc_name(262)
 	var demon := ""

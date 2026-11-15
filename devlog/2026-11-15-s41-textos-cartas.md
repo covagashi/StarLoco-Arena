@@ -51,3 +51,23 @@ nombre. Detalle en el sprint.
 
 Verificado: `run_tests.sh --headless` 1629/0; `inventory_smoke` 9/9 contra
 un servidor local (copia de la base en el scratchpad).
+
+## Paso 3 y cierre de S41, misma sesión
+
+El dueño: "pues cambia el texto, así terminas el S41". Renombré también las
+clases y el mundo (Gran Reloj), porque los textos los nombran; los hechizos
+que ve el cliente; y los diálogos, NPC, logros, retos, criterios,
+invocaciones y eventos, con agentes Haiku en dos pasadas (la primera
+parafraseó poco: un tercio quedó casi igual al original). Los nodos de Nilo
+que se pueden abrir los reescribí yo porque los agentes trajeron datos
+falsos del retail; las descripciones de eventos y algunos criterios salen
+del texto anterior con solo las clases cambiadas, para no tocar las reglas.
+Fuera `GameText`, `npc_rename.gd`, `npc_text_fix.gd` y la carga de
+`gui/i18n_*.json`.
+
+Verificado: `run_tests.sh --headless` 1520/0; en vivo `talk_smoke` 7/7,
+`tutorial_smoke` 10/10 (cuenta nueva `novato9141`), `story_smoke` 4/4,
+`achievements_smoke` 3/3, `inventory_smoke` 9/9.
+
+No verificado: el nombre de cada clase en el combate en 3D no se ha mirado
+en una captura (sale de `breed.N`, como antes).

@@ -132,3 +132,11 @@ Desde un checkout limpio, sin `godot/assets/` retail ni
 `server/data-dist/`, el servidor arranca y el cliente juega un combate en
 cualquiera de las 6 arenas del prototipo, con nuestros modelos, efectos, sonidos, cartas
 y textos. Ningún fichero del repo lee formatos del cliente antiguo.
+
+## Llega de S41 (2026-11-15)
+
+El cliente ya no lee ninguna tabla de texto retail (`GameText` borrado, la
+capa XML no carga `gui/i18n_*.json`, `NpcDialogs` solo toma la estructura de
+`npcdialogs.json`). Al borrar `godot/assets/` retail: `gui/i18n_*.json` y
+`gamedata/cardsets.json` ya no hacen falta, y `dumpnpcdialogs` puede dejar de
+exportar textos.

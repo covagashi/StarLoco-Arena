@@ -5,8 +5,8 @@ extends RefCounted
 ## the demon bosses ("Démon de la 58ème minute"), the breed master, and each AI
 ## fighter after its breed ("Iop", "Crâ"). The wire carries plain strings, so
 ## the translation happens here, once, when the 8000 is indexed: the demons
-## have their name in the retail text tables (content.29, the DemonChallenge
-## element descriptors), the rest are our own i18n keys. Only these two coach
+## by their npc.<id> name (ours since S41, NpcDialogs), the rest by our own
+## i18n keys. Only these two coach
 ## ids are touched, and a fighter only when its name is exactly its breed's
 ## French name, so nothing a player typed is ever rewritten.
 ##
@@ -14,12 +14,12 @@ extends RefCounted
 ## (demonChallengeName, challengeOpponentName, breedName) and
 ## handlers_fightcreation.go (the "Sparring" opponent).
 
-const GameText := preload("res://src/gamedata/game_text.gd")
+const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 
 const SPARRING_COACH := 2147483648      # 1 << 31, sparringCoachID
 const CHALLENGE_COACH := 2147483649     # 1 << 31 + 1, challengeCoachID
 
-## demonChallengeName -> content.29.<id>
+## demonChallengeName -> its npc.<id> name (NpcDialogs, ours since S41)
 const DEMONS := {
 	"Démon de la 58ème minute": 262, "Démon de la 52ème minute": 263,
 	"Démon de la 46ème minute": 264, "Démon de la 25ème minute": 265,
@@ -47,7 +47,8 @@ static func coach_name(id: int, name: String) -> String:
 	if not is_ai_coach(id):
 		return name
 	if DEMONS.has(name):
-		return GameText.content(29, DEMONS[name], name)
+		var n := NpcDialogs.npc_name(DEMONS[name])
+		return n if n != "" else name
 	if OTHERS.has(name):
 		var t := I18n.t(OTHERS[name])
 		return name if t == OTHERS[name] else t

@@ -1,6 +1,6 @@
 # S41 — Textos propios
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (pasos 1–2 hechos, 2026-11-15)
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ✅ cerrado (2026-11-15)
 
 ## Decisión del dueño (2026-10-25)
 
@@ -126,11 +126,60 @@ local: **9/9** (nombre propio de la poción, una carta de regla con el
 nombre de su clase y otra con el de su hechizo, colecciones). Capturas en
 `~/codigo/capturas/s41/`.
 
-### Pendiente en S41
+### Paso 3: el resto de los textos, y fuera los retail (2026-11-15)
 
-- Las **descripciones** de las cartas (`content.24`, lore) y de los sets
-  (`content.26`): el cliente nativo no las enseña; se escriben si alguna
-  pantalla las necesita.
-- Eventos, logros, retos, NPC, ayuda, tutorial e historia, como dice el
-  alcance. Después, quitar `GameText` (lo usan aún hechizos, S46, y los
-  nombres de los demonios) y los `gui/i18n_*.json` retail.
+Pedido del dueño: "pues cambia el texto, te lo he dicho, así terminas el
+S41". Agentes Haiku en dos pasadas y revisión mía; las decisiones que tomé
+solo (heurística: ningún texto del retail, como pide el sprint):
+
+- **Las clases y el mundo también.** Los eventos, logros y diálogos nombran
+  clases, así que sin renombrarlas quedaban textos retail. Las 12 clases
+  (`breed.N` en `ui_<lang>.json`): Bastión, Domador, Buscaoro, Sombra,
+  Relojero, Tahúr, Curandero, Espadachín, Arquero, Jardinero, Furia y Panda
+  (en/fr en sus tablas). El "Horamundo" pasa a ser **el Gran Reloj**. Los
+  modelos 3D y sus carpetas (`feca_m`…) no cambian de nombre: no se ven.
+  Si el dueño quiere otros nombres, son una línea por clase.
+- **Hechizos:** los 139 que el cliente nombra (los 120 de las clases y 19
+  de invocaciones o reglas) en `spell.<id>`. Los datos de los hechizos
+  siguen siendo S46.
+- **Diálogos, NPC, retos, logros, criterios, invocaciones y eventos** (1.282
+  textos: `npc`, `dlg`/`dlgr`, `chal`, `ach`/`achd`, `crit`, `summon`,
+  `event`/`eventd`/`eventl`). La primera pasada dejó un tercio de los textos
+  casi iguales al original (los agentes parafraseaban poco): una segunda
+  pasada los reescribió con un script que mide el parecido, hasta que ninguno
+  pasó del 60 %.
+- **Revisión mía:** los nodos de Nilo que se pueden abrir (7, 8, 10–12, 42,
+  44, 66, 69, 74–84) los escribí yo donde el agente había inventado o traído
+  datos falsos del retail (sobres comprados en la web, enviar objetos a
+  otros juegos, un botón naranja que no existe); ahora explican el lobby,
+  el botín con garantía y la elección de 1 carta de 3. Las descripciones de
+  eventos (`eventd`) y los criterios que perdían datos son reglas, no prosa:
+  salen del texto anterior con solo los nombres de clase cambiados (la
+  reescritura libre había atribuido un bonus a la clase equivocada).
+- **Fuera:** `GameText` (y su prueba), `npc_rename.gd` y `npc_text_fix.gd`
+  (los arreglos de S23 quedan dentro de los textos nuevos). `NpcDialogs` solo
+  toma de `npcdialogs.json` la estructura (respuestas, acciones, logros,
+  invocaciones). La capa XML ya no carga `gui/i18n_<lang>.json`: todas las
+  pantallas son nativas. En la interfaz, "Wakfu" → "Evolución" y "Kanodo" →
+  "Constelación".
+
+**Pruebas:** `own_text_test.gd` cuenta cada tipo de texto, comprueba las tres
+lenguas y que ningún texto, ni de `content_` ni de `ui_`, lleve una palabra
+del retail (clases, mundo, monstruos, marcas); `run_tests.sh --headless`
+1520/0. En vivo contra un servidor local: `talk_smoke` 7/7,
+`tutorial_smoke` 10/10 (cuenta nueva), `story_smoke` 4/4,
+`achievements_smoke` 3/3, `inventory_smoke` 9/9. Capturas en
+`~/codigo/capturas/s41/`.
+
+## Cierre (2026-11-15)
+
+Criterio cumplido: todo texto que ve el jugador sale de `ui_<lang>.json` y
+`content_<lang>.json`, nuestros; el cliente no lee ninguna tabla de texto
+retail. Lo que queda va a su sprint:
+- **S43:** `dumpnpcdialogs` aún escribe los textos retail en el
+  `npcdialogs.json` local (ya no se leen) y `gui/i18n_*.json` sigue en disco:
+  se van con el borrado de `godot/assets/` retail.
+- **S46:** al rediseñar hechizos, sus nombres ya son nuestros (`spell.<id>`);
+  las cartas de regla que apuntan a un hechizo (`@spell:`) los siguen.
+- Las descripciones de cartas y sets (lore) no se escribieron: ninguna
+  pantalla las enseña.

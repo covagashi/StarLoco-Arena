@@ -5,14 +5,28 @@ extends RefCounted
 
 const OwnText := preload("res://src/gamedata/own_text.gd")
 const PATH := "res://assets/i18n/content_%s.json"
-## Every name kind and how many there are (coach cards, fighter equipment,
-## collections, fighter conditions).
-const COUNTS := {"card": 907, "fcard": 75, "set": 138, "cond": 111}
-const MAX_LEN := {"card": 30, "fcard": 30, "set": 24, "cond": 30}
+## Every kind and how many there are: coach cards, fighter equipment,
+## collections, fighter conditions, spells, and the NpcDialogs texts (NPC
+## names and lines, challenges, dialog nodes and their replies, achievements
+## and their descriptions, achievement criteria, summons, event cards).
+const COUNTS := {"card": 907, "fcard": 75, "set": 138, "cond": 111, "spell": 139,
+	"npc": 224, "chal": 39, "dlg": 61, "dlgr": 148, "ach": 332, "achd": 173,
+	"crit": 99, "summon": 53, "event": 51, "eventd": 51, "eventl": 51}
+## Names fit a ribbon or a row; long texts (npc, dlg, achd, eventd, eventl)
+## have no limit.
+const MAX_LEN := {"card": 30, "fcard": 30, "set": 24, "cond": 30, "spell": 30,
+	"chal": 40, "dlgr": 70, "ach": 40, "crit": 160, "summon": 30, "event": 40}
+## Kinds whose text may be empty (an achievement its name already explains).
+const MAY_BE_EMPTY := ["achd"]
 ## Retail proper nouns that must not come back (lower case, whole words).
-const BANNED := ["dofus", "ankama", "wabbit", "zaap", "bonta", "brakmar", "amakna",
-	"krosmoz", "kama", "kamas", "tofu", "bouftou", "iop", "sedforme", "krono",
-	"kepika", "zanahowia", "arakne", "potaras"]
+const BANNED := ["dofus", "ankama", "wabbit", "zaap", "zaaps", "bonta", "brakmar", "amakna",
+	"krosmoz", "kama", "kamas", "tofu", "tofus", "bouftou", "iop", "iops", "sedforme", "krono",
+	"kepika", "zanahowia", "arakne", "potaras", "horamundo", "wakfu", "kanodo", "feca",
+	"fecas", "osamodas", "anutrof", "enutrof", "sram", "srams", "xelor", "xelors", "ecaflip",
+	"eniripsa", "aniripsa", "yopuka", "yopukas", "ocra", "ocras", "sadida", "sadidas", "sacrier",
+	"sacrógrito", "pandawa", "pandawas", "cra", "cras", "jalató", "gobball", "bwak", "adamai",
+	"adamaï", "baan", "maknala", "ogrines", "féca", "xélor", "crâ", "sacrieur", "shushu",
+	"kwak", "prespic", "gostofo"]
 
 
 func run(t) -> void:
@@ -39,12 +53,23 @@ func run(t) -> void:
 		for k in tables[lang]:
 			var v := str(tables[lang][k])
 			var kind := str(k).get_slice(".", 0)
-			if v.strip_edges() == "" or v.length() > int(MAX_LEN.get(kind, 30)):
+			if (v.strip_edges() == "" and not kind in MAY_BE_EMPTY) or v.length() > int(MAX_LEN.get(kind, 100000)):
 				bad.append("%s=%s" % [k, v])
 			for m in re.search_all(v.to_lower()):
 				if m.get_string() in BANNED:
 					bad.append("%s=%s" % [k, v])
 		t.ok(bad.is_empty(), "%s: blank, overlong or retail names %s" % [lang, bad.slice(0, 8)])
+	# the UI tables (ui_<lang>.json) carry no retail word either
+	for lang in ["es", "en", "fr"]:
+		var f := FileAccess.open("res://assets/i18n/ui_%s.json" % lang, FileAccess.READ)
+		var ui: Variant = JSON.parse_string(f.get_as_text()) if f != null else null
+		var hits: Array = []
+		if ui is Dictionary:
+			for k in ui:
+				for m in re.search_all(str(ui[k]).to_lower()):
+					if m.get_string() in BANNED:
+						hits.append("%s=%s" % [k, ui[k]])
+		t.ok(ui is Dictionary and hits.is_empty(), "ui_%s: no retail words %s" % [lang, hits.slice(0, 5)])
 	var was := I18n.lang
 	I18n.set_locale("es")
 	t.ok(OwnText.get_text("cond", 1, "") != "", "a condition name reads in Spanish")

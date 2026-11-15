@@ -16,29 +16,19 @@ extends RefCounted
 ## [challengeId][challengeModes[id]], 2 = 22003 criterion) then navigates to
 ## `next` — 0 closes the dialog.
 ##
-## Text follows the UI language (State.locale): `locales.<lang>` carries the
-## same text tables for es/fr, and a key missing there falls back to English.
-## Behaviour (next/act/params, modes, achievements) is language-free.
+## Texts are ours since S41 (OwnText, assets/i18n/content_<lang>.json):
+## npc.<nameId>, chal.<id>, dlg.<groupId> and dlgr.<groupId>.<reply>,
+## ach.<id>, achd.<id>, crit.<id>, summon.<id>, event.<id>, eventd.<id> and
+## eventl.<id>. This table only brings the behaviour (next/act/params, modes,
+## achievements, summons); its retail texts are no longer read.
 
-const NpcRename := preload("res://src/gamedata/npc_rename.gd")
-const NpcTextFix := preload("res://src/gamedata/npc_text_fix.gd")
+const OwnText := preload("res://src/gamedata/own_text.gd")
 const PATH := "gamedata/npcdialogs.json"
-const State := preload("res://src/state.gd")
 
-static var _names := {}       # nameId int -> String (content.29: names + texts)
-static var _chal_names := {}  # challenge id int -> String (content.30)
 static var _groups := {}      # groupId int -> {text, replies:[…]}
 static var _modes := {}       # challenge id int -> i16 mode
 static var _ach := {}         # achievement id int -> {stats, cards, prev, super, cat, sub, pts, hid}
-static var _ach_names := {}   # achievement id int -> String (content.37)
-static var _ach_descs := {}   # achievement id int -> String (content.49)
-static var _crit_names := {}  # criterion id int -> String (content.48)
 static var _summons := {}     # summon template id int -> {hp, ap, mp, look}
-static var _summon_names := {} # summon id int -> String (content.10)
-static var _event_names := {}  # event card id int -> String (content.8)
-static var _event_descs := {}  # event card id int -> effects + duration (content.27)
-static var _event_lore := {}   # event card id int -> flavour text (content.9)
-static var _loc := {}         # lang -> {table -> {id int -> text / group}}
 static var _loaded := false
 
 
@@ -60,84 +50,39 @@ static func _ensure() -> void:
 	var data: Variant = AssetPaths.read_json(PATH)
 	if not data is Dictionary:
 		return
-	for nid in _dict(data.get("names")):
-		_names[int(nid)] = data.names[nid]
-	for cid in _dict(data.get("challengeNames")):
-		_chal_names[int(cid)] = data.challengeNames[cid]
 	for gid in _dict(data.get("groups")):
 		_groups[int(gid)] = data.groups[gid]
 	for cid in _dict(data.get("challengeModes")):
 		_modes[int(cid)] = int(data.challengeModes[cid])
 	for aid in _dict(data.get("achievements")):
 		_ach[int(aid)] = data.achievements[aid]
-	for aid in _dict(data.get("achievementNames")):
-		_ach_names[int(aid)] = data.achievementNames[aid]
-	for aid in _dict(data.get("achievementDescs")):
-		_ach_descs[int(aid)] = data.achievementDescs[aid]
-	for cid in _dict(data.get("criterionNames")):
-		_crit_names[int(cid)] = data.criterionNames[cid]
 	for sid in _dict(data.get("summons")):
 		_summons[int(sid)] = data.summons[sid]
-	for sid in _dict(data.get("summonNames")):
-		_summon_names[int(sid)] = data.summonNames[sid]
-	for eid in _dict(data.get("eventNames")):
-		_event_names[int(eid)] = data.eventNames[eid]
-	for eid in _dict(data.get("eventDescs")):
-		_event_descs[int(eid)] = data.eventDescs[eid]
-	for eid in _dict(data.get("eventLore")):
-		_event_lore[int(eid)] = data.eventLore[eid]
-	for l in _dict(data.get("locales")):
-		var tables := {}
-		for t in _dict(data.locales[l]):
-			var m := {}
-			for k in _dict(data.locales[l][t]):
-				m[int(k)] = data.locales[l][t][k]
-			tables[t] = m
-		_loc[l] = tables
 
 
-## The UI language's entry for `id` in `table`, else the English one.
-static func _tr(table: String, id: int, english: Dictionary, fallback: Variant) -> Variant:
-	var t: Dictionary = _dict(_dict(_loc.get(State.locale)).get(table))
-	var v: Variant = t[id] if t.has(id) else english.get(id, fallback)
-	return _renamed(v)
-
-
-## The tutorial characters carry our own names (npc_rename.gd): in a text,
-## and in every string of a dialog node.
-static func _renamed(v: Variant) -> Variant:
-	if v is String:
-		return NpcRename.apply(v)
-	if v is Dictionary:
-		var d: Dictionary = v.duplicate(true)
-		for k in d:
-			d[k] = _renamed(d[k])
-		return d
-	if v is Array:
-		return (v as Array).map(func(x): return _renamed(x))
-	return v
-
-
-## content.29 text — used for NPC names AND the demon/Challenge speech bodies.
+## npc.<id>: NPC names AND the demon/Challenge speech bodies.
 static func npc_name(id: int) -> String:
-	_ensure()
-	var text := NpcTextFix.name_text(State.locale, id, str(_tr("names", id, _names, "")))
-	# the data has stray double spaces ("mi nombre es  Adamai")
-	return NpcRename.name_for(id, NpcRename.apply(text)).replace("  ", " ")
+	return OwnText.get_text("npc", id, "")
 
 
 ## content.30 challenge display name (the défi picker rows).
 static func challenge_name(id: int) -> String:
-	_ensure()
-	return str(_tr("challengeNames", id, _chal_names, "Challenge %d" % id))
+	return OwnText.get_text("chal", id, "#%d" % id)
 
 
-## The dialog node: {"text", "replies":[{label, next, act?, params?}]}.
+## The dialog node: {"text", "replies":[{label, next, act?, params?}]}, the
+## data's behaviour with our texts (dlg.<id>, dlgr.<id>.<reply>).
 static func group(id: int) -> Dictionary:
 	_ensure()
-	var g: Variant = _tr("groups", id, _groups, null)
-	# Nilo's groups the retail left in French (S20)
-	return _renamed(NpcTextFix.apply(State.locale, id, g)) if g is Dictionary else {}
+	var g: Variant = _groups.get(id)
+	if not g is Dictionary:
+		return {}
+	var out: Dictionary = (g as Dictionary).duplicate(true)
+	out["text"] = OwnText.get_text("dlg", id, "")
+	var replies: Array = out.get("replies", [])
+	for i in replies.size():
+		replies[i]["label"] = OwnText.get_key("dlgr.%d.%d" % [id, i], "…")
+	return out
 
 
 ## The i16 second field of a 26330 NPC-dialog challenge launch —
@@ -158,15 +103,13 @@ static func summon(id: int) -> Dictionary:
 
 ## Summon display name (content.10 — aJt.getName). Empty for unknown ids.
 static func summon_name(id: int) -> String:
-	_ensure()
-	return str(_tr("summonNames", id, _summon_names, ""))
+	return OwnText.get_text("summon", id, "")
 
 
 ## Per-round event-card title (content.8 — tO). The 8100 tail carries the
 ## drawn id; 0 means no card this round. Empty for unknown ids.
 static func event_name(id: int) -> String:
-	_ensure()
-	return str(_tr("eventNames", id, _event_names, ""))
+	return OwnText.get_text("event", id, "")
 
 
 ## The event card's hover text: what it does and for how long. The exporter
@@ -175,9 +118,8 @@ static func event_name(id: int) -> String:
 ## the rest. A table exported before S07 has none, so the card's flavour text
 ## (content.9) stands in; "" before that.
 static func event_desc(id: int) -> String:
-	_ensure()
-	var d := str(_tr("eventDescs", id, _event_descs, ""))
-	return d if d != "" else str(_tr("eventLore", id, _event_lore, ""))
+	var d := OwnText.get_text("eventd", id, "")
+	return d if d != "" else OwnText.get_text("eventl", id, "")
 
 
 ## What an event card does, on one line (S24): the description without its
@@ -238,18 +180,15 @@ static func achievement_stats(id: int) -> Dictionary:
 ## criterion label (content.48) — the aea_1 "name"/"description" fields and
 ## the ako condition row label.
 static func achievement_name(id: int) -> String:
-	_ensure()
-	return str(_tr("achievementNames", id, _ach_names, "Achievement %d" % id))
+	return OwnText.get_text("ach", id, "#%d" % id)
 
 
 static func achievement_desc(id: int) -> String:
-	_ensure()
-	return str(_tr("achievementDescs", id, _ach_descs, ""))
+	return OwnText.get_text("achd", id, "")
 
 
 static func criterion_name(id: int) -> String:
-	_ensure()
-	return str(_tr("criterionNames", id, _crit_names, "criterion %d" % id))
+	return OwnText.get_text("crit", id, "#%d" % id)
 
 
 ## The achievementsList filter (qy_2): drop hidden rows, drop a row whose

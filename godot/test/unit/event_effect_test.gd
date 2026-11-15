@@ -16,7 +16,7 @@ func run(t) -> void:
 	t.eq(NpcDialogs.event_effect(19), "+15% de daño", "Ira Guerrera")
 	t.eq(NpcDialogs.event_effect(12), "+1 PA", "Es la hora de la acción")
 	var sram := NpcDialogs.event_effect(2)
-	t.ok(sram.begins_with("+10% de daño") and "(Srams)" in sram and not "Duraci" in sram,
-		"Dios Sram keeps its class, drops its Duración line: '%s'" % sram)
+	t.ok(sram.begins_with("+10% de daño") and "(Sombras)" in sram and not "Duraci" in sram,
+		"the Shade god's card keeps its class, drops its Duración line: '%s'" % sram)
 	t.ok(not "Dua" in NpcDialogs.event_effect(3), "the data's 'Duación' typo is dropped too")
 	State.locale = before

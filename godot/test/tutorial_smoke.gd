@@ -9,7 +9,7 @@ extends "res://test/totems_smoke.gd"
 ## 2. "Entrenamiento" with no fighters points at recruiting instead.
 ## 3. Ayuda → "Primeros pasos": the next step is achievement 275.
 ## 4. Servicios → "Aprendizaje": Nilo (retail's Baan), the twelve class masters
-##    (our names, npc_rename.gd), Demon III.
+##    (our names, content_<lang>.json since S41), Demon III.
 ## 5. A class master's "Reclutar un guerrero" opens the creation with its class.
 ## 6. Baan's "I'm new" (219), then Demon III (210): after three recruits
 ##    only challenge 29 is offered.

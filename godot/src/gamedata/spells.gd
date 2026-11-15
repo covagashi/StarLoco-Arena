@@ -1,11 +1,12 @@
 extends RefCounted
-const GameText := preload("res://src/gamedata/game_text.gd")
+const OwnText := preload("res://src/gamedata/own_text.gd")
 
 ## Spell tables exported by the old importer's spell_names.py into
 ## assets/gamedata/spells.json — {breed: [{id,name,ap,min,max,value,…,fx}]};
 ## "fx" is the S37 effect recipe (server/cmd/dumpspells/vfx.go, drawn by
 ## src/fx/vfx.gd).
-## Names are the client's own content.3.<id> strings.
+## Names are ours (S41, OwnText spell.<id>); "name"/"nfr" are the retail
+## English and French ones, kept only because nfr keys the AnimSort actions.
 
 const PATH := "gamedata/spells.json"
 
@@ -47,12 +48,9 @@ static func for_breed(breed: int) -> Array:
 	return _by_breed.get(breed, [])
 
 
-## In the UI language (GameText, content.3), else the English export.
+## Our name for the spell (S41, OwnText spell.<id>) in the UI language.
 static func name_of(id: int) -> String:
-	_ensure()
-	var s: Variant = _by_id.get(id)
-	var english := str(s.get("name", "Spell %d" % id)) if s != null else "Spell %d" % id
-	return GameText.content(GameText.SPELL, id, english)
+	return OwnText.get_text("spell", id, "#%d" % id)
 
 
 ## French display name (content.3 texts_fr) — the retail AnimSort-<name>

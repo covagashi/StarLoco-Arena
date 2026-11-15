@@ -22,15 +22,12 @@ func _init(lang := "es") -> void:
 	load_i18n(lang)
 
 
-func load_i18n(lang: String) -> void:
-	var p := GUI_ROOT + "i18n_%s.json" % lang
-	if not AssetPaths.exists(p):
-		p = GUI_ROOT + "i18n_en.json"
-	if not AssetPaths.exists(p):
-		push_error("[guilib] missing " + AssetPaths.resolve(p))
-		return
-	var parsed: Variant = AssetPaths.read_json(p)
-	i18n = parsed if parsed is Dictionary else {}
+## S41: no retail text any more. Every screen is native and reads our own
+## tables (I18n, OwnText); the XML layer only routes events, so its %key%
+## lookups get an empty table and show nothing retail. `lang` is kept for
+## the callers.
+func load_i18n(_lang: String) -> void:
+	i18n = {}
 	loader.i18n = i18n
 
 
