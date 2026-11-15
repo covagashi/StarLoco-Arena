@@ -1,6 +1,6 @@
 # S41 — Textos propios
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (paso 1 hecho, 2026-11-15)
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (pasos 1–2 hechos, 2026-11-15)
 
 ## Decisión del dueño (2026-10-25)
 
@@ -85,13 +85,52 @@ desconocido no sale); `run_tests.sh --headless` 1614/0.
 y cartas sembradas (409, 137, 305, 123 y set 1): **7/7**, con capturas en
 `~/codigo/capturas/s41/`.
 
+### Paso 2: nombres propios de cartas, colecciones y condiciones (2026-11-15)
+
+Pedido del dueño: "cambia los textos, usa haiku o tú mismo". Escritos por
+agentes Haiku por lotes, con una guía de estilo (tono ligero, cortos, nada de
+nombres propios ni juegos de palabras del retail; las palabras de
+diccionario sí valen) y revisados uno a uno por mí:
+
+- `godot/assets/i18n/content_<lang>.json` (es/en/fr, en git): `card.<id>`
+  (las 907 cartas de coach), `fcard.<id>` (los 75 equipos de luchador),
+  `set.<id>` (las 138 colecciones) y `cond.<id>` (las 111 condiciones).
+  `src/gamedata/own_text.gd` los lee; `Cards.name_of`,
+  `Cards.card_set_name`, `FighterCards.label` y el texto de las pociones ya
+  no tocan `GameText` ni `cardsets.json`. `dumpcards` ya no escribe nombres.
+- El equipo de coach sigue el patrón de su colección ("Capa de remiendo",
+  "Botas de remiendo"); las pociones se llaman por su bendición ("Pócima
+  pegajosa"); las reliquias (antes "objetos DOFUS") son curiosidades:
+  gemas, esencias, rollos.
+- **Cartas de regla que apuntan a un hechizo, una clase o un equipo de
+  luchador (212 de 282):** no llevan copia del nombre, sino una referencia
+  (`@spell:34`, `@breed:1`, `@fcard:7`) que el cliente resuelve. Heurística:
+  cuando S46 renombre hechizos y clases, estas cartas lo siguen solas. El
+  emparejamiento se hizo por el nombre retail (hechizos repetidos toman el
+  primer id con ese nombre). Las 14 colecciones de hechizos de clase se
+  llaman "Hechizos de clase 1…14" hasta entonces.
+- Revisión mía: reglas de tiempo y turnos en claro ("10 s por turno",
+  "+5 turnos"; los agentes las habían vuelto crípticas), elisiones
+  francesas, "Gommette" (pegatina) → "Gomme", dos condiciones y dos
+  traducciones inglesas.
+- Interfaz: fuera "Dofus" de las etiquetas (la ranura y el tipo de carta
+  pasan a "Reliquia(s)", "Clásico" en vez de "Clásico (Dofus)"). La pestaña
+  Colecciones toma el nombre de la colección, no el prefijo de sus cartas
+  (salían "Botas de", "10 s por").
+
+**Pruebas:** `test/unit/own_text_test.gd` (las tres tablas con las mismas
+claves, cuántas de cada tipo, ninguna vacía ni de más de 30 caracteres,
+ninguna palabra propia del retail); `fighter_cards_test` con el nombre
+nuevo. `run_tests.sh --headless` 1629/0. `inventory_smoke` contra servidor
+local: **9/9** (nombre propio de la poción, una carta de regla con el
+nombre de su clase y otra con el de su hechizo, colecciones). Capturas en
+`~/codigo/capturas/s41/`.
+
 ### Pendiente en S41
 
-- Los **nombres de las condiciones** de las pociones ("Pegajoso", "Idiota")
-  aún salen de `content.40` retail (`GameText`): van con el resto de
-  nombres.
-- Los **nombres de cartas y colecciones** siguen siendo los retail
-  (`content.23`, `content.25`); algunas colecciones salen cortadas ("Alas
-  de", "10") porque se derivan del prefijo de sus cartas.
+- Las **descripciones** de las cartas (`content.24`, lore) y de los sets
+  (`content.26`): el cliente nativo no las enseña; se escriben si alguna
+  pantalla las necesita.
 - Eventos, logros, retos, NPC, ayuda, tutorial e historia, como dice el
-  alcance.
+  alcance. Después, quitar `GameText` (lo usan aún hechizos, S46, y los
+  nombres de los demonios) y los `gui/i18n_*.json` retail.

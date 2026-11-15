@@ -1,7 +1,8 @@
 extends RefCounted
-## S22: fighter equipment is its own table. Card 1 is the sword "Raciela"
-## (content.1, a weapon: slot type 1); the coach card with the same id is the
-## "Capa Arlan Txin" cape (content.23). The loadout editor read the coach one.
+## S22: fighter equipment is its own table. Card 1 is a sword (a weapon:
+## slot type 1, "Espada de la aurora" since S41, OwnText fcard.1); the coach
+## card with the same id is a cape (card.1). The loadout editor read the
+## coach one.
 
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
 const Cards := preload("res://src/gamedata/cards.gd")
@@ -16,7 +17,7 @@ func run(t) -> void:
 	var before := State.locale
 	State.locale = "es"
 	t.eq(FighterCards.slot_type(1), 1, "card 1 is a weapon")
-	t.eq(FighterCards.label(1), "Raciela", "its fighter name")
+	t.eq(FighterCards.label(1), "Espada de la aurora", "its fighter name")
 	t.ok(FighterCards.label(1) != Cards.name_of(1), "not the coach card's name")
 	t.ok(FighterCards.value_of(1) > 0, "it costs budget")
 	var slots := {}

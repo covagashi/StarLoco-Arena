@@ -2,11 +2,11 @@ extends RefCounted
 
 ## Fighter-equipment active-ability table exported by
 ## server/cmd/dumpfightercards into assets/gamedata/fightercards.json —
-## {"<id>": {ap, min, max, usable, type, value}}. Names are the client's
-## content.1 (label below), NOT the coach-card table that shares the ids.
+## {"<id>": {ap, min, max, usable, type, value}}. Names are ours (S41,
+## OwnText fcard.<id>), NOT the coach-card names that share the ids.
 
 const PATH := "gamedata/fightercards.json"
-const GameText := preload("res://src/gamedata/game_text.gd")
+const OwnText := preload("res://src/gamedata/own_text.gd")
 
 static var _by_id := {}
 static var _loaded := false
@@ -32,11 +32,11 @@ static func usable(card_id: int) -> bool:
 	return bool(ability(card_id).get("usable", false))
 
 
-## The fighter card's own name (content.1, in the UI language). The coach-
+## The fighter card's own name (OwnText fcard.<id>, in the UI language). The coach-
 ## card table shares the id but names a different item: card 1 is the sword
 ## "Raciela" here and the "Capa Arlan Txin" cape there (S22).
 static func label(card_id: int) -> String:
-	return GameText.content(GameText.FIGHTER_CARD, card_id, "Eq %d" % card_id)
+	return OwnText.get_text("fcard", card_id, "#%d" % card_id)
 
 
 ## The FIGHTER slot type of a card (1 weapon, 2 pet, 3 cloak, 4 hat, 5

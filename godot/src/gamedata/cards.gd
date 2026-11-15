@@ -1,15 +1,12 @@
 extends RefCounted
-const GameText := preload("res://src/gamedata/game_text.gd")
+const OwnText := preload("res://src/gamedata/own_text.gd")
 
-## Card template table exported by server/cmd/dumpcards + merged with retail
-## names by the old importer's card_names.py into assets/gamedata/cards.json —
-## {"<id>": {name, type, set, value, price: {"<ctype>": amt}, unique, tradable}}.
-## Names are the client's own content.23.<id> strings.
+## Card template table exported by server/cmd/dumpcards into
+## assets/gamedata/cards.json — {"<id>": {type, set, value, price:
+## {"<ctype>": amt}, unique, tradable, rank, fx...}}. Its "name" is the old
+## retail English one and is no longer read: names are ours (S41, OwnText).
 
 const PATH := "gamedata/cards.json"
-# State.locale mirrors I18n.lang; the autoload itself does not resolve when a
-# -s test script compiles this file first (fight_smoke: "name_of" missing).
-const State := preload("res://src/state.gd")
 
 static var _by_id := {}       # card id int -> Dictionary
 static var _loaded := false
@@ -60,11 +57,9 @@ static func meta(id: int) -> Dictionary:
 	return _by_id.get(id, {})
 
 
-## In the UI language (GameText, content.23), else the English export.
+## Our name for the card (S41, OwnText card.<id>) in the UI language.
 static func name_of(id: int) -> String:
-	var c: Variant = _by_id.get(id)
-	var english := str(c.get("name", "Card %d" % id)) if c != null else "Card %d" % id
-	return GameText.content(GameText.CARD, id, english)
+	return OwnText.get_text("card", id, "#%d" % id)
 
 
 ## Token price as a displayable string ("1200 tok, 40 cred") — empty when the
@@ -150,23 +145,8 @@ static func _lab_ensure() -> void:
 			_labs[int(k)] = data[k]
 
 
-## --- card set names (content.25, the old importer's card_names.py) ----------
-const SETS_PATH := "gamedata/cardsets.json"
+## --- card set names (S41: ours, OwnText set.<id>) ----------------------------
 
-static var _sets := {}   # lang -> {set id int: name}
-
-
-## The set's retail name in the UI language (falls back to English), or "".
+## The collection's name in the UI language, or "".
 static func card_set_name(id: int) -> String:
-	if _sets.is_empty():
-		var data: Variant = AssetPaths.read_json(SETS_PATH)
-		if data is Dictionary:
-			for lang in data:
-				var by_id := {}
-				for k in data[lang]:
-					by_id[int(k)] = str(data[lang][k])
-				_sets[lang] = by_id
-	var n: Variant = _sets.get(State.locale, {}).get(id)
-	if n == null:
-		n = _sets.get("en", {}).get(id)
-	return str(n) if n != null else ""
+	return OwnText.get_text("set", id, "")

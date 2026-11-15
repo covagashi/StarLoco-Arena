@@ -16,10 +16,9 @@ extends RefCounted
 ## An action with no text is left out rather than shown raw.
 
 const Cards := preload("res://src/gamedata/cards.gd")
-const GameText := preload("res://src/gamedata/game_text.gd")
+const OwnText := preload("res://src/gamedata/own_text.gd")
 
 const SETS_PATH := "gamedata/cardsetfx.json"
-const CONDITION := 40   # content.40: condition names (retail, until S41 replaces them)
 const RESURRECT := 13
 const APPLY_CONDITION := 15
 ## Worn effects that only touch fighters after a Historia fight (S21: Elite
@@ -45,7 +44,7 @@ static func effect_line(row: Array, used: bool) -> String:
 	var p0 := int(row[1]) if row.size() > 1 else 0
 	var p1 := int(row[2]) if row.size() > 2 else 0
 	if used and a == APPLY_CONDITION:
-		var cond := GameText.content(CONDITION, p0, "#%d" % p0)
+		var cond := OwnText.get_text("cond", p0, "#%d" % p0)
 		if p1 > 0:
 			return I18n.t("cardfx.use.15", {"cond": cond, "n": p1})
 		return I18n.t("cardfx.use.15_always", {"cond": cond})

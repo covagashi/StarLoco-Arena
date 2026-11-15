@@ -39,3 +39,15 @@ dicen +50 % XP"). Detalle y decisiones en `sprints/S41-textos-propios.md`.
   ../godot/assets/gamedata/cards.json` desde `server/`.
 - Los nombres (cartas, colecciones, condiciones) siguen siendo retail: lo
   siguiente de S41.
+
+## Paso 2, misma sesión: nombres propios
+
+El dueño: "cambia los textos, usa haiku o tú mismo". Siete agentes Haiku
+(colecciones, condiciones, equipo de luchador y cuatro lotes de cartas) con
+una guía de estilo; yo revisé cada lote y corregí lo que no servía (reglas
+de tiempo crípticas, elisiones francesas, "Gommette"). 212 cartas de regla
+apuntan al hechizo, la clase o el equipo que regulan en vez de copiar su
+nombre. Detalle en el sprint.
+
+Verificado: `run_tests.sh --headless` 1629/0; `inventory_smoke` 9/9 contra
+un servidor local (copia de la base en el scratchpad).

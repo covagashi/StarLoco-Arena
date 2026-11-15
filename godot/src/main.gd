@@ -4031,7 +4031,7 @@ func _all_card_sets() -> Array:
 			coll.append(_card_item(cid))
 			if int(State.inventory.get(cid, 0)) > 0:
 				owned += 1
-		out.append({"id": sid, "name": _set_name(cards), "size": cards.size(),
+		out.append({"id": sid, "name": _set_name_for(sid), "size": cards.size(),
 			"completion": owned, "description": "", "collection": coll,
 			"illustrationUrl": str(cards[0]),
 			"isInTome": owned == cards.size(), "tomeStyle": ""})

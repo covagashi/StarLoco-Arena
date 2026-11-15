@@ -68,6 +68,8 @@ func _audit() -> void:
 		var fx: Label = p.find_child("CardEffects", true, false)
 		var txt := fx.text if fx != null else ""
 		_record(5200, "card effects", txt.count(" durante 3 combates") == 2, "'%s'" % txt.replace("\n", " / "))
+		var nm: Label = p.find_child("CardName", true, false)
+		_record(5200, "own name", nm != null and nm.text == "Pócima pegajosa", "'%s'" % (nm.text if nm != null else "—"))
 		await _shot("inventory-effects")
 	var tile137: Variant = p.find_child("Card137", true, false)
 	if tile137 != null:
@@ -77,6 +79,11 @@ func _audit() -> void:
 		var txt := fx.text if fx != null else ""
 		_record(5200, "worn effects", txt.contains("+25 % a tus cartas de resurrección") and txt.contains("combate de Historia"), "'%s'" % txt.replace("\n", " / "))
 		await _shot("inventory-worn")
+	# S41: a rule card on a class or a spell takes that one's name
+	if p.find_child("Card559", true, false) != null:
+		_record(5200, "rule card names", cards.name_of(559) == i18n.t("breed.1") \
+			and cards.name_of(573) == load("res://src/gamedata/spells.gd").name_of(34),
+			"559 '%s', 573 '%s'" % [cards.name_of(559), cards.name_of(573)])
 	var set1: Variant = null
 	for st in _main._gui.gui.model.get_value("localCoach.cardSets") if _main._gui.gui.model.get_value("localCoach.cardSets") is Array else []:
 		if int(st.get("id", 0)) == 1 and int(st.get("completion", 0)) > 0:
