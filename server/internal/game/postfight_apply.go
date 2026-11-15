@@ -335,13 +335,14 @@ func (d *Deps) standingForResult(won bool) int32 {
 	return d.rules().StandingLoss
 }
 
-// sessionSetBonus is setBonusFor guarded for an absent session (a coach can
-// finish a fight disconnected, and the synthetic sides have no session at all).
+// sessionSetBonus is coachBonusFor (sets and the equipped cards' own effects)
+// guarded for an absent session (a coach can finish a fight disconnected, and
+// the synthetic sides have no session at all).
 func sessionSetBonus(s *Session, action int32) int32 {
 	if s == nil {
 		return 0
 	}
-	return s.setBonusFor(action)
+	return s.coachBonusFor(action)
 }
 
 // opposingSetBonus sums an "…pour l'adversaire" bonus owned by the OTHER team and

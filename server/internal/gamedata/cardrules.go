@@ -48,6 +48,11 @@ const (
 	// setResurrectBonusCap caps what a set adds on top (middle rank today), so
 	// no combination makes a lost fighter a formality.
 	setResurrectBonusCap int32 = 10
+	// ResurrectGearBonusCap caps what the coach's whole gear (equipped cards'
+	// own resurrection effect plus sets) adds to a resurrection card (S41: the
+	// equipped cards' effects count since then, and three 25 % capes on top of
+	// a 25 % card would make it sure again). At most 25 + 25 = 50 %.
+	ResurrectGearBonusCap int32 = 25
 )
 
 // fighterCardValues are the fighter cards whose budget cost was off for what

@@ -18,9 +18,10 @@ package game
 // used to say resurrection was the only one; that was true when only
 // handlers_evolution.go called in.
 //
-// Still inert: the DROP family (AI 18–21), and deliberately so — see the drop
-// table entry in docs/STATUS.md, where the pool and base rate are documented as
-// not recoverable from the client.
+// The DROP family (AI 18–21) was left out of sets on purpose (docs/STATUS.md:
+// the retail pool and base rate are not recoverable); since S41 every source
+// counts the same way (coachBonusFor), so a set's drop bonus does what the
+// client's text for it says.
 
 // AI-enum action ids carried by coach-card and card-set effects. Only the ones we
 // act on are named here; the full list is in the client's `AI` enum. The
@@ -56,6 +57,16 @@ func (s *Session) setBonusFor(action int32) int32 {
 		}
 	}
 	return total
+}
+
+// coachBonusFor is everything the coach's gear adds to an AI action: the
+// unlocked set effects plus the equipped cards' own effects (S41). The card's
+// own effects were shown by the retail client (sj_1 sums both into one entry
+// per action) but only drops read them here, so a "+4 % XP" cape gave
+// nothing unless it completed a set; now the texts the client draws from the
+// effects are what the server applies.
+func (s *Session) coachBonusFor(action int32) int32 {
+	return s.setBonusFor(action) + s.equippedEffectBonus(action)
 }
 
 // equippedCountsPerSet counts the coach's equipped cards by their set id. A card

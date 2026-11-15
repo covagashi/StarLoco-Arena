@@ -108,15 +108,16 @@ func (d *Deps) rollFightDrops(f *Fight, coach *domain.Coach, sess *Session) []in
 	// n2: the coach's evolution level, shifted by the drop-level effects it
 	// has equipped (the familiar "simulates one more level" of the i18n).
 	level := int(StandingToLevel(coach.Standing))
-	level += int(sess.equippedEffectBonus(aiDropMinLevel)) +
-		int(sess.equippedEffectBonus(aiDropMaxLevel))
+	// S41: sets count too (coachBonusFor), as for every other META effect.
+	level += int(sess.coachBonusFor(aiDropMinLevel)) +
+		int(sess.coachBonusFor(aiDropMaxLevel))
 	// n3: the map's own drop-chance action (type-1600) plus every equipped
 	// drop-chance/bonus modifier the coach wears.
 	var bonus int32
 	if d.MapBonuses != nil && f != nil && f.Arena() != nil {
 		bonus += d.MapBonuses.DropChanceBonus(int16(f.Arena().worldID))
 	}
-	bonus += sess.equippedEffectBonus(aiDropChance) + sess.equippedEffectBonus(aiDropBonus)
+	bonus += sess.coachBonusFor(aiDropChance) + sess.coachBonusFor(aiDropBonus)
 
 	draws := 1
 	if f != nil && !f.Practice && d.MapBonuses != nil && f.Arena() != nil {

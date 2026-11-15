@@ -174,14 +174,7 @@ func handleFighterUseItemOn(s *Session, f *protocol.C2SFrame) error {
 				"coach", s.Coach.Name, "card", cardID)
 			return nil
 		}
-		// The card's own chance, plus any unlocked SET bonus. The client sums
-		// every source of a given AI action the same way (sj_1 accumulates them
-		// into one entry per action id), so a coach wearing enough of a set that
-		// grants resurrection is meant to be luckier.
-		pct = card.ResurrectPercent + s.setBonusFor(aiActionResurrect)
-		if pct > 100 {
-			pct = 100
-		}
+		pct = s.resurrectChance(card)
 	}
 
 	// Resurrecting lands the fighter on the bench, which the client caps.
@@ -314,3 +307,13 @@ func (s *Session) stateIsFull(state uint8) (bool, error) {
 
 // legendaryBenchCapacity mirrors hu_2.java:640-643 (`n8 >= 9`).
 const legendaryBenchCapacity = 9
+
+// resurrectChance is a resurrection card's chance for this coach: the card's
+// own, plus what the coach's gear adds — unlocked SET bonuses and, since S41,
+// the equipped cards' own resurrection effect. The client sums every source of
+// a given AI action the same way (sj_1 accumulates them into one entry per
+// action id). The gear's share is capped (gamedata.ResurrectGearBonusCap), so
+// no outfit makes a lost fighter a formality.
+func (s *Session) resurrectChance(card *gamedata.CoachCard) int32 {
+	return min(card.ResurrectPercent+min(s.coachBonusFor(aiActionResurrect), gamedata.ResurrectGearBonusCap), 100)
+}

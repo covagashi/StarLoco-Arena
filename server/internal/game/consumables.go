@@ -104,9 +104,13 @@ func (s *Session) useConsumableOnFighter(fighter *domain.Fighter, cardID int32) 
 			// that +1 exists so an equipped card's condition survives the fight
 			// it was applied in, which does not apply to a card used out of
 			// combat.
-			id, dur := conditionParams(card, action)
-			if id != 0 && applyCondition(s.deps.Conditions, fighter, id, dur) {
-				changed = true
+			// Every AI-15 effect, not just the first: 54 potions carry two
+			// conditions (a blessing and its price), and their text lists both
+			// (S41).
+			for _, c := range conditionParams(card, action) {
+				if c.id != 0 && applyCondition(s.deps.Conditions, fighter, c.id, c.duration) {
+					changed = true
+				}
 			}
 		}
 	}
@@ -134,15 +138,21 @@ func (s *Session) useConsumableOnFighter(fighter *domain.Fighter, cardID int32) 
 	return s.pushFighterList()
 }
 
-// conditionParams pulls the [conditionId, duration] pair out of an AI-15 effect.
-// EffectParam only exposes params[0] (it sums magnitudes), so the pair is read
-// directly here.
-func conditionParams(card *gamedata.CoachCard, action int32) (id int16, duration int8) {
+// conditionParams pulls the [conditionId, duration] pair out of every AI-15
+// effect of the card. EffectParam only exposes params[0] (it sums
+// magnitudes), so the pairs are read directly here.
+func conditionParams(card *gamedata.CoachCard, action int32) []conditionPair {
+	var out []conditionPair
 	for _, ef := range card.Effects {
 		if ef.Action != action || len(ef.Params) < 2 {
 			continue
 		}
-		return int16(ef.Params[0]), int8(ef.Params[1])
+		out = append(out, conditionPair{int16(ef.Params[0]), int8(ef.Params[1])})
 	}
-	return 0, 0
+	return out
+}
+
+type conditionPair struct {
+	id       int16
+	duration int8
 }

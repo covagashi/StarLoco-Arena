@@ -1,6 +1,9 @@
 extends "res://test/world_smoke.gd"
 
 ## S22: the Inventario, filtered by what cards are for, sorted, live. Spanish.
+## S41: a picked card says what it does (its effects, our text) and a set its
+## bonuses — when the `test` coach owns card 409 (a two-condition potion),
+## card 137 (worn: resurrection bonus) and a card of set 1, those are checked.
 ##
 ##   godot --path godot -s test/inventory_smoke.gd [-- --shot-dir=D]
 
@@ -57,6 +60,36 @@ func _audit() -> void:
 		if vals[i] > vals[i - 1]:
 			sorted_ok = false
 	_record(5200, "by value", sorted_ok and vals.size() > 1, "%d tiles, highest %d first" % [vals.size(), vals[0] if not vals.is_empty() else 0])
+	# S41: what a card does, from its effects
+	var tile409: Variant = p.find_child("Card409", true, false)
+	if tile409 != null:
+		tile409.pressed.emit()
+		await create_timer(0.4).timeout
+		var fx: Label = p.find_child("CardEffects", true, false)
+		var txt := fx.text if fx != null else ""
+		_record(5200, "card effects", txt.count(" durante 3 combates") == 2, "'%s'" % txt.replace("\n", " / "))
+		await _shot("inventory-effects")
+	var tile137: Variant = p.find_child("Card137", true, false)
+	if tile137 != null:
+		tile137.pressed.emit()
+		await create_timer(0.4).timeout
+		var fx: Label = p.find_child("CardEffects", true, false)
+		var txt := fx.text if fx != null else ""
+		_record(5200, "worn effects", txt.contains("+25 % a tus cartas de resurrección") and txt.contains("combate de Historia"), "'%s'" % txt.replace("\n", " / "))
+		await _shot("inventory-worn")
+	var set1: Variant = null
+	for st in _main._gui.gui.model.get_value("localCoach.cardSets") if _main._gui.gui.model.get_value("localCoach.cardSets") is Array else []:
+		if int(st.get("id", 0)) == 1 and int(st.get("completion", 0)) > 0:
+			set1 = st
+	if set1 != null:
+		p.tab = 1
+		p.selected = set1
+		p.schedule_refresh()
+		await create_timer(0.5).timeout
+		var sb: Label = p.find_child("SetBonuses", true, false)
+		var stxt := sb.text if sb != null else ""
+		_record(5200, "set bonuses", stxt.begins_with("Con ") and stxt.contains(" puestas: "), "'%s'" % stxt.replace("\n", " / "))
+		await _shot("inventory-set-bonuses")
 	_close_all()
 	i18n.set_locale(lang_before)
 

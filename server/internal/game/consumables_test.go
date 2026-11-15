@@ -45,11 +45,14 @@ func consumableHarness(t *testing.T) (*Session, *domain.Fighter, *store.Store) {
 		// 404: apply condition 74 ("Rapide", +1 MP) for 3 fights.
 		&gamedata.CoachCard{ID: 404, HasUsableAction: true,
 			Effects: []gamedata.CardSetEffect{eff(aiApplyCondition, 74, 3)}},
+		// 406: two conditions, like the shipped "blessing and its price" potions.
+		&gamedata.CoachCard{ID: 406, HasUsableAction: true,
+			Effects: []gamedata.CardSetEffect{eff(aiApplyCondition, 74, 3), eff(aiApplyCondition, 72, 3)}},
 		// 405: carries a healing effect but is NOT flagged usable — must be refused.
 		&gamedata.CoachCard{ID: 405, HasUsableAction: false,
 			Effects: []gamedata.CardSetEffect{eff(aiCancelWound, 100)}},
 	)
-	for _, id := range []int32{320, 340, 401, 402, 403, 404, 405} {
+	for _, id := range []int32{320, 340, 401, 402, 403, 404, 405, 406} {
 		if err := st.DB().Create(&domain.CoachCard{
 			CoachID: coach.ID, TemplateID: id, Quantity: 3, Pos: 0,
 		}).Error; err != nil {
@@ -186,6 +189,17 @@ func TestConsumableGrantsXPAndCondition(t *testing.T) {
 	useItemOn(t, s, f.ID, 404)
 	if after := cardCount(t, st, s.Coach.ID, 404); after != before {
 		t.Errorf("a duplicate blessing was consumed (%d -> %d)", before, after)
+	}
+}
+
+// TestConsumableAppliesEveryCondition (S41): a potion with two conditions
+// applies both, as its text says, not only the first.
+func TestConsumableAppliesEveryCondition(t *testing.T) {
+	s, f, st := consumableHarness(t)
+	useItemOn(t, s, f.ID, 406)
+	got, _ := st.Fighters.Get(f.ID)
+	if !got.HasCondition(74) || !got.HasCondition(72) {
+		t.Errorf("conditions after the two-condition potion: %+v, want 74 and 72", got.Conditions)
 	}
 }
 

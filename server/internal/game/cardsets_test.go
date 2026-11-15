@@ -71,3 +71,59 @@ func TestSetBonusFor(t *testing.T) {
 		t.Errorf("no catalogue = %d, want 0", got)
 	}
 }
+
+// TestCoachBonusCountsTheCardsOwnEffects (S41): an equipped card's own effect
+// counts without completing its set, on top of the set's unlocked effects;
+// an unequipped card, or one above the coach's level, adds nothing.
+func TestCoachBonusCountsTheCardsOwnEffects(t *testing.T) {
+	deps := &Deps{
+		Cards: gamedata.NewCards(
+			&gamedata.CoachCard{ID: 10, CardSet: 1, Effects: []gamedata.CardSetEffect{
+				{Action: 1, Params: []int32{4}, Threshold: 127}}},
+			&gamedata.CoachCard{ID: 11, CardSet: 1, Effects: []gamedata.CardSetEffect{
+				{Action: 1, Params: []int32{3}, Threshold: 127}}},
+			&gamedata.CoachCard{ID: 12, RequiredLevel: 99, Effects: []gamedata.CardSetEffect{
+				{Action: 1, Params: []int32{10}, Threshold: 127}}},
+		),
+		CardSets: gamedata.NewCardSets(&gamedata.CardSet{ID: 1, Effects: []gamedata.CardSetEffect{
+			{Action: 1, Params: []int32{2}, Threshold: 2}}}),
+	}
+	sess := func(inv ...domain.CoachCard) *Session {
+		return &Session{Coach: &domain.Coach{ID: 1, Inventory: inv}, deps: deps}
+	}
+	if got := sess(domain.CoachCard{TemplateID: 10, Pos: 1}).coachBonusFor(1); got != 4 {
+		t.Errorf("one card = %d, want its own 4", got)
+	}
+	if got := sess(domain.CoachCard{TemplateID: 10, Pos: 1}, domain.CoachCard{TemplateID: 11, Pos: 2}).coachBonusFor(1); got != 9 {
+		t.Errorf("two cards of the set = %d, want 4 + 3 + the set's 2", got)
+	}
+	if got := sess(domain.CoachCard{TemplateID: 10, Pos: 0}).coachBonusFor(1); got != 0 {
+		t.Errorf("unequipped card = %d, want 0", got)
+	}
+	if got := sess(domain.CoachCard{TemplateID: 12, Pos: 1}).coachBonusFor(1); got != 0 {
+		t.Errorf("card above the coach's level = %d, want 0", got)
+	}
+}
+
+// TestResurrectChanceCapsTheGear (S41): three equipped 25 % capes add at most
+// ResurrectGearBonusCap to a 25 % resurrection card, never a sure 100 %.
+func TestResurrectChanceCapsTheGear(t *testing.T) {
+	cape := func(id int32) *gamedata.CoachCard {
+		return &gamedata.CoachCard{ID: id, Type: 10, Effects: []gamedata.CardSetEffect{
+			{Action: aiActionResurrect, Params: []int32{25}, Threshold: 127}}}
+	}
+	potion := &gamedata.CoachCard{ID: 900, Type: gamedata.CardTypeEvolution, ResurrectPercent: 25}
+	s := &Session{deps: &Deps{Cards: gamedata.NewCards(cape(1), cape(2), cape(3), potion)},
+		Coach: &domain.Coach{ID: 1}}
+	if got := s.resurrectChance(potion); got != 25 {
+		t.Errorf("no gear = %d, want 25", got)
+	}
+	s.Coach.Inventory = []domain.CoachCard{{TemplateID: 1, Pos: 1}}
+	if got := s.resurrectChance(potion); got != 50 {
+		t.Errorf("one cape = %d, want 50", got)
+	}
+	s.Coach.Inventory = append(s.Coach.Inventory, domain.CoachCard{TemplateID: 2, Pos: 2}, domain.CoachCard{TemplateID: 3, Pos: 3})
+	if got := s.resurrectChance(potion); got != 25+gamedata.ResurrectGearBonusCap {
+		t.Errorf("three capes = %d, want %d", got, 25+gamedata.ResurrectGearBonusCap)
+	}
+}
