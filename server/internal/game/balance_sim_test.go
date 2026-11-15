@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
@@ -168,7 +170,16 @@ func TestBalanceSim(t *testing.T) {
 		desc  string
 	}
 	var rows []row
+	only := map[int32]bool{} // S40_SIM_CARDS=118,163: measure just these
+	for _, f := range strings.Split(os.Getenv("S40_SIM_CARDS"), ",") {
+		if v, err := strconv.Atoi(strings.TrimSpace(f)); err == nil {
+			only[int32(v)] = true
+		}
+	}
 	for id, fc := range d.FighterCards.All() {
+		if len(only) > 0 && !only[id] {
+			continue
+		}
 		wr := winRate(t, d, simTeam(d, 2, []int32{id}, 1), naked, n)
 		if math.IsNaN(wr) {
 			continue

@@ -179,6 +179,7 @@ func (f *Fight) playAggressiveAI(ff *FightFighter) {
 	}
 	f.moveIntoSpellRange(ff, target)
 	f.castAISpellRepeatedly(ff)
+	f.noteAIWait(ff)
 }
 
 // playKiteAI casts at the nearest enemy from range, then retreats with leftover
@@ -190,6 +191,7 @@ func (f *Fight) playKiteAI(ff *FightFighter) {
 	}
 	f.moveIntoSpellRange(ff, target)
 	f.castAISpellRepeatedly(ff)
+	f.noteAIWait(ff)
 	if ff.HP > 0 && f.isCurrentTurn(ff.WireID) {
 		f.retreatFromOpponents(ff)
 	}
@@ -676,16 +678,31 @@ func (f *Fight) moveIntoSpellRange(ff, target *FightFighter) {
 	if ff.MP <= 0 || ff.hasState(stateRooted) {
 		return
 	}
+	// Cautious (S40): a cell from which nothing can be fired this turn but
+	// that an enemy can strike next turn is the worst place to end a turn — the
+	// enemy gets the first blow with all its AP. Until it has waited
+	// aiMaxWaits turns, the fighter prefers to stop out of reach (the closest
+	// such cell, so the enemy must step in first); then it advances anyway, so
+	// two cautious sides cannot stall a fight.
+	cautious := ff.aiWaits < aiMaxWaits
 	var bestPath []Pos
 	bestCanFire := false
 	bestScore := f.aiFiringGap(ff, ff.Pos, target)
 	bestLen := 0
 	bestRisk := f.aiCellRisk(ff, ff.Pos)
+	bestExposed := cautious && f.aiThreatened(ff, ff.Pos)
 	for _, path := range f.orderedReachablePaths(ff, ff.MP) {
 		cell := path[len(path)-1]
 		canFire := f.aiCanFireFrom(ff, cell, target)
 		score := f.aiFiringGap(ff, cell, target)
 		risk := f.aiCellRisk(ff, cell)
+		exposed := cautious && !canFire && f.aiThreatened(ff, cell)
+		if !canFire && !bestCanFire && exposed != bestExposed {
+			if !exposed {
+				bestPath, bestScore, bestLen, bestRisk, bestExposed = path, score, len(path), risk, false
+			}
+			continue
+		}
 		better := (canFire && !bestCanFire) ||
 			(canFire == bestCanFire && score >= 0 && (bestScore < 0 || score < bestScore)) ||
 			// Same firing quality: take the SAFER cell. A player who can shoot from
@@ -695,12 +712,61 @@ func (f *Fight) moveIntoSpellRange(ff, target *FightFighter) {
 			(canFire == bestCanFire && score == bestScore && risk == bestRisk &&
 				bestPath != nil && len(path) < bestLen)
 		if better {
-			bestPath, bestCanFire, bestScore, bestLen, bestRisk = path, canFire, score, len(path), risk
+			bestPath, bestCanFire, bestScore, bestLen, bestRisk, bestExposed = path, canFire, score, len(path), risk, exposed
 		}
 	}
 	if len(bestPath) > 0 {
 		f.applyFighterMove(ff, bestPath)
 	}
+}
+
+// aiMaxWaits is how many turns in a row a fighter may hold back out of reach
+// before it advances regardless (moveIntoSpellRange).
+const aiMaxWaits = 2
+
+// noteAIWait counts a turn that ended without an attack (AP untouched) as a
+// wait, and resets the count when the fighter attacked.
+func (f *Fight) noteAIWait(ff *FightFighter) {
+	if ff.AP < ff.MaxAP {
+		ff.aiWaits = 0
+	} else {
+		ff.aiWaits++
+	}
+}
+
+// aiThreatened reports whether a living, visible opponent could strike cell p
+// on its next turn: walk its full MP, then reach with its longest affordable
+// harmful spell (or close combat). A cheap bound — no line of sight, no
+// blocking — which errs on the cautious side.
+func (f *Fight) aiThreatened(ff *FightFighter, p Pos) bool {
+	for _, o := range f.allFighters() {
+		if o.HP <= 0 || o == ff || !f.areOpponents(ff, o) || o.hasState(stateInvisible) {
+			continue
+		}
+		if manhattanDist(o.Pos, p) <= o.MaxMP+f.aiStrikeRange(o) {
+			return true
+		}
+	}
+	return false
+}
+
+// aiStrikeRange is the longest range o can hurt from with a full AP bar: its
+// harmful spells' effective max range, or 1 for close combat.
+func (f *Fight) aiStrikeRange(o *FightFighter) int32 {
+	reach := int32(1)
+	if f.deps == nil || f.deps.Spells == nil {
+		return reach
+	}
+	for _, id := range f.aiRepertoire(o) {
+		sp := f.deps.Spells.Get(id)
+		if sp == nil || !aiSpellHarmsEnemy(sp) || aiSpellAPCost(sp) > o.MaxAP {
+			continue
+		}
+		if r := spellEffectiveMaxRange(o, sp); r > reach {
+			reach = r
+		}
+	}
+	return reach
 }
 
 // moveTowardNearestOpponent walks the fighter toward the cell nearest the closest

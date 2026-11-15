@@ -348,3 +348,26 @@ combate en vivo de más de 80 rondas que pasa de los 120 s.
 **Conclusión:** con esta IA no se puede confirmar el equilibrio de
 movilidad e iniciativa; las defensivas sí parecen baratas. Decisiones del
 dueño, abajo.
+
+**Decisión del dueño (2026-11-15):** arreglar la IA antes de cerrar S40;
+las defensivas se reajustan después, con datos de la IA arreglada.
+
+### Paso 2.7: la IA no se queda a tiro sin atacar (2026-11-15)
+
+`moveIntoSpellRange` (agresiva y hostigadora): si no llega a una casilla
+desde la que pueda atacar, ya no acaba el turno al alcance de un enemigo
+(sus PM más su alcance más largo, `aiThreatened`); se para en la casilla
+segura más cercana. Como mucho 2 turnos seguidos esperando (`aiMaxWaits`),
+para que dos bandos prudentes no se bloqueen. `go test ./...` en verde.
+
+Con la IA nueva (3.240 combates; luego 200 por carta para las extremas):
+- Iniciativa: de 100 % / 0 % a 62 % / 20–30 %. Queda ventaja por mover
+  segundo: alguien tiene que entrar primero en el alcance del otro.
+- +1 PM ya no hace perder (53–55 %); las defensivas dejan de arrasar
+  (112: del 100 % al 57 %).
+- Con 200 combates el valor sigue a lo que hace ganar (r = 0,59). Desviadas:
+  **118** (+40 PV, 300) gana el 90 % y le tocaría ~500; **163** (+20 %
+  resistencia, +15 PV, 250) 77 %, ~350; **132** (reflejo 20 %, 150) 66 %,
+  ~300; **114** (100) 57 %, ~200; y al revés **120** (+30 % daño fuego y
+  tierra, 250) 47 %, ~100. Las armas siguen sin medirse (la IA no usa su
+  ataque).

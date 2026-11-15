@@ -92,6 +92,10 @@ type FightFighter struct {
 	// spellReturn arms effect 88 ("Renvoi de sort"): the next damaging spell
 	// aimed at this fighter is redirected to its caster, then the flag clears.
 	spellReturn bool
+	// aiWaits counts the AI turns in a row this fighter held back out of the
+	// enemies' reach instead of stepping into it unable to strike (S40, see
+	// moveIntoSpellRange); an attack resets it.
+	aiWaits int
 	// CastHistory enforces each spell's cast-frequency limits (min interval / max
 	// per turn / max per target) for this fighter - see spell_cast_history.go.
 	CastHistory spellCastHistory
