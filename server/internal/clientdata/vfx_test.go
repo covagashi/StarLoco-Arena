@@ -1,8 +1,9 @@
-package main
+package clientdata
 
 import (
 	"testing"
 
+	"github.com/StarLoco/arena-2.70/content"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
 
@@ -36,14 +37,11 @@ func TestSpellVfx(t *testing.T) {
 
 // Every class spell in the shipped data gets a recipe the client can draw.
 func TestSpellVfxRealData(t *testing.T) {
-	st, err := gamedata.Open("../../data-dist")
-	if err != nil {
-		t.Skip("no data-dist:", err)
-	}
-	sp, err := st.LoadSpells()
+	r, err := gamedata.LoadRulesContent(content.Rules)
 	if err != nil {
 		t.Fatal(err)
 	}
+	sp := r.Spells
 	shapes := map[string]int{}
 	for _, s := range sp.All() {
 		if s.BreedID < 1 || s.BreedID > 12 {

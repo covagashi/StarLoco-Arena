@@ -695,7 +695,7 @@ static func _body(weight: int, spacing := 0) -> Font:
 	var key := "body%d_%d" % [weight, spacing]
 	if not _fonts.has(key):
 		var f := FontVariation.new()
-		f.base_font = _file(FONT_BODY, "gui/fonts/TAHOMA.TTF")
+		f.base_font = _file(FONT_BODY)
 		var ts := TextServerManager.get_primary_interface()
 		f.variation_opentype = {ts.name_to_tag("wght"): weight}
 		f.spacing_glyph = spacing
@@ -703,15 +703,12 @@ static func _body(weight: int, spacing := 0) -> Font:
 	return _fonts[key]
 
 
-## A font file of ours, or `fallback` (the old one) when it is not installed.
-static func _file(rel: String, fallback: String) -> FontFile:
+## One of our font files (assets/ui/fonts), cached.
+static func _file(rel: String) -> FontFile:
 	var key := "file:" + rel
 	if not _fonts.has(key):
 		var f := FontFile.new()
-		var path := AssetPaths.resolve(rel)
-		if not FileAccess.file_exists(path):
-			path = AssetPaths.resolve(fallback)
-		f.load_dynamic_font(path)
+		f.load_dynamic_font(AssetPaths.resolve(rel))
 		f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
 		_fonts[key] = f
 	return _fonts[key]
@@ -727,7 +724,7 @@ static func body_font() -> Font:
 static func display_font() -> Font:
 	if not _fonts.has("display"):
 		var f := FontVariation.new()
-		f.base_font = _file(FONT_DISPLAY, FONT_TITLE)
+		f.base_font = _file(FONT_DISPLAY)
 		f.variation_transform = Transform2D(Vector2(1, 0), Vector2(-0.2, 1), Vector2.ZERO)
 		f.spacing_glyph = 1
 		_fonts["display"] = f
@@ -757,7 +754,7 @@ static func tag(text: String, colour := B_MUTE) -> Label:
 
 ## Titles and buttons: Lilita One.
 static func title_font() -> FontFile:
-	return _file(FONT_TITLE, "gui/fonts/COPRGTB.TTF")
+	return _file(FONT_TITLE)
 
 
 ## Theme for every native control: raised navy buttons with a lip, the

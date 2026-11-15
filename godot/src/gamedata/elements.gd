@@ -1,11 +1,13 @@
 extends RefCounted
 
-## Interactive-element tables exported by server/cmd/dumpelements into
-## assets/gamedata/elements.json — {"<worldId>": [{id,type,x,y,z,dir,flags,desc}]}.
+## Interactive-element tables — assets/content/elements.json,
+## {"<worldId>": [{id,type,x,y,z,dir,flags,desc}]}. Exported once from the
+## retail world maps (server/cmd/dumpelements) and frozen in S43 as our own
+## data, like server/internal/game/elements_data.go on the server side.
 ## The wire payload (opcode 200) carries position again; this table supplies
 ## the element KIND (type) and descriptor, which never travel on the wire.
 
-const PATH := "gamedata/elements.json"
+const PATH := "content/elements.json"
 
 ## env type (asi factory) -> display label. Same numbering as server
 ## internal/gamedata/envmaps.go EnvType* constants.

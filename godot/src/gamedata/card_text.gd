@@ -4,7 +4,7 @@ extends RefCounted
 ## The retail descriptions never reached the native UI (the inventory showed
 ## no effect at all), and after S40's caps they would have lied anyway. These
 ## lines are built from the effects themselves — cards.json "fx" and
-## cardsetfx.json, both written by server/cmd/dumpcards from server/content/
+## cardsetfx.json, both written by server/cmd/exportclient from server/content/
 ## — through the cardfx.* keys of assets/i18n/ui_<lang>.json, so a card says
 ## exactly what the server applies:
 ##   - worn (coach equipment): the post-fight META bonuses, which since S41
@@ -18,7 +18,7 @@ extends RefCounted
 const Cards := preload("res://src/gamedata/cards.gd")
 const OwnText := preload("res://src/gamedata/own_text.gd")
 
-const SETS_PATH := "gamedata/cardsetfx.json"
+const SETS_PATH := "content/cardsetfx.json"
 const RESURRECT := 13
 const APPLY_CONDITION := 15
 ## Worn effects that only touch fighters after a Historia fight (S21: Elite

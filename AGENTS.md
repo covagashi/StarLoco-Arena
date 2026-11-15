@@ -34,14 +34,15 @@ own code and tests (`server/internal/protocol`,
 |---|---|---|
 | `server/` | **The Go 1.26 server — the primary active project.** Module `github.com/StarLoco/arena-2.70` | Yes — primary work happens here |
 | `server/docs/` | **Start at `STATUS.md`** (current state, open items, invariants), then `DATA-COVERAGE.md` / `BUGS.md` | Yes, keep in sync with code |
-| `godot/` | **Proprietary** (all rights reserved, `godot/LICENSE`; not MIT). The Godot 4 client (login → coach creation → native lobby → native combat). `godot/assets/` is git-ignored on purpose; tests via `godot/run_tests.sh` | Yes — active work |
+| `godot/` | **Proprietary** (all rights reserved, `godot/LICENSE`; not MIT). The Godot 4 client (login → coach creation → native lobby → native combat). `godot/assets/` is git-ignored on purpose except `ui/`, `i18n/`, `audio/` and `content/` (the tables `exportclient` builds); tests via `godot/run_tests.sh` | Yes — active work |
 | `sprints/` | **The roadmap**: `BACKLOG.md` (live work queue) + one `SNN-*.md` per sprint with its evidence | Yes, keep in sync with the work |
 | `devlog/` | The agent's per-session log — what was asked, done, found, and left unverified | Yes — add an entry per session |
 | `server/COVERAGE.md` | Per-opcode implemented / wire-audited / tested matrix | Yes, keep current |
-| `server/content/` | **Proprietary** data (all rights reserved, `server/content/LICENSE`; the `.go` embed file is MIT). The game's own cards since S40: `cards/coach/set_<id>.json`, `sets.json`, `fighter.json`, `events.json`, embedded in the server and read by `gamedata.LoadCardContent` instead of `data.bdat` | Yes — card design edits go here |
+| `server/content/` | **Proprietary** data (all rights reserved, `server/content/LICENSE`; the `.go` embed file is MIT). The game's own cards since S40 (`cards/coach/set_<id>.json`, `sets.json`, `fighter.json`, `events.json`, read by `gamedata.LoadCardContent`) and the rest of the rules since S43 (`rules/`: spells, summonings, challenges, achievements, NPC dialogs…, read by `gamedata.LoadRulesContent`), embedded in the server; nothing reads `data.bdat` at runtime | Yes — card and rules design edits go here (then `exportclient`) |
 | `server/data-dist/` | The redistributable server-data subset (`data.bdat` + `indexes.bdat`, maps) — ships in git and in releases | Occasionally, deliberately (see constraint 4) |
 | `server/data/` | Local scratch copy of game data for a dev build | No — **git-ignored**, local input only |
-| `server/cmd/dump*` | Export tables as JSON for `godot/assets/gamedata/` (cards from `server/content/` since S40, the rest from `data-dist/`) | Occasionally (until S40/S41/S46 replace the data) |
+| `server/cmd/exportclient` | Writes the client's tables (`godot/assets/content/`, tracked) from `server/content/`; `TestClientDataUpToDate` fails until you rerun it after a content change | Whenever `server/content/` changes |
+| `server/cmd/exportrules`, `exportcards` | One-way bridges that froze the retail `data.bdat` tables into `server/content/` (S40, S43); they go with `data-dist/` | No (done) |
 | `server/cmd/studio` | Wails desktop data editor; its retail-asset viewer died with `client/` (see its `README.md`) | Rarely |
 | `docs/` | Game wiki (rules, breeds, spells, mechanics), console commands, `QUICKSTART.md` (ships inside releases) | Occasionally |
 | `.github/workflows/` | `ci.yml` (build/test on Linux+Windows), `release.yml` (release-please → GoReleaser) | Occasionally |

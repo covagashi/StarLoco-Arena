@@ -1815,8 +1815,7 @@ func _announce_event(evname: String, effect: String) -> void:
 	box.position = Vector2(vp.x * 0.1, vp.y * 0.26)
 	box.size = Vector2(vp.x * 0.8, 120)
 	$UI.add_child(box)
-	var font := FontFile.new()
-	font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
+	var font := UiStyle.title_font()
 	for part in [[evname.to_upper(), 40, Color("e2bd6e")], [effect, 20, Color("f1e5c1")]]:
 		if str(part[0]) == "":
 			continue
@@ -3297,9 +3296,7 @@ func _show_fight_result() -> bool:
 	title.add_theme_constant_override("outline_size", 18)
 	title.add_theme_color_override("font_outline_color", Color(0.05, 0.04, 0.02))
 	title.add_theme_color_override("font_color", Color("e2bd6e") if won else Color("c9583f"))
-	var title_font := FontFile.new()
-	title_font.load_dynamic_font(AssetPaths.resolve("gui/fonts/COPRGTB.TTF"))
-	title.add_theme_font_override("font", title_font)
+	title.add_theme_font_override("font", UiStyle.title_font())
 	column.add_child(title)
 	var done := Button.new()
 	done.name = "Continue"

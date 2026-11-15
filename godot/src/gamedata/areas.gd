@@ -1,14 +1,14 @@
 extends RefCounted
 
-## Type-210 static-effect templates exported by server/cmd/dumpeffects into
-## assets/gamedata/areas.json — {"<id>": {"t": "TRAP"|"SPECIAL", "l": label,
+## Type-210 static-effect templates exported by server/cmd/exportclient into
+## assets/content/areas.json — {"<id>": {"t": "TRAP"|"SPECIAL", "l": label,
 ## "s": areaShape, "z": [sizes], "m": maxExec, "w": firesOnWalkOn,
 ## "e": [innerEffectIds]}}. The 8120 creation broadcast (action 66 cell area /
 ## 176 caster aura) carries only the template id, so the footprint, fire budget
 ## and inner-effect list are resolved here — the same rf_2 catalog the retail
 ## client keeps.
 
-const PATH := "gamedata/areas.json"
+const PATH := "content/areas.json"
 
 static var _by_id := {}
 static var _loaded := false

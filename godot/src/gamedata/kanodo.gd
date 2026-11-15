@@ -1,7 +1,7 @@
 extends RefCounted
 
-## Sphere-board ("Kanodo") catalogue — godot/assets/gamedata/spheres.json,
-## dumped from record types 900/901 by server/cmd/dumpspheres.
+## Sphere-board ("Kanodo") catalogue — assets/content/spheres.json,
+## built from server/content/rules (record types 900/901) by server/cmd/exportclient.
 ##
 ## boards[id] = {breed, season, root:[x,y]}; nodes[id] = {board, x, y, xp,
 ## kind, spell, pool, barrier[], tx, ty, fx[]}. Node kind is the client's own
@@ -9,7 +9,7 @@ extends RefCounted
 ## barrier | teleport | item | deadend | empty. "empty" nodes are the path
 ## segments between paying spheres — they are what Reachable may cross.
 
-const PATH := "gamedata/spheres.json"
+const PATH := "content/spheres.json"
 
 static var _loaded := false
 static var boards := {}          # int id -> {breed, season, root:[x,y]}

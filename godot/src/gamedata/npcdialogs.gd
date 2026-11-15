@@ -1,13 +1,12 @@
 extends RefCounted
 
-## NPC dialog table: record 1500 (client `atF` reply rows) exported by
-## server/cmd/dumpnpcdialogs and resolved against i18n tables 29/59/60 by
-## the old importer's npc_dialogs.py into assets/gamedata/npcdialogs.json:
+## NPC dialog table: the reply rows (record 1500, client `atF`) of
+## server/content/rules/npc_dialogs.json, built by server/cmd/exportclient
+## into assets/content/npcdialogs.json:
 ##
-##   {"names":  {"<nameId>": "Baan"},
-##    "groups": {"<groupId>": {"text": "…",   # content.59 speech
-##                            "replies": [{"label", "next", "act", "params"}]}},
-##    "challengeModes": {"<challengeId>": mode}}
+##   {"groups": {"<groupId>": {"replies": [{"next", "act", "params"}]}},
+##    "challengeModes": {"<challengeId>": mode},
+##    "achievements": {…}, "summons": {…}}
 ##
 ## Retail model (ni_0/ao_2): an NPC element's desc is
 ## "nameId;criterionId;defaultGroup;altGroup;style" — the dialog opens on
@@ -23,7 +22,7 @@ extends RefCounted
 ## achievements, summons); its retail texts are no longer read.
 
 const OwnText := preload("res://src/gamedata/own_text.gd")
-const PATH := "gamedata/npcdialogs.json"
+const PATH := "content/npcdialogs.json"
 
 static var _groups := {}      # groupId int -> {text, replies:[…]}
 static var _modes := {}       # challenge id int -> i16 mode

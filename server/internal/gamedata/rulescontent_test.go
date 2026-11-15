@@ -41,6 +41,7 @@ func TestRulesContentParity(t *testing.T) {
 	same("tournaments", own.Tournaments, retail.Tournaments)
 	same("sphere boards", own.SphereBoards, retail.SphereBoards)
 	same("equipment pools", own.EquipmentPools, retail.EquipmentPools)
+	same("npc dialogs", own.NpcDialogs, retail.NpcDialogs)
 }
 
 // TestRulesContentLoads: the embedded tree loads whole without client data,

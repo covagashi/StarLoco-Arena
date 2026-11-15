@@ -3,7 +3,7 @@ extends Node2D
 ## to play in, so a 22094 now lands here. Square pixel particles in the
 ## card's own colour with a white core.
 ##
-## kind — the card's fwType (dumpcards → cards.json):
+## kind — the card's fwType (exportclient → cards.json):
 ##   1 Fairywork  a rocket climbs from the ground, then bursts
 ##   2 Fountain   a jet from the ground for a couple of seconds
 ##   0 Explosive  a burst right away, then a white crackle

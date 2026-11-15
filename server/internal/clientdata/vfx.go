@@ -1,4 +1,4 @@
-package main
+package clientdata
 
 import "github.com/StarLoco/arena-2.70/internal/gamedata"
 

@@ -45,7 +45,7 @@ func DerivedTokenPrice(value int32) int32 {
 // ApplyCardMasterPrices gives every card of a Card Master set that has no
 // positive price its derived token price. A card the data already prices
 // keeps its price. Runs on the server's runtime catalogue only (LoadBundle);
-// dumpcards and the studio keep the raw data.
+// exportclient and the studio keep the raw data.
 func ApplyCardMasterPrices(c *Cards) {
 	if c == nil {
 		return

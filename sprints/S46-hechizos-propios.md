@@ -41,3 +41,12 @@ Bastión, Domador, Buscaoro, Sombra, Relojero, Tahúr, Curandero, Espadachín,
 Arquero, Jardinero, Furia, Panda). Las cartas de regla que prohíben o
 encarecen un hechizo apuntan a él (`@spell:<id>`): si el rediseño cambia ids,
 hay que actualizar esas referencias.
+
+## Llega de S43 (2026-11-15)
+
+Los hechizos, las invocaciones y los efectos estáticos ya están congelados
+en `server/content/rules/` (`spells.json`, `summonings.json`,
+`static_effects.json`), con prueba de paridad contra `data.bdat`
+(`TestRulesContentParity`): el primer paso de este sprint está hecho. Al
+rediseñar, se edita ahí, se quita esa tabla de la paridad y se corre
+`go run ./cmd/exportclient` para el cliente.

@@ -235,17 +235,20 @@ func _check_versus() -> void:
 	if v == null:
 		print("[smoke] VERSUS never shown")
 		return
-	await process_frame
+	# Read the names now: the screen hands over to placement on its own, and
+	# on a slow renderer it can be gone by the next frame.
 	var left: Label = v.find_child("Left", true, false).find_child("Coach", true, false)
 	var right: Label = v.find_child("Right", true, false).find_child("Coach", true, false)
-	print("[smoke] VERSUS '%s' vs '%s'" % [left.text, right.text])
+	var left_text := left.text
+	var right_text := right.text
+	print("[smoke] VERSUS '%s' vs '%s'" % [left_text, right_text])
 	if DisplayServer.get_name() != "headless":
 		await create_timer(0.5).timeout
 		var img := root.get_texture().get_image()
 		if img != null:
 			img.save_png("/tmp/fight_versus.png")
 	# this harness logs in as `test` without the lobby, so no State name
-	var shown := left.text == "test" and right.text != "" and right.text != left.text
+	var shown := left_text == "test" and right_text != "" and right_text != left_text
 	t = 0.0
 	while not fight_scene._placement and t < 8.0:
 		await create_timer(0.1).timeout

@@ -75,12 +75,50 @@ run_lint() {
 		echo
 		echo "Those paths cannot be read from an exported build (B-173)."
 		echo "Route them through AssetPaths instead, e.g.:"
-		echo '  AssetPaths.read_json("gamedata/spells.json")'
+		echo '  AssetPaths.read_json("content/spells.json")'
 		echo '  AssetPaths.load_image("ui/lobby_bg.png")'
 		echo '  AssetPaths.resolve("gui/fonts/TAHOMA.TTF")'
 		return 1
 	fi
 	echo "ok"
+	return 0
+}
+
+## S43 guard: nothing may start naming the old client's formats again
+## (.jar, .anm, .xps, mapgfx, data-dist). tools/retail_refs.txt lists the
+## files that still do; step 4 of S43 empties it. A file outside the list
+## fails, and a listed file that no longer names them must leave the list,
+## so it only shrinks.
+run_retail_guard() {
+	echo "=== lint: no new reference to the old client (S43) ==="
+	local pat='\.jar\b|\.anm\b|\.xps\b|mapgfx|data-dist'
+	local now
+	now=$( { grep -rlE "$pat" src test tools project.godot export_presets.cfg run_tests.sh \
+			--include='*.gd' --include='*.py' --include='*.sh' --include='*.cfg' \
+			--include='*.godot' --include='*.tscn' 2>/dev/null
+		if [[ -d ../server ]]; then
+			grep -rlE "$pat" ../server --include='*.go' 2>/dev/null
+		fi; } | grep -vE '^(tools/no_retail_smoke\.sh|run_tests\.sh|tools/retail_refs\.txt)$' | sort -u)
+	local listed
+	listed=$(grep -v '^#' tools/retail_refs.txt | sed '/^$/d' | sort -u)
+	local added gone
+	added=$(comm -23 <(echo "$now") <(echo "$listed") | sed '/^$/d')
+	gone=$(comm -13 <(echo "$now") <(echo "$listed") | sed '/^$/d')
+	if [[ -n "$added" ]]; then
+		echo "$added"
+		echo
+		echo "These files name the old client's formats (.jar .anm .xps mapgfx data-dist)."
+		echo "The game reads only its own data since S43: server/content, godot/assets/content."
+		return 1
+	fi
+	if [[ -n "$gone" ]]; then
+		echo "$gone"
+		echo
+		echo "These files no longer name the old client's formats: take them out of"
+		echo "tools/retail_refs.txt so the list keeps shrinking."
+		return 1
+	fi
+	echo "ok ($(echo "$listed" | sed '/^$/d' | wc -l) files left for S43 step 4)"
 	return 0
 }
 
@@ -139,6 +177,7 @@ case "$mode" in
 	--headless)
 		rc=0
 		run_lint || rc=$?
+		run_retail_guard || rc=$?
 		run_art_tests || rc=$?
 		run_headless || rc=$?
 		exit "$rc"
@@ -151,6 +190,7 @@ case "$mode" in
 	"")
 		headless_rc=0
 		run_lint || headless_rc=$?
+		run_retail_guard || headless_rc=$?
 		run_art_tests || headless_rc=$?
 		run_headless || headless_rc=$?
 

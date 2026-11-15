@@ -231,7 +231,7 @@ StarLoco-Arena/  (branch v2.70)
 ├── .goreleaser.yaml        How the downloadable binaries are built and packaged
 ├── server/                 The Go 1.26 server — the primary active project
 │   │                       (module github.com/StarLoco/arena-2.70)
-│   ├── cmd/                Entry points: server, seedaccount, studio (editor), loadtest, dump*
+│   ├── cmd/                Entry points: server, seedaccount, studio (editor), loadtest, exportclient
 │   ├── internal/           Implementation (protocol, gamedata, web portal, game, store…)
 │   ├── configs/            Example YAML configs (sqlite / postgres / mysql)
 │   ├── deploy/             Docker Compose files, one per database

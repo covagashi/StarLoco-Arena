@@ -1,18 +1,15 @@
 extends RefCounted
 const OwnText := preload("res://src/gamedata/own_text.gd")
 
-## Spell tables exported by the old importer's spell_names.py into
-## assets/gamedata/spells.json — {breed: [{id,name,ap,min,max,value,…,fx}]};
-## "fx" is the S37 effect recipe (server/cmd/dumpspells/vfx.go, drawn by
-## src/fx/vfx.gd).
-## Names are ours (S41, OwnText spell.<id>); "name"/"nfr" are the retail
-## English and French ones, kept only because nfr keys the AnimSort actions.
+## Spell tables built from server/content by server/cmd/exportclient into
+## assets/content/spells.json — {breed: [{id,ap,min,max,value,…,fx}]};
+## "fx" is the S37 effect recipe (server/internal/clientdata/vfx.go, drawn
+## by src/fx/vfx.gd). Names are ours (S41, OwnText spell.<id>).
 
-const PATH := "gamedata/spells.json"
+const PATH := "content/spells.json"
 
 static var _by_breed := {}    # breed int -> Array[Dictionary]
 static var _by_id := {}       # spell id -> Dictionary
-static var _sfx := {}         # spell id -> [[t_ms, soundId], …]
 static var _loaded := false
 
 
@@ -28,19 +25,6 @@ static func _ensure() -> void:
 		_by_breed[int(breed)] = arr
 		for s in arr:
 			_by_id[int(s.id)] = s
-	# script-driven cast/impact sfx (the old importer's spell_sounds.py):
-	# the Lua cast script's Sound.playSound ids with their invoke() delays.
-	var sfx: Variant = AssetPaths.read_json("gamedata/spell_sfx.json")
-	if sfx is Dictionary:
-		for k in sfx.keys():
-			_sfx[int(k)] = sfx[k]
-
-
-## Timed sound events for the cast — [[t_ms, soundId], …] from the spell's
-## retail Lua script (cast sound at 0, impact sounds at their invoke delay).
-static func sfx_events(id: int) -> Array:
-	_ensure()
-	return _sfx.get(id, [])
 
 
 static func for_breed(breed: int) -> Array:
@@ -53,8 +37,9 @@ static func name_of(id: int) -> String:
 	return OwnText.get_text("spell", id, "#%d" % id)
 
 
-## French display name (content.3 texts_fr) — the retail AnimSort-<name>
-## cast actions are keyed on it; empty when the export lacks the column.
+## French display name that keyed the retail AnimSort-<name> cast actions.
+## Our tables carry no retail names (S43), so it is always "" and the cast
+## plays the generic action; it goes with the retail animations.
 static func fr_name(id: int) -> String:
 	_ensure()
 	var s: Variant = _by_id.get(id)

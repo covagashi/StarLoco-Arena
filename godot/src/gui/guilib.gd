@@ -8,6 +8,9 @@ extends RefCounted
 ## retail XML tree can ship beside the executable instead of in the .pck.
 const GUI_ROOT := "gui/"
 
+## The theme and the loader read the retail XML tree, so they are built on
+## the first XML dialog only (S43): a session that opens nothing but native
+## panels never touches gui/. null until then.
 var theme: GuiTheme
 var model := GuiModel.new()
 var i18n := {}
@@ -16,10 +19,15 @@ var event_sink := Callable()   # func(method: String, args: Array, widget: GWidg
 
 
 func _init(lang := "es") -> void:
-	theme = GuiTheme.new()
-	loader = GuiLoader.new(theme, {}, model)
-	loader.dialog_cb = _dispatch
 	load_i18n(lang)
+
+
+func _ensure_loader() -> void:
+	if loader != null:
+		return
+	theme = GuiTheme.new()
+	loader = GuiLoader.new(theme, i18n, model)
+	loader.dialog_cb = _dispatch
 
 
 ## S41: no retail text any more. Every screen is native and reads our own
@@ -28,13 +36,15 @@ func _init(lang := "es") -> void:
 ## the callers.
 func load_i18n(_lang: String) -> void:
 	i18n = {}
-	loader.i18n = i18n
+	if loader != null:
+		loader.i18n = i18n
 
 
 ## Load a dialog XML -> GWidget tree. `model_values` seeds the property store.
 func open_dialog(name: String, model_values := {}) -> GWidget:
 	for k in model_values:
 		model.values[k] = model_values[k]
+	_ensure_loader()
 	var rel := GUI_ROOT + "xml/dialogs/%s.xml" % name
 	if not AssetPaths.exists(rel):
 		rel = GUI_ROOT + "xml/%s.xml" % name
@@ -79,7 +89,7 @@ func _resolve_arg(arg: String, src: GWidget) -> Variant:
 		return arg.trim_prefix("'").trim_prefix('"').trim_suffix("'").trim_suffix('"')
 	if arg.is_valid_int() or arg.is_valid_float():
 		return arg.to_float() if arg.contains(".") else arg.to_int()
-	if loader.by_id.has(arg):
+	if loader != null and loader.by_id.has(arg):
 		return loader.by_id[arg]
 	# <data id> aliases — nearest ancestor binding first (list rows)
 	var n: Node = src
@@ -87,7 +97,7 @@ func _resolve_arg(arg: String, src: GWidget) -> Variant:
 		if n is GWidget and n.data_id == arg:
 			return n.data_value
 		n = n.get_parent()
-	if loader.data_ids.has(arg):
+	if loader != null and loader.data_ids.has(arg):
 		return loader.data_ids[arg].data_value
 	return arg
 

@@ -1,13 +1,13 @@
 extends RefCounted
 
-## Type-200 effect records exported by server/cmd/dumpeffects into
-## assets/gamedata/effects.json — {"<effectId>": {"a": actionId,
+## Type-200 effect records exported by server/cmd/exportclient into
+## assets/content/effects.json — {"<effectId>": {"a": actionId,
 ## "d": table-turns, "i": infinite, "p": params}}. Only timed or infinite
 ## effects are listed (the ones that attach a buff client-side — an instant
 ## hit/heal never produces a chip). Params matter for dispel: action 62's
 ## params[0] is the effectId it strips (server removeEffectByID).
 
-const PATH := "gamedata/effects.json"
+const PATH := "content/effects.json"
 
 static var _by_id := {}
 static var _loaded := false

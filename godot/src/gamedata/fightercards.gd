@@ -1,11 +1,11 @@
 extends RefCounted
 
 ## Fighter-equipment active-ability table exported by
-## server/cmd/dumpfightercards into assets/gamedata/fightercards.json —
+## server/cmd/exportclient into assets/content/fightercards.json —
 ## {"<id>": {ap, min, max, usable, type, value}}. Names are ours (S41,
 ## OwnText fcard.<id>), NOT the coach-card names that share the ids.
 
-const PATH := "gamedata/fightercards.json"
+const PATH := "content/fightercards.json"
 const OwnText := preload("res://src/gamedata/own_text.gd")
 
 static var _by_id := {}

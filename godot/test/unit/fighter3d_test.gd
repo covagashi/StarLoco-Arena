@@ -81,7 +81,7 @@ func _equipment(t) -> void:
 		src += FileAccess.get_file_as_string("res://art/equipment/%s.kx.js" % f)
 	# S35c: the coach table — real coach cards, the piece modelled and of
 	# the card's slot (Fighter3D.COACH_SLOT through 5201's slot of its type)
-	var cards: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/gamedata/cards.json"))
+	var cards: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/content/cards.json"))
 	const COACH_TYPE := {11: "hat", 12: "weapon", 8: "cape", 13: "pet", 7: "shoulders", 5: "bracelets",
 		2: "skirt", 9: "pants", 6: "boots", 10: "torso", 4: "mark"}
 	# the garments are recipes for coach_garment.py, not kiln models

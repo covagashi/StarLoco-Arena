@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## S37: the fight's own effect library. A spell is drawn from a recipe —
-## shape + element + intensity (dumpspells/vfx.go → spells.json "fx") —
+## shape + element + intensity (server/internal/clientdata/vfx.go → spells.json "fx") —
 ## instead of a per-spell animation:
 ##
 ##   bolt    a shot flies caster → cell, bursts on landing

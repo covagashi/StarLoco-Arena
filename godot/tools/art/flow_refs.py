@@ -100,7 +100,7 @@ def grid_pages(dest, title, items):
 def accessory_pages(out, content):
     """Fighter equipment; names are content table 1 (fightercards.gd)."""
     (out / "accesorios").mkdir(exist_ok=True)
-    cards = json.loads((ASSETS / "gamedata/fightercards.json").read_text())
+    cards = json.loads((ASSETS / "content/fightercards.json").read_text())
     for slot, name in SLOTS.items():
         ids = sorted(int(k) for k, c in cards.items() if c["type"] == slot)
         items = [(EQUIP / ("fighters/illustrations/%d.png" % cid), "%d · %s"
@@ -112,7 +112,7 @@ def accessory_pages(out, content):
 def coach_clothes_pages(out, content):
     """Coach clothes; names are content table 23."""
     (out / "ropa-coach").mkdir(exist_ok=True)
-    cards = json.loads((ASSETS / "gamedata/cards.json").read_text())
+    cards = json.loads((ASSETS / "content/cards.json").read_text())
     for slot, name in COACH_SLOTS.items():
         items = []
         for cid in sorted(int(k) for k, c in cards.items() if c["type"] == slot):

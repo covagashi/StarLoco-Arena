@@ -1,12 +1,12 @@
 extends RefCounted
 const OwnText := preload("res://src/gamedata/own_text.gd")
 
-## Card template table exported by server/cmd/dumpcards into
-## assets/gamedata/cards.json — {"<id>": {type, set, value, price:
+## Card template table exported by server/cmd/exportclient into
+## assets/content/cards.json — {"<id>": {type, set, value, price:
 ## {"<ctype>": amt}, unique, tradable, rank, fx...}}. Its "name" is the old
 ## retail English one and is no longer read: names are ours (S41, OwnText).
 
-const PATH := "gamedata/cards.json"
+const PATH := "content/cards.json"
 
 static var _by_id := {}       # card id int -> Dictionary
 static var _loaded := false
@@ -111,8 +111,8 @@ static func all_ids() -> Array:
 	return ids
 
 
-## --- fusion altars (type-1100 records, server/cmd/dumpcards arg 3) ----------
-const LABS_PATH := "gamedata/fusionlabs.json"
+## --- fusion altars (type-1100 records, server/cmd/exportclient) ----------
+const LABS_PATH := "content/fusionlabs.json"
 
 static var _labs := {}
 

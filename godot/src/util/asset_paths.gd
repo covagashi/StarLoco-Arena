@@ -1,7 +1,7 @@
 class_name AssetPaths
 extends RefCounted
 ## AssetPaths — the one place that turns a logical asset name
-## ("gamedata/spells.json", "anims/coach_7000/2_AnimStatique/meta.json")
+## ("content/spells.json", "anims/coach_7000/2_AnimStatique/meta.json")
 ## into a path this build can actually open.
 ##
 ## Why it exists: everything under assets/ except ui/ and i18n/ is produced
@@ -45,7 +45,7 @@ static var _roots = null
 static var _cache := {}
 
 
-## Logical name for an asset: "gamedata/spells.json". A leading
+## Logical name for an asset: "content/spells.json". A leading
 ## "res://assets/" or "/" is dropped; anything else (including a "user://"
 ## or absolute path a test hands us) passes through untouched.
 static func normalize(rel: String) -> String:
@@ -107,6 +107,10 @@ static func resolve(rel: String) -> String:
 			break
 	if out == "":
 		out = (all[0] + key) if not all.is_empty() else key
+		# S43: tools/no_retail_smoke.sh sets ARENA_ASSET_TRACE=1 to catch any
+		# read of a file that is not there (read_json and friends stay quiet).
+		if OS.get_environment("ARENA_ASSET_TRACE") == "1":
+			print("[assets] missing %s" % key)
 	_cache[key] = out
 	return out
 

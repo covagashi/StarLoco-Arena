@@ -28,6 +28,7 @@ import (
 //	sphere_boards.json           sphere boards
 //	spheres.json                 the nodes of those boards
 //	equipment_pools.json         equipment pools
+//	npc_dialogs.json             NPC dialog reply rows
 //
 // One record per line, sorted by id, so a redesign diffs record by record.
 
@@ -44,6 +45,7 @@ type RulesContent struct {
 	Tournaments    *Tournaments
 	SphereBoards   *SphereBoards
 	EquipmentPools *EquipmentPools
+	NpcDialogs     *NpcDialogs
 }
 
 const (
@@ -61,6 +63,7 @@ const (
 	rulesSphereBoards    = "sphere_boards.json"
 	rulesSpheres         = "spheres.json"
 	rulesEquipmentPools  = "equipment_pools.json"
+	rulesNpcDialogs      = "npc_dialogs.json"
 )
 
 // LoadRulesContent decodes a rules content tree (content.Rules, or os.DirFS of
@@ -81,6 +84,7 @@ func LoadRulesContent(fsys fs.FS) (*RulesContent, error) {
 		boards  []*SphereBoard
 		spheres []*Sphere
 		pools   []*EquipmentPool
+		dialogs []*NpcDialogReply
 	)
 	for _, f := range []struct {
 		name string
@@ -100,6 +104,7 @@ func LoadRulesContent(fsys fs.FS) (*RulesContent, error) {
 		{rulesSphereBoards, &boards},
 		{rulesSpheres, &spheres},
 		{rulesEquipmentPools, &pools},
+		{rulesNpcDialogs, &dialogs},
 	} {
 		if err := readContentFile(fsys, f.name, f.into); err != nil {
 			return nil, err
@@ -130,6 +135,7 @@ func LoadRulesContent(fsys fs.FS) (*RulesContent, error) {
 		Tournaments:    tn,
 		SphereBoards:   NewSphereBoards(boards, spheres),
 		EquipmentPools: NewEquipmentPools(pools...),
+		NpcDialogs:     NewNpcDialogs(dialogs...),
 	}, nil
 }
 
@@ -198,6 +204,7 @@ func WriteRulesContent(dir string, r *RulesContent) error {
 		{rulesSphereBoards, func(p string) error { return writeContentFile(p, boards) }},
 		{rulesSpheres, func(p string) error { return writeContentFile(p, spheres) }},
 		{rulesEquipmentPools, func(p string) error { return writeContentFile(p, pools) }},
+		{rulesNpcDialogs, func(p string) error { return writeContentFile(p, r.NpcDialogs.Rows()) }},
 	} {
 		if err := w.fn(filepath.Join(dir, w.name)); err != nil {
 			return err
@@ -226,6 +233,7 @@ func LoadRetailRulesContent(bdatDir string) (*RulesContent, error) {
 		func() (err error) { r.Tournaments, err = st.LoadTournaments(); return },
 		func() (err error) { r.SphereBoards, err = st.LoadSphereBoards(); return },
 		func() (err error) { r.EquipmentPools, err = st.LoadEquipmentPools(); return },
+		func() (err error) { r.NpcDialogs, err = st.LoadNpcDialogs(); return },
 	} {
 		if err := step(); err != nil {
 			return nil, err

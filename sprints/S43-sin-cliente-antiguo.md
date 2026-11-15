@@ -1,6 +1,6 @@
 # S43 — Sin el cliente antiguo
 
-**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (pasos 1 y 2 hechos el 2026-11-04; 3 y 4 tras S35 y S37–S41)
+**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (pasos 1 y 2 hechos el 2026-11-04, paso 3 el 2026-11-15; el 4, borrar, espera el ok del dueño)
 
 ## Decisión del dueño (2026-10-28)
 
@@ -100,6 +100,76 @@ al retail.
   `server/data-dist/` apartados, y juega un combate entero.
 - Una comprobación en CI falla si el código vuelve a nombrar `.jar`,
   `.anm`, `.xps`, `mapgfx` o `data-dist`.
+
+> **Hecho (2026-11-15):**
+>
+> **Lo que se vio al apartarlo todo.** El servidor arrancaba con 0 hechizos
+> (el aviso de seguridad) y rechazaba el combate: hechizos, invocaciones,
+> efectos estáticos, retos, logros, condiciones, laboratorios de fusión,
+> bonus de mapa, torneos, tableros de esferas, lotes de equipo y diálogos
+> de NPC aún salían de `data.bdat`. El cliente se quedaba sin sus tablas
+> (`assets/gamedata/*.json`, generadas por los `dump*` desde `data.bdat`) y
+> pedía la fuente retail `gui/fonts/COPRGTB.TTF`.
+>
+> - **Servidor:** las 12 tablas, congeladas en `server/content/rules/`
+>   (3,4 MB, un registro por línea) por `cmd/exportrules`, como S40 hizo con
+>   las cartas: mismos structs, mismos ids. `LoadBundle` ya no abre
+>   `data.bdat`; el aviso de arranque ya no manda al operador a buscar el
+>   cliente. Una prueba de paridad compara cada tabla con `data.bdat`
+>   registro a registro (mientras `data-dist` exista). De paso:
+>   `boardByBreed` se llenaba en orden de mapa (no determinista); ahora va
+>   por id.
+> - **Cliente:** `server/internal/clientdata` + `cmd/exportclient` escriben
+>   los JSON del cliente desde `server/content` en `godot/assets/content/`
+>   (con seguimiento: `godot/` es propietario, como `server/content/`).
+>   `TestClientDataUpToDate` falla si `server/content` cambia y no se vuelve
+>   a exportar. Salen idénticos a los de antes, salvo los textos retail que
+>   S41 ya no leía (nombres de hechizos, etiquetas de diálogo). Fuera los seis
+>   `dump*` y `spell_sfx.json` (nadie lo usaba). El anuncio de evento y el
+>   título de fin de combate usan nuestra fuente de títulos.
+> - **La prueba:** `godot/tools/no_retail_smoke.sh` aparta las carpetas
+>   retail y `data-dist`, compila el servidor, juega `fight_smoke` (o los
+>   que diga `SMOKES=`) con `ARENA_ASSET_TRACE=1` y lo devuelve todo al
+>   acabar. Falla si el combate no termina, si el servidor no carga
+>   hechizos o si el cliente pide **cualquier** fichero que no está
+>   (`AssetPaths.resolve` lo avisa con el rastreo; `read_json` callaba).
+> - **La guarda de CI:** `run_tests.sh` (`run_retail_guard`, carril
+>   `--headless`) compara los ficheros que nombran `.jar`/`.anm`/`.xps`/
+>   `mapgfx`/`data-dist` con `godot/tools/retail_refs.txt` (81 hoy). Un
+>   fichero nuevo falla; uno que deja de nombrarlos tiene que salir de la
+>   lista, así que solo encoge. El paso 4 la deja vacía y la guarda pasa a
+>   ser "ninguno".
+>
+> **Los menús, también sin retail.** Con `SMOKES=` se pasaron el lobby, el
+> inventario y las pantallas. El lobby creaba la capa XML retail al
+> arrancar y esta cargaba `gui/xml/theme/default.xml` y los bordes
+> `gui/misc/appSkin/` aunque todos los paneles que abre son nativos: ahora
+> `GuiLib` crea el tema y el cargador XML solo al abrir el primer diálogo
+> XML. `gamedata/elements.json` (los elementos del lobby: Baan, el Card
+> Master…) no sale de ninguna tabla de reglas; se congeló tal cual en
+> `assets/content/elements.json`, como su gemelo del servidor
+> (`internal/game/elements_data.go`).
+>
+> **Queda para el paso 4** (la lista exacta: `godot/tools/retail_refs.txt`):
+> - Cliente: `map_gfx.gd`, `jar.gd`, `topology.gd`, `fightmap.gd`, la ruta
+>   retail de `anm_sprite.gd` (y `anm_scripts.json`), el motor XML de
+>   `src/gui/` con los diálogos que aún no tienen panel nativo (S38),
+>   `test/map_smoke.gd`, `topology_bounds_test.gd`, `tools/export_islands.gd`,
+>   `tools/art/build_arena.gd`, la casilla "retail" del editor de mapas.
+> - Servidor: `cmd/studio` (visor de datos retail), `cmd/dumpelements`,
+>   `cmd/genelements`, `envmaps.go`/`worldtopo.go`/`elementviews.go` (mundo
+>   abierto, el `/TP` de GM), `exportcards` y `exportrules`.
+> - **Las pruebas Go que leen `data-dist`** (`*_real_test.go`,
+>   `realdata_test.go`, las e2e `realdata`/`challenge_fight`/
+>   `victory_condition`, `balance_sim_test.go`…): sin `data-dist` se saltan
+>   en silencio. Antes de borrarlo hay que pasarlas a `server/content`, o se
+>   pierde esa cobertura sin que nada se ponga en rojo.
+>
+> **Decisión (sin el dueño, heurística de sprints autónomos):** los hechizos
+> se congelaron aquí aunque S46 los iba a mover. S43 no se puede cerrar sin
+> ellos y el camino es el mismo que pedía S46 ("mismo esquema, mismos ids,
+> prueba de paridad antes de rediseñar"); S46 empieza ya desde
+> `server/content/rules/spells.json`.
 
 ### 4. Borrar
 

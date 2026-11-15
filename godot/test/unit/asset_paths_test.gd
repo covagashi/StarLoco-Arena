@@ -54,12 +54,12 @@ func run(t) -> void:
 ## still hand out "res://assets/anims/…" strings and must keep working.
 func _check_normalize(t) -> void:
 	t.eq(AssetPaths.PREFIX, "res://assets/", "PREFIX is the legacy asset root")
-	t.eq(AssetPaths.normalize("res://assets/gamedata/spells.json"),
-		"gamedata/spells.json", "normalize() strips the legacy res:// prefix")
-	t.eq(AssetPaths.normalize("gamedata/spells.json"),
-		"gamedata/spells.json", "normalize() leaves a logical name alone")
-	t.eq(AssetPaths.normalize("/gamedata/spells.json"),
-		"gamedata/spells.json", "normalize() strips a leading slash")
+	t.eq(AssetPaths.normalize("res://assets/content/spells.json"),
+		"content/spells.json", "normalize() strips the legacy res:// prefix")
+	t.eq(AssetPaths.normalize("content/spells.json"),
+		"content/spells.json", "normalize() leaves a logical name alone")
+	t.eq(AssetPaths.normalize("/content/spells.json"),
+		"content/spells.json", "normalize() strips a leading slash")
 	t.eq(AssetPaths.normalize("res://assets//gui/xml/theme/default.xml"),
 		"gui/xml/theme/default.xml",
 		"normalize() strips the prefix and the slash it left behind")
