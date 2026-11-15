@@ -51,10 +51,17 @@ const (
 )
 
 // fighterCardValues are the fighter cards whose budget cost was off for what
-// they give (cmd/cardreport, owner-approved): two 5-AP, range 2-5 weapons.
+// they give (owner-approved): two 5-AP, range 2-5 weapons by cmd/cardreport,
+// and five cards by the AI-against-AI simulation (balance_sim_test.go, the
+// cautious AI, 200 fights a card, 2026-11-15).
 var fighterCardValues = map[int32]int32{
-	28: 150, // 10 damage
-	34: 100, // 8 damage
+	28:  150, // 10 damage
+	34:  100, // 8 damage
+	118: 500, // +40 HP: won 90 %
+	163: 350, // +20 % all resistances, +15 HP: 77 %
+	132: 300, // 20 % damage rebound: 66 %
+	114: 200, // +10 % all resistances, +15 % two elements: 57 % for 100
+	120: 100, // +30 % fire and earth damage: 47 % for 250
 }
 
 // capMeta returns v inside the cap of action a (unchanged if a has none).

@@ -119,6 +119,13 @@ Esto se hace cuando el paso 3 pasa y el dueño da el ok:
 - Los pasos 3 y 4 necesitan que S35 y S37–S41 hayan sustituido su parte.
 - "Dejar de depender totalmente" llega con el paso 4.
 
+## Llega de S40 (2026-11-15)
+
+Las cartas ya son de `server/content/`; el cliente aún lee el JSON que
+generan los `dump*` (`assets/gamedata/cards.json`, `fightercards.json`).
+Al quitar `data-dist`, el cliente tiene que leer `server/content/`
+directamente, como ya hace con las arenas.
+
 ## Criterio de cierre
 
 Desde un checkout limpio, sin `godot/assets/` retail ni

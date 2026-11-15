@@ -18,6 +18,16 @@ cartas, y este los hechizos.
 - Cada hechizo ya tiene su receta de VFX (S37) y su sonido por forma y
   elemento (S39); el rediseño debe respetarlos o cambiarlos a la vez.
 
+## Llega de S40 (2026-11-15)
+
+- **Mover segundo da ventaja** (`balance_sim_test.go`): quien entra primero
+  en el alcance del otro recibe el primer golpe, así que la iniciativa alta
+  penaliza (+30: 20–30 % de victorias en espejo). Es de reglas más que de
+  cartas: casillas de salida, o que la iniciativa dé otra ventaja.
+- **La IA no usa el ataque de las armas** (solo `closeCombatAI`, el golpe
+  genérico): hay que enseñárselo y medir entonces las armas con la misma
+  simulación.
+
 ## Criterio de cierre
 
 El servidor no lee ningún hechizo de `data-dist/`; las partidas siguen

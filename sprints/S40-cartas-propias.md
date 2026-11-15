@@ -1,6 +1,6 @@
 # S40 — Cartas propias (datos)
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🟡 abierto (2026-11-14)
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ✅ cerrado (2026-11-15)
 
 ## Decisión del dueño (2026-10-25)
 
@@ -371,3 +371,30 @@ Con la IA nueva (3.240 combates; luego 200 por carta para las extremas):
   ~300; **114** (100) 57 %, ~200; y al revés **120** (+30 % daño fuego y
   tierra, 250) 47 %, ~100. Las armas siguen sin medirse (la IA no usa su
   ataque).
+
+**Decisiones del dueño (2026-11-15):** los 5 valores, sí; la ventaja de
+mover segundo, a S46.
+
+### Paso 2.8: el reajuste y el cierre (2026-11-15)
+
+- `cardrules.go`: 118 → 500, 163 → 350, 132 → 300, 114 → 200, 120 → 100.
+  Medidas de nuevo con 200 combates: las cinco a menos de 4 puntos de lo que
+  les toca por valor, y el valor explica mucho mejor la ventaja (r de 0,59 a
+  0,84). `go test ./...` en verde; `run_tests.sh` 1526/0;
+  `fightercards.json` del cliente regenerado.
+
+## Cierre (2026-11-15)
+
+Criterio cumplido: el servidor no lee ninguna carta de `data-dist/` (las
+lee de `server/content/`), y las simulaciones IA contra IA dicen que el
+presupuesto, que es lo que limita cada liga, paga lo que cada carta hace
+ganar. Lo que queda va a su sprint:
+- **S41:** las descripciones de las cartas son textos retail ("+50 % XP",
+  "100 %").
+- **S43:** el cliente lee el JSON derivado de `dump*`; al quitar `data-dist`
+  tiene que leer `server/content/` directamente (como las arenas).
+- **S46:** la ventaja de mover segundo (la iniciativa alta aún penaliza,
+  20–30 %); que la IA use el ataque de las armas (hoy solo el golpe cuerpo a
+  cuerpo genérico), y entonces medir las armas.
+- Aparte (no es de S40): `TestGhostFightReplaysWithItsSeed` falla 1 de cada
+  6 veces, porque un combate en vivo de más de 80 rondas pasa de los 120 s.
