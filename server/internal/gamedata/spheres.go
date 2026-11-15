@@ -237,6 +237,9 @@ func (c *SphereBoards) reindex() {
 		c.boardByBreed[b.Breed] = append(c.boardByBreed[b.Breed], b)
 	}
 	sort.Slice(c.boardIDs, func(i, j int) bool { return c.boardIDs[i] < c.boardIDs[j] })
+	for _, list := range c.boardByBreed {
+		sort.Slice(list, func(i, j int) bool { return list[i].ID < list[j].ID })
+	}
 
 	for _, sp := range c.spheres {
 		c.byBoard[sp.BoardID] = append(c.byBoard[sp.BoardID], sp)

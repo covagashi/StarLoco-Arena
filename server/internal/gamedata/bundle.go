@@ -30,8 +30,10 @@ type Bundle struct {
 	Conditions     *Conditions
 }
 
-// LoadBundle loads whatever loc points at. Missing or unreadable data is
-// survivable: the affected tables stay nil and the server still starts.
+// LoadBundle loads the game's own data, embedded in the binary. Since S43 no
+// table comes from loc (it is kept for the GM /TP world topology); a broken
+// content tree is survivable: the affected tables stay nil and the server
+// still starts.
 func LoadBundle(loc Location, log *slog.Logger) *Bundle {
 	b := &Bundle{Loc: loc}
 
@@ -57,37 +59,17 @@ func LoadBundle(loc Location, log *slog.Logger) *Bundle {
 			"fighterCards", b.FighterCards.Len(), "events", b.Events.Len())
 	}
 
-	st, err := Open(loc.BdatDir)
-	if err != nil {
-		log.Debug("game data not loaded", "dir", loc.BdatDir, "err", err)
-		return b
+	// The rest of the rules too (S43), embedded from server/content/rules:
+	// nothing here reads data.bdat any more.
+	if r, err := LoadRulesContent(content.Rules); err != nil {
+		log.Warn("rules content not loaded", "err", err)
+	} else {
+		b.Spells, b.Summonings, b.StaticEffects = r.Spells, r.Summonings, r.StaticEffects
+		b.Challenges, b.Achievements, b.Conditions = r.Challenges, r.Achievements, r.Conditions
+		b.FusionLabs, b.MapBonuses, b.Tournaments = r.FusionLabs, r.MapBonuses, r.Tournaments
+		b.SphereBoards, b.EquipmentPools = r.SphereBoards, r.EquipmentPools
+		log.Debug("rules content loaded", "spells", b.Spells.Len(), "challenges", b.Challenges.Len(),
+			"achievements", b.Achievements.Len(), "sphereBoards", b.SphereBoards.BoardCount())
 	}
-	warn := func(what string, err error) {
-		if err != nil {
-			log.Warn(what+" load failed", "err", err)
-		}
-	}
-	b.Spells, err = st.LoadSpells()
-	warn("spell", err)
-	b.Summonings, err = st.LoadSummonings()
-	warn("summoning", err)
-	b.StaticEffects, err = st.LoadStaticEffects()
-	warn("static-effect", err)
-	b.Challenges, err = st.LoadChallenges()
-	warn("challenge", err)
-	b.Achievements, err = st.LoadAchievements()
-	warn("achievement", err)
-	b.Conditions, err = st.LoadConditions()
-	warn("fighter-condition", err)
-	b.FusionLabs, err = st.LoadFusionLabs()
-	warn("fusion-lab", err)
-	b.MapBonuses, err = st.LoadMapBonuses()
-	warn("map-bonus", err)
-	b.Tournaments, err = st.LoadTournaments()
-	warn("tournament-definition", err)
-	b.SphereBoards, err = st.LoadSphereBoards()
-	warn("sphere-board", err)
-	b.EquipmentPools, err = st.LoadEquipmentPools()
-	warn("equipment-pool", err)
 	return b
 }

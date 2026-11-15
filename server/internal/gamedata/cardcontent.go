@@ -91,12 +91,12 @@ func LoadCardContent(fsys fs.FS) (*CardContent, error) {
 func readContentFile(fsys fs.FS, name string, into any) error {
 	b, err := fs.ReadFile(fsys, name)
 	if err != nil {
-		return fmt.Errorf("card content: %w", err)
+		return fmt.Errorf("content: %w", err)
 	}
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields() // a misspelt field must not vanish silently
 	if err := dec.Decode(into); err != nil {
-		return fmt.Errorf("card content: %s: %w", name, err)
+		return fmt.Errorf("content: %s: %w", name, err)
 	}
 	return nil
 }

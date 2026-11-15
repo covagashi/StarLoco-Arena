@@ -103,11 +103,13 @@ func TestCardContentRoundTrip(t *testing.T) {
 
 // TestBundleCardsWithoutRetailData: with no data.bdat at all the server still
 // has every card (S43 deletes data-dist), Card Master prices and the drop
-// table included.
+// table included, and since S43 the rest of the rules too.
 func TestBundleCardsWithoutRetailData(t *testing.T) {
 	b := LoadBundle(Location{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if b.Spells != nil {
-		t.Fatal("spells loaded without data.bdat; the test is not isolated")
+	if b.Spells.Len() != 203 || b.Challenges.Len() != 39 || b.Achievements.Len() != 332 ||
+		b.Summonings.Len() != 53 || b.SphereBoards.BoardCount() != 15 {
+		t.Fatalf("rules without data.bdat: spells %d, challenges %d, achievements %d, summonings %d, boards %d",
+			b.Spells.Len(), b.Challenges.Len(), b.Achievements.Len(), b.Summonings.Len(), b.SphereBoards.BoardCount())
 	}
 	if b.Cards.Len() != 907 || b.CardSets.Len() != 138 || b.FighterCards.Len() != 75 || b.Events.Len() != 51 {
 		t.Fatalf("cards %d, sets %d, fighter cards %d, events %d",

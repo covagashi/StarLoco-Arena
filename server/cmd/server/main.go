@@ -80,7 +80,7 @@ func run(configPath, dataOverride string) error {
 		log.Warn("reset connected flags", "err", err)
 	}
 
-	deps, dataLoc := buildDeps(cfg, st, log)
+	deps, _ := buildDeps(cfg, st, log)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -95,17 +95,17 @@ func run(configPath, dataOverride string) error {
 	// is a fight with ownership, turn order and "is alive" as its only rules -
 	// which is fine for a unit test and catastrophic for a public instance.
 	//
-	// data-dist ships in git and is auto-discovered, so this should never fire in
-	// practice; it exists because "never fires in practice" is exactly the
-	// assumption that stops being true quietly.
+	// The spells are embedded in the binary (S43, server/content/rules), so this
+	// should never fire in practice; it exists because "never fires in practice"
+	// is exactly the assumption that stops being true quietly.
 	if spellsLen(deps.Spells) == 0 {
 		log.Error("SECURITY: no spell data loaded - combat runs with NO range, " +
 			"line-of-sight, target-mask, criteria or cooldown validation, and any " +
 			"fighter may cast any spell. Do not expose this instance.")
 		fmt.Println()
 		fmt.Println("  !! No spell data was found. Combat validation is DISABLED.")
-		fmt.Println("     Point data_dir at a copy of the client data, or restore")
-		fmt.Println("     server/data-dist/, before letting anyone connect.")
+		fmt.Println("     server/content/rules/ did not load: rebuild the server from a")
+		fmt.Println("     clean checkout before letting anyone connect.")
 		fmt.Println()
 	}
 
@@ -166,7 +166,7 @@ func run(configPath, dataOverride string) error {
 		}()
 	}
 
-	banner(cfg, gameLn, webLn, createdConfig, configPath, deps, dataLoc)
+	banner(cfg, gameLn, webLn, createdConfig, configPath, deps)
 
 	if webLn != nil {
 		// The portal runs inside this process on purpose: that is what lets it
@@ -244,7 +244,7 @@ func portInUse(addr string, err error) error {
 
 // banner is the whole of the server's normal startup output. Everything an
 // operator needs, nothing they don't.
-func banner(cfg config.Config, gameLn, webLn net.Listener, createdConfig bool, configPath string, deps *game.Deps, dataLoc gamedata.Location) {
+func banner(cfg config.Config, gameLn, webLn net.Listener, createdConfig bool, configPath string, deps *game.Deps) {
 	fmt.Println()
 	fmt.Printf("  DofusArena 2.70 server %s\n", version.Short())
 	fmt.Println()
@@ -261,7 +261,7 @@ func banner(cfg config.Config, gameLn, webLn net.Listener, createdConfig bool, c
 	if createdConfig {
 		fmt.Printf("  Settings written to %s - edit it and restart to change anything.\n", configPath)
 	}
-	gameDataStatus(cfg, deps, dataLoc)
+	gameDataStatus(deps)
 	if webLn != nil && cfg.Web.RegistrationEnabled {
 		fmt.Println("  Players create their accounts on the web portal, then log in with the game client.")
 	}
@@ -269,52 +269,18 @@ func banner(cfg config.Config, gameLn, webLn net.Listener, createdConfig bool, c
 	fmt.Println()
 }
 
-// gameDataStatus reports what game data was found and, when something is
-// missing, exactly how to fix it.
-//
-// The data is the retail client's copyrighted content, so it cannot ship with
-// the server; the next best thing is to find the operator's own copy for them
-// and, failing that, to make the fix a single obvious step instead of a
-// folder-merging puzzle.
-func gameDataStatus(cfg config.Config, deps *game.Deps, loc gamedata.Location) {
-	haveCards := deps.Cards != nil
-	haveArenas := deps.FightMaps != nil && deps.FightMaps.Len() > 0
-
-	if haveCards && haveArenas {
+// gameDataStatus reports what game data loaded. Since S43 all of it is the
+// game's own, embedded in the binary (server/content and the arenas), so a
+// miss means a broken build, not a missing folder.
+func gameDataStatus(deps *game.Deps) {
+	if deps.Cards != nil && deps.FightMaps != nil && deps.FightMaps.Len() > 0 {
 		fmt.Printf("  Game data     %d cards, %d spells, %d arenas\n",
 			cardsLen(deps.Cards), spellsLen(deps.Spells), arenaCount(deps))
-		if loc.Root != "" {
-			fmt.Printf("                from %s\n", loc.Root)
-		}
 		return
 	}
-
 	fmt.Println()
-	// The arenas are embedded, so the cards and spells are what is missing.
-	fmt.Println("  No cards or spells found, so fights are unavailable.")
-
-	fmt.Println()
-	fmt.Println("  The game data belongs to Ankama and cannot be shipped with this")
-	fmt.Println("  server, so point it at your own DofusArena installation:")
-	fmt.Println()
-	fmt.Println("      arena-server --data \"<your DofusArena folder>\"")
-	fmt.Println()
-	fmt.Println("  or set data_dir in your config file to the same path. Use the folder")
-	fmt.Println("  that holds DofusArena.exe - its game and game/contents folders work")
-	fmt.Println("  too.")
-
-	searched := gamedata.SearchedPaths(cfg.DataDir)
-	if len(searched) > 0 {
-		fmt.Println()
-		fmt.Println("  Looked in:")
-		for i, p := range searched {
-			if i >= 6 { // enough to be useful without burying the banner
-				fmt.Printf("      ... and %d more\n", len(searched)-i)
-				break
-			}
-			fmt.Printf("      %s\n", p)
-		}
-	}
+	fmt.Println("  The embedded game data did not load, so fights are unavailable.")
+	fmt.Println("  Rebuild the server from a clean checkout (server/content/).")
 	fmt.Println()
 }
 
