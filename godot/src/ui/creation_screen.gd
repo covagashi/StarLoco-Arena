@@ -37,7 +37,7 @@ var _tabs := {}              # section -> list Button
 var _pages := {}             # section -> its Control on the form
 var _sheet_title: Label
 var _sheet_tag: Label
-var _section := "hair"
+var _section := "body"   # first the sex: it opened on the hair and a player never saw the choice (S44)
 var _drifts: Array = []
 var _t := 0.0
 var _head: Control
@@ -278,6 +278,9 @@ func _sex_toggle(parent: Control, text: String, sex: int) -> Button:
 	for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color",
 			"font_hover_pressed_color", "font_disabled_color"]:
 		b.add_theme_color_override(col, Color(0, 0, 0, 0))
+	# the theme's outline would still draw the hidden text: a smudge
+	# under "MUJER" whenever it was not the one picked
+	b.add_theme_constant_override("outline_size", 0)
 	b.draw.connect(func():
 		var s := b.size
 		var on := b.button_pressed

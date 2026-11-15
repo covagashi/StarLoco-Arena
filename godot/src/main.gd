@@ -645,7 +645,7 @@ func _connect_proxy(proxy: String) -> void:
 	if WebAssets.active():
 		var url := WebAssets.server_url()
 		Session.connect_to(url, 0)
-		_log_line(I18n.t("net.connecting", {"host": url, "port": "-"}))
+		_log_line(I18n.t("net.connecting_url", {"url": url}))
 		return
 	if proxy == "":
 		proxy = "140.238.172.196:3000"
@@ -728,7 +728,8 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					State.guild.get("guild", "?"),
 					State.guild.get("rank_name", "?"),
 					int(State.guild.get("demon_id", 0))])
-			_log_line("[color=green]%s[/color]" % I18n.t("net.in_lobby"))
+			# "En el lobby." is said once, on 4516 (net.in_world): saying it
+			# here too printed it twice in a row (S44)
 			# Ask for the server's public web address (60000 → 60001): the
 			# bug reporter POSTs to it, and a TCP link carries no http URL.
 			State.net.send_message(OP_CLIENT_CONFIG_REQ, PackedByteArray(), 3)

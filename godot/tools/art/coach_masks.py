@@ -97,8 +97,12 @@ def masks(name):
     mn = rgb.min(axis=2)
     sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0)
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
-    # skin: warm (r > g > b), moderately saturated, not dark (eyes, leather)
-    warm = covered & (r > g) & (g > b) & (sat > 0.18) & (sat < 0.62) & (mx > 0.55) & ((r - b) > 0.14)
+    # skin: any warm hue (r > g >= b), from the cream of a baked highlight to
+    # the peach, not dark (eyes, leather). The white armour and the grey hair
+    # are neutral or cool, so the hue keeps them out. (Until 2026-11-15 the
+    # cream and the pale peach were left out: a dark skin showed white
+    # blotches wherever Meshy baked a highlight.)
+    warm = covered & (r > g) & (g >= b) & (sat > 0.07) & (sat < 0.62) & (mx > 0.42) & ((r - b) > 0.06)
     warm &= ~((mx < 0.7) & (sat > 0.45))   # the leather and the belt: darker, browner
     pale = covered & (sat < 0.16) & (mx > 0.45)
     # each triangle votes by its texels: a baked highlight inside a skin
@@ -137,6 +141,10 @@ def masks(name):
     m = np.asarray(img).copy()
     m[~covered] = 0
     m[..., 0][m[..., 1] > 127] = 0
+    # bleed the masks a few texels past each island: the texture is sampled
+    # with filtering, and a zero right at the edge left a fine untinted seam
+    grown = np.asarray(Image.fromarray(m).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.MaxFilter(5)))
+    m[~covered] = grown[~covered]
     img = Image.fromarray(m)
     img.save(OUT / f"{name}_mask.png")
     # the brightness toon.gdshader divides by, in linear light as the shader
@@ -144,8 +152,8 @@ def masks(name):
     # stays at the picked colour instead of washing out to white
     lin = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
     lum = lin @ np.array([0.299, 0.587, 0.114], np.float32)
-    refs = {"skin_ref": float(np.percentile(lum[m[..., 0] > 127], 80)),
-            "hair_ref": float(np.percentile(lum[m[..., 1] > 127], 80))}
+    refs = {"skin_ref": float(np.percentile(lum[(m[..., 0] > 127) & covered], 80)),
+            "hair_ref": float(np.percentile(lum[(m[..., 1] > 127) & covered], 80))}
     (OUT / f"{name}_mask.json").write_text(json.dumps(refs) + "\n")
     print(f"{name}: skin {int((m[..., 0] > 127).sum())} px, hair {int((m[..., 1] > 127).sum())} px "
           f"({int(hair_t.sum())} hair triangles), {refs}")

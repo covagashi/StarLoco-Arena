@@ -17,10 +17,10 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 ; minutes of music is tens of MB). Streams mix in the audio worklet instead.
 general/default_playback_type.web=0
 ; A stream is mixed on the main thread (the web build has no other), so a
-; frame longer than the output buffer cut the music: opening the inventory
-; on a slower machine did it. The music can wait a quarter of a second;
-; the short sounds are samples (audio.gd SHORT) and don't wait for this.
-driver/output_latency.web=250
+; frame longer than the output buffer cut the music: opening and closing the
+; inventory on a phone still did at 250 ms. The music can wait half a
+; second; the short sounds are samples (audio.gd SHORT) and don't wait.
+driver/output_latency.web=500
 
 [autoload]
 

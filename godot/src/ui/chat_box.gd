@@ -36,6 +36,23 @@ const COLORS := {
 	"me": "khaki",
 	"error": "tomato",
 }
+## The same on a light backdrop (the lobby, S44): the colours above are
+## for the fight's dark one, and khaki, light green or the log's own green
+## and yellow on white could hardly be read.
+const LIGHT_COLORS := {
+	"say": "#1c2033",
+	"trade": "#b35c00",
+	"whisper": "#6a3fb5",
+	"group": "#2e7d32",
+	"clan": "#00796b",
+	"channel": "#1565c0",
+	"server": "#c62828",
+	"system": "#5f5320",
+	"me": "#5f5320",
+	"error": "#c62828",
+}
+const LIGHT_INLINE := {"[color=green]": "[color=#1e7b34]", "[color=yellow]": "[color=#8a6d00]",
+	"[color=red]": "[color=#c62828]", "[color=gray]": "[color=#5c6070]"}
 const CHAT_ERROR_KEYS := {
 	3206: "chat.err.malformed",
 	3210: "chat.err.privileges",
@@ -60,7 +77,13 @@ const MAX_LINES := 300
 
 var _tab := "all"
 var _tab_btns := {}
-var _lines: Array = []          # [{kind, text}] — pre-formatted bbcode
+var _lines: Array = []          # [{kind, text}] — the line's own bbcode
+## Light backdrop palette (LIGHT_COLORS); the lobby sets it.
+var light := false:
+	set(v):
+		light = v
+		if is_node_ready():
+			_render()
 
 
 func _ready() -> void:
@@ -417,19 +440,27 @@ func _on_submit(text: String) -> void:
 
 
 func _line(kind: String, s: String) -> void:
-	_lines.append({"kind": kind, "text": "[color=%s]%s[/color]" % [
-		COLORS.get(kind, "white"), s]})
+	_lines.append({"kind": kind, "text": s})
 	if _lines.size() > MAX_LINES:
 		_lines.remove_at(0)
 	if _tab == "all" or KIND_TAB.get(kind, "say") == _tab:
-		_display.append_text(_lines.back().text + "\n")
+		_display.append_text(_shown(_lines.back()) + "\n")
+
+
+## A line in the palette of the backdrop it is on.
+func _shown(l: Dictionary) -> String:
+	var t: String = l.text
+	if light:
+		for k: String in LIGHT_INLINE:
+			t = t.replace(k, LIGHT_INLINE[k])
+	return "[color=%s]%s[/color]" % [(LIGHT_COLORS if light else COLORS).get(l.kind, "white"), t]
 
 
 func _render() -> void:
 	_display.clear()
 	for l in _lines:
 		if _tab == "all" or KIND_TAB.get(l.kind, "say") == _tab:
-			_display.append_text(l.text + "\n")
+			_display.append_text(_shown(l) + "\n")
 
 
 func log_line(s: String) -> void:

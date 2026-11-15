@@ -410,6 +410,7 @@
   "login.account": "Enter your account",
   "login.language": "Language",
   "net.connecting": "connecting to {host}:{port}…",
+  "net.connecting_url": "connecting to {url}…",
   "net.disconnected": "disconnected",
   "net.status_connected": "connected",
   "net.status_offline": "offline",

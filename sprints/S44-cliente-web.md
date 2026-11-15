@@ -360,3 +360,57 @@ Todo subido a https://140.238.172.196/.
   La primera es la grande (compilar Godot para web con emscripten aquí,
   una o dos horas de máquina) y la propongo como siguiente paso.
 - Dominio o itch.io (dueño); de momento, la IP.
+
+### Lo que vio el hermano en el móvil (2026-11-15, Firefox Android)
+
+Dueño: "en firefox funciona bien, ya sé que no está optimizado para
+móviles pero he encontrado algunos fallos" (cuatro capturas). Firefox se
+da por bueno como está: no se compila un motor web propio.
+
+Arreglado (subido a oracle-2):
+- **La piel del jefe con manchas blancas**: no era el móvil; pasaba en
+  todas partes con una piel oscura. `tools/art/coach_masks.py` dejaba fuera
+  de la máscara de piel los tonos crema y melocotón claro (los brillos que
+  Meshy hornea en la textura) y la ponía a cero justo en el borde de cada
+  trozo de textura (rayitas claras). Ahora la piel es todo tono cálido con
+  algo de saturación (la armadura blanca y el pelo gris, neutros o fríos,
+  siguen fuera) y la máscara sangra unos píxeles fuera de cada trozo.
+  Piel cubierta: 221.941 → 363.241 px (él), 214.081 → 432.942 px (ella).
+- **No vio elegir hombre o mujer**: "Crea tu jefe" abría en PELO; abre en
+  CUERPO. Y "MUJER" sin elegir salía como una mancha: el texto oculto del
+  botón seguía dibujando su contorno (igual que la flecha izquierda del
+  lobby). Arreglados los dos.
+- **"Un botón que no se ve" en Historia** (y CREAR EQUIPO / VER TORNEOS
+  tapados por las piernas de los luchadores): las acciones de las tres
+  losetas llevan una tira blanca debajo; la frase de Historia, un punto
+  más pequeña y más estrecha, ya no choca con el pollito ni la tapa la
+  etiqueta del equipo.
+- **El chat "se ve muy mal"**: usaba los colores del fondo oscuro del
+  combate (caqui, verde y amarillo chillones) sobre el blanco del lobby.
+  `ChatBox.light`: tinta y verdes/amarillos/rojos oscuros en el lobby. Fuera
+  también el "En el lobby." repetido y el ":-" del mensaje de conexión.
+- **La música al abrir y cerrar el inventario**: búfer de la música en web
+  a 500 ms (antes 250). Con la CPU ×6, abrir da un fotograma de 83 ms y
+  cerrar 17 ms.
+- La flecha izquierda para girar al jefe quedaba debajo del chat (gris).
+
+Pendiente, para el dueño:
+- **¿Tantos canales de chat?** (Todo, General, Comercio, Grupo, Clan,
+  Privados, Sistema). Mi opinión: no. En la demo no hay grupos (el 2vs2
+  está escondido) ni comercio entre jugadores a la vista, y sin canales se
+  lee mejor en pequeño. Propuesta: **Todo · Privados · Sistema** (General
+  pasa a ser lo que se escribe en Todo). No lo toco hasta que digas.
+- **Crear cuenta**: en la demo no hay registro a propósito (JUGAR guarda
+  la partida en el navegador). Pasar la demo a una cuenta con correo y
+  contraseña sin perder el progreso estaba en el plan "si hay tirón".
+- **Cartas con dibujo provisional**: las de arena (Bosque de Cobre,
+  Callejón de los Faroles…) y los peinados llevan el pictograma de su
+  familia, no una ilustración propia. Es trabajo de arte (S38 hizo la
+  plantilla y los pictogramas).
+- **Pantalla de bienvenida y vex en vez del 3D** en las pantallas (el
+  jefe se queda en 3D): trabajo de arte en el estilo B de S45
+  (`capturas/s45/referencias`). Primer paso propuesto abajo.
+- **Escribir en el móvil** y **la mitad de la pantalla en negro** (tercera
+  captura): no lo reproduzco aquí. Al cambiar el tamaño en Chromium el
+  juego se reescala bien; será la barra o el teclado de Firefox Android
+  cambiando el alto de la ventana. Queda para cuando se trabaje el móvil.

@@ -242,8 +242,10 @@ func _coach() -> void:
 		b.text = "«" if left else "»"
 		for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 			b.add_theme_color_override(col, Color(0, 0, 0, 0))
+		b.add_theme_constant_override("outline_size", 0)   # or the hidden text shows as a smudge
 		b.scale = Vector2(0.42, 0.42)
-		b.position = COACH_FOOT + Vector2(-150 if left else 128, -60)
+		# the left one clear of the chat, which draws over the lobby
+		b.position = COACH_FOOT + Vector2(-122 if left else 128, -60)
 		b.tooltip_text = _t("lobby.rotate.tip")
 		b.pressed.connect(_rotate.bind(-1 if left else 1))
 		_box.add_child(b)
@@ -601,10 +603,11 @@ func _card(m: Array) -> void:
 	root.add_child(head)
 	c.phrase = Label.new()
 	c.phrase.position = Vector2(pad, 126)
-	c.phrase.size = Vector2(270, 60)
+	# narrow enough to stop short of the chick, three lines above the chip
+	c.phrase.size = Vector2(240, 56)
 	c.phrase.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	c.phrase.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_text(c.phrase, 13, Color("4a5064"))
+	_text(c.phrase, 12, Color("4a5064"))
 	c.phrase.visible = big
 	root.add_child(c.phrase)
 	# what it pays and its warning: the tile's tooltip (_retranslate)
@@ -698,6 +701,11 @@ func _draw_play(play: Button, cut: Callable) -> void:
 	var x := _pill_x(play)
 	var y := play.size.y - 16.0
 	var col := UiStyle.B_FAINT if play.disabled else CORAL
+	# a white slip under it: the tiles' figures stand behind the action and
+	# coral on the doll's orange and the pink field read as nothing
+	var tw := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var asc := _font.get_ascent(size)
+	play.draw_rect(Rect2(x - 8, y - asc - 3, tw + 16, asc + 9), Color(1, 1, 1, 0.92))
 	play.draw_string(_font, Vector2(x, y), t, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
 	if play.has_focus() or play.is_hovered():
 		var pts: PackedVector2Array = cut.call(-3.0)
@@ -732,7 +740,7 @@ func _tile_figures(id: String, mask: Control, size: Vector2, c: Dictionary) -> v
 	match id:
 		"story":
 			add.call("story_a", Vector2(size.x - 60 - 135, 18), 240)
-			add.call("story_b", Vector2(size.x - 250 - 70, 110), 140, -6.0)
+			add.call("story_b", Vector2(size.x - 210 - 70, 110), 140, -6.0)
 		"ranked":
 			add.call("fighter_a", Vector2(24, 36), 200)
 			add.call("fighter_b", Vector2(size.x - 26 - 70, 36), 200)
@@ -935,6 +943,8 @@ func bind_model(model, chat: Control) -> void:
 	_chat = chat
 	if is_instance_valid(_chat):
 		_chat.theme = _chat_theme()
+		if "light" in _chat:
+			_chat.light = true
 		var display: Control = _chat.get_node_or_null("Display")
 		if display != null:
 			var ds := StyleBoxFlat.new()
