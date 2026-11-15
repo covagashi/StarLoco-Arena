@@ -265,3 +265,28 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
       quedar oculto por la decoración: la copa tendría que aclararse o recortarse
       sobre él (o dibujarse su silueta), como hace el ocultador de la arena
       (`ArenaScene.occluder`) con el resto. Sin mirar aún la causa.
+
+## 13. Demo web (lo que dejó [S44](./S44-cliente-web.md), 2026-11-15)
+
+Del informe del hermano del dueño (Firefox Android) y de cerrar S44. Lo que
+espera al dueño lleva **(dueño)**.
+
+- [ ] **Canales del chat** (dueño): hoy siete (Todo, General, Comercio,
+      Grupo, Clan, Privados, Sistema). Propuesta: Todo · Privados · Sistema.
+- [ ] **Pantalla de bienvenida e ilustraciones vex** en lugar de las capturas
+      3D de los menús (el jefe sigue en 3D) (dueño). Propuesta de un agente
+      Fable en `~/codigo/capturas/s44/arte/`.
+- [ ] **Tutorial de entrada largo** (dueño): 8 + 4 páginas de Aldebrán y 10
+      de Nilo antes de la primera pelea.
+- [ ] **Cartas sin ilustración propia**: las de arena y los peinados llevan
+      el pictograma de su familia.
+- [ ] **Móvil**: escribir (no hay teclado en pantalla), la mitad de la
+      pantalla en negro en Firefox Android (sin reproducir: barra o teclado
+      cambiando el alto), y la interfaz entera pensada para 1280×720.
+- [ ] **Firefox gasta más que Chromium** (pestaña 600–740 MB, más 330–590 del
+      proceso principal): aceptado por el dueño ("en Firefox funciona bien").
+      Si hiciera falta: motor web propio sin los módulos que no se usan.
+- [ ] **Pasar una cuenta demo a una cuenta con correo y contraseña** sin perder
+      el progreso, si la demo tiene tirón.
+- [ ] **Dominio o itch.io** (dueño): hoy https://140.238.172.196/ con
+      certificado de IP de 6 días que Caddy renueva solo.

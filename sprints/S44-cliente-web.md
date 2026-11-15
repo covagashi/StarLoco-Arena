@@ -1,6 +1,6 @@
 # S44 — Cliente web: la demo se juega en el navegador
 
-**Planificado:** 2026-11-04 · **Hito:** M5 — Release · **Tamaño:** M · **Estado:** 🔵 adelantado el paso 2 (2026-11-14: conexión por WebSocket); el resto, tras S43
+**Planificado:** 2026-11-04 · **Hito:** M5 — Release · **Tamaño:** M · **Estado:** 🟢 cerrado 2026-11-15: demo en https://140.238.172.196/ (oracle-2), cuenta demo con JUGAR, combate entero en Chromium y Firefox, primera carga 34,5 MB; lo pendiente, en [BACKLOG §13](./BACKLOG.md)
 
 ## Decisión del dueño (2026-11-04)
 
@@ -414,3 +414,25 @@ Pendiente, para el dueño:
   captura): no lo reproduzco aquí. Al cambiar el tamaño en Chromium el
   juego se reescala bien; será la barra o el teclado de Firefox Android
   cambiando el alto de la ventana. Queda para cuando se trabaje el móvil.
+
+## Resultado (cierre, 2026-11-15)
+
+El criterio de cierre, punto por punto:
+
+| Criterio | Cómo queda |
+|---|---|
+| Desde un enlace, sin instalar nada | https://140.238.172.196/ (oracle-2, el servidor de pruebas; dominio o itch.io, cuando el dueño diga) |
+| JUGAR con cuenta demo, sin registro | ✅ cuenta propia por navegador; tope por IP y hora; fuera de la temporada; purga a 30 días |
+| Lobby y un combate entero contra el servidor por `wss://` | ✅ Chromium y Firefox, por internet (`fight ended` en el log de oracle-2) |
+| Primera carga ≤ 50 MB | ✅ 34,5 MB (luchadores e invocaciones, 16,3 MB, en segundo plano) |
+| Pestaña ≤ 500 MB en la arena 6 | ✅ Chromium 452–515 MB; Firefox 625–744 MB, **aceptado por el dueño** ("en Firefox funciona bien") |
+
+Comandos que lo demuestran: `go test ./...` (con `TestDemoAccounts`,
+`TestDemoAccountsOffByDefault`, `TestClientAddrBehindProxy`, …);
+`godot/run_tests.sh --headless` 1491/0; `tools/no_retail_smoke.sh` con
+`fight_smoke`, `hub_smoke`, `inventory_smoke` y `talk_smoke`; los recorridos de
+Playwright de este fichero.
+
+Lo que sigue va en [BACKLOG §13](./BACKLOG.md): canales del chat,
+bienvenida e ilustraciones vex, tutorial largo, cartas sin ilustración,
+móvil, Firefox, cuenta demo → cuenta normal, dominio.

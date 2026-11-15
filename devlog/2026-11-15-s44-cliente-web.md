@@ -52,3 +52,18 @@ IP del jugador de `X-Forwarded-For` cuando viene del proxy local.
 - Un combate entero contra oracle-2; dominio propio o itch.io: con el dueño.
 - El tutorial de entrada son ~22 páginas antes de la primera pelea; en una
   demo pesa. Apuntado para el dueño, sin tocar.
+
+## Más tarde, misma sesión (el dueño, luego dormido)
+
+- "Sí, hazlo" a los cuatro pendientes: Firefox medido (funciona entero,
+  gasta más que Chromium; el dueño lo da por bueno), combate entero contra
+  oracle-2 en Firefox por internet, primera carga 34,5 MB (luchadores en
+  segundo plano), cartas del inventario decodificadas poco a poco.
+- Informe del hermano desde un móvil: manchas en la piel del jefe (máscara
+  de `coach_masks.py`, pasaba en todas partes con piel oscura), no veía
+  hombre/mujer (la pantalla abría en PELO, y MUJER era una mancha), acciones
+  de las losetas tapadas, chat ilegible sobre blanco, música al abrir y
+  cerrar el inventario. Arreglado y subido.
+- **S44 cerrado.** Lo que espera al dueño, en `sprints/BACKLOG.md` §13.
+- Pedido a un agente Fable: propuesta de bienvenida (3 páginas) y un
+  luchador en vex, en `~/codigo/capturas/s44/arte/`, sin tocar el juego.
