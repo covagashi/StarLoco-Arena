@@ -79,6 +79,17 @@ type FighterCard struct {
 // fight (client jb_2.isUsable: the FIGHTER_CARD_USE list is non-empty).
 func (c *FighterCard) Usable() bool { return c != nil && len(c.UseEffects) > 0 }
 
+// UseDamage is one use-effect's flat HP damage and running-effect ActionID,
+// for the AI's estimate (a weapon's normal hit sums the non-critical ones
+// whose target conditions take the target). ok is false for an effect that
+// removes no HP.
+func UseDamage(ef Effect) (amount, actionID int32, ok bool) {
+	if _, isDmg := isFlatDamage(ef.ActionID); !isDmg || len(ef.Params) == 0 {
+		return 0, 0, false
+	}
+	return int32(ef.Params[0]), ef.ActionID, true
+}
+
 // FighterCards holds all fighter-card templates by id.
 type FighterCards struct {
 	byID map[int32]*FighterCard

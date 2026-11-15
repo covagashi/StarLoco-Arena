@@ -13,6 +13,32 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-190 · A single-target effect ignored its own target conditions (weapon 34 hit for 112)
+
+- **Symptom:** fighter card 34 (a ranged weapon, 5 AP, valued 100) took
+  112 HP off whoever it hit instead of 8. Found in S46 as soon as the AI
+  played weapons: one fighter wearing it won 92 % of the balance fights
+  against the naked mirror (every other weapon, 46–55 %). Spells 30 and 443
+  put their caster-only rider (a damage boost; an AP/MP cost) on the enemy
+  hit instead of on the caster.
+- **Root cause:** `areaFightersFrom` filtered an effect's targets by its
+  target-condition masks (`effectTargetAllowed`) only for expanded areas; a
+  point effect took whoever stood on the aimed cell, on the grounds that the
+  client had validated the aim. But the client validates the aim against the
+  SPELL's masks, and each effect still picks its own targets: weapon 34
+  carries one 8-damage effect per target breed (enemy + "breed is k+1"),
+  and all fourteen landed.
+- **Fix:** a point effect reaches the fighter on the cell only if its own
+  conditions allow it; an effect whose every condition demands the caster
+  goes to the caster wherever the spell was aimed (`casterOnly`). Only
+  weapon 34 (breed masks) and spells 30 and 443 (caster riders) change in
+  the shipped data (spell 12's caster-only effect is a teleport, resolved on
+  the cell; 470's is unsupported).
+- **Verified:** `unit` — `TestPointEffectHonoursItsTargetBreed` (before the
+  fix: 24 HP lost to three breed effects, after: 8),
+  `TestCasterOnlyPointEffectGoesToTheCaster`; the balance simulation:
+  weapon 34 back to 53 % (S46).
+
 ### B-188 · Ranked Elite fights banked XP, wounds and deaths on Elite fighters
 
 - **Symptom:** after a ranked (Combattre) win or loss, the Elite fighters

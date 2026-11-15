@@ -50,10 +50,22 @@ func (f *Fight) areaFighters(caster *FightFighter, ef gamedata.Effect, center Po
 func (f *Fight) areaFightersFrom(caster *FightFighter, from Pos, ef gamedata.Effect, center Pos) []*FightFighter {
 	shape := ef.AreaShape
 	// Point, unknown, or a zone shape with no radius/size -> only the fighter on
-	// the target cell. This aim was already validated by the client, so it is NOT
-	// re-filtered by the target conditions (unlike the expanded area targets).
+	// the target cell, and only if this effect's target conditions allow it. The
+	// client validated the aim against the SPELL's masks; each effect still
+	// picks its own targets. S46: weapon 34 carries one damage effect per target
+	// breed (bit 16+k), and with no filter here all fourteen landed on whoever
+	// it hit: 112 damage instead of 8.
+	// An effect only the caster may take (every condition has IS_CASTER: the
+	// self-boost or the cost riding on an attack, spells 30 and 443) goes to the
+	// caster wherever the spell was aimed; before, it landed on the target.
 	if shape != areaShapeEmpty && (shape == areaShapePoint || shape == 0 || len(ef.AreaSize) == 0) {
-		if v := f.fighterAtCell(center); v != nil {
+		if casterOnly(ef.Targets) {
+			if caster != nil && caster.HP > 0 {
+				return []*FightFighter{caster}
+			}
+			return nil
+		}
+		if v := f.fighterAtCell(center); v != nil && effectTargetAllowed(caster, v, ef.Targets) {
 			return []*FightFighter{v}
 		}
 		return nil
@@ -81,6 +93,19 @@ func (f *Fight) areaFightersFrom(caster *FightFighter, from Pos, ef gamedata.Eff
 		}
 	}
 	return out
+}
+
+// casterOnly reports whether every target condition demands the caster.
+func casterOnly(targets []int64) bool {
+	if len(targets) == 0 {
+		return false
+	}
+	for _, c := range targets {
+		if c&condIsCaster == 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // livingFighters returns every living fighter across both teams.

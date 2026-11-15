@@ -50,3 +50,46 @@ en `server/content/rules/` (`spells.json`, `summonings.json`,
 (`TestRulesContentParity`): el primer paso de este sprint está hecho. Al
 rediseñar, se edita ahí, se quita esa tabla de la paridad y se corre
 `go run ./cmd/exportclient` para el cliente.
+
+## Adelantado la noche del 2026-11-15 (el dueño dormía)
+
+Lo que no necesitaba decisiones de diseño y hacía falta antes de medir
+nada (de "Llega de S40"):
+
+- **La IA juega el ataque de su arma.** `aiWeaponOverSpell` lo pone a
+  competir con el hechizo con la misma regla que entre hechizos (rematar
+  primero, luego daño por PA; en empate, el hechizo); `weaponAI` lo usa el
+  luchador sin hechizo de daño (bloqueador, el que se refuerza) antes del
+  golpe genérico. La estimación cuenta solo los efectos que ese objetivo
+  recibe. Pruebas: `TestAIBlockerUsesItsWeapon`, `TestAIWeaponNeedsRange`,
+  `TestAIWeaponVersusSpell`.
+- **B-190, un fallo de combate que la IA destapó:** un efecto de un solo
+  objetivo no miraba su propia máscara de objetivos. El arma 34 lleva un
+  efecto de 8 por cada clase de objetivo y pegaba los catorce (112); los
+  hechizos 30 y 443 ponían en el enemigo el extra que es del lanzador.
+  Arreglado en `areaFightersFrom` (`server/docs/BUGS.md`).
+- **Las armas, medidas por fin** (`S40_SIM=200`, solo las 23 armas, una en
+  el Iop contra el espejo desnudo; espejo 0,51):
+
+  | | antes (solo el puñetazo) | IA con armas, sin B-190 | IA con armas, con B-190 |
+  |---|---|---|---|
+  | arma 34 (valor 100) | 0,49 | **0,92** | 0,53 |
+  | el resto (22) | 0,45–0,55 | 0,43–0,55 | 0,46–0,54 |
+  | correlación ventaja/valor | r = 0,27 | r = −0,06 | r = −0,04 |
+
+  **Conclusión:** con la IA usándolas, un arma en un luchador apenas mueve
+  el resultado (±4 puntos) y su valor no lo predice: los hechizos rinden más
+  por PA que el ataque del arma. Es un dato para el rediseño de este sprint
+  (¿las armas deberían pesar más, o costar menos?), no algo que cambiar
+  sin el dueño.
+
+## Para planificarlo con el dueño (preguntas)
+
+1. **¿Qué se rediseña?** a) solo números (daño, PA, alcance, enfriamiento)
+   de los 203 hechizos que hay; b) además algunos hechizos nuevos o
+   cambiados por clase; c) desde cero.
+2. **¿Entran las clases** (vida, PA, PM, iniciativa de cada luchador)?
+3. **Mover segundo da ventaja** (iniciativa alta = 14–25 % de victorias):
+   ¿casillas de salida más lejos, o que la iniciativa dé otra cosa?
+4. **Armas:** pesan poco frente a los hechizos (arriba). ¿Más daño, menos
+   PA, o se quedan como bonus pasivos con un ataque de apoyo?

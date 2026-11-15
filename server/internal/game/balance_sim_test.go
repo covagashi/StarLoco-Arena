@@ -27,9 +27,9 @@ import (
 // prints a report: does a fighter card's budget cost (its Value, what the
 // league caps) follow what it adds to winning?
 //
-// Limits: the AI never plays a fighter card's weapon attack (closeCombatAI is
-// the generic close combat), so a weapon is measured by its passive bonuses
-// only; and the breeds are fixed (breed balance is S46).
+// Limits: the breeds are fixed (breed balance is S46). Since S46 the AI plays
+// a weapon's attack (aiWeaponOverSpell, weaponAI), so a weapon is measured by
+// its attack as well as its passive bonuses; before, only by the bonuses.
 
 var simBreeds = []uint8{8, 9, 1} // Iop, Cra, Feca: a hitter, a ranged, a tank
 
@@ -185,7 +185,7 @@ func TestBalanceSim(t *testing.T) {
 		}
 		desc := fmt.Sprintf("type %d", fc.Type)
 		if fc.Usable() {
-			desc += " weapon (attack not played by the AI)"
+			desc += " weapon"
 		}
 		rows = append(rows, row{id, fc.Value, wr, desc})
 	}

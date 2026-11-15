@@ -101,6 +101,7 @@ func (f *Fight) runArchetypeTurn(ff *FightFighter) {
 	switch behavior {
 	case behaviorSelfBuff:
 		f.playSelfBuffAI(ff)
+		f.weaponAI(ff)
 		f.closeCombatAI(ff)
 	case behaviorAggressive:
 		f.playAggressiveAI(ff)
@@ -111,6 +112,7 @@ func (f *Fight) runArchetypeTurn(ff *FightFighter) {
 		f.playKiteAI(ff)
 	default: // behaviorBlocker
 		f.moveTowardNearestOpponent(ff)
+		f.weaponAI(ff)
 		f.closeCombatAI(ff)
 	}
 }
@@ -607,11 +609,110 @@ func (f *Fight) castAISpellRepeatedly(ff *FightFighter) {
 			return
 		}
 		spellID := f.chooseAISpell(ff, target)
+		if cardID := f.aiWeaponOverSpell(ff, target, spellID); cardID != 0 {
+			if !f.useFighterCard(ff, cardID, target.Pos) {
+				return
+			}
+			continue
+		}
 		if spellID == 0 {
 			return // nothing castable from here
 		}
 		if !f.castSpellByFighter(ff, spellID, target.Pos) {
 			return // refused for a reason we did not model: stop rather than spin
+		}
+	}
+}
+
+// aiWeaponOverSpell is the equipped weapon to attack `target` with instead of
+// `spellID` (0: cast the spell), ranked by the same rule as two spells
+// (aiSpellBetter: a finisher first, then damage per AP). Until S46 the AI
+// never played its weapon's attack, only the generic punch, so a weapon
+// counted for nothing but its passive bonuses.
+func (f *Fight) aiWeaponOverSpell(ff, target *FightFighter, spellID int32) int32 {
+	cardID, dmg, cost := f.bestWeaponAgainst(ff, target)
+	if cardID == 0 {
+		return 0
+	}
+	if spellID == 0 {
+		return cardID
+	}
+	sp := f.deps.Spells.Get(spellID)
+	if sp == nil {
+		return cardID
+	}
+	// on a tie the spell wins: the weapon's id is ranked after every spell's
+	if f.aiSpellBetter(target, dmg, cost, aiWeaponRank+cardID,
+		f.aiEstimatedDamage(ff, target, sp), aiSpellAPCost(sp), spellID) {
+		return cardID
+	}
+	return 0
+}
+
+// aiWeaponRank puts a weapon after every spell in aiSpellBetter's last
+// tie-break (lower id wins).
+const aiWeaponRank int32 = 1 << 24
+
+// bestWeaponAgainst is the equipped card whose attack ff can play at target
+// right now (AP, range band, line of sight), with its estimated damage and AP
+// cost; 0 when there is none.
+func (f *Fight) bestWeaponAgainst(ff, target *FightFighter) (cardID, dmg, cost int32) {
+	if ff == nil || target == nil || ff.Fighter == nil || f.deps == nil || f.deps.FighterCards == nil {
+		return 0, 0, 0
+	}
+	if ff.CarriedByFighter != nil {
+		return 0, 0, 0
+	}
+	for _, obj := range ff.Fighter.Objects {
+		card := f.deps.FighterCards.Get(obj.TemplateID)
+		if !card.Usable() || ff.effectiveAP() < card.APCost {
+			continue
+		}
+		if !f.cardTargetValid(ff, card, target.Pos) {
+			continue
+		}
+		// the normal hit's damage effects that this target takes (weapon 34
+		// has one per target breed: only the matching one lands)
+		var d int32
+		for _, ef := range card.UseEffects {
+			if ef.IsCritical || !effectTargetAllowed(ff, target, ef.Targets) {
+				continue
+			}
+			if base, actionID, ok := gamedata.UseDamage(ef); ok {
+				d += f.computeElementalDamage(ff, target, base, damageElement(actionID))
+			}
+		}
+		if d <= 0 {
+			continue
+		}
+		if cardID == 0 || f.aiSpellBetter(target, d, card.APCost, aiWeaponRank+card.ID, dmg, cost, aiWeaponRank+cardID) {
+			cardID, dmg, cost = card.ID, d, card.APCost
+		}
+	}
+	return cardID, dmg, cost
+}
+
+// weaponAI spends AP on weapon attacks for an archetype that casts no damage
+// spell (the blocker, the self-buffer), before the generic punch.
+func (f *Fight) weaponAI(ff *FightFighter) {
+	for i := 0; i <= int(ff.MaxAP); i++ { // every attack spends AP
+		if ff.HP <= 0 || !f.isCurrentTurn(ff.WireID) || ff.AP <= 0 {
+			return
+		}
+		target := f.chooseAITarget(ff)
+		if target == nil {
+			return
+		}
+		cardID, _, _ := f.bestWeaponAgainst(ff, target)
+		if cardID == 0 {
+			// the chosen target may be out of the weapon's reach: try the one next to us
+			if adj := f.adjacentOpponent(ff); adj != nil && adj != target {
+				target = adj
+				cardID, _, _ = f.bestWeaponAgainst(ff, target)
+			}
+		}
+		if cardID == 0 || !f.useFighterCard(ff, cardID, target.Pos) {
+			return
 		}
 	}
 }
