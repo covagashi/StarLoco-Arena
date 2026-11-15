@@ -38,9 +38,17 @@ Detalle, cifras y decisiones en `sprints/S44-cliente-web.md`.
   arenas de los mundos 10 y 38 ~480–520 MB, **arena 6 452–472 MB** (bajo
   el presupuesto de 500).
 
+## Publicada en oracle-2
+
+El dueño aclaró que oracle-2 es el servidor de pruebas (1–2 personas): la
+demo está en **https://140.238.172.196/** (servidor nuevo con WebSocket,
+Caddy con certificado de IP, la imagen y la base de antes guardadas para
+volver atrás). Recorrido real JUGAR → lobby desde aquí. `wsconn` toma la
+IP del jugador de `X-Forwarded-For` cuando viene del proxy local.
+
 ## No verificado / pendiente
 
 - Firefox, y combates con más luchadores: ver el sprint.
-- `wss://` en producción (oracle-2) y la publicación: con el dueño.
+- Un combate entero contra oracle-2; dominio propio o itch.io: con el dueño.
 - El tutorial de entrada son ~22 páginas antes de la primera pelea; en una
   demo pesa. Apuntado para el dueño, sin tocar.

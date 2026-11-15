@@ -15,6 +15,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -149,9 +150,8 @@ func (l *Listener) upgrade(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return // Upgrade already answered with the HTTP error
 	}
-	remote, _ := net.ResolveTCPAddr("tcp", r.RemoteAddr)
-	var addr net.Addr = remote
-	if remote == nil {
+	var addr net.Addr = clientAddr(r)
+	if addr == nil {
 		addr = ws.RemoteAddr()
 	}
 	c := New(ws, addr)
@@ -160,6 +160,28 @@ func (l *Listener) upgrade(w http.ResponseWriter, r *http.Request) {
 	case <-l.done:
 		_ = c.Close()
 	}
+}
+
+// clientAddr is the player's address. Behind the TLS proxy every socket
+// comes from the proxy, which would turn the per-address limits (connections,
+// logins, demo accounts) into one shared budget; so when the direct peer is
+// on this machine or a private network (the proxy, or Docker's bridge), the
+// last X-Forwarded-For entry - the one that proxy appended - is the player.
+// A peer on the internet cannot set it for itself.
+func clientAddr(r *http.Request) *net.TCPAddr {
+	remote, _ := net.ResolveTCPAddr("tcp", r.RemoteAddr)
+	if remote == nil || !(remote.IP.IsLoopback() || remote.IP.IsPrivate()) {
+		return remote
+	}
+	fwd := r.Header.Values("X-Forwarded-For")
+	if len(fwd) == 0 {
+		return remote
+	}
+	parts := strings.Split(fwd[len(fwd)-1], ",")
+	if ip := net.ParseIP(strings.TrimSpace(parts[len(parts)-1])); ip != nil {
+		return &net.TCPAddr{IP: ip}
+	}
+	return remote
 }
 
 // Accept waits for the next upgraded connection.

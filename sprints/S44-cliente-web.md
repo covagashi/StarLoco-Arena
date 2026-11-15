@@ -249,3 +249,42 @@ PSS de los procesos, con recolección forzada antes de medir:
 - El tutorial de entrada son 8 + 4 páginas de Aldebrán y luego 10 de Nilo
   antes de la primera pelea; en una demo pesa. Lo apunto para el dueño, no
   lo toco.
+
+### 6. Publicada en oracle-2 (2026-11-15) ✅ a medias
+
+El dueño: "el oracle es el de pruebas, para 1/2 personas". Así que la demo
+va ahí: **https://140.238.172.196/**
+
+- **Servidor**: imagen `dofusarena-2.70:s44` (binario compilado aquí,
+  `configs/config.oracle.yaml`: sqlite en el volumen de siempre y
+  `limits.demo_accounts: true`), contenedor `deploy-arena-1` con los mismos
+  puertos (5555, 3000, 8080) más `127.0.0.1:5556` para el WebSocket. La
+  imagen de antes (6 semanas, anterior a S43) quedó como
+  `dofusarena-2.70:pre-s44` y su contenedor parado como
+  `deploy-arena-1-pre-s44`; la base, copiada en
+  `~/arena-s44/arena.db.bak-2026-11-15`. Volver atrás: parar y borrar
+  `deploy-arena-1`, renombrar el `-pre-s44` y arrancarlo.
+- **Web**: `/srv/pippop-demo` (el export y los paquetes; wasm, pck, js y
+  manifiesto también en `.gz`). Caddy: un bloque nuevo para la IP en
+  `/etc/caddy/Caddyfile` (copia en `Caddyfile.bak-2026-11-15`): estáticos
+  con `precompressed gzip`, el manifiesto `no-cache`, los trozos `immutable`
+  y `/ws` al 5556. Los bloques de `arena.pippop.shop` y `mvp.pippop.shop` no
+  se tocaron (`/health` 200 antes y después).
+- **HTTPS obligatorio**: Godot en web se niega a arrancar sin contexto
+  seguro, aunque no use hilos. Sin dominio, un certificado de Let's
+  Encrypt para la IP (perfil `shortlived`, 6 días, Caddy lo renueva solo) y
+  `default_sni 140.238.172.196` en las opciones globales (un navegador que
+  entra por IP no manda SNI).
+- **La IP real del jugador**: detrás de Caddy todas las conexiones venían
+  del proxy, y los topes por IP (conexiones, logins, cuentas demo) habrían
+  sido uno solo para todos. `wsconn` toma la última entrada de
+  `X-Forwarded-For` cuando quien conecta es local o de red privada
+  (`TestClientAddrBehindProxy`). Comprobado: el log de oracle-2 muestra la
+  IP de casa, no la del proxy.
+- **Recorrido real** en Chromium desde aquí: carga (50,9 MB transferidos
+  en total, con gzip) → JUGAR → cuenta demo → crea tu jefe → lobby.
+  Pestaña: 372 MB en el login, 441 MB en el lobby.
+
+Falta para cerrar: Firefox, un combate entero contra oracle-2 y que la
+primera carga baje con holgura de 50 MB. Un dominio propio quitaría el
+certificado de IP (decisión del dueño, como itch.io).
