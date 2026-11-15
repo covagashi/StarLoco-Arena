@@ -1,7 +1,7 @@
 extends RefCounted
 ## sprints/S06: the Music and SFX buses exist, the options' volumes land on
-## them (mute and a zero slider both silence), and the fight sound pool plays
-## on SFX — the effects slider would otherwise move nothing.
+## them (mute and a zero slider both silence), and no imported music means
+## silence, not an error.
 
 func run(t) -> void:
 	t.suite("audio")
@@ -33,7 +33,3 @@ func run(t) -> void:
 	node.free()
 	assets.reset_roots()
 
-	var spr = load("res://src/anims/anm_sprite.gd").new()
-	var p: AudioStreamPlayer = spr._sfx_player()
-	t.eq(p.bus, &"SFX", "fight sounds play on the SFX bus")
-	spr.free()

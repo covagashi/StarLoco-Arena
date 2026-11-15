@@ -2,6 +2,11 @@
 
 > Picking the project up cold? Start at [`STATUS.md`](./STATUS.md).
 
+> **Historical since S43 (2026-11-15).** The server no longer reads the client's
+> files: every table described here was frozen as the game's own data in
+> `server/content` (S40 cards, S43 the rest) and the decoders were deleted. This
+> document records how those tables were decoded and what their fields mean.
+
 **The rule: the client's data files are the single source of truth.** The 2.70 server
 must derive every game value by *reading the client's own files*, never by hardcoding a
 number or by porting one from v2.04b. When the client's data is updated, the server must

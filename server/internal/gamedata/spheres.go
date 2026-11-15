@@ -35,12 +35,6 @@ import "sort"
 // against fixed sets. So this package stores what the record holds and leaves the
 // classification to whoever needs it.
 
-// Sphere board record types.
-const (
-	TypeSphereBoard = 900
-	TypeSphere      = 901
-)
-
 // SphereBoard is one decoded board (`bg_0` -> runtime `Ei`).
 //
 // Three of its fields are named by the client itself: `Ei.getFieldValue` maps
@@ -170,37 +164,6 @@ type SphereBoards struct {
 type boardCell struct {
 	board int32
 	x, y  int16
-}
-
-// LoadSphereBoards decodes types 900 and 901.
-func (s *Store) LoadSphereBoards() (*SphereBoards, error) {
-	out := &SphereBoards{
-		boards:       make(map[int32]*SphereBoard),
-		spheres:      make(map[int32]*Sphere),
-		byBoard:      make(map[int32][]*Sphere),
-		byBoardCell:  make(map[boardCell]*Sphere),
-		boardByBreed: make(map[uint8][]*SphereBoard),
-	}
-	for _, e := range s.EntriesOf(TypeSphereBoard) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if b := decodeSphereBoard(rec.Data); b != nil {
-			out.boards[b.ID] = b
-		}
-	}
-	for _, e := range s.EntriesOf(TypeSphere) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if sp := decodeSphere(rec.Data); sp != nil {
-			out.spheres[sp.ID] = sp
-		}
-	}
-	out.reindex()
-	return out, nil
 }
 
 // NewSphereBoards builds a catalogue from explicit definitions (tests/tooling).
@@ -344,67 +307,6 @@ func (c *SphereBoards) BoardCount() int {
 		return 0
 	}
 	return len(c.boards)
-}
-
-// decodeSphereBoard parses a `bg_0` record from its own deserializer:
-//
-//	[i32 id][i32 season][u8 breed][i32 ?][i16 rootX][i16 rootY][u8 n]{n x i32 ?}
-//
-// Every byte is accounted for (Leftover() == 0 on all 15 shipped boards); the
-// trailing four fields are simply never read by the client.
-func decodeSphereBoard(data []byte) *SphereBoard {
-	c := &cur{b: data}
-	b := &SphereBoard{}
-	b.ID = c.i32()
-	b.Season = c.i32()
-	b.Breed = c.u8()
-	b.UnreadInt = c.i32()
-	b.RootX = c.i16()
-	b.RootY = c.i16()
-
-	n := int(c.u8())
-	for i := 0; i < n && c.ok(); i++ {
-		b.UnreadIDs = append(b.UnreadIDs, c.i32())
-	}
-	if !c.ok() || b.ID <= 0 {
-		return nil
-	}
-	b.leftover = len(c.b) - c.pos
-	return b
-}
-
-// decodeSphere parses an `aeI` record from its own deserializer:
-//
-//	[i32 id][i32 boardId][i32 xpCost][i16 x][i16 y][i32 spellId][i32 equipmentPool]
-//	[i32 m]{m x Ht wrapper}[u8 n]{n x i32 cardId}[u8 deadEnd][i16 tpX][i16 tpY]
-//
-// The effect block is the same wrapper spells and conditions use, so it reuses
-// decodeEffectList rather than introducing a second reader.
-func decodeSphere(data []byte) *Sphere {
-	c := &cur{b: data}
-	s := &Sphere{}
-	s.ID = c.i32()
-	s.BoardID = c.i32()
-	s.XPCost = c.i32()
-	s.X = c.i16()
-	s.Y = c.i16()
-	s.SpellID = c.i32()
-	s.EquipmentPoolID = c.i32()
-	s.Effects = decodeEffectList(c)
-
-	n := int(c.u8())
-	for i := 0; i < n && c.ok(); i++ {
-		s.BarrierCards = append(s.BarrierCards, c.i32())
-	}
-	s.DeadEnd = c.u8() == 1
-	s.TeleportX = c.i16()
-	s.TeleportY = c.i16()
-
-	if !c.ok() || s.ID <= 0 {
-		return nil
-	}
-	s.leftover = len(c.b) - c.pos
-	return s
 }
 
 // HasPayload reports the client's `ajM.azm()`: the node does something. It is the

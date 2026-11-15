@@ -10,7 +10,7 @@ extends Node
 ##       [--out=/tmp/fe] [--breed=8] [--sex=1]
 
 const Panels := preload("res://src/ui/lobby_panels.gd")
-const FightView := preload("res://src/fight/fight_view.gd")
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 
 var _fails := 0
 
@@ -30,7 +30,7 @@ func _fighter(cards: Dictionary) -> Dictionary:
 	var breed := int(_arg("breed", "1"))
 	var sex := int(_arg("sex", "0"))
 	var f := {"name": "Arel", "breedId": breed, "sex": sex, "value": 120,
-		"actorDescriptorLibrary": "fighter_%s" % FightView.FIGHTER_FILES[(breed - 1) * 2 + sex],
+		"actorDescriptorLibrary": Fighter3D.fighter_key(breed, sex),
 		"spells": [], "breedSpells": []}
 	for field in Panels.EQ_FIELDS:
 		f[field] = {}

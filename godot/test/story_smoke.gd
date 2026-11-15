@@ -84,7 +84,7 @@ func _audit() -> void:
 		await create_timer(1.0).timeout
 		_close_all()
 	# 4. the Team panel's Historia tab
-	_main._gui.gui.model.set_value("gamePreferences", 0, "lastSelectedGameModeId")
+	_main._gui.model.set_value("gamePreferences", 0, "lastSelectedGameModeId")
 	_main._gui.open("teamManagementDialog")
 	await create_timer(0.6).timeout
 	var team = _main._gui.dialogs.get("teamManagementDialog")

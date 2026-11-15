@@ -112,9 +112,9 @@ ticket this server never grants, so registration can never complete.
 Both rules are checked against the decoded catalogue in `validateTournament`,
 and the form only ever offers definitions that satisfy them — the picker shows
 20 of the 22, labelled with the team type the client will read (`1 — classic
-1v1`, `17 — graveyard`). With no game data loaded the catalogue is empty and the
-id is taken on trust, because refusing to let an operator edit tournaments at
-all because `data_dir` is missing would be worse.
+1v1`, `17 — graveyard`). With no game data loaded (a broken build) the catalogue is
+empty and the id is taken on trust, because refusing to let an operator edit
+tournaments at all would be worse.
 
 Name and short label are capped at 127 bytes. That is the wire, not taste: both
 are length-prefixed with a **signed** byte, so 128 presents as a negative length

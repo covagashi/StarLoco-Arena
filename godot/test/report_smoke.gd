@@ -39,7 +39,7 @@ func _audit() -> void:
 	await _wait(func(): return _main._gui.is_open("fightReportDialog"), 3.0)
 	await create_timer(0.6).timeout
 	var panel = _main._gui.dialogs.get("fightReportDialog")
-	var r: Variant = _main._gui.gui.model.get_value("fightReport")
+	var r: Variant = _main._gui.model.get_value("fightReport")
 	var rep: Dictionary = r if r is Dictionary else {}
 	var ok: bool = over and panel != null and not _debug_pane_shown() \
 		and str(panel.title.text) != "" and panel.find_child("Continue", true, false) != null
@@ -121,7 +121,7 @@ func _victory_condition() -> void:
 			and sc._gui.is_open("fightReportDialog"), 10.0)
 	var rep: Dictionary = {}
 	if back:
-		var r: Variant = current_scene._gui.gui.model.get_value("fightReport")
+		var r: Variant = current_scene._gui.model.get_value("fightReport")
 		rep = r if r is Dictionary else {}
 	_record(8300, "victory condition", over and back and rep.get("outcome", "") == "victory"
 		and enemy_alive > 0, "challenge %d: outcome '%s' with %d enemy fighter(s) alive" % [
@@ -151,7 +151,7 @@ func _evolution_rows() -> void:
 	var fighters = panel.find_child("Fighters", true, false) if panel != null else null
 	var cards = panel.find_child("Cards", true, false) if panel != null else null
 	var rows: int = fighters.get_root().get_child_count() if fighters != null else 0
-	var r: Dictionary = _main._gui.gui.model.get_value("fightReport")
+	var r: Dictionary = _main._gui.model.get_value("fightReport")
 	# S21: the outcome is the big line under the title, the cards are tiles
 	var hero = panel.find_child("Outcome", true, false) if panel != null else null
 	_record(8300, "fighter rows", hero != null and str(hero.text) == "VICTORIA"

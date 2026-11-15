@@ -21,16 +21,14 @@ and the asset-extraction scripts were removed on 2026-10-25 (sprint S32); they
 are in git history only. The project is moving to its own art, cards and texts
 (milestone M7, [`sprints/`](./sprints)).
 
-- `server/data/` — a git-ignored scratch copy of game data, for local
-  development.
-- `server/data-dist/` — the small, deliberately-curated data subset that *is*
-  committed and ships in releases (see `AGENTS.md` constraint 4). Changes to it
-  are a maintainer decision, not a routine contribution.
+- `server/content/` — the game's own cards and rules (proprietary, embedded in
+  the server). After changing it, run `go run ./cmd/exportclient` from
+  `server/` so the client's tables follow.
 
 Please **do not** add decompiled third-party code, retail files or scripts
 that extract from the retail client, and do not commit copyrighted assets.
-`server/data-dist/` is the one deliberate exception, covered by
-`DISCLAIMER.md`, until the project's own cards replace it (S40).
+Since S43 the game reads nothing from the retail client, and
+`godot/run_tests.sh` keeps it that way.
 
 ## Getting set up
 
@@ -53,9 +51,7 @@ No Git LFS is needed — a plain `git clone` gets everything that is tracked.
 - **The wire protocol is a contract** between the server and the Godot
   client: change a message only in both at once, in the same commit, with the
   protocol tests updated.
-- **Do not move `server/data/`** — `server/configs/*.yaml` resolves it as
-  `data_dir: "data"`, relative to the `server/` working directory.
-  See [`AGENTS.md`](./AGENTS.md) for the exact constraints.
+- See [`AGENTS.md`](./AGENTS.md) for the exact constraints.
 - **Module path** stays `github.com/StarLoco/arena-2.70` even though the folder
   is just `server/`. Don't rewrite imports to match the folder.
 - **Tests:** prefer table-driven and real-data tests; real-data tests must

@@ -15,7 +15,6 @@ extends Control
 
 const Layout := preload("res://src/maps/arena_layout.gd")
 const ArenaScene := preload("res://src/maps/arena_scene.gd")
-const MapGfx := preload("res://src/maps/map_gfx.gd")
 
 const HELP := """[b]Ratón[/b]
 Izq.: herramienta (arrastra para pintar suelos)
@@ -36,7 +35,7 @@ AvPág / RePág: subir / bajar (Mayús: más)
 Ctrl+flechas u Opción+flechas: desplazar (Mayús: más)
   (o las flechas del panel, a la derecha) · Inicio: centrar
 Supr: quitar la seleccionada · Esc: deseleccionar
-Flechas: mover la vista · G rejilla · V retail
+Flechas: mover la vista · G rejilla
 Ctrl+Z / Ctrl+Y: deshacer / rehacer · Ctrl+S: guardar
 H: esta ayuda"""
 
@@ -93,9 +92,6 @@ var _cam: Camera3D
 var _overlay: MeshInstance3D
 var _hover_mesh: MeshInstance3D
 var _sel_mesh: MeshInstance3D
-var _retail_layer: CanvasLayer
-var _retail: Node2D
-var _retail_ok := false
 
 var _arena_pick: OptionButton
 var _status: Label
@@ -120,8 +116,6 @@ var _cell_label: Label
 var _role_buttons := {}
 var _starts_label: Label
 var _grid_check: CheckButton
-var _retail_check: CheckButton
-var _retail_alpha: HSlider
 var _help: PanelContainer
 var _syncing := false
 
@@ -167,7 +161,6 @@ func load_arena(n: int) -> void:
 	for p: Vector2i in layout.cells:
 		_rebuild_cell(p)
 	_rebuild_overlay()
-	_load_retail()
 	_fill_palette()
 	if brush.is_empty() or _palette_index(brush.kit, brush.piece) < 0:
 		var first := _first_of_kind("tile")
@@ -532,11 +525,6 @@ func _build_view() -> void:
 	_sel_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sel_mesh.visible = false
 	_world.add_child(_sel_mesh)
-	_retail_layer = CanvasLayer.new()
-	_vp.add_child(_retail_layer)
-	_retail = MapGfx.new()
-	_retail_layer.add_child(_retail)
-	_retail_layer.visible = false
 
 
 func _rebuild_cell(p: Vector2i) -> void:
@@ -736,45 +724,17 @@ func game_scale() -> void:
 
 func _apply_zoom() -> void:
 	_cam.size = maxf(1.0, _vp.size.y) / (Layout.PX * zoom)
-	_sync_retail()
 
 
 func _pan(px: Vector2) -> void:
 	var k := 1.0 / (Layout.PX * zoom)
 	_cam.position -= _cam.transform.basis.x * px.x * k - _cam.transform.basis.y * px.y * k
-	_sync_retail()
 
 
 func _zoom_by(f: float) -> void:
 	zoom = clampf(zoom * f, 0.2, 5.0)
 	_apply_zoom()
 	_update_status()
-
-
-# --- the retail map as a reference layer ----------------------------------
-
-func _load_retail() -> void:
-	_retail_ok = (_retail as MapGfx).load_world(Layout.world_of(arena))
-	_retail_check.disabled = not _retail_ok
-	_retail_check.tooltip_text = "" if _retail_ok else "No hay arte retail de este mapa en assets/mapgfx"
-	if not _retail_ok:
-		_retail_check.button_pressed = false
-	_retail_layer.visible = _retail_ok and _retail_check.button_pressed
-	_sync_retail()
-
-
-## Lines the painted retail map up with the 3D: the retail puts cell (x, y)
-## at ((x - y) * 43, (x + y) * 21.5) - alt * 10; read where the camera puts
-## the same points and map one plane onto the other.
-func _sync_retail() -> void:
-	if _retail_layer == null or not _retail_layer.visible:
-		return
-	var o := _cam.unproject_position(Vector3(0.5, 0, 0.5))
-	var ex := _cam.unproject_position(Vector3(1.5, 0, 0.5)) - o
-	var ey := _cam.unproject_position(Vector3(0.5, 0, 1.5)) - o
-	_retail_layer.transform = Transform2D((ex - ey) / 86.0, (ex + ey) / 43.0, o)
-	_retail.modulate.a = _retail_alpha.value
-	_retail.queue_redraw()
 
 
 # --- input ---------------------------------------------------------------
@@ -906,9 +866,6 @@ func _unhandled_key_input(e: InputEvent) -> void:
 			KEY_UP: _pan(Vector2(0, 60))
 			KEY_DOWN: _pan(Vector2(0, -60))
 			KEY_G: _grid_check.button_pressed = not _grid_check.button_pressed
-			KEY_V:
-				if _retail_ok:
-					_retail_check.button_pressed = not _retail_check.button_pressed
 			KEY_H, KEY_F1: _help.visible = not _help.visible
 			_: handled = false
 	if handled:
@@ -959,22 +916,6 @@ func _build_ui() -> void:
 		show_grid = on
 		_overlay.visible = on)
 	top.add_child(_grid_check)
-	_retail_check = CheckButton.new()
-	_retail_check.text = "Retail"
-	_retail_check.tooltip_text = "El mapa retail encima, como referencia"
-	_retail_check.toggled.connect(func(on: bool) -> void:
-		_retail_layer.visible = on and _retail_ok
-		_sync_retail())
-	top.add_child(_retail_check)
-	_retail_alpha = HSlider.new()
-	_retail_alpha.min_value = 0.1
-	_retail_alpha.max_value = 1.0
-	_retail_alpha.step = 0.05
-	_retail_alpha.value = 0.5
-	_retail_alpha.custom_minimum_size.x = 90
-	_retail_alpha.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_retail_alpha.value_changed.connect(func(_v: float) -> void: _sync_retail())
-	top.add_child(_retail_alpha)
 	_button(top, "Ayuda", func() -> void: _help.visible = not _help.visible, "H")
 
 	var mid := HBoxContainer.new()

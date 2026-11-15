@@ -24,7 +24,7 @@ func _audit() -> void:
 	turn_right.pressed.emit()
 	await create_timer(0.3).timeout
 	var after := int(lobby._dir)
-	var model_dir := int(_main._gui.gui.model.get_value("localCoach").get("actorDirection", -1))
+	var model_dir := int(_main._gui.model.get_value("localCoach").get("actorDirection", -1))
 	_record(0, "turn", after == ((before + 1) & 7) and model_dir == after,
 		"» : %d → %d (model says %d)" % [before, after, model_dir])
 	await _shot("coach-turned")

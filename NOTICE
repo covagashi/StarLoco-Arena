@@ -17,12 +17,10 @@ attribution aid, not a grant of rights. See DISCLAIMER.md.
 ===============================================================================
 Copyrighted game material — © Ankama Games
 ===============================================================================
-  REPRODUCED IN THIS REPOSITORY:
+  REMOVED FROM THE TREE ON 2026-11-15 (sprint S43), STILL IN GIT HISTORY:
   - Server game data: the card/spell/arena records and the
-    overworld element layouts the server's own logic needs
-    (~3 MB; no art, audio, or executable code — the map
-    layers carry ids, positions and descriptors, not
-    sprites) — ships in git and in every release .......... server/data-dist/
+    overworld element layouts the server read (~3 MB; no
+    art, audio, or executable code) ....................... server/data-dist/
                                                               (data.bdat, indexes.bdat,
                                                                maps/{fight,tplg,env}/)
 
@@ -36,8 +34,7 @@ Copyrighted game material — © Ankama Games
   this project controls links to a copy - not the release notes, not
   README.md, not the web portal. See DISCLAIMER.md):
   - The DofusArena 2.70 retail client and launcher
-  - Art/audio/text converted from it, where still on disk .. godot/assets/
-  - A local scratch copy of game data ..................... server/data/
+  - Art/audio/text converted from it (no longer read by the client since S43)
 
   "DofusArena", "Dofus", and all related assets are trademarks and/or
   copyrighted works of Ankama Games. All rights reserved by Ankama.

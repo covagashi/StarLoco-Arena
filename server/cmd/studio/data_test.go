@@ -1,34 +1,20 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
 
-// realDataDir resolves the v2.70 server's data store (data.bdat + indexes.bdat)
-// relative to this package. Real-data tests skip (not fail) when it is absent,
-// matching the repo convention.
-func realDataDir(t *testing.T) string {
+// checkTables reads every table through the App and checks the getters agree
+// with the counts and come back sorted.
+func checkTables(t *testing.T, a *App) {
 	t.Helper()
-	dir := filepath.Join("..", "..", "data-dist")
-	if !looksLikeDataDir(dir) {
-		t.Skipf("v2.70 .bdat store not found at %s; skipping real-data test", dir)
-	}
-	return dir
-}
-
-func TestApp_ReadsRealBdatStore(t *testing.T) {
-	dir := realDataDir(t)
-	a := NewApp()
-	if p := a.SetDataDir(dir); !p.DataDirValid {
-		t.Fatalf("SetDataDir(%q) reported invalid", dir)
-	}
-
 	counts := a.GetDataCounts()
 	if counts.Error != "" {
 		t.Fatalf("GetDataCounts error: %s", counts.Error)
 	}
-	// The shipped store carries all of these; a zero count means a decode regression.
+	// The content carries all of these; a zero count means a load regression.
 	for name, n := range map[string]int{
 		"spells":        counts.Spells,
 		"coachCards":    counts.CoachCards,
@@ -54,7 +40,6 @@ func TestApp_ReadsRealBdatStore(t *testing.T) {
 		}
 	}
 
-	// Every other getter must succeed and agree with its count.
 	cc, err := a.GetCoachCards()
 	if err != nil || len(cc) != counts.CoachCards {
 		t.Errorf("GetCoachCards len=%d err=%v (count %d)", len(cc), err, counts.CoachCards)
@@ -73,20 +58,38 @@ func TestApp_ReadsRealBdatStore(t *testing.T) {
 	}
 }
 
-func TestApp_InvalidDataDirErrors(t *testing.T) {
-	a := NewApp()
-	a.SetDataDir(t.TempDir()) // valid path, but no .bdat pair
-	counts := a.GetDataCounts()
-	if counts.Error == "" {
-		t.Error("expected an error for a directory with no .bdat store")
+// Away from a checkout the studio reads the content embedded in the binary.
+func TestApp_ReadsEmbeddedContent(t *testing.T) {
+	checkTables(t, &App{})
+}
+
+// Inside a checkout it reads server/content, so it shows what the server loads.
+func TestApp_ReadsCheckoutContent(t *testing.T) {
+	a := NewApp() // the tests run in server/cmd/studio, inside the checkout
+	if a.paths.RulesDir == "" || a.paths.ContentDir == "" {
+		t.Fatalf("content not detected from the checkout: %+v", a.paths)
+	}
+	checkTables(t, a)
+}
+
+// A broken rules tree is an error, not an empty table.
+func TestApp_BrokenRulesErrors(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "spells.json"), []byte("not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a := &App{paths: Paths{RulesDir: dir}}
+	if counts := a.GetDataCounts(); counts.Error == "" {
+		t.Error("expected an error for a broken rules tree")
 	}
 	if _, err := a.GetSpells(); err == nil {
-		t.Error("GetSpells should error when no valid data dir is selected")
+		t.Error("GetSpells should error on a broken rules tree")
 	}
 }
 
-func TestLooksLikeDataDir_EmptyDir(t *testing.T) {
-	if looksLikeDataDir(t.TempDir()) {
-		t.Error("an empty dir should not look like a .bdat store")
+func TestDetectRulesDirFromCheckout(t *testing.T) {
+	dir := detectRulesDir()
+	if dir == "" || !fileExists(filepath.Join(dir, "spells.json")) {
+		t.Fatalf("detectRulesDir = %q", dir)
 	}
 }

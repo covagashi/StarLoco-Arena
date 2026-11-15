@@ -30,7 +30,7 @@ func _audit() -> void:
 	var sid := -1
 	var best := {}
 	if city_panel != null:
-		var city: Dictionary = _main._gui.gui.model.get_value("city")
+		var city: Dictionary = _main._gui.model.get_value("city")
 		for g in city.get("groups", []):
 			if int(g.kind) != 14:
 				continue
@@ -58,7 +58,7 @@ func _audit() -> void:
 	if not is_instance_of(panel, FusionPanel):
 		return
 	await create_timer(0.3).timeout
-	var trade: Dictionary = _main._gui.gui.model.get_value("fusionTrade")
+	var trade: Dictionary = _main._gui.model.get_value("fusionTrade")
 	_record(14, "targets", trade.get("targets", []).size() == 7
 		and panel.find_child("Target%d" % TARGET, true, false) != null
 		and panel.find_child("Fuse", true, false).disabled,
@@ -70,7 +70,7 @@ func _audit() -> void:
 func _fuse(panel) -> void:
 	panel.find_child("Target%d" % TARGET, true, false).pressed.emit()
 	await create_timer(0.3).timeout
-	var trade: Dictionary = _main._gui.gui.model.get_value("fusionTrade")
+	var trade: Dictionary = _main._gui.model.get_value("fusionTrade")
 	_record(14, "target", int(trade.get("targetId", -1)) == TARGET
 		and panel.find_child("Power", true, false) != null
 		and str(trade.get("reason", "")) == "fus.need_two",
@@ -90,10 +90,10 @@ func _fuse(panel) -> void:
 	# take one back, then put it again: the list and the grid follow
 	panel.find_child("Staged%d" % b, true, false).pressed.emit()
 	await create_timer(0.2).timeout
-	var after_unstage: int = _main._gui.gui.model.get_value("fusionTrade").inputCount
+	var after_unstage: int = _main._gui.model.get_value("fusionTrade").inputCount
 	panel.find_child("Fuel%d" % b, true, false).pressed.emit()
 	await create_timer(0.3).timeout
-	trade = _main._gui.gui.model.get_value("fusionTrade")
+	trade = _main._gui.model.get_value("fusionTrade")
 	var fuse: Button = panel.find_child("Fuse", true, false)
 	_record(14, "give", after_unstage == 1 and int(trade.get("inputCount", 0)) == 2
 		and bool(trade.get("canFusion", false)) and fuse != null and not fuse.disabled,
@@ -106,9 +106,9 @@ func _fuse(panel) -> void:
 	_seen.clear()
 	fuse.pressed.emit()
 	var answered: bool = await _wait(func(): return _seen.has(5491) and _seen.has(5200) \
-		and str(_main._gui.gui.model.get_value("fusionTrade").status) != "", 5.0)
+		and str(_main._gui.model.get_value("fusionTrade").status) != "", 5.0)
 	await create_timer(0.4).timeout
-	trade = _main._gui.gui.model.get_value("fusionTrade")
+	trade = _main._gui.model.get_value("fusionTrade")
 	var got := bool(trade.get("statusOk", false))
 	var moved := false
 	if got:

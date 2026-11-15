@@ -54,7 +54,7 @@ func _carry() -> void:
 	await _wait(func(): return _seen.has(28618), 6.0)
 	await _wait(func(): return _main._gui.is_open("askDialog"), 3.0)
 	await create_timer(0.5).timeout
-	var ask: Dictionary = _main._gui.gui.model.get_value("ask")
+	var ask: Dictionary = _main._gui.model.get_value("ask")
 	_record(13, "carry ask", _seen.has(28618) and str(ask.get("text", "")).contains(CARRY_NEXT),
 		"28618 → '%s'" % ask.get("text", "—"))
 	await _shot("carry-ask")
@@ -78,7 +78,7 @@ func _calendar_s09() -> void:
 	var tid := _tid_named(OPEN_CUP)
 	var cell := {}
 	var ev := {}
-	for c in _main._gui.gui.model.get_value("calendar").get("calendar", []):
+	for c in _main._gui.model.get_value("calendar").get("calendar", []):
 		for e in c.get("events", []):
 			if int(e.id) == tid and cell.is_empty():
 				cell = c   # its first period's day; the second is tomorrow
@@ -104,7 +104,7 @@ func _calendar_s09() -> void:
 	await _wait(func(): return _seen.has(28650), 3.0)
 	await create_timer(0.4).timeout
 	var drawn = panel.find_child("Draw%d" % tid, true, false)
-	var slots: Dictionary = _main._gui.gui.model.get_value("calendar").get("bracket", {}).get("slots", {})
+	var slots: Dictionary = _main._gui.model.get_value("calendar").get("bracket", {}).get("slots", {})
 	var rounds: Array = []
 	if drawn is HBoxContainer:
 		for col in drawn.get_children():
@@ -169,7 +169,7 @@ func _create() -> void:
 	panel.draft["t_desc"] = "Hecha desde el smoke"
 	# tomorrow if the month allows, else the last day of the month on show
 	var days := 0
-	for c in _main._gui.gui.model.get_value("calendar").get("calendar", []):
+	for c in _main._gui.model.get_value("calendar").get("calendar", []):
 		if str(c.get("day", "")) != "":
 			days += 1
 	var day := mini(int(Time.get_datetime_dict_from_system().day) + 1, days)

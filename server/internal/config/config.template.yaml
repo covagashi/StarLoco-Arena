@@ -238,30 +238,6 @@ web:
 
 
 # -----------------------------------------------------------------------------
-#  Game data - the card, spell and map files copied out of the game client.
-# -----------------------------------------------------------------------------
-
-# Where your DofusArena game data lives.
-#
-# A small set of this data (cards, spells, arenas - no art, audio, or code)
-# ships bundled with the server, so fights already work with no change here.
-#
-# Only set this if you want to use your own client's data instead - e.g. after
-# a client update changes card numbers. The simplest answer is the folder that
-# holds DofusArena.exe - the server understands the client's own layout and
-# finds the cards, spells and arenas inside it. Its game and game/contents
-# folders work too, as does a folder you have copied data.bdat, indexes.bdat
-# and maps/ into.
-#
-#   data_dir: "C:/Program Files (x86)/Ankama/DofusArena"
-#
-# Leave it as "data" to use the bundled copy (or a data folder you place next
-# to the server yourself). Relative paths are resolved from wherever the
-# server is started.
-data_dir: "data"
-
-
-# -----------------------------------------------------------------------------
 #  Updates
 # -----------------------------------------------------------------------------
 update_check:

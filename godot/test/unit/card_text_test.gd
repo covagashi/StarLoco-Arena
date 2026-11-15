@@ -1,6 +1,6 @@
 extends RefCounted
 ## S41: card texts are built from the effects, not the retail descriptions.
-## CI-safe: it feeds effect rows directly (no assets/gamedata needed) and
+## CI-safe: it feeds effect rows directly (no assets/content needed) and
 ## reads only the tracked assets/i18n tables, in Spanish and English.
 
 const CardText := preload("res://src/gamedata/card_text.gd")

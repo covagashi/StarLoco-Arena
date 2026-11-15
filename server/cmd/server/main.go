@@ -31,7 +31,6 @@ import (
 
 func main() {
 	configPath := flag.String("config", "config.yaml", "path to the YAML config file")
-	dataDir := flag.String("data", "", "path to the game data, or to your DofusArena folder (overrides the config)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 
@@ -40,13 +39,13 @@ func main() {
 		return
 	}
 
-	if err := run(*configPath, *dataDir); err != nil {
+	if err := run(*configPath); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
 }
 
-func run(configPath, dataOverride string) error {
+func run(configPath string) error {
 	// First run: leave the operator a documented file to edit. Never fatal -
 	// a read-only directory should not stop the server from working.
 	createdConfig, cfgErr := config.EnsureFile(configPath)
@@ -54,9 +53,6 @@ func run(configPath, dataOverride string) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return err
-	}
-	if dataOverride != "" {
-		cfg.DataDir = dataOverride
 	}
 
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
@@ -80,7 +76,7 @@ func run(configPath, dataOverride string) error {
 		log.Warn("reset connected flags", "err", err)
 	}
 
-	deps, _ := buildDeps(cfg, st, log)
+	deps := buildDeps(cfg, st, log)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -330,12 +326,8 @@ func requestedPort(addr string) int {
 // buildDeps loads the static game data and assembles the server dependencies.
 // Missing or unreadable data is survivable: the server starts, and only real
 // fights are unavailable.
-func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps, gamedata.Location) {
-	// The client keeps the record store and the arenas in two different
-	// directories, so locate them independently rather than demanding a
-	// hand-merged folder.
-	loc := gamedata.Discover(cfg.DataDir)
-	data := gamedata.LoadBundle(loc, log)
+func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) *game.Deps {
+	data := gamedata.LoadBundle(log)
 	if data.Cards != nil {
 		log.Debug("game data loaded", "cards", cardsLen(data.Cards), "spells", spellsLen(data.Spells),
 			"fighterCards", fighterCardsLen(data.FighterCards), "summonings", summoningsLen(data.Summonings),
@@ -391,7 +383,7 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) (*game.Deps
 	}
 	deps.OfflineTournaments = cfg.World.OfflineTournamentsEnabled() // S29
 	deps.UseGameData(data)
-	return deps, loc
+	return deps
 }
 
 // webBaseURL is what the game socket announces for opcode-60000 queries:

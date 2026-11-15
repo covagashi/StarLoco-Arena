@@ -54,20 +54,12 @@ Open the **web portal** address the server printed (usually
 
 ## 3. The game data
 
-The card, spell and arena data fights need is already in the `data` folder next
-to `arena-server` - nothing to do here. The startup message confirms it:
+The cards, spells and arenas are built into `arena-server` - nothing to do
+here. The startup message confirms it:
 
 ```
   Game data     907 cards, 203 spells, 6 arenas
-                from /path/to/arena-server/data
 ```
-
-Using another copy instead? Point `--data` at a folder holding `data.bdat`,
-`indexes.bdat` and `maps/`, or set `data_dir` in `config.yaml` to the same
-path - either replaces the bundled copy.
-
-Note that this is the **server's own data** (card/spell/arena records), not the
-playable game - see the next step for that.
 
 ## 4. Connect with the game client
 
@@ -101,7 +93,7 @@ the portal link and they can register and read it themselves.
 |---|---|
 | *"another program is already using that port"* | A server is still running from earlier - close it. Or change `addr` in `config.yaml`. |
 | The web portal will not open | Check the address the server printed; it does not always use port 80. |
-| *"No game data ... fights are unavailable"* | The `data` folder next to `arena-server` got separated from it, or `--data`/`data_dir` points somewhere empty - see step 3. |
+| *"The embedded game data did not load"* | The download is damaged: download the release again. |
 | Client cannot connect | The server window must still be running. Allow it through the firewall when asked. |
 | Forgot who the admin is | The first account registered. To start over, stop the server and delete `arena.db` (this erases everything). |
 

@@ -86,17 +86,14 @@ static func portrait_for(f: Dictionary) -> Texture2D:
 	elif breed == 7000 or breed == 7001:   # a coach in the fight
 		ids.append(breed)
 	for id in ids:
-		# S38: our own portraits, rendered from the 3D figures
-		# (tools/portraits), before the retail art
-		for dir in ["ui/portraits/", "gui/images/theme/images/breeds/",
-				"gui/images/breeds/fightTimeline/"]:
-			var rel: String = dir + "%d.png" % id
-			if not _portraits.has(rel):
-				var img := AssetPaths.load_image(rel)
-				_portraits[rel] = ImageTexture.create_from_image(img) \
-					if img != null else null
-			if _portraits[rel] != null:
-				return _portraits[rel]
+		# S38: our own portraits, rendered from the 3D figures (tools/portraits)
+		var rel := "ui/portraits/%d.png" % id
+		if not _portraits.has(rel):
+			var img := AssetPaths.load_image(rel)
+			_portraits[rel] = ImageTexture.create_from_image(img) \
+				if img != null else null
+		if _portraits[rel] != null:
+			return _portraits[rel]
 	return null
 
 

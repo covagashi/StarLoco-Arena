@@ -6,7 +6,7 @@ import "testing"
 // asserts the shape the round-card mechanic depends on. Skips when the client
 // data directory is absent.
 func TestLoadEventsReal(t *testing.T) {
-	s, err := Open(clientBdataDir)
+	s, err := openContent(t)
 	if err != nil {
 		t.Skip(err)
 	}

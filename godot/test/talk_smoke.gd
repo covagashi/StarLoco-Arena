@@ -24,7 +24,7 @@ func _audit() -> void:
 	var city = await _open_city()
 	var by_kind := {}
 	if city != null:
-		for g in _main._gui.gui.model.get_value("city").get("groups", []):
+		for g in _main._gui.model.get_value("city").get("groups", []):
 			# by each service's own kind (S22: the Retos group mixes three)
 			for sv in g.services:
 				var k := int(sv.get("kind", g.kind))
@@ -53,7 +53,7 @@ func _talk_open(id: int):
 
 
 func _talk() -> Dictionary:
-	var t: Variant = _main._gui.gui.model.get_value("talk")
+	var t: Variant = _main._gui.model.get_value("talk")
 	return t if t is Dictionary else {}
 
 

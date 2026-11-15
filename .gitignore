@@ -54,15 +54,6 @@ Thumbs.db
 *.log
 
 # ============================================================================
-#  Local game-data scratch copy — for pointing a dev build at your OWN client
-#  instead of the committed server/data-dist/. Never committed.
-#  (server/data-dist/ is NOT listed here on purpose: it is a small, deliberate
-#  redistribution of the server-side data subset — see AGENTS.md and
-#  DISCLAIMER.md before touching it.)
-# ============================================================================
-/server/data/
-
-# ============================================================================
 #  Client — we commit the decompiled sources, protocol analysis and RE
 #  tooling, but NOT the ~436 MB compiled retail client (game + bundled JRE +
 #  copyrighted assets), nor anything derived from it.
@@ -99,30 +90,6 @@ __pycache__/
 # commit it (it is machine-local and huge).
 /godot/.godot/
 /godot/export/
-# Converted retail art (old retail importer output) — derived from
-# client/compiled/, same no-redistribution rule applies.
-# Contents only: each folder's .gdignore IS tracked, so Godot never tries to
-# import this art (it is read raw through AssetPaths, and there are ~312k PNG
-# frames under anims/ alone). Git cannot re-include a file inside an excluded
-# directory, hence /dir/* rather than /dir/.
-/godot/assets/anims/*
-!/godot/assets/anims/.gdignore
-/godot/assets/mapgfx/*
-!/godot/assets/mapgfx/.gdignore
-/godot/assets/gamedata/*
-!/godot/assets/gamedata/.gdignore
-/godot/assets/sounds/*
-!/godot/assets/sounds/.gdignore
-/godot/assets/fx/*
-!/godot/assets/fx/.gdignore
-/godot/assets/gui/*
-!/godot/assets/gui/.gdignore
-/godot/assets/mapgfx_1bit/*
-!/godot/assets/mapgfx_1bit/.gdignore
-/godot/assets/musics/*
-!/godot/assets/musics/.gdignore
-# the old make_assets.sh logs (removed in S32; kept ignored for checkouts that still have them)
-/godot/assets/.make_assets/
 # Agent worktrees: a full second checkout of this repo, created by Claude Code
 # for isolated work. Never committable. Project-level .claude/settings.json is
 # deliberately NOT ignored, so only this subtree is listed.

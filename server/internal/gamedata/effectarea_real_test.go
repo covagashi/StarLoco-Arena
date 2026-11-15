@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -10,12 +8,9 @@ import (
 // the real 2.70 data and validates the parser against the known shipped records:
 // the two canonical TRAP templates (id=1 point single-shape, id=2 circle radius
 // 2) and the SPECIAL map tiles. A wrong layout would mis-decode the type string,
-// area shape or the inner-effect list. Skips without client data.
+// area shape or the inner-effect list. Reads server/content.
 func TestLoadStaticEffectsReal(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,11 +89,11 @@ func firstActionID(e []Effect) int32 {
 // application condition (yl_1.d), ack_1.ahJ nor the re-trigger delay
 // (yl_1.FH): every shipped template leaves them at zero / empty (S19). It
 // also pins the trigger ids to the six the client knows (he_1.a, B-076). Runs
-// on the committed data-dist.
+// on server/content.
 func TestStaticEffectsUnusedFieldsReal(t *testing.T) {
-	st, err := Open(filepath.Join("..", "..", "data-dist"))
+	st, err := openContent(t)
 	if err != nil {
-		t.Skip("no data-dist; skipping")
+		t.Fatal(err)
 	}
 	se, err := st.LoadStaticEffects()
 	if err != nil {

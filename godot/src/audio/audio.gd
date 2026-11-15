@@ -4,7 +4,7 @@ extends Node
 ##
 ## Buses: Master ← Music, Master ← SFX. Created here at startup (the project
 ## ships no bus layout), so every AudioStreamPlayer that names "SFX" — the
-## AnmSprite pool, which plays every fight sound — follows the effects slider.
+## interface and fight sounds (ui, sfx, fight) — follows the effects slider.
 ##
 ## Music, as the retail plays it (nk_0.ce, sk_2): track 1 "island" outside a
 ## fight (aog_1 world entry, RO fight end), track 2 "fight" during one

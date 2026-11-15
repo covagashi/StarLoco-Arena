@@ -3,11 +3,9 @@ extends RefCounted
 ## `aub`), the fields the native panels need (S09).
 ##
 ## The 28602 row only carries the definition id; what kind of team it is for,
-## what it costs to enter and what it pays are in the client's data, which the
-## asset export does not carry. Copied from the server's decoded catalogue
-## (server/internal/gamedata/tournaments.go over data-dist/data.bdat): if a
-## data update ever changes them, gamedata's tournaments_real_test is the
-## place that notices.
+## what it costs to enter and what it pays are copied from the server's
+## catalogue (server/content/rules, read by server/internal/gamedata): if
+## it ever changes them, change them here too.
 
 const CLASSIC := 1
 const EVOLUTION := 2

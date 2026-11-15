@@ -230,7 +230,7 @@ func _backdrop() -> void:
 ## The 3D coach, large and sharp, the chevrons that turn it (a qc_0 wire
 ## dir, as in coach creation) and the bubble its emotes show.
 func _coach() -> void:
-	_spr = preload("res://src/anims/anm_sprite.gd").new()
+	_spr = preload("res://src/anims/figure.gd").new()
 	_spr.foot_pivot = true
 	_spr.position = COACH_FOOT
 	_spr.scale = Vector2(COACH_SCALE, COACH_SCALE)
@@ -1137,7 +1137,7 @@ func _sync() -> void:
 	if look != _look:
 		_look = look
 		_spr.tints = Palettes.coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
-		var lib := "anims/coach_700%d" % int(coach.get("sex", 0))
+		var lib := preload("res://src/anims/fighter3d.gd").coach_key(int(coach.get("sex", 0)))
 		# the menu stance (S45), not the fight's idle
 		if not Direction8.load_idle(_spr, lib, _dir, "AnimMenu") \
 				and not Direction8.load_idle(_spr, lib, _dir):

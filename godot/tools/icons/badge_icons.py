@@ -58,7 +58,7 @@ def coin(t):
 
 
 def main():
-    ach = json.load(open('assets/gamedata/npcdialogs.json'))['achievements']
+    ach = json.load(open('assets/content/npcdialogs.json'))['achievements']
     cats = sorted({int(a['cat']) for a in ach.values()})
     out = 'assets/ui/achievements'
     os.makedirs(out, exist_ok=True)

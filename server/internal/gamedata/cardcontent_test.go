@@ -4,59 +4,12 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"testing/fstest"
 
 	"github.com/StarLoco/arena-2.70/content"
 )
-
-// TestCardContentParity: the embedded content is exactly the retail tables
-// with the S40 rules applied (cardrules.go), record by record. A redesign that
-// changes cards on purpose goes in the rules, or retires this test set by set.
-func TestCardContentParity(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	retail, err := LoadRetailCardContent(clientBdataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// The content is the retail tables plus the S40 rules, nothing else.
-	ApplyCardRules(retail)
-	own, err := LoadCardContent(content.Cards)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if retail.Cards.Len() != own.Cards.Len() {
-		t.Fatalf("coach cards: retail %d, content %d", retail.Cards.Len(), own.Cards.Len())
-	}
-	for id, want := range retail.Cards.All() {
-		if got := own.Cards.Get(id); !reflect.DeepEqual(got, want) {
-			t.Errorf("coach card %d differs:\n content %+v\n retail  %+v", id, got, want)
-		}
-	}
-	if !reflect.DeepEqual(own.Sets.IDs(), retail.Sets.IDs()) {
-		t.Fatalf("card sets: content %v, retail %v", own.Sets.IDs(), retail.Sets.IDs())
-	}
-	for _, id := range retail.Sets.IDs() {
-		if got, want := own.Sets.Get(id), retail.Sets.Get(id); !reflect.DeepEqual(got, want) {
-			t.Errorf("card set %d differs:\n content %+v\n retail  %+v", id, got, want)
-		}
-	}
-	if !reflect.DeepEqual(own.Fighters.All(), retail.Fighters.All()) {
-		t.Errorf("fighter cards differ (%d content, %d retail)", own.Fighters.Len(), retail.Fighters.Len())
-	}
-	if !reflect.DeepEqual(own.Events.IDs(), retail.Events.IDs()) {
-		t.Fatalf("events: content %v, retail %v", own.Events.IDs(), retail.Events.IDs())
-	}
-	for _, id := range retail.Events.IDs() {
-		if got, want := own.Events.Get(id), retail.Events.Get(id); !reflect.DeepEqual(got, want) {
-			t.Errorf("event %d differs:\n content %+v\n retail  %+v", id, got, want)
-		}
-	}
-}
 
 // TestCardContentRoundTrip writes a tree and reads it back, so the format
 // keeps its promises without the retail data: nil and empty lists, the price
@@ -101,14 +54,14 @@ func TestCardContentRoundTrip(t *testing.T) {
 	}
 }
 
-// TestBundleCardsWithoutRetailData: with no data.bdat at all the server still
-// has every card (S43 deletes data-dist), Card Master prices and the drop
-// table included, and since S43 the rest of the rules too.
+// TestBundleCardsWithoutRetailData: the bundle is the embedded content alone
+// (S43): every card, Card Master prices and the drop table included, and the
+// rest of the rules.
 func TestBundleCardsWithoutRetailData(t *testing.T) {
-	b := LoadBundle(Location{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	b := LoadBundle(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if b.Spells.Len() != 203 || b.Challenges.Len() != 39 || b.Achievements.Len() != 332 ||
 		b.Summonings.Len() != 53 || b.SphereBoards.BoardCount() != 15 {
-		t.Fatalf("rules without data.bdat: spells %d, challenges %d, achievements %d, summonings %d, boards %d",
+		t.Fatalf("rules: spells %d, challenges %d, achievements %d, summonings %d, boards %d",
 			b.Spells.Len(), b.Challenges.Len(), b.Achievements.Len(), b.Summonings.Len(), b.SphereBoards.BoardCount())
 	}
 	if b.Cards.Len() != 907 || b.CardSets.Len() != 138 || b.FighterCards.Len() != 75 || b.Events.Len() != 51 {

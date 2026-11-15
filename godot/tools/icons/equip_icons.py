@@ -113,7 +113,7 @@ def main():
     coach = '--coach' in sys.argv
     kind = 'equip_coach' if coach else 'equip'
     src_dir, out = f'art/ui/out/{kind}', f'assets/ui/{kind}'
-    cards = {} if coach else json.load(open('assets/gamedata/fightercards.json'))
+    cards = {} if coach else json.load(open('assets/content/fightercards.json'))
     os.makedirs(out, exist_ok=True)
     gj = os.path.join(src_dir, 'garments.json')
     garments = set(json.load(open(gj))) if os.path.exists(gj) else set()

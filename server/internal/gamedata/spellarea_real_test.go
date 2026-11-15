@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -10,12 +8,9 @@ import (
 // correct (5th) post-params array: a non-point AoE shape (circle 2 / cross 3 /
 // T 4 / T-inv 9) must now carry a non-empty size. Before the off-by-one fix the
 // size read the empty vestigial 4th array and every zone spell collapsed to a
-// point. Logs the shape->size distribution for eyeballing. Skips without data.
+// point. Logs the shape->size distribution for eyeballing. Reads server/content.
 func TestSpellAreaSizeReal(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

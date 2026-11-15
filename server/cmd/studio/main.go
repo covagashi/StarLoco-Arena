@@ -1,11 +1,9 @@
-// Command studio is the DofusArena 2.70 Data Studio: a cross-platform desktop
-// GUI for browsing the 2.70 client's static game data (the data.bdat +
-// indexes.bdat object store) as sortable tables.
+// Command studio is the content studio: a cross-platform desktop GUI that
+// browses the game's own content (server/content: spells, summonings, static
+// effects, cards) as sortable tables and edits the cards' balance fields.
 //
-// It is deliberately a command inside the arena-2.70 module (rather than a
-// separate tool) so it can import the already-proven, byte-exact decoders in
-// internal/gamedata directly. Unlike the v2.04 Studio it is READ-ONLY: the
-// 2.70 data layer has no encoder, so this tool browses but never writes. The
+// It is a command inside the server module so it loads the content with the
+// same code as the server (gamedata.LoadRulesContent / LoadCardContent). The
 // web frontend lives under frontend/ and is built into frontend/dist, which is
 // embedded below.
 package main
@@ -26,7 +24,7 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:            "DofusArena 2.70 Studio",
+		Title:            "Pippop Arena Studio",
 		Width:            1280,
 		Height:           820,
 		MinWidth:         960,

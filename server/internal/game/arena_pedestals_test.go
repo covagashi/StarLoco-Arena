@@ -39,7 +39,7 @@ func TestArenaDropsEmptyPedestalSlots(t *testing.T) {
 			}
 		}
 		if len(a.coachCells) > 6 {
-			t.Errorf("arena %d has %d pedestals, the .fmd only stores 6", id, len(a.coachCells))
+			t.Errorf("arena %d has %d pedestals, an arena stores 6", id, len(a.coachCells))
 		}
 		checked++
 	}

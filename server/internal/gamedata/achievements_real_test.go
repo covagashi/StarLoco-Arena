@@ -1,22 +1,12 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
-// achievementDataDir is the shipped subset, which carries types 800/801/802, so
-// this test does not need a local client tree. It still skips rather than fails
-// if the directory is missing.
-var achievementDataDir = filepath.Join("..", "..", "data-dist")
-
 func openAchievements(t *testing.T) *Achievements {
 	t.Helper()
-	if _, err := os.Stat(filepath.Join(achievementDataDir, "data.bdat")); err != nil {
-		t.Skip("no data-dist")
-	}
-	st, err := Open(achievementDataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,42 +15,6 @@ func openAchievements(t *testing.T) *Achievements {
 		t.Fatal(err)
 	}
 	return ach
-}
-
-// TestAchievementRecordsAreConsumedExactly is the load-bearing test for the
-// type-800 layout. Every record must be consumed to the byte: a short read means
-// a field is missing or mis-sized, and an overrun means the decoder invented one.
-// Since achievement completion is evaluated FROM these records, a silent
-// mis-parse would make the server unlock the wrong things.
-func TestAchievementRecordsAreConsumedExactly(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(achievementDataDir, "data.bdat")); err != nil {
-		t.Skip("no data-dist")
-	}
-	st, err := Open(achievementDataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entries := st.EntriesOf(TypeAchievement)
-	if len(entries) == 0 {
-		t.Fatal("no type-800 records")
-	}
-	for _, e := range entries {
-		rec, err := st.ReadRecord(e.Position)
-		if err != nil {
-			t.Fatalf("read record at %d: %v", e.Position, err)
-		}
-		a := decodeAchievement(rec.Data)
-		if a == nil {
-			t.Fatalf("record at %d (%d bytes) failed to decode", e.Position, len(rec.Data))
-		}
-		// Recompute the exact serialized size from what we decoded.
-		want := 16 + 1 + len(a.Conditions)*4 + 1 + len(a.Cards)*4 + 1 + 4 + 1
-		if want != len(rec.Data) {
-			t.Errorf("achievement %d: decoded %d bytes but the record is %d "+
-				"(conds=%d cards=%d)", a.ID, want, len(rec.Data),
-				len(a.Conditions), len(a.Cards))
-		}
-	}
 }
 
 // TestAchievementCatalogueShape pins the shipped table so a data swap that

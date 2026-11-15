@@ -4,15 +4,15 @@ extends Node2D
 ## the common 20 bones, the 11 base animations) drawn inside the fight.
 ## S33's technique A: the model lives in its own small transparent
 ## SubViewport with the arena's light and the game's orthographic camera,
-## shown as a sprite whose origin is the feet. It hangs off an AnmSprite
-## (AnmSprite.model3d), so fight_view keeps placing, sorting, occluding and
-## labelling that sprite as before, and keeps asking for retail actions
+## shown as a sprite whose origin is the feet. It hangs off a figure node
+## (figure.gd, .model3d), so fight_view keeps placing, sorting, occluding
+## and labelling that node, and asks for actions by name
 ## ("1_AnimMarche02"): take() turns them into the model's animation and
 ## facing. One viewport per fighter costs ~4 ms each (S33); a shared
 ## viewport for twelve fighters is the follow-up.
 ##
-## Only fighters with a built model get one (model_for); the others stay
-## retail sprites.
+## Only fighters with a built model get one (model_for); the others show
+## nothing.
 
 const ArenaScene := preload("res://src/maps/arena_scene.gd")
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
@@ -169,17 +169,8 @@ const SHADOW := Color(0.05, 0.04, 0.1, 0.4)
 var _shadow_r := SHADOW_R
 
 
-## S34: `--old-art` on the command line (after `--`) or PIPPOP_OLD_ART=1
-## plays with the retail sprites while both kinds of art live side by side:
-## every lookup below then answers "not built".
-static func old_art() -> bool:
-	return OS.get_environment("PIPPOP_OLD_ART") == "1" or "--old-art" in OS.get_cmdline_user_args()
-
-
 ## The path of a built model by name, or "" when it isn't built.
 static func model_path(model: String) -> String:
-	if old_art():
-		return ""
 	var path := ArenaLayout.root().path_join(MODEL_DIR % model)
 	return path if FileAccess.file_exists(path) else ""
 
@@ -212,10 +203,10 @@ static func coach_tints(skin: int, hair: int) -> Dictionary:
 		"hair": Color(clampf(h.x, 0.0, 1.0), clampf(h.y, 0.0, 1.0), clampf(h.z, 0.0, 1.0))}
 
 
-## The 3D figure for a retail anim set, or {} when none is built:
+## The 3D figure for a figure key, or {} when none is built:
 ## {path, scale, coach}.
-static func for_set(set_dir: String) -> Dictionary:
-	var fig := figure_of(set_dir)
+static func for_set(key: String) -> Dictionary:
+	var fig := figure_of(key)
 	if fig.is_empty():
 		return {}
 	var path := model_path(fig.model)
@@ -224,27 +215,36 @@ static func for_set(set_dir: String) -> Dictionary:
 	return {"path": path, "scale": fig.scale, "coach": fig.coach}
 
 
-## Which figure a retail anim set stands for, built or not: {model, scale,
-## coach}. "anims/coach_700<sex>" is a coach, and so is
-## "anims/fighter_700<sex>"; "anims/fighter_-1<breed><sex>" a fighter
-## (fight_view.FIGHTER_FILES); "anims/npc_<look>" a summon.
-static func figure_of(set_dir: String) -> Dictionary:
-	var name := set_dir.get_file()
-	if name in ["coach_7000", "coach_7001", "fighter_7000", "fighter_7001"]:
-		return {"model": COACHES[int(name.right(1))], "scale": 1.0, "coach": true}
-	if name.begins_with("fighter_-1") and name.length() >= 12:
-		var code := name.substr(10)
-		var breed := int(code.left(-1))
-		if MODELS.has(breed):
-			return {"model": MODELS[breed][clampi(int(code.right(1)), 0, 1)], "scale": 1.0, "coach": false}
-	elif name.begins_with("npc_"):
-		var look := int(name.substr(4))
-		if SUMMONS.has(look):
-			return {"model": SUMMONS[look][0], "scale": summon_scale(look), "coach": false}
+## Which figure a key stands for, built or not: {model, scale, coach}.
+## Keys are the figures' own names: a coach (COACHES), a breed's model
+## (MODELS), a summon (SUMMONS).
+static func figure_of(key: String) -> Dictionary:
+	if key in COACHES.values():
+		return {"model": key, "scale": 1.0, "coach": true}
+	for pair in MODELS.values():
+		if key in pair:
+			return {"model": key, "scale": 1.0, "coach": false}
+	for look in SUMMONS:
+		if SUMMONS[look][0] == key:
+			return {"model": key, "scale": summon_scale(look), "coach": false}
 	return {}
 
 
-## Retail channel tints (Palettes.coach_tints: {1: skin, 2: hair}, ×1.25)
+## The figure key of a coach (by sex), of a breed's fighter, of a summon
+## look; "" when the game has no such figure.
+static func coach_key(sex: int) -> String:
+	return COACHES[clampi(sex, 0, 1)]
+
+
+static func fighter_key(breed: int, sex: int) -> String:
+	return MODELS[breed][clampi(sex, 0, 1)] if MODELS.has(breed) else ""
+
+
+static func summon_key(look: int) -> String:
+	return SUMMONS[look][0] if SUMMONS.has(look) else ""
+
+
+## Channel tints (Palettes.coach_tints: {1: skin, 2: hair}, ×1.25)
 ## back to the swatch colours Toon tints with.
 static func from_channels(tints: Dictionary) -> Dictionary:
 	var out := {}
@@ -352,13 +352,13 @@ func _build(model: Node3D, tints: Dictionary, mask := {}) -> void:
 	_spr.centered = false
 	_spr.scale = Vector2.ONE / _res
 	_spr.position = -Vector2(BASE) * FEET
-	_spr.use_parent_material = true   # the arena occluder on the AnmSprite
+	_spr.use_parent_material = true   # the arena occluder on the figure node
 	add_child(_spr)
 
 
 ## The path of a built equipment piece by name, or "" when it isn't built.
 static func piece_path(piece: String) -> String:
-	if old_art() or piece == "":
+	if piece == "":
 		return ""
 	var path := ArenaLayout.root().path_join(EQUIP_DIR % piece)
 	return path if FileAccess.file_exists(path) else ""
@@ -658,7 +658,7 @@ static func hang(model: Node3D, path: String, slot: String, piece: String) -> No
 
 ## The built garment `piece` for the figure at `path`, or "".
 static func garment_path(path: String, piece: String) -> String:
-	if old_art() or piece == "":
+	if piece == "":
 		return ""
 	var p := ArenaLayout.root().path_join(GARMENT_DIR % [path.get_file().get_basename(), piece])
 	return p if FileAccess.file_exists(p) else ""
@@ -852,7 +852,7 @@ static func _rel(model: Node3D, n: Node3D) -> Transform3D:
 	return t
 
 
-## Retail action → animation: "<dir>_<Name>" as fight_view asks for it.
+## Action → animation: "<dir>_<Name>" as fight_view asks for it.
 ## Returns false for an action the model has no counterpart for, so the
 ## caller's fallback chain goes on.
 func take(action: String, once: bool, hold: bool) -> bool:
@@ -963,8 +963,9 @@ func _draw() -> void:   # drawn before the child sprite: under the feet
 	draw_circle(Vector2.ZERO, _shadow_r * 0.65, SHADOW, true, -1.0, true)
 
 
-## The AnmSprite mirrors itself for directions 3, 4 and 7 (the retail sets
-## only ship five): cancel the mirror and turn the model to the true one.
+## The figure node mirrors itself for directions 3, 4 and 7 (Direction8's
+## five-plus-mirror table): cancel the mirror and turn the model to the true
+## one.
 func _face() -> void:
 	var p := get_parent() as Node2D
 	var flipped := p != null and p.scale.x < 0.0

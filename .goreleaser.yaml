@@ -56,19 +56,14 @@ archives:
       - goos: windows
         formats: [zip] # Windows has no built-in tar.gz extractor in Explorer
     # Everything a player needs and nothing they don't: the config file is
-    # generated on first run, so no sample config is shipped.
-    #
-    # server/data-dist holds the minimal card/spell/arena data the SERVER's
-    # own logic needs to run fights (~2.5MB) - not the retail client, which
-    # players still need separately to actually play. See DISCLAIMER.md.
+    # generated on first run, so no sample config is shipped. The game data
+    # is embedded in the binary (server/content, S43).
     files:
       - src: docs/QUICKSTART.md
         dst: README.md
       - LICENSE
       - NOTICE
       - DISCLAIMER.md
-      - src: server/data-dist
-        dst: data
 
 checksum:
   name_template: checksums.txt

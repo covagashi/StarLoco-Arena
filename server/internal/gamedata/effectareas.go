@@ -48,21 +48,6 @@ type StaticEffects struct {
 	byID map[int32]*StaticEffect
 }
 
-// LoadStaticEffects reads and decodes every trap/glyph template (type 210).
-func (s *Store) LoadStaticEffects() (*StaticEffects, error) {
-	out := &StaticEffects{byID: make(map[int32]*StaticEffect)}
-	for _, e := range s.EntriesOf(TypeStaticEffect) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if t := decodeStaticEffect(rec.Data); t != nil {
-			out.byID[t.ID] = t
-		}
-	}
-	return out, nil
-}
-
 // NewStaticEffects builds a catalog from explicit templates (tests/tooling).
 func NewStaticEffects(templates ...*StaticEffect) *StaticEffects {
 	out := &StaticEffects{byID: make(map[int32]*StaticEffect, len(templates))}
@@ -82,27 +67,3 @@ func (s *StaticEffects) Len() int { return len(s.byID) }
 
 // All returns every loaded trap/glyph template, keyed by id.
 func (s *StaticEffects) All() map[int32]*StaticEffect { return s.byID }
-
-// decodeStaticEffect parses one rf_2 record. Returns nil for a malformed/empty
-// record (the defensive cursor degrades a truncated tail to zero values).
-func decodeStaticEffect(data []byte) *StaticEffect {
-	c := &cur{b: data}
-	t := &StaticEffect{}
-	t.ID = c.i32()                  // 1 id
-	t.Type = c.str()                // 2 type "TRAP"/"SPECIAL"
-	t.Label = c.str()               // 3 label
-	t.AreaShape = c.i32()           // 4 areaShape
-	t.MaxExec = c.i32()             // 5 maxExecutionCount
-	t.Field6 = c.i32()              // 6 ack_1.ahJ
-	t.AppCondition = c.i32()        // 7 applicationCondition
-	t.Animation = c.i32()           // 8 trigger animation
-	t.AreaSize = c.i32Array()       // 9 areaSize
-	t.AppTriggers = c.i32Array()    // 10 applicationTriggers
-	t.UnappTriggers = c.i32Array()  // 11 unapplicationTriggers
-	t.RetriggerDelay = c.i32Array() // 12 re-trigger delay
-	t.Effects = decodeEffectList(c) // 13 inner effects
-	if !c.ok() || t.ID <= 0 {
-		return nil
-	}
-	return t
-}

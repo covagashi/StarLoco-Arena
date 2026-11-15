@@ -20,7 +20,7 @@ func _audit() -> void:
 	var city_panel = await _open_city()
 	var sid := -1
 	if city_panel != null:
-		var city: Dictionary = _main._gui.gui.model.get_value("city")
+		var city: Dictionary = _main._gui.model.get_value("city")
 		for g in city.get("groups", []):
 			if int(g.kind) == 2 and not g.services.is_empty():
 				sid = int(g.services[0].id)
@@ -46,7 +46,7 @@ func _audit() -> void:
 
 
 func _round_trip(panel) -> void:
-	var offer: Array = _main._gui.gui.model.get_value("mailbox.native").offer
+	var offer: Array = _main._gui.model.get_value("mailbox.native").offer
 	if offer.is_empty():
 		_record(2, "attach", false, "the test coach has no tradable card")
 		return
@@ -63,7 +63,7 @@ func _round_trip(panel) -> void:
 	_type(to, "test")
 	panel.find_child("Check", true, false).pressed.emit()
 	var found: bool = await _wait(func(): return panel.find_child("Found", true, false) != null \
-		and int(_main._gui.gui.model.get_value("mailbox.newMail", "receiverId")) > 0, 3.0)
+		and int(_main._gui.model.get_value("mailbox.newMail", "receiverId")) > 0, 3.0)
 	_record(2, "check name", found, "15506 → 15507")
 	var subj: LineEdit = panel.find_child("Subject", true, false)
 	_type(subj, subject)
@@ -71,7 +71,7 @@ func _round_trip(panel) -> void:
 	body.insert_text_at_caret("Native mailbox smoke.")
 	panel.find_child("Offer%d" % cid, true, false).pressed.emit()
 	await create_timer(0.3).timeout
-	var cards: Array = _main._gui.gui.model.get_value("mailbox.newMail", "cards")
+	var cards: Array = _main._gui.model.get_value("mailbox.newMail", "cards")
 	_record(2, "attach", cards.size() == 1 and panel.find_child("Attached0", true, false) != null
 		and str(panel.draft.get("message", "")) == "Native mailbox smoke.",
 		"%s, typed text kept across the rebuild" % _card_name(cid))
@@ -79,15 +79,15 @@ func _round_trip(panel) -> void:
 	_seen.clear()
 	panel.find_child("Send", true, false).pressed.emit()
 	var sent: bool = await _wait(func(): return _seen.has(15003) and _seen.has(15001) \
-		and _main._gui.gui.model.get_value("mailbox.native").mode == "list", 4.0)
+		and _main._gui.model.get_value("mailbox.native").mode == "list", 4.0)
 	_record(2, "send", sent and int(State.inventory.get(cid, 0)) == before - 1,
 		"15003 + list refresh, %s %d → %d, status '%s'" % [_card_name(cid), before,
 			int(State.inventory.get(cid, 0)),
-			_main._gui.gui.model.get_value("mailbox.native").status])
+			_main._gui.model.get_value("mailbox.native").status])
 	await create_timer(0.4).timeout
 	# The message to yourself lands in the inbox: open it by its row.
 	var mid := -1
-	for m in _main._gui.gui.model.get_value("mailManager").receivedMails:
+	for m in _main._gui.model.get_value("mailManager").receivedMails:
 		if str(m.get("title", "")) == subject:
 			mid = int(m.mailId)
 	var tree: Tree = panel.find_child("Mails", true, false)
@@ -100,7 +100,7 @@ func _round_trip(panel) -> void:
 	if row_item != null:
 		row_item.select(0)
 	await create_timer(0.3).timeout
-	var open: Variant = _main._gui.gui.model.get_value("mailbox.mail")
+	var open: Variant = _main._gui.model.get_value("mailbox.mail")
 	_record(2, "read", mid > 0 and open is Dictionary and int(open.get("mailId", 0)) == mid
 		and panel.find_child("Take", true, false) != null,
 		"inbox row %d opened" % mid)

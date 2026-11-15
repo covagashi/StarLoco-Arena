@@ -18,9 +18,6 @@ package gamedata
 // is precisely why the server has to check it. The one place a card can arrive
 // unearned is a crafted 6011.
 
-// TypeEquipmentPool is the data.bdat record type for equipment pools.
-const TypeEquipmentPool = 251
-
 // EquipmentPool is one decoded pool.
 type EquipmentPool struct {
 	ID int32
@@ -39,22 +36,6 @@ type EquipmentPools struct {
 	byID   map[int32]*EquipmentPool
 	ids    []int32
 	byCard map[int32][]int32 // cardID -> pool ids that grant it
-}
-
-// LoadEquipmentPools decodes type 251.
-func (s *Store) LoadEquipmentPools() (*EquipmentPools, error) {
-	out := &EquipmentPools{byID: make(map[int32]*EquipmentPool)}
-	for _, e := range s.EntriesOf(TypeEquipmentPool) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if p := decodeEquipmentPool(rec.Data); p != nil {
-			out.byID[p.ID] = p
-		}
-	}
-	out.reindex()
-	return out, nil
 }
 
 // NewEquipmentPools builds a catalogue from explicit definitions (tests/tooling).
@@ -150,25 +131,4 @@ func (c *EquipmentPools) CardsOf(poolIDs []int32) []int32 {
 	}
 	sortInt32Slice(out)
 	return out
-}
-
-// decodeEquipmentPool parses an `alf_2` record from its own deserializer:
-//
-//	[i32 id][i16 n]{n x i32 cardId}
-func decodeEquipmentPool(data []byte) *EquipmentPool {
-	c := &cur{b: data}
-	p := &EquipmentPool{}
-	p.ID = c.i32()
-	n := int(c.i16())
-	if n < 0 {
-		return nil
-	}
-	for i := 0; i < n && c.ok(); i++ {
-		p.CardIDs = append(p.CardIDs, c.i32())
-	}
-	if !c.ok() || p.ID <= 0 {
-		return nil
-	}
-	p.leftover = len(c.b) - c.pos
-	return p
 }

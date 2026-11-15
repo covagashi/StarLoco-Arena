@@ -3,8 +3,8 @@
 #
 #   docker compose -f deploy/docker-compose.sqlite.yml up --build
 #
-# The image bundles its own small game-data subset; mount your own at /data
-# (see deploy/README.md) only if you want to use different data.
+# The game data is embedded in the server binary (server/content); nothing to
+# mount for it.
 
 services:
   arena:
@@ -19,14 +19,11 @@ services:
       ARENA_ADDR: "0.0.0.0:5555"
       ARENA_WEB_ADDR: "0.0.0.0:8080"
       ARENA_LOG_LEVEL: "info"
-      ARENA_DATA_DIR: "/data"
       ARENA_DB_DRIVER: "sqlite"
       ARENA_DB_DSN: "/state/arena.db"
     volumes:
       # Persist the SQLite DB across restarts.
       - arena-state:/state
-      # Mount the client game data (read-only).
-      - ${ARENA_DATA_DIR:-./data}:/data:ro
     restart: unless-stopped
 
 volumes:

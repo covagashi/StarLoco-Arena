@@ -3,13 +3,12 @@ extends RefCounted
 ## that is truncated, or valid-but-the-wrong-kind at top level, must degrade
 ## to the caller's declared default instead of aborting the caller.
 ##
-## Not hypothetical. assets/gamedata/*.json, the per-action meta.json files
-## and the map atlases are all old retail importer output, so an interrupted
-## importer run leaves a half-written file on disk. GDScript turns that into
-## a hard stop: `var d: Dictionary = <Nil>` raises "Trying to assign value of
-## type 'Nil' to a variable of type 'Dictionary'" and ABORTS the rest of the
-## function, leaving the caller half-initialised with one line in the log.
-## The symptom months later is "the animations don't show".
+## Not hypothetical. assets/content/*.json is generated (exportclient), so an
+## interrupted run leaves a half-written file on disk. GDScript turns that
+## into a hard stop: `var d: Dictionary = <Nil>` raises "Trying to assign
+## value of type 'Nil' to a variable of type 'Dictionary'" and ABORTS the
+## rest of the function, leaving the caller half-initialised with one line
+## in the log.
 ##
 ## Touches no real asset — fixtures are written under user://.
 
@@ -62,7 +61,7 @@ func run(t) -> void:
 	_cleanup()
 
 
-## Mirrors map_gfx.gd / kanodo.gd: the result goes straight into a statically
+## Mirrors kanodo.gd: the result goes straight into a statically
 ## typed Dictionary. Keep the flag assignment LAST so an abort is detectable.
 func _typed_assignment_canary() -> void:
 	var d: Dictionary = AssetPaths.read_json("array.json", {})

@@ -86,23 +86,6 @@ type Spells struct {
 	byID map[int32]*Spell
 }
 
-// LoadSpells reads and decodes every spell template from the store.
-func (s *Store) LoadSpells() (*Spells, error) {
-	spells := &Spells{byID: make(map[int32]*Spell)}
-	for _, e := range s.EntriesOf(TypeSpell) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		sp, err := decodeSpell(rec.Data)
-		if err != nil {
-			continue
-		}
-		spells.byID[sp.ID] = sp
-	}
-	return spells, nil
-}
-
 // NewSpells builds a catalog from explicit templates (tests/tooling).
 func NewSpells(templates ...*Spell) *Spells {
 	s := &Spells{byID: make(map[int32]*Spell, len(templates))}
@@ -148,53 +131,6 @@ func (s *Spells) AnyEffectIDWithParamCountOtherThan(n int) (int32, bool) {
 		}
 	}
 	return best, found
-}
-
-// decodeSpell reads a co_1 record (DATA-FORMAT §4), including the embedded effect
-// list (field 21):
-//
-//	i32 id, i32 breedId, i32 value, i32 aiTarget, i32 scriptId,
-//	i8 AP, i8 maxPerPlayer, i8 minInterval, i8 maxPerTurn, i8 rangeMin, i8 rangeMax,
-//	i8, i8, 6×bool, str criterion, effectList, …
-func decodeSpell(data []byte) (*Spell, error) {
-	if len(data) < 26 {
-		return nil, errShort
-	}
-	c := &cur{b: data}
-	sp := &Spell{}
-	sp.ID = c.i32()      // 1 id
-	sp.BreedID = c.i32() // 2 breedId
-	sp.Value = c.i32()   // 3 value (budget, not damage)
-	c.i32()              // 4 aiTargetId
-	sp.ScriptID = c.i32()
-	sp.AP = int8(c.u8())            // 6  eo() actionPoints
-	sp.CastMaxPerTarget = c.u8()    // 7  ep()/iS() per-target cap
-	sp.MaxActive = c.u8()           // 8  eq()/iT() max live instances
-	sp.CastMaxPerTurn = c.u8()      // 9  er()/iU() per-turn cap
-	sp.Cooldown = c.u8()            // 10 es()/iV() cooldown, 63 = once per fight
-	sp.CooldownUnlockDelay = c.u8() // 11 et()      deferred unlock
-	// Range lives at fields 12/13 (NOT 10/11 as an earlier DATA-FORMAT draft had
-	// it) — verified against the raw bytes: e.g. Iop melee spell 4 = 1/1, Cra
-	// spell 3 = 8/5, Feca spell 31 = 4/1. The two bytes are stored (max,min);
-	// normalize to [min,max] so the range check is robust to the byte order.
-	ra := c.u8() // 12 range bound A (observed = max)
-	rb := c.u8() // 13 range bound B (observed = min)
-	if ra >= rb {
-		sp.RangeMax, sp.RangeMin = int8(ra), int8(rb)
-	} else {
-		sp.RangeMax, sp.RangeMin = int8(rb), int8(ra)
-	}
-	sp.TestLoS = c.u8() != 0            // 14 ew()/iW() requires line of sight
-	sp.OnlyLine = c.u8() != 0           // 15 ex()/iN() straight line only
-	sp.NeedFreeCell = c.u8() != 0       // 16 ey()/iX() target cell must be free
-	c.u8()                              // 17 eB()      description-generation toggle
-	sp.RangeNotBoostable = c.u8() != 0  // 18 eD()
-	sp.EnforceTargetMasks = c.u8() != 0 // 19 eF()
-	sp.Criterion = c.str()              // 20 criterion (cast-precondition tokens)
-	sp.Effects = decodeEffectList(c)    // 21 effects
-	sp.TargetMasks = c.i64Array()       // 22 iJ()/jb() cast-level target conditions
-	sp.ParentID = c.i32()               // 23 iL()/eG() parent spell
-	return sp, nil
 }
 
 // Damage returns the spell's direct flat HP damage (the sum of its flat HP-loss

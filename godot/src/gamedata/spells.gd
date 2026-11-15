@@ -37,15 +37,6 @@ static func name_of(id: int) -> String:
 	return OwnText.get_text("spell", id, "#%d" % id)
 
 
-## French display name that keyed the retail AnimSort-<name> cast actions.
-## Our tables carry no retail names (S43), so it is always "" and the cast
-## plays the generic action; it goes with the retail animations.
-static func fr_name(id: int) -> String:
-	_ensure()
-	var s: Variant = _by_id.get(id)
-	return str(s.get("nfr", "")) if s != null else ""
-
-
 static func meta(id: int) -> Dictionary:
 	_ensure()
 	return _by_id.get(id, {})

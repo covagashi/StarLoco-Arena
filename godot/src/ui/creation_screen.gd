@@ -27,8 +27,8 @@ const INK := UiStyle.B_INK
 const CORAL := UiStyle.B_CORAL
 
 var _box: Control
-var _model                   # GuiLib model — localCoach lives here
-var _spr                     # AnmSprite paper-doll (the 3D coach)
+var _model                   # GuiModel (GuiLayer.model) — localCoach lives here
+var _spr                     # figure.gd: the 3D coach
 var name_edit: LineEdit
 var _sex_btns := {}
 var _hair_cells := {}
@@ -66,7 +66,7 @@ func _init() -> void:
 		shadow.draw_arc(Vector2.ZERO, 175, 0, TAU, 64, Color(INK, 0.35), 3.0, true)
 		shadow.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE))
 	_box.add_child(shadow)
-	_spr = preload("res://src/anims/anm_sprite.gd").new()
+	_spr = preload("res://src/anims/figure.gd").new()
 	_spr.foot_pivot = true
 	_spr.position = FOOT
 	_spr.scale = Vector2(DOLL_SCALE, DOLL_SCALE)
@@ -412,10 +412,7 @@ func _sync() -> void:
 
 
 func _sync_doll(lc: Dictionary) -> void:
-	var lib := AssetPaths.normalize(str(lc.get("actorDescriptorLibrary",
-		"coach_7000")))
-	if not lib.begins_with("anims/"):
-		lib = "anims/" + lib
+	var lib := str(lc.get("actorDescriptorLibrary", "coach_7000"))
 	var dir: int = int(lc.get("actorDirection", 3)) & 7
 	if lc.get("actorMaterial") is Dictionary:
 		_spr.tints = lc["actorMaterial"]

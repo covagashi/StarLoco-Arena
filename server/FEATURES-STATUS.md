@@ -39,7 +39,7 @@ overnight). Test them in the morning.
 | Card exchange | 5101/5103/5111 | ⚠️ partial | Invite/accept/cancel flow works; **card transfer on completion deferred** (needs a re-validated tx to avoid dupes). |
 | GM commands | (chat `/`) | ✅ | /HELP /WHERE /WHO /TP /STRENGTH — IsAdmin gated. |
 | World presence | 4096 / 4098 | ✅ | ACTOR_SPAWN fan-out on join; despawn on leave. |
-| Game data (data.bdat) | — | ✅ | Parses 907 cards / 203 spells / 75 fighter cards (incl. equip-time stat bonuses) / 53 summons from the real client store. |
+| Game data (`server/content`) | — | ✅ | 907 cards / 203 spells / 75 fighter cards / 53 summons and the other rules tables, the game's own since S40/S43, embedded. |
 | **Fighter roster** | 6001/6003/6006 | ✅ | Create/delete/list with the et_2 codec; breed/name/spell validation; budget computed server-side; owner-scoped delete. |
 | **Team presets** | 6021/6023/6030 | ✅ | Save/delete/list with the sw_1 codec; members scoped to owned fighters. |
 | **Matchmaking** | 2301/23110/23114/2308 | ✅ | Opponent search → MatchFound → accept handshake; two coaches match + accept. |
@@ -151,7 +151,7 @@ go run ./cmd/seedaccount --login locos975 --password azerty --admin   # make you
 go run ./cmd/server                                                    # 127.0.0.1:5555
 ```
 
-`--data-dir` defaults to the local client `contents\bdata`. The DB file is
+The game data is embedded (`server/content`). The DB file is
 `arena.db` (git-ignored). Delete it to reset all accounts/coaches.
 
 ## Architecture
@@ -161,7 +161,7 @@ Layered, mirroring the proven 2006 server:
 - `internal/handshake` — connection/coach/movement message codecs.
 - `internal/domain` — GORM models.
 - `internal/store` — SQLite + repositories.
-- `internal/gamedata` — data.bdat reader.
+- `internal/gamedata` — the game data tables, loaded from `server/content`.
 - `internal/game` — router (opcode→handler map), Deps DI, session, world
   registry, exchange manager, `handlers_*.go` + `packets.go`.
 - `cmd/server`, `cmd/seedaccount`.

@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -32,11 +30,7 @@ import (
 // This test fails the moment that shape changes - i.e. the moment the catalogue
 // reading stops being true and the question deserves re-opening.
 func TestNp1RuleCatalogueShape(t *testing.T) {
-	dir := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(dir, "data.bdat")); err != nil {
-		t.Skip("no data-dist; skipping")
-	}
-	st, err := Open(dir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

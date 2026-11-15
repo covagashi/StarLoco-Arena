@@ -34,15 +34,12 @@ own code and tests (`server/internal/protocol`,
 |---|---|---|
 | `server/` | **The Go 1.26 server — the primary active project.** Module `github.com/StarLoco/arena-2.70` | Yes — primary work happens here |
 | `server/docs/` | **Start at `STATUS.md`** (current state, open items, invariants), then `DATA-COVERAGE.md` / `BUGS.md` | Yes, keep in sync with code |
-| `godot/` | **Proprietary** (all rights reserved, `godot/LICENSE`; not MIT). The Godot 4 client (login → coach creation → native lobby → native combat). `godot/assets/` is git-ignored on purpose except `ui/`, `i18n/`, `audio/` and `content/` (the tables `exportclient` builds); tests via `godot/run_tests.sh` | Yes — active work |
+| `godot/` | **Proprietary** (all rights reserved, `godot/LICENSE`; not MIT). The Godot 4 client (login → coach creation → native lobby → native combat). `godot/assets/` holds only our own `ui/`, `i18n/`, `audio/` and `content/` (the tables `exportclient` builds); tests via `godot/run_tests.sh` | Yes — active work |
 | `sprints/` | **The roadmap**: `BACKLOG.md` (live work queue) + one `SNN-*.md` per sprint with its evidence | Yes, keep in sync with the work |
 | `devlog/` | The agent's per-session log — what was asked, done, found, and left unverified | Yes — add an entry per session |
 | `server/COVERAGE.md` | Per-opcode implemented / wire-audited / tested matrix | Yes, keep current |
 | `server/content/` | **Proprietary** data (all rights reserved, `server/content/LICENSE`; the `.go` embed file is MIT). The game's own cards since S40 (`cards/coach/set_<id>.json`, `sets.json`, `fighter.json`, `events.json`, read by `gamedata.LoadCardContent`) and the rest of the rules since S43 (`rules/`: spells, summonings, challenges, achievements, NPC dialogs…, read by `gamedata.LoadRulesContent`), embedded in the server; nothing reads `data.bdat` at runtime | Yes — card and rules design edits go here (then `exportclient`) |
-| `server/data-dist/` | The redistributable server-data subset (`data.bdat` + `indexes.bdat`, maps) — ships in git and in releases | Occasionally, deliberately (see constraint 4) |
-| `server/data/` | Local scratch copy of game data for a dev build | No — **git-ignored**, local input only |
 | `server/cmd/exportclient` | Writes the client's tables (`godot/assets/content/`, tracked) from `server/content/`; `TestClientDataUpToDate` fails until you rerun it after a content change | Whenever `server/content/` changes |
-| `server/cmd/exportrules`, `exportcards` | One-way bridges that froze the retail `data.bdat` tables into `server/content/` (S40, S43); they go with `data-dist/` | No (done) |
 | `server/cmd/studio` | Wails desktop data editor; its retail-asset viewer died with `client/` (see its `README.md`) | Rarely |
 | `docs/` | Game wiki (rules, breeds, spells, mechanics), console commands, `QUICKSTART.md` (ships inside releases) | Occasionally |
 | `.github/workflows/` | `ci.yml` (build/test on Linux+Windows), `release.yml` (release-please → GoReleaser) | Occasionally |
@@ -50,11 +47,11 @@ own code and tests (`server/internal/protocol`,
 
 ## Critical constraints — do not break these
 
-1. **Do not move `server/data/`.** The server resolves it from
-   `server/configs/*.yaml` (`data_dir: "data"`, relative to the `server/`
-   working directory). It is **git-ignored** — a local scratch copy for
-   pointing a dev build at another copy of the game data. Tests that need it must **skip**,
-   not fail, when it is absent.
+1. **The game reads only its own data (S43).** Rules and cards live in
+   `server/content/` (embedded in the server), the client's tables in
+   `godot/assets/content/` (built by `server/cmd/exportclient`). Nothing may
+   read a format of the old retail client again (`.bdat`, `.jar`, `.fmd`,
+   `.anm`, `.xps`, its art): `godot/run_tests.sh` guards it.
 2. **The Go module path is `github.com/StarLoco/arena-2.70`** (in
    `server/go.mod`) even though the folder is just `server/`. This is
    intentional — do **not** rewrite imports to match the folder name.
@@ -62,18 +59,10 @@ own code and tests (`server/internal/protocol`,
    placeholder `server/cmd/studio/frontend/dist/.gitkeep` keeps the directory
    present so `go build ./...` works without first building the frontend. Do not
    delete it.
-4. **This branch does not use Git LFS.** Everything committed is source, docs or
-   small tooling assets. Copyrighted material (`server/data/`, the converted
-   retail art under `godot/assets/`) is excluded by `.gitignore` and must stay
-   that way — never `git add -f` it.
-   **`server/data-dist/` is the one deliberate exception**: a small (~2.5 MB)
-   maintainer-curated subset of card/spell/arena *records* (no art, audio, or
-   executable code), committed on purpose so the server and its releases work
-   without every operator sourcing the data first. It stays until S40 (own
-   cards) replaces it. It is edited only via an
-   explicit maintainer decision (StarLoco), not by force-adding whatever
-   happens to be in a local `server/data/`. Keep `DISCLAIMER.md` and `NOTICE`
-   in sync with whatever it contains.
+4. **This branch does not use Git LFS.** Everything committed is source, docs,
+   tooling assets and the game's own data. Nothing from the retail client is
+   committed (the redistributed `server/data-dist/` subset was removed in
+   S43) — never `git add -f` any of it.
 5. **Nothing in this project links to a copy of the retail client, and
    `web.client_download_url` defaults to empty.** This replaces an earlier
    decision (the default used to be a maintainer-hosted Mega mirror, also
@@ -110,13 +99,13 @@ go run ./cmd/seedaccount --login test --password test123
 
 - First run creates `config.yaml` (from the embedded, fully commented
   `internal/config/config.template.yaml`) and `arena.db` (SQLite, WAL) in
-  `server/` — both git-ignored. It also finds the committed
-  `server/data-dist/` automatically, so fights work with no further setup.
+  `server/` — both git-ignored. The game data is embedded, so fights work
+  with no further setup.
 - The Godot client (`godot --path godot`) offers `127.0.0.1:5555` on its
   login screen, so it connects with no change. Its own tests:
   `godot/run_tests.sh`.
 - End-to-end tests live in `server/test/e2e/` and drive a real server over a
-  real socket. `realdata_test.go` boots it on the committed `data-dist/`; the
+  real socket. `realdata_test.go` boots it on the embedded content; the
   rest use no game data or a hand-built catalogue.
 - The suites run on SQLite unless told otherwise. To run every store-backed
   test (store, game, web, e2e) on the production dialects, point two variables

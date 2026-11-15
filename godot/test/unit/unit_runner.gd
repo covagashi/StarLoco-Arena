@@ -5,9 +5,8 @@ extends Node
 ## hardcoded preload list: suite files land independently of this runner),
 ## instantiates each with load(path).new(), and calls run(t) with one shared
 ## UnitAssert. No RenderingServer waits, no scene/viewport dependencies — the
-## whole lane is safe under `--headless` on a machine that has never run the
-## asset importer (assets/anims, assets/gamedata, assets/gui, ... stay
-## untouched; only assets/i18n and assets/ui are tracked in git).
+## whole lane is safe under `--headless` on a fresh checkout (it needs only
+## the tracked assets/: ui, i18n, audio, content).
 
 const AssertScript := preload("res://test/unit/assert.gd")
 

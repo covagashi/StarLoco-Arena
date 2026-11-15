@@ -26,14 +26,14 @@ func _run() -> void:
 	var jobs: Array = []   # [id, set, tints, whole body]
 	for breed in range(1, 13):
 		for sex in 2:
-			jobs.append([breed * 10 + sex, "anims/fighter_-1%d%d" % [breed, sex], {}, false])
+			jobs.append([breed * 10 + sex, Fighter3D.fighter_key(breed, sex), {}, false])
 	for sex in 2:
-		jobs.append([7000 + sex, "anims/coach_700%d" % sex, Palettes.coach_tints(1, 1), false])
+		jobs.append([7000 + sex, Fighter3D.coach_key(sex), Palettes.coach_tints(1, 1), false])
 	for look in Fighter3D.SUMMONS:
-		jobs.append([int(look), "anims/npc_%d" % int(look), {}, true])
+		jobs.append([int(look), Fighter3D.summon_key(int(look)), {}, true])
 	var made := 0
 	for j in jobs:
-		var spr = preload("res://src/anims/anm_sprite.gd").new()
+		var spr = preload("res://src/anims/figure.gd").new()
 		spr.foot_pivot = true
 		spr.position = FOOT
 		spr.scale = Vector2(SCALE, SCALE)

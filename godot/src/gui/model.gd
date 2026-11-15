@@ -1,14 +1,12 @@
 class_name GuiModel
 extends RefCounted
-## Property store for XULOR2 <property attribute="..." name="..." field="...">
-## bindings. Names are dotted paths ("fight.timeline.currentFighter");
-## `field` selects a sub-key of the bound object. Widgets watch names and
-## get refreshed when values change.
+## Property store the native panels read (GuiLayer.model). Names are
+## dotted paths ("fight.timeline.currentFighter"); `field` selects a sub-key
+## of the stored object. Panels listen to `changed` and refresh.
 
 signal changed(name: String, field: String, value)
 
 var values := {}
-var _watchers := {}  # "name|field" or "name" -> Array[{w, bind}]
 
 
 func _walk(path: String, create := false):
@@ -38,7 +36,7 @@ func get_value(name: String, field: String = ""):
 	return v
 
 
-## retail fields can be property paths that restate the model root or the
+## Fields can be property paths that restate the model root or the
 ## name's last segment — field="guild.name" on name="guild" means guild.name
 ## flat, and field="teamManagement.teamPreset1vs1List" on
 ## name="teamManagement.teamManager" means a direct child of teamManager.
@@ -74,36 +72,3 @@ func set_value(name: String, value, field: String = "") -> void:
 	else:
 		w["parent"][w["key"]] = value
 	changed.emit(name, field, value)
-	for e in _watchers.get(_wkey(name, field), []):
-		if is_instance_valid(e["w"]):
-			e["w"].apply_model(get_value(name, field), e["bind"])
-	for e in _watchers.get(_wkey(name, ""), []):
-		if is_instance_valid(e["w"]):
-			e["w"].apply_model(get_value(name), e["bind"])
-	if field != "":
-		return
-	# The whole object was replaced: its field watchers changed too. Without
-	# this, a dialog opened before its model push (the usual order: wire, then
-	# dialog_opened -> _push_*) never saw its field-bound lists — the Card
-	# Master's catalogue stayed empty until the dialog was reopened.
-	var prefix := name + "|"
-	for k in _watchers:
-		if not k.begins_with(prefix):
-			continue
-		var sub: String = k.substr(prefix.length())
-		for e in _watchers[k]:
-			if is_instance_valid(e["w"]):
-				var fv = get_value(name, sub)
-				if fv != null:   # same rule as the initial bind in loader._wire
-					e["w"].apply_model(fv, e["bind"])
-
-
-func watch(w: GWidget, name: String, field: String = "", bind: Dictionary = {}) -> void:
-	var k := _wkey(name, field)
-	if not _watchers.has(k):
-		_watchers[k] = []
-	_watchers[k].append({"w": w, "bind": bind})
-
-
-func _wkey(name: String, field: String) -> String:
-	return name + "|" + field if field != "" else name

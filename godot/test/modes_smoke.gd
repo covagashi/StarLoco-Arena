@@ -39,7 +39,7 @@ func _audit() -> void:
 		if b.toggle_mode and b.text == i18n.t("team.tab_tournaments"):
 			b.pressed.emit()
 	await create_timer(0.6).timeout
-	var mode := int(_main._gui.gui.model.get_value("gamePreferences", "lastSelectedGameModeId"))
+	var mode := int(_main._gui.model.get_value("gamePreferences", "lastSelectedGameModeId"))
 	_record(0, "tab id", mode == 3 and int(team.tab) == 3, "Torneos → mode %d, tab %d" % [mode, int(team.tab)])
 	await _shot("team-torneos")
 	for b in team.find_children("*", "Button", true, false):
@@ -61,7 +61,7 @@ func _audit() -> void:
 		"evolution fighter: Esferas=%d, Convertir en leyenda=%d" % [sph.size(), leg.size()])
 	await _shot("team-evolucion")
 	var legends := 0
-	for cell in _main._gui.gui.model.get_value("calendar", "calendar") if _main._gui.gui.model.get_value("calendar", "calendar") is Array else []:
+	for cell in _main._gui.model.get_value("calendar", "calendar") if _main._gui.model.get_value("calendar", "calendar") is Array else []:
 		for e in cell.get("events", []):
 			if int(e.get("kind", 0)) == 4:
 				legends += 1

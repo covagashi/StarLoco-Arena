@@ -11,7 +11,7 @@ import (
 )
 
 // gambit_test.go exercises the gambit rule engine (gambit.go, gambit_eval.go)
-// against the REAL spell table shipped in server/data-dist, because the part
+// against the REAL spell table in server/content, because the part
 // worth proving is not that a rule struct round-trips: it is that a rule naming
 // a real spell id goes through the same range / line-of-sight / AP / cooldown /
 // friendly-fire gates a human coach's cast goes through, and falls back to the

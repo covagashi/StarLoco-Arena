@@ -36,12 +36,11 @@ go build ./...
 go test ./...
 go run ./cmd/server                              # listens on 0.0.0.0:5555
 go run ./cmd/server --config configs/config.sqlite.yaml
-go run ./cmd/server --data "C:\path\to\DofusArena"
 ```
 
 The listen address is a config key (`addr`), not a flag — the first run writes a
-fully commented `config.yaml` next to the binary. The three flags are `--config`,
-`--data` and `--version`.
+fully commented `config.yaml` next to the binary. The two flags are `--config` and
+`--version`. The game data is embedded (`server/content`, S43).
 
 The retail client already ships pointed at `127.0.0.1:5555`
 (`client config.properties → proxyAddresses_1`), so it connects with no change;

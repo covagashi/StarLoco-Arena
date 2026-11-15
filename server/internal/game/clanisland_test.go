@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/store"
 	"github.com/StarLoco/arena-2.70/internal/store/storetest"
 )
@@ -405,44 +404,6 @@ func TestClanIslandZaapsMatchTheDocumentedTable(t *testing.T) {
 			if e.kind == kindZaap && !seen[e.instanceID] {
 				t.Errorf("world %d serves zaap instance %d, which OVERWORLD-MAP.md does not document",
 					world, e.instanceID)
-			}
-		}
-	}
-}
-
-// TestClanIslandZaapAltitudesMatchTheTopology checks the one field that cannot be
-// eyeballed. The arrival `alt` in ENTER_INSTANCE must be the cell's lowest walkable
-// altitude, because the client seeds its overworld pathfinder with the coach's cell
-// and altitude and needs a walkable layer at exactly that height; when it does not
-// match, the coach arrives, renders correctly, and simply cannot walk - no error,
-// no packet, nothing to see.
-//
-// Real-data test: skips when the shipped maps are absent, per repo convention.
-func TestClanIslandZaapAltitudesMatchTheTopology(t *testing.T) {
-	root := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(root, "maps", "tplg")); err != nil {
-		t.Skipf("shipped maps unavailable: %v", err)
-	}
-	for world := range clanIslandWorlds() {
-		topo, err := gamedata.LoadWorldTopology(root, world)
-		if err != nil {
-			t.Errorf("world %d: topology unavailable: %v", world, err)
-			continue
-		}
-		for _, e := range worldElements[world] {
-			if e.kind != kindZaap {
-				continue
-			}
-			got, ok := topo.LowestWalkableAlt(e.cellX, e.cellY)
-			if !ok {
-				t.Errorf("world %d instance %d: cell (%d,%d) has NO walkable layer - "+
-					"a coach arriving there could never move", world, e.instanceID, e.cellX, e.cellY)
-				continue
-			}
-			if got != e.alt {
-				t.Errorf("world %d instance %d cell (%d,%d): served alt %d, topology says %d "+
-					"- the coach would arrive unable to walk",
-					world, e.instanceID, e.cellX, e.cellY, e.alt, got)
 			}
 		}
 	}

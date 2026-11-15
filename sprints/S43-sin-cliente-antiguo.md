@@ -1,6 +1,6 @@
 # S43 — Sin el cliente antiguo
 
-**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** 🔵 en curso (pasos 1 y 2 hechos el 2026-11-04, paso 3 el 2026-11-15; el 4, borrar, espera el ok del dueño)
+**Planificado:** 2026-10-28 · **Hito:** M7 — Arte propio · **Tamaño:** M · **Estado:** ✅ cerrado (2026-11-15: el juego ya no lee nada del cliente antiguo)
 
 ## Decisión del dueño (2026-10-28)
 
@@ -181,6 +181,47 @@ Esto se hace cuando el paso 3 pasa y el dueño da el ok:
 - `server/data-dist/`. Se acaba la excepción de redistribución.
 - Los docs: AGENTS.md (la excepción de `data-dist`), README, DISCLAIMER y
   QUICKSTART dejan de hablar del cliente antiguo.
+
+> **Hecho (2026-11-15, con el ok del dueño: "si").**
+>
+> - **Servidor:** fuera `data-dist/`, el lector de `data.bdat` (`Store`,
+>   `Open`, los `decode*`, las constantes de tipo de registro),
+>   `locate.go`, `envmaps.go`, `worldtopo.go`, `elementviews.go`,
+>   `cmd/dumpelements`, `cmd/genelements`, `exportcards`, `exportrules`, el
+>   ajuste `data_dir`, la opción `--data` y `ARENA_DATA_DIR`. `LoadBundle`
+>   ya no recibe ubicación. El `/TP` de GM deja la altura como está (o la
+>   que se le dé); no hay topología del mundo. `elements_data.go` queda como
+>   tabla propia.
+> - **Las pruebas que leían `data-dist`** ahora leen `server/content` con un
+>   adaptador de prueba (`contentStore` en `gamedata`, `realGameData` en
+>   `game`, `realBundle` en las e2e): **dejan de saltarse**. Las que
+>   probaban el formato binario (colas de cartas y retos, registros de
+>   logros, paridad) se borraron; las de daño de hechizos y bonus de equipo
+>   se reescribieron sobre los structs. Dos esperaban la resurrección retail
+>   (5–100 %); ahora esperan la de S40 (25 % todas).
+> - **Studio:** sigue siendo el editor de cartas de S40, pero solo lee
+>   `server/content` (cartas y reglas); fuera los visores retail (mapas,
+>   sprites, jars, tga) y la carpeta de datos.
+> - **Cliente:** fuera `map_gfx.gd`, `jar.gd`, `topology.gd`, `fightmap.gd`,
+>   `anm_sprite.gd` (lo sustituye `figure.gd`, que solo enseña las figuras
+>   3D), el motor XML de `src/gui/` (`GuiLayer` queda como enrutador de
+>   paneles nativos; `newMailDialog` abre el buzón nativo en modo
+>   redactar), `deprecated_hall/`, las herramientas y pruebas que solo
+>   servían al arte retail, la casilla "retail" del editor de mapas, el
+>   interruptor `--old-art` y el lanzamiento por nombre francés de hechizo.
+>   Las arenas sin arte 3D dibujan rombos planos.
+> - **Disco:** las carpetas retail de `godot/assets/` (353 MB) salieron del
+>   repo a `~/.local/share/retail-s43/` (fuera de la carpeta compartida), y
+>   sus líneas de `.gitignore` y sus `.gdignore` se fueron.
+> - **La guarda:** `run_retail_guard` ya no lleva lista: ninguna línea de
+>   código (los comentarios sí pueden contar la historia) nombra `.jar`,
+>   `.anm`, `.xps`, `.bdat`, `mapgfx` o `data-dist`, ni en `godot/` ni en
+>   `server/`. `no_retail_smoke.sh` ya no aparta nada: juega los smokes con
+>   el rastreo de ficheros que faltan.
+> - **Docs:** AGENTS, CLAUDE, README (raíz, servidor y Godot), DISCLAIMER,
+>   NOTICE, LICENSE, CONTRIBUTING, QUICKSTART, deploy y STATUS. DISCLAIMER y
+>   NOTICE dicen que `data-dist` salió del árbol pero sigue en el historial,
+>   y que `server/content` nació de los ids y valores retail (S40, S43).
 
 ## Orden
 

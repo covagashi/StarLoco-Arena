@@ -10,7 +10,6 @@ import (
 // place that loads them, shared by cmd/server and the e2e harness, so the tests
 // that drive the real socket also exercise the real data path (S08).
 type Bundle struct {
-	Loc            Location
 	FightMaps      *FightMaps
 	Cards          *Cards
 	Spells         *Spells
@@ -30,15 +29,13 @@ type Bundle struct {
 	Conditions     *Conditions
 }
 
-// LoadBundle loads the game's own data, embedded in the binary. Since S43 no
-// table comes from loc (it is kept for the GM /TP world topology); a broken
+// LoadBundle loads the game's own data, embedded in the binary (S43). A broken
 // content tree is survivable: the affected tables stay nil and the server
 // still starts.
-func LoadBundle(loc Location, log *slog.Logger) *Bundle {
-	b := &Bundle{Loc: loc}
+func LoadBundle(log *slog.Logger) *Bundle {
+	b := &Bundle{}
 
-	// The fight arenas are the prototype's own, embedded in the binary, so
-	// they load whatever loc points at.
+	// The fight arenas are the prototype's own, embedded in the binary.
 	if fm, err := LoadFightMaps(); err != nil {
 		log.Warn("fight arenas not loaded; falling back to the built-in arena", "err", err)
 	} else {
@@ -46,8 +43,7 @@ func LoadBundle(loc Location, log *slog.Logger) *Bundle {
 		log.Debug("fight arenas loaded", "arenas", fm.Len())
 	}
 
-	// The cards are the game's own too (S40), embedded from server/content:
-	// they load whatever loc points at, and never from data.bdat.
+	// The cards are the game's own too (S40), embedded from server/content.
 	if cc, err := LoadCardContent(content.Cards); err != nil {
 		log.Warn("card content not loaded", "err", err)
 	} else {
@@ -59,8 +55,7 @@ func LoadBundle(loc Location, log *slog.Logger) *Bundle {
 			"fighterCards", b.FighterCards.Len(), "events", b.Events.Len())
 	}
 
-	// The rest of the rules too (S43), embedded from server/content/rules:
-	// nothing here reads data.bdat any more.
+	// The rest of the rules too (S43), embedded from server/content/rules.
 	if r, err := LoadRulesContent(content.Rules); err != nil {
 		log.Warn("rules content not loaded", "err", err)
 	} else {

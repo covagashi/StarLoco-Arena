@@ -43,7 +43,7 @@ func _equipment_refused(panel) -> void:
 	if item.is_empty():
 		_record(10, "equipment refused", false, "no dead fighter (seed the db)")
 		return
-	var offered: Array = _main._gui.gui.model.get_value("evolutionTeam").get("reviveCards", [])
+	var offered: Array = _main._gui.model.get_value("evolutionTeam").get("reviveCards", [])
 	_record(10, "offered", offered.all(func(c): return int(c.id) != LUCKLESS),
 		"the panel offers %s, not the equipment card" % [offered.map(func(c): return c.name)])
 	var fid := int(item.id)
@@ -57,7 +57,7 @@ func _equipment_refused(panel) -> void:
 	await create_timer(0.4).timeout
 	var f = _main._fighter_by_id(fid)
 	var st := int(f.get("state", -1)) if f != null else -1
-	var status: Dictionary = _main._gui.gui.model.get_value("evolutionTeam").get("reviveStatus", {})
+	var status: Dictionary = _main._gui.model.get_value("evolutionTeam").get("reviveStatus", {})
 	var want: String = root.get_node("I18n").t("team.revive_refused", {"name": item.get("name", "?")})
 	var footer: Label = panel.find_child("ReviveStatus", true, false)
 	_record(10, "equipment refused", st == 2 and not bool(status.get("ok", true))
@@ -90,7 +90,7 @@ func _bench_full(panel) -> void:
 	await _wait(func(): return _main._revive_pending.is_empty(), 4.0)
 	await create_timer(0.4).timeout
 	var f = _main._fighter_by_id(fid)
-	var status: Dictionary = _main._gui.gui.model.get_value("evolutionTeam").get("reviveStatus", {})
+	var status: Dictionary = _main._gui.model.get_value("evolutionTeam").get("reviveStatus", {})
 	var want: String = root.get_node("I18n").t("team.revive_refused", {"name": item.get("name", "?")})
 	_record(10, "refused", f != null and int(f.get("state", -1)) == 3
 		and str(status.get("text", "")) == want and int(State.inventory.get(REVIVE_CARD, 0)) == qty,

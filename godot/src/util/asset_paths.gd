@@ -1,38 +1,32 @@
 class_name AssetPaths
 extends RefCounted
 ## AssetPaths — the one place that turns a logical asset name
-## ("content/spells.json", "anims/coach_7000/2_AnimStatique/meta.json")
-## into a path this build can actually open.
+## ("content/spells.json", "ui/login_bg.png") into a path this build can
+## actually open.
 ##
-## Why it exists: everything under assets/ except ui/ and i18n/ is produced
-## by the old retail importer from a lawfully-owned retail client and is
-## git-ignored on purpose (AGENTS.md — no Ankama bytes in the repo). The
-## importer itself is gone (S32): what is on disk stays until M7's own art
-## replaces it, sprint by sprint. Those files are read RAW, with Image.load_from_file / FileAccess /
-## FontFile.load_dynamic_font, not through ResourceLoader. In the editor
-## res:// is a real directory on disk, so a hardcoded "res://assets/…"
-## works; from an exported binary res:// is the .pck and loose files that
-## no importer ever claimed were never packed, so every one of those reads
-## would come back empty. ProjectSettings.globalize_path() does not rescue
-## it either — it maps res:// to the directory holding the executable's
-## pack, where the files are equally absent.
+## Why it exists: the game reads its tables, interface images, translations
+## and sounds RAW (Image.load_from_file / FileAccess / AudioStream
+## load_from_file), not through ResourceLoader. In the editor res:// is a
+## real directory on disk, so a hardcoded "res://assets/…" works; from an
+## exported binary res:// is the .pck and loose files that no importer ever
+## claimed were never packed, so every one of those reads would come back
+## empty. ProjectSettings.globalize_path() does not rescue it either — it
+## maps res:// to the directory holding the executable's pack, where the
+## files are equally absent.
 ##
-## The release layout therefore mirrors the server's data-dist/: a plain
-## `assets/` folder shipped next to the executable, which an operator can
-## also regenerate from their own client. Roots are probed in order and the
-## first one that HAS THE FILE wins.
+## A release therefore ships a plain `assets/` folder next to the
+## executable (ui/, i18n/, audio/, content/). Roots are probed in order and
+## the first one that HAS THE FILE wins.
 ##
-## Per-file probing is the load-bearing detail: assets/ui/*.png and
-## assets/i18n/*.json are tracked and imported, so "res://assets/" still
-## exists inside an exported .pck. A root-level existence check would see
-## that and wrongly pin every lookup to res://. Probing each file instead
-## lets ui/login_bg.png come out of the pack while gamedata/spells.json
-## falls through to the folder beside the binary.
+## Per-file probing is the load-bearing detail: assets/ui/*.png are
+## imported, so "res://assets/" still exists inside an exported .pck. A
+## root-level existence check would see that and wrongly pin every lookup
+## to res://. Probing each file instead lets ui/login_bg.png come out of the
+## pack while content/spells.json falls through to the folder beside the
+## binary.
 ##
-## Callers pass logical names. Legacy "res://assets/…" strings still work —
-## normalize() strips the prefix — which is what keeps this migration
-## reversible and keeps the top-level test scripts (and deprecated_hall/)
-## compiling untouched.
+## Callers pass logical names. A "res://assets/…" string still works —
+## normalize() strips the prefix.
 
 const PREFIX := "res://assets/"
 
@@ -61,7 +55,7 @@ static func normalize(rel: String) -> String:
 ## subsets in a release pack) keeps working with zero setup; then the
 ## `assets/` folder beside the executable, which is what a release ships;
 ## then user://assets/ as the escape hatch for an operator who dropped a
-## freshly imported tree into the writable data dir.
+## tree into the writable data dir.
 static func roots() -> PackedStringArray:
 	if _roots == null:
 		_roots = PackedStringArray([
@@ -128,9 +122,8 @@ static func read_text(rel: String) -> String:
 	return FileAccess.get_file_as_string(p)
 
 
-## Parsed JSON, or `default` when the file is missing OR malformed — the
-## old retail importer output is regenerated often, so a truncated table must not
-## take the client down.
+## Parsed JSON, or `default` when the file is missing OR malformed — a
+## truncated table must not take the client down.
 static func read_json(rel: String, default: Variant = null) -> Variant:
 	var txt := read_text(rel)
 	if txt == "":
@@ -161,8 +154,8 @@ static func read_json(rel: String, default: Variant = null) -> Variant:
 	return parsed
 
 
-## Raw image decode (NOT ResourceLoader) — null when missing. The anim
-## frames, map atlases and native-UI backgrounds all come through here.
+## Raw image decode (NOT ResourceLoader) — null when missing. Icons,
+## portraits and native-UI backgrounds all come through here.
 static func load_image(rel: String) -> Image:
 	var p := resolve(rel)
 	# Dev-log hygiene, NOT behaviour. Godot warns "Loaded resource as image
@@ -180,12 +173,8 @@ static func load_image(rel: String) -> Image:
 	return load_image_at(p)
 
 
-## Image loader for a path that is ALREADY resolved. anm_sprite resolves one
-## meta.json per action and derives every frame/mask path from its base dir —
-## deliberately never re-probing per frame, so a split asset tree can't pair
-## one root's meta.json with another root's PNGs. Those paths must therefore
-## skip resolve() while still getting the editor detour above, which is the
-## only reason this is public.
+## Image loader for a path that is ALREADY resolved (a file found beside
+## another one): skips resolve() but keeps the editor detour above.
 static func load_image_at(path: String) -> Image:
 	if not FileAccess.file_exists(path):
 		return null
@@ -196,10 +185,8 @@ static func load_image_at(path: String) -> Image:
 
 
 ## Directory flavour of resolve(), probed with DirAccess (the _absolute
-## variant — the plain one is an instance method): for the anim "set dir"
-## prefixes ("anims/coach_7000") that callers extend with
-## "/<Action>/f000.png", and for DirAccess.open() scans like the theme's
-## lazy image index. Never returns a trailing slash.
+## variant — the plain one is an instance method), for folder scans. Never
+## returns a trailing slash.
 static func dir(rel: String) -> String:
 	var key := normalize(rel)
 	while key.ends_with("/"):

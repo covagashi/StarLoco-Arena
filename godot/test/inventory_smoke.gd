@@ -85,7 +85,7 @@ func _audit() -> void:
 			and cards.name_of(573) == load("res://src/gamedata/spells.gd").name_of(34),
 			"559 '%s', 573 '%s'" % [cards.name_of(559), cards.name_of(573)])
 	var set1: Variant = null
-	for st in _main._gui.gui.model.get_value("localCoach.cardSets") if _main._gui.gui.model.get_value("localCoach.cardSets") is Array else []:
+	for st in _main._gui.model.get_value("localCoach.cardSets") if _main._gui.model.get_value("localCoach.cardSets") is Array else []:
 		if int(st.get("id", 0)) == 1 and int(st.get("completion", 0)) > 0:
 			set1 = st
 	if set1 != null:

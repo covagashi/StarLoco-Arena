@@ -1,6 +1,6 @@
 // Package content embeds the game's own design data: the cards, card sets,
 // fighter cards and event cards (S40) and the rest of the rules (S43: spells,
-// summonings, challenges, achievements...) that replaced the retail data.bdat
+// summonings, challenges, achievements...) that replaced the retail
 // tables. The data files are proprietary (see LICENSE in this directory); this
 // file, like the rest of the server, is MIT.
 package content

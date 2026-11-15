@@ -1,20 +1,15 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 // TestLoadSummoningsReal decodes every summon template (type 300) from the real
 // 2.70 data and sanity-checks the stat sheet the server mirrors: plausible
 // HP/AP/MP, and that both spell-casting creatures and spell-less blockers exist
-// (the two ends of the summon-AI behaviour range). Skips without client data.
+// (the two ends of the summon-AI behaviour range). Reads server/content.
 func TestLoadSummoningsReal(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

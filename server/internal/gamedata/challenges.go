@@ -1,7 +1,7 @@
 package gamedata
 
-// TypeChallengeDef is the data.bdat record type holding challenge definitions
-// (client class GE, loaded by q_0 into contentLoader.challenge / ahy_1.axg()).
+// Challenge definitions (retail client class GE; ours in
+// server/content/rules/challenges.json since S43).
 //
 // A "challenge" is a scripted fight against a server-built opponent, referenced
 // by id from two kinds of overworld element:
@@ -9,14 +9,10 @@ package gamedata
 //   - DemonChallenge (env type 7) — field 2 of its ';'-separated descriptor.
 //   - BreedMaster (env type 5) — field 4 of its descriptor ("test this breed").
 //
-// Both launch it by sending C2S 26330 [i32 challengeId][i16 99].
-const TypeChallengeDef = 400
-
 // Challenge is a decoded challenge definition.
 //
-// Wire layout (big-endian), matched field-for-field against the client's GE
-// deserializer (GE.a) and verified by checking each decoded record's size
-// against its byte length (39 records, ids 3..46):
+// The fields follow the retail record (big-endian), matched field-for-field
+// against the client's GE deserializer (GE.a) when it was decoded:
 //
 //	i32 id, i32×6 fields, u8 rewardCount, i32×rewardCount rewardCardIds,
 //	u8 bool(QA), i16(QB), i32(QC), i32(QD), i32(QE), i32(QF),
@@ -88,21 +84,6 @@ type Challenges struct {
 	byID map[int32]*Challenge
 }
 
-// LoadChallenges reads and decodes every challenge definition (type 400).
-func (s *Store) LoadChallenges() (*Challenges, error) {
-	out := &Challenges{byID: make(map[int32]*Challenge)}
-	for _, e := range s.EntriesOf(TypeChallengeDef) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if ch := decodeChallenge(rec.Data); ch != nil {
-			out.byID[ch.ID] = ch
-		}
-	}
-	return out, nil
-}
-
 // NewChallenges builds a catalog from explicit definitions (tests/tooling).
 func NewChallenges(defs ...*Challenge) *Challenges {
 	out := &Challenges{byID: make(map[int32]*Challenge, len(defs))}
@@ -136,52 +117,4 @@ func (c *Challenges) All() map[int32]*Challenge {
 		return nil
 	}
 	return c.byID
-}
-
-func decodeChallenge(data []byte) *Challenge {
-	return decodeChallengeCursor(&cur{b: data})
-}
-
-// decodeChallengeCursor is decodeChallenge over a caller-owned cursor so a test
-// can assert the record is consumed exactly (zero bytes left over).
-func decodeChallengeCursor(c *cur) *Challenge {
-	id := c.i32()
-	ch := &Challenge{ID: id}
-	for i := range ch.Fields {
-		ch.Fields[i] = c.i32()
-	}
-	n := int(c.u8())
-	for i := 0; i < n; i++ {
-		if v := c.i32(); c.ok() {
-			ch.RewardCards = append(ch.RewardCards, v)
-		}
-	}
-	if !c.ok() || id <= 0 {
-		return nil
-	}
-	// Tail, best-effort: read through to QE (the client's time-panel gate). A
-	// record that somehow ends early leaves TimeChallenge at its zero value —
-	// which is exactly "no time challenge" — rather than dropping the whole
-	// definition, so the core decode above stays authoritative.
-	qa := c.u8() != 0 // QA
-	qb := c.i16()     // QB
-	qc := c.i32()     // QC
-	qd := c.i32()     // QD
-	qe := c.i32()     // QE — GE.bbI
-	if c.ok() {
-		ch.ShowsResult, ch.LinkedAchievement, ch.XP, ch.XPLimit = qa, qb, qc, qd
-		ch.TimeChallenge = qe
-	}
-	ch.Field15 = c.i32() // QF
-
-	// The tail used to stop here because the np_1 element layout was unknown.
-	// It is decodable now (see parameters.go), so the record is read to its end.
-	bonuses, ok := decodeParameters(c)
-	if !ok {
-		return ch // an inline effect we cannot skip; keep what we have
-	}
-	ch.Bonuses = bonuses
-	ch.Unknown1 = c.i32() // QG
-	ch.Unknown2 = c.i32() // QH
-	return ch
 }

@@ -247,10 +247,9 @@ func _choice_button(text: String) -> Button:
 
 
 ## The speaker on the left: our standing portraits big, a small square one
-## (a class portrait) in a medallion, a retail animation in its old box.
-## False when there is no face to show.
+## (a class portrait) in a medallion. False when there is no face to show.
 func _show_face(face: Dictionary) -> bool:
-	var key := str(face.get("image", face.get("anim", "")))
+	var key := str(face.get("image", ""))
 	if key == _face_key and _face_slot.get_child_count() > 0:
 		return true
 	_face_key = key
@@ -282,29 +281,7 @@ func _show_face(face: Dictionary) -> bool:
 			m.add_child(tr)
 			_face_slot.add_child(m)
 		return true
-	if not face.has("anim"):
-		return false
-	var spr = preload("res://src/anims/anm_sprite.gd").new()
-	if not spr.load_action(str(face.anim), str(face.get("action", ""))):
-		spr.free()
-		return false
-	var holder := Control.new()
-	holder.name = "Face"
-	holder.size = PORTRAIT.size
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(spr)
-	var w := 1.0
-	var h := 1.0
-	for f in spr._frames:
-		w = maxf(w, float(f.w))
-		h = maxf(h, float(f.h))
-	var k := minf(minf(PORTRAIT.size.x / w, PORTRAIT.size.y / h), 3.0)
-	spr.scale = Vector2(k, k)
-	spr.foot_pivot = true
-	spr.position = Vector2(PORTRAIT.size.x / 2.0, PORTRAIT.size.y)
-	_face_slot.position = PORTRAIT.position
-	_face_slot.add_child(holder)
-	return true
+	return false
 
 
 ## Our portraits' idle loop (tools/portraits/npc_anim.py, made in AniCraft):

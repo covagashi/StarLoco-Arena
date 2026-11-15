@@ -62,7 +62,7 @@ func _create() -> void:
 	# clean up earlier runs
 	_main._on_native_lobby_action("nativeGhostList", [], null, -1)
 	await create_timer(0.6).timeout
-	for g in _main._gui.gui.model.get_value("ghosts.list") if _main._gui.gui.model.get_value("ghosts.list") != null else []:
+	for g in _main._gui.model.get_value("ghosts.list") if _main._gui.model.get_value("ghosts.list") != null else []:
 		if g.mine and str(g.name) == GHOST_NAME:
 			_main._on_native_lobby_action("nativeGhostDelete", [int(g.id)], null, -1)
 			await create_timer(0.4).timeout
@@ -114,14 +114,14 @@ func _create() -> void:
 	await _shot("ghost-editor")
 	p.find_child("GhostSave", true, false).pressed.emit()
 	var saved: bool = await _wait(func():
-		return str(_main._gui.gui.model.get_value("ghosts.status")) == _t.t("ghost.ok.1"), 4.0)
+		return str(_main._gui.model.get_value("ghosts.status")) == _t.t("ghost.ok.1"), 4.0)
 	await create_timer(0.6).timeout
 	var gid := -1
-	for g in _main._gui.gui.model.get_value("ghosts.list"):
+	for g in _main._gui.model.get_value("ghosts.list"):
 		if g.mine and str(g.name) == GHOST_NAME:
 			gid = int(g.id)
 	_record(0, "save", saved and gid > 0, "60010 → '%s', id %d" % [
-		_main._gui.gui.model.get_value("ghosts.status"), gid])
+		_main._gui.model.get_value("ghosts.status"), gid])
 	p = await _panel("ghost.tab_mine")
 	await _shot("ghost-mine")
 	var f := FileAccess.open(ID_FILE, FileAccess.WRITE)
@@ -181,16 +181,16 @@ func _challenge() -> void:
 	_main = current_scene
 	await create_timer(1.0).timeout
 	var lp = await _panel("ghost.tab_ladder")
-	await _wait(func(): return lp != null and _main._gui.gui.model.get_value("ghosts.ladder") != null, 3.0)
+	await _wait(func(): return lp != null and _main._gui.model.get_value("ghosts.ladder") != null, 3.0)
 	await create_timer(0.4).timeout
-	var l: Dictionary = _main._gui.gui.model.get_value("ghosts.ladder")
+	var l: Dictionary = _main._gui.model.get_value("ghosts.ladder")
 	var me_listed: bool = l.get("rows", []).any(func(r): return r.mine and str(r.name) == "test2")
 	_record(0, "ladder", int(l.get("fights", 0)) >= 1 and int(l.get("rank", 0)) >= 1 and me_listed,
 		"60017: Elo %s, rank %s, %s fights; test2 listed: %s" % [l.get("elo"), l.get("rank"),
 			l.get("fights"), me_listed])
 	await _shot("ghost-ladder")
 	var fp = await _panel("ghost.tab_fight")
-	var fillers: Array = _main._gui.gui.model.get_value("ghosts.list").filter(func(g): return str(g.owner) == "")
+	var fillers: Array = _main._gui.model.get_value("ghosts.list").filter(func(g): return str(g.owner) == "")
 	_record(0, "fillers", fillers.size() == 12 and fp.find_child("GhostAuto", true, false) != null,
 		"%d arena ghosts to fight, and 'Rival automático'" % fillers.size())
 	await _shot("ghost-fillers")

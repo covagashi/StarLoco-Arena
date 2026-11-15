@@ -49,8 +49,6 @@ const defaultClientDownloadURL = ""
 type Config struct {
 	// Addr is the TCP listen address for the game client (default 0.0.0.0:5555).
 	Addr string `yaml:"addr"`
-	// DataDir holds the client game data (data.bdat + indexes.bdat).
-	DataDir string `yaml:"data_dir"`
 	// LogLevel: debug | info | warn | error.
 	LogLevel string `yaml:"log_level"`
 	// WSAddr, when non-empty, also serves the game protocol over WebSocket on
@@ -283,7 +281,6 @@ type DBConfig struct {
 func Default() Config {
 	return Config{
 		Addr:     "0.0.0.0:5555",
-		DataDir:  "data",
 		LogLevel: "info",
 		Web: WebConfig{
 			Enabled:             true,
@@ -377,9 +374,6 @@ func Load(path string) (Config, error) {
 func (c *Config) applyEnv() {
 	if v := os.Getenv("ARENA_ADDR"); v != "" {
 		c.Addr = v
-	}
-	if v := os.Getenv("ARENA_DATA_DIR"); v != "" {
-		c.DataDir = v
 	}
 	if v := os.Getenv("ARENA_LOG_LEVEL"); v != "" {
 		c.LogLevel = v

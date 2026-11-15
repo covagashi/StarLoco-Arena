@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -11,10 +9,7 @@ import (
 // and throw the rest away, which silently made every other usable card inert —
 // this is the canary against that regression returning.
 func TestConsumableCardsReal(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,9 +65,9 @@ func TestConsumableCardsReal(t *testing.T) {
 		}
 	}
 
-	// Resurrection percentages must still be derived from the effect array after
-	// the refactor that started keeping the whole list.
-	for id, pct := range map[int32]int32{305: 100, 316: 100, 51: 12, 53: 10, 35: 5, 137: 1} {
+	// Resurrection percentages: every card the same since S40 (ResurrectPercentAll).
+	for id, pct := range map[int32]int32{305: ResurrectPercentAll, 316: ResurrectPercentAll,
+		51: ResurrectPercentAll, 53: ResurrectPercentAll, 35: ResurrectPercentAll, 137: ResurrectPercentAll} {
 		c := cards.Get(id)
 		if c == nil {
 			t.Errorf("card %d missing", id)

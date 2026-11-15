@@ -5,19 +5,8 @@ pure-Go static binary (CGO disabled), so images are tiny (~20 MB on alpine).
 
 ## Game data
 
-The image bundles the small server-data subset it needs (`server/data-dist/`,
-~2.5 MB — see `AGENTS.md`/`DISCLAIMER.md`), so fights work with **no volume
-required**.
-
-To use your own copy instead (e.g. your own client's `contents/bdata` +
-`contents/maps`, merged into one folder), mount it over the default:
-
-```powershell
-$env:ARENA_DATA_DIR = "E:\Projets\DofusArena2-06\client\compiled\game\contents"
-```
-
-and it takes priority — the container falls back to the bundled copy only when
-nothing is mounted at `/data`.
+The game data is the game's own and is embedded in the server binary
+(`server/content`), so there is nothing to mount for it.
 
 ## Stacks
 
@@ -57,7 +46,6 @@ YAML config (`configs/config.*.yaml`). Env vars override the file.
 | Var | Meaning |
 |---|---|
 | `ARENA_ADDR` | game listen address (e.g. `0.0.0.0:5555`) |
-| `ARENA_DATA_DIR` | game-data dir (mounted at `/data`) |
 | `ARENA_LOG_LEVEL` | debug / info / warn / error |
 | `ARENA_WEB_ENABLED` | serve the account-registration portal (`true`/`false`) |
 | `ARENA_WEB_ADDR` | portal listen address (image default `0.0.0.0:8080`) |

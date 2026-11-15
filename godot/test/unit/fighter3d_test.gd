@@ -1,38 +1,35 @@
 extends RefCounted
-## S35: every retail anim set of a fighter, a coach or a summon has its 3D
-## figure, so the .anm reader is never asked for one (AnmSprite swaps the
-## frames for the figure). Only tracked code: the GLBs under
-## art/characters/out/ are git-ignored, so their presence is checked only
-## when they are built.
+## S35: every fighter breed, coach and summon has its 3D figure, and the
+## figure keys the game asks for resolve to it. Only tracked code: the GLBs
+## under art/characters/out/ are git-ignored, so their presence is checked
+## only when they are built.
 
 const Fighter3D := preload("res://src/anims/fighter3d.gd")
-const FightView := preload("res://src/fight/fight_view.gd")
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 
 
 func run(t) -> void:
 	t.suite("fighter3d")
 	var built := DirAccess.dir_exists_absolute("res://art/characters/out")
-	for i in FightView.FIGHTER_FILES.size():
-		var set_dir := FightView.FIGHTER_SET % FightView.FIGHTER_FILES[i]
-		var fig := Fighter3D.figure_of(set_dir)
-		t.ok(not fig.is_empty(), "%s has a 3D figure" % set_dir)
-		if i < 24:
-			t.eq(fig.get("model"), Fighter3D.MODELS[i / 2 + 1][i % 2],
-				"%s is breed %d sex %d" % [set_dir, i / 2 + 1, i % 2])
-		else:
-			t.ok(fig.get("coach", false), "%s is a coach" % set_dir)
-		if built:
-			t.ok(not Fighter3D.for_set(set_dir).is_empty(), "%s is built" % set_dir)
+	for breed in range(1, 13):
+		for sex in [0, 1]:
+			var key := Fighter3D.fighter_key(breed, sex)
+			var fig := Fighter3D.figure_of(key)
+			t.eq(fig.get("model"), Fighter3D.MODELS[breed][sex], "breed %d sex %d has a 3D figure" % [breed, sex])
+			t.ok(not fig.get("coach", true), "breed %d sex %d is not a coach" % [breed, sex])
+			if built:
+				t.ok(not Fighter3D.for_set(key).is_empty(), "%s is built" % key)
+	t.eq(Fighter3D.fighter_key(13, 0), "", "no breed 13")
 	for sex in [0, 1]:
-		var fig := Fighter3D.figure_of("anims/coach_700%d" % sex)
+		var fig := Fighter3D.figure_of(Fighter3D.coach_key(sex))
 		t.eq(fig.get("model"), Fighter3D.COACHES[sex], "coach sex %d" % sex)
 		t.ok(fig.get("coach", false), "coach sex %d tints" % sex)
 	for look in Fighter3D.SUMMONS:
-		var fig := Fighter3D.figure_of("anims/npc_%d" % look)
+		var fig := Fighter3D.figure_of(Fighter3D.summon_key(look))
 		t.eq(fig.get("model"), Fighter3D.SUMMONS[look][0], "summon %d" % look)
 		t.ok(float(fig.get("scale", 1.0)) < 1.0, "summon %d is smaller than a fighter" % look)
-	t.ok(Fighter3D.figure_of("anims/portrait_nilo").is_empty(), "a portrait stays retail")
+	t.eq(Fighter3D.summon_key(1), "", "an unknown look has no figure")
+	t.ok(Fighter3D.figure_of("portrait_nilo").is_empty(), "a portrait is no figure")
 	_art_root(t)
 	_equipment(t)
 	# the retail channel tints come back as the creation screen's swatches
@@ -45,7 +42,7 @@ func run(t) -> void:
 
 
 ## S34: the figures are read under the art root (an exported game's art/
-## beside the executable), and --old-art / PIPPOP_OLD_ART=1 turns them off.
+## beside the executable).
 func _art_root(t) -> void:
 	var dir := OS.get_user_data_dir().path_join("fighter3d_test_art")
 	DirAccess.make_dir_recursive_absolute(dir.path_join("characters/out"))
@@ -56,11 +53,8 @@ func _art_root(t) -> void:
 	ArenaLayout.set_root(dir)
 	t.eq(Fighter3D.model_for(1, 1), glb, "a figure is read under the art root")
 	t.eq(Fighter3D.model_for(1, 0), "", "a figure missing there is not built")
-	t.eq(Fighter3D.for_set("anims/fighter_-111").get("path", ""), glb, "for_set follows the art root")
-	OS.set_environment("PIPPOP_OLD_ART", "1")
-	t.eq(Fighter3D.model_for(1, 1), "", "PIPPOP_OLD_ART=1 plays the retail sprites")
-	t.ok(Fighter3D.for_set("anims/fighter_-111").is_empty(), "and AnmSprite keeps the frames")
-	OS.unset_environment("PIPPOP_OLD_ART")
+	t.eq(Fighter3D.for_set("feca_f").get("path", ""), glb, "for_set follows the art root")
+	t.ok(Fighter3D.for_set("feca_m").is_empty(), "and a key not built there has no figure")
 	ArenaLayout.set_root("")
 	DirAccess.remove_absolute(glb)
 

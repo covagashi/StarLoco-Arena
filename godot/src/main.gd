@@ -34,7 +34,6 @@ const Cards := preload("res://src/gamedata/cards.gd")
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const TournamentDefs := preload("res://src/gamedata/tournament_defs.gd")
-const Topology := preload("res://src/maps/topology.gd")
 const Scenarios := preload("res://src/gamedata/scenarios.gd")
 const BugReport := preload("res://src/ui/bug_report.gd")
 
@@ -267,7 +266,7 @@ var _match := {}              # pending 23110 MatchFound row
 var _shop_id := -1            # catalogue id echoed back on buy/barter
 var _shop_cards := []         # [{id, qty}] of the open catalogue
 var _barter_wanted := -1      # card id picked for exchange
-var _gui: GuiLayer            # retail XULOR2 dialog layer
+var _gui: GuiLayer            # the native panels' router (GuiLayer)
 const NativeLobbyPanel := preload("res://src/ui/lobby_panel.gd")
 var _lobby_screen
 var _lobby_ready := false
@@ -290,7 +289,6 @@ func _ready() -> void:
 	Session.connected.connect(_on_connected)
 	Session.disconnected.connect(_on_disconnected)
 	Session.message.connect(_on_message)
-	# retail XULOR2 layer — logonDialog replaces the wire-test login row
 	_gui = GuiLayer.new()
 	for panel_name in preload("res://src/ui/lobby_panels.gd").TITLES:
 		_gui.native_factories[panel_name] = _make_native_lobby_panel
@@ -312,7 +310,7 @@ func _ready() -> void:
 		_prefs_applied = true
 		_apply_audio_prefs()
 		_apply_vsync_pref()
-		if _gui.gui.model.get_value("gamePreferences", "fullScreen") == true:
+		if _gui.model.get_value("gamePreferences", "fullScreen") == true:
 			_apply_fullscreen_pref()
 		else:
 			_on_apply_resolution([], null)   # no-op until one was picked
@@ -372,7 +370,6 @@ func _ready() -> void:
 		_gui.on(m, func(_a, _w): pass)
 	_gui.on("openCloseSphereBoard", _on_evo_sphere_board)
 	_gui.on("selectConsumableSet", _on_evo_select_set)
-	_gui.on("goBackToList", _on_evo_back_to_list)
 	_gui.on("selectCard", _on_evo_card_infos)
 	_gui.on("showCoachCardInfosEvolution", _on_evo_card_infos)
 	_gui.on("hideCoachCardInfosEvolution", func(_a, _w): pass)
@@ -394,7 +391,6 @@ func _ready() -> void:
 	_gui.on("validateSpellDrop", func(_a, _w): pass)
 	_gui.on("showEquipmentInfos", _on_eq_show_infos)
 	_gui.on("showSpellInfos", _on_eq_show_infos)
-	_gui.on("showHelp", _on_eq_show_help)
 	_gui.on("saveEditableFighter", _on_eq_save)
 	_gui.on("closeFighterEditionDialog",
 		func(_a, _w): _gui.close("fighterEquipmentDialog"))
@@ -447,8 +443,10 @@ func _ready() -> void:
 	_gui.on("reply", _on_mail_reply)
 	_gui.on("sendMail", _on_mail_send)
 	_gui.on("testName", _on_mail_test_name)
-	_gui.on("closeNewMailDialog",
-		func(_a, _w): _gui.close("newMailDialog"))
+	_gui.on("closeNewMailDialog", func(_a, _w):
+		_mail_mode = "list"
+		_mail_status = {}
+		_push_mail_model())
 	_gui.on("validateNewMailForm", func(_a, _w): pass)
 	_gui.on("toggleInventory", func(_a, _w): pass)
 	_gui.on("addItemToMail", func(_a, _w): pass)   # dndc staging — later
@@ -470,8 +468,6 @@ func _ready() -> void:
 		func(_a, _w): _ladder_gui_mine())
 	# dofusarena.coachManagement:* — zaap tome navigation + teleport
 	_gui.on("goToSet", _on_zaap_go_to_set)
-	_gui.on("goToSetList", _on_cardbook_tab)
-	_gui.on("changeInstance", _on_zaap_change_instance)
 	_gui.on("equipSet", func(_a, _w): pass)
 	# dofusarena.coachManagement:* — card book / coach inventory
 	_gui.on("showCoachCardInfos", _on_card_hover)
@@ -480,7 +476,6 @@ func _ready() -> void:
 	_gui.on("hideCoachCardInfos", _on_card_unhover)
 	_gui.on("hideCoachEquipmentInfos", _on_card_unhover)
 	_gui.on("showCoachEquipmentInfos", _on_card_hover)
-	_gui.on("goToFightList", _on_cardbook_tab)
 	_gui.on("selectEquipmentTypeFilter", _on_equip_type_filter)
 	_gui.on("selectAllEquipmentTypeFilter", _on_equip_filter_all)
 	_gui.on("useSpecialCard", _on_use_special_card)
@@ -501,15 +496,10 @@ func _ready() -> void:
 	# dofusarena.firework:* — launcher slots + per-slot delays
 	_gui.on("dropFirework", _on_fw_drop)
 	_gui.on("removeFirework", _on_fw_remove)
-	_gui.on("setDelay", _on_fw_delay)
 	_gui.on("validateFireworkDrop", func(_a, _w): pass)
 	_gui.on("launchFirework", _on_fw_launch)
 	_gui.on("closeFireworkDialog",
 		func(_a, _w): _gui.close("fireworkDialog"))
-	# dofusarena:zoom* — miniMap navigator controls
-	_gui.on("zoomIn", func(a, w): _on_map_zoom(a, w, 0.25))
-	_gui.on("zoomOut", func(a, w): _on_map_zoom(a, w, -0.25))
-	_gui.on("setMapZoom", _on_map_zoom_slider)
 	_gui.on("closeCardMasterDialog",
 		func(_a, _w): _gui.close("cardMasterDialog"))
 	# dofusarena.exchange:* — player trade pane (5105-5116)
@@ -526,8 +516,6 @@ func _ready() -> void:
 	_gui.on("backToBreedList", func(_a, _w): pass)
 	_gui.on("showEffectDetails", func(_a, _w): pass)
 	_gui.on("hideEffectDetails", func(_a, _w): pass)
-	_gui.on("selectNextSet", func(a, _w): _step_set(a, 1))
-	_gui.on("selectPreviousSet", func(a, _w): _step_set(a, -1))
 	# dofusarena.calendar:* — month paging + day events + registration
 	_gui.on("showNextMonth", _on_calendar_month.bind(1))
 	_gui.on("showPreviousMonth", _on_calendar_month.bind(-1))
@@ -585,10 +573,10 @@ func _on_connected() -> void:
 		_pending_login = ""
 
 
-func _on_retail_logon(args: Array, _widget: GWidget) -> void:
+func _on_retail_logon(args: Array, _widget: GuiLayer.Ctx) -> void:
 	# dofusarena:logon(loginForm) — green button / Enter in a field
-	var login := str(_gui.gui.model.get_value("account.name"))
-	var password := str(_gui.gui.model.get_value("account.password"))
+	var login := str(_gui.model.get_value("account.name"))
+	var password := str(_gui.model.get_value("account.password"))
 	if login.strip_edges() == "":
 		return
 	_login_name = login
@@ -598,7 +586,7 @@ func _on_retail_logon(args: Array, _widget: GWidget) -> void:
 	else:
 		_pending_login = login
 		_pending_pass = password
-		var proxy := str(_gui.gui.model.get_value("proxy", "selected"))
+		var proxy := str(_gui.model.get_value("proxy", "selected"))
 		if proxy == "":
 			proxy = "140.238.172.196:3000"
 		var hp := proxy.split(":")
@@ -624,7 +612,7 @@ func _show_login_screen() -> void:
 	_login_screen = preload("res://src/ui/login_screen.gd").new()
 	$UI.add_child(_login_screen)   # CanvasLayer — camera must not shift it
 	_login_screen.submit.connect(_on_login_submit)
-	var pm: Dictionary = _gui.gui.model.values.get("proxy", {})
+	var pm: Dictionary = _gui.model.values.get("proxy", {})
 	var hosts: Array = []
 	for it in pm.get("list", []):
 		hosts.append(str(it.get("text", it)) if it is Dictionary else str(it))
@@ -632,16 +620,16 @@ func _show_login_screen() -> void:
 		hosts = ["140.238.172.196:3000", "127.0.0.1:5555"]
 	_login_screen.set_proxies(hosts, str(pm.get("selected", hosts[0])))
 	_login_screen.name_edit.text = str(
-		_gui.gui.model.values.get("account.name", ""))
-	if _gui.gui.model.values.get("account.remember", false):
+		_gui.model.values.get("account.name", ""))
+	if _gui.model.values.get("account.remember", false):
 		_login_screen.pass_edit.text = str(
-			_gui.gui.model.values.get("account.password", ""))
+			_gui.model.values.get("account.password", ""))
 
 
 func _on_login_submit(login: String, password: String, proxy: String) -> void:
-	_gui.gui.model.values["account.name"] = login
-	_gui.gui.model.values["account.password"] = password
-	var pm: Dictionary = _gui.gui.model.values.get("proxy", {})
+	_gui.model.values["account.name"] = login
+	_gui.model.values["account.password"] = password
+	var pm: Dictionary = _gui.model.values.get("proxy", {})
 	pm["selected"] = proxy
 	_login_name = login
 	_login_pass = password
@@ -733,7 +721,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			# Ask for the server's public web address (60000 → 60001): the
 			# bug reporter POSTs to it, and a TCP link carries no http URL.
 			State.net.send_message(OP_CLIENT_CONFIG_REQ, PackedByteArray(), 3)
-			_gui.close("logonDialog")
 			if _login_screen != null:
 				_login_screen.queue_free()
 				_login_screen = null
@@ -814,7 +801,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				list.append({"id": payload.get_i64(), "name": payload.get_str("u8", "utf8"),
 					"owner": payload.get_str("u8", "utf8"), "fighters": payload.get_u8(),
 					"elo": payload.get_i32(), "mine": payload.get_u8() == 1})
-			_gui.gui.model.set_value("ghosts", list, "list")
+			_gui.model.set_value("ghosts", list, "list")
 		OP_FIGHTER_EQUIP:
 			var wfid := int(payload.get_i64())
 			var wear: Array = []
@@ -841,7 +828,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				if payload.remaining() >= 4:
 					owned.append(payload.get_i32())
 			State.cosmetics = {"hair_fx": fx, "owned": owned}
-			_gui.gui.model.set_value("localCoach", fx, "hairFx")
+			_gui.model.set_value("localCoach", fx, "hairFx")
 			_push_equip_model()
 		OP_CARD_PICKS:
 			# S40: every few wins, one coach card of three to keep
@@ -853,13 +840,13 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					var cid := payload.get_i32()
 					offer.append({"id": cid, "name": Cards.name_of(cid)})
 			State.card_picks = {"wins": wins, "every": every, "offer": offer}
-			_gui.gui.model.set_value("cardPicks", State.card_picks)
+			_gui.model.set_value("cardPicks", State.card_picks)
 		OP_LEAGUE:
 			# S40: the team budget each ladder's league allows
 			if payload.remaining() >= 10:
 				State.league = {"tier": payload.get_u8(), "budget": payload.get_i32(),
 					"ghost_tier": payload.get_u8(), "ghost_budget": payload.get_i32()}
-				_gui.gui.model.set_value("league", State.league)
+				_gui.model.set_value("league", State.league)
 		OP_SEASON:
 			var season := {"number": payload.get_u16(), "ends": payload.get_i64(), "results": []}
 			for i in payload.get_u8():
@@ -880,12 +867,12 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				l.rows.append({"name": payload.get_str("u8", "utf8"), "elo": payload.get_i32(),
 					"fights": payload.get_i32(), "wins": payload.get_i32(),
 					"mine": payload.get_u8() == 1})
-			_gui.gui.model.set_value("ghosts", l, "ladder")
+			_gui.model.set_value("ghosts", l, "ladder")
 		OP_GHOST_RESULT:
 			var action := payload.get_u8()
 			var code := payload.get_u8()
 			var key := "ghost.ok.%d" % action if code == 0 else "ghost.err.%d" % code
-			_gui.gui.model.set_value("ghosts", I18n.t(key), "status")
+			_gui.model.set_value("ghosts", I18n.t(key), "status")
 			if code != 0 and action == 2:
 				_log_line("[color=red]%s[/color]" % I18n.t(key))
 			if code == 0 and action != 2:
@@ -1171,7 +1158,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			for c in d.get("currencies", []):
 				State.wallet[int(c.type)] = int(c.amount)
-			_gui.gui.model.set_value("wallet", State.wallet.duplicate())   # S45: the lobby's coins
+			_gui.model.set_value("wallet", State.wallet.duplicate())   # S45: the lobby's coins
 			if _gui.is_open("cardMasterDialog"):
 				_push_cardmaster_model()
 		OP_INVENTORY:
@@ -1232,7 +1219,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			else:
 				for c in d.get("currencies", []):
 					State.wallet[int(c.type)] = int(c.amount)
-				_gui.gui.model.set_value("wallet", State.wallet.duplicate())
+				_gui.model.set_value("wallet", State.wallet.duplicate())
 				var msg := I18n.t(["shop.done", "shop.tokens"][res] if res <= 1
 					else "shop.refused", {"code": res})
 				_log_line("[color=%s]%s[/color]" % ["green" if res == 0 else "red", msg])
@@ -1568,7 +1555,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			var cid := int(d.get("coach_id", 0))
 			# -1 = checked and unknown; 0 stays "not checked yet"
-			_gui.gui.model.set_value("mailbox.newMail.receiverId",
+			_gui.model.set_value("mailbox.newMail.receiverId",
 				cid if cid > 0 else -1)
 			if cid <= 0 and not _gui.is_open("mailboxDialog"):
 				_toast(I18n.t("chat.user_not_found_toast"))
@@ -1615,7 +1602,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					_mail_status = {"ok": true, "text": I18n.t("mail.collected",
 						{"list": ", ".join(d.cards.map(
 							func(c): return Cards.name_of(int(c))))})}
-				var open: Variant = _gui.gui.model.get_value("mailbox.mail")
+				var open: Variant = _gui.model.get_value("mailbox.mail")
 				if open is Dictionary and int(open.get("mailId", 0)) == int(d.mail_id):
 					open["cards"] = []
 					open["hasItems"] = false
@@ -1785,9 +1772,7 @@ func _read_coach_spawns(payload: WireReader) -> void:
 			"sex": int(body.get_u8())}
 		body.get_u16() # look flags (equipment variant bits — unused)
 		body.get_i32() # standing
-		body.get_u8()  # sit — opcode 4601 would toggle it; AnimAssis lives
-		               # in coach_700x but the sit pose needs the retail
-		               # bench-anchor — read, kept
+		body.get_u8()  # sit — opcode 4601 would toggle it; no sit pose — read, kept
 		body.get_u16() # guild blob len
 		body.get_u16() # descriptor blob len
 		body.get_u8()  # strength pairs
@@ -2101,7 +2086,7 @@ func _open_team_pick() -> void:
 		if int(p.type) == -4:
 			continue  # synthetic bench row
 		presets.append({"id": int(p.id), "name": str(p.name), "n": p.fighters.size()})
-	_gui.gui.model.set_value("teamPick", {"presets": presets,
+	_gui.model.set_value("teamPick", {"presets": presets,
 		"evo": _challenge_evo != 0})
 	_gui.open("teamPickDialog")
 
@@ -2155,14 +2140,14 @@ var _equip_slots: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # worn (5
 ## S35c: the hub's coach figure wears what 5200 says it wears
 ## (localCoach.worn = [{slot, id}], lobby_screen → Fighter3D.wear_coach_cards).
 func _push_coach_worn() -> void:
-	var lc = _gui.gui.model.get_value("localCoach")
+	var lc = _gui.model.get_value("localCoach")
 	if not (lc is Dictionary):
 		return
 	var worn := []
 	for i in _equip_slots.size():
 		if int(_equip_slots[i]) > 0:
 			worn.append({"slot": i, "id": int(_equip_slots[i])})
-	_gui.gui.model.set_value("localCoach", worn, "worn")
+	_gui.model.set_value("localCoach", worn, "worn")
 var _equip_draft: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # being edited
 
 
@@ -2210,7 +2195,7 @@ func _push_equip_model() -> void:
 	for id in State.cosmetics.get("owned", []):
 		if Fighter3D.HAIR_FX.has(int(id)):
 			hair.append({"id": int(id), "name": I18n.t("hairfx.%d" % int(id))})
-	_gui.gui.model.set_value("coachEquip", {"slots": slots, "owned": owned,
+	_gui.model.set_value("coachEquip", {"slots": slots, "owned": owned,
 		"dirty": _equip_draft != _equip_slots,
 		"hairFx": int(State.cosmetics.get("hair_fx", 0)), "hairOwned": hair})
 
@@ -2225,24 +2210,24 @@ func _on_equip_wear() -> void:
 		(14 - _equip_draft.count(0)))
 
 
-## 2048 COACH_CREATE_REQ → retail coachCreationDialog (sex/skin/hair/name +
-## live paper-doll preview). localCoach is the model the XML binds to.
+## 2048 COACH_CREATE_REQ → the native creation screen (sex/skin/hair/name +
+## live 3D preview). localCoach is the model it reads.
 func _open_coach_creation() -> void:
 	if _login_screen != null:
 		_login_screen.queue_free()
 		_login_screen = null
-	_gui.gui.model.set_value("localCoach", {
+	_gui.model.set_value("localCoach", {
 		"sex": 0, "skin": 1, "hair": 1,
 		"name": _login_name.strip_edges().left(20),
 		"actorDescriptorLibrary": "coach_7000",
 		"actorAnimation": "AnimStatique",
 		"actorDirection": 3,
 		"actorMaterial": Palettes.coach_tints(1, 1)})
-	if not _gui.gui.model.changed.is_connected(_on_localcoach_changed):
-		_gui.gui.model.changed.connect(_on_localcoach_changed)
+	if not _gui.model.changed.is_connected(_on_localcoach_changed):
+		_gui.model.changed.connect(_on_localcoach_changed)
 	_create_screen = preload("res://src/ui/creation_screen.gd").new()
 	$UI.add_child(_create_screen)
-	_create_screen.bind_model(_gui.gui.model)
+	_create_screen.bind_model(_gui.model)
 	_create_screen.dir_pressed.connect(
 		func(d): _on_coach_dir([], null, d))
 	_create_screen.random_pressed.connect(
@@ -2256,25 +2241,25 @@ func _open_coach_creation() -> void:
 func _on_localcoach_changed(n: String, field: String, _v) -> void:
 	if n != "localCoach" or not field in ["sex", "hair", "skin"]:
 		return
-	var lc = _gui.gui.model.get_value("localCoach")
+	var lc = _gui.model.get_value("localCoach")
 	if not (lc is Dictionary):
 		return
 	lc["actorDescriptorLibrary"] = "coach_700%d" % int(lc.get("sex", 0))
 	lc["actorMaterial"] = Palettes.coach_tints(
 		int(lc.get("skin", 0)), int(lc.get("hair", 0)))
-	_gui.gui.model.set_value("localCoach", lc)
+	_gui.model.set_value("localCoach", lc)
 
 
 func _on_coach_dir(_args: Array, _w, d: int) -> void:
-	var lc = _gui.gui.model.get_value("localCoach")
+	var lc = _gui.model.get_value("localCoach")
 	if not (lc is Dictionary):
 		return
-	_gui.gui.model.set_value("localCoach",
+	_gui.model.set_value("localCoach",
 		(int(lc.get("actorDirection", 3)) + d) & 7, "actorDirection")
 
 
 func _on_coach_random(_args: Array, _w) -> void:
-	var m = _gui.gui.model
+	var m = _gui.model
 	if not (m.get_value("localCoach") is Dictionary):
 		return
 	m.set_value("localCoach", randi() % 2, "sex")
@@ -2283,7 +2268,7 @@ func _on_coach_random(_args: Array, _w) -> void:
 
 
 func _on_coach_create(_args: Array, _w) -> void:
-	var lc = _gui.gui.model.get_value("localCoach")
+	var lc = _gui.model.get_value("localCoach")
 	if not (lc is Dictionary):
 		return
 	var name := str(lc.get("name", "")).strip_edges()
@@ -2300,14 +2285,12 @@ func _on_coach_create(_args: Array, _w) -> void:
 	if _create_screen != null:
 		_create_screen.queue_free()
 		_create_screen = null
-	_gui.close("coachCreationDialog")
 	DebugLog.add("coach creation sent — '%s'" % name)
 
 
 ## --- fighter creation (teamManagement.editableFighter) --------------------
-## The retail fighterCreationDialog binds a preview paper-doll to the model;
+## The fighter creation panel shows a preview figure from the model;
 ## setFighter* events just rewrite fields. On validate → 6001.
-const _FV := preload("res://src/fight/fight_view.gd")
 
 
 ## Whether the create-fighter dialog was opened from the evolution tab —
@@ -2318,7 +2301,7 @@ var _create_fighter_evo := false
 
 func _on_new_fighter_dialog(_args: Array, _w, evo := false, breed := 1) -> void:
 	_create_fighter_evo = evo
-	_gui.gui.model.set_value("teamManagement", {
+	_gui.model.set_value("teamManagement", {
 		"breedId": breed, "sex": 0, "version": 2 if evo else 1,
 		# no colour picker (S07): the breed's own colours
 		"skin": Palettes.NO_TINT, "hair": Palettes.NO_TINT, "eye": Palettes.NO_TINT,
@@ -2330,22 +2313,21 @@ func _on_new_fighter_dialog(_args: Array, _w, evo := false, breed := 1) -> void:
 
 
 func _refresh_editable_fighter() -> void:
-	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	var f = _gui.model.get_value("teamManagement", "editableFighter")
 	if not (f is Dictionary):
 		return
 	var breed := clampi(int(f.get("breedId", 1)), 1, 12)
 	var sex := clampi(int(f.get("sex", 0)), 0, 1)
-	f["actorDescriptorLibrary"] = "fighter_%s" % \
-		_FV.FIGHTER_FILES[(breed - 1) * 2 + sex]
+	f["actorDescriptorLibrary"] = Fighter3D.fighter_key(breed, sex)
 	f["actorMaterial"] = Palettes.fighter_tints(
 		int(f.get("skin", 0)), int(f.get("hair", 0)), int(f.get("eye", 0)))
-	_gui.gui.model.set_value("teamManagement", f, "editableFighter")
+	_gui.model.set_value("teamManagement", f, "editableFighter")
 
 
 ## setFighterBreedId(fighter,N) / setFighterSkinColorIndex(N,fighter) —
 ## the arg order differs per event; take the numeric arg either way.
 func _on_fighter_set(args: Array, _w, field: String) -> void:
-	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	var f = _gui.model.get_value("teamManagement", "editableFighter")
 	if not (f is Dictionary):
 		return
 	var v := -1
@@ -2363,11 +2345,11 @@ func _on_fighter_set(args: Array, _w, field: String) -> void:
 		f["actorMaterial"] = Palettes.fighter_tints(
 			int(f.get("skin", 0)), int(f.get("hair", 0)),
 			int(f.get("eye", 0)))
-		_gui.gui.model.set_value("teamManagement", f, "editableFighter")
+		_gui.model.set_value("teamManagement", f, "editableFighter")
 
 
 func _on_fighter_version(args: Array, _w) -> void:
-	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	var f = _gui.model.get_value("teamManagement", "editableFighter")
 	if not (f is Dictionary):
 		return
 	for a in args:
@@ -2376,11 +2358,11 @@ func _on_fighter_version(args: Array, _w) -> void:
 	# the version radio also picks which roster the recruit lands in:
 	# 2 = evolution (Wakfu-era), 1 = classic (Dofus-era)
 	_create_fighter_evo = int(f.get("version", 1)) == 2
-	_gui.gui.model.set_value("teamManagement", f, "editableFighter")
+	_gui.model.set_value("teamManagement", f, "editableFighter")
 
 
 func _on_gui_create_fighter(_args: Array, _w) -> void:
-	var f = _gui.gui.model.get_value("teamManagement", "editableFighter")
+	var f = _gui.model.get_value("teamManagement", "editableFighter")
 	if not (f is Dictionary):
 		return
 	var fname := str(f.get("name", "")).strip_edges()
@@ -2417,7 +2399,7 @@ func _on_gui_delete_fighter(args: Array, _w) -> void:
 	Session.send(OP_FIGHTER_DELETE, w.raw(), 2)
 
 
-## Roster → the XULOR2 model the evolution tab's fighter cards bind.
+## Roster → the model the team panel's fighter cards read.
 ## state 1/5 → bench lists; the editableTeamPreset.fighters bean is
 ## per-tab (evolution titulars vs the classic recruit pool) like retail.
 func _push_team_model() -> void:
@@ -2426,16 +2408,16 @@ func _push_team_model() -> void:
 		var item := _evo_fighter_item(fr)
 		if int(fr.get("state", 0)) == 1:
 			bench.append(item)
-	_gui.gui.model.set_value("teamManagement",
+	_gui.model.set_value("teamManagement",
 		{"fighters": _tm_classic_pool() if _tm_tab() in [1, 2, 3]
 			else _tm_evo_playing()}, "editableTeamPreset")
-	_gui.gui.model.set_value("evolutionTeam",
+	_gui.model.set_value("evolutionTeam",
 		{"fightersOnBench": bench, "fallen": _fallen_fighters(),
 		"reviveCards": _revive_cards(), "reviveStatus": _revive_status,
 		"benchFull": bench.size() >= BENCH_CAPACITY})
-	_gui.gui.model.set_value("tomeManager",
+	_gui.model.set_value("tomeManager",
 		_all_card_sets(), "evolutionSets")
-	_gui.gui.model.set_value("onlyTabEnabledId", -1)
+	_gui.model.set_value("onlyTabEnabledId", -1)
 	_push_team_classic_model()
 
 
@@ -2526,7 +2508,7 @@ func _settle_revive() -> void:
 ## gamePreferences.lastSelectedGameModeId (0 evolution, 1 elite, 2 2v2,
 ## 3 tournament, 4 legends).
 func _tm_tab() -> int:
-	var v: Variant = _gui.gui.model.get_value("gamePreferences",
+	var v: Variant = _gui.model.get_value("gamePreferences",
 		"lastSelectedGameModeId")
 	return int(v) if v is int or v is float else 0
 
@@ -2569,29 +2551,23 @@ func _tm_evo_playing() -> Array:
 ## changeTeamTab(teamManagementTabbedContainer) — repush the shared
 ## editableTeamPreset fields for the newly shown tab and persist the
 ## index like retail's lastSelectedGameModeId.
-func _on_tm_change_tab(args: Array, w: GWidget) -> void:
-	var idx := -1
-	var src: GWidget = w
-	for a in args:
-		if a is GWidget:
-			src = a
-	if src != null:
-		idx = src.selected_index
+func _on_tm_change_tab(_args: Array, w: GuiLayer.Ctx) -> void:
+	var idx := w.selected_index if w != null else -1
 	if idx < 0:
 		return
-	_gui.gui.model.set_value("gamePreferences",
+	_gui.model.set_value("gamePreferences",
 		idx, "lastSelectedGameModeId")
-	var ev: Variant = _gui.gui.model.get_value("teamManagement",
+	var ev: Variant = _gui.model.get_value("teamManagement",
 		"editableTeamPreset")
 	var ef: Dictionary = ev if ev is Dictionary else {}
 	ef["fighters"] = _tm_classic_pool() if idx in [1, 2, 3] \
 		else _tm_evo_playing()
-	_gui.gui.model.set_value("teamManagement", ef, "editableTeamPreset")
+	_gui.model.set_value("teamManagement", ef, "editableTeamPreset")
 
 
 ## addRemoveFighterFromEditableTeamPreset(fighter) — the recruit pool's
 ## add/remove button; same 6013 wire as the drag-drop path.
-func _on_tm_add_remove_fighter(_a: Array, w: GWidget) -> void:
+func _on_tm_add_remove_fighter(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary):
 		return
@@ -2615,7 +2591,7 @@ var _tm_preset_sel := -1
 
 
 func _push_team_classic_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var legends: Array = []
 	var legends_bench: Array = []
 	for fr in State.roster:
@@ -2691,7 +2667,7 @@ func _preset_strength(list: Array) -> int:
 
 
 ## teamNameDialog's icon/background pickers — the retail list is a fixed
-## icon sheet; expose the 12 slots the XML enumerates.
+## icon sheet; expose its 12 slots.
 func _team_icons() -> Array:
 	var out: Array = []
 	for i in 12:
@@ -2700,7 +2676,7 @@ func _team_icons() -> Array:
 
 
 ## selectTeamPreset — the clicked row becomes editableTeamPreset.
-func _on_tm_select_preset(_a: Array, w: GWidget) -> void:
+func _on_tm_select_preset(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary):
 		return
@@ -2711,8 +2687,8 @@ func _on_tm_select_preset(_a: Array, w: GWidget) -> void:
 ## onFighterDropped/onFighterDroppedXvsX — a roster fighter dropped onto a
 ## preset slot → 6013 [i64 fid][i16 src][i16 dst][i64 coach]. Dropping a
 ## preset member back onto the roster pool sends dst = -1.
-func _on_tm_fighter_dropped(_a: Array, w: GWidget) -> void:
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+func _on_tm_fighter_dropped(_a: Array, w: GuiLayer.Ctx) -> void:
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	var payload: Variant = dnd.get("item")
 	if not (payload is Dictionary):
 		return
@@ -2743,7 +2719,7 @@ func _on_tm_fighter_dropped(_a: Array, w: GWidget) -> void:
 
 
 ## deleteEditableTeamPreset(team) → 6023 [i64 team][i16 gm][i16 fa].
-func _on_tm_delete_preset(args: Array, w: GWidget) -> void:
+func _on_tm_delete_preset(args: Array, w: GuiLayer.Ctx) -> void:
 	var team_id := _tm_preset_sel
 	var row: Variant = args[0] if args.size() > 0 \
 		and args[0] is Dictionary else _row_item(w)
@@ -2763,7 +2739,7 @@ func _on_tm_delete_preset(args: Array, w: GWidget) -> void:
 ## saveTeam — persist editableTeamPreset's members back under its own id
 ## (6021 sw_1 blob; same layout the debug saver writes). saveTeam(team)
 ## carries the preset row in the elite/tournament tabs.
-func _on_tm_save_team(args: Array, w: GWidget) -> void:
+func _on_tm_save_team(args: Array, w: GuiLayer.Ctx) -> void:
 	var team_id := _tm_preset_sel
 	var row: Variant = args[0] if args.size() > 0 \
 		and args[0] is Dictionary else _row_item(w)
@@ -2798,8 +2774,8 @@ func _on_tm_save_team(args: Array, w: GWidget) -> void:
 ## raw sw_1 blob). Retail types: -6 elite (teamNameDialog), -5 tournament
 ## (newTeamTournamentDialog); both carry the 4 appearance bytes picked via
 ## selectedTeamIcon/selectedTeamBackground (hu_2.java:16632/16660).
-func _on_tm_add_team(_args: Array, _w: GWidget, preset_type: int) -> void:
-	var model := _gui.gui.model
+func _on_tm_add_team(_args: Array, _w: GuiLayer.Ctx, preset_type: int) -> void:
+	var model := _gui.model
 	var tname := str(model.get_value("teamManagement", "teamName"))
 	if tname.strip_edges() == "":
 		return
@@ -2840,8 +2816,8 @@ func _asv(v: Variant) -> Array:
 ## saving a solo preset: 6024 [str8 name][i64 inviter][i64 invited]
 ## (hu_2.java:16636 → ir_0). The invited coach comes from
 ## teamManagement.teammateName (friend-list picker).
-func _on_tm_add_team_xvsx(_args: Array, _w: GWidget) -> void:
-	var model := _gui.gui.model
+func _on_tm_add_team_xvsx(_args: Array, _w: GuiLayer.Ctx) -> void:
+	var model := _gui.model
 	var tname := str(model.get_value("teamManagement", "teamName"))
 	if tname.strip_edges() == "":
 		return
@@ -2870,7 +2846,7 @@ func _on_tm_add_team_xvsx(_args: Array, _w: GWidget) -> void:
 
 ## selectTeam{Icon,Background} set the asV index; the *ColorIndex events set
 ## its color — `field` is the model key, `part` the asV component.
-func _on_tm_pick_color(args: Array, w: GWidget, field: String,
+func _on_tm_pick_color(args: Array, w: GuiLayer.Ctx, field: String,
 		part: String) -> void:
 	var idx := 0
 	if part == "id":
@@ -2882,25 +2858,25 @@ func _on_tm_pick_color(args: Array, w: GWidget, field: String,
 			idx = int(a)
 		elif a is Dictionary:
 			idx = int(a.get("id", idx))
-	var cur: Variant = _gui.gui.model.get_value(field)
+	var cur: Variant = _gui.model.get_value(field)
 	var d: Dictionary = cur if cur is Dictionary else {}
 	d[part] = idx
-	_gui.gui.model.set_value(field, d)
+	_gui.model.set_value(field, d)
 
 
 ## showHidePrebuildTeams — the preferences checkbox → model flag.
-func _on_tm_prebuild_toggle(_a: Array, _w: GWidget) -> void:
-	var gpv: Variant = _gui.gui.model.get_value("gamePreferences")
+func _on_tm_prebuild_toggle(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var gpv: Variant = _gui.model.get_value("gamePreferences")
 	var gp: Dictionary = gpv if gpv is Dictionary else {}
 	gp["showPrebuildTeam"] = not bool(gp.get("showPrebuildTeam", true))
-	_gui.gui.model.set_value("gamePreferences", gp)
+	_gui.model.set_value("gamePreferences", gp)
 
 
 ## selectEditableFighter — preset-member row → editableFighter preview.
-func _on_tm_select_editable_fighter(_a: Array, w: GWidget) -> void:
+func _on_tm_select_editable_fighter(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if row is Dictionary:
-		_gui.gui.model.set_value("teamManagement",
+		_gui.model.set_value("teamManagement",
 			row, "editableFighter")
 
 
@@ -2931,16 +2907,14 @@ func _evo_fighter_item(fr: Dictionary) -> Dictionary:
 		"iconUrl": str(breed * 10),
 		"illustrationUrl": str(breed * 10),
 		"typeIconUrl": "",
-		"actorDescriptorLibrary": "fighter_%s" % \
-			_FV.FIGHTER_FILES[(breed - 1) * 2 + sex],
+		"actorDescriptorLibrary": Fighter3D.fighter_key(breed, sex),
 		"actorAnimation": "AnimStatique",
 		"actorDirection": 3,
 		"actorMaterial": Palettes.fighter_tints(
 			int(fr.get("skin", 0)), int(fr.get("hair", 0)),
 			int(fr.get("eye", 0)))}
 	item.merge(fr, true)
-	item["actorDescriptorLibrary"] = "fighter_%s" % \
-		_FV.FIGHTER_FILES[(breed - 1) * 2 + sex]
+	item["actorDescriptorLibrary"] = Fighter3D.fighter_key(breed, sex)
 	item["actorMaterial"] = Palettes.fighter_tints(
 		int(fr.get("skin", 0)), int(fr.get("hair", 0)),
 		int(fr.get("eye", 0)))
@@ -2949,20 +2923,20 @@ func _evo_fighter_item(fr: Dictionary) -> Dictionary:
 
 
 ## evolution:selectFighter — row becomes the details panel's fighter.
-func _on_evo_select_fighter(args: Array, w: GWidget) -> void:
+func _on_evo_select_fighter(args: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = args[0] if args.size() > 0 \
 		and args[0] is Dictionary else _row_item(w)
 	if not (row is Dictionary):
 		return
-	_gui.gui.model.set_value("evolutionTeam",
+	_gui.model.set_value("evolutionTeam",
 		row, "selectedFighter")
 
 
 ## evolution:changeFighterStatus — the per-row swap button AND the dndc drop
 ## between the team/bench lists both land here → 23000 state toggle.
-func _on_evo_fighter_status(_args: Array, w: GWidget) -> void:
+func _on_evo_fighter_status(_args: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	if not (row is Dictionary):
 		row = dnd.get("item")
 	if not (row is Dictionary):
@@ -2984,7 +2958,7 @@ func _on_evo_fighter_status(_args: Array, w: GWidget) -> void:
 
 ## evolution:becomeALegend — promote the clicked evolution fighter into the
 ## Legends team → 23000 flag 1 (retail event 23068).
-func _on_evo_become_legend(args: Array, w: GWidget) -> void:
+func _on_evo_become_legend(args: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = args[0] if args.size() > 0 \
 		and args[0] is Dictionary else _row_item(w)
 	if not (row is Dictionary):
@@ -2999,7 +2973,7 @@ func _on_evo_become_legend(args: Array, w: GWidget) -> void:
 
 
 ## evolution:openCloseSphereBoard(fighter) — the Kanodo grid (native panel).
-func _on_evo_sphere_board(args: Array, w: GWidget) -> void:
+func _on_evo_sphere_board(args: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = args[0] if args.size() > 0 \
 		and args[0] is Dictionary else _row_item(w)
 	if not (row is Dictionary):
@@ -3009,7 +2983,7 @@ func _on_evo_sphere_board(args: Array, w: GWidget) -> void:
 
 ## evolution:selectConsumableSet(setList,setDescription) — pick a tome set →
 ## coachManagement.currentSet {name, description, collectionForEvolution}.
-func _on_evo_select_set(args: Array, w: GWidget) -> void:
+func _on_evo_select_set(_args: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if row is Dictionary:
 		var coll: Array = []
@@ -3017,28 +2991,18 @@ func _on_evo_select_set(args: Array, w: GWidget) -> void:
 			if c is Dictionary \
 					and int(State.inventory.get(int(c.get("id", 0)), 0)) > 0:
 				coll.append(c)
-		_gui.gui.model.set_value("coachManagement",
+		_gui.model.set_value("coachManagement",
 			{"name": str(row.get("name", "")),
 				"description": str(row.get("description", "")),
 				"collectionForEvolution": coll}, "currentSet")
-	if args.size() >= 2:
-		if args[0] is GWidget: args[0].visible = false
-		if args[1] is GWidget: args[1].visible = true
-
-
-## evolution:goBackToList(setList,setDescription) — back to the summary.
-func _on_evo_back_to_list(args: Array, _w: GWidget) -> void:
-	if args.size() >= 2:
-		if args[0] is GWidget: args[0].visible = true
-		if args[1] is GWidget: args[1].visible = false
 
 
 ## evolution:selectCard / showCoachCardInfosEvolution — hover/click a set
 ## card → coachManagement.selectedCard preview.
-func _on_evo_card_infos(_args: Array, w: GWidget) -> void:
+func _on_evo_card_infos(_args: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if row is Dictionary:
-		_gui.gui.model.set_value("coachManagement",
+		_gui.model.set_value("coachManagement",
 			row, "selectedCard")
 
 
@@ -3059,7 +3023,7 @@ var _eq_page := 0
 
 
 ## evolution:editFighter(fighter) → open the equipment editor on that row.
-func _on_eq_edit_fighter(args: Array, w: GWidget) -> void:
+func _on_eq_edit_fighter(args: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = args[0] if args.size() > 0 \
 		and args[0] is Dictionary else _row_item(w)
 	if not (row is Dictionary):
@@ -3118,7 +3082,7 @@ func _push_fequip_model() -> void:
 	var f: Variant = _fighter_by_id(_eq_fid)
 	if f == null:
 		return
-	var model := _gui.gui.model
+	var model := _gui.model
 	var breed := clampi(int(f.get("breed", 1)), 1, 12)
 	var sex := clampi(int(f.get("sex", 0)), 0, 1)
 	var spells: Array = []
@@ -3142,8 +3106,7 @@ func _push_fequip_model() -> void:
 		"dmgEarthPercent": 0, "dmgFirePercent": 0, "dmgWaterPercent": 0,
 		"dmgWindPercent": 0,
 		"value": int(f.get("budget", 0)),
-		"actorDescriptorLibrary": "fighter_%s" % \
-			_FV.FIGHTER_FILES[(breed - 1) * 2 + sex],
+		"actorDescriptorLibrary": Fighter3D.fighter_key(breed, sex),
 		"actorMaterial": Palettes.fighter_tints(
 			int(f.get("skin", 0)), int(f.get("hair", 0)),
 			int(f.get("eye", 0))),
@@ -3201,7 +3164,7 @@ func _eq_is_dirty(f: Dictionary) -> bool:
 
 
 ## changeItemCardType(N) — pick which slot's card pool the strip lists.
-func _on_eq_change_type(args: Array, _w: GWidget) -> void:
+func _on_eq_change_type(args: Array, _w: GuiLayer.Ctx) -> void:
 	for a in args:
 		if a is int or a is float:
 			_eq_type = clampi(int(a), 0, 4)
@@ -3210,13 +3173,13 @@ func _on_eq_change_type(args: Array, _w: GWidget) -> void:
 
 
 ## increaseList/decreaseList(itemList) — page the equipment strip.
-func _on_eq_page(_a: Array, _w: GWidget, delta: int) -> void:
+func _on_eq_page(_a: Array, _w: GuiLayer.Ctx, delta: int) -> void:
 	_eq_page += delta
 	_push_fequip_model()
 
 
 ## addEquipment(fighter) — double-click a strip card → its type's slot.
-func _on_eq_add_equipment(_a: Array, w: GWidget) -> void:
+func _on_eq_add_equipment(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary):
 		return
@@ -3228,7 +3191,7 @@ func _on_eq_add_equipment(_a: Array, w: GWidget) -> void:
 
 
 ## removeEquipment(fighter,N) — double-click the equipped slot → unequip.
-func _on_eq_remove_equipment(args: Array, w: GWidget) -> void:
+func _on_eq_remove_equipment(args: Array, w: GuiLayer.Ctx) -> void:
 	var slot := -1
 	for a in args:
 		if a is int or a is float:
@@ -3245,7 +3208,7 @@ func _on_eq_remove_equipment(args: Array, w: GWidget) -> void:
 
 
 ## addSpell/removeSpell — double-click a breed-spell row ↔ equipped row.
-func _on_eq_add_spell(_a: Array, w: GWidget) -> void:
+func _on_eq_add_spell(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary):
 		return
@@ -3255,7 +3218,7 @@ func _on_eq_add_spell(_a: Array, w: GWidget) -> void:
 		_push_fequip_model()
 
 
-func _on_eq_remove_spell(_a: Array, w: GWidget) -> void:
+func _on_eq_remove_spell(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if row is Dictionary:
 		_eq_spells.erase(int(row.get("id", 0)))
@@ -3264,8 +3227,8 @@ func _on_eq_remove_spell(_a: Array, w: GWidget) -> void:
 
 ## dragEquipment(fighter,N) fires at drag start — remember the source slot
 ## so a drop elsewhere unequips it (the payload is the slot's own item).
-func _on_eq_drag_equipment(args: Array, _w: GWidget) -> void:
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+func _on_eq_drag_equipment(args: Array, _w: GuiLayer.Ctx) -> void:
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	for a in args:
 		if a is int or a is float:
 			dnd["from_slot"] = int(a)
@@ -3273,8 +3236,8 @@ func _on_eq_drag_equipment(args: Array, _w: GWidget) -> void:
 
 ## dropEquipment(fighter,N) — a strip card (or another slot's item) onto
 ## slot N; the card's record type must match (type = slot+1, vi_1 order).
-func _on_eq_drop_equipment(args: Array, _w: GWidget) -> void:
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+func _on_eq_drop_equipment(args: Array, _w: GuiLayer.Ctx) -> void:
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	var payload: Variant = dnd.get("item")
 	if not (payload is Dictionary):
 		return
@@ -3294,8 +3257,8 @@ func _on_eq_drop_equipment(args: Array, _w: GWidget) -> void:
 
 
 ## dropSpell(fighter) — a breed-spell row dragged onto the equipped list.
-func _on_eq_drop_spell(_a: Array, _w: GWidget) -> void:
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+func _on_eq_drop_spell(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	var payload: Variant = dnd.get("item")
 	if payload is Dictionary and str(payload.get("cardType", "")) == "spell":
 		var sid := int(payload.get("id", 0))
@@ -3305,27 +3268,17 @@ func _on_eq_drop_spell(_a: Array, _w: GWidget) -> void:
 
 
 ## showEquipmentInfos/showSpellInfos — hover → selectedCard preview.
-func _on_eq_show_infos(_a: Array, w: GWidget) -> void:
+func _on_eq_show_infos(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if row is Dictionary:
-		_gui.gui.model.set_value("teamManagement",
+		_gui.model.set_value("teamManagement",
 			row, "selectedCard")
-
-
-## showHelp(key) — the spell-card stat labels' rollover help.
-func _on_eq_show_help(args: Array, _w: GWidget) -> void:
-	if args.is_empty():
-		return
-	var model := _gui.gui.model
-	model.set_value("teamManagement",
-		_gui.gui.loader.i18n_str(str(args[0])), "help")
-	model.set_value("teamManagement", str(args[0]), "helpIcon")
 
 
 ## saveEditableFighter(fighter) → 6011 [i64 fid][i16 team][u16 spellLen]
 ## {i32 spells}[u16 cardLen]{i16 slot,i32 card} — same layout as the
 ## debug editor (spells blob first, equipment positions after).
-func _on_eq_save(_a: Array, _w: GWidget) -> void:
+func _on_eq_save(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if _eq_fid < 0:
 		return
 	var wr := WireWriter.new()
@@ -3343,13 +3296,13 @@ func _on_eq_save(_a: Array, _w: GWidget) -> void:
 	_push_fequip_model()
 	DebugLog.add("loadout saved: %d spells, %d items" % [
 		_eq_spells.size(), _eq_cards.size()])
-	_gui.gui.model.set_value("coachManagement", {"currentSet": ""})
-	_gui.gui.model.set_value("tomeManager", false)
+	_gui.model.set_value("coachManagement", {"currentSet": ""})
+	_gui.model.set_value("tomeManager", false)
 
 
 ## --- lobby dialogs: model pushes on open + dofusarena.social:* ---------------
 
-## Called by GuiLayer for every XULOR2 dialog that mounts — feed each
+## Called by GuiLayer for every native panel that mounts — feed each
 ## screen's model from State before its first draw.
 func _on_gui_dialog_opened(name: String) -> void:
 	match name:
@@ -3392,24 +3345,18 @@ func _on_gui_dialog_opened(name: String) -> void:
 		"optionsDialog":
 			_push_options_model()
 		"fusionLabDialog":
-			if not _gui.native_factories.has("fusionLabDialog"):
-				_push_cardbook_model()   # the XML include's inventory tab needs it
 			_push_fusion_model()
 		"mailboxDialog":
 			if _mails.is_empty() and not _mail_loading:
 				_mail_loading = true
 				Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
 			_push_mail_model()
-		"newMailDialog":
-			_push_cardbook_model()
 		"demonAffiliationDialog":
 			_push_cardbook_model()
 			_push_demon_model()
 		"fireworkDialog":
 			_push_cardbook_model()
 			_push_firework_model()
-		"mapDialog", "miniMapDialog":
-			_push_map_model()
 		"exchangeDialog", "cardMasterDialog":
 			_push_cardbook_model()   # embedded inventory include
 			if name == "exchangeDialog":
@@ -3418,7 +3365,7 @@ func _on_gui_dialog_opened(name: String) -> void:
 
 ## friends.list / ignore.list / guild.{members,name} for the social tabs.
 func _push_social_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var fl: Array = []
 	for fr in State.friends:
 		fl.append({"name": str(fr.get("name", "")),
@@ -3544,13 +3491,13 @@ func _push_ladder_model() -> void:
 			"demonName": _demon_name(int(r.get("demon", 0))),
 			"guildName": str(r.get("guild", "")),
 			"quarterlyReputationPoints": int(r.get("rep", 0))})
-	_gui.gui.model.set_value("ladderManager", lm)
+	_gui.model.set_value("ladderManager", lm)
 	# search/paging button visibility flags the tabs bind to
 	for n in ["ladderPlayerSearchButtonVisible",
 			"ladderReputationSearchButtonVisible",
 			"ladder2vs2BestTeamSearchButtonVisible",
 			"ladderGlickoRatingSearchButtonVisible"]:
-		_gui.gui.model.set_value(n, true)
+		_gui.model.set_value(n, true)
 
 
 ## The retail ladder tab order matches LADDER_TABS[0..6]; read the live
@@ -3559,22 +3506,7 @@ func _ladder_gui_tab() -> int:
 	var root: Control = _gui.dialogs.get("ladderInformationDialog")
 	if root is NativeLobbyPanel:
 		return root.tab
-	if root is GWidget:
-		var tc := _find_kind(root, "tabbedContainer")
-		if tc != null:
-			return clampi(int(tc.selected_index), 0, 6)
 	return _ladder_tab
-
-
-func _find_kind(w: GWidget, k: String) -> GWidget:
-	if w.kind == k:
-		return w
-	for ch in w.get_children():
-		if ch is GWidget:
-			var r := _find_kind(ch, k)
-			if r != null:
-				return r
-	return null
 
 
 func _ladder_gui_page(delta: int) -> void:
@@ -3646,34 +3578,10 @@ func _set_name(cards: Array) -> String:
 
 ## goToSet(specialList,specialSetDetails,4) — open the set detail pane:
 ## the clicked row's item is the set dict → coachManagement.currentSet.
-func _on_zaap_go_to_set(args: Array, w: GWidget) -> void:
+func _on_zaap_go_to_set(_args: Array, w: GuiLayer.Ctx) -> void:
 	if w != null and w.item_value is Dictionary:
-		_gui.gui.model.set_value("coachManagement",
+		_gui.model.set_value("coachManagement",
 			w.item_value, "currentSet")
-	if args.size() >= 2:
-		if args[0] is GWidget:
-			args[0].visible = false
-		if args[1] is GWidget:
-			args[1].visible = true
-
-
-## goToSetList has two call shapes sharing one method name:
-##   goToSetList(specialList,specialSetDetails) — zaap: show list, hide details
-##   goToSetList(inventoryTab,N[,list,details]) — inventory: select tab N
-func _on_cardbook_tab(args: Array, _w: GWidget) -> void:
-	if args.size() < 2 or not (args[0] is GWidget):
-		return
-	if args[1] is GWidget:
-		args[0].visible = true
-		args[1].visible = false
-		return
-	args[0].selected_index = int(args[1])
-	args[0].queue_redraw()
-	if args.size() >= 4:
-		if args[2] is GWidget:
-			args[2].visible = true
-		if args[3] is GWidget:
-			args[3].visible = false
 
 
 ## selectEquipmentTypeFilter(coach,N) — checkbox toggles type N in/out of
@@ -3682,7 +3590,7 @@ func _on_cardbook_tab(args: Array, _w: GWidget) -> void:
 var _equip_filter := {}   # card type -> bool shown (default all)
 
 
-func _on_equip_type_filter(args: Array, _w: GWidget) -> void:
+func _on_equip_type_filter(args: Array, _w: GuiLayer.Ctx) -> void:
 	if args.size() < 2:
 		return
 	var t := int(args[1])
@@ -3691,7 +3599,7 @@ func _on_equip_type_filter(args: Array, _w: GWidget) -> void:
 	_push_cardbook_model()
 
 
-func _on_equip_filter_all(_a: Array, _w: GWidget) -> void:
+func _on_equip_filter_all(_a: Array, _w: GuiLayer.Ctx) -> void:
 	# all-on (the default) -> all-off; otherwise back to all-on
 	var all_on := true
 	for t in range(1, 20):
@@ -3713,51 +3621,34 @@ func _sync_equip_filter_model() -> void:
 	var f := {}
 	for t in _FILTER_FIELDS:
 		f[_FILTER_FIELDS[t]] = _equip_filter.get(t, true)
-	_gui.gui.model.set_value("coachManagement", f,
+	_gui.model.set_value("coachManagement", f,
 		"inventoryCardTypeFilter")
 
 
-func _on_card_hover(_a: Array, w: GWidget) -> void:
+func _on_card_hover(_a: Array, w: GuiLayer.Ctx) -> void:
 	if w != null and w.item_value is Dictionary:
-		_gui.gui.model.set_value("coachManagement",
+		_gui.model.set_value("coachManagement",
 			w.item_value, "selectedCard")
 
 
-func _on_card_unhover(_a: Array, _w: GWidget) -> void:
-	_gui.gui.model.set_value("coachManagement", null, "selectedCard")
+func _on_card_unhover(_a: Array, _w: GuiLayer.Ctx) -> void:
+	_gui.model.set_value("coachManagement", null, "selectedCard")
 
 
 ## useSpecialCard (retail aBC). Card 214 "Pacte" (type 21) opens clan
 ## creation, as in retail. Zaap cards (20) do nothing: the game has a lobby,
 ## not worlds to travel (owner, S05). Types 28 (title, 22093) and 30 (Dofus,
 ## 22097) are not wired yet.
-func _on_use_special_card(_a: Array, w: GWidget) -> void:
+func _on_use_special_card(_a: Array, w: GuiLayer.Ctx) -> void:
 	var card = w.item_value if w != null else null
 	if not (card is Dictionary):
-		card = _gui.gui.model.values.get(
+		card = _gui.model.values.get(
 			"coachManagement", {}).get("selectedCard")
 	if not (card is Dictionary):
 		return
 	var cid := int(card.get("id", -1))
 	if int(card.get("cardType", card.get("type", 0))) == 21 and cid == 214:
 		_gui.open("guildCreationDialog")
-
-
-func _step_set(args: Array, delta: int) -> void:
-	if args.is_empty() or not (args[0] is GWidget):
-		return
-	var n: int = args[0].content_items.size()
-	if n == 0:
-		return
-	args[0].selected_index = wrapi(
-		args[0].selected_index + delta, 0, n)
-	args[0].queue_redraw()
-
-
-## changeInstance(card) — retail's double-click-a-zaap teleport. The game
-## has a lobby, not worlds to travel (owner, S05): it only closes the dialog.
-func _on_zaap_change_instance(_args: Array, _w: GWidget) -> void:
-	_gui.close("zaapDialog")
 
 
 ## The islands whose services the lobby's City panel offers. The hall's
@@ -3895,7 +3786,7 @@ func _push_city_model() -> void:
 	if not challenges.is_empty():
 		groups.append({"kind": CITY_CHALLENGES, "services": challenges,
 			"name": I18n.t("elem.3"), "desc": I18n.t("city.desc.challenges")})
-	_gui.gui.model.set_value("city", {"groups": groups})
+	_gui.model.set_value("city", {"groups": groups})
 
 
 ## --- cardBookDialog (coach inventory) ----------------------------------------
@@ -3961,7 +3852,7 @@ func _push_cardbook_model() -> void:
 				if t >= 1 and t <= 19 \
 						and _equip_filter.get(t, true):
 					equip.append(it)
-	var model := _gui.gui.model
+	var model := _gui.model
 	_sync_equip_filter_model()
 	# the inventory tabs all bind localCoach.<field>
 	model.set_value("localCoach", equip, "filtredEquipmentCardInventory")
@@ -4061,7 +3952,7 @@ func _days_in_month(year: int, month: int) -> int:
 
 
 func _push_calendar_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var base := Time.get_datetime_dict_from_system()
 	var year := int(base.year)
 	var month := int(base.month) + _calendar_month_off
@@ -4172,7 +4063,7 @@ func _tourn_event_model(e: Dictionary, row: Dictionary) -> Dictionary:
 		"rewardName": Cards.name_of(reward) if reward != 0 else ""}
 
 
-func _on_calendar_month(_a: Array, _w: GWidget, delta: int) -> void:
+func _on_calendar_month(_a: Array, _w: GuiLayer.Ctx, delta: int) -> void:
 	_calendar_month_off += delta
 	_push_calendar_model()
 
@@ -4180,24 +4071,24 @@ func _on_calendar_month(_a: Array, _w: GWidget, delta: int) -> void:
 ## showFullEventList(eventListContainer,eventDescription,eventList,
 ## calendarDay) — fill the shared day-detail list with the clicked day's
 ## events; args[3] resolves the row's <data id="calendarDay">.
-func _on_calendar_day_events(args: Array, _w: GWidget) -> void:
+func _on_calendar_day_events(args: Array, _w: GuiLayer.Ctx) -> void:
 	var day_cell = args[3] if args.size() > 3 else null
 	if not (day_cell is Dictionary):
 		return
-	_gui.gui.model.set_value("calendar",
+	_gui.model.set_value("calendar",
 		{"events": day_cell.get("events", []), "style": ""},
 		"fullEventList")
 
 
-func _on_calendar_highlight(a: Array, w: GWidget) -> void:
+func _on_calendar_highlight(a: Array, w: GuiLayer.Ctx) -> void:
 	var ev = a[0] if not a.is_empty() else \
 		(w.item_value if w != null else null)
 	if ev is Dictionary:
-		_gui.gui.model.set_value("itemOver", ev)
-		_gui.gui.model.set_value("itemSelected", ev)
+		_gui.model.set_value("itemOver", ev)
+		_gui.model.set_value("itemSelected", ev)
 
 
-func _on_calendar_register(args: Array, w: GWidget) -> void:
+func _on_calendar_register(args: Array, w: GuiLayer.Ctx) -> void:
 	var ev = args[0] if not args.is_empty() else \
 		(w.item_value if w != null else null)
 	if not (ev is Dictionary):
@@ -4332,7 +4223,7 @@ func _push_tourn_search_model() -> void:
 			"kind": TournamentDefs.kind(def),
 			"open": bool(_search_open.get(tid, false)),
 			"searching": _tourn_search_tid == tid})
-	_gui.gui.model.set_value("tournamentSearch", {"rows": rows,
+	_gui.model.set_value("tournamentSearch", {"rows": rows,
 		"searching": _tourn_search_tid})
 	_push_hub_model()
 
@@ -4457,7 +4348,7 @@ func _push_achievement_model() -> void:
 		subs.sort_custom(func(a, b): return int(a.sub) < int(b.sub))
 		tl.append({"name": "Type %d" % cat, "cat": cat,
 			"isSelected": cat == _ach_sel["type"], "subtypes": subs})
-	_gui.gui.model.set_value("achievementManager", {
+	_gui.model.set_value("achievementManager", {
 		"achievementsList": _achievement_items(),
 		"achievementTypesList": tl,
 		"achievementsTotalPoints": total})
@@ -4467,10 +4358,10 @@ func _push_achievement_model() -> void:
 			sel = t
 	if sel == null and not tl.is_empty():
 		sel = tl[0]
-	_gui.gui.model.set_value("selectedAchievementType", sel)
+	_gui.model.set_value("selectedAchievementType", sel)
 
 
-func _on_ach_select_type(_a: Array, w: GWidget) -> void:
+func _on_ach_select_type(_a: Array, w: GuiLayer.Ctx) -> void:
 	if w == null or not (w.item_value is Dictionary):
 		return
 	_ach_sel["type"] = int(w.item_value.get("cat", -1))
@@ -4478,7 +4369,7 @@ func _on_ach_select_type(_a: Array, w: GWidget) -> void:
 	_push_achievement_model()
 
 
-func _on_ach_select_subtype(_a: Array, w: GWidget) -> void:
+func _on_ach_select_subtype(_a: Array, w: GuiLayer.Ctx) -> void:
 	if w == null or not (w.item_value is Dictionary):
 		return
 	_ach_sel["type"] = int(w.item_value.get("cat", _ach_sel["type"]))
@@ -4491,7 +4382,7 @@ func _on_ach_select_subtype(_a: Array, w: GWidget) -> void:
 ## The native panel lists its own resolutions (lobby_panels
 ## _supported_resolutions); this only seeds the current one.
 func _push_options_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var gp: Dictionary = model.values.get("gamePreferences", {})
 	if str(gp.get("screenResolution", "")) == "":
 		var ws := get_window().size
@@ -4500,11 +4391,11 @@ func _push_options_model() -> void:
 
 
 func _apply_audio_prefs() -> void:
-	Audio.apply_prefs(_gui.gui.model.values.get("gamePreferences", {}))
+	Audio.apply_prefs(_gui.model.values.get("gamePreferences", {}))
 
 
 func _apply_vsync_pref() -> void:
-	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
+	var gp: Dictionary = _gui.model.values.get("gamePreferences", {})
 	DisplayServer.window_set_vsync_mode(
 		DisplayServer.VSYNC_ENABLED
 		if bool(gp.get("vsyncActivated", true))
@@ -4512,54 +4403,35 @@ func _apply_vsync_pref() -> void:
 
 
 func _apply_fullscreen_pref() -> void:
-	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
+	var gp: Dictionary = _gui.model.values.get("gamePreferences", {})
 	get_window().mode = Window.MODE_FULLSCREEN \
 		if bool(gp.get("fullScreen", false)) else Window.MODE_WINDOWED
 
 
-func _on_apply_resolution(args: Array, _w: GWidget) -> void:
-	var gp: Dictionary = _gui.gui.model.values.get("gamePreferences", {})
+func _on_apply_resolution(_args: Array, _w: GuiLayer.Ctx) -> void:
+	var gp: Dictionary = _gui.model.values.get("gamePreferences", {})
 	var spec: String = str(gp.get("screenResolution", ""))
-	# the form's combobox may hold a picked-but-unapplied value
-	if args.size() > 0 and args[0] is GWidget:
-		var combo: GWidget = _find_combo(args[0])
-		if combo != null and str(combo.content_value) != "":
-			spec = str(combo.content_value)
 	var p := spec.split("x")
 	if p.size() != 2:
 		return
 	get_window().size = Vector2i(int(p[0]), int(p[1]))
 
 
-func _find_combo(w: GWidget) -> GWidget:
-	if w.kind == "comboboxplus" or w.kind == "comboBox":
-		return w
-	for ch in w.get_children():
-		if ch is GWidget:
-			var r := _find_combo(ch)
-			if r != null:
-				return r
-	return null
-
-
-func _on_destroy_coach(_a: Array, _w: GWidget) -> void:
+func _on_destroy_coach(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if not State.fight_data.is_empty():
 		return  # retail: cantDestroyCoachDuringFight
 	# the Options panel already asked (confirm_action, coach.destroy_confirm)
 	Session.send(OP_DESTROY_COACH, PackedByteArray(), 2)
 
 
-## Event args are either the textEditor widget (editor) or a row's
-## <data id> value (friend dict / ignore name).
+## Event args are a typed name or a row's value (friend dict / ignore name).
 func _social_arg_text(v: Variant) -> String:
-	if v is GWidget:
-		return v.text.strip_edges()
 	if v is Dictionary:
 		return str(v.get("name", v.get("text", ""))).strip_edges()
 	return str(v).strip_edges()
 
 
-func _on_social_add(args: Array, _w: GWidget, opcode: int) -> void:
+func _on_social_add(args: Array, _w: GuiLayer.Ctx, opcode: int) -> void:
 	var s := _social_arg_text(args[0]) if not args.is_empty() else ""
 	if s.is_empty():
 		return
@@ -4571,7 +4443,7 @@ func _on_social_add(args: Array, _w: GWidget, opcode: int) -> void:
 ## inviteToGuild(name) — retail's uk_1 event 21054 becomes a 501 by NAME
 ## (qu_2 → uq_2): [u8 type 0][u8 mode 0][str8 name][i64 guildId], arch 8.
 ## The UI event ids 21050-21054 are not wire opcodes (B-180).
-func _on_guild_invite_by_name(args: Array, _w: GWidget) -> void:
+func _on_guild_invite_by_name(args: Array, _w: GuiLayer.Ctx) -> void:
 	var name := _social_arg_text(args[0]) if not args.is_empty() else ""
 	var gid := int(State.guild.get("guild_id", 0))
 	if name.is_empty() or gid <= 0:
@@ -4584,11 +4456,11 @@ func _on_guild_invite_by_name(args: Array, _w: GWidget) -> void:
 	Session.send(OP_GUILD_INVITE, w.raw(), 8)
 
 
-func _on_social_remove(args: Array, w: GWidget, opcode: int) -> void:
+func _on_social_remove(args: Array, w: GuiLayer.Ctx, opcode: int) -> void:
 	_on_social_add(args, w, opcode)
 
 
-func _on_gui_quit_guild(_a: Array, _w: GWidget) -> void:
+func _on_gui_quit_guild(_a: Array, _w: GuiLayer.Ctx) -> void:
 	var gid := int(State.guild.get("guild_id", 0))
 	if gid <= 0:
 		return
@@ -4598,7 +4470,7 @@ func _on_gui_quit_guild(_a: Array, _w: GWidget) -> void:
 	Session.send(OP_GUILD_LEAVE, w.raw(), 8)
 
 
-func _on_gui_destroy_guild(_a: Array, _w: GWidget) -> void:
+func _on_gui_destroy_guild(_a: Array, _w: GuiLayer.Ctx) -> void:
 	var gid := int(State.guild.get("guild_id", 0))
 	if gid <= 0:
 		return
@@ -4628,8 +4500,8 @@ func _request_guild_refresh() -> void:
 ## createGuild(guildCreationForm) — aia_0.createGuild reads the
 ## guildCreationName property, requires >= 5 chars, sends
 ## atM(509)=[u8 type=kG.Fi=2][str8 name] and closes.
-func _on_guild_create(_a: Array, _w: GWidget) -> void:
-	var name := str(_gui.gui.model.get_value("guildCreationName")) \
+func _on_guild_create(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var name := str(_gui.model.get_value("guildCreationName")) \
 		.strip_edges()
 	if name.length() < 5:
 		_toast(I18n.t("guild.name_short"))
@@ -4655,7 +4527,7 @@ func _rank_item(rk: Dictionary) -> Dictionary:
 
 
 func _push_guild_mgmt_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var ranks: Array = []
 	for rk in State.guild.get("ranks", []):
 		ranks.append(_rank_item(rk))
@@ -4666,14 +4538,14 @@ func _push_guild_mgmt_model() -> void:
 
 ## selectRank(rankNameEditor) — item click seeds the editor + checkboxes
 ## through the guildSelectedRank binding.
-func _on_guild_select_rank(_a: Array, w: GWidget) -> void:
+func _on_guild_select_rank(_a: Array, w: GuiLayer.Ctx) -> void:
 	if w.item_value is Dictionary:
-		_gui.gui.model.set_value("guildSelectedRank",
+		_gui.model.set_value("guildSelectedRank",
 			w.item_value.duplicate())
 
 
 func _selected_rank_rights() -> int:
-	var sr: Variant = _gui.gui.model.get_value("guildSelectedRank")
+	var sr: Variant = _gui.model.get_value("guildSelectedRank")
 	var r := 0
 	if sr is Dictionary:
 		if sr.get("canInvite", false): r |= GUILD_RIGHT_INVITE
@@ -4685,9 +4557,9 @@ func _selected_rank_rights() -> int:
 
 ## addRankToGuild — 553 [i64 gid][i32 rights][str8 name] arch 2; retail
 ## adds the typed name with the toggled rights.
-func _on_guild_add_rank(_a: Array, _w: GWidget) -> void:
+func _on_guild_add_rank(_a: Array, _w: GuiLayer.Ctx) -> void:
 	var gid := int(State.guild.get("guild_id", 0))
-	var name := str(_gui.gui.model.get_value(
+	var name := str(_gui.model.get_value(
 		"guildSelectedRank", "name")).strip_edges()
 	if gid <= 0 or name.is_empty():
 		return
@@ -4698,9 +4570,9 @@ func _on_guild_add_rank(_a: Array, _w: GWidget) -> void:
 	Session.send(OP_GUILD_RANK_ADD, w.raw(), 2)
 
 
-func _on_guild_remove_rank(_a: Array, _w: GWidget) -> void:
+func _on_guild_remove_rank(_a: Array, _w: GuiLayer.Ctx) -> void:
 	var gid := int(State.guild.get("guild_id", 0))
-	var sr: Variant = _gui.gui.model.get_value("guildSelectedRank")
+	var sr: Variant = _gui.model.get_value("guildSelectedRank")
 	var lvl := int(sr.get("rankLevel", 0)) if sr is Dictionary else 0
 	if gid <= 0 or lvl <= 0:
 		return
@@ -4712,9 +4584,9 @@ func _on_guild_remove_rank(_a: Array, _w: GWidget) -> void:
 
 ## modifyRank — 555 [i64 gid][i32 rights][u16 lvl][u16 lvl][str8 name]
 ## (both shorts carry the same level — aia_0.modifyRank).
-func _on_guild_modify_rank(_a: Array, _w: GWidget) -> void:
+func _on_guild_modify_rank(_a: Array, _w: GuiLayer.Ctx) -> void:
 	var gid := int(State.guild.get("guild_id", 0))
-	var sr: Variant = _gui.gui.model.get_value("guildSelectedRank")
+	var sr: Variant = _gui.model.get_value("guildSelectedRank")
 	if gid <= 0 or not (sr is Dictionary):
 		return
 	var name := str(sr.get("name", "")).strip_edges()
@@ -4732,7 +4604,7 @@ func _on_guild_modify_rank(_a: Array, _w: GWidget) -> void:
 
 ## getMemberStats — row click on the roster; 2600 fetches the member's
 ## PlayerStatisticsReport, 2601 fills guildCoachStatsDialog.
-func _on_guild_member_stats(_a: Array, w: GWidget) -> void:
+func _on_guild_member_stats(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary):
 		return
@@ -4746,7 +4618,7 @@ func _push_guild_member_stats(d: Dictionary) -> void:
 	var stats := {}
 	for s in d.get("stats", []):
 		stats[int(s.id)] = s.value
-	var model := _gui.gui.model
+	var model := _gui.model
 	model.set_value("guildCoachStats", {
 		"name": str(d.get("name", "")),
 		"level": int(_guild_stats_member.get("level", 0)),
@@ -4769,7 +4641,7 @@ func _push_guild_member_stats(d: Dictionary) -> void:
 
 ## promote/depromote on the stats screen act on the member it shows —
 ## same sparse-rank pick as _on_guild_set_rank.
-func _on_guild_stats_promote(_a: Array, _w: GWidget, delta: int) -> void:
+func _on_guild_stats_promote(_a: Array, _w: GuiLayer.Ctx, delta: int) -> void:
 	if _guild_stats_member.is_empty():
 		return
 	var gid := int(State.guild.get("guild_id", 0))
@@ -4790,7 +4662,7 @@ func _on_guild_stats_promote(_a: Array, _w: GWidget, delta: int) -> void:
 	Session.send(OP_GUILD_SET_RANK, w.raw(), 8)
 
 
-func _on_guild_stats_kick(_a: Array, _w: GWidget) -> void:
+func _on_guild_stats_kick(_a: Array, _w: GuiLayer.Ctx) -> void:
 	var gid := int(State.guild.get("guild_id", 0))
 	var mid := int(_guild_stats_member.get("coach_id", 0))
 	if gid <= 0 or mid <= 0:
@@ -4831,7 +4703,7 @@ func _mail_row(m: Dictionary) -> Dictionary:
 ## mailManager.{receivedMails,sentMails} + mailbox.mail (the selected
 ## letter) + mailbox.newMail (the compose draft).
 func _push_mail_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var recv: Array = []
 	var sent: Array = []
 	for m in _mails:
@@ -4865,18 +4737,12 @@ func _push_mail_model() -> void:
 		"statusOk": bool(_mail_status.get("ok", false))})
 
 
-## the clicked widget can be a child of the materialized row — the item
-## dict only lives on the renderer root.
-func _row_item(w: GWidget) -> Variant:
-	var n: Node = w
-	while n != null:
-		if n is GWidget and n.item_value != null:
-			return n.item_value
-		n = n.get_parent()
-	return null
+## The row a native panel acted on (its item), or null.
+func _row_item(w: GuiLayer.Ctx) -> Variant:
+	return w.item_value if w != null else null
 
 
-func _on_mail_read(_a: Array, w: GWidget) -> void:
+func _on_mail_read(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary):
 		return
@@ -4884,15 +4750,15 @@ func _on_mail_read(_a: Array, w: GWidget) -> void:
 	for m in _mails:
 		if int(m.get("id", 0)) == int(row.get("mailId", 0)):
 			m["read"] = true
-	_gui.gui.model.set_value("mailbox.mail", row)
+	_gui.model.set_value("mailbox.mail", row)
 
 
 ## deleteMail(mail) — the row dict carries mailId; the button inside a
 ## sent-box row deletes that copy server-side too (15004).
-func _on_mail_delete(_a: Array, w: GWidget) -> void:
+func _on_mail_delete(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary) or int(row.get("mailId", 0)) <= 0:
-		row = _gui.gui.model.get_value("mailbox.mail")
+		row = _gui.model.get_value("mailbox.mail")
 	if not (row is Dictionary):
 		return
 	_mail_delete(int(row.get("mailId", 0)))
@@ -4901,9 +4767,9 @@ func _on_mail_delete(_a: Array, w: GWidget) -> void:
 func _mail_delete(mid: int) -> void:
 	if mid <= 0:
 		return
-	var open: Variant = _gui.gui.model.get_value("mailbox.mail")
+	var open: Variant = _gui.model.get_value("mailbox.mail")
 	if open is Dictionary and int(open.get("mailId", 0)) == mid:
-		_gui.gui.model.set_value("mailbox.mail", {})
+		_gui.model.set_value("mailbox.mail", {})
 	var wr := WireWriter.new()
 	wr.put_u8(1)
 	wr.put_i64(mid)
@@ -4914,8 +4780,8 @@ func _mail_delete(mid: int) -> void:
 	_push_mail_model()
 
 
-func _on_mail_take(_a: Array, _w: GWidget) -> void:
-	var row: Variant = _gui.gui.model.get_value("mailbox.mail")
+func _on_mail_take(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var row: Variant = _gui.model.get_value("mailbox.mail")
 	if not (row is Dictionary):
 		return
 	var mid := int(row.get("mailId", 0))
@@ -4932,14 +4798,14 @@ func _mail_open(mid: int) -> void:
 	for m in _mails:
 		if int(m.get("id", 0)) == mid:
 			m["read"] = true
-			_gui.gui.model.set_value("mailbox.mail", _mail_row(m))
+			_gui.model.set_value("mailbox.mail", _mail_row(m))
 			_mail_status = {}
 			_push_mail_model()
 			return
 
 
 func _mail_compose(to: String) -> void:
-	_gui.gui.model.set_value("mailbox.newMail", {
+	_gui.model.set_value("mailbox.newMail", {
 		"receiver": to, "receiverId": 0, "title": "",
 		"message": "", "cards": []})
 	_mail_mode = "compose"
@@ -4948,7 +4814,7 @@ func _mail_compose(to: String) -> void:
 
 
 func _mail_attach(cid: int) -> void:
-	var nm: Variant = _gui.gui.model.get_value("mailbox.newMail")
+	var nm: Variant = _gui.model.get_value("mailbox.newMail")
 	if not (nm is Dictionary):
 		return
 	var cards: Array = nm.get("cards", [])
@@ -4960,29 +4826,29 @@ func _mail_attach(cid: int) -> void:
 	_push_mail_model()
 
 
-func _on_mail_new(_a: Array, _w: GWidget) -> void:
-	_gui.gui.model.set_value("mailbox.newMail", {
-		"receiver": "", "receiverId": 0, "title": "",
-		"message": "", "cards": []})
-	_push_cardbook_model()   # compose binds localCoach.cardInventory
-	_gui.open("newMailDialog")
+func _on_mail_new(_a: Array, _w: GuiLayer.Ctx) -> void:
+	_open_mail_compose("")
 
 
 ## reply — seed the draft with the selected letter's sender.
-func _on_mail_reply(_a: Array, _w: GWidget) -> void:
-	var row: Variant = _gui.gui.model.get_value("mailbox.mail")
+func _on_mail_reply(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var row: Variant = _gui.model.get_value("mailbox.mail")
 	var to := str(row.get("sender", "")) if row is Dictionary else ""
-	_gui.gui.model.set_value("mailbox.newMail", {
-		"receiver": to, "receiverId": 0, "title": "",
-		"message": "", "cards": []})
-	_push_cardbook_model()
-	_gui.open("newMailDialog")
+	_open_mail_compose(to)
+
+
+## S43: the retail newMailDialog is gone — writing a letter is the native
+## mailbox's compose mode (mailbox_panel.gd), opened on a fresh draft.
+func _open_mail_compose(to: String) -> void:
+	_mail_compose(to)
+	if not _gui.is_open("mailboxDialog"):
+		_gui.open("mailboxDialog")
 
 
 ## testName(newMailForm) — resolves the typed receiver name into
 ## mailbox.newMail.receiverId through 15506/15507.
-func _on_mail_test_name(_a: Array, _w: GWidget) -> void:
-	var name := str(_gui.gui.model.get_value(
+func _on_mail_test_name(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var name := str(_gui.model.get_value(
 		"mailbox.newMail", "receiver")).strip_edges()
 	if name.is_empty():
 		return
@@ -4993,8 +4859,8 @@ func _on_mail_test_name(_a: Array, _w: GWidget) -> void:
 
 ## sendMail(newMailForm) — the full mail record, arch 3: the same record
 ## shape the server decodes (id=0, session-derived sender fields).
-func _on_mail_send(_a: Array, _w: GWidget) -> void:
-	var nm: Variant = _gui.gui.model.get_value("mailbox.newMail")
+func _on_mail_send(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var nm: Variant = _gui.model.get_value("mailbox.newMail")
 	if not (nm is Dictionary):
 		return
 	var receiver := str(nm.get("receiver", "")).strip_edges()
@@ -5031,7 +4897,6 @@ func _on_mail_send(_a: Array, _w: GWidget) -> void:
 	w.put_i64(int(Time.get_unix_time_from_system() * 1000.0))
 	w.put_u8(0); w.put_u8(0); w.put_u8(0); w.put_i32(0)
 	Session.send(OP_MAIL_SEND, w.raw(), 3)
-	_gui.close("newMailDialog")
 
 
 ## localCoach model — shared by menuBarDialog / coachStatisticsDialog /
@@ -5040,7 +4905,7 @@ func _on_mail_send(_a: Array, _w: GWidget) -> void:
 ## the model used to put it back to 3 (S20).
 func _local_coach_dir() -> int:
 	if _gui != null:
-		var cur: Variant = _gui.gui.model.get_value("localCoach")
+		var cur: Variant = _gui.model.get_value("localCoach")
 		if cur is Dictionary and cur.has("actorDirection"):
 			return int(cur.actorDirection) & 7
 	return 3
@@ -5086,7 +4951,7 @@ func _local_coach_model() -> Dictionary:
 
 
 func _push_local_coach() -> void:
-	_gui.gui.model.set_value("localCoach", _local_coach_model())
+	_gui.model.set_value("localCoach", _local_coach_model())
 
 
 ## The retail's standingForProgressBar (sj_1): the share of the current
@@ -5106,8 +4971,8 @@ func _mount_lobby_menubar(d: Dictionary) -> void:
 	Audio.play_music("island")
 	$UI/Chat.visible = true
 	_push_local_coach()
-	_gui.gui.model.set_value("showToolsInMenuBar", 0)
-	_gui.gui.model.set_value("menuBar", {
+	_gui.model.set_value("showToolsInMenuBar", 0)
+	_gui.model.set_value("menuBar", {
 		"coachInventoryButton": true, "socialButton": true})
 	_show_lobby_screen()
 
@@ -5239,14 +5104,14 @@ func _zone_triggers_at(cell: Vector2i) -> Array:
 	return out
 
 
-## CanvasLayer shell; the existing XML layer remains above it.
+## CanvasLayer shell; the native panels' layer (GuiLayer) stays above it.
 func _show_lobby_screen() -> void:
 	if not is_instance_valid(_lobby_screen):
 		_lobby_screen = preload("res://src/ui/lobby_screen.gd").new()
 		_lobby_screen.name = "LobbyScreen"
 		$UI.add_child(_lobby_screen)
 		$UI.move_child(_lobby_screen, 0)
-		_lobby_screen.bind_model(_gui.gui.model, $UI/Chat)
+		_lobby_screen.bind_model(_gui.model, $UI/Chat)
 		_lobby_screen.dialog_requested.connect(func(n): _gui.toggle(n))
 		_lobby_screen.action_requested.connect(_on_lobby_action)
 		_lobby_screen.team_picked.connect(func(pid):
@@ -5266,7 +5131,7 @@ func _show_lobby_screen() -> void:
 func _make_native_lobby_panel(panel_name: String) -> Control:
 	var panel := preload("res://src/ui/lobby_panels.gd").new()
 	panel.panel_name = panel_name
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
@@ -5274,91 +5139,91 @@ func _make_native_lobby_panel(panel_name: String) -> Control:
 ## S18: the native Card Master replaces the retail cardMasterDialog XML.
 func _make_card_master_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/card_master_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_mailbox_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/mailbox_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_fusion_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/fusion_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_equip_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/coach_equip_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_kanodo_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/kanodo_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_team_pick_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/team_pick_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_level_up_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/level_up_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_ask_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/ask_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_exchange_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/exchange_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_report_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/report_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_firework_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/firework_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_demon_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/demon_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
 
 func _make_talk_panel(_panel_name: String) -> Control:
 	var panel := preload("res://src/ui/talk_panel.gd").new()
-	panel.model = _gui.gui.model
+	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
 
@@ -5614,21 +5479,21 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			_push_mail_model()
 			return
 		"nativeMailCheck":
-			_gui.gui.model.set_value("mailbox.newMail.receiver", str(args[0]).strip_edges())
-			_gui.gui.model.set_value("mailbox.newMail.receiverId", 0)
+			_gui.model.set_value("mailbox.newMail.receiver", str(args[0]).strip_edges())
+			_gui.model.set_value("mailbox.newMail.receiverId", 0)
 			_on_mail_test_name([], null)
 			return
 		"nativeMailAttach":
 			_mail_attach(int(args[0]))
 			return
 		"nativeMailDetach":
-			var cards: Array = _gui.gui.model.get_value("mailbox.newMail", "cards")
+			var cards: Array = _gui.model.get_value("mailbox.newMail", "cards")
 			if cards is Array and int(args[0]) < cards.size():
 				cards.remove_at(int(args[0]))
 			_push_mail_model()
 			return
 		"nativeMailSend":
-			var nm: Variant = _gui.gui.model.get_value("mailbox.newMail")
+			var nm: Variant = _gui.model.get_value("mailbox.newMail")
 			if nm is Dictionary:
 				nm["receiver"] = str(args[0]).strip_edges()
 				nm["title"] = str(args[1])
@@ -5660,11 +5525,10 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 		"nativeFusRequest":
 			_on_fusion_request([], null)
 			return
-	var context := GWidget.new()
+	var context := GuiLayer.Ctx.new()
 	context.item_value = item
 	context.selected_index = index
-	_gui._on_event("dofusarena", event, args, context)
-	context.free()
+	_gui.dispatch(event, args, context)
 
 
 ## Resolve the announced portal address for HTTP: a wildcard bind host
@@ -5721,7 +5585,7 @@ func _push_story_model() -> void:
 	for fr in State.roster:
 		if int(fr.get("type", 2)) == 2 and int(fr.get("state", 0)) == 0:
 			titulars += 1
-	_gui.gui.model.set_value("story", {"won": _story_won.duplicate(), "titulars": titulars})
+	_gui.model.set_value("story", {"won": _story_won.duplicate(), "titulars": titulars})
 
 
 ## Jugar on a Historia challenge: its demon's intro the first time (as in the
@@ -5764,7 +5628,7 @@ func _story_after_talk(was: Array) -> void:
 ## S25: the season (60031) — its number and end for the Ranking panels, and
 ## a toast for each result of a closed season not yet shown.
 func _on_season(season: Dictionary) -> void:
-	_gui.gui.model.set_value("season", {"number": int(season.number), "ends": int(season.ends)})
+	_gui.model.set_value("season", {"number": int(season.number), "ends": int(season.ends)})
 	for r in season.results:
 		var text := I18n.t("season.result", {"season": int(r.season),
 			"ladder": I18n.t("season.ladder_%d" % clampi(int(r.ladder), 1, 2)),
@@ -5815,7 +5679,7 @@ func _push_hub_model() -> void:
 	if str(tourn.label) == "" and first_name != "":
 		tourn.label = I18n.t("hub.tourn.shut", {"name": first_name})
 	_push_story_model()
-	_gui.gui.model.set_value("hub", {
+	_gui.model.set_value("hub", {
 		"story": {"titulars": titulars, "bench": bench},
 		"ranked": {"teams": teams, "selected": _tm_preset_sel},
 		"tourn": tourn})
@@ -5835,11 +5699,11 @@ func _on_lobby_action(action: String) -> void:
 				_on_cancel_search()
 			_gui.open("ghostDialog")
 		"team_story", "team_elite":
-			_gui.gui.model.set_value("gamePreferences",
+			_gui.model.set_value("gamePreferences",
 				0 if action == "team_story" else 1, "lastSelectedGameModeId")
 			_gui.open("teamManagementDialog")
 		"tourn_search":
-			var hub: Variant = _gui.gui.model.get_value("hub")
+			var hub: Variant = _gui.model.get_value("hub")
 			if hub is Dictionary:
 				_tourn_search(int(hub.get("tourn", {}).get("search_tid", -1)))
 		"duo":
@@ -5917,7 +5781,7 @@ func _ask_show() -> void:
 	if _asks.is_empty():
 		_gui.close("askDialog")
 		return
-	_gui.gui.model.set_value("ask", {"title": _asks[0].title, "text": _asks[0].text})
+	_gui.model.set_value("ask", {"title": _asks[0].title, "text": _asks[0].text})
 	if not _gui.is_open("askDialog"):
 		_gui.open("askDialog")
 
@@ -5972,7 +5836,7 @@ func _talk_show(speaker: String, text: String, choices: Array, page := 0, pages 
 	for c in choices:
 		_talk_actions.append(c.do)
 		rows.append({"label": str(c.label), "kind": str(c.kind)})
-	_gui.gui.model.set_value("talk", {"name": speaker, "text": _talk_bbcode(text),
+	_gui.model.set_value("talk", {"name": speaker, "text": _talk_bbcode(text),
 		"choices": rows, "page": page, "pages": pages, "face": _talk_face})
 	if not _gui.is_open("npcTalkDialog"):
 		_gui.open("npcTalkDialog")
@@ -6392,12 +6256,12 @@ func _show_fight_result() -> void:
 	var cards: Array = []
 	for cid in counts:
 		cards.append({"id": int(cid), "name": Cards.name_of(int(cid)), "qty": int(counts[cid])})
-	_gui.gui.model.set_value("fightReport", {"outcome": outcome,
+	_gui.model.set_value("fightReport", {"outcome": outcome,
 		"summary": summary, "coaches": coaches, "fighters": fighters,
 		"cards": cards})
 	var report := _gui.open("fightReportDialog")
 	if level_now > level_before and report != null:
-		_gui.gui.model.set_value("levelUp", {"level": level_now})
+		_gui.model.set_value("levelUp", {"level": level_now})
 		report.closed.connect(func(): _gui.open("coachLevelUpDialog"), CONNECT_ONE_SHOT)
 
 
@@ -6406,7 +6270,7 @@ func _show_fight_result() -> void:
 ## team-panel open — the server re-pushes the roster (6006) + presets (6030).
 func _open_fallen() -> void:
 	Session.send(6031, PackedByteArray(), 2)
-	_gui.gui.model.set_value("gamePreferences", 0, "lastSelectedGameModeId")
+	_gui.model.set_value("gamePreferences", 0, "lastSelectedGameModeId")
 	_push_team_model()
 	_gui.open("teamManagementDialog")
 
@@ -6437,7 +6301,7 @@ func _open_fusion_lab(e: Dictionary) -> void:
 
 
 func _push_fusion_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var slots := maxi(1, int(_fusion_lab.get("slots", 3)) - 1)
 	var tray: Array = []
 	for cid in _fusion_inputs:
@@ -6549,7 +6413,7 @@ func _fusion_stage_native(cid: int) -> void:
 
 ## Double-click a tray row → hand the card back to the inventory.
 ## (method name shared with cardMaster — only act while the lab is open)
-func _on_fusion_remove_input(_a: Array, w: GWidget) -> void:
+func _on_fusion_remove_input(_a: Array, w: GuiLayer.Ctx) -> void:
 	if not _gui.is_open("fusionLabDialog"):
 		return
 	if w == null or not (w.item_value is Dictionary):
@@ -6561,7 +6425,7 @@ func _on_fusion_remove_input(_a: Array, w: GWidget) -> void:
 
 
 ## Double-click the target card → clear it.
-func _on_fusion_remove_target(_a: Array, _w: GWidget) -> void:
+func _on_fusion_remove_target(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if not _gui.is_open("fusionLabDialog"):
 		return
 	_fusion_target = -1
@@ -6572,7 +6436,7 @@ func _on_fusion_remove_target(_a: Array, _w: GWidget) -> void:
 ## equip(coach) double-click on an inventory row — while the lab is open it
 ## stages the card: boost cards (fusPower/fusQuality) become the target,
 ## everything else becomes fuel. Stands in for retail drag&drop.
-func _on_maybe_fusion_add(_a: Array, w: GWidget) -> void:
+func _on_maybe_fusion_add(_a: Array, w: GuiLayer.Ctx) -> void:
 	if not _gui.is_open("fusionLabDialog"):
 		return
 	var card = w.item_value if w != null else null
@@ -6593,7 +6457,7 @@ func _on_maybe_fusion_add(_a: Array, w: GWidget) -> void:
 
 ## fusionRequest(...) → 5490 [i32 n]{i32 ids}: inputs then target LAST —
 ## the client writes the array reversed so the server reads the target last.
-func _on_fusion_request(_a: Array, _w: GWidget) -> void:
+func _on_fusion_request(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if _fusion_inputs.size() < 2 or _fusion_target <= 0:
 		return
 	var wr := WireWriter.new()
@@ -6608,7 +6472,7 @@ func _on_fusion_request(_a: Array, _w: GWidget) -> void:
 
 ## Shared removeCard — the method name lives on both the fusion tray and
 ## the card-master exchange list.
-func _on_shared_remove_card(a: Array, w: GWidget) -> void:
+func _on_shared_remove_card(a: Array, w: GuiLayer.Ctx) -> void:
 	if _gui.is_open("cardMasterDialog"):
 		_on_cm_remove(a, w)
 	elif _gui.is_open("exchangeDialog"):
@@ -6621,8 +6485,8 @@ func _on_shared_remove_card(a: Array, w: GWidget) -> void:
 
 ## Shared dropCard — route the drag payload by open dialog. The fusion
 ## tray slots and the barter slots both accept inventory cards.
-func _on_shared_drop_card(_a: Array, w: GWidget) -> void:
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+func _on_shared_drop_card(_a: Array, w: GuiLayer.Ctx) -> void:
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	var payload: Variant = dnd.get("item")
 	if not (payload is Dictionary):
 		return
@@ -6641,7 +6505,7 @@ func _on_shared_drop_card(_a: Array, w: GWidget) -> void:
 
 ## drop on a tray slot: boost cards land on the target, others on the
 ## fuel slots (same rule as the double-click stage).
-func _fusion_stage(cid: int, _w: GWidget) -> void:
+func _fusion_stage(cid: int, _w: GuiLayer.Ctx) -> void:
 	var m := Cards.meta(cid)
 	var slots := maxi(1, int(_fusion_lab.get("slots", 3)) - 1)
 	if int(m.get("fusPower", 0)) > 0 or int(m.get("fusQuality", 0)) > 0:
@@ -6653,8 +6517,8 @@ func _fusion_stage(cid: int, _w: GWidget) -> void:
 
 
 ## dropFusionCard — drop onto the fusion-target slot itself.
-func _on_fusion_drop_target(_a: Array, _w: GWidget) -> void:
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+func _on_fusion_drop_target(_a: Array, _w: GuiLayer.Ctx) -> void:
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	var payload: Variant = dnd.get("item")
 	if not (payload is Dictionary) or not _gui.is_open("fusionLabDialog"):
 		return
@@ -6673,11 +6537,11 @@ var _cm_selected := -1    # catalog card being bought
 var _cm_status := {}      # last 5403 for the native panel: {text, ok}
 
 
-## The retail dialog opens on the catalog reply (5401), like the mailbox.
-## The retail fields stay for the XML layout; the native panel (S18) reads
+## The panel opens on the catalog reply (5401), like the mailbox.
+## The native panel (S18) reads
 ## catalog/offer/staged/wallet/status.
 func _push_cardmaster_model() -> void:
-	var model := _gui.gui.model
+	var model := _gui.model
 	var catalog: Array = []
 	var native: Array = []
 	var set_id := 0
@@ -6747,21 +6611,15 @@ func _push_cardmaster_model() -> void:
 
 ## selectCardToBuy(selectCardContainer, buyCardContainer) — the two
 ## container widget args toggle; the row item becomes selectedCard.
-func _on_cm_select_card(a: Array, w: GWidget) -> void:
+func _on_cm_select_card(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if row is Dictionary:
 		_cm_selected = int(row.get("id", -1))
-	if a.size() >= 2:
-		if a[0] is GWidget: a[0].visible = false
-		if a[1] is GWidget: a[1].visible = true
 	_push_cardmaster_model()
 
 
 ## chooseAnotherCard — back to the catalog.
-func _on_cm_choose_another(a: Array, _w: GWidget) -> void:
-	if a.size() >= 2:
-		if a[0] is GWidget: a[0].visible = true
-		if a[1] is GWidget: a[1].visible = false
+func _on_cm_choose_another(_a: Array, _w: GuiLayer.Ctx) -> void:
 	_cm_selected = -1
 	_push_cardmaster_model()
 
@@ -6777,7 +6635,7 @@ func _cm_stage(cid: int) -> void:
 
 
 ## removeCard on the exchange list — unstage one of the row's cards.
-func _on_cm_remove(_a: Array, w: GWidget) -> void:
+func _on_cm_remove(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if row is Dictionary:
 		_cm_unstage(int(row.get("id", 0)))
@@ -6808,7 +6666,7 @@ func _cm_buy_tokens() -> void:
 
 
 ## buyCards → 5400 [i32 exId][i16 nW]{i32 wanted}[i16 nG]{i32,u16}.
-func _on_cm_buy(_a: Array, _w: GWidget) -> void:
+func _on_cm_buy(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if _cm_selected <= 0 or _cm_given.is_empty():
 		return
 	var wr := WireWriter.new()
@@ -6845,12 +6703,12 @@ func _push_demon_model() -> void:
 		sum += Cards.value_of(int(cid)) * int(_demon_staged[cid])
 	while staged.size() < 4:
 		staged.append(null)
-	_gui.gui.model.set_value("demonAffiliationTrade", {
+	_gui.model.set_value("demonAffiliationTrade", {
 		"localCardExchange": staged,
 		"localCardsPrice": sum,
 		"affiliationPrice": 0,
 		"canBuyCards": not _demon_staged.is_empty()})
-	_gui.gui.model.set_value("exchange.cardTrade", _demon_id,
+	_gui.model.set_value("exchange.cardTrade", _demon_id,
 		"exchangeId")
 	# --- native panel (S18, src/ui/demon_panel.gd) ---------------------------
 	var owned: Array = []
@@ -6874,7 +6732,7 @@ func _push_demon_model() -> void:
 	var demons: Array = []
 	for did in _lobby_demons():
 		demons.append({"id": did, "name": _demon_name(did)})
-	_gui.gui.model.set_value("demonNative", {
+	_gui.model.set_value("demonNative", {
 		"demon": _demon_id, "demonName": _demon_name(_demon_id),
 		"canChoose": int(State.guild.get("demon_id", 0)) == 0,
 		"demons": demons, "owned": owned, "basket": basket, "total": sum,
@@ -6945,7 +6803,7 @@ func _demon_stage(cid: int) -> void:
 	_push_demon_model()
 
 
-func _on_demon_remove(_a: Array, w: GWidget) -> void:
+func _on_demon_remove(_a: Array, w: GuiLayer.Ctx) -> void:
 	var row: Variant = _row_item(w)
 	if not (row is Dictionary):
 		return
@@ -6960,7 +6818,7 @@ func _on_demon_remove(_a: Array, w: GWidget) -> void:
 
 ## affiliateToDemon → 5470 [u16 demon][u16 n]{i32 card, u16 qty}. Retail
 ## sends every staged instance as its own (card,1) pair.
-func _on_demon_affiliate(_a: Array, _w: GWidget) -> void:
+func _on_demon_affiliate(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if _demon_staged.is_empty() or _demon_id < 0:
 		return
 	var wr := WireWriter.new()
@@ -7006,7 +6864,7 @@ func _ex_staged_value(side: int) -> int:
 func _push_exchange_model() -> void:
 	if _ex.is_empty():
 		return
-	var model := _gui.gui.model
+	var model := _gui.model
 	var mine := int(_ex.get("my_side", 0))
 	var other := 1 - mine
 	var look: Dictionary = State.my_coach_look
@@ -7078,7 +6936,7 @@ func _ex_add_one(cid: int) -> void:
 
 
 ## setReadyForExchange → 5109 ready toggle.
-func _on_ex_ready(_a: Array, _w: GWidget) -> void:
+func _on_ex_ready(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if _ex.is_empty():
 		return
 	var w := WireWriter.new()
@@ -7087,7 +6945,7 @@ func _on_ex_ready(_a: Array, _w: GWidget) -> void:
 
 
 ## closeCoachExchangeDialog → 5111 cancels the trade.
-func _on_ex_close(_a: Array, _w: GWidget) -> void:
+func _on_ex_close(_a: Array, _w: GuiLayer.Ctx) -> void:
 	if not _ex.is_empty():
 		var w := WireWriter.new()
 		w.put_i64(int(_ex.id))
@@ -7096,7 +6954,7 @@ func _on_ex_close(_a: Array, _w: GWidget) -> void:
 
 
 ## removeCard on my side of the trade → 5107 unstage.
-func _on_ex_remove(_a: Array, w: GWidget) -> void:
+func _on_ex_remove(_a: Array, w: GuiLayer.Ctx) -> void:
 	if _ex.is_empty():
 		return
 	var row: Variant = _row_item(w)
@@ -7113,7 +6971,7 @@ func _on_ex_remove(_a: Array, w: GWidget) -> void:
 
 
 ## drop on my tray → 5105 stage one of the dragged card.
-func _ex_stage(cid: int, _w: GWidget) -> void:
+func _ex_stage(cid: int, _w: GuiLayer.Ctx) -> void:
 	if _ex.is_empty() or not _ex.get("accepted", false):
 		return
 	var wr := WireWriter.new()
@@ -7168,7 +7026,7 @@ func _refresh_kanodo() -> void:
 	if cursor == Vector2i.ZERO:
 		var root: Array = Kanodo.boards.get(board, {}).get("root", [0, 0])
 		cursor = Vector2i(int(root[0]), int(root[1]))
-	_gui.gui.model.set_value("kanodo", {"fid": _kanodo_fid,
+	_gui.model.set_value("kanodo", {"fid": _kanodo_fid,
 		"name": str(f.get("name", "?")), "xp": int(f.get("xp", 0)),
 		"total": int(f.get("total_xp", 0)), "board": board,
 		"owned": f.get("spheres", []), "cursor": [cursor.x, cursor.y],
@@ -7274,93 +7132,6 @@ func _answer_exchange(accept: bool) -> void:
 		_ex = {}
 
 
-## --- mapDialog / miniMapDialog ------------------------------------------------
-## map.xml is static except the map background (containerMap<id> theme style)
-## and the coach pin; miniMapDialog is a live mapNavigator of the same data.
-## Coach/element world coords → map px: iso-project the fmd cells, fit the
-## projected bounds into the 1024×512 retail map image, apply that same
-## transform to each pin.
-
-const _MAP_SIZE := Vector2(1024, 512)
-
-
-func _push_map_model() -> void:
-	var model := _gui.gui.model
-	var w := State.current_world
-	model.set_value("currentInstanceId", "Map%d" % w)
-	var mm := {"mapId": "map%d" % w,
-		"mapSize": "%d,%d" % [int(_MAP_SIZE.x), int(_MAP_SIZE.y)],
-		"name": "Island %d" % w,
-		"eliteBonus": "", "evolutionBonus": "",
-		"zoom": 1.0, "xCenter": 222, "yCenter": 9}
-	var topo := Topology.load_world(w, Topology.SCOPE_WORLD)
-	var cells: Dictionary = topo.get("cells", {})
-	var mn := Vector2(INF, INF)
-	var mx := Vector2(-INF, -INF)
-	for pos in cells:
-		if not cells[pos].get("ground", false):
-			continue
-		var p := Vector2((pos.x - pos.y) * 43.0, (pos.x + pos.y) * 21.5)
-		mn = mn.min(p)
-		mx = mx.max(p)
-	if mn.x >= mx.x:
-		model.set_value("miniMap", mm)
-		return
-	var span := mx - mn
-	var s := minf(_MAP_SIZE.x / maxf(span.x + 86.0, 1.0),
-		_MAP_SIZE.y / maxf(span.y + 43.0, 1.0))
-	var to_px := func(wx: float, wy: float) -> Vector2:
-		var p := Vector2((wx - wy) * 43.0, (wx + wy) * 21.5)
-		return (p - mn) * s + (_MAP_SIZE - span * s) / 2.0
-	var cp: Vector2 = to_px.call(_my_pos.x, _my_pos.y)
-	mm["miniMapX"] = cp.x
-	mm["miniMapY"] = cp.y
-	var points: Array = []
-	for id in State.elements:
-		var e: Dictionary = State.elements[id]
-		var ep: Vector2 = to_px.call(float(e.get("x", 0)), float(e.get("y", 0)))
-		points.append({"x": ep.x, "y": ep.y,
-			"color": _map_pin_color(int(e.get("type", 0)))})
-	points.append({"x": cp.x, "y": cp.y,
-		"color": Color(1, 0.85, 0.2), "me": true})
-	mm["points"] = points
-	model.set_value("miniMap", mm)
-
-
-## Element-kind → pin color on the minimap (same palette the world markers
-## use, mapped through the env-type table's own numbering).
-func _map_pin_color(t: int) -> Color:
-	match t:
-		2: return Color(0.7, 0.7, 0.75)      # mailbox
-		4: return Color(0.35, 0.7, 1.0)      # zaap
-		6, 9, 11: return Color(0.8, 0.4, 1.0)  # demons
-		12: return Color(1.0, 0.65, 0.2)     # firework
-		13: return Color(0.95, 0.55, 0.95)   # tournament totem
-		14: return Color(0.4, 0.9, 0.85)     # fusion altar
-		_: return Color(0.6, 0.9, 0.6)
-
-
-## dofusarena:zoomIn / zoomOut / setMapZoom — miniMap.zoom drives the
-## navigator's zoomScale bind.
-func _on_map_zoom(_a: Array, _w: GWidget, delta: float) -> void:
-	var model := _gui.gui.model
-	var mmv: Variant = model.get_value("miniMap")
-	var mm: Dictionary = mmv if mmv is Dictionary else {"zoom": 1.0}
-	var z: float = clampf(float(mm.get("zoom", 1.0)) + delta, 0.5, 4.0)
-	mm["zoom"] = z
-	model.set_value("miniMap", mm)
-	model.set_value("zoomScale", z)
-
-
-func _on_map_zoom_slider(_a: Array, w: GWidget) -> void:
-	var model := _gui.gui.model
-	var mmv: Variant = model.get_value("miniMap")
-	var mm: Dictionary = mmv if mmv is Dictionary else {}
-	mm["zoom"] = float(w.content_value) * 3.5 + 0.5
-	model.set_value("miniMap", mm)
-	model.set_value("zoomScale", mm["zoom"])
-
-
 ## --- fireworkDialog (22095 launch) --------------------------------------------
 ## 8 launcher slots {card, delay}; the tome panel lists the sets that hold
 ## type-25 (fairywork/fountain) cards. launchFirework schedules each staged
@@ -7391,7 +7162,7 @@ func _open_firework_retail() -> bool:
 func _push_firework_model() -> void:
 	if _fw_slots.is_empty():
 		_fw_reset()
-	var model := _gui.gui.model
+	var model := _gui.model
 	# --- native launcher (S18, src/ui/firework_panel.gd) ---------------------
 	var used := {}
 	var slots_n: Array = []
@@ -7430,8 +7201,8 @@ func _push_firework_model() -> void:
 
 
 ## dropFirework(N) — a tome/inventory card lands on launcher slot N.
-func _on_fw_drop(args: Array, _w: GWidget) -> void:
-	var dnd: Dictionary = _gui.gui.model.values.get("dnd", {})
+func _on_fw_drop(args: Array, _w: GuiLayer.Ctx) -> void:
+	var dnd: Dictionary = _gui.model.values.get("dnd", {})
 	var payload: Variant = dnd.get("item")
 	if not (payload is Dictionary):
 		return
@@ -7446,7 +7217,7 @@ func _on_fw_drop(args: Array, _w: GWidget) -> void:
 
 
 ## removeFirework(N) — the slot's own card is dragged out → clear the slot.
-func _on_fw_remove(args: Array, _w: GWidget) -> void:
+func _on_fw_remove(args: Array, _w: GuiLayer.Ctx) -> void:
 	for a in args:
 		if a is int or a is float:
 			var i := clampi(int(a), 0, _fw_slots.size() - 1)
@@ -7454,24 +7225,9 @@ func _on_fw_remove(args: Array, _w: GWidget) -> void:
 	_push_firework_model()
 
 
-## setDelay(N, delayN) — the per-slot textEditor, arg2 = the editor widget.
-func _on_fw_delay(args: Array, _w: GWidget) -> void:
-	var slot := -1
-	var editor: GWidget = null
-	for a in args:
-		if a is int or a is float:
-			if slot < 0:
-				slot = int(a)
-		elif a is GWidget:
-			editor = a
-	if slot < 0 or slot >= _fw_slots.size() or editor == null:
-		return
-	_fw_slots[slot]["delay"] = maxi(0, int(editor.text))
-
-
 ## launchFirework — schedule each staged card; delay is in deciseconds
 ## (maxChars=3 on the field). One 22095 per launch, element pos/id on wire.
-func _on_fw_launch(_a: Array, _w: GWidget) -> void:
+func _on_fw_launch(_a: Array, _w: GuiLayer.Ctx) -> void:
 	var e: Dictionary = _element_info(_fw_elem)
 	var pos: Vector3i = e.get("pos", Vector3i.ZERO)
 	var delay_acc := 0.0

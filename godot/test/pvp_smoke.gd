@@ -113,7 +113,7 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 				# pick our first tradable card, Ofrecer, then Listo.
 				await create_timer(0.5).timeout
 				var panel = _main._gui.dialogs.get("exchangeDialog")
-				var ex: Dictionary = _main._gui.gui.model.get_value("exchangeNative")
+				var ex: Dictionary = _main._gui.model.get_value("exchangeNative")
 				var owned: Array = ex.get("owned", []) if ex != null else []
 				if panel == null or owned.is_empty():
 					print("[smoke] WARN no native exchange window / nothing to offer")
@@ -126,8 +126,8 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 				# the bot answers our stage with its own card + ready; any
 				# stage un-readies both, so we ready only after its card lands
 				await create_timer(1.5).timeout
-				var theirs: Array = _main._gui.gui.model.get_value("exchangeNative").get("theirs", [])
-				var mine_rows: Array = _main._gui.gui.model.get_value("exchangeNative").get("mine", [])
+				var theirs: Array = _main._gui.model.get_value("exchangeNative").get("theirs", [])
+				var mine_rows: Array = _main._gui.model.get_value("exchangeNative").get("mine", [])
 				print("[smoke] main sees the bot offer %s" % [theirs.map(func(c): return c.name)])
 				print("[smoke] TRADE %s — mine %s, theirs %s" % ["OK" if mine_rows.size() == 1
 					and str(mine_rows[0].name) == str(owned[0].name) and theirs.size() == 1
@@ -167,7 +167,7 @@ func _on_main_msg(op: int, raw: PackedByteArray) -> void:
 			var tp = _main._gui.dialogs.get("teamPickDialog")
 			var pick: Button = tp.find_child("Team-1", true, false) if tp != null else null
 			print("[smoke] TEAMPICK %s (%d team buttons)" % ["OK" if pick != null else "FAIL",
-				_main._gui.gui.model.get_value("teamPick").get("presets", []).size() if tp != null else 0])
+				_main._gui.model.get_value("teamPick").get("presets", []).size() if tp != null else 0])
 			# S08: a 4th toast within 4 s used to freeze the client (toast loop)
 			for n in 6:
 				_main._toast("burst %d" % n)
@@ -216,7 +216,7 @@ var _report_rows := -1
 
 func _check_report() -> void:
 	await create_timer(0.8).timeout
-	var r: Variant = _main._gui.gui.model.get_value("fightReport")
+	var r: Variant = _main._gui.model.get_value("fightReport")
 	if _main._gui.is_open("fightReportDialog") and r is Dictionary:
 		_report_rows = r.get("fighters", []).size()
 		_capture("fight-report-pvp")
@@ -503,7 +503,7 @@ func _guild_phase() -> void:
 	sp = await _social_clan()
 	var in_list: bool = await _select_row(sp, "test2")
 	print("[smoke] GUILD_MEMBERS %s — test2 in the native clan table %s" % ["OK" if in_list else "FAIL",
-		_main._gui.gui.model.get_value("guild").get("members", []).map(func(m): return str(m.get("name", "?")))])
+		_main._gui.model.get_value("guild").get("members", []).map(func(m): return str(m.get("name", "?")))])
 	if in_list:
 		_btn(sp, _t("social.view_member")).pressed.emit()   # 2600 → 2601
 		print("[smoke] member-stats sent (2600)")

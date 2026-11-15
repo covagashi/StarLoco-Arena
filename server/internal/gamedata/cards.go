@@ -112,24 +112,6 @@ type Cards struct {
 	byID map[int32]*CoachCard
 }
 
-// LoadCards reads and decodes every coach-card template from the store.
-func (s *Store) LoadCards() (*Cards, error) {
-	cards := &Cards{byID: make(map[int32]*CoachCard)}
-	for _, e := range s.EntriesOf(TypeCoachCard) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		card, err := decodeCoachCard(rec.Data)
-		if err != nil {
-			// Skip malformed records rather than failing the whole load.
-			continue
-		}
-		cards.byID[card.ID] = card
-	}
-	return cards, nil
-}
-
 // NewCards builds a Cards catalog from an explicit set of templates. Intended
 // for tests and tooling that need a deterministic catalog without the client
 // data files.
@@ -189,103 +171,6 @@ func sortInt32Asc(a []int32) {
 
 // Len reports how many templates were loaded.
 func (c *Cards) Len() int { return len(c.byID) }
-
-// decodeCoachCard reads the leading fields of an aPp record (big-endian):
-//
-//	i32 id, i32 type, i32 cardSet, i32 value, then the token-price map
-//	[i8 count]{i8 currencyType, i32 amount} (field 5, the shop "tokenValue"),
-//	... (remaining fields skipped).
-//
-// decodeCoachCard parses an aPp record in full, matching the client's aPp
-// deserializer field for field.
-//
-// The record is read to the END, including the 19-26 tail (the `np_1[]`
-// parameters, fusion power/quality, pet model, colour slot/palette). That tail
-// used to be unreachable because the `np_1` element layout was unknown; it was
-// decoded in B-071/B-073. Nothing in this record references a spell — the last
-// field, `tE()`, is the colour PALETTE index (the client builds the style class
-// as `"fighterColor" + tE()`), not a link to anything castable.
-func decodeCoachCard(data []byte) (*CoachCard, error) {
-	return decodeCoachCardCursor(&cur{b: data})
-}
-
-// decodeCoachCardCursor is decodeCoachCard over a caller-owned cursor, so a test
-// can inspect how many bytes of the record were consumed. A record that decodes
-// with ZERO bytes left over is the strongest evidence a layout is right.
-func decodeCoachCardCursor(c *cur) (*CoachCard, error) {
-	card := &CoachCard{}
-	card.ID = c.i32()      // 1 id
-	card.Type = c.i32()    // 2 type (client enum aMK)
-	card.CardSet = c.i32() // 3 card set / panoplie
-	card.Value = c.i32()   // 4 barter value
-	// 5 token-price map (aim_1): [i8 count] then count × (i8 key, i32 amount).
-	if n := int(c.u8()); n > 0 && n <= 64 {
-		card.Price = make(map[uint8]int32, n)
-		for i := 0; i < n && c.ok(); i++ {
-			key := c.u8()
-			card.Price[key] = c.i32()
-		}
-	}
-	card.RequiredLevel = c.i32() // 6  tr()
-	card.FireworkType = c.u8()   // 7  tl()
-	// 8 tk(): float params, i32-counted (NOT i8 — getting this wrong misaligns
-	// everything after it).
-	if n := int(c.i32()); n > 0 && n <= 64 {
-		card.FireworkColour = make([]float32, 0, n)
-		for i := 0; i < n && c.ok(); i++ {
-			card.FireworkColour = append(card.FireworkColour, c.f32())
-		}
-	}
-	card.IsUnique = c.u8() != 0         // 9
-	card.ObtainableInDraw = c.u8() != 0 // 10 to()
-	card.DropPercent = c.i32()          // 11 ts()
-	card.Bound = c.u8() != 0            // 12 tp()
-	card.Undestructible = c.u8() != 0   // 13 tq()
-	card.HasUsableAction = c.u8() != 0  // 14 tt()
-	// 15 tu(): the akw_0 effect array — the SAME structure card sets and fighter
-	// conditions carry, so it is decoded with the shared decodeAkw. Keeping the
-	// whole list (rather than sniffing one action out of it, as this used to)
-	// is what makes every consumable card usable: healing (AI 5/11), morale
-	// (AI 9), fatigue (AI 16) and "apply a condition" (AI 15) all live here.
-	if n := int(c.u8()); n >= 0 && n <= 64 {
-		for k := 0; k < n && c.ok(); k++ {
-			ef := decodeAkw(c)
-			card.Effects = append(card.Effects, ef)
-			if ef.Action == resurrectAction && card.ResurrectPercent == 0 && len(ef.Params) > 0 {
-				card.ResurrectPercent = ef.Params[0]
-			}
-		}
-	}
-	c.u8()              // 16 aZd() — dead in the client too
-	c.i32()             // 17 aZe() — dead in the client too
-	card.Rank = c.i32() // 18 getRank(): drives the client's rarity frame colour
-
-	// 19-26: the tail that used to be unreachable because the `np_1` element
-	// layout was unknown (see parameters.go). Field order from aPp's own
-	// deserializer `a(ByteBuffer,int,short)`.
-	params, ok := decodeParameters(c) // 19 tv(): gameplay parameters
-	card.Parameters = params
-	if !ok {
-		// A parameter carried an inline effect we cannot skip; everything after
-		// it would be garbage. Keep what we have rather than invent values.
-		return card, nil
-	}
-	card.Unknown19 = c.i16()    // 20 tw(): passed to the runtime card, never read
-	card.Unknown20 = c.i16()    // 21 tx(): idem
-	card.FusionPower = c.i16()  // 22 tz(): the fusion lab's "labPower" field
-	card.FusionQuality = c.u8() // 23 tA(): the fusion lab's "quality" field
-	card.PetModelID = c.i32()   // 24 tB(): pet appearance, spawned by aez_0.aQv()
-	card.ColourSlot = c.u8()    // 25 tD(): 0 hair / 1 skin / 2 eyes
-	card.ColourIndex = c.i32()  // 26 tE(): palette index within that slot
-
-	if card.ID <= 0 {
-		return nil, errShort
-	}
-	// A truncated tail leaves the trailing fields zeroed rather than dropping an
-	// otherwise-usable card — the leading id/type/set/value are what most callers
-	// need.
-	return card, nil
-}
 
 var errShort = shortErr("gamedata: record too short")
 

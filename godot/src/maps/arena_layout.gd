@@ -22,8 +22,8 @@ extends RefCounted
 ## surface in altitude steps (ALT m each); only the changes are written.
 ##
 ## The cells and their altitudes are never edited: they are the arena's
-## base shape, art/shapes/arena-NN.json (the retail fight topology and .fmd,
-## frozen once in S43 so nothing reads the old client's .jar files):
+## base shape, art/shapes/arena-NN.json (the fight topology and start
+## cells, ours since S43):
 ##   {"world": 5, "arena": 1, "team0": [[x, y, z], ...], "team1": [...],
 ##    "coach": [...], "specials": [[x, y, z, template], ...],
 ##    "cells": {"x,y": [alt, "floor" | "obstacle"]}}
@@ -555,8 +555,7 @@ static func fight_path(world: int) -> String:
 
 ## The world's exported fight shape in fight_view's terms, or {} when the
 ## world has none: {cells: {Vector2i: {alt, ground}}, fmd: {team0, team1,
-## coach: [{x, y, z}], specials: [{pos: {x, y, z}, template}]}} — the
-## shapes the retail Topology.load_world and FightMap.load returned.
+## coach: [{x, y, z}], specials: [{pos: {x, y, z}, template}]}}.
 static func load_fight_shape(world: int) -> Dictionary:
 	return _read_shape(ProjectSettings.globalize_path(fight_path(world)))
 

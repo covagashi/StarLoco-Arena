@@ -48,7 +48,7 @@ func _ready() -> void:
 		ped.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE))
 	stage.add_child(ped)
 	stage.move_child(ped, pinned_actions.get_index())
-	_spr = preload("res://src/anims/anm_sprite.gd").new()
+	_spr = preload("res://src/anims/figure.gd").new()
 	_spr.foot_pivot = true
 	_spr.position = FOOT
 	_spr.scale = Vector2(DOLL_SCALE, DOLL_SCALE)
@@ -176,7 +176,7 @@ func _dress(slots: Array) -> void:
 	if look != _look:
 		_look = look
 		_spr.tints = Palettes.coach_tints(int(lc.get("skin", 0)), int(lc.get("hair", 0)))
-		var lib := "anims/coach_700%d" % int(lc.get("sex", 0))
+		var lib := preload("res://src/anims/fighter3d.gd").coach_key(int(lc.get("sex", 0)))
 		if not Direction8.load_idle(_spr, lib, Direction8.FRONT, "AnimMenu"):
 			Direction8.load_idle_any(_spr, lib)
 	if _spr.model3d != null and _spr.model3d.has_method("wear_coach_cards"):

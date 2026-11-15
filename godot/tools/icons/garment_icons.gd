@@ -27,13 +27,13 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	var pieces: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/equipment/pieces.json"))["coach"]
 	var made := 0
-	var spr = preload("res://src/anims/anm_sprite.gd").new()
+	var spr = preload("res://src/anims/figure.gd").new()
 	spr.foot_pivot = true
 	spr.position = FOOT
 	spr.scale = Vector2(SCALE, SCALE)
 	spr.tints = Palettes.coach_tints(1, 1)
 	add_child(spr)
-	Direction8.load_idle(spr, "anims/coach_7000", 1)
+	Direction8.load_idle(spr, "coach_7000", 1)
 	await get_tree().create_timer(0.8).timeout
 	var m = spr.model3d
 	if m == null:

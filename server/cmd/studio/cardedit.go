@@ -12,9 +12,8 @@ import (
 )
 
 // cardedit.go: the cards are the game's own data since S40, in the checkout's
-// server/content/cards (proprietary, see its LICENSE), not in data.bdat. The
-// studio reads them from there, whatever data directory is selected, and its
-// card editor writes them back with gamedata.WriteCardContent, which keeps one
+// server/content/cards (proprietary, see its LICENSE). The studio reads them
+// from there and its card editor writes them back with gamedata.WriteCardContent, which keeps one
 // card per line so a saved edit diffs as that card alone. Away from a checkout
 // it shows the cards embedded in the binary, read-only.
 
@@ -40,7 +39,7 @@ func (a *App) ensureCards() error {
 }
 
 // detectContentDir finds server/content/cards from the working directory or
-// the executable, the same way detectPaths finds the data store.
+// the executable (see candidateRoots).
 func detectContentDir() string {
 	for _, root := range candidateRoots() {
 		for _, rel := range []string{filepath.Join("server", "content", "cards"), filepath.Join("content", "cards")} {

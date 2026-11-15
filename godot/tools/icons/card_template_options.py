@@ -226,7 +226,7 @@ def card(c, style, W=150, H=180):
 
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else "card_options.png"
-    cards = json.load(open("assets/gamedata/cards.json"))
+    cards = json.load(open("assets/content/cards.json"))
     picks = [("185", "coach"), ("111", "coach"), ("305", "consumable"), ("1008", "combat"),
              ("202", "arena"), ("943", "fusion"), ("1000", "dofus")]
     sample = [{"id": i, "family": f, "rank": int(cards[i].get("rank", 0)), "name": cards[i]["name"]} for i, f in picks]

@@ -64,21 +64,6 @@ type Summonings struct {
 	byID map[int32]*Summoning
 }
 
-// LoadSummonings reads and decodes every summon template (type 300).
-func (s *Store) LoadSummonings() (*Summonings, error) {
-	out := &Summonings{byID: make(map[int32]*Summoning)}
-	for _, e := range s.EntriesOf(TypeSummoning) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if sm := decodeSummoning(rec.Data); sm != nil {
-			out.byID[sm.ID] = sm
-		}
-	}
-	return out, nil
-}
-
 // NewSummonings builds a catalog from explicit templates (tests/tooling).
 func NewSummonings(templates ...*Summoning) *Summonings {
 	out := &Summonings{byID: make(map[int32]*Summoning, len(templates))}
@@ -98,48 +83,3 @@ func (s *Summonings) Len() int { return len(s.byID) }
 
 // All returns every loaded summon template, keyed by id.
 func (s *Summonings) All() map[int32]*Summoning { return s.byID }
-
-// decodeSummoning parses a jz_2 record through the look field. Returns nil for a
-// malformed/empty record (the defensive cursor degrades a truncated tail to zero
-// values, so a short record just yields no spells / look 0).
-func decodeSummoning(data []byte) *Summoning {
-	c := &cur{b: data}
-	sm := &Summoning{}
-	sm.ID = c.i32()  // 1 id
-	sm.HP = c.i32()  // 2 maxHP
-	sm.AP = c.i32()  // 3 maxAP
-	sm.MP = c.i32()  // 4 maxMP
-	n := int(c.u8()) // 5 spell count (i8) + i32×n spell ids
-	if n < 0 || n > 64 {
-		n = 0
-	}
-	for i := 0; i < n && c.ok(); i++ {
-		sm.SpellIDs = append(sm.SpellIDs, c.i32())
-	}
-	sm.Look = c.i32() // 6 look/gfx id
-
-	sm.CannotBeCarried = c.u8() != 0   // 7  op()
-	sm.Intransposable = c.u8() != 0    // 8  oq()
-	sm.Stabilised = c.u8() != 0        // 9  or()
-	sm.Rooted = c.u8() != 0            // 10 os()
-	sm.DeadFlag = c.u8() != 0          // 11 ov()
-	sm.NoPositionalBonus = c.u8() != 0 // 12 oy()
-	sm.Block = c.i32()                 // 13 ot()
-	sm.Dodge = c.i32()                 // 14 ou()
-	sm.Radius = int32(c.u8())          // 15 ox()
-	for n := int(c.u8()); n > 0; n-- { // 16 blob list (no callers in the client)
-		ln := int(c.i32())
-		if ln < 0 || !c.need(ln) {
-			break
-		}
-		c.pos += ln
-	}
-	sm.ParticleID = c.i32() // 17 oz()
-
-	// The header (through Look) is what combat needs; a truncated tail degrades to
-	// zero flags rather than dropping the whole creature.
-	if sm.ID <= 0 {
-		return nil
-	}
-	return sm
-}

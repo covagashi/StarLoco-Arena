@@ -108,7 +108,7 @@ func _audit() -> void:
 		_record(-1, "City panel", false, "did not open")
 		return
 	await _shot("city")
-	var city: Dictionary = _main._gui.gui.model.get_value("city")
+	var city: Dictionary = _main._gui.model.get_value("city")
 	if city == null or city.get("groups", []).is_empty():
 		_record(-1, "City panel", false, "no services listed")
 		return
@@ -159,7 +159,7 @@ func _evidence(kind: int) -> Array:
 		3, 5, 6, 7, 9, 15:
 			# S18: the native conversation window, never the debug pane
 			var ok: bool = await _wait(func(): return _main._gui.is_open("npcTalkDialog"), 2.0)
-			var talk: Variant = _main._gui.gui.model.get_value("talk")
+			var talk: Variant = _main._gui.model.get_value("talk")
 			var t: Dictionary = talk if talk is Dictionary else {}
 			return [ok and not _debug_pane_shown() and str(t.get("name", "")) != ""
 				and not t.get("choices", []).is_empty(),
@@ -197,7 +197,7 @@ func _service_button(id: int) -> Button:
 	var panel = await _open_city()
 	if panel == null:
 		return null
-	var city: Dictionary = _main._gui.gui.model.get_value("city")
+	var city: Dictionary = _main._gui.model.get_value("city")
 	var groups: Array = city.get("groups", [])
 	for i in groups.size():
 		for s in groups[i].services:

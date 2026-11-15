@@ -20,7 +20,7 @@ func TestResetPositionMovesCoachToAZaap(t *testing.T) {
 
 	z, ok := primaryZaap(startWorldID)
 	if !ok {
-		t.Skip("no zaap data for the start world (needs server/data or data-dist)")
+		t.Fatal("no zaap for the start world in elements_data.go")
 	}
 	// Wedge the coach somewhere it certainly is not supposed to be.
 	s.Coach.PosX, s.Coach.PosY, s.Coach.PosZ = -9999, -9999, 0

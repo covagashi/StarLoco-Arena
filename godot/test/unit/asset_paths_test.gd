@@ -2,20 +2,18 @@ extends RefCounted
 ## Guards src/util/asset_paths.gd — the resolver every raw asset read goes
 ## through (B-173).
 ##
-## The hazard it exists for: everything under assets/ except ui/ and i18n/ is
-## old retail importer output, git-ignored, and read RAW (Image.load_from_file,
-## FileAccess, FontFile.load_dynamic_font) rather than as a Godot resource. A
+## The hazard it exists for: the game reads its tables, images and sounds
+## RAW (Image.load_from_file, FileAccess) rather than as Godot resources. A
 ## hardcoded "res://assets/…" works in the editor and silently reads nothing
 ## from an exported .pck, so release builds resolve against an `assets/`
-## folder shipped beside the executable instead — the same shape as the
-## server's data-dist/.
+## folder shipped beside the executable instead.
 ##
 ## The subtle part, and the reason for most of what follows: probing is PER
-## FILE, not per root. assets/ui/*.png and assets/i18n/*.json ARE tracked and
-## imported, so "res://assets/" still exists inside an exported pack; a
-## root-level existence check would see it and wrongly pin every lookup to
-## res://, re-breaking gamedata/anims/gui. "root precedence" and
-## "fall-through" below are that invariant in test form.
+## FILE, not per root. assets/ui/*.png ARE imported, so "res://assets/"
+## still exists inside an exported pack; a root-level existence check would
+## see it and wrongly pin every lookup to res://, re-breaking content/ and
+## audio/. "root precedence" and "fall-through" below are that invariant in
+## test form.
 ##
 ## This suite must stay runnable on a machine that has never run the asset
 ## importer, so it touches no real asset: it builds two throwaway root trees
@@ -49,9 +47,7 @@ func run(t) -> void:
 	_cleanup()
 
 
-## normalize() is what keeps the migration reversible: the top-level smoke
-## scripts, deprecated_hall/ and the gui model's actorDescriptorLibrary values
-## still hand out "res://assets/anims/…" strings and must keep working.
+## normalize(): a "res://assets/…" string still names the same asset.
 func _check_normalize(t) -> void:
 	t.eq(AssetPaths.PREFIX, "res://assets/", "PREFIX is the legacy asset root")
 	t.eq(AssetPaths.normalize("res://assets/content/spells.json"),
@@ -60,16 +56,16 @@ func _check_normalize(t) -> void:
 		"content/spells.json", "normalize() leaves a logical name alone")
 	t.eq(AssetPaths.normalize("/content/spells.json"),
 		"content/spells.json", "normalize() strips a leading slash")
-	t.eq(AssetPaths.normalize("res://assets//gui/xml/theme/default.xml"),
-		"gui/xml/theme/default.xml",
+	t.eq(AssetPaths.normalize("res://assets//ui/fonts/x.ttf"),
+		"ui/fonts/x.ttf",
 		"normalize() strips the prefix and the slash it left behind")
 	t.eq(AssetPaths.normalize(""), "", "normalize() passes an empty name through")
 	# Anything that is not an assets/ path is NOT ours to rewrite: scripts
 	# live in the pack and are preloaded, and tests hand us user:// fixtures.
 	t.eq(AssetPaths.normalize("res://src/main.gd"), "res://src/main.gd",
 		"normalize() leaves a non-asset res:// path unchanged")
-	t.eq(AssetPaths.normalize("user://assets/gamedata/x.json"),
-		"user://assets/gamedata/x.json",
+	t.eq(AssetPaths.normalize("user://assets/content/x.json"),
+		"user://assets/content/x.json",
 		"normalize() leaves a user:// path unchanged")
 
 
@@ -106,7 +102,7 @@ func _check_precedence(t) -> void:
 
 ## The invariant that per-file probing buys: root A exists and holds files,
 ## yet a file only root B has still resolves to B. This is ui/login_bg.png
-## (packed) vs gamedata/spells.json (beside the executable) in miniature.
+## (packed) vs content/spells.json (beside the executable) in miniature.
 func _check_fallthrough(t) -> void:
 	t.eq(AssetPaths.resolve("b_only.txt"), ROOT_B + "/b_only.txt",
 		"resolve() falls through to the second root per FILE, not per root")
@@ -117,16 +113,16 @@ func _check_fallthrough(t) -> void:
 
 ## A miss still names a path, so "cannot open <x>" stays diagnosable.
 func _check_missing(t) -> void:
-	t.eq(AssetPaths.resolve("gamedata/nope.json"),
-		ROOT_A + "/gamedata/nope.json",
+	t.eq(AssetPaths.resolve("content/nope.json"),
+		ROOT_A + "/content/nope.json",
 		"a missing file resolves under the FIRST root")
-	t.ok(not AssetPaths.exists("gamedata/nope.json"),
+	t.ok(not AssetPaths.exists("content/nope.json"),
 		"exists() false for a missing file")
-	t.eq(AssetPaths.read_text("gamedata/nope.json"), "",
+	t.eq(AssetPaths.read_text("content/nope.json"), "",
 		"read_text() is empty for a missing file")
-	t.eq(AssetPaths.read_json("gamedata/nope.json"), null,
+	t.eq(AssetPaths.read_json("content/nope.json"), null,
 		"read_json() defaults to null for a missing file")
-	t.eq(AssetPaths.read_json("gamedata/nope.json", {}), {},
+	t.eq(AssetPaths.read_json("content/nope.json", {}), {},
 		"read_json() honors the caller's default")
 
 
@@ -135,7 +131,7 @@ func _check_text_and_json(t) -> void:
 		"read_json() parses a table")
 	t.eq(AssetPaths.read_json("b_table.json"), {"name": "bravo"},
 		"read_json() parses a table from the fall-through root")
-	# Truncated import output must not take the client down — every gamedata
+	# A truncated table must not take the client down — every content
 	# table treats a null parse as "feature absent". The two
 	# "Parse JSON failed" ERROR lines the lane prints are the engine
 	# reporting THIS fixture: JSON.parse_string logs before returning null,
@@ -163,8 +159,7 @@ func _check_images(t) -> void:
 		"load_image() is null for a missing image")
 
 
-## dir() is the DirAccess flavour — the anim set-dir prefixes and the theme's
-## lazy image-index scan both need a folder, not a file.
+## dir() is the DirAccess flavour, for folder scans.
 func _check_dirs(t) -> void:
 	t.eq(AssetPaths.dir("shared_dir"), ROOT_A + "/shared_dir",
 		"dir() takes the first root that has the folder")
@@ -176,8 +171,8 @@ func _check_dirs(t) -> void:
 		"dir() never returns a trailing slash")
 	t.eq(AssetPaths.dir("no_such_dir"), ROOT_A + "/no_such_dir",
 		"a missing folder resolves under the FIRST root")
-	t.eq(AssetPaths.dir("anims/coach_7000"), ROOT_B + "/anims/coach_7000",
-		"dir() resolves a nested anim set dir")
+	t.eq(AssetPaths.dir("nested/b_sub"), ROOT_B + "/nested/b_sub",
+		"dir() resolves a nested folder")
 	# "ambi" is a FILE in A and a FOLDER in B: the file and directory caches
 	# must not answer each other's questions.
 	t.eq(AssetPaths.resolve("ambi"), ROOT_A + "/ambi",
@@ -214,7 +209,7 @@ func _check_reset(t) -> void:
 func _build_fixtures(t) -> bool:
 	_cleanup()
 	for d in [ROOT_A, ROOT_B, ROOT_A + "/shared_dir", ROOT_B + "/shared_dir",
-			ROOT_B + "/b_dir", ROOT_B + "/anims/coach_7000",
+			ROOT_B + "/b_dir", ROOT_B + "/nested/b_sub",
 			ROOT_B + "/ambi"]:
 		DirAccess.make_dir_recursive_absolute(d)
 	var ok := _write(ROOT_A + "/both.txt", "from A")

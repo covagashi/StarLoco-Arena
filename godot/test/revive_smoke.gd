@@ -28,7 +28,7 @@ func _audit() -> void:
 	var city = await _open_city()
 	var kinds: Array = []
 	if city != null:
-		for g in _main._gui.gui.model.get_value("city").get("groups", []):
+		for g in _main._gui.model.get_value("city").get("groups", []):
 			kinds.append(int(g.kind))
 	_record(10, "services", city != null and not 10 in kinds,
 		"no graveyard among %d service kinds" % kinds.size())
@@ -84,7 +84,7 @@ func _revive(panel, st: int) -> void:
 	await create_timer(0.4).timeout
 	var f = _main._fighter_by_id(fid)
 	var now := int(f.get("state", -1)) if f != null else -1
-	var status: Dictionary = _main._gui.gui.model.get_value("evolutionTeam").get("reviveStatus", {})
+	var status: Dictionary = _main._gui.model.get_value("evolutionTeam").get("reviveStatus", {})
 	var want := 0 if st == 2 else 1
 	_record(10, "revive %d" % st, done and now == want and _seen.has(6006)
 		and bool(status.get("ok", false)) and int(State.inventory.get(REVIVE_CARD, 0)) <= qty - 1
@@ -97,7 +97,7 @@ func _revive(panel, st: int) -> void:
 ## Press the lobby's Team menu button on the evolution tab.
 func _open_team():
 	_close_all()
-	_main._gui.gui.model.set_value("gamePreferences", 0, "lastSelectedGameModeId")
+	_main._gui.model.set_value("gamePreferences", 0, "lastSelectedGameModeId")
 	var lobby = _main._lobby_screen
 	if lobby == null:
 		return null

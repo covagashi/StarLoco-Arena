@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -36,11 +34,7 @@ import (
 // spell has appeared whose MaxActive really does bind tighter than the limits we
 // enforce, and it becomes worth implementing.
 func TestMaxActiveIsRedundantInShippedData(t *testing.T) {
-	dir := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(dir, "data.bdat")); err != nil {
-		t.Skip("no data-dist; skipping")
-	}
-	st, err := Open(dir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

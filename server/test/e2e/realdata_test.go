@@ -14,8 +14,8 @@ import (
 )
 
 // The rest of this package runs on a nil (or a hand-built) catalogue, so the
-// data layer itself had no e2e. These tests start the server with the committed
-// data-dist loaded through the same gamedata.LoadBundle + Deps.UseGameData that
+// data layer itself had no e2e. These tests start the server with the game's
+// own data loaded through the same gamedata.LoadBundle + Deps.UseGameData that
 // cmd/server uses (S08).
 
 var (
@@ -23,16 +23,15 @@ var (
 	realData     *gamedata.Bundle
 )
 
-// realBundle loads data-dist once per package: it is read-only after loading,
+// realBundle loads the embedded content once per package: it is read-only after loading,
 // and every parallel test can share it.
 func realBundle(t *testing.T) *gamedata.Bundle {
 	t.Helper()
 	realDataOnce.Do(func() {
-		realData = gamedata.LoadBundle(gamedata.Discover("../../data-dist"),
-			slog.New(slog.NewTextHandler(io.Discard, nil)))
+		realData = gamedata.LoadBundle(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	})
 	if realData.Cards == nil || realData.Spells == nil || realData.FightMaps == nil {
-		t.Skip("data-dist not loadable from test/e2e; real-data e2e skipped")
+		t.Fatal("the embedded game data did not load")
 	}
 	return realData
 }
@@ -93,7 +92,7 @@ func TestRealDataShopRefusesUnpricedCard(t *testing.T) {
 		}
 	}
 	if shop == 0 {
-		t.Fatal("no card set in data-dist stocks both an unpriced and a cheap card")
+		t.Fatal("no card set stocks both an unpriced and a cheap card")
 	}
 
 	addr := testServerWithData(t, nil)

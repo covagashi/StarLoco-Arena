@@ -84,21 +84,6 @@ type FighterCards struct {
 	byID map[int32]*FighterCard
 }
 
-// LoadFighterCards reads and decodes every fighter-card template (type 250).
-func (s *Store) LoadFighterCards() (*FighterCards, error) {
-	fc := &FighterCards{byID: make(map[int32]*FighterCard)}
-	for _, e := range s.EntriesOf(TypeFighterCard) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if card := decodeFighterCard(rec.Data); card != nil {
-			fc.byID[card.ID] = card
-		}
-	}
-	return fc, nil
-}
-
 // NewFighterCards builds a catalog from explicit templates (tests/tooling).
 func NewFighterCards(templates ...*FighterCard) *FighterCards {
 	fc := &FighterCards{byID: make(map[int32]*FighterCard, len(templates))}
@@ -125,48 +110,6 @@ func (c *FighterCards) All() map[int32]*FighterCard { return c.byID }
 //	i32 id, i16 type, i8 weaponAp, i32 value, i32 rangeMAX, i32 rangeMIN,
 //	i32 (uh_0.eA), i32 iconSubType, 6×bool  = 4+2+1+4+4+4+4+4+6 = 33 bytes.
 const fighterCardHeaderLen = 33
-
-// decodeFighterCard parses a uh_0 record (DATA-FORMAT §5) and sums its EQUIP-time
-// CharacBuff effects into Bonus. Returns nil on a malformed/empty record.
-func decodeFighterCard(data []byte) *FighterCard {
-	c := &cur{b: data}
-	id := c.i32()       // 1  id
-	typ := c.i16()      // 2  type
-	ap := c.u8()        // 3  weaponActionPoints (jb_2.Vo)
-	value := c.i32()    // 4  value
-	rangeMax := c.i32() // 5  uh_0.Az -> jb_2.Az = range MAX (see the struct doc)
-	rangeMin := c.i32() // 6  uh_0.AA -> jb_2.AA = range MIN
-	scriptID := c.i32() // 7  uh_0.eA — use-time Lua script id
-	c.i32()             // 8  icon sub-type (ve_0.Bo)
-	// The six flags, now identified against the client's own targeting validator
-	// (mv_1.a(gn_0, jb_2, ry), which rejects a use with a specific error per flag).
-	onlyLine := c.u8() != 0     // 9  ex() -> Vp(): target must share the caster's row/col
-	testLoS := c.u8() != 0      // 10 ew() -> iW(): needs line of sight
-	needFreeCell := c.u8() != 0 // 11 ey() -> Vq(): target cell must be empty
-	whenDead := c.u8() != 0     // 12 AB() -> Vr(): usable while dead/KO
-	whenCarried := c.u8() != 0  // 13 AC() -> Vs(): usable while carried
-	c.u8()                      // 14 AD(): description-generation toggle only
-	if !c.ok() || id <= 0 {
-		return nil
-	}
-	card := &FighterCard{
-		ID: id, Type: typ, Value: value, ScriptID: scriptID,
-		APCost: int32(ap), RangeMin: rangeMin, RangeMax: rangeMax,
-		OnlyLine: onlyLine, TestLoS: testLoS, NeedFreeCell: needFreeCell,
-		UsableWhenDead: whenDead, UsableWhenCarried: whenCarried,
-	}
-	effects := decodeEffectList(c) // 15 effects
-	card.Bonus = sumEquipBonus(effects)
-	for _, ef := range effects {
-		switch ef.ContainerType {
-		case containerFighterCardEquip:
-			card.EquipEffects = append(card.EquipEffects, ef)
-		case containerFighterCardUse:
-			card.UseEffects = append(card.UseEffects, ef)
-		}
-	}
-	return card
-}
 
 // Effect container types. The record stores these space-padded to a fixed width
 // ("FIGHTER_CARD_USE  "); decodeEffectBlob trims them, exactly as the client does

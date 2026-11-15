@@ -35,8 +35,7 @@ var simBreeds = []uint8{8, 9, 1} // Iop, Cra, Feca: a hitter, a ranged, a tank
 
 func simDeps(t *testing.T) *Deps {
 	t.Helper()
-	b := gamedata.LoadBundle(gamedata.Discover(filepath.Join("..", "..", "data-dist")),
-		slog.New(slog.NewTextHandler(io.Discard, nil)))
+	b := gamedata.LoadBundle(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if b.Spells == nil {
 		t.Skip("no game data")
 	}

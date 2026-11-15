@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -11,12 +9,9 @@ import (
 // them with damage spells. The decisive invariant: a DAMAGE spell targets an
 // enemy fighter, so its cell is occupied — it must NOT have NeedFreeCell set. If
 // the field labeled NeedFreeCell were actually (say) TestLoS, most damage spells
-// would light it up, exposing the mislabel. Skips without client data.
+// would light it up, exposing the mislabel. Reads server/content.
 func TestDumpSpellFlagsReal(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

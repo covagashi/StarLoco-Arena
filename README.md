@@ -55,19 +55,16 @@ off with `update_check: enabled: false` in `config.yaml`.
 | Piece | What it is | Included here? |
 |---|---|---|
 | 🖥️ **Server** | The Go program the game client connects to. Accounts, chat, matchmaking, teams, full fights. | ✅ Yes — `server/` |
-| 🗃️ **Server game data** | `data.bdat` / `indexes.bdat` + maps: the card/spell/arena records the *server's own logic* needs to run a fight. | ✅ Yes — `server/data-dist/` (~2.5 MB) |
+| 🗃️ **Game data** | The game's own cards, spells and rules, embedded in the server. Proprietary, all rights reserved. | ✅ Yes — `server/content/` |
 | 🕹️ **Godot client** | The game client players use (login, lobby, fights). Proprietary, all rights reserved. | ✅ Yes — `godot/` (code; its art is being redone, see above) |
 
-> ⚖️ **Server game data.** `server/data-dist/` is a small,
-> deliberately curated subset of records — no art, audio, or executable code —
-> needed for the server's own fight logic, and StarLoco (the maintainer) has
-> chosen to include it so the server runs with zero setup. It stays until the
-> project's own cards replace it (sprint S40). Nothing in this project links
-> to a copy of the retail client. See [`DISCLAIMER.md`](./DISCLAIMER.md) for
-> the exact split and [`SECURITY.md`](./SECURITY.md) for takedown requests.
+> ⚖️ **Nothing from the retail client.** Since sprint S43 the game reads only
+> its own data and art; nothing in this project links to a copy of the retail
+> client. See [`DISCLAIMER.md`](./DISCLAIMER.md) and
+> [`SECURITY.md`](./SECURITY.md) for takedown requests.
 >
-> Everything else committed here is source, documentation and small tooling
-> assets, so a plain `git clone` stays fast and **no Git LFS is required**.
+> Everything committed here is source, documentation, tooling and the game's
+> own data and art, so a plain `git clone` stays fast and **no Git LFS is required**.
 
 The **server** and the **Godot client** are the actively developed parts.
 
@@ -118,21 +115,8 @@ the **`server`** folder of the clone.
 
 ### Step 2 — Game data
 
-The repo already includes the data the *server* needs
-(`server/data-dist/`), so fights work out of the box — `go run ./cmd/server`
-finds it automatically and nothing is required here.
-
-To use another copy of that data instead, point the server at a folder holding
-`data.bdat`, `indexes.bdat` **and** `maps/`:
-
-```
-go run ./cmd/server --data /path/to/data
-```
-
-the `ARENA_DATA_DIR` environment variable, or `data_dir` in `config.yaml`.
-The dev-only `server/data/` (a scratch spot for such a copy) is git-ignored —
-unlike `server/data-dist/`, which is tracked deliberately (see the callout
-above).
+Nothing to do: the game's own data is embedded in the server
+(`server/content/`).
 
 ### Step 3 — Start the server
 
@@ -214,7 +198,7 @@ are in [`godot/README.md`](./godot/README.md).
 | Problem | Fix |
 |---|---|
 | `go` / `git` **is not recognized** (Windows) or **command not found** (macOS) | The tool isn't installed or isn't on your `PATH`. Reopen the terminal after installing. |
-| Server says **"No game data ... fights are unavailable"** | Shouldn't happen — data ships bundled. If `data/` got separated from `arena-server`, or `--data`/`data_dir` points somewhere empty, put it back next to the binary or drop the override. |
+| Server says **"The embedded game data did not load"** | The binary was built from a broken checkout: rebuild it from a clean one. |
 | **"another program is already using that port"** | Another copy of the server is still running. Close the other terminal (`Ctrl + C`), or change `addr` in `config.yaml`. |
 | The **web portal** doesn't open | Read the address the server printed — port 80 usually needs admin rights, so it falls back to another port automatically. Set `web.addr` in `config.yaml` to pin one, or `web.enabled: false` to turn it off. |
 | The client **can't connect** | Make sure the Step 3 terminal is still running. On first launch your firewall may ask for permission — **allow** it. |
@@ -238,20 +222,12 @@ StarLoco-Arena/  (branch v2.70)
 │   ├── test/e2e/           End-to-end tests driving a real server over a real socket
 │   ├── docs/               STATUS.md (start here), BUGS.md, DATA-COVERAGE.md, …
 │   ├── COVERAGE.md         Per-opcode implemented / wire-audited / tested matrix
-│   ├── content/            The game's own cards (proprietary, embedded in the server)
-│   ├── data-dist/          Server game data (~2.5 MB) — COMMITTED, ships in releases
-│   └── data/               Local scratch copy of game data — NOT committed
-├── godot/                  The Godot 4 client (Pippop Arena); assets/ is NOT committed
+│   └── content/            The game's own cards and rules (proprietary, embedded in the server)
+├── godot/                  The Godot 4 client (Pippop Arena)
 ├── sprints/                The roadmap: BACKLOG.md + one file per sprint
 ├── devlog/                 Per-session work log
 └── docs/                   Game wiki (rules, breeds, spells, mechanics) + console commands
 ```
-
-> **Why `data*/` lives inside `server/`:** it is the server's runtime input.
-> `server/configs/*.yaml` resolves it as `data_dir: "data"`, relative to the
-> `server/` working directory (falling back to the committed `data-dist/` — see
-> [`internal/gamedata/locate.go`](./server/internal/gamedata/locate.go)). Do
-> **not** move either — see [`AGENTS.md`](./AGENTS.md).
 
 For full server details and the design docs, see
 [`server/README.md`](./server/README.md), [`server/docs/`](./server/docs) and
@@ -270,8 +246,7 @@ go test ./...            # full suite, no C toolchain required
 go test -race ./...      # requires a C toolchain (optional)
 ```
 
-Tests that need the real game data **skip** (they don't fail) when `server/data`
-is absent, so the suite is green on a fresh clone.
+The real-data tests read the embedded content, so they run on every clone.
 
 The Godot client has its own suite (`godot/run_tests.sh`) and live smoke
 scripts that drive a real server — see [`godot/README.md`](./godot/README.md).
@@ -280,10 +255,8 @@ scripts that drive a real server — see [`godot/README.md`](./godot/README.md).
 
 ## Git
 
-This branch does **not** use Git LFS — a plain `git clone` gets everything,
-including the small (~2.5 MB) `server/data-dist/` the server needs to run
-fights. Copyrighted material (the converted art under `godot/assets/`) and
-regenerable outputs (build artifacts, `node_modules/`, dev databases, logs) are
+This branch does **not** use Git LFS — a plain `git clone` gets everything.
+Regenerable outputs (build artifacts, `node_modules/`, dev databases, logs) are
 excluded via [`.gitignore`](./.gitignore) — see [`DISCLAIMER.md`](./DISCLAIMER.md)
 for exactly what is and isn't redistributed here.
 

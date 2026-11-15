@@ -1,24 +1,28 @@
 class_name GuiLayer
 extends CanvasLayer
-## Hosts XULOR2 dialogs on a CanvasLayer and routes dofusarena:* widget
-## events to a handler map. One GuiLib per layer (theme + model shared).
+## Hosts the native lobby panels (src/ui/*_panel.gd) on a CanvasLayer and
+## routes their actions to a handler map. Every dialog name opens the
+## native panel its factory builds; the retail XML engine is gone (S43).
 
 signal dialog_opened(name: String)
 
-var gui: GuiLib
-var handlers := {}          # method -> Callable(args, widget)
-var dialogs := {}           # canonical name -> native Control or GWidget
+## What a native panel acted on, handed to every handler: the row's item
+## and its index (-1 when the action is not about a row).
+class Ctx extends RefCounted:
+	var item_value: Variant = null
+	var selected_index := -1
+
+
+var model := GuiModel.new()  # the property store the native panels read
+var handlers := {}          # method -> Callable(args: Array, ctx: Ctx)
+var dialogs := {}           # canonical name -> native Control
 var native_factories := {}  # canonical name -> Callable returning Control
 var settings_path := "user://gui_settings.cfg"
 
-## event-name → xml file when they differ (retail registers screens under
-## logical names, not file names)
+## Logical names the lobby still asks for → the panel that answers them.
 const DIALOG_ALIASES := {
 	"coachInventoryDialog": "cardBookDialog",
-	# the generic toggle names the old drag-only lab; the tray UI is the
-	# functional one we wired
 	"fusionLaboratoryDialog": "fusionLabDialog",
-	# openCloseTeamXvsXNameDialog names the 2v2 name screen logically
 	"teamXvsXNameDialog": "team2vs2NameDialog",
 }
 
@@ -30,8 +34,6 @@ func _file_for(name: String) -> String:
 
 func _init() -> void:
 	layer = 10
-	gui = GuiLib.new(_saved_lang())
-	gui.event_sink = _on_event
 
 
 func _ready() -> void:
@@ -42,25 +44,17 @@ func open(name: String, model_values := {}) -> Control:
 	var fname := _file_for(name)
 	if is_open(fname):
 		return dialogs[fname]
+	if not native_factories.has(fname):
+		push_warning("GuiLayer: no native panel for %s" % fname)
+		return null
 	for key in model_values:
-		gui.model.set_value(key, model_values[key])
-	var native := native_factories.has(fname)
-	var root: Control = native_factories[fname].call(fname) if native else gui.open_dialog(fname)
+		model.set_value(key, model_values[key])
+	var root: Control = native_factories[fname].call(fname)
 	if root == null:
 		return null
 	add_child(root)
 	dialogs[fname] = root
-	if native:
-		root.closed.connect(close.bind(fname))
-	else:
-		_place_root(root, get_viewport().get_visible_rect().size)
-		GuiLayouts.apply(root)
-		root.resized.connect(func(): GuiLayouts.apply(root))
-		var resize := _relayout.bind(root)
-		get_viewport().size_changed.connect(resize)
-		root.tree_exiting.connect(func():
-			if get_viewport().size_changed.is_connected(resize):
-				get_viewport().size_changed.disconnect(resize))
+	root.closed.connect(close.bind(fname))
 	dialog_opened.emit(fname)
 	return root
 
@@ -95,127 +89,42 @@ func on(method: String, cb: Callable) -> void:
 	handlers[method] = cb
 
 
-func _relayout(root: GWidget) -> void:
-	_place_root(root, get_viewport().get_visible_rect().size)
-	GuiLayouts.apply(root)
-
-
-## The retail UI was authored for a fixed ~1024×768 window — XULOR2
-## positions are absolute pixels. Scale the whole dialog so the authored
-## layout fills whatever viewport we actually have.
-const REF_SIZE := Vector2(1024, 768)
-
-
-## Places a dialog root inside the viewport like the retail layer does:
-## the root's own <sld> (align/size/xOff/yOff) resolves against the
-## viewport in reference space; roots that specify nothing get their
-## preferred size centered, and only truly sizeless roots stretch.
-func _place_root(root: GWidget, vp: Vector2) -> void:
-	var want0 := root.get_minimum_size()
-	var s := minf(vp.x / REF_SIZE.x, vp.y / REF_SIZE.y)
-	if want0.x >= 700 or want0.y >= 500:
-		# full-screen-class dialogs (login art, map, team mgmt) scale so
-		# their authored size fills the viewport like the retail client
-		s = minf(vp.x / maxf(want0.x, 1.0), vp.y / maxf(want0.y, 1.0))
-	root.scale = Vector2(s, s)
-	var lvp := vp / s
-	var ld: Dictionary = root.layout_data
-	var want := want0
-	var size := want
-	if ld.has("size"):
-		var sv: Array = ld["size"]
-		size = Vector2(_ld_axis(sv[0], want.x, lvp.x),
-			_ld_axis(sv[1], want.y, lvp.y))
-	elif root.layout.get("adaptToContentSize") in [true, "true"]:
-		size = want
-	elif want == Vector2.ZERO:
-		size = lvp
-	var a: Vector2 = GuiLayouts.ALIGN.get(
-		String(ld.get("align", "center")).to_lower(), Vector2(0.5, 0.5))
-	root.position = a * (lvp - size) + Vector2(
-		float(ld.get("xOff", 0)), float(ld.get("yOff", 0)))
-	root.size = size
-
-
-static func _ld_axis(spec: Variant, want: float, avail: float) -> float:
-	if spec is String and String(spec).ends_with("%"):
-		return avail * float(String(spec).rstrip("%")) / 100.0
-	var f := float(spec)
-	if f <= 0:  # -1 min / -2 pref / 0 — resolve to the preferred extent
-		return want
-	return f
-
-
-func _on_event(ns: String, method: String, args: Array, widget: GWidget) -> void:
-	match method:
-		"unloadDialog":
-			var ancestor: Node = widget
-			while ancestor != null:
-				for name in dialogs:
-					if dialogs[name] == ancestor:
-						close(name)
-						return
-				ancestor = ancestor.get_parent()
-		"setLanguage":
-			var lang := str(args[0]) if args.size() > 0 else "en"
-			gui.model.set_value("gamePreferences", lang, "language")
-			gui.load_i18n(lang)
-			_save_settings()
-			_rebuild_open_dialogs()
-		"showUrl":
-			pass
-		"quit":
-			get_tree().quit()
-		_:
-			var h: Callable = handlers.get(method, Callable())
-			if h.is_valid():
-				h.call(args, widget)
-				_save_settings()
-				return
-			# dofusarena:openCloseXxxDialog / closeXxxDialog are generic
-			# dialog toggles — the name is already the file name
-			if method.begins_with("openClose") and \
-					method.ends_with("Dialog"):
-				toggle(method.trim_prefix("openClose"))
-				return
-			if method.begins_with("close") and \
-					method.ends_with("Dialog"):
-				close(method.trim_prefix("close"))
-				return
-
-
-func _rebuild_open_dialogs() -> void:
-	var open_names := dialogs.keys()
-	for n in open_names:
-		close(n)
-	for n in open_names:
-		open(n)
-
-
-func _saved_lang() -> String:
-	var c := ConfigFile.new()
-	if c.load(settings_path) == OK:
-		return str(c.get_value("gui", "language", "es"))
-	return "es"
+## A native panel's action: its handler, else the generic
+## openClose<Xxx>Dialog / close<Xxx>Dialog toggles. Preferences are saved
+## after every handled action.
+func dispatch(method: String, args: Array = [], ctx: Ctx = null) -> void:
+	if method == "quit":
+		get_tree().quit()
+		return
+	var h: Callable = handlers.get(method, Callable())
+	if h.is_valid():
+		h.call(args, ctx)
+		_save_settings()
+		return
+	if method.begins_with("openClose") and method.ends_with("Dialog"):
+		toggle(method.trim_prefix("openClose"))
+		return
+	if method.begins_with("close") and method.ends_with("Dialog"):
+		close(method.trim_prefix("close"))
 
 
 func _load_settings() -> void:
 	var c := ConfigFile.new()
 	if c.load(settings_path) != OK:
 		return
-	gui.model.values["account.name"] = c.get_value("account", "name", "")
-	gui.model.values["account.remember"] = c.get_value("account", "remember", false)
-	if gui.model.values["account.remember"]:
-		gui.model.values["account.password"] = c.get_value("account", "password", "")
+	model.values["account.name"] = c.get_value("account", "name", "")
+	model.values["account.remember"] = c.get_value("account", "remember", false)
+	if model.values["account.remember"]:
+		model.values["account.password"] = c.get_value("account", "password", "")
 	var hosts: Array = c.get_value("proxy", "list", ["140.238.172.196:3000", "127.0.0.1:5555"])
 	var sel: String = str(c.get_value("proxy", "selected", hosts[0]))
 	if sel not in hosts:
 		sel = str(hosts[0])
-	gui.model.values["proxy"] = {
+	model.values["proxy"] = {
 		"list": hosts.map(func(h): return {"text": h}),
 		"selected": sel,
 	}
-	gui.model.values["gamePreferences"] = {
+	model.values["gamePreferences"] = {
 		"language": c.get_value("gui", "language", "es"),
 		"inverseMouseControl": c.get_value("prefs", "inverseMouseControl", false),
 		"showFighterMoveRange": c.get_value("prefs", "showFighterMoveRange", true),
@@ -234,21 +143,20 @@ func _load_settings() -> void:
 		"screenResolution": c.get_value("prefs", "screenResolution", ""),
 		"screenResolutions": [],
 	}
-	gui.model.values["buildVersion"] = "2.70 (72909)"
 
 
 func _save_settings() -> void:
 	var c := ConfigFile.new()
 	c.load(settings_path)
-	var gp: Dictionary = gui.model.values.get("gamePreferences", {})
+	var gp: Dictionary = model.values.get("gamePreferences", {})
 	c.set_value("gui", "language", gp.get("language", "es"))
-	c.set_value("account", "name", gui.model.values.get("account.name", ""))
-	var rem: bool = gui.model.values.get("account.remember", false)
+	c.set_value("account", "name", model.values.get("account.name", ""))
+	var rem: bool = model.values.get("account.remember", false)
 	c.set_value("account", "remember", rem)
 	c.set_value("account", "password",
-		gui.model.values.get("account.password", "") if rem else "")
+		model.values.get("account.password", "") if rem else "")
 	c.set_value("proxy", "selected",
-		gui.model.values.get("proxy", {}).get("selected", ""))
+		model.values.get("proxy", {}).get("selected", ""))
 	for k in gp:
 		if k == "language" or k == "screenResolutions":
 			continue

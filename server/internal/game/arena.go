@@ -28,8 +28,8 @@ type arena struct {
 	minX, minY       int32  // bounding-box origin (a map need not start at 0,0)
 	width, height    int32  //
 	centerX, centerY int32  // camera center / battlefield centroid (cLw/cLx + EnterInstance focus)
-	team0, team1     []Pos  // per-side fighter start cells (x,y,z) from the .fmd
-	coachCells       []Pos  // coach pedestal cells from the .fmd
+	team0, team1     []Pos  // per-side fighter start cells (x,y,z) from the arena shape
+	coachCells       []Pos  // coach pedestal cells from the arena shape
 	cells            []cell // row-major over the bounding box
 	// specials are the map-authored special cells (from the .fmd), which fire an
 	// effect on a fighter that STARTS its turn on one. See specialcells.go.

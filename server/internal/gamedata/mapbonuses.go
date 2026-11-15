@@ -32,10 +32,6 @@ type MapBonus struct {
 	Actions []CardSetEffect
 }
 
-// TypeMapBonus is the data.bdat record type holding per-map bonus metadata
-// (client enum `atr_0.cVm` = 1600).
-const TypeMapBonus = 1600
-
 // The two AI action ids this corpus's map records carry (the full enum is
 // AI.java; the game package keeps its own copy for the post-fight pass).
 const (
@@ -105,38 +101,4 @@ func (t *MapBonuses) XPBonusPercent(mapID int16) int32 {
 		}
 	}
 	return total
-}
-
-// LoadMapBonuses decodes every type-1600 record.
-func (s *Store) LoadMapBonuses() (*MapBonuses, error) {
-	out := &MapBonuses{byMap: make(map[int16]*MapBonus)}
-	for _, e := range s.EntriesOf(TypeMapBonus) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if m := decodeMapBonus(rec.Data); m != nil {
-			out.byMap[m.MapID] = m
-		}
-	}
-	return out, nil
-}
-
-// decodeMapBonus reads one `mw_0` record, or nil if it is short.
-func decodeMapBonus(data []byte) *MapBonus {
-	c := &cur{b: data}
-	m := &MapBonus{}
-	m.MapID = c.i16()
-	m.EliteDropBonus = c.u8()
-	n := int(c.u8())
-	if n < 0 || n > 32 {
-		return nil
-	}
-	for i := 0; i < n && c.ok(); i++ {
-		m.Actions = append(m.Actions, decodeAkw(c))
-	}
-	if !c.ok() {
-		return nil
-	}
-	return m
 }

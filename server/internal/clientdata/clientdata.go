@@ -6,7 +6,7 @@
 //	go run ./cmd/exportclient
 //
 // rewrites them, and TestClientDataUpToDate fails while they differ from what
-// the content builds. It replaces the dump* commands that read data.bdat.
+// the content builds. It replaced the dump* commands that read the retail data.
 package clientdata
 
 import (

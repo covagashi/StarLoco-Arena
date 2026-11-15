@@ -29,7 +29,7 @@ func _audit() -> void:
 	var city_panel = await _open_city()
 	var sid := -1
 	if city_panel != null:
-		var city: Dictionary = _main._gui.gui.model.get_value("city")
+		var city: Dictionary = _main._gui.model.get_value("city")
 		for g in city.get("groups", []):
 			if int(g.kind) == 1 and not g.services.is_empty():
 				sid = int(g.services[0].id)
@@ -48,7 +48,7 @@ func _audit() -> void:
 	if not is_instance_of(panel, CardMasterPanel):
 		return
 	await create_timer(0.3).timeout
-	var trade: Dictionary = _main._gui.gui.model.get_value("cardMasterTrade")
+	var trade: Dictionary = _main._gui.model.get_value("cardMasterTrade")
 	var catalog: Array = trade.get("catalog", [])
 	_record(1, "catalogue", not catalog.is_empty()
 		and panel.find_child("Card%d" % int(catalog[-1].id), true, false) != null,
@@ -71,7 +71,7 @@ func _barter(panel, catalog: Array) -> void:
 	var wid := int(want.id)
 	panel.find_child("Card%d" % wid, true, false).pressed.emit()
 	await create_timer(0.3).timeout
-	var trade: Dictionary = _main._gui.gui.model.get_value("cardMasterTrade")
+	var trade: Dictionary = _main._gui.model.get_value("cardMasterTrade")
 	_record(1, "select", int(trade.selectedId) == wid, str(want.name))
 	panel.find_child("Barter", true, false).pressed.emit()
 	await create_timer(0.3).timeout
@@ -83,10 +83,10 @@ func _barter(panel, catalog: Array) -> void:
 	await create_timer(0.1).timeout
 	var low: int = panel._grid_scroll.scroll_vertical
 	var guard := 0
-	while not bool(_main._gui.gui.model.get_value("cardMasterTrade").canBuyCards) \
+	while not bool(_main._gui.model.get_value("cardMasterTrade").canBuyCards) \
 			and guard < 40:
 		guard += 1
-		trade = _main._gui.gui.model.get_value("cardMasterTrade")
+		trade = _main._gui.model.get_value("cardMasterTrade")
 		offer = trade.offer
 		var pick := -1
 		for i in range(offer.size() - 1, -1, -1):
@@ -105,7 +105,7 @@ func _barter(panel, catalog: Array) -> void:
 		elif guard == 1:
 			_record(1, "keeps scroll", panel._grid_scroll.scroll_vertical == low,
 				"%d → %d" % [low, panel._grid_scroll.scroll_vertical])
-	trade = _main._gui.gui.model.get_value("cardMasterTrade")
+	trade = _main._gui.model.get_value("cardMasterTrade")
 	_record(1, "stage", bool(trade.canBuyCards),
 		"offering %d of %d with %d kinds" % [int(trade.offered), int(trade.wanted),
 			trade.staged.size()])
@@ -117,7 +117,7 @@ func _barter(panel, catalog: Array) -> void:
 	panel.find_child("Trade", true, false).pressed.emit()
 	var done: bool = await _wait(func(): return _seen.has(5403) \
 		and int(State.inventory.get(wid, 0)) > before, 4.0)
-	trade = _main._gui.gui.model.get_value("cardMasterTrade")
+	trade = _main._gui.model.get_value("cardMasterTrade")
 	_record(1, "trade", done and bool(trade.statusOk) and trade.staged.is_empty(),
 		"5403, %s %d → %d, status '%s'" % [want.name, before,
 			int(State.inventory.get(wid, 0)), trade.status])

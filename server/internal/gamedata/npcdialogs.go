@@ -1,13 +1,8 @@
 package gamedata
 
 import (
-	"encoding/binary"
 	"sort"
 )
-
-// TypeNpcDialogReply is the data.bdat record type of NPC dialog reply rows
-// (client `atF`).
-const TypeNpcDialogReply = 1500
 
 // NpcDialogReply is one reply row of an NPC dialog. Field order (atF.a v1):
 //
@@ -55,37 +50,3 @@ func (d *NpcDialogs) Rows() []*NpcDialogReply {
 
 // Len is the number of reply rows.
 func (d *NpcDialogs) Len() int { return len(d.Rows()) }
-
-// LoadNpcDialogs decodes every type-1500 row; short rows are skipped.
-func (s *Store) LoadNpcDialogs() (*NpcDialogs, error) {
-	var rows []*NpcDialogReply
-	for _, e := range s.EntriesOf(TypeNpcDialogReply) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if r := decodeNpcDialogReply(rec.Data); r != nil {
-			rows = append(rows, r)
-		}
-	}
-	return NewNpcDialogs(rows...), nil
-}
-
-func decodeNpcDialogReply(d []byte) *NpcDialogReply {
-	if len(d) < 11 {
-		return nil
-	}
-	f := make([]int32, 5)
-	for i := range f {
-		f[i] = int32(int16(binary.BigEndian.Uint16(d[i*2:])))
-	}
-	n := int(d[10])
-	if len(d) < 11+4*n {
-		return nil
-	}
-	var params []int32
-	for i := 0; i < n; i++ {
-		params = append(params, int32(binary.BigEndian.Uint32(d[11+i*4:])))
-	}
-	return &NpcDialogReply{Group: f[1], Next: f[2], Order: f[3], Act: f[4], Params: params}
-}

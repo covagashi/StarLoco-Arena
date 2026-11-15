@@ -1,21 +1,17 @@
 package gamedata
 
 import (
-	"path/filepath"
 	"testing"
 )
 
-// TestMapBonusesReal pins the type-1600 decode against the real record set:
+// TestMapBonusesReal pins the map-bonus table (server/content/rules):
 // 29 maps, two action families — arenas 86-109 carry AI19 drop chance 1-25%
 // and maps 24-28 carry AI1 XP% 5-25 — plus the eliteDropBonus byte (1-3).
 // The values below were dumped straight from the shipped data.
 func TestMapBonusesReal(t *testing.T) {
-	st, err := Open(filepath.Join("..", "..", "data"))
+	st, err := openContent(t)
 	if err != nil {
-		st, err = Open(filepath.Join("..", "..", "data-dist"))
-		if err != nil {
-			t.Skipf("game data not available: %v", err)
-		}
+		t.Fatal(err)
 	}
 	mb, err := st.LoadMapBonuses()
 	if err != nil {
@@ -44,12 +40,9 @@ func TestMapBonusesReal(t *testing.T) {
 		}
 	}
 	// Elite bonus sits in 1..3 everywhere it exists; a plain map reports none.
-	for _, e := range st.EntriesOf(TypeMapBonus) {
-		rec, _ := st.ReadRecord(e.Position)
-		if m := decodeMapBonus(rec.Data); m != nil {
-			if m.EliteDropBonus < 1 || m.EliteDropBonus > 3 {
-				t.Errorf("map %d eliteDropBonus = %d, want 1..3", m.MapID, m.EliteDropBonus)
-			}
+	for _, m := range mb.byMap {
+		if m.EliteDropBonus < 1 || m.EliteDropBonus > 3 {
+			t.Errorf("map %d eliteDropBonus = %d, want 1..3", m.MapID, m.EliteDropBonus)
 		}
 	}
 	if mb.Get(5) != nil || mb.DropChanceBonus(5) != 0 || mb.XPBonusPercent(5) != 0 {

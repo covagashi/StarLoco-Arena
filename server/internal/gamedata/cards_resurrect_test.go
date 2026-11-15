@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -13,7 +11,7 @@ import (
 // the exact known values and that NO other card is mistaken for a resurrection
 // card.
 func TestCardResurrectPercentReal(t *testing.T) {
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Skipf("game data not available: %v", err)
 	}
@@ -22,9 +20,12 @@ func TestCardResurrectPercentReal(t *testing.T) {
 		t.Fatalf("LoadCards: %v", err)
 	}
 
+	// S40: the owner equalised every resurrection card (ResurrectPercentAll);
+	// retail had 5, 12, 10, 1 and four sure 100 % cards.
 	want := map[int32]int32{
-		35: 5, 51: 12, 53: 10, 137: 1,
-		305: 100, 316: 100, 317: 100, 318: 100,
+		35: ResurrectPercentAll, 51: ResurrectPercentAll, 53: ResurrectPercentAll,
+		137: ResurrectPercentAll, 305: ResurrectPercentAll, 316: ResurrectPercentAll,
+		317: ResurrectPercentAll, 318: ResurrectPercentAll,
 	}
 	for id, pct := range want {
 		c := cards.Get(id)
@@ -62,10 +63,7 @@ func TestCardResurrectPercentReal(t *testing.T) {
 // skipped. The two tradability flags are the ones that matter: the server, not the
 // client, has to police what may be staked in an exchange.
 func TestCoachCardFullDecodeReal(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,17 +114,13 @@ func TestCoachCardFullDecodeReal(t *testing.T) {
 }
 
 // TestResurrectionConsumablesAreEvolutionTypeShipped pins, on the shipped
-// data-dist, the split the graveyard handler relies on: the four resurrection
+// content, the split the graveyard handler relies on: the four resurrection
 // cards are Evolution consumables (type 24, the only type the retail graveyard
 // offers), while the four equipment cards that also carry the effect (their
 // chance to come back during a fight) are not. If a data update ever moved one
 // across, the handler's CardTypeEvolution gate would silently change meaning.
 func TestResurrectionConsumablesAreEvolutionTypeShipped(t *testing.T) {
-	root := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(root, "data.bdat")); err != nil {
-		t.Skipf("shipped data unavailable: %v", err)
-	}
-	st, err := Open(root)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}

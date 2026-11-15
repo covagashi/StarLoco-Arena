@@ -379,7 +379,7 @@ second player, and the client HUD renders fully once *the client* starts the fig
   `victory condition met ... round=21 winner=0`).
 - Most of the e2e harness builds `game.Deps` with **nil** `Cards`, `Spells`,
   `FighterCards`, `Summonings`, `CardSets`, `Events`, `FightMaps`; only
-  `realdata_test.go` (`testServerWithData`, S08) boots on `data-dist`. Check which one
+  `realdata_test.go` (`testServerWithData`, S08) boots on the embedded content. Check which one
   a red test uses before blaming a gameplay change. A *varying* failing test is
   machine load; a *consistent* one is a regression.
 
@@ -469,6 +469,10 @@ it no longer assumes a Go toolchain or a terminal-literate operator.
 - Defaults changed for end users: `addr` `127.0.0.1` → **`0.0.0.0`** (friends can connect),
   `log_level` `debug` → **`info`** (quiet console).
 
+> **S43 (2026-11-15): superseded.** The server embeds its own data
+> (`server/content`); `locate.go`, `--data`, `data_dir` and `server/data-dist/`
+> are gone. The two entries below are history.
+
 **Game-data discovery** (`internal/gamedata/locate.go`) — added after the first
 release, then revised days later (see the dated entry below — this paragraph
 describes the discovery mechanism only, not the current bundling policy).
@@ -550,10 +554,8 @@ three-way committed / linked / neither split that no longer had a middle term.
 
 **Still open, deliberately, and needing a maintainer decision:**
 
-- **`server/data-dist/`** — 344 files, 2.96 MB of Ankama records, committed and
-  in every release. "No art, audio or executable code" mitigates but does not
-  answer it. Bring-your-own via `Discover()` is the defensible alternative and
-  costs the zero-setup property. Not changed without an explicit call.
+- ~~**`server/data-dist/`**~~ — removed in S43 (2026-11-15, owner's call): the
+  game reads only `server/content`. Still in git history.
 - **`client/decompiled/`** — EU Software Directive art. 6 protects decompiling
   *for interoperability*; it is weaker cover for publishing the output. Moving
   it to a private repo would cost nothing operationally. `client/analysis/`

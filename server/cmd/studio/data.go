@@ -6,10 +6,11 @@ import (
 	"strings"
 )
 
-// This file exposes the read-only game-data catalogs to the frontend. Every
-// method reuses the existing, byte-exact decoders via the cached gamedata
-// catalogs built in app.go -- there is no format logic here, only loading,
-// sorting, and flattening into DTOs the UI can render as tables.
+// This file exposes the game's content tables to the frontend: the rules
+// (spells, summonings, static effects) decoded by gamedata.LoadRulesContent and
+// the cards decoded by gamedata.LoadCardContent (both cached in app.go). There
+// is no format logic here, only sorting and flattening into DTOs the UI renders
+// as tables.
 
 // DataCounts is a quick summary of how many records each catalog holds, used to
 // populate the nav badges and the overview page. A load error string (empty
@@ -23,30 +24,26 @@ type DataCounts struct {
 	Error         string `json:"error"`
 }
 
-// GetDataCounts loads every catalog and returns their record counts. A
-// missing/invalid data dir yields an Error string rather than a hard fail.
+// GetDataCounts loads every table and returns their record counts. A load
+// failure yields an Error string rather than a hard fail.
 func (a *App) GetDataCounts() DataCounts {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	var c DataCounts
-	if err := a.ensureLoaded(); err != nil {
+	if err := a.ensureRules(); err != nil {
 		c.Error = err.Error()
 	}
 	if err := a.ensureCards(); err != nil && c.Error == "" {
 		c.Error = err.Error()
 	}
-	if a.spells != nil {
-		c.Spells = a.spells.Len()
+	if a.rules != nil {
+		c.Spells = a.rules.Spells.Len()
+		c.Summonings = a.rules.Summonings.Len()
+		c.StaticEffects = a.rules.StaticEffects.Len()
 	}
 	if a.cardContent != nil {
 		c.CoachCards = a.cardContent.Cards.Len()
 		c.FighterCards = a.cardContent.Fighters.Len()
-	}
-	if a.summonings != nil {
-		c.Summonings = a.summonings.Len()
-	}
-	if a.staticEffects != nil {
-		c.StaticEffects = a.staticEffects.Len()
 	}
 	return c
 }
@@ -70,14 +67,11 @@ type SpellDTO struct {
 func (a *App) GetSpells() ([]SpellDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.ensureLoaded(); err != nil {
+	if err := a.ensureRules(); err != nil {
 		return nil, err
 	}
-	if a.spells == nil {
-		return []SpellDTO{}, nil
-	}
-	out := make([]SpellDTO, 0, a.spells.Len())
-	for _, sp := range a.spells.All() {
+	out := make([]SpellDTO, 0, a.rules.Spells.Len())
+	for _, sp := range a.rules.Spells.All() {
 		out = append(out, SpellDTO{
 			ID:           sp.ID,
 			BreedID:      sp.BreedID,
@@ -209,14 +203,11 @@ type SummoningDTO struct {
 func (a *App) GetSummonings() ([]SummoningDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.ensureLoaded(); err != nil {
+	if err := a.ensureRules(); err != nil {
 		return nil, err
 	}
-	if a.summonings == nil {
-		return []SummoningDTO{}, nil
-	}
-	out := make([]SummoningDTO, 0, a.summonings.Len())
-	for _, sm := range a.summonings.All() {
+	out := make([]SummoningDTO, 0, a.rules.Summonings.Len())
+	for _, sm := range a.rules.Summonings.All() {
 		out = append(out, SummoningDTO{
 			ID:           sm.ID,
 			HP:           sm.HP,
@@ -248,14 +239,11 @@ type StaticEffectDTO struct {
 func (a *App) GetStaticEffects() ([]StaticEffectDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.ensureLoaded(); err != nil {
+	if err := a.ensureRules(); err != nil {
 		return nil, err
 	}
-	if a.staticEffects == nil {
-		return []StaticEffectDTO{}, nil
-	}
-	out := make([]StaticEffectDTO, 0, a.staticEffects.Len())
-	for _, se := range a.staticEffects.All() {
+	out := make([]StaticEffectDTO, 0, a.rules.StaticEffects.Len())
+	for _, se := range a.rules.StaticEffects.All() {
 		out = append(out, StaticEffectDTO{
 			ID:           se.ID,
 			Type:         se.Type,

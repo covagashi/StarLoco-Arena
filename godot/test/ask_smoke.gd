@@ -158,7 +158,7 @@ func _btn(panel, text: String) -> Button:
 
 
 func _ask() -> Dictionary:
-	var a: Variant = _main._gui.gui.model.get_value("ask")
+	var a: Variant = _main._gui.model.get_value("ask")
 	return a if a is Dictionary else {}
 
 

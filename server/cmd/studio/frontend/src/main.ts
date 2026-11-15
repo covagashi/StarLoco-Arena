@@ -1,14 +1,11 @@
 import "./style.css";
-import { getEnv, getPaths, setDataDir, setClientDir, getDataCounts, type Paths, type DataCounts } from "./backend";
+import { getEnv, getPaths, getDataCounts, type Paths, type DataCounts } from "./backend";
 import { viewSpells, viewCards, viewSummonings, viewStaticEffects } from "./views";
-import { viewAssets } from "./assets";
-import { viewSprites } from "./sprites";
-import { viewMaps } from "./maps";
 import { t, setUILang } from "./i18n";
 
 // -------- App shell / navigation --------
-// Reproduces the v2.04 studio design (sectioned sidebar, brand, status bar,
-// overview hero) on the 2.70 read-only backend.
+// Sectioned sidebar, brand, status bar and overview over the content backend
+// (server/content: the rules tables and the cards).
 
 interface NavEntry {
   id: string;
@@ -22,13 +19,9 @@ const NAV: NavEntry[] = [
   { id: "cards", icon: "\u2617", section: "Game Data" },
   { id: "summonings", icon: "\u269C", section: "Game Data" },
   { id: "staticEffects", icon: "\u2622", section: "Game Data" },
-  { id: "assets", icon: "\u25A6", section: "Assets" },
-  { id: "sprites", icon: "\u25A3", section: "Assets" },
-  { id: "maps", icon: "\u25C6", section: "World" },
 ];
 
-// UI-only language toggle (the 2.70 backend ships no i18n name tables, so this
-// switches the studio's own chrome only).
+// UI-only language toggle (switches the studio's own chrome only).
 const LANG_OPTIONS = [
   { code: "en", label: "English" },
   { code: "fr", label: "Fran\u00E7ais" },
@@ -36,7 +29,7 @@ const LANG_OPTIONS = [
 let lang = "en";
 
 let current = "overview";
-let paths: Paths = { dataDir: "", clientDir: "", dataDirValid: false, clientDirValid: false, contentDir: "" };
+let paths: Paths = { contentDir: "", rulesDir: "" };
 let counts: DataCounts | null = null;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -54,8 +47,8 @@ function renderShell(): void {
 
   let navHtml = `
     <div class="brand">
-      <div class="logo">DA</div>
-      <div class="title"><b>DofusArena Studio</b><span>2.70 \u00B7 ${esc(t("app.subtitle"))}</span></div>
+      <div class="logo">PA</div>
+      <div class="title"><b>Pippop Arena Studio</b><span>${esc(t("app.subtitle"))}</span></div>
     </div>
     <div class="nav-scroll">`;
   for (const [section, entries] of sections) {
@@ -101,11 +94,11 @@ function navBadge(e: NavEntry): string {
 function renderStatus(): void {
   const status = document.querySelector<HTMLDivElement>("#status");
   if (!status) return;
-  const dataOk = paths.dataDirValid;
-  const clientOk = paths.clientDirValid;
+  const dataOk = !!counts && !counts.error;
+  const checkout = paths.contentDir !== "" && paths.rulesDir !== "";
   status.innerHTML = `
     <span><span class="dot ${dataOk ? "ok" : "err"}"></span>${t(dataOk ? "status.data.loaded" : "status.data.missing")}</span>
-    <span><span class="dot ${clientOk ? "ok" : "err"}"></span>${t(clientOk ? "status.client.detected" : "status.client.missing")}</span>
+    <span><span class="dot ${checkout ? "ok" : "err"}"></span>${t(checkout ? "status.checkout" : "status.embedded")}</span>
     <span class="spacer"></span>
     <span class="mono" id="envline"></span>`;
   getEnv().then((env) => {
@@ -149,16 +142,13 @@ function renderPage(): void {
     cards: viewCards,
     summonings: viewSummonings,
     staticEffects: viewStaticEffects,
-    assets: viewAssets,
-    sprites: viewSprites,
-    maps: viewMaps,
   };
   dataViews[current]?.(main);
 }
 
 function overviewPage(): string {
-  const dataRow = pathRow(t("overview.dataDir"), paths.dataDir, paths.dataDirValid, "data");
-  const clientRow = pathRow(t("overview.clientDir"), paths.clientDir, paths.clientDirValid, "client");
+  const cardsRow = pathRow(t("overview.cardsDir"), paths.contentDir);
+  const rulesRow = pathRow(t("overview.rulesDir"), paths.rulesDir);
 
   const jump = (view: string, icon: string, title: string, desc: string) =>
     `<button class="ov-jump" data-nav-jump="${view}">
@@ -169,10 +159,10 @@ function overviewPage(): string {
 
   return `
     <div class="ov-hero">
-      <div class="ov-hero-badge">DA</div>
+      <div class="ov-hero-badge">PA</div>
       <div>
-        <h1 class="ov-hero-title">DofusArena 2.70 Studio</h1>
-        <p class="ov-hero-sub">Read-only workbench \u2014 browse the 2.70 client's spells, cards, summonings, static effects, sprites and jars.</p>
+        <h1 class="ov-hero-title">Pippop Arena Studio</h1>
+        <p class="ov-hero-sub">${esc(t("overview.hero.sub"))}</p>
       </div>
     </div>
 
@@ -188,16 +178,14 @@ function overviewPage(): string {
       ${jump("spells", "\u2726", t("nav.spells"), "Every spell, sortable & filterable")}
       ${jump("cards", "\u2617", t("nav.cards"), t("overview.jump.cards"))}
       ${jump("summonings", "\u269C", t("nav.summonings"), "Summon creature stat sheets")}
-      ${jump("sprites", "\u25A3", t("nav.sprites"), t("overview.jump.sprites"))}
-      ${jump("maps", "\u25C6", t("nav.maps"), t("overview.jump.maps"))}
-      ${jump("assets", "\u25A6", t("nav.assets"), t("overview.jump.assets"))}
+      ${jump("staticEffects", "\u2622", t("nav.staticEffects"), "Glyphs, traps and other static effects")}
     </div>
 
     <div class="card">
       <h2>${esc(t("overview.sources"))}</h2>
-      <p class="hint">The studio auto-detects the repo's <code>server/data</code> and <code>client/compiled</code> folders. Override them here if needed.</p>
-      ${dataRow}
-      ${clientRow}
+      <p class="hint">${esc(t("overview.sourcesHint"))}</p>
+      ${cardsRow}
+      ${rulesRow}
     </div>
 
     <div class="card">
@@ -219,15 +207,14 @@ function overviewStat(n: number | undefined, label: string): string {
   return `<div class="stat"><div class="n">${val}</div><div class="l">${esc(label)}</div></div>`;
 }
 
-function pathRow(label: string, value: string, valid: boolean, kind: string): string {
+function pathRow(label: string, value: string): string {
   return `
     <div class="path-row">
       <div class="path-info">
         <div class="path-label">${esc(label)}</div>
-        <div class="path-value ${value ? "" : "empty"}">${value ? esc(value) : esc(t("overview.notSet"))}</div>
+        <div class="path-value ${value ? "" : "empty"}">${value ? esc(value) : esc(t("overview.embedded"))}</div>
       </div>
-      <span class="pill ${valid ? "ok" : "err"}">${valid ? esc(t("overview.valid")) : esc(t("overview.missing"))}</span>
-      <button data-pick="${kind}">${esc(t("overview.change"))}</button>
+      <span class="pill ${value ? "ok" : "err"}">${value ? esc(t("overview.checkout")) : esc(t("overview.readOnly"))}</span>
     </div>`;
 }
 
@@ -241,21 +228,6 @@ function wireOverview(): void {
     lang = langSel.value;
     setUILang(lang);
     renderShell();
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const kind = btn.dataset.pick!;
-      const entered = window.prompt(
-        `Enter the ${kind} directory path:`,
-        kind === "data" ? paths.dataDir : paths.clientDir,
-      );
-      if (entered == null) return;
-      paths = kind === "data" ? await setDataDir(entered) : await setClientDir(entered);
-      if (kind === "data") await refreshCounts();
-      renderStatus();
-      renderPage();
-    });
   });
 }
 
@@ -272,7 +244,7 @@ async function refreshCounts(): Promise<void> {
 async function boot(): Promise<void> {
   paths = await getPaths();
   renderShell();
-  if (paths.dataDirValid) await refreshCounts();
+  await refreshCounts();
 }
 
 boot();

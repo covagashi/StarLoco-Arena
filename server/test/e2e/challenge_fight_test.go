@@ -1,12 +1,10 @@
 package e2e
 
 import (
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/game"
-	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/testclient"
 )
 
@@ -23,18 +21,8 @@ func challengeLaunch(challengeID int32) []byte {
 // exercise a successful launch.
 func challengeServer(t *testing.T) string {
 	t.Helper()
-	st, err := gamedata.Open(filepath.Join("..", "..", "data-dist"))
-	if err != nil {
-		t.Skipf("game data not available: %v", err)
-	}
-	defs, err := st.LoadChallenges()
-	if err != nil {
-		t.Fatalf("LoadChallenges: %v", err)
-	}
-	spells, err := st.LoadSpells()
-	if err != nil {
-		t.Fatalf("LoadSpells: %v", err)
-	}
+	b := realBundle(t)
+	defs, spells := b.Challenges, b.Spells
 	_, addr := testServerWithDeps(t, func(d *game.Deps) {
 		d.ChallengeDefs = defs
 		d.Spells = spells

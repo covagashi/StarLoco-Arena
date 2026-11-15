@@ -1,7 +1,8 @@
 extends RefCounted
 ## S36 phase C: the arena layout the map editor writes and fight_view will
-## read. Only tracked data: the kits' kit.json and the fight topology in
-## server/data-dist/maps/ (the GLBs under art/*/out/ are not needed).
+## read. Only tracked data: the kits' kit.json and the fight shapes under
+## art/shapes and server/internal/gamedata/arenas (the GLBs under art/*/out/
+## are not needed).
 
 const Layout := preload("res://src/maps/arena_layout.gd")
 

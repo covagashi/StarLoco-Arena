@@ -24,9 +24,6 @@ package gamedata
 // wound types are laid out so that a SERIOUS wound is exactly `light + 10`, which
 // is what lets the wound roller upgrade a light wound in place.
 
-// TypeFighterCondition is the data.bdat record type for fighter conditions.
-const TypeFighterCondition = 902
-
 // Wound type ranges (aiz_2.ayT / ayU). Body parts in order: leg, arm, head,
 // torso, other.
 const (
@@ -100,22 +97,6 @@ type Conditions struct {
 	ids    []int16
 }
 
-// LoadConditions reads and decodes every fighter-condition definition.
-func (s *Store) LoadConditions() (*Conditions, error) {
-	out := &Conditions{byID: make(map[int16]*Condition)}
-	for _, e := range s.EntriesOf(TypeFighterCondition) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if c := decodeCondition(rec.Data); c != nil {
-			out.byID[c.ID] = c
-		}
-	}
-	out.reindex()
-	return out, nil
-}
-
 // NewConditions builds a catalog from explicit definitions (tests/tooling).
 func NewConditions(defs ...*Condition) *Conditions {
 	out := &Conditions{byID: make(map[int16]*Condition, len(defs))}
@@ -182,34 +163,4 @@ func (c *Conditions) Len() int {
 		return 0
 	}
 	return len(c.byID)
-}
-
-// decodeCondition parses an `ahm_1` record. From its own deserializer
-// `a(ByteBuffer, int, short)`:
-//
-//	[i16 id][i8 grade][i16 type][u8 n]{n × akw_0}[i32 m]{m × Ht wrapper}
-//
-// Both sub-structures are the ones already used elsewhere — `decodeAkw` (shared
-// with card sets and coach cards) and `decodeEffectList` (shared with spells) —
-// so this record needed no new primitives at all.
-func decodeCondition(data []byte) *Condition {
-	c := &cur{b: data}
-	cond := &Condition{}
-	cond.ID = c.i16()
-	cond.Duration = int8(c.u8())
-	cond.Type = c.i16()
-
-	n := int(c.u8())
-	if n < 0 || n > 64 {
-		return nil
-	}
-	for i := 0; i < n && c.ok(); i++ {
-		cond.MetaEffects = append(cond.MetaEffects, decodeAkw(c))
-	}
-	cond.FightEffects = decodeEffectList(c)
-
-	if !c.ok() || cond.ID <= 0 {
-		return nil
-	}
-	return cond
 }

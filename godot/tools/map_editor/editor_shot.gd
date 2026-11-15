@@ -6,7 +6,7 @@ extends SceneTree
 ## window. Needs a real display (xvfb is fine), not --headless.
 ##
 ##   xvfb-run -a -s "-screen 0 1600x900x24" godot --path godot \
-##       -s tools/map_editor/editor_shot.gd -- --arena=1 --out=<png> --save=<json> [--retail]
+##       -s tools/map_editor/editor_shot.gd -- --arena=1 --out=<png> --save=<json>
 
 const Layout := preload("res://src/maps/arena_layout.gd")
 
@@ -39,8 +39,6 @@ func _run() -> void:
 		await _alts_demo(ed, cells)
 	if opts.has("nudge"):
 		await _nudge_demo(ed)
-	if opts.has("retail"):
-		ed._retail_check.button_pressed = true
 	if opts.has("game"):
 		ed.game_scale()
 	if opts.has("help"):

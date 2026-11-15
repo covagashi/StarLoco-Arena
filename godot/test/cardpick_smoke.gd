@@ -19,7 +19,7 @@ func _audit() -> void:
 	var i18n = root.get_node("I18n")
 	_lang_before = i18n.lang
 	i18n.set_locale("es")
-	var model = _main._gui.gui.model
+	var model = _main._gui.model
 	var got: bool = await _wait(func():
 		return model.get_value("league") is Dictionary and model.get_value("cardPicks") is Dictionary, 6.0)
 	var lg: Dictionary = model.get_value("league") if got else {}

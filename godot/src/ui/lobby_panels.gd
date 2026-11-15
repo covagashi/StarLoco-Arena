@@ -12,7 +12,7 @@ const Features := preload("res://src/features.gd")
 const Story := preload("res://src/gamedata/story.gd")
 const CardText := preload("res://src/gamedata/card_text.gd")
 ## Native presentations over the existing GuiModel and action handlers.
-## No XML layout or protocol serialization lives in these panels.
+## No protocol serialization lives in these panels.
 
 const TITLES := {
 	"menuDialog": "panel.menu", "teamManagementDialog": "panel.team",
@@ -34,7 +34,7 @@ const TITLES := {
 	"storyDialog": "panel.story",
 }
 var _preview
-var _eq_fig = null            # S35c: the equipment panel's figure (AnmSprite)
+var _eq_fig = null            # S35c: the equipment panel's figure (figure.gd)
 var _eq_fig_set := ""
 var _preview_look := ""
 var _preview_dir := Direction8.FRONT
@@ -1332,7 +1332,7 @@ func _fighter_creation() -> void:
 	var stage := Control.new()
 	stage.custom_minimum_size = Vector2(320, 330)
 	split.add_child(stage)
-	_preview = preload("res://src/anims/anm_sprite.gd").new()
+	_preview = preload("res://src/anims/figure.gd").new()
 	_preview.foot_pivot = true
 	_preview.position = Vector2(160, 300)
 	_preview.scale = Vector2(2.5, 2.5)
@@ -1365,11 +1365,8 @@ func _sync_preview() -> void:
 	if look == _preview_look:
 		return
 	_preview_look = look
-	# actorDescriptorLibrary is normally a bare set name ("fighter_-110"),
-	# but tolerate an already-qualified or legacy res:// one.
-	var set_dir := AssetPaths.normalize(lib)
-	if not set_dir.begins_with("anims/"):
-		set_dir = "anims/" + set_dir
+	# actorDescriptorLibrary is the figure key (Fighter3D.fighter_key)
+	var set_dir := lib
 	if not Direction8.load_idle(_preview, set_dir, _preview_dir):
 		Direction8.load_idle_any(_preview, set_dir)
 
@@ -1513,13 +1510,11 @@ func _equip_figure(parent: Control, fighter: Dictionary) -> void:
 	stage.name = "Figure"
 	stage.custom_minimum_size = Vector2(260, 330)
 	parent.add_child(stage)
-	var set_dir := AssetPaths.normalize(lib)
-	if not set_dir.begins_with("anims/"):
-		set_dir = "anims/" + set_dir
+	var set_dir := lib   # the figure key (Fighter3D.fighter_key)
 	if not is_instance_valid(_eq_fig) or _eq_fig_set != set_dir:
 		if is_instance_valid(_eq_fig):
 			_eq_fig.queue_free()
-		_eq_fig = preload("res://src/anims/anm_sprite.gd").new()
+		_eq_fig = preload("res://src/anims/figure.gd").new()
 		_eq_fig.foot_pivot = true
 		_eq_fig.scale = Vector2(2.2, 2.2)
 		_eq_fig_set = set_dir

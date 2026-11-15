@@ -71,14 +71,14 @@ func _run() -> void:
 		lobby.debug_requested.emit()
 	else:
 		print("[lobby] SKIP: debug controls (lobby has no debug_requested signal)")
-	_main._gui.gui.model.set_value("localCoach", [{"name": "Aplaudir", "id": 57}], "equipedEmotes")
+	_main._gui.model.set_value("localCoach", [{"name": "Aplaudir", "id": 57}], "equipedEmotes")
 	# The emote menu left the lobby shell; a missing member aborts _run before
 	# quit() and hangs the process, so only assert it while it still exists.
 	if "_emotes" in lobby:
 		_check(lobby._emotes.get_popup().item_count == 2, "model refreshes emote actions")
 	else:
 		print("[lobby] SKIP: emote actions (lobby has no _emotes menu)")
-	_main._gui.gui.model.set_value("localCoach", [], "equipedEmotes")
+	_main._gui.model.set_value("localCoach", [], "equipedEmotes")
 	_main._lobby_screen.queue_free()
 	await process_frame
 	_main._show_lobby_screen()

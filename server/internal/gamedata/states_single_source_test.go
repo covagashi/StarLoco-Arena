@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"sort"
 	"testing"
 )
@@ -42,11 +40,7 @@ var stateActionIDs = map[int32]string{
 // If this test ever fails, the max()-and-last-writer model is no longer safe
 // and states must become properly source-counted, the way Kt does it.
 func TestStatesTargetedBy149AreSingleSourced(t *testing.T) {
-	dir := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(dir, "data.bdat")); err != nil {
-		t.Skip("no data-dist; skipping")
-	}
-	st, err := Open(dir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

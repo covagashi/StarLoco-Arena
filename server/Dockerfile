@@ -30,11 +30,6 @@ COPY --from=build /out/arena-server /app/arena-server
 COPY --from=build /out/seedaccount /app/seedaccount
 COPY configs/ /app/configs/
 
-# The small server-data subset ships in the image by default, so fights work
-# with zero mounts (see AGENTS.md / DISCLAIMER.md for what this is and isn't).
-# Mount your own copy over ARENA_DATA_DIR=/data to use different data instead.
-COPY --from=build /src/data-dist /app/data-dist
-
 # Bug-report screenshots are written here at runtime (web.bug_report_dir).
 # Create it in the IMAGE and own it as the unprivileged user: docker seeds a
 # named volume from the image's contents on first mount, ownership included, and

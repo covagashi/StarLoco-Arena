@@ -1,17 +1,16 @@
 extends Node2D
 
-## Placeholder isometric fight-map view: topology ground cells shaded by
-## altitude + .fmd spawn cells. Original art replaces this once the asset
-## pipeline lands — positions/projection stay identical.
+## The fight view: the owner's 3D arena (ArenaView) under the actors, the
+## tactical marks on its floor, the HUD. An arena with no 3D art draws its
+## cells as flat diamonds shaded by altitude.
 ##
 ## Projection (maprender.go): screen = ((x-y)*43, (x+y)*21.5 - alt*10).
 
 const ReplayPlayer := preload("res://src/fight/replay_player.gd")
 const ReplayBar := preload("res://src/fight/replay_bar.gd")
-const AnmSprite := preload("res://src/anims/anm_sprite.gd")
+const Figure := preload("res://src/anims/figure.gd")
 const Vfx := preload("res://src/fx/vfx.gd")
 const Fighter3D := preload("res://src/anims/fighter3d.gd")
-const MapGfx := preload("res://src/maps/map_gfx.gd")
 const ArenaView := preload("res://src/maps/arena_view.gd")
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
@@ -31,26 +30,8 @@ const Palettes := preload("res://src/gamedata/palettes.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const LobbyPanel := preload("res://src/ui/lobby_panel.gd")
 
-## Player coach paper-doll: Players/700<sex>.anm body + AnimCommunes
-## gestures, channel-tinted per coach (ch1 skin=apH, ch2 hair=agl_0).
-## coach_805 was an NPC bird used as a stand-in — gone.
-## Anim set dirs are LOGICAL names ("anims/coach_7000") — AnmSprite
-## resolves them through AssetPaths, so these strings hold in an
-## exported build where the frames ship beside the executable.
-const COACH_SET := "anims/coach_7000"
-const FIGHTER_SET := "anims/fighter_%s"
-
-## Breed -> Players/<file>.anm (client zh_1.cdN): entry i = breed i/2+1,
-## sex i%2. 7000/7001 are special fighter skins appended at the end.
-const FIGHTER_FILES := [
-	"-110", "-111", "-120", "-121", "-130", "-131", "-140", "-141",
-	"-150", "-151", "-160", "-161", "-170", "-171", "-180", "-181",
-	"-190", "-191", "-1100", "-1101", "-1110", "-1111", "-1120", "-1121",
-	"7000", "7001",
-]
-
-## Server direction (Direction8) -> anm direction. The anm only ships
-## {0,1,2,5,6}; 3/4/7 are horizontal mirrors of 1/0/5 (gw_2.ao).
+## Server direction (Direction8) -> the direction asked for; 3/4/7 are
+## horizontal mirrors of 1/0/5 (the figure turns itself back, Fighter3D._face).
 const DIR_MAP := {0: 0, 1: 1, 2: 2, 3: 1, 4: 0, 5: 5, 6: 6, 7: 5}
 const DIR_FLIP := {0: false, 1: false, 2: false, 3: true,
 	4: true, 5: false, 6: false, 7: true}
@@ -64,11 +45,9 @@ var _fmd := {}
 var _alt_min := 0
 var _alt_max := 0
 var _sorted := []    # ground cell positions, back-to-front (x+y, then x)
-var _sprites := {}   # actor id -> AnmSprite
-var _gfx: Node2D           # painted backdrop layer (created in _ready)
-var _gfx_active := false   # painted backdrop loaded → skip placeholder floors
-## M7 (S36, phase D): the owner's layout in 3D under the world, instead of
-## the retail painted map, for every arena that has one.
+var _sprites := {}   # actor id -> Figure
+## M7 (S36, phase D): the owner's layout in 3D under the world, for every
+## arena that has one.
 var _arena: ArenaView
 var _arena_3d := false
 ## The ground marks over the 3D arena, one layer per surface altitude (each
@@ -140,8 +119,7 @@ func _ready() -> void:
 	$UI/Chat.emote.connect(func(id, anim):
 		chat_bubble(id, "* %s *" % anim.trim_prefix("AnimEmote-")
 			.trim_suffix("-Debut").to_lower())
-		# retail plays the gesture too — AnimEmotes<Male|Femele>.anm tracks
-		# are composited into fighter_* sets (loop emotes keep only Debut).
+		# the fighter plays the gesture too (its celebrate clip).
 		# The 4700 actor id is a COACH id — resolve to their live fighter.
 		var fid := -1
 		for k in State.fighters:
@@ -153,12 +131,6 @@ func _ready() -> void:
 			var base: String = anim.trim_suffix("-Debut") \
 				.trim_suffix("-Boucle").trim_suffix("-Fin")
 			_play_combat(fid, base))
-	_gfx = MapGfx.new()
-	_gfx.name = "MapGfx"
-	_gfx.show_behind_parent = true   # art under overlays; registered actors merge inside
-	add_child(_gfx)
-	move_child(_gfx, 0)   # painted layer draws first, under floors+actors
-	_gfx.overlay_source = _depth_overlays   # ground marks in depth order
 	_arena = ArenaView.new()
 	_arena.name = "Arena3D"
 	_arena.follow = cam
@@ -219,7 +191,6 @@ func _ready() -> void:
 		State.net.message_received.connect(_on_net_message)
 		State.net.scene_active = true
 	# Combat controls use the same native Godot visual family as the lobby.
-	# The XML fight controls obscured both the map and the functional buttons.
 	if State.replay != null:
 		# S11: the transport takes the PASS button's place
 		_replay_bar = ReplayBar.new(State.replay)
@@ -529,8 +500,6 @@ func _load() -> void:
 	for l in _mark_layers.values():
 		l.queue_free()
 	_mark_layers = {}
-	_gfx_active = not _arena_3d and _gfx.load_world(map_id)
-	_gfx.visible = not _arena_3d
 	# the owner's shape, as the server plays it; {} for any other id
 	var own := ArenaLayout.load_fight_shape(map_id)
 	_cells = own.get("cells", {})
@@ -572,10 +541,8 @@ func _load() -> void:
 
 
 ## Grid -> screen. Callers pass a cell's centre as (x + 0.5, y + 0.5); the
-## retail client (aba_2.i/j) and the painted map (map_gfx.py) put cell (x, y)
-## at ((x - y) * 43, (x + y) * 21.5), so the half cell is taken back out of y.
-## Without it, fighters, rings, auras and the placement zones sat half a cell
-## (21.5 px) below the floor art they belong to.
+## arena art (arena_layout.gd) puts cell (x, y) at ((x - y) * 43,
+## (x + y) * 21.5), so the half cell is taken back out of y.
 func _iso(x: float, y: float, alt: float) -> Vector2:
 	return Vector2((x - y) * HW, (x + y - 1.0) * HH - alt * EL)
 
@@ -592,9 +559,9 @@ func _spawn_actors() -> void:
 	for c in _fmd.get("coach", []):
 		if c.x <= -2047:
 			continue   # unused pedestal slot (arena.go emptyPedestalXY)
-		var spr := AnmSprite.new()
+		var spr := Figure.new()
 		# feet on the pedestal's top, as a live fight's 4102 puts them (the
-		# cell's z is its surface; the retail stood the sprite one step up)
+		# cell's z is its surface)
 		spr.position = _iso(c.x + 0.5, c.y + 0.5, c.z)
 		spr.z_index = clampi(int(c.x + c.y) * 4 + 1, -4096, 4096)
 		spr.material = _arena.occluder(c.z, true)
@@ -604,7 +571,7 @@ func _spawn_actors() -> void:
 		# facing the battlefield, like the server's diagonalFacing
 		var dir := _facing(Vector2i(c.x, c.y), centre)
 		_set_flip(spr, DIR_FLIP.get(dir, false))
-		spr.load_action(COACH_SET, "%d_AnimStatique" % DIR_MAP.get(dir, 1))
+		spr.load_action(Fighter3D.coach_key(0), "%d_AnimStatique" % DIR_MAP.get(dir, 1))
 
 
 ## The start cells' centroid (server arena.battlefieldCentre).
@@ -731,8 +698,8 @@ const STEP_DIR := {
 
 
 
-## Card-use script id -> armed-stance family suffix (scripts 800x in
-## data.jar: AnimStatique03[-Debut]-<fam> while a weapon swings).
+## Card-use script id -> armed-stance family suffix (scripts 800x:
+## AnimStatique03[-Debut]-<fam> while a weapon swings).
 ## 219 = unarmed fists (AnimPoings / script 8000, also the 8111 punch).
 const WEAPON_FAMILY := {
 	8000: "219", 8001: "110", 8002: "112", 8003: "117",
@@ -959,7 +926,7 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var carrier := int(_carried_by.get(fid, -1))
 			_drop_cargo(fid)         # walking breaks a carry (dismountIfCarried)
 			if carrier > 0:          # a dismounted carrier drops the Porte pose
-				var cspr: AnmSprite = _sprites.get(carrier)
+				var cspr: Figure = _sprites.get(carrier)
 				if cspr != null:
 					_restore_idle(cspr, carrier)
 			if path.size() > 1:
@@ -986,10 +953,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var tackled := int(payload.get_i64())
 			_walk.erase(tackled)
 			_float_text(tackled, I18n.t("fight.tackled"), Color(1.0, 0.5, 0.3))
-			# Retail also logs "[name] has been tackled." to the fight info
-			# channel and plays AnimTacle on the held fighter — a skeletal
-			# track in AnimCombat.anm, rendered for players via the
-			# composite bake; sets that lack it keep just the float.
+			# "[name] has been tackled." goes to the fight log and the held
+			# fighter plays its hit clip.
 			Audio.fight("tackle")   # S39
 			_play_combat(tackled, "AnimTacle")
 			var tn := str(State.fighters.get(tackled, {}).get("name", ""))
@@ -1053,9 +1018,9 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 
 
 ## S35: a fighter whose breed has a built 3D model (Fighter3D.MODELS), or a
-## summon whose look has one (Fighter3D.SUMMONS, scaled to its size), is
-## drawn by it instead of the retail frames; the rest and coaches stay.
-func _attach_model3d(spr: AnmSprite, f: Dictionary) -> void:
+## summon whose look has one (Fighter3D.SUMMONS, scaled to its size), gets
+## it here; coaches get theirs from load_action (Figure.auto_model).
+func _attach_model3d(spr: Figure, f: Dictionary) -> void:
 	if spr.model3d != null:
 		return
 	var look := int(f.get("look", 0))
@@ -1075,13 +1040,9 @@ func _attach_model3d(spr: AnmSprite, f: Dictionary) -> void:
 
 ## Spawn (or move) one actor from a 4102 entry {id,x,y,z,dir}.
 func _place_actor(a: Dictionary) -> void:
-	var spr: AnmSprite = _sprites.get(a.id)
+	var spr: Figure = _sprites.get(a.id)
 	if spr == null:
-		spr = AnmSprite.new()
-		# The authored .anm anchor goes on the cell centre, as in the client.
-		# foot_pivot (lowest visible row) lifted every fighter ~8 px off its
-		# shadow and summons with long shadows/particles up to 43 px; the old
-		# half-cell error in _iso used to hide most of it.
+		spr = Figure.new()   # feet on the cell centre
 		_sprites[a.id] = spr
 		_actors.add_child(spr)
 	var dir: int = DIR_MAP.get(a.dir, 1)
@@ -1102,18 +1063,11 @@ func _place_actor(a: Dictionary) -> void:
 	spr.z_index = clampi(int(a.x + a.y) * 4 + 1, -4096, 4096)
 	spr.material = _arena.occluder(a.z, true)
 	_actor_cells[a.id] = Vector3i(a.x, a.y, a.z)
-	if _gfx_active:
-		# merged painter: the map-gfx layer calls draw_on at our zkey slot
-		spr.external_draw = true
-		_gfx.register_dynamic(a.id,
-			func(): return MapGfx.actor_key_cell(
-				_actor_cells.get(a.id, Vector3i.ZERO)),
-			func(ci): spr.draw_on(ci, spr.position))
 	queue_redraw()
 
 
 func _move_actor(id: int, p: Vector3i) -> void:
-	var spr: AnmSprite = _sprites.get(id)
+	var spr: Figure = _sprites.get(id)
 	if spr == null:
 		return
 	spr.position = _iso(p.x + 0.5, p.y + 0.5, p.z)
@@ -1260,7 +1214,7 @@ func _on_running_effect(d: Dictionary) -> void:
 			_refresh_apmp()
 	elif FX_STATE.has(int(d.effect_id)):
 		_float_text(target, _fx_word(FX_STATE[int(d.effect_id)]), Color(0.9, 0.9, 1.0))
-		var spr: AnmSprite = _sprites.get(target)
+		var spr: Figure = _sprites.get(target)
 		if int(d.effect_id) == 57 and spr != null:
 			# invisible — retail hides the sprite from enemies entirely and
 			# fades it for the caster's own team
@@ -1269,7 +1223,7 @@ func _on_running_effect(d: Dictionary) -> void:
 			spr.modulate.a = 0.35 if allied else 0.0
 	elif int(d.effect_id) == 62:      # dispel — clears the invisibility tint
 		_float_text(target, "Dispelled", Color(0.9, 0.9, 1.0))
-		var spr: AnmSprite = _sprites.get(target)
+		var spr: Figure = _sprites.get(target)
 		if spr != null:
 			spr.modulate.a = 1.0
 		# strips by SOURCE effectId — the dispel's params[0] (server
@@ -1386,7 +1340,7 @@ func _apply_displacement(d: Dictionary) -> void:
 			if mover > 0:
 				_carried_by[mover] = caster
 				_play_combat(caster, "Anim01Porte")   # the lift gesture
-				var cspr: AnmSprite = _sprites.get(caster)
+				var cspr: Figure = _sprites.get(caster)
 				if cspr != null:     # mount the cargo on its carrier at once
 					_carry_follow(caster, cspr)
 		59:                       # throw — the carried lands, link broken
@@ -1559,7 +1513,7 @@ func chat_bubble(coach_id: int, text: String) -> void:
 		if int(f.get("coach", -2)) == coach_id and not f.get("summon", false):
 			fid = int(id)
 			break
-	var spr: AnmSprite = _sprites.get(fid if fid >= 0 else coach_id)
+	var spr: Figure = _sprites.get(fid if fid >= 0 else coach_id)
 	if spr == null:
 		return
 	var old := spr.get_node_or_null("Bubble")
@@ -1589,7 +1543,7 @@ func _kill_actor(fid: int) -> void:
 	Audio.fight("death")   # S39
 	_buffs.erase(fid)                  # a dead fighter's icons are moot
 	_refresh_buffs(fid)
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	if spr != null:
 		# AnimMort where the set has one (NPC summon anms) — holds the last
 		# frame as the corpse; player fighter files carry the KO sequence
@@ -1607,13 +1561,8 @@ func _kill_actor(fid: int) -> void:
 			else:
 				spr.playing = false
 		spr.modulate = Color(0.55, 0.55, 0.6, 0.85)
-		# back to its own canvas item so the corpse greys out via modulate
-		_gfx.unregister_dynamic(fid)
-		spr.external_draw = false
-		spr.queue_redraw()
-		# jz_2.oz — a summon with a particle id dies as a FreeParticleSystem
-		# burst (aiJ.kT), no grey corpse. We can't run .xps, so the corpse
-		# dissolves upward instead — same "it dissipates" read.
+		# a summon with a particle id leaves no grey corpse: it dissolves
+		# upward ("it dissipates").
 		if int(State.fighters.get(fid, {}).get("particle", 0)) != 0:
 			var dt := create_tween()
 			dt.tween_interval(0.9)
@@ -1627,7 +1576,7 @@ func _kill_actor(fid: int) -> void:
 		if _carried_by[cid] == fid:      # onto the carrier's cell, where it is
 			_drop_cargo(cid)
 	if carrier > 0 and not _dead.get(carrier, false):  # the carrier stands
-		var cspr: AnmSprite = _sprites.get(carrier)    # back up off Porte
+		var cspr: Figure = _sprites.get(carrier)    # back up off Porte
 		if cspr != null:
 			_restore_idle(cspr, carrier)
 	for a in _areas.duplicate():       # a dead caster's aura dies with it
@@ -1643,7 +1592,7 @@ func _kill_actor(fid: int) -> void:
 ## The fighter's name over its head — hidden; it shows while the pointer is
 ## on the fighter or on its card (S17: life and buffs live on the card).
 ## Childed to the sprite so it follows walks. Coaches stay unlabeled.
-func _nameplate(spr: AnmSprite, fid: int) -> void:
+func _nameplate(spr: Figure, fid: int) -> void:
 	var lbl := spr.get_node_or_null("Plate") as Label
 	if lbl == null:
 		lbl = Label.new()
@@ -1665,7 +1614,7 @@ func _nameplate(spr: AnmSprite, fid: int) -> void:
 
 
 ## Mirror the sprite; child Labels counter-flip so text stays readable.
-func _set_flip(spr: AnmSprite, flip: bool) -> void:
+func _set_flip(spr: Figure, flip: bool) -> void:
 	spr.scale.x = -absf(spr.scale.x) if flip else absf(spr.scale.x)
 	for c in spr.get_children():
 		if c is Label or c is ProgressBar:
@@ -1673,7 +1622,7 @@ func _set_flip(spr: AnmSprite, flip: bool) -> void:
 
 
 func _refresh_nameplate(fid: int) -> void:
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	if spr != null:
 		var lbl := spr.get_node_or_null("Plate") as Label
 		if lbl != null:
@@ -1699,7 +1648,7 @@ func _hp_max(f: Dictionary) -> int:
 
 ## Floating combat text — rises ~26px over ~0.9s and fades out.
 func _float_text(fid: int, text: String, color: Color) -> void:
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	if spr == null or not is_inside_tree():
 		return
 	var lbl := Label.new()
@@ -2006,7 +1955,7 @@ func fight_hud_model() -> Dictionary:
 		for b in _buffs.get(fid, []):
 			chips.append(str(b.label) if b.inf else "%s·%d" % [b.label, b.left])
 			invisible = invisible or int(b.get("act", 0)) == 57   # by effect, not by its word
-		var spr: AnmSprite = _sprites.get(fid)
+		var spr: Figure = _sprites.get(fid)
 		if spr != null and spr.modulate.a < 0.5 and not _dead.get(fid, false):
 			invisible = true
 		fighters[int(fid)] = {
@@ -2050,7 +1999,7 @@ func _base_stats(f: Dictionary) -> Array:
 
 
 func _on_timeline_chip(fid: int) -> void:
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	if spr != null:
 		cam.position = spr.position
 	_toggle_fighter_info(fid)
@@ -2179,7 +2128,7 @@ func _update_name_hover(cell: Variant) -> void:
 	var fid := -1
 	if cell != null:
 		fid = _occupied_fighter(cell)
-		var spr: AnmSprite = _sprites.get(fid)
+		var spr: Figure = _sprites.get(fid)
 		if spr == null or spr.modulate.a < 0.05:
 			fid = -1   # an unseen (invisible) enemy keeps its secret
 	if fid == _name_hover:
@@ -2215,9 +2164,7 @@ func _build_spell_bar(f: Dictionary) -> void:
 		b.set_meta("sid", int(sid))
 		bar.add_child(b)
 		_spell_btns[int(sid)] = b
-	var wb := _action_button(I18n.t("fight.weapon_short"),
-		"ui/spells/weapon.png" if AssetPaths.exists("ui/spells/weapon.png")
-			else "gui/images/theme/images/closeCombatIcon.png", -1)
+	var wb := _action_button(I18n.t("fight.weapon_short"), "ui/spells/weapon.png", -1)
 	wb.tooltip_text = I18n.t("fight.weapon_tip")
 	wb.pressed.connect(_on_spell_button.bind(-2))
 	wb.set_meta("sid", -2)
@@ -2229,9 +2176,8 @@ func _build_spell_bar(f: Dictionary) -> void:
 		if not FighterCards.usable(cid):
 			continue
 		var ab := FighterCards.ability(cid)
-		var eb := _action_button(FighterCards.label(cid),
-			("ui/equip/%d.png" % cid) if AssetPaths.exists("ui/equip/%d.png" % cid)
-				else "gui/images/equipments/fighters/icons/%d.png" % cid, int(ab.get("ap", -1)))
+		var eb := _action_button(FighterCards.label(cid), "ui/equip/%d.png" % cid,
+			int(ab.get("ap", -1)))
 		eb.tooltip_text = I18n.t("fight.card_tip", {"name": eb.get_meta("label"),
 			"ap": int(ab.get("ap", -1)), "min": int(ab.get("min", 0)),
 			"max": int(ab.get("max", 0))})
@@ -2255,7 +2201,7 @@ func _sync_armed() -> void:
 				or (c.has_meta("cid") and int(c.get_meta("cid")) == _card_mode)
 			c.set_pressed_no_signal(on)
 
-## A square action slot: the retail icon (spell, weapon, card) with its AP
+## A square action slot: its icon (spell, weapon, card) with its AP
 ## cost in the corner; a short text label when the icon is missing.
 func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 	var b := Button.new()
@@ -2323,10 +2269,9 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 	return b
 
 
-## A spell's icon: ours (S38, tools/icons/spell_icons.py) before the retail one.
+## A spell's icon (S38, tools/icons/spell_icons.py).
 static func _spell_icon(sid: int) -> String:
-	var own := "ui/spells/%d.png" % sid
-	return own if AssetPaths.exists(own) else "gui/images/spells/icons/%d.png" % sid
+	return "ui/spells/%d.png" % sid
 
 
 func _clear_spell_bar() -> void:
@@ -2741,7 +2686,7 @@ func _process(delta: float) -> void:
 		return
 	for fid in _walk.keys():
 		var path: Array = _walk[fid]
-		var spr: AnmSprite = _sprites.get(fid)
+		var spr: Figure = _sprites.get(fid)
 		if spr == null or path.is_empty():
 			_walk.erase(fid)
 			continue
@@ -2771,11 +2716,11 @@ func _process(delta: float) -> void:
 
 ## A carried fighter rides on its carrier (58): it glides with the carrier's
 ## sprite, offset upward so both stay visible, and tracks its cell.
-func _carry_follow(fid: int, spr: AnmSprite) -> void:
+func _carry_follow(fid: int, spr: Figure) -> void:
 	for cid in _carried_by:
 		if _carried_by[cid] != fid:
 			continue
-		var cspr: AnmSprite = _sprites.get(cid)
+		var cspr: Figure = _sprites.get(cid)
 		if cspr != null:
 			cspr.position = spr.position + Vector2(0, -70)
 			_actor_cells[cid] = _actor_cells.get(fid, Vector3i.ZERO)
@@ -2786,7 +2731,7 @@ func _carry_follow(fid: int, spr: AnmSprite) -> void:
 func _drop_cargo(cid: int) -> void:
 	_carried_by.erase(cid)
 	var p: Vector3i = _actor_cells.get(cid, Vector3i(-9999, -9999, -9999))
-	var spr: AnmSprite = _sprites.get(cid)
+	var spr: Figure = _sprites.get(cid)
 	if spr != null and p.x > -9999:
 		spr.position = _iso(p.x + 0.5, p.y + 0.5, p.z)
 		spr.z_index = clampi((p.x + p.y) * 4 + 1, -4096, 4096)
@@ -2801,7 +2746,7 @@ func _face_step(fid: int) -> void:
 	Audio.fight("step", -8.0)   # S39: a footstep per cell, under the rest
 	var d := Vector2i(path[0].x - cur.x, path[0].y - cur.y)
 	var dir: int = STEP_DIR.get(d, -1)
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	if spr == null or not State.fighters.has(fid):
 		return
 	var changed := false
@@ -2848,7 +2793,7 @@ func _face_toward(fid: int, cell: Vector2i) -> void:
 	if best < 0 or best == _actor_dir.get(fid, -1):
 		return
 	_actor_dir[fid] = best
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	if spr == null:
 		return
 	_set_flip(spr, DIR_FLIP.get(best, false))
@@ -2951,7 +2896,7 @@ func _coach_looks(payload: WireReader) -> void:
 
 ## S35c: the coach's 3D figure wears its cards (Fighter3D.wear_coach_cards).
 func _dress_coach(id: int) -> void:
-	var spr: AnmSprite = _sprites.get(id)
+	var spr: Figure = _sprites.get(id)
 	if spr == null or spr.model3d == null or not spr.model3d.has_method("wear_coach_cards"):
 		return
 	spr.model3d.wear_coach_cards(State.coach_ids.get(id, {}).get("cards", []))
@@ -2963,7 +2908,7 @@ func _dress_coach(id: int) -> void:
 ## first), the plain gesture otherwise; fists (219) for the unarmed 8111.
 func _play_weapon(fid: int, fam: String) -> void:
 	Audio.fight("swing")   # S39
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	var f: Dictionary = State.fighters.get(fid, {})
 	if spr == null or f.is_empty():
 		return
@@ -2987,7 +2932,7 @@ func _play_weapon(fid: int, fam: String) -> void:
 	_play_combat(fid, "AnimCarte")
 
 
-func _weapon_hold(spr: AnmSprite, fid: int, set_dir: String, dir: int,
+func _weapon_hold(spr: Figure, fid: int, set_dir: String, dir: int,
 		base: String) -> void:
 	if not is_instance_valid(spr) or _dead.has(fid):
 		return
@@ -3001,7 +2946,7 @@ func _weapon_hold(spr: AnmSprite, fid: int, set_dir: String, dir: int,
 
 ## Re-face one actor to a server direction (4522 or 4521-driven).
 func _reface(fid: int, dir: int) -> void:
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	if spr == null or not State.fighters.has(fid):
 		return
 	_set_flip(spr, DIR_FLIP.get(dir, false))
@@ -3022,8 +2967,7 @@ func _coach_look(coach_id: int) -> Dictionary:
 
 
 func _coach_set(coach_id: int) -> String:
-	return "anims/coach_700%d" % int(
-		_coach_look(coach_id).get("sex", 0))
+	return Fighter3D.coach_key(int(_coach_look(coach_id).get("sex", 0)))
 
 
 func _coach_tints(coach_id: int) -> Dictionary:
@@ -3033,25 +2977,31 @@ func _coach_tints(coach_id: int) -> Dictionary:
 	return Palettes.coach_tints(int(l.get("skin", 0)), int(l.get("hair", 0)))
 
 
-## Sprite set for a fighter record: summon `look` points straight at an anm
-## (negative → Players fighter file, positive → NPCs set); players resolve
-## through the breed/sex table; anything unresolvable falls back to coach.
+## Figure key for a fighter record: a summon's `look` names its figure
+## (positive: Fighter3D.SUMMONS; negative "-1<breed><sex>": a breed's
+## fighter); players resolve through breed/sex; anything without a figure
+## falls back to its coach's.
 func _anim_set(f: Dictionary) -> String:
 	var look := int(f.get("look", 0))
+	var key := ""
 	if look > 0:
-		return "anims/npc_%d" % look
-	if look < 0:
-		return FIGHTER_SET % str(look)
-	var breed := int(f.get("breed", 1))
-	if breed >= 1:
-		return FIGHTER_SET % _fighter_file(breed, int(f.get("sex", 0)))
+		key = Fighter3D.summon_key(look)
+	elif look < 0:
+		var code := str(-look)   # "1<breed><sex>"
+		if code.length() >= 3:
+			key = Fighter3D.fighter_key(int(code.substr(1, code.length() - 2)), int(code.right(1)))
+	else:
+		var breed := int(f.get("breed", 1))
+		key = Fighter3D.fighter_key(breed, int(f.get("sex", 0)))
+		if key == "" and breed >= 7000:
+			key = Fighter3D.coach_key(breed - 7000)   # the special coach-skin fighters
+	if key != "":
+		return key
 	return _coach_set(int(f.get("coach", -1)))
 
 
-## Coach fallback check — _anim_set returns coach_700<sex>, so an exact
-## COACH_SET compare leaks the female paper-doll into fighter probes.
-static func _is_coach_set(set_dir: String) -> bool:
-	return AssetPaths.normalize(set_dir).begins_with("anims/coach_")
+static func _is_coach_set(key: String) -> bool:
+	return Fighter3D.figure_of(key).get("coach", false)
 
 
 ## Fighter channel tints (ee_2): skin/hair/eye draw from tn_0 — the
@@ -3063,12 +3013,11 @@ func _fighter_tints(f: Dictionary) -> Dictionary:
 		int(f.get("hair", 0)), int(f.get("eye", 0)))
 
 
-## Exported sets repack to {0,1,2,5,6}, but AnimSort sets only carry {1,5}
-## and a few anms keep wire dirs — probe the wire dir, then the packed one,
-## then any side. First hit wins; DIR_FLIP's mirror still applies on top.
-## prefer02 puts the retail combat variants first (qg_2: the in-fight idle
-## is AnimStatique02, the walk AnimMarche02 when the set carries them).
-func _anim_probe(spr: AnmSprite, set_dir: String, wire_dir: int, base: String,
+## Probe the wire dir, then the mirrored one, then any side, and the action's
+## variants. First hit wins; DIR_FLIP's mirror still applies on top.
+## prefer02 puts the combat variants first (the in-fight idle is
+## AnimStatique02, the walk AnimMarche02).
+func _anim_probe(spr: Figure, set_dir: String, wire_dir: int, base: String,
 		once := false, hold := false, prefer02 := false) -> bool:
 	var bases := [base, "%s02" % base, "%s-02" % base]
 	if prefer02:
@@ -3085,14 +3034,12 @@ func _anim_probe(spr: AnmSprite, set_dir: String, wire_dir: int, base: String,
 
 
 ## Load the idle animation for a fighter in a given wire direction, falling
-## back to the coach sprite when the breed's fighter set has no asset —
-## summons carry breed -1 and never have a fighter file.
-func _load_fighter_anim(spr: AnmSprite, fid: int, wire_dir: int,
+## back to the coach's figure when the fighter's has no such clip.
+func _load_fighter_anim(spr: Figure, fid: int, wire_dir: int,
 		base := "AnimStatique") -> void:
 	var f: Dictionary = State.fighters[fid]
 	var set_dir := _anim_set(f)
-	# a carrier idles on the Porte pose (ee_2: ls("Porte") swaps the gesture
-	# bank until the throw); only the carrier breeds' sets author it
+	# a carrier idles on the carry pose until the throw
 	if base == "AnimStatique" and not _is_coach_set(set_dir) \
 			and _is_carrier(fid) \
 			and _anim_probe(spr, set_dir, wire_dir, "AnimStatiquePorte"):
@@ -3113,10 +3060,10 @@ func _is_carrier(fid: int) -> bool:
 	return false
 
 
-## AnimKO-Debut done — chain into the held Boucle corpse loop; if the set
-## lacks it the one-shot already holds its last frame. `ko` carries the
+## AnimKO-Debut done — chain into the held Boucle corpse loop; if the figure
+## lacks it the one-shot already holds its last pose. `ko` carries the
 ## family prefix — "AnimPorte-KO-" for a fighter that died mid-carry.
-func _ko_loop(spr: AnmSprite, set_dir: String, dir: int,
+func _ko_loop(spr: Figure, set_dir: String, dir: int,
 		ko := "AnimKO-") -> void:
 	if is_instance_valid(spr):
 		_anim_probe(spr, set_dir, dir, ko + "Boucle")
@@ -3124,26 +3071,26 @@ func _ko_loop(spr: AnmSprite, set_dir: String, dir: int,
 
 ## Back to idle once a one-shot gesture ends — unless the fighter died
 ## (AnimMort holds its last frame; the grey modulate does the rest).
-func _restore_idle(spr: AnmSprite, fid: int) -> void:
+func _restore_idle(spr: Figure, fid: int) -> void:
 	if _dead.has(fid) or not is_instance_valid(spr):
 		return
 	_load_fighter_anim(spr, fid, int(_actor_dir.get(fid, 5)))
 
 
-## Play a one-shot gesture from the fighter's own set — NPC summon anms carry
-## AnimHit/AnimMort/AnimCast, player fighter files do not. Silent no-op when
-## the action is absent; falls back to the coach set last.
+## Play a one-shot gesture on the fighter's own figure. Silent no-op when
+## the action is absent; falls back to the coach's figure last.
 func _play_combat(fid: int, base: String, hold := false) -> bool:
-	var spr: AnmSprite = _sprites.get(fid)
+	var spr: Figure = _sprites.get(fid)
 	var f: Dictionary = State.fighters.get(fid, {})
 	if spr == null or f.is_empty():
 		return false
 	var set_dir := _anim_set(f)
 	var dir := int(_actor_dir.get(fid, 5))
-	var sets := [set_dir] if set_dir != COACH_SET else []
-	sets.append(COACH_SET)
-	# a carrier hit/tackled/killed while holding somebody plays the Porte
-	# variant (ee_2 swaps the gesture bank while ls("Porte") is set)
+	var coach := Fighter3D.coach_key(0)
+	var sets := [set_dir] if set_dir != coach else []
+	sets.append(coach)
+	# a carrier hit/tackled/killed while holding somebody plays the carry
+	# variant
 	var bases := [base]
 	if _is_carrier(fid):
 		match base:
@@ -3164,55 +3111,21 @@ func _play_combat(fid: int, base: String, hold := false) -> bool:
 	return false
 
 
-## French spell name → anm action slug: strip accents and everything
-## non-alphanumeric ("Colère de Iop" -> "ColeredeIop"), matching the retail
-## AnimSort-<name> actions inside AnimSort_<breed*10>.
-const _ACCENTS := {"é":"e","è":"e","ê":"e","ë":"e","à":"a","â":"a",
-	"î":"i","ï":"i","ô":"o","ö":"o","û":"u","ù":"u","ü":"u","ç":"c",
-	"É":"E","È":"E","À":"A","Ç":"C","Î":"I","Ô":"O","Û":"U"}
-
-func _anim_slug(fr_name: String) -> String:
-	var out := ""
-	for ch in fr_name:
-		if _ACCENTS.has(ch):
-			out += _ACCENTS[ch]
-		elif (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") \
-				or (ch >= "0" and ch <= "9"):
-			out += ch
-	return out
-
-
-## Cast gesture (8110): AnimSort_<breed*10> carries one action per spell —
-## <dir>_AnimSort-<slugged French name> — plus the generic AnimSort-Cast.
-## The sets only hold dir 1 (right-facing) and 5 (left); DIR_FLIP's mirror
-## is already on the sprite, so map the facing to the nearest authored side.
-func _play_cast(fid: int, sid: int) -> void:
-	var spr: AnmSprite = _sprites.get(fid)
+## Cast gesture (8110): the figure's cast clip, facing the nearest side.
+func _play_cast(fid: int, _sid: int) -> void:
+	var spr: Figure = _sprites.get(fid)
 	var f: Dictionary = State.fighters.get(fid, {})
 	if spr == null or f.is_empty():
 		return
-	var fr := _anim_slug(Spells.fr_name(sid))
 	var own := _anim_set(f)
-	var sets: Array = []
-	# Own set first: NPC summon anms carry authored AnimSort-* gestures, and
-	# fighter_<file> dirs carry the composited AnimSort_<breed> tracks baked
-	# over that body (full skeleton + fx quads). The raw animsort_<b*10>
-	# dirs only ever rasterize loose fx sprites — a weaker fallback.
 	if not _is_coach_set(own):
-		sets.append(own)
-	var breed := int(f.get("breed", 0))
-	if breed >= 1:
-		sets.append("anims/animsort_%d" % (breed * 10))
-	for set_dir in sets:
 		var dir := 1 if int(DIR_MAP.get(int(_actor_dir.get(fid, 1)), 1)) <= 2 else 5
-		for base in (["AnimSort-%s" % fr] if not fr.is_empty() else []) \
-				+ ["AnimSort-Cast", "AnimCast"]:
-			if spr.play_once(set_dir, "%d_%s" % [dir, base]):
-				var cb := _restore_idle.bind(spr, fid)
-				if not spr.action_finished.is_connected(cb):
-					spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
-				return
-	# last resort: the coach set's generic cast, if it has one
+		if spr.play_once(own, "%d_AnimCast" % dir):
+			var cb := _restore_idle.bind(spr, fid)
+			if not spr.action_finished.is_connected(cb):
+				spr.action_finished.connect(cb, CONNECT_ONE_SHOT)
+			return
+	# last resort: the coach's cast
 	_play_combat(fid, "AnimCast")
 
 
@@ -3445,12 +3358,6 @@ func request_move_to(cell: Vector2i) -> bool:
 	return true
 
 
-static func _fighter_file(breed: int, sex: int) -> String:
-	if breed >= 1 and breed <= 12:
-		return FIGHTER_FILES[(breed - 1) * 2 + clampi(sex, 0, 1)]
-	return FIGHTER_FILES[24 + clampi(breed - 7000, 0, 1)]
-
-
 func _cell_poly(x: int, y: int, alt: float) -> PackedVector2Array:
 	var c := _iso(x + 0.5, y + 0.5, alt)
 	return PackedVector2Array([
@@ -3480,14 +3387,6 @@ func _draw() -> void:
 		if overlays_visible:
 			_draw_top_overlays()
 		return
-	if _gfx_active:
-		# painted backdrop already carries ground+walls — keep only the
-		# gameplay overlays (spawn zones, placement/hover rings)
-		# (ground marks are merged into the map's depth order: map_gfx
-		# pulls them through overlay_source; only text stays up here)
-		if overlays_visible:
-			_draw_top_overlays()
-		return
 	# pass 1: floor tops, back-to-front so lower rows paint over upper walls
 	for pos in _sorted:
 		var c: Dictionary = _cells[pos]
@@ -3495,7 +3394,7 @@ func _draw() -> void:
 		draw_colored_polygon(poly, _alt_color(c.alt))
 		draw_polyline(poly + PackedVector2Array([poly[0]]), Color(0, 0, 0, 0.25), 1.0)
 	# pass 2: wall faces where a cell drops toward a lower/void +x or +y
-	# neighbour — the "aba" drop height retail draws as a cliff skirt.
+	# neighbour, as a cliff skirt.
 	const FRONT := [Vector2i(1, 0), Vector2i(0, 1)]
 	for pos in _sorted:
 		var c: Dictionary = _cells[pos]
@@ -3519,15 +3418,13 @@ func _draw() -> void:
 
 ## --- tactical overlays --------------------------------------------------
 ## Ground marks (zones, pedestals, special tiles, traps/glyphs, reach, path,
-## hovered cell) belong ON the floor: with the painted map they are merged
-## into map_gfx's depth order — after their cell's ground and flat decals,
-## before its props and before anything standing in front — so a rock or a
-## fighter in front covers them, as in retail. Team rings/auras go right
-## before their own fighter. Only text (MP cost) and debug marks stay on
-## top. Without the painted map everything draws straight onto this canvas.
+## hovered cell) belong ON the floor: over the 3D arena they are gathered
+## in depth order (each cell's band; team rings/auras right before their own
+## fighter) onto one layer per altitude, which the arena hides where it is
+## in front. Only text (MP cost) and debug marks stay on top. Without 3D
+## art everything draws straight onto this canvas.
 
 ## Zones are a translucent team-colour fill.
-var _zone_ghost := OS.get_environment("ARENA_ZONE_GHOST") != "0"   # on unless =0
 var _ov_collect := false   # true while _depth_overlays gathers, false = draw now
 var _ov: Array = []        # [{key, o, d: Callable(ci)}] gathered marks
 
@@ -3535,7 +3432,7 @@ var _ov: Array = []        # [{key, o, d: Callable(ci)}] gathered marks
 enum OvLayer { ZONE, SPECIAL, AREA, REACH, AOE, PATH, HOVER }
 
 
-## Hand the ground marks to map_gfx (its overlay_source); [] when hidden.
+## The ground marks in depth order; [] when hidden.
 func _depth_overlays() -> Array:
 	if not overlays_visible:
 		return []
@@ -3550,7 +3447,7 @@ func _depth_overlays() -> Array:
 func _ground(x: int, y: int, layer: int, fn: Callable) -> void:
 	if _ov_collect:
 		var alt: int = _cells.get(Vector2i(x, y), {}).get("alt", 0)
-		_ov.append({"key": MapGfx.ground_key(x, y), "o": layer, "d": fn, "alt": alt})
+		_ov.append({"key": _mark_key(x, y), "o": layer, "d": fn, "alt": alt})
 	else:
 		fn.call(self)
 
@@ -3558,13 +3455,23 @@ func _ground(x: int, y: int, layer: int, fn: Callable) -> void:
 ## A mark under the fighter standing on p (ring, aura, selection).
 func _under_actor(p: Vector3i, fn: Callable) -> void:
 	if _ov_collect:
-		_ov.append({"key": MapGfx.actor_key_cell(p) - 1, "o": 0, "d": fn, "alt": p.z})
+		_ov.append({"key": _actor_key(p) - 1, "o": 0, "d": fn, "alt": p.z})
 	else:
 		fn.call(self)
 
 
-## The ground marks over the 3D arena: gathered like map_gfx's, in depth
-## order, and handed to one MarkLayer per altitude.
+## Depth keys: a cell's band runs back to front by y, then x; inside one, a
+## mark on the floor (8208) sorts before what stands on the cell (8224).
+static func _actor_key(p: Vector3i) -> int:
+	return ((p.y + 131072) << 32) | ((p.x + 131072) << 14) | 8224
+
+
+static func _mark_key(x: int, y: int) -> int:
+	return ((y + 131071) << 32) | ((x + 131071) << 14) | 8208
+
+
+## The ground marks over the 3D arena: gathered in depth order and handed
+## to one MarkLayer per altitude.
 func _draw_arena_marks() -> void:
 	var by_alt := {}
 	for m: Dictionary in _depth_overlays():
@@ -3636,7 +3543,7 @@ func _draw_ground_overlays() -> void:
 	# caster's only show while that caster is visible (aew_1.aoy) — an
 	# invisible enemy's traps stay hidden from us.
 	for a in _areas:
-		var csp: AnmSprite = _sprites.get(int(a.caster))
+		var csp: Figure = _sprites.get(int(a.caster))
 		var cf: Dictionary = State.fighters.get(int(a.caster), {})
 		var enemy := int(cf.get("coach", -1)) != State.my_coach_id
 		if enemy and csp != null and csp.modulate.a < 0.9:
@@ -3664,7 +3571,7 @@ func _draw_ground_overlays() -> void:
 		var f: Dictionary = State.fighters.get(id, {})
 		if f.is_empty():
 			continue                 # coach actors aren't fighters
-		var fspr: AnmSprite = _sprites.get(id)
+		var fspr: Figure = _sprites.get(id)
 		if fspr != null and fspr.modulate.a < 0.05:
 			continue                 # fully hidden — don't leak the position
 		var p: Vector3i = _actor_cells[id]
@@ -3739,16 +3646,6 @@ func _draw_ground_overlays() -> void:
 
 
 func _draw_top_overlays() -> void:
-	# a faint outline of the start zones over everything: depth lets tall
-	# grass in front hide a whole placement cell (as in retail); this keeps
-	# it findable without covering rocks/fighters with colour.
-	if _gfx_active and _zone_ghost and (_placement or State.fighters.is_empty()):
-		for t in [0, 1]:
-			var gcol: Color = [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)][t]
-			for c in _fmd.get("team%d" % t, []):
-				var gp := _cell_poly(c.x, c.y, c.z)
-				draw_polyline(gp + PackedVector2Array([gp[0]]),
-					Color(gcol.r, gcol.g, gcol.b, 0.45), 1.0)
 	for pos in _cells:
 		var c = _cells[pos]
 		if not c.ground:

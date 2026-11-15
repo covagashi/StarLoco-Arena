@@ -28,8 +28,8 @@ func _audit() -> void:
 	var lang_before: String = i18n.lang
 	i18n.set_locale("es")
 	# 1. the arrival 60031 (it was sent before this audit started)
-	await _wait(func(): return not (_main._gui.gui.model.get_value("season") as Variant == null), 4.0)
-	var season: Variant = _main._gui.gui.model.get_value("season")
+	await _wait(func(): return not (_main._gui.model.get_value("season") as Variant == null), 4.0)
+	var season: Variant = _main._gui.model.get_value("season")
 	var n := int(season.get("number", 0)) if season is Dictionary else 0
 	_record(60031, "season", n > 0 and (_want_season == 0 or n == _want_season),
 		"season %d, ends %s" % [n, Time.get_datetime_string_from_unix_time(int(season.get("ends", 0)) if season is Dictionary else 0)])

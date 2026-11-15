@@ -3,13 +3,14 @@ extends "res://src/ui/lobby_panel.gd"
 ## the client pops when a fight's standing crosses a level (WE: aet_0.nJ of
 ## the old and the new standing). Your coach celebrating, the new level in
 ## big figures and the retail line "¡Has subido un nivel!". The retail doll
-## dances (AnimEmote-Danse); coach sets export no emotes, so it jumps.
+## dances; ours jumps.
 ##
 ## Reads `levelUp` {level} and `localCoach` (look). Read-only: no events.
 
 const SIZE := Vector2(560, 470)
-const AnmSprite := preload("res://src/anims/anm_sprite.gd")
+const Figure := preload("res://src/anims/figure.gd")
 const Direction8 := preload("res://src/util/direction8.gd")
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 
 
 func _ready() -> void:
@@ -34,13 +35,13 @@ func refresh() -> void:
 	stage.custom_minimum_size = Vector2(200, 240)
 	split.add_child(stage)
 	var coach: Dictionary = data("localCoach", {})
-	var spr := AnmSprite.new()
+	var spr := Figure.new()
 	spr.foot_pivot = true
 	spr.position = Vector2(100, 225)
 	spr.scale = Vector2(2.2, 2.2)
 	spr.tints = Palettes.coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
 	stage.add_child(spr)
-	var lib := "anims/coach_700%d" % int(coach.get("sex", 0))
+	var lib := Fighter3D.coach_key(int(coach.get("sex", 0)))
 	if not spr.load_action(lib, "1_AnimSaut"):
 		Direction8.load_idle_any(spr, lib)
 	var col := column(split)

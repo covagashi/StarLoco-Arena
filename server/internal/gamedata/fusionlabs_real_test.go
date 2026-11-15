@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"sort"
 	"testing"
 )
@@ -11,11 +9,7 @@ import (
 // so a field-order slip would still "decode" and just produce nonsense — the
 // assertions below are about plausibility, not just parsing.
 func TestLoadFusionLabsReal(t *testing.T) {
-	dir := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(dir, "data.bdat")); err != nil {
-		t.Skip("no data-dist; skipping")
-	}
-	st, err := Open(dir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -32,18 +31,8 @@ func TestChallengeVictoryConditionEndsFight(t *testing.T) {
 	if raceEnabled {
 		t.Skip("timing-sensitive full-fight E2E; flaky under -race's slowdown")
 	}
-	st, err := gamedata.Open(filepath.Join("..", "..", "data-dist"))
-	if err != nil {
-		t.Skipf("game data not available: %v", err)
-	}
-	all, err := st.LoadChallenges()
-	if err != nil {
-		t.Fatalf("LoadChallenges: %v", err)
-	}
-	spells, err := st.LoadSpells()
-	if err != nil {
-		t.Fatalf("LoadSpells: %v", err)
-	}
+	b := realBundle(t)
+	all, spells := b.Challenges, b.Spells
 
 	// Challenge 35 is a known-playable minute demon (see TestChallengeFightIsPlayable).
 	base := all.Get(35)

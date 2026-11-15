@@ -1,8 +1,7 @@
-// Read-only game-data views for the 2.70 studio. Each reproduces the v2.04
-// design: a page head + the shared faceted, sortable, CSV-exporting table
-// (table.ts) with a right-side detail drawer. Data comes from the read-only
-// v2.70 backend DTOs. The one editor is the cards' (S40): the drawer of a coach
-// or fighter card carries a form that saves to server/content/cards.
+// Content views: a page head + the shared faceted, sortable, CSV-exporting
+// table (table.ts) with a right-side detail drawer. Data comes from the game's
+// own content (server/content). The one editor is the cards' (S40): the drawer
+// of a coach or fighter card carries a form that saves to server/content/cards.
 
 import { mountTable, boolBadge, type Column, type Facet } from "./table";
 import { t } from "./i18n";
@@ -67,7 +66,8 @@ export function viewSpells(container: HTMLElement): void {
   getSpells()
     .then((rows) => {
       container.innerHTML =
-        pageHead(t("nav.spells"), `${rows.length} spells \u00B7 data.bdat`) + `<div class="view-body"></div>`;
+        pageHead(t("nav.spells"), `${rows.length} spells \u00B7 server/content/rules`) +
+        `<div class="view-body"></div>`;
       const host = container.querySelector<HTMLElement>(".view-body")!;
       const columns: Column<SpellDTO>[] = [
         { key: "id", label: "ID", align: "right", width: "64px", value: (r) => r.id },
@@ -342,7 +342,8 @@ export function viewSummonings(container: HTMLElement): void {
   getSummonings()
     .then((rows) => {
       container.innerHTML =
-        pageHead(t("nav.summonings"), `${rows.length} summonings \u00B7 data.bdat`) + `<div class="view-body"></div>`;
+        pageHead(t("nav.summonings"), `${rows.length} summonings \u00B7 server/content/rules`) +
+        `<div class="view-body"></div>`;
       const host = container.querySelector<HTMLElement>(".view-body")!;
       mountTable<SummoningDTO>(host, {
         rows,
@@ -384,7 +385,7 @@ export function viewStaticEffects(container: HTMLElement): void {
   getStaticEffects()
     .then((rows) => {
       container.innerHTML =
-        pageHead(t("nav.staticEffects"), `${rows.length} traps / glyphs \u00B7 data.bdat`) +
+        pageHead(t("nav.staticEffects"), `${rows.length} traps / glyphs \u00B7 server/content/rules`) +
         `<div class="view-body"></div>`;
       const host = container.querySelector<HTMLElement>(".view-body")!;
       mountTable<StaticEffectDTO>(host, {

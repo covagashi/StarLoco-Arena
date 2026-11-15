@@ -390,7 +390,7 @@ result dialog.
 | Actor-model fights (race-clean) | ✓ | ✓ (race) |
 | Phase/turn timers (anti-deadlock) | ✓ | ✓ (2 tests) |
 | AoI scoping + dynamic spawn/despawn | ✓ | ✓ (3 E2E) |
-| gamedata (data.bdat cards/spells) | ✓ | ✓ (real-data tests) |
+| gamedata (server/content cards/rules) | ✓ | ✓ (real-data tests) |
 | Coach-stats race (Coach.Mu) | ✓ | ✓ (race, forfeit) |
 
 ---

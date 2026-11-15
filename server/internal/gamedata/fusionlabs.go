@@ -36,10 +36,6 @@ type FusionLab struct {
 	Slots uint8
 }
 
-// TypeFusionLab is the data.bdat record type holding fusion-lab definitions
-// (client enum `atr_0.cVf` = 1100).
-const TypeFusionLab = 1100
-
 // FusionLabs is the decoded type-1100 table, keyed by id.
 type FusionLabs struct {
 	byID map[int64]*FusionLab
@@ -96,33 +92,4 @@ func (t *FusionLabs) Default() *FusionLab {
 		}
 	}
 	return best
-}
-
-// LoadFusionLabs decodes every type-1100 record.
-func (s *Store) LoadFusionLabs() (*FusionLabs, error) {
-	labs := &FusionLabs{byID: make(map[int64]*FusionLab)}
-	for _, e := range s.EntriesOf(TypeFusionLab) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if l := decodeFusionLab(rec.Data); l != nil {
-			labs.byID[l.ID] = l
-		}
-	}
-	return labs, nil
-}
-
-// decodeFusionLab reads one `ajd_0` record, or nil if it is short.
-func decodeFusionLab(data []byte) *FusionLab {
-	c := &cur{b: data}
-	l := &FusionLab{}
-	l.ID = c.i64()
-	l.Power = c.i16()
-	l.Quality = c.u8()
-	l.Slots = c.u8()
-	if !c.ok() {
-		return nil
-	}
-	return l
 }

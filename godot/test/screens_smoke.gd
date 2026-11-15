@@ -168,7 +168,7 @@ func _equipment() -> void:
 		if found:
 			hb.pressed.emit()
 		await _wait(func(): return int(State.cosmetics.get("hair_fx", 0)) == other, 3.0)
-		var lc = _main._gui.gui.model.get_value("localCoach")
+		var lc = _main._gui.model.get_value("localCoach")
 		_record(60043, "hair effect", found and int(State.cosmetics.get("hair_fx", 0)) == other
 			and lc is Dictionary and int(lc.get("hairFx", 0)) == other,
 			"owns %s, %d → %d (button %s, localCoach.hairFx %s)" % [owned, was,
@@ -234,7 +234,7 @@ func _kanodo() -> void:
 	await create_timer(0.8).timeout
 	var k = _main._gui.dialogs.get("kanodoDialog")
 	var board = k.find_child("Board", true, false) if k != null else null
-	var model: Dictionary = _main._gui.gui.model.get_value("kanodo")
+	var model: Dictionary = _main._gui.model.get_value("kanodo")
 	_record(23009, "kanodo", board != null and int(model.get("board", 0)) > 0 and board._lit.size() > 0,
 		"native panel, board %d, %d sphere(s) owned, %d within reach" % [int(model.get("board", 0)),
 			model.get("owned", []).size(), board._lit.size() if board != null else 0])
@@ -259,7 +259,7 @@ func _kanodo() -> void:
 	var enabled := buy != null and not buy.disabled
 	buy.pressed.emit()
 	await create_timer(0.6).timeout
-	var after: Dictionary = _main._gui.gui.model.get_value("kanodo")
+	var after: Dictionary = _main._gui.model.get_value("kanodo")
 	var cur: Array = after.get("cursor", [0, 0])
 	_record(23009, "buy", enabled and int(cur[0]) == int(pick.x) and int(cur[1]) == int(pick.y)
 		and int(pick.id) in after.get("owned", []),

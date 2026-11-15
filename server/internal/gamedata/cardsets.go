@@ -22,9 +22,6 @@ import "sort"
 // fatigue, drops, reputation, resurrection, "apply a condition"). They are NOT
 // in-fight combat effects.
 
-// TypeCardSet is the data.bdat record type for card sets.
-const TypeCardSet = 101
-
 // CardSetEffect is one threshold-gated set bonus (an akw_0 entry).
 type CardSetEffect struct {
 	// Action is the akw_0 type: an id in the client's AI enum (e.g. 13 =
@@ -51,22 +48,6 @@ type CardSet struct {
 type CardSets struct {
 	byID map[int32]*CardSet
 	ids  []int32
-}
-
-// LoadCardSets reads and decodes every card-set definition (type 101).
-func (s *Store) LoadCardSets() (*CardSets, error) {
-	out := &CardSets{byID: make(map[int32]*CardSet)}
-	for _, e := range s.EntriesOf(TypeCardSet) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if cs := decodeCardSet(rec.Data); cs != nil {
-			out.byID[cs.ID] = cs
-		}
-	}
-	out.reindex()
-	return out, nil
 }
 
 // NewCardSets builds a catalog from explicit definitions (tests/tooling).
@@ -126,43 +107,4 @@ func (c *CardSet) ActiveEffects(equipped int) []CardSetEffect {
 		}
 	}
 	return out
-}
-
-// decodeCardSet parses a yp_0 record: [i32 setId][u8 count][count x akw_0].
-func decodeCardSet(data []byte) *CardSet {
-	c := &cur{b: data}
-	cs := &CardSet{}
-	cs.ID = c.i32()
-	n := int(c.u8())
-	if n < 0 || n > 64 {
-		return nil
-	}
-	for i := 0; i < n && c.ok(); i++ {
-		cs.Effects = append(cs.Effects, decodeAkw(c))
-	}
-	if !c.ok() || cs.ID <= 0 {
-		return nil
-	}
-	return cs
-}
-
-// decodeAkw reads one akw_0 entry, the shared "card effect" structure:
-//
-//	[i32 type][i8 opCount][i32 x opCount][i64 condition][i8 threshold]
-//
-// Used by card sets (type 101) and by coach cards' own effect array (type 100
-// field 15), so the two stay in step by construction.
-func decodeAkw(c *cur) CardSetEffect {
-	ef := CardSetEffect{Action: c.i32()}
-	n := int(c.u8())
-	if n < 0 || n > 32 {
-		c.err = true
-		return ef
-	}
-	for i := 0; i < n && c.ok(); i++ {
-		ef.Params = append(ef.Params, c.i32())
-	}
-	ef.Condition = c.i64()
-	ef.Threshold = c.u8()
-	return ef
 }

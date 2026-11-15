@@ -40,7 +40,7 @@ func _audit() -> void:
 			c.ranked.pick.get_item_text(c.ranked.pick.selected) if c.ranked.pick.item_count > 0 else c.ranked.team.text,
 			c.tourn.team.text])
 	# 7. the coach wears its cards
-	var lc = _main._gui.gui.model.get_value("localCoach")
+	var lc = _main._gui.model.get_value("localCoach")
 	var worn: Array = lc.get("worn", []) if lc is Dictionary else []
 	var want: Dictionary = preload("res://src/anims/fighter3d.gd").coach_pieces(worn)
 	var m3d = lobby._spr.model3d

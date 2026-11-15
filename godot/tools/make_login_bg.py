@@ -17,8 +17,8 @@ S = 3                      # supersample factor
 W, H = 1280 * S, 720 * S
 OUT = "assets/ui/login_bg.png"
 
-F_COPPER = "assets/gui/fonts/COPRGTB.TTF"
-F_TAHOMA = "assets/gui/fonts/TAHOMA.TTF"
+F_COPPER = "assets/ui/fonts/LilitaOne-Regular.ttf"   # was the retail COPRGTB (S43)
+F_TAHOMA = "assets/ui/fonts/Nunito-Variable.ttf"   # was the retail TAHOMA (S43)
 F_BAY = "/System/Library/Fonts/Supplemental/NotoSansTagalog-Regular.ttf"
 
 

@@ -153,7 +153,7 @@ func writeFightGrid(w *protocol.Writer, a *arena) {
 			w.U16(a.cellFlag(x, y)) // 0xFC00 floor / 0xFEFF void
 		}
 	}
-	w.U8(0) // customTeams = 0 (client uses the .fmd / default split)
+	w.U8(0) // customTeams = 0 (client uses the arena's own split)
 	w.U8(0) // cLE team-A default side
 	w.U8(0) // cLF team-B default side
 }

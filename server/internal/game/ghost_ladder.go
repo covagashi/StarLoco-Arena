@@ -16,7 +16,7 @@ import (
 //   - Filler ghosts: fillerGhostCount server-made teams (CoachID 0), built from
 //     the breeds' own spells with two simple rules each, rated from 700 to
 //     1360. They are made on the first ghost request, never shipped in
-//     data-dist (that directory is the maintainer's call).
+//     server/content.
 //   - Matchmaking: 60014 with ghost id 0 picks the ghost nearest the
 //     challenger's rating — a player's ghost within ghostMatchBand first, else
 //     the nearest of all, fillers included.

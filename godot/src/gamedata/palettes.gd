@@ -65,8 +65,8 @@ static func pick(table: Array, idx: int) -> Vector3:
 	return table[idx % table.size()]
 
 
-## Channel-tint map for AnmSprite.load_action tints — coach paper-doll
-## (aez_0): skin→apH, hair→agl_0.  Values ×1.25 like retail aaV.
+## Channel tints for a coach figure (figure.gd .tints, back to swatches by
+## Fighter3D.from_channels): skin→1, hair→2, values ×1.25.
 static func coach_tints(skin: int, hair: int) -> Dictionary:
 	var s := pick(SKIN, skin) * 1.25
 	var h := pick(HAIR, hair) * 1.25

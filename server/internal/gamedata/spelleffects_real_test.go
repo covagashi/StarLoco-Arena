@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"sort"
 	"testing"
 )
@@ -10,12 +8,9 @@ import (
 // TestSpellEffectsReal verifies spell effect decoding against the shipped 2.70
 // data: it confirms damage spells resolve to a plausible flat-damage amount via
 // Spell.Damage() (the real per-effect magnitude, not the budget Value) and that
-// heal spells are detected. Skips without client data.
+// heal spells are detected. Reads server/content.
 func TestSpellEffectsReal(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -84,7 +84,7 @@ func run() -> void:
 	await exercise_controls()
 	# Legacy close events use an uppercase first letter and must canonicalize.
 	main._gui.open("teamManagementDialog")
-	main._gui._on_event("dofusarena", "closeTeamManagementDialog", [], null)
+	main._gui.dispatch("closeTeamManagementDialog")
 	check(not main._gui.is_open("teamManagementDialog"), "legacy case normalization")
 	# Stacked subpanels close one at a time and leave their parent available.
 	main._gui.open("teamManagementDialog")
@@ -144,7 +144,7 @@ func exercise_controls() -> void:
 	for i in 30:
 		rows.append({"id": i+1, "name": "Luchador de prueba con nombre extenso %d" % i,
 			"breedId": 8, "state": 0, "type": 2})
-	main._gui.gui.model.set_value("teamManagement", {"fighters": rows}, "editableTeamPreset")
+	main._gui.model.set_value("teamManagement", {"fighters": rows}, "editableTeamPreset")
 	await create_timer(0.2).timeout
 	var tree: Tree = find_tree(panel)
 	tree.get_root().get_first_child().select(0)

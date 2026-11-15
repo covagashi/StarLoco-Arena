@@ -1,8 +1,6 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"sort"
 	"testing"
 )
@@ -12,11 +10,7 @@ import (
 // would almost certainly desync the tail and fail to parse — but it could also
 // "succeed" with nonsense, which is what the plausibility assertions are for.
 func TestLoadTournamentsReal(t *testing.T) {
-	dir := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(dir, "data.bdat")); err != nil {
-		t.Skip("no data-dist; skipping")
-	}
-	st, err := Open(dir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,11 +71,7 @@ func TestLoadTournamentsReal(t *testing.T) {
 // offers (1, 4, 17 - all zero on both counts) would look correct while never
 // once running.
 func TestTournamentFeesAndRewardsAreScarce(t *testing.T) {
-	dir := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(dir, "data.bdat")); err != nil {
-		t.Skip("no data-dist; skipping")
-	}
-	st, err := Open(dir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

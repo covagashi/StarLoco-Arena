@@ -38,7 +38,7 @@ func _audit() -> void:
 
 
 func _talk() -> Dictionary:
-	var t = _main._gui.gui.model.get_value("talk")
+	var t = _main._gui.model.get_value("talk")
 	return t if t is Dictionary else {}
 
 
@@ -87,7 +87,7 @@ func _first_steps() -> void:
 func _learning() -> void:
 	var city = await _open_city()
 	var group := {}
-	for g in _main._gui.gui.model.get_value("city").get("groups", []):
+	for g in _main._gui.model.get_value("city").get("groups", []):
 		if int(g.kind) == 100:
 			group = g
 	var labels: Array = group.get("services", []).map(func(s): return s.label)
@@ -97,7 +97,7 @@ func _learning() -> void:
 
 
 func _master_id() -> int:
-	for g in _main._gui.gui.model.get_value("city").get("groups", []):
+	for g in _main._gui.model.get_value("city").get("groups", []):
 		if int(g.kind) == 100:
 			for s in g.services:
 				if _main._element_info(int(s.id)).kind == 5:
@@ -123,7 +123,7 @@ func _recruit() -> void:
 	_main._talk_choice(idx)
 	await _wait(func(): return _main._gui.is_open("fighterCreationDialog"), 3.0)
 	await create_timer(0.3).timeout
-	var ef = _main._gui.gui.model.get_value("teamManagement", "editableFighter")
+	var ef = _main._gui.model.get_value("teamManagement", "editableFighter")
 	_record(10, "recruit", _main._gui.is_open("fighterCreationDialog") and int(ef.get("breedId", 0)) == breed,
 		"creation opens with class %d" % breed)
 	await _shot("recruit")

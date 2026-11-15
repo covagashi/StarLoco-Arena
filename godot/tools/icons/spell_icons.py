@@ -5,7 +5,7 @@ spell's element colour, cut on the slant, an ink rule along the top. One
 glyph per spell (not per effect shape: shape + element would give 35 equal
 neutral auras), composed from a small vocabulary of pictograms below.
 Writes assets/ui/spells/<id>.png (96 px), which the fight's spell bar and
-the panels read before the retail art.
+the panels read.
 Run from godot/: python3 tools/icons/spell_icons.py [--sheet out.png]
 """
 import json
@@ -475,7 +475,7 @@ def icon(sid, el):
 
 
 def main():
-    data = json.load(open('assets/gamedata/spells.json'))
+    data = json.load(open('assets/content/spells.json'))
     spells = [s for k in sorted(data, key=int) for s in data[k]]
     os.makedirs(OUT, exist_ok=True)
     missing = [s['id'] for s in spells if s['id'] not in G]

@@ -5,15 +5,11 @@
 ##                tests (tools/art/test_check.py), then
 ##                res://test/unit/unit_runner.tscn under --headless. No
 ##                git-ignored assets required — this is the CI lane.
-##   --visual     Windowed preview lane only: test/ui_review_preview.tscn and
-##                test/fight_ui_preview.tscn, each at 1280x720 and 800x600.
-##                Needs assets/anims (coach_7000) + the appSkin atlases, so
-##                it can only ever run locally.
-##   (no flag)    Headless lane, then the visual lane too — but only if
-##                assets/anims exists. If it doesn't (a fresh checkout — see
-##                AGENTS.md, assets/ is git-ignored except assets/ui and
-##                assets/i18n), the visual lane is skipped with a notice
-##                instead of failing.
+##   --visual     Windowed preview lane only: the VISUAL_SCENES below, each
+##                at 1280x720 and 800x600. They draw only the game's own
+##                art (the 3D figures and arenas under art/*/out, rebuilt by
+##                tools/art/build.py; without them the scenes still run).
+##   (no flag)    Headless lane, then the visual lane.
 ##
 ## GODOT overrides the binary. Otherwise: `godot` on PATH (Linux, CI), then
 ## the usual macOS install path.
@@ -59,6 +55,8 @@ cleanup_godot() {
 	pkill -f "^[^ ]*[Gg]odot[^ /]* --path \." >/dev/null 2>&1 || true
 }
 
+VISUAL_SCENES=(test/ui_review_preview.tscn test/fight_ui_preview.tscn)
+
 ## B-173 guard. Every raw asset read must go through AssetPaths, because a
 ## hardcoded "res://assets/…" works in the editor and silently reads nothing
 ## from an exported .pck. Comment lines are exempt, and so is asset_paths.gd
@@ -77,48 +75,37 @@ run_lint() {
 		echo "Route them through AssetPaths instead, e.g.:"
 		echo '  AssetPaths.read_json("content/spells.json")'
 		echo '  AssetPaths.load_image("ui/lobby_bg.png")'
-		echo '  AssetPaths.resolve("gui/fonts/TAHOMA.TTF")'
+		echo '  AssetPaths.resolve("audio/ui/click.ogg")'
 		return 1
 	fi
 	echo "ok"
 	return 0
 }
 
-## S43 guard: nothing may start naming the old client's formats again
-## (.jar, .anm, .xps, mapgfx, data-dist). tools/retail_refs.txt lists the
-## files that still do; step 4 of S43 empties it. A file outside the list
-## fails, and a listed file that no longer names them must leave the list,
-## so it only shrinks.
+## S43 guard: the game reads only its own data (server/content,
+## godot/assets/content). No code line may name the old retail client's
+## formats again (.jar .anm .xps .bdat, mapgfx, data-dist); comment lines
+## that record how they worked are fine.
 run_retail_guard() {
-	echo "=== lint: no new reference to the old client (S43) ==="
-	local pat='\.jar\b|\.anm\b|\.xps\b|mapgfx|data-dist'
-	local now
-	now=$( { grep -rlE "$pat" src test tools project.godot export_presets.cfg run_tests.sh \
+	echo "=== lint: nothing reads the old client (S43) ==="
+	local pat='\.(jar|anm|xps|bdat)\b|mapgfx|data-dist'
+	local hits
+	hits=$( { grep -rnE "$pat" src test tools project.godot export_presets.cfg \
 			--include='*.gd' --include='*.py' --include='*.sh' --include='*.cfg' \
-			--include='*.godot' --include='*.tscn' 2>/dev/null
+			--include='*.godot' --include='*.tscn' 2>/dev/null \
+			| grep -vE '^[^:]+:[0-9]+:[[:space:]]*#'
 		if [[ -d ../server ]]; then
-			grep -rlE "$pat" ../server --include='*.go' 2>/dev/null
-		fi; } | grep -vE '^(tools/no_retail_smoke\.sh|run_tests\.sh|tools/retail_refs\.txt)$' | sort -u)
-	local listed
-	listed=$(grep -v '^#' tools/retail_refs.txt | sed '/^$/d' | sort -u)
-	local added gone
-	added=$(comm -23 <(echo "$now") <(echo "$listed") | sed '/^$/d')
-	gone=$(comm -13 <(echo "$now") <(echo "$listed") | sed '/^$/d')
-	if [[ -n "$added" ]]; then
-		echo "$added"
+			grep -rnE "$pat" ../server --include='*.go' 2>/dev/null \
+				| grep -vE '^[^:]+:[0-9]+:[[:space:]]*//'
+		fi; } || true)
+	if [[ -n "$hits" ]]; then
+		echo "$hits"
 		echo
-		echo "These files name the old client's formats (.jar .anm .xps mapgfx data-dist)."
-		echo "The game reads only its own data since S43: server/content, godot/assets/content."
+		echo "These lines name the old client's formats. The game reads only its own"
+		echo "data since S43: server/content and godot/assets/content."
 		return 1
 	fi
-	if [[ -n "$gone" ]]; then
-		echo "$gone"
-		echo
-		echo "These files no longer name the old client's formats: take them out of"
-		echo "tools/retail_refs.txt so the list keeps shrinking."
-		return 1
-	fi
-	echo "ok ($(echo "$listed" | sed '/^$/d' | wc -l) files left for S43 step 4)"
+	echo "ok"
 	return 0
 }
 
@@ -140,7 +127,7 @@ run_visual() {
 	echo "=== visual preview lane ==="
 	local rc=0
 	local scene res scene_rc
-	for scene in test/ui_review_preview.tscn test/fight_ui_preview.tscn; do
+	for scene in "${VISUAL_SCENES[@]}"; do
 		for res in 1280x720 800x600; do
 			echo "--- $scene @ $res ---"
 			scene_rc=0
@@ -155,20 +142,6 @@ run_visual() {
 		done
 	done
 	return "$rc"
-}
-
-skip_visual_notice() {
-	cat <<'EOF'
-=== visual preview lane: SKIPPED ===
-assets/anims/coach_7000 is not present. The art is git-ignored on purpose (redistribution
-constraint on converted retail art — see AGENTS.md / sprints/BACKLOG.md),
-so a fresh checkout never has it, and the windowed previews (coach_7000
-anims + appSkin atlases) can't run without it.
-
-The retail importer was removed in S32 (sprints/S32-fuera-el-retail.md):
-this lane only runs on a checkout that still has the old export on disk,
-until the M7 art replaces it.
-EOF
 }
 
 mode="${1:-}"
@@ -195,13 +168,7 @@ case "$mode" in
 		run_headless || headless_rc=$?
 
 		visual_rc=0
-		# coach_7000, not the folder itself: assets/anims/ exists in every
-		# checkout because its .gdignore is tracked.
-		if [[ -d assets/anims/coach_7000 ]]; then
-			run_visual || visual_rc=$?
-		else
-			skip_visual_notice
-		fi
+		run_visual || visual_rc=$?
 
 		if [[ "$headless_rc" -ne 0 || "$visual_rc" -ne 0 ]]; then
 			exit 1

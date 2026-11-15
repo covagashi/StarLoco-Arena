@@ -1,8 +1,6 @@
 package game
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
@@ -14,7 +12,7 @@ import (
 // numbers meet: a board whose cheapest node costs more than a fight pays would be
 // unreachable forever, and no test of either half alone would notice.
 //
-// It reads the SHIPPED data-dist, which carries all 15 boards, so it runs in CI
+// It reads server/content, which carries all 15 boards, so it runs in CI
 // rather than only where a client is installed.
 
 // sentinelBreedID is the breed the three unfinished boards carry; it is not a
@@ -23,15 +21,7 @@ const sentinelBreedID = 127
 
 func economyBoards(t *testing.T) *gamedata.SphereBoards {
 	t.Helper()
-	root := filepath.Join("..", "..", "data-dist")
-	if _, err := os.Stat(filepath.Join(root, "data.bdat")); err != nil {
-		t.Skipf("shipped data unavailable: %v", err)
-	}
-	st, err := gamedata.Open(root)
-	if err != nil {
-		t.Fatalf("open: %v", err)
-	}
-	boards, err := st.LoadSphereBoards()
+	boards, err := openRealGameData(t).LoadSphereBoards()
 	if err != nil {
 		t.Fatalf("boards: %v", err)
 	}

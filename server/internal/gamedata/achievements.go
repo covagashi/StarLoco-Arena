@@ -1,7 +1,6 @@
 package gamedata
 
 import (
-	"encoding/binary"
 	"sort"
 )
 
@@ -25,13 +24,6 @@ import (
 // and it acts as a KEY for other content — zone triggers (oq), challenge gating
 // (afz_0) and the island Zaap dialog all test "does this coach have achievement
 // N" rather than granting anything.
-
-// Achievement record types.
-const (
-	TypeAchievement            = 800
-	TypeAchievementCategory    = 801
-	TypeAchievementSubcategory = 802
-)
 
 // AchievementCondition is one statistic threshold: the coach's counter for StatID
 // must be >= Threshold. StatID indexes the client's or_0 enum, which documents
@@ -163,112 +155,6 @@ type Achievements struct {
 	ids        []int16
 	categories map[int16]*AchievementCategory
 	catIDs     []int16
-}
-
-// decodeAchievement parses one type-800 record. It returns nil if the buffer is
-// too short at any point, so a truncated record is skipped rather than producing
-// a half-filled definition that would silently mis-evaluate.
-func decodeAchievement(b []byte) *Achievement {
-	p := 0
-	need := func(n int) bool { return p+n <= len(b) }
-	i16 := func() int16 { v := int16(binary.BigEndian.Uint16(b[p:])); p += 2; return v }
-	i32 := func() int32 { v := int32(binary.BigEndian.Uint32(b[p:])); p += 4; return v }
-
-	if !need(16) {
-		return nil
-	}
-	a := &Achievement{}
-	a.ID, a.Previous, a.Superseding = i16(), i16(), i16()
-	a.Category, a.Subcategory, a.Points = i16(), i16(), i16()
-	a.ScriptID = i32()
-
-	if !need(1) {
-		return nil
-	}
-	n := int(b[p])
-	p++
-	if !need(n * 4) {
-		return nil
-	}
-	for i := 0; i < n; i++ {
-		a.Conditions = append(a.Conditions, AchievementCondition{StatID: i16(), Threshold: i16()})
-	}
-
-	if !need(1) {
-		return nil
-	}
-	n = int(b[p])
-	p++
-	if !need(n * 4) {
-		return nil
-	}
-	for i := 0; i < n; i++ {
-		a.Cards = append(a.Cards, i32())
-	}
-
-	if !need(1) {
-		return nil
-	}
-	a.AutoDescription = b[p] == 1
-	p++
-	if !need(4) {
-		return nil
-	}
-	a.Unused = i32()
-	if !need(1) {
-		return nil
-	}
-	a.Hidden = b[p] == 1
-	return a
-}
-
-// LoadAchievements reads types 800, 801 and 802 and links them together.
-func (s *Store) LoadAchievements() (*Achievements, error) {
-	out := &Achievements{
-		byID:       make(map[int16]*Achievement),
-		categories: make(map[int16]*AchievementCategory),
-	}
-	for _, e := range s.EntriesOf(TypeAchievement) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if a := decodeAchievement(rec.Data); a != nil {
-			out.byID[a.ID] = a
-		}
-	}
-	// Type 801: a bare i16 id.
-	for _, e := range s.EntriesOf(TypeAchievementCategory) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if len(rec.Data) < 2 {
-			continue
-		}
-		id := int16(binary.BigEndian.Uint16(rec.Data))
-		out.categories[id] = &AchievementCategory{ID: id}
-	}
-	// Type 802: [i16 parentCategory][i16 subcategoryId].
-	for _, e := range s.EntriesOf(TypeAchievementSubcategory) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if len(rec.Data) < 4 {
-			continue
-		}
-		parent := int16(binary.BigEndian.Uint16(rec.Data))
-		sub := int16(binary.BigEndian.Uint16(rec.Data[2:]))
-		cat, ok := out.categories[parent]
-		if !ok {
-			cat = &AchievementCategory{ID: parent}
-			out.categories[parent] = cat
-		}
-		cat.Subcategories = append(cat.Subcategories, sub)
-	}
-	out.reindex()
-	return out, nil
 }
 
 // NewAchievements builds a catalogue from explicit definitions (tests/tooling).

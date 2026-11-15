@@ -70,7 +70,7 @@ func _audit() -> void:
 	# 5. not a City service
 	var services := 0
 	_main._push_city_model()
-	for g in (_main._gui.gui.model.get_value("city") as Dictionary).get("groups", []):
+	for g in (_main._gui.model.get_value("city") as Dictionary).get("groups", []):
 		for sv in g.get("services", []):
 			if int(sv.get("kind", -1)) == 9:
 				services += 1

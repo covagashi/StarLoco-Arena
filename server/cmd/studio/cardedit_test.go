@@ -59,10 +59,10 @@ func snapshot(t *testing.T, dir string) map[string]string {
 
 func TestUpdateCoachCardSavesOnlyItsSet(t *testing.T) {
 	dir := contentCopy(t)
-	a := &App{paths: Paths{ContentDir: dir}} // no data dir: the cards do not need one
+	a := &App{paths: Paths{ContentDir: dir}}
 	cards, err := a.GetCoachCards()
 	if err != nil || len(cards) != 907 {
-		t.Fatalf("GetCoachCards without a data dir: %d cards, %v", len(cards), err)
+		t.Fatalf("GetCoachCards: %d cards, %v", len(cards), err)
 	}
 	var card CoachCardDTO
 	for _, c := range cards {

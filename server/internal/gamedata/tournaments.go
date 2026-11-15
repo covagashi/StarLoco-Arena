@@ -32,12 +32,6 @@ const (
 	TournamentTeamLegendary uint8 = 4 // "… de type légendaire"
 )
 
-// TypeTournamentDef / TypeTournamentLevel are the data.bdat record types.
-const (
-	TypeTournamentDef   = 1000
-	TypeTournamentLevel = 1001
-)
-
 // tournamentPrizeTiers is the fixed number of prize maps every definition
 // carries (`aub.cVM` is `new aim_1[5]`).
 const tournamentPrizeTiers = 5
@@ -124,72 +118,4 @@ func (t *Tournaments) Levels() []uint8 {
 		return nil
 	}
 	return t.levels
-}
-
-// LoadTournaments decodes every type-1000 definition and the type-1001 levels.
-func (s *Store) LoadTournaments() (*Tournaments, error) {
-	out := &Tournaments{byID: make(map[int16]*TournamentDef)}
-	for _, e := range s.EntriesOf(TypeTournamentDef) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		if d := decodeTournamentDef(rec.Data); d != nil {
-			out.byID[d.ID] = d
-		}
-	}
-	for _, e := range s.EntriesOf(TypeTournamentLevel) {
-		rec, err := s.ReadRecord(e.Position)
-		if err != nil {
-			return nil, err
-		}
-		c := &cur{b: rec.Data}
-		v := c.u8()
-		if c.ok() {
-			out.levels = append(out.levels, v)
-		}
-	}
-	return out, nil
-}
-
-// decodeTournamentDef reads one `aub` record, or nil if it is malformed.
-func decodeTournamentDef(data []byte) *TournamentDef {
-	c := &cur{b: data}
-	d := &TournamentDef{}
-	d.ID = c.i16()
-	d.Unknown1 = c.u8()
-	d.Unknown2 = c.u8()
-	d.TeamType = c.u8()
-	d.Unknown3 = c.i32()
-	d.Unknown4 = c.i32()
-
-	rules, ok := decodeParameters(c)
-	if !ok {
-		return nil
-	}
-	d.Rules = rules
-
-	d.Unknown5 = c.i16()
-	d.InscriptionCard = c.i32()
-	d.RewardCard = c.i32()
-	d.Flag = c.u8() != 0
-
-	for i := 0; i < tournamentPrizeTiers; i++ {
-		n := int(c.u8())
-		if n < 0 || n > 64 || !c.ok() {
-			return nil
-		}
-		if n > 0 {
-			d.Prizes[i] = make(TournamentPrize, n)
-		}
-		for j := 0; j < n && c.ok(); j++ {
-			k := c.u8()
-			v := c.i32()
-			d.Prizes[i][k] = v
-		}
-	}
-	if !c.ok() {
-		return nil
-	}
-	return d
 }

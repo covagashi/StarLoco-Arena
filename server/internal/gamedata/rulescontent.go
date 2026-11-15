@@ -10,8 +10,8 @@ import (
 )
 
 // rulescontent.go reads and writes the rest of the game's rules data (S43):
-// every table the server still decoded from data.bdat after S40 took the
-// cards. Same path as the cards: the data.bdat structs as JSON in
+// every table the server decoded from the retail client after S40 took the
+// cards. Same path as the cards: those structs as JSON in
 // server/content/rules/, embedded by package content, with the retail ids.
 //
 //	spells.json                  spell templates (by id)
@@ -211,33 +211,4 @@ func WriteRulesContent(dir string, r *RulesContent) error {
 		}
 	}
 	return nil
-}
-
-// LoadRetailRulesContent decodes the same tables from a data.bdat directory. It
-// is the source of cmd/exportrules and the reference of the parity test.
-func LoadRetailRulesContent(bdatDir string) (*RulesContent, error) {
-	st, err := Open(bdatDir)
-	if err != nil {
-		return nil, err
-	}
-	r := &RulesContent{}
-	for _, step := range []func() error{
-		func() (err error) { r.Spells, err = st.LoadSpells(); return },
-		func() (err error) { r.Summonings, err = st.LoadSummonings(); return },
-		func() (err error) { r.StaticEffects, err = st.LoadStaticEffects(); return },
-		func() (err error) { r.Challenges, err = st.LoadChallenges(); return },
-		func() (err error) { r.Achievements, err = st.LoadAchievements(); return },
-		func() (err error) { r.Conditions, err = st.LoadConditions(); return },
-		func() (err error) { r.FusionLabs, err = st.LoadFusionLabs(); return },
-		func() (err error) { r.MapBonuses, err = st.LoadMapBonuses(); return },
-		func() (err error) { r.Tournaments, err = st.LoadTournaments(); return },
-		func() (err error) { r.SphereBoards, err = st.LoadSphereBoards(); return },
-		func() (err error) { r.EquipmentPools, err = st.LoadEquipmentPools(); return },
-		func() (err error) { r.NpcDialogs, err = st.LoadNpcDialogs(); return },
-	} {
-		if err := step(); err != nil {
-			return nil, err
-		}
-	}
-	return r, nil
 }

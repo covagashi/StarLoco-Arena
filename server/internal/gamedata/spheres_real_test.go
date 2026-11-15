@@ -1,17 +1,12 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 func realSphereBoards(t *testing.T) *SphereBoards {
 	t.Helper()
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,10 +251,7 @@ func TestTeleportTargetsLandOnRealCells(t *testing.T) {
 // complaint. The spell catalogue is the independent oracle: a pool id is not a
 // spell id.
 func TestSphereSpellIDsResolve(t *testing.T) {
-	if _, err := os.Stat(filepath.Join(clientBdataDir, "data.bdat")); err != nil {
-		t.Skip("no client data")
-	}
-	st, err := Open(clientBdataDir)
+	st, err := openContent(t)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -47,13 +47,11 @@ makes the (light) menu icon atlas.
 
 ## Current data limits
 
-The localCoach producer derives the coach level from State.coach_standing (2052 at login plus each 8300's standing won) with the retail formula (State.coach_level, S07) and supplies an empty equipped-emote list. Tools are read from localCoach.tools or the retail top-level tools model. Registered item handlers receive a GWidget item context. Known emotes use the existing retail 4701 layout and incoming animation names display as bubbles. This checkout has no persisted emote-unequip handler or native retail tool executor; unavailable actions show an explicit message.
+The localCoach producer derives the coach level from State.coach_standing (2052 at login plus each 8300's standing won) with the retail formula (State.coach_level, S07) and supplies an empty equipped-emote list. Tools are read from localCoach.tools or the retail top-level tools model. Registered item handlers receive a `GuiLayer.Ctx` (the row's item and index). Known emotes use the existing retail 4701 layout and incoming animation names display as bubbles. This checkout has no persisted emote-unequip handler or native retail tool executor; unavailable actions show an explicit message.
 
 ## Validation
 
 `test/hub_smoke.gd` checks the cards, the Ranking team, the search card and its ghost offer, the nine menus and the pad paths. `test/native_lobby.gd` runs the real windowed login, nine dialog toggles, chat focus, model refresh, shell remount, practice fight transition and return (the debug strip no longer exists). Credentials are command-line arguments. Screenshots are written to `/tmp/native-lobby.png` and `/tmp/native-lobby-social.png`.
-
-`test/window_skin.gd` checks missing app-skin border/title resources and custom-theme precedence.
 
 Live smokes against a local server cover every native window: `world_smoke`
 (Services), `talk_smoke`, `cardmaster_smoke`, `mailbox_smoke`, `fusion_smoke`,
@@ -67,7 +65,7 @@ headers say how to seed and restore `server/arena.db`.
 
 `src/ui/lobby_panel.gd` is the common modal surface: the native theme (`UiStyle.theme()`), Copperplate title, Tahoma controls, a dark shade, bounded 1120×620 reference frame, and scrollable content. Containers own interior layout. Deferred layout resets prevent initial text minimum sizes from pushing the frame below the viewport. Close and Escape are shared, and Tab cycles inside the panel. Team combat actions stay in a fixed footer outside the scrolling roster/detail area.
 
-`src/ui/lobby_panels.gd` provides native menu, team/evolution, statistics, inventory/collections, rankings, calendar, achievements, social, help, options, fighter creation with tinted preview, fighter equipment/spells, team creation, and clan creation/management/member statistics. These twenty logical dialog routes are registered in `main.gd`; runtime XML does not build them. The shared model still supplies content, and the existing handlers serialize all requests.
+`src/ui/lobby_panels.gd` provides native menu, team/evolution, statistics, inventory/collections, rankings, calendar, achievements, social, help, options, fighter creation with tinted preview, fighter equipment/spells, team creation, and clan creation/management/member statistics. These logical dialog routes are registered in `main.gd`; there is no XML engine any more (S43), and a name with no native panel opens nothing. The shared model still supplies content, and the existing handlers serialize all requests.
 
 The dialog registry normalizes event names, prevents duplicate opens, supports nested native panels, and disconnects resize callbacks when legacy dialogs close. Plain `unloadDialog` from legacy templates also reaches the close router. Explicit close handlers take precedence so equipment and exchange cleanup keep their original behavior.
 

@@ -1,6 +1,5 @@
 # DofusArena 2.70 server — SQLite (local development)
 addr: "127.0.0.1:5555"
-data_dir: "data"          # dir with data.bdat + indexes.bdat (client game data)
 log_level: "debug"
 debug_addr: "127.0.0.1:5599"  # DEV ONLY: live packet-inject endpoint (/s2c /c2s /raw)
 

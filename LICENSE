@@ -24,9 +24,9 @@ SOFTWARE.
 SCOPE OF THIS LICENSE
 
 The MIT License above applies ONLY to the original work in this repository —
-principally the Go server under `server/` (excluding `server/data/` and
-`server/data-dist/`), the reverse-engineering utilities under `tools/`, and the
-documentation authored for this project.
+principally the Go server under `server/` (excluding the proprietary game data
+in `server/content/`, see its LICENSE), and the documentation authored for this
+project.
 
 It does NOT apply to third-party or copyrighted material redistributed here for
 preservation and interoperability purposes, including but not limited to the

@@ -2,17 +2,12 @@
 #  Attributes — DofusArena 2.70
 # ----------------------------------------------------------------------------
 #  This branch does NOT use Git LFS. Everything committed here is source,
-#  documentation, small tooling assets, and a small (~2.5 MB) redistributable
-#  server-data subset, so plain Git objects are cheaper and simpler than an
-#  LFS dependency.
+#  documentation, small tooling assets and the game's own data, so plain Git
+#  objects are cheaper and simpler than an LFS dependency.
 #
 #  The HEAVY copyrighted material is never committed at all — it is excluded
 #  by .gitignore:
 #    - client/compiled/   the runnable retail client + bundled JRE (~436 MB)
-#    - server/data/       a local scratch copy of your own client's data
-#
-#  server/data-dist/ (data.bdat, indexes.bdat, maps/, *.jar) IS committed on
-#  purpose — a maintainer-curated exception, see AGENTS.md and DISCLAIMER.md.
 #
 #  Line endings are intentionally NOT normalized (no `text=auto`): the repo
 #  holds decompiled sources and byte-sensitive fixtures, and renormalizing

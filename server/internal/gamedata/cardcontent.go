@@ -13,7 +13,7 @@ import (
 )
 
 // cardcontent.go reads and writes the game's own card data (S40, path A): the
-// same structs the data.bdat decoders produce, as JSON in server/content/cards/
+// structs the retail tables were decoded into, as JSON in server/content/cards/
 // (embedded into the binary by package content). The ids are the retail ones,
 // so the players' inventories need no migration.
 //
@@ -165,28 +165,4 @@ func writeContentFile[T any](name string, recs []T) error {
 	}
 	sb.WriteString("]\n")
 	return os.WriteFile(name, []byte(sb.String()), 0o644)
-}
-
-// LoadRetailCardContent decodes the same four tables from a data.bdat
-// directory, as they come (before ApplyCardMasterPrices). It is the source of
-// cmd/exportcards and the reference of the parity test.
-func LoadRetailCardContent(bdatDir string) (*CardContent, error) {
-	st, err := Open(bdatDir)
-	if err != nil {
-		return nil, err
-	}
-	c := &CardContent{}
-	if c.Cards, err = st.LoadCards(); err != nil {
-		return nil, err
-	}
-	if c.Sets, err = st.LoadCardSets(); err != nil {
-		return nil, err
-	}
-	if c.Fighters, err = st.LoadFighterCards(); err != nil {
-		return nil, err
-	}
-	if c.Events, err = st.LoadEvents(); err != nil {
-		return nil, err
-	}
-	return c, nil
 }

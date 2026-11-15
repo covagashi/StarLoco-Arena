@@ -47,7 +47,7 @@ func _services() -> void:
 	var city = await _open_city()
 	var kinds: Array = []
 	if city != null:
-		for g in _main._gui.gui.model.get_value("city").get("groups", []):
+		for g in _main._gui.model.get_value("city").get("groups", []):
 			kinds.append(int(g.kind))
 	_record(13, "services", city != null and not 11 in kinds and not 13 in kinds and 12 in kinds,
 		"no totems among %s, fireworks still there" % [kinds])
@@ -77,7 +77,7 @@ func _calendar() -> void:
 	await _wait(func(): return _seen.has(17003) and _seen.has(28602), 3.0)
 	await create_timer(0.3).timeout
 	var cell := {}
-	for c in _main._gui.gui.model.get_value("calendar").get("calendar", []):
+	for c in _main._gui.model.get_value("calendar").get("calendar", []):
 		if not c.get("events", []).is_empty():
 			cell = c
 			break
@@ -113,7 +113,7 @@ func _calendar() -> void:
 	await create_timer(0.4).timeout
 	var drawn = panel.find_child("Draw%d" % tid, true, false)
 	var empty = panel.find_child("BracketEmpty%d" % tid, true, false)
-	var slots: Dictionary = _main._gui.gui.model.get_value("calendar").get("bracket", {}).get("slots", {})
+	var slots: Dictionary = _main._gui.model.get_value("calendar").get("bracket", {}).get("slots", {})
 	_record(13, "bracket", _seen.has(28650) and (drawn is HBoxContainer or empty != null),
 		"28649 → 28650: %d seat(s) %s" % [slots.size(), slots.values()])
 	await _shot("cal-bracket")
@@ -177,7 +177,7 @@ func _clan_demon() -> void:
 	await _wait(func(): return _seen.has(5403), 3.0)
 	await _wait(func(): return _seen.has(27511), 2.0)
 	await create_timer(0.5).timeout
-	var d: Dictionary = _main._gui.gui.model.get_value("demonNative")
+	var d: Dictionary = _main._gui.model.get_value("demonNative")
 	var clans: Array = d.get("ladder", []).map(func(r): return str(r.name))
 	var guild := str(State.guild.get("guild", ""))
 	_record(11, "offer", _seen.has(5403) and bool(d.get("status", {}).get("ok", false))
@@ -192,7 +192,7 @@ func _fireworks() -> void:
 	var city = await _open_city()
 	var sid := -1
 	if city != null:
-		for g in _main._gui.gui.model.get_value("city").get("groups", []):
+		for g in _main._gui.model.get_value("city").get("groups", []):
 			if int(g.kind) == 12:
 				sid = int(g.services[0].id)
 	var b: Button = await _service_button(sid) if sid > 0 else null
@@ -212,7 +212,7 @@ func _fireworks() -> void:
 	add = fp.find_child("Add%d" % FIREWORK, true, false)
 	add.pressed.emit()
 	await create_timer(0.3).timeout
-	var slots: Array = _main._gui.gui.model.get_value("fireworkNative").get("slots", [])
+	var slots: Array = _main._gui.model.get_value("fireworkNative").get("slots", [])
 	_record(12, "launcher", slots.size() == 2, "native launcher, %d in the show" % slots.size())
 	await _shot("fw-launcher")
 	var shown_before := int(_main._fw_shown)

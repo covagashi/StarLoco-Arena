@@ -58,10 +58,6 @@ type Deps struct {
 	// FightMaps holds the prototype's arenas (embedded); nil falls back to the
 	// hand-decoded world 5 (see arena_registry.go).
 	FightMaps *gamedata.FightMaps
-	// MapsRoot is the maps directory (contents/maps). Only the GM teleport uses
-	// it, to resolve a destination cell's real ground altitude on demand rather
-	// than loading all ~113 world topologies at startup. Empty disables that.
-	MapsRoot string
 	// Events is the per-round event-card table (type 230). nil/empty leaves the
 	// round-card mechanic inert (eventId 0, no effects) — see events.go.
 	Events *gamedata.Events
@@ -161,7 +157,6 @@ func (d *Deps) UseGameData(b *gamedata.Bundle) {
 	d.FightMaps = b.FightMaps
 	d.Events = b.Events
 	d.Achievements = b.Achievements
-	d.MapsRoot = b.Loc.MapsRoot
 	d.CardSets = b.CardSets
 	d.FusionLabs = b.FusionLabs
 	d.MapBonuses = b.MapBonuses
