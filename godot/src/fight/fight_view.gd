@@ -86,6 +86,12 @@ var _replay_bar: Control = null  # S11 transport, only while a replay plays
 
 func _ready() -> void:
 	Audio.play_music("fight")
+	if WebAssets.active():
+		set_process(false)   # nothing below has run yet
+		set_process_unhandled_input(false)
+		await _web_arena()
+		set_process(true)
+		set_process_unhandled_input(true)
 	_skin_fight_ui()
 	$UI/TopBar/LoadBtn.pressed.connect(_load)
 	_end_turn.pressed.connect(_on_action_button)
@@ -492,6 +498,43 @@ func _wire_fight_focus() -> void:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus == null or (focus is BaseButton and focus.disabled):
 		controls[0].grab_focus()
+
+
+## The web demo downloads each arena when a fight on it starts (S44,
+## WebAssets). The server's messages wait meanwhile (scene_active is still
+## off), so the fight starts where it would have.
+func _web_arena() -> void:
+	var group := WebAssets.arena_group(State.fight_world)
+	if group == "" or WebAssets.has(group):
+		return
+	var veil := ColorRect.new()
+	veil.color = Color(0.09, 0.07, 0.12)
+	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var lbl := Label.new()
+	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 22)
+	veil.add_child(lbl)
+	var layer := CanvasLayer.new()
+	layer.layer = 50
+	layer.add_child(veil)
+	add_child(layer)
+	var tick := func() -> void:
+		lbl.text = I18n.t("fight.arena.loading", {"p": int(WebAssets.progress() * 100.0)})
+	tick.call()
+	var timer := Timer.new()
+	timer.wait_time = 0.1
+	timer.timeout.connect(tick)
+	add_child(timer)
+	timer.start()
+	var ok: bool = await WebAssets.ensure([group])
+	timer.queue_free()
+	if ok:
+		layer.queue_free()
+	else:   # the fight still plays, on the flat board
+		lbl.text = I18n.t("fight.arena.failed")
+		get_tree().create_timer(3.0).timeout.connect(layer.queue_free)
 
 
 func _load() -> void:

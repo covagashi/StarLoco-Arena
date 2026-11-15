@@ -35,44 +35,9 @@ func _initialize() -> void:
 	var files := {}   # source (res://) -> path under art/
 	var missing := []
 	for arena in range(1, Layout.RELEASE + 1):
-		var world := Layout.world_of(arena)
-		files[Layout.layout_path(arena)] = "layouts/arena-%02d.json" % arena
-		files[Layout.shape_path(arena)] = "shapes/arena-%02d.json" % arena
-		files[Layout.fight_path(world)] = "fight/%d.json" % world
-		var layout := Layout.load_layout(arena)
-		for items: Array in layout.cells.values():
-			for it: Dictionary in items:
-				var pc := Layout.piece(it.kit, it.piece)
-				if pc.is_empty():
-					missing.append("arena %d: %s/%s is in no kit.json" % [arena, it.kit, it.piece])
-					continue
-				files["%s/%s/kit.json" % [Layout.ART_DIR, it.kit]] = "%s/kit.json" % it.kit
-				_model(files, it.kit, it.piece, it.loom)
-				if pc.get("kind", "") == "tile" and pc.get("col", "") != "":
-					_model(files, it.kit, pc.col, it.loom)
-	for model in _figures():
-		var src: String = Layout.ART_DIR.path_join(Fighter3D.MODEL_DIR % model)
-		files[src] = src.trim_prefix(Layout.ART_DIR + "/")
-		if model in Fighter3D.COACHES.values():
-			for ext: String in ["_mask.png", "_mask.json"]:
-				var m: String = src.get_basename() + ext
-				files[m] = m.trim_prefix(Layout.ART_DIR + "/")
-	var pieces_src: String = Layout.ART_DIR.path_join(Fighter3D.PIECES)
-	files[pieces_src] = Fighter3D.PIECES
-	var tables = JSON.parse_string(FileAccess.get_file_as_string(pieces_src))
-	var garments = JSON.parse_string(FileAccess.get_file_as_string(Layout.ART_DIR.path_join("equipment/garments.json")))
-	if not garments is Dictionary:
-		garments = {}
-	if tables is Dictionary:
-		for table: Dictionary in [tables.get("fighter", {}), tables.get("coach", {})]:
-			for piece: String in table.values():
-				var src: String = Layout.ART_DIR.path_join(Fighter3D.EQUIP_DIR % piece)
-				if garments.has(piece):   # one per coach figure
-					for c: String in Fighter3D.COACHES.values():
-						src = Layout.ART_DIR.path_join(Fighter3D.GARMENT_DIR % [c.get_file().get_basename(), piece])
-						files[src] = src.trim_prefix(Layout.ART_DIR + "/")
-					continue
-				files[src] = src.trim_prefix(Layout.ART_DIR + "/")
+		files.merge(arena_files(arena, missing))
+	files.merge(figure_files())
+	files.merge(equipment_files())
 	var bytes := 0
 	for src: String in files:
 		if not FileAccess.file_exists(src):
@@ -97,8 +62,69 @@ func _initialize() -> void:
 	quit(0)
 
 
+## What one arena's fight reads: its layout, base shape and fight shape,
+## every kit.json its layout uses and every model it places (in its loom,
+## and the columns under its blocks). source (res://) -> path under art/.
+## A piece no kit.json knows goes to `missing`.
+static func arena_files(arena: int, missing: Array) -> Dictionary:
+	var files := {}
+	var world := Layout.world_of(arena)
+	files[Layout.layout_path(arena)] = "layouts/arena-%02d.json" % arena
+	files[Layout.shape_path(arena)] = "shapes/arena-%02d.json" % arena
+	files[Layout.fight_path(world)] = "fight/%d.json" % world
+	var layout := Layout.load_layout(arena)
+	for items: Array in layout.cells.values():
+		for it: Dictionary in items:
+			var pc := Layout.piece(it.kit, it.piece)
+			if pc.is_empty():
+				missing.append("arena %d: %s/%s is in no kit.json" % [arena, it.kit, it.piece])
+				continue
+			files["%s/%s/kit.json" % [Layout.ART_DIR, it.kit]] = "%s/kit.json" % it.kit
+			_model(files, it.kit, it.piece, it.loom)
+			if pc.get("kind", "") == "tile" and pc.get("col", "") != "":
+				_model(files, it.kit, pc.col, it.loom)
+	return files
+
+
+## Every 3D figure (Fighter3D: fighters, summons, coaches) and the
+## coaches' masks.
+static func figure_files() -> Dictionary:
+	var files := {}
+	for model in _figures():
+		var src: String = Layout.ART_DIR.path_join(Fighter3D.MODEL_DIR % model)
+		files[src] = src.trim_prefix(Layout.ART_DIR + "/")
+		if model in Fighter3D.COACHES.values():
+			for ext: String in ["_mask.png", "_mask.json"]:
+				var m: String = src.get_basename() + ext
+				files[m] = m.trim_prefix(Layout.ART_DIR + "/")
+	return files
+
+
+## Which card shows which piece (S35c) and every piece it names: a rigid
+## model, or one garment per coach figure (equipment/garments.json).
+static func equipment_files() -> Dictionary:
+	var files := {}
+	var pieces_src: String = Layout.ART_DIR.path_join(Fighter3D.PIECES)
+	files[pieces_src] = Fighter3D.PIECES
+	var garments_src: String = Layout.ART_DIR.path_join("equipment/garments.json")
+	var tables = JSON.parse_string(FileAccess.get_file_as_string(pieces_src))
+	var garments = JSON.parse_string(FileAccess.get_file_as_string(garments_src))
+	if not garments is Dictionary:
+		garments = {}
+	if tables is Dictionary:
+		for table: Dictionary in [tables.get("fighter", {}), tables.get("coach", {})]:
+			for piece: String in table.values():
+				var src: String = Layout.ART_DIR.path_join(Fighter3D.EQUIP_DIR % piece)
+				if garments.has(piece):   # one per coach figure
+					for c: String in Fighter3D.COACHES.values():
+						src = Layout.ART_DIR.path_join(Fighter3D.GARMENT_DIR % [c.get_file().get_basename(), piece])
+						files[src] = src.trim_prefix(Layout.ART_DIR + "/")
+					continue
+				files[src] = src.trim_prefix(Layout.ART_DIR + "/")
+	return files
+
 ## Every figure the game can draw in 3D.
-func _figures() -> Array:
+static func _figures() -> Array:
 	var out := []
 	for pair: Array in Fighter3D.MODELS.values():
 		out.append_array(pair)
@@ -108,7 +134,7 @@ func _figures() -> Array:
 	return out
 
 
-func _model(files: Dictionary, kit: String, name: String, loom: String) -> void:
+static func _model(files: Dictionary, kit: String, name: String, loom: String) -> void:
 	var src := Layout.model_path(kit, name, loom)
 	files[src] = src.trim_prefix(Layout.ART_DIR + "/")
 

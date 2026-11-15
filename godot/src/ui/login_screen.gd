@@ -6,10 +6,13 @@ extends Control
 ## and on the right a white form with an ink rule: account, password (with
 ## its eye), the server, CONECTAR. Everything enters in a cascade.
 ## Replaces the retail logonDialog; emits `submit(login, password, proxy)`.
+## In the web demo (S44) the form is one JUGAR button instead: the browser's
+## own demo account (DemoAccount), on the page's server.
 
 signal submit(login: String, password: String, proxy: String)
 
 const UiStyle := preload("res://src/ui/ui_style.gd")
+const DemoAccount := preload("res://src/web/demo_account.gd")
 const StyleB := preload("res://src/ui/style_b.gd")
 const REF := Vector2(1280, 720)
 const LANGS := ["es", "en", "fr"]
@@ -141,11 +144,16 @@ func _form_block() -> void:
 	UiStyle.display(head, 44)
 	col.add_child(head)
 	_gap(col, 6)
-	col.add_child(UiStyle.tag(I18n.t("login.user")))
+	var rows: Array[Control] = []   # what the web demo hides
+	rows.append(UiStyle.tag(I18n.t("login.user")))
+	col.add_child(rows[-1])
 	name_edit = _field(col)
+	rows.append(name_edit)
 	_gap(col, 6)
-	col.add_child(UiStyle.tag(I18n.t("login.pass")))
+	rows.append(UiStyle.tag(I18n.t("login.pass")))
+	col.add_child(rows[-1])
 	pass_edit = _field(col)
+	rows.append(pass_edit)
 	pass_edit.secret = true
 	pass_edit.clear_button_enabled = false
 	var ps2: StyleBox = pass_edit.get_theme_stylebox("normal").duplicate()
@@ -167,8 +175,10 @@ func _form_block() -> void:
 	pass_edit.add_child(reveal_btn)
 	_gap(col, 6)
 	# the server: a small ink box with its live dot
-	col.add_child(UiStyle.tag(I18n.t("login.server")))
+	rows.append(UiStyle.tag(I18n.t("login.server")))
+	col.add_child(rows[-1])
 	proxy_opt = OptionButton.new()
+	rows.append(proxy_opt)
 	proxy_opt.name = "Server"
 	proxy_opt.tooltip_text = I18n.t("login.server")
 	var chip := StyleBoxFlat.new()
@@ -208,6 +218,22 @@ func _form_block() -> void:
 	btn.custom_minimum_size.y = 64
 	btn.pressed.connect(_do_submit)
 	col.add_child(btn)
+	if WebAssets.active():
+		for r in rows:
+			r.visible = false
+		var note := Label.new()
+		note.text = I18n.t("login.demo_note")
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		note.custom_minimum_size.x = R_FORM.size.x - 68   # wraps at its width from the start
+		note.add_theme_font_size_override("font_size", 16)
+		note.add_theme_color_override("font_color", INK)
+		col.add_child(note)
+		col.move_child(note, rows[0].get_index())
+		btn.text = I18n.t("login.play")
+		btn.pressed.disconnect(_do_submit)
+		btn.pressed.connect(_do_play)
+		btn.name = "Play"
+		form.reset_size.call_deferred()   # without the hidden rows
 
 	name_edit.focus_next = name_edit.get_path_to(pass_edit)
 	pass_edit.focus_next = pass_edit.get_path_to(proxy_opt)
@@ -218,7 +244,8 @@ func _form_block() -> void:
 
 func _ready() -> void:
 	_relayout()
-	name_edit.grab_focus()
+	if name_edit.visible:
+		name_edit.grab_focus()
 	_enter.call_deferred()
 
 
@@ -309,3 +336,9 @@ func _do_submit() -> void:
 	if proxy_opt.selected >= 0:
 		proxy = proxy_opt.get_item_text(proxy_opt.selected)
 	submit.emit(login, pass_edit.text, proxy)
+
+
+## The web demo's JUGAR: this browser's demo account, made on first use.
+func _do_play() -> void:
+	var acc := DemoAccount.load_or_create()
+	submit.emit(acc.login, acc.password, "")

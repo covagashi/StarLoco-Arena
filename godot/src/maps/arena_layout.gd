@@ -64,10 +64,13 @@ static var _root := ""
 
 
 ## The art folder this build reads: res://art in the editor, the art/
-## folder beside the executable in an exported game.
+## folder beside the executable in an exported game, and the one the web
+## demo unpacks its bundles into (WebAssets) in the browser.
 static func root() -> String:
 	if _root != "":
 		return _root
+	if OS.has_feature("web"):
+		return WebAssets.ROOT.path_join("art")
 	if OS.has_feature("template"):
 		return OS.get_executable_path().get_base_dir().path_join("art")
 	return ART_DIR

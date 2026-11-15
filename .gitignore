@@ -90,6 +90,10 @@ __pycache__/
 # commit it (it is machine-local and huge).
 /godot/.godot/
 /godot/export/
+# assets/ is read raw (AssetPaths); an export or `godot --import` still
+# writes an .import beside every file. Only the few ui/ images the game
+# loads as resources keep theirs (already tracked).
+/godot/assets/**/*.import
 # Agent worktrees: a full second checkout of this repo, created by Claude Code
 # for isolated work. Never committable. Project-level .claude/settings.json is
 # deliberately NOT ignored, so only this subtree is listed.

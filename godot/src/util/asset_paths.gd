@@ -55,7 +55,8 @@ static func normalize(rel: String) -> String:
 ## subsets in a release pack) keeps working with zero setup; then the
 ## `assets/` folder beside the executable, which is what a release ships;
 ## then user://assets/ as the escape hatch for an operator who dropped a
-## tree into the writable data dir.
+## tree into the writable data dir. The web demo reads its boot bundle,
+## unpacked in memory, right after res:// (WebAssets).
 static func roots() -> PackedStringArray:
 	if _roots == null:
 		_roots = PackedStringArray([
@@ -63,6 +64,8 @@ static func roots() -> PackedStringArray:
 			OS.get_executable_path().get_base_dir() + "/assets/",
 			"user://assets/",
 		])
+		if OS.has_feature("web"):   # S44: the boot bundle, unpacked (WebAssets)
+			_roots.insert(1, WebAssets.ROOT + "/assets/")
 	return _roots
 
 

@@ -384,3 +384,11 @@ limits:
   # win simply by connecting before you do, and every GM command is gated on that
   # one flag. Set false and seed your admin with cmd/seedaccount.
   first_account_is_admin: true
+  # The web demo's "Play" button (S44): a visitor gets their own demo
+  # account under a generated "demo-..." login that the browser keeps, even
+  # with auto_register off. Demo accounts take no place in the season
+  # standings and are deleted after 30 days without a login. Turn it on only
+  # on the instance that serves the web demo.
+  demo_accounts: false
+  # How many demo accounts one address may create per hour. -1 = no cap.
+  demo_accounts_per_ip_hour: 5

@@ -597,6 +597,14 @@ type LimitsConfig struct {
 	// for the same reason as AutoRegister; use cmd/seedaccount and set this false
 	// for anything exposed.
 	FirstAccountIsAdmin *bool `yaml:"first_account_is_admin"`
+	// DemoAccounts lets the web demo's "Play" button (S44) create a demo
+	// account under a generated "demo-…" login, even with auto_register
+	// off. Off by default: only an instance that serves the web demo wants
+	// it.
+	DemoAccounts bool `yaml:"demo_accounts"`
+	// DemoAccountsPerIPHour caps the demo accounts one address creates per
+	// hour. Default 5. -1 disables.
+	DemoAccountsPerIPHour int `yaml:"demo_accounts_per_ip_hour"`
 }
 
 // Limit accessors: 0 means "use the default", negative means "disabled".
@@ -605,6 +613,9 @@ func (l LimitsConfig) maxConnectionsPerIP() int    { return limitOr(l.MaxConnect
 func (l LimitsConfig) handshakeTimeout() int       { return limitOr(l.HandshakeTimeoutSeconds, 30) }
 func (l LimitsConfig) idleTimeout() int            { return limitOr(l.IdleTimeoutSeconds, 300) }
 func (l LimitsConfig) loginAttemptsPerMinute() int { return limitOr(l.LoginAttemptsPerMinute, 10) }
+
+// DemoPerIPHour is the demo accounts cap per address and hour (0 = none).
+func (l LimitsConfig) DemoPerIPHour() int { return limitOr(l.DemoAccountsPerIPHour, 5) }
 
 // MaxConnections etc. are the exported forms the game package consumes.
 func (l LimitsConfig) MaxConns() int           { return l.maxConnections() }

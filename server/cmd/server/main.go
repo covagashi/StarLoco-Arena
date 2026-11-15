@@ -216,6 +216,7 @@ func run(configPath string) error {
 	// the clock, whether or not anyone is looking.
 	go deps.RunTournamentScheduler(ctx)
 	go deps.RunSeasonScheduler(ctx)
+	go deps.RunDemoPurge(ctx)
 
 	if err := srv.Serve(ctx, gameLn); err != nil {
 		return fmt.Errorf("game server stopped: %w", err)
@@ -487,5 +488,7 @@ func limitsFromConfig(cfg config.Config) game.Limits {
 		LoginRatePerMin:          l.LoginRatePerMinute(),
 		DisableAutoRegister:      !l.AutoRegisterEnabled(),
 		DisableFirstAccountAdmin: !l.FirstAccountAdmin(),
+		DemoAccounts:             l.DemoAccounts,
+		DemoPerIPHour:            l.DemoPerIPHour(),
 	}
 }

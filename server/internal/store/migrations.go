@@ -300,6 +300,14 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.CardPick{})
 		},
 	},
+	{
+		// Web demo accounts (S44): the is_demo flag.
+		Version: 22,
+		Name:    "account_demo",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.Account{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

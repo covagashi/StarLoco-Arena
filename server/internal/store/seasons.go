@@ -49,6 +49,7 @@ type Standing struct {
 func (r *SeasonRepo) RankedTop(n int) ([]Standing, error) {
 	var cs []domain.Coach
 	err := r.db.Select("id", "strength").Where("strength > 0").
+		Where("id NOT IN (?)", r.demoCoaches()).
 		Order("strength DESC, name ASC").Limit(n).Find(&cs).Error
 	out := make([]Standing, 0, len(cs))
 	for _, c := range cs {
@@ -60,13 +61,21 @@ func (r *SeasonRepo) RankedTop(n int) ([]Standing, error) {
 // GhostTop is the top n of the ghost ladder, the GhostRepo.Ladder order.
 func (r *SeasonRepo) GhostTop(n int) ([]Standing, error) {
 	var gs []domain.GhostRating
-	err := r.db.Where("fights > 0").Order("elo DESC").Order("fights ASC").
+	err := r.db.Where("fights > 0").Where("coach_id NOT IN (?)", r.demoCoaches()).
+		Order("elo DESC").Order("fights ASC").
 		Order("coach_id ASC").Limit(n).Find(&gs).Error
 	out := make([]Standing, 0, len(gs))
 	for _, g := range gs {
 		out = append(out, Standing{CoachID: g.CoachID, Rating: g.Elo})
 	}
 	return out, err
+}
+
+// demoCoaches is the subquery of the demo accounts' coaches (S44): they
+// play the ladders but take no place at the close, so no pesetas.
+func (r *SeasonRepo) demoCoaches() *gorm.DB {
+	return r.db.Model(&domain.Account{}).Select("coach_id").
+		Where("is_demo = ? AND coach_id IS NOT NULL", true)
 }
 
 // Close settles a season in one transaction: it records the results, pays

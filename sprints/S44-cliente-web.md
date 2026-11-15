@@ -136,3 +136,90 @@ sin publicar), o empezar por el paso 3: una raíz de assets por HTTP que
 descargue a `user://` lo que haga falta (el lobby y lo mínimo en la primera
 carga, cada arena al entrar en su combate). Las plantillas web de Godot
 4.7.1 ya están instaladas en la Ally.
+
+## Abierto tras S43 (2026-11-15)
+
+S43 cerrado: ya no queda nada retail, así que la demo se puede construir
+entera. Pasos 1, 3 y 5 empezados en la misma sesión.
+
+### 1 y 3. Exportar y bajar los assets por partes
+
+- **Preset `Web`** en `export_presets.cfg` (sin hilos: vale en itch.io y
+  cualquier hosting sin cabeceras COOP/COEP).
+  `godot --headless --path godot --export-release Web ../dist/web/index.html`
+  da `index.wasm` 39,5 MB (9 MB con gzip), `index.pck` 0,9 MB.
+- **Paquetes** (`tools/web/pack_web.gd -- ../dist/web`): lo que un
+  escritorio lleva suelto junto al ejecutable (`assets/` y `art/`) va en
+  zips en `bundles/`, con `manifest.json` y el hash en el nombre (caché
+  para siempre). `boot` = `assets/` + figuras + equipo: 40,3 MB; cada arena,
+  aparte: 9,1 / 12,1 / 10,1 / 9,1 / 21,7 / 27,7 MB (arenas 1–6).
+  `pack_arenas.gd` se partió en `arena_files` / `figure_files` /
+  `equipment_files` para que los dos empaquetadores lean la misma lista
+  (la salida de `pack_arenas` es idéntica byte a byte, `diff -r`).
+- **Cliente** (`src/util/web_assets.gd`): baja un grupo y lo descomprime en
+  `/tmp/pippop`, el sistema de ficheros en memoria del navegador (no
+  `user://`: ese se copia a IndexedDB y se vuelve a leer entero en cada
+  arranque). `AssetPaths` y `ArenaLayout.root()` leen de ahí en web, así
+  que ninguna lectura del juego cambia. `src/web/web_boot.tscn` es la
+  escena inicial en web (`run/main_scene.web`): barra de carga, `boot`, y
+  pasa a `main.tscn`. `fight_view` baja la arena de su mundo antes de
+  montarla (los mensajes del servidor esperan, `scene_active` sigue
+  apagado), y solo una arena queda descomprimida a la vez.
+- Godot 4.7.1 en web: `HTTPRequest.download_file` no escribe nada; el
+  cuerpo llega a memoria y se escribe a mano para `ZIPReader`.
+- **Primera carga ≈ 50 MB** con gzip (9 wasm + 0,9 pck + 40,3 boot). Justo
+  en el límite: queda recortar (pasos 3–4).
+
+### 5. Cuenta demo ✅ (servidor y cliente)
+
+- **Servidor**: `limits.demo_accounts` (apagado por defecto) y
+  `limits.demo_accounts_per_ip_hour` (5). Un login desconocido con la forma
+  `demo-` + 20 letras/cifras (`game.IsDemoLogin`) crea una cuenta con
+  `is_demo` (migración 22) aunque `auto_register` esté apagado, nunca admin,
+  con tope por IP y hora. Las cuentas demo no entran en `RankedTop` /
+  `GhostTop`, así que no cobran pesetas de temporada. `RunDemoPurge` borra
+  cada hora las que llevan `DemoMaxIdle` (30 días) sin entrar.
+- **Cliente**: en web el login es un solo botón **JUGAR** con una línea
+  ("Demo gratis en el navegador, sin registro…"). `src/web/demo_account.gd`
+  genera login y clave la primera vez y los guarda en `user://` (IndexedDB
+  del navegador): al volver se sigue con el mismo jefe. El servidor es el de
+  la página (`/ws` en el mismo host, `wss://` en https) o `?server=<url>`
+  para pruebas. "Crea tu jefe" sale con un nombre generado ("Lonefen76").
+  Un rechazo en la demo dice "No se pudo abrir tu partida demo…", no
+  "contraseña incorrecta".
+- Pruebas: `TestDemoAccounts`, `TestDemoAccountsOffByDefault` (e2e),
+  `TestIsDemoLogin`, `TestDemoPerIPHour`, `TestPurgeDemoAccounts`,
+  `TestDemoCoachesTakeNoSeasonPlace`.
+- Recorrido real en Chromium (Playwright, GPU AMD por ANGLE/Vulkan, sin
+  ventana): carga → JUGAR → cuenta demo creada en el servidor → crea tu jefe
+  (figura 3D) → lobby → tutorial de Aldebrán → crear luchador → equipo. El
+  tope por IP saltó de verdad en la sexta cuenta de la sesión.
+
+### 4. Memoria, primera medida (Chromium, lobby)
+
+PSS de los procesos, con recolección forzada antes de medir:
+
+| Momento | Pestaña (renderer) | wasm | GPU |
+|---|---|---|---|
+| Antes de bajar nada | 241 MB | 46 MB | 86 MB |
+| Pantalla de login (boot bajado) | 380 MB | 80 MB | 89 MB |
+| Lobby | 554 MB | 148 MB | 102 MB |
+
+- Bajar `boot` de una pieza dejaba el wasm en 171 MB para siempre (la
+  memoria de wasm no se devuelve): ahora va en partes de ~4 MB y se queda
+  en 80. Las arenas, igual.
+- El resto: ~200 MB son Chromium con el motor compilado; ~65 MB los
+  ficheros de `boot` en memoria; el lobby suma ~70 MB de wasm (figuras).
+- **Pasa del presupuesto (≤ 500 MB) ya en el lobby.** Siguiente: que las
+  figuras y el equipo se bajen al usarse en vez de en `boot` (son 46 de los
+  65 MB), y medir el combate de la arena 6.
+
+### Visto de paso
+
+- Los iconos que la interfaz dibuja con caracteres sueltos (los dados de
+  "Nuevo luchador", el de RECLUTAR) salen como cuadros en web: no hay
+  fuentes del sistema de las que tirar. Hace falta meter esos símbolos en
+  una fuente propia o dibujarlos.
+- El tutorial de entrada son 8 + 4 páginas de Aldebrán y luego 10 de Nilo
+  antes de la primera pelea; en una demo pesa. Lo apunto para el dueño, no
+  lo toco.

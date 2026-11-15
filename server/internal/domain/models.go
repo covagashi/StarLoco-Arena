@@ -18,10 +18,14 @@ type Account struct {
 	PasswordHash string `gorm:"size:120;not null"` // bcrypt
 	Connected    bool   `gorm:"not null;default:false"`
 	IsAdmin      bool   `gorm:"not null;default:false"`
-	CoachID      *uint  // nullable FK — nil => no coach yet
-	Coach        *Coach `gorm:"foreignKey:CoachID"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// IsDemo marks a web demo account (S44): created by the "Play" button
+	// under a generated login, kept off the season standings and deleted
+	// after DemoMaxIdle without a login.
+	IsDemo    bool   `gorm:"not null;default:false;index"`
+	CoachID   *uint  // nullable FK — nil => no coach yet
+	Coach     *Coach `gorm:"foreignKey:CoachID"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // Coach is a player's in-world character.

@@ -66,6 +66,12 @@ func set_locale(l: String) -> void:
 	locale_changed.emit(l)
 
 
+## Reads the tables again: the web demo's autoload starts before its
+## boot bundle is unpacked (S44, web_boot.gd).
+func reload() -> void:
+	_load()
+
+
 func _load() -> void:
 	_table = _read(_PATH % lang)
 	_fallback = _read(_PATH % "en")

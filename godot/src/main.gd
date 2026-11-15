@@ -36,6 +36,7 @@ const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
 const TournamentDefs := preload("res://src/gamedata/tournament_defs.gd")
 const Scenarios := preload("res://src/gamedata/scenarios.gd")
 const BugReport := preload("res://src/ui/bug_report.gd")
+const DemoAccount := preload("res://src/web/demo_account.gd")
 
 const OP_CLIENT_VERSION := 7
 const OP_CLIENT_AUTH := 1025
@@ -586,13 +587,7 @@ func _on_retail_logon(args: Array, _widget: GuiLayer.Ctx) -> void:
 	else:
 		_pending_login = login
 		_pending_pass = password
-		var proxy := str(_gui.model.get_value("proxy", "selected"))
-		if proxy == "":
-			proxy = "140.238.172.196:3000"
-		var hp := proxy.split(":")
-		Session.connect_to(hp[0], int(hp[1]) if hp.size() > 1 else 5555)
-		_log_line(I18n.t("net.connecting", {"host": hp[0],
-			"port": hp[1] if hp.size() > 1 else "5555"}))
+		_connect_proxy(str(_gui.model.get_value("proxy", "selected")))
 	_gui._save_settings()
 
 
@@ -618,6 +613,8 @@ func _show_login_screen() -> void:
 		hosts.append(str(it.get("text", it)) if it is Dictionary else str(it))
 	if hosts.is_empty():
 		hosts = ["140.238.172.196:3000", "127.0.0.1:5555"]
+	if WebAssets.active():   # S44: the page's own server, nothing to pick
+		hosts = [WebAssets.server_url()]
 	_login_screen.set_proxies(hosts, str(pm.get("selected", hosts[0])))
 	_login_screen.name_edit.text = str(
 		_gui.model.values.get("account.name", ""))
@@ -638,13 +635,24 @@ func _on_login_submit(login: String, password: String, proxy: String) -> void:
 	else:
 		_pending_login = login
 		_pending_pass = password
-		if proxy == "":
-			proxy = "140.238.172.196:3000"
-		var hp := proxy.split(":")
-		Session.connect_to(hp[0], int(hp[1]) if hp.size() > 1 else 5555)
-		_log_line(I18n.t("net.connecting", {"host": hp[0],
-			"port": hp[1] if hp.size() > 1 else "5555"}))
+		_connect_proxy(proxy)
 	_gui._save_settings()
+
+
+## Opens the connection to a "host:port" proxy; the web demo always plays on
+## its page's server instead (S44, WebAssets.server_url).
+func _connect_proxy(proxy: String) -> void:
+	if WebAssets.active():
+		var url := WebAssets.server_url()
+		Session.connect_to(url, 0)
+		_log_line(I18n.t("net.connecting", {"host": url, "port": "-"}))
+		return
+	if proxy == "":
+		proxy = "140.238.172.196:3000"
+	var hp := proxy.split(":")
+	Session.connect_to(hp[0], int(hp[1]) if hp.size() > 1 else 5555)
+	_log_line(I18n.t("net.connecting", {"host": hp[0],
+		"port": hp[1] if hp.size() > 1 else "5555"}))
 
 
 func _send_auth(login_txt: String, pass_txt: String) -> void:
@@ -683,7 +691,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				_log_line("[color=red]%s[/color]" % I18n.t(
 					"net.auth_refused", {"code": code}))
 				if _login_screen != null:
-					_login_screen.set_error(I18n.t("login.bad_credentials"))
+					# the web demo has no password to get wrong: a refusal
+					# there is the server's cap on new demo accounts (S44)
+					_login_screen.set_error(I18n.t("login.demo_refused"
+						if WebAssets.active() else "login.bad_credentials"))
 		OP_COACH_CREATE_REQ:
 			_open_coach_creation()
 		OP_COACH_CREATION_RESULT:
@@ -2218,7 +2229,8 @@ func _open_coach_creation() -> void:
 		_login_screen = null
 	_gui.model.set_value("localCoach", {
 		"sex": 0, "skin": 1, "hair": 1,
-		"name": _login_name.strip_edges().left(20),
+		"name": DemoAccount.coach_name() if WebAssets.active() \
+			else _login_name.strip_edges().left(20),
 		"actorDescriptorLibrary": "coach_7000",
 		"actorAnimation": "AnimStatique",
 		"actorDirection": 3,

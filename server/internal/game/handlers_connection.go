@@ -139,7 +139,23 @@ func handleAuthentication(s *Session, f *protocol.C2SFrame) error {
 	}
 
 	acc, err := s.deps.Store.Accounts.FindByName(auth.Login)
-	if errors.Is(err, store.ErrNotFound) {
+	if errors.Is(err, store.ErrNotFound) && s.guard != nil && s.guard.limits.DemoAccounts &&
+		IsDemoLogin(auth.Login) {
+		// S44: the web demo's "Play" button, under the login it generated
+		// and kept in the browser. Capped per address and hour so the table
+		// cannot be flooded; never an admin.
+		if !s.guard.allowDemo(s.remoteIP) {
+			s.log.Warn("demo account limit hit", "ip", s.remoteIP)
+			result, _ := handshake.EncodeAuthResult(protocol.AuthInvalidLogin)
+			_ = s.Send(result)
+			return nil
+		}
+		acc, err = s.deps.Store.Accounts.CreateDemoAccount(auth.Login, auth.Password)
+		if err != nil {
+			return err
+		}
+		s.log.Info("demo account created", "login", auth.Login)
+	} else if errors.Is(err, store.ErrNotFound) {
 		// Auto-register on first login (dev convenience). The very first
 		// account on a fresh server becomes the administrator, so a brand new
 		// install always has someone who can run GM commands and open the web

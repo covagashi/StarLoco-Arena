@@ -78,6 +78,30 @@ func (r *AccountRepo) CreateAccount(name, password string, admin bool) (*domain.
 	return acc, nil
 }
 
+// CreateDemoAccount creates a web demo account (S44): never an admin,
+// flagged IsDemo.
+func (r *AccountRepo) CreateDemoAccount(name, password string) (*domain.Account, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	acc := &domain.Account{Name: name, PasswordHash: string(hash), IsDemo: true}
+	if err := r.db.Create(acc).Error; err != nil {
+		return nil, err
+	}
+	return acc, nil
+}
+
+// StaleDemoIDs lists the demo accounts nobody has logged into since
+// `before` (UpdatedAt moves on every login and logout), offline ones only.
+func (r *AccountRepo) StaleDemoIDs(before time.Time) ([]uint, error) {
+	var ids []uint
+	err := r.db.Model(&domain.Account{}).
+		Where("is_demo = ? AND connected = ? AND updated_at < ?", true, false, before).
+		Pluck("id", &ids).Error
+	return ids, err
+}
+
 // VerifyPassword reports whether password matches the account's stored hash.
 func (r *AccountRepo) VerifyPassword(acc *domain.Account, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(acc.PasswordHash), []byte(password)) == nil

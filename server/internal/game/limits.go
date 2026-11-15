@@ -36,6 +36,29 @@ type Limits struct {
 	// an operator can see it.
 	DisableAutoRegister      bool
 	DisableFirstAccountAdmin bool
+
+	// DemoAccounts lets the web demo's "Play" button (S44) create a demo
+	// account under a generated login (IsDemoLogin), even with
+	// auto-registration off; DemoPerIPHour caps how many one address
+	// creates per hour (0 = no cap).
+	DemoAccounts  bool
+	DemoPerIPHour int
+}
+
+// IsDemoLogin reports whether a login is one the web demo generates:
+// "demo-" and 20 lowercase letters or digits. Only these may become demo
+// accounts, so an ordinary name can never be taken by one.
+func IsDemoLogin(login string) bool {
+	const prefix = "demo-"
+	if len(login) != len(prefix)+20 || login[:len(prefix)] != prefix {
+		return false
+	}
+	for _, c := range login[len(prefix):] {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 // AutoRegisterAllowed reports whether an unknown login may create an account.
@@ -53,6 +76,7 @@ type connGuard struct {
 	total    int
 	perIP    map[string]int
 	loginHit map[string][]time.Time
+	demoHit  map[string][]time.Time
 
 	now func() time.Time // swappable in tests
 }
@@ -62,6 +86,7 @@ func newConnGuard(l Limits) *connGuard {
 		limits:   l,
 		perIP:    make(map[string]int),
 		loginHit: make(map[string][]time.Time),
+		demoHit:  make(map[string][]time.Time),
 	}
 }
 
@@ -142,6 +167,30 @@ func (g *connGuard) allowLogin(ip string) bool {
 	return true
 }
 
+// allowDemo reports whether ip may create another demo account this hour,
+// and counts it when so.
+func (g *connGuard) allowDemo(ip string) bool {
+	if g.limits.DemoPerIPHour <= 0 {
+		return true
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	now := g.clock()
+	cutoff := now.Add(-time.Hour)
+	kept := g.demoHit[ip][:0]
+	for _, h := range g.demoHit[ip] {
+		if h.After(cutoff) {
+			kept = append(kept, h)
+		}
+	}
+	if len(kept) >= g.limits.DemoPerIPHour {
+		g.demoHit[ip] = kept
+		return false
+	}
+	g.demoHit[ip] = append(kept, now)
+	return true
+}
+
 // sweepLoginHits drops empty per-IP entries so a long-running server does not
 // accumulate one map key per address that ever attempted a login.
 func (g *connGuard) sweepLoginHits() {
@@ -159,6 +208,12 @@ func (g *connGuard) sweepLoginHits() {
 			delete(g.loginHit, ip)
 		} else {
 			g.loginHit[ip] = kept
+		}
+	}
+	hour := g.clock().Add(-time.Hour)
+	for ip, hits := range g.demoHit {
+		if len(hits) == 0 || !hits[len(hits)-1].After(hour) {
+			delete(g.demoHit, ip)
 		}
 	}
 }

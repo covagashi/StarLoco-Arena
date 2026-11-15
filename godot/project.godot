@@ -7,6 +7,7 @@ config_version=5
 
 config/name="StarLoco Arena"
 run/main_scene="res://src/main.tscn"
+run/main_scene.web="res://src/web/web_boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
