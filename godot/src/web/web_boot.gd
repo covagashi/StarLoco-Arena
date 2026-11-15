@@ -66,4 +66,5 @@ func _load() -> void:
 		return
 	_bar.value = 1.0
 	I18n.reload()   # its autoload ran before the tables were here
+	WebAssets.fetch_later()   # the fighters and summons, while the player logs in
 	get_tree().change_scene_to_file.call_deferred(MAIN)

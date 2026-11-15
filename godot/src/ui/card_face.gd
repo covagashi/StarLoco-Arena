@@ -38,6 +38,13 @@ const HAIR_TYPES := [3, 29]
 const NAME_W := BASE.x - 26.0   # the ribbon's text width
 
 static var _art_cache := {}   # asset path → Texture2D (null when missing)
+## Art a face drew without: asset path → ids of the faces waiting for it.
+## A grid of new cards (the inventory) decodes a few images a frame instead
+## of all of them in one long frame, which also cut the music on the web
+## (its audio is mixed between frames, S44).
+static var _waiting := {}
+static var _pumping := false
+const DECODES_PER_FRAME := 4
 
 var card_id := 0
 var fighter := false          # a fighter equipment card (fightercards.json)
@@ -75,19 +82,56 @@ static func _tex(rel: String) -> Texture2D:
 ## The piece for coach and fighter gear, the hair pictogram for haircuts and
 ## hair colours without one, else the family's pictogram.
 static func art_of(cid: int, is_fighter: bool) -> Texture2D:
+	return _tex(art_path(cid, is_fighter))
+
+
+## The asset art_of draws: the first of those that exists.
+static func art_path(cid: int, is_fighter: bool) -> String:
 	var fam := family(cid, is_fighter)
-	var piece: Texture2D = null
+	var piece := ""
 	if is_fighter:
-		piece = _tex("ui/cards/fighter/%d.webp" % cid)
+		piece = "ui/cards/fighter/%d.webp" % cid
 	elif fam == "coach":
-		piece = _tex("ui/cards/coach/%d.webp" % cid)
-	if piece != null:
+		piece = "ui/cards/coach/%d.webp" % cid
+	if piece != "" and AssetPaths.exists(piece):
 		return piece
-	if not is_fighter and int(Cards.meta(cid).get("type", -1)) in HAIR_TYPES:
-		var hair := _tex("ui/cards/family/hair.webp")
-		if hair != null:
-			return hair
-	return _tex("ui/cards/family/%s.webp" % fam)
+	if not is_fighter and int(Cards.meta(cid).get("type", -1)) in HAIR_TYPES \
+			and AssetPaths.exists("ui/cards/family/hair.webp"):
+		return "ui/cards/family/hair.webp"
+	return "ui/cards/family/%s.webp" % fam
+
+
+## The texture if it is decoded already; else null, and this face redraws
+## once it is.
+func _tex_soon(rel: String) -> Texture2D:
+	if _art_cache.has(rel):
+		return _art_cache[rel]
+	if not _waiting.has(rel):
+		_waiting[rel] = []
+	if not get_instance_id() in _waiting[rel]:
+		_waiting[rel].append(get_instance_id())
+	if not _pumping:
+		_pumping = true
+		_pump.call_deferred()
+	return null
+
+
+static func _pump() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	while not _waiting.is_empty():
+		for i in DECODES_PER_FRAME:
+			if _waiting.is_empty():
+				break
+			var rel: String = _waiting.keys()[0]
+			var ids: Array = _waiting[rel]
+			_waiting.erase(rel)
+			_tex(rel)
+			for id: int in ids:
+				var face := instance_from_id(id) as CanvasItem
+				if face != null:
+					face.queue_redraw()
+		await tree.process_frame
+	_pumping = false
 
 
 func _ready() -> void:
@@ -114,7 +158,7 @@ func _draw() -> void:
 	_disc(centre, 36.0, 0.94, light)
 	_halo(centre, 36.0, 54.0, 0.94, Color(light, 0.55), Color(light, 0.0))
 	# the art
-	var tex := art_of(card_id, fighter)
+	var tex := _tex_soon(art_path(card_id, fighter))
 	if tex != null:
 		var side := 92.0
 		draw_texture_rect(tex, Rect2((BASE.x - side) / 2.0, 12, side, side), false)
@@ -128,7 +172,7 @@ func _draw() -> void:
 	draw_circle(Vector2(17, 17), 15, INK)
 	draw_circle(Vector2(17, 17), 13, colour)
 	draw_arc(Vector2(17, 17), 11.8, 0, TAU, 40, Color(1, 1, 1, 0.4), 1.0, true)
-	var pic := _tex("ui/cards/family/%s.webp" % fam)
+	var pic := _tex_soon("ui/cards/family/%s.webp" % fam)
 	if pic != null:
 		draw_texture_rect(pic, Rect2(6, 6, 22, 22), false)
 	# the rarity's diamonds, faceted: a lit top, the metal below

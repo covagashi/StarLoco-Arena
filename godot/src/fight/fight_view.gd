@@ -504,8 +504,9 @@ func _wire_fight_focus() -> void:
 ## WebAssets). The server's messages wait meanwhile (scene_active is still
 ## off), so the fight starts where it would have.
 func _web_arena() -> void:
-	var group := WebAssets.arena_group(State.fight_world)
-	if group == "" or WebAssets.has(group):
+	var groups := WebAssets.LATER.duplicate()   # the figures, if still on their way
+	groups.append(WebAssets.arena_group(State.fight_world))
+	if groups.all(func(g): return g == "" or WebAssets.has(g)):
 		return
 	var veil := ColorRect.new()
 	veil.color = Color(0.09, 0.07, 0.12)
@@ -528,7 +529,7 @@ func _web_arena() -> void:
 	timer.timeout.connect(tick)
 	add_child(timer)
 	timer.start()
-	var ok: bool = await WebAssets.ensure([group])
+	var ok: bool = await WebAssets.ensure(groups)
 	timer.queue_free()
 	if ok:
 		layer.queue_free()

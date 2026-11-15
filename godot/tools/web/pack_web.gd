@@ -6,8 +6,11 @@ extends SceneTree
 ##   godot --headless --path godot --export-release Web ../dist/web/index.html
 ##   godot --headless --path godot -s tools/web/pack_web.gd -- ../dist/web
 ## Writes <dist>/bundles/:
-##   boot-K.<hash>.zip      assets/ (ui, i18n, audio, content), every 3D
-##                          figure and every equipment piece: the first load
+##   boot-K.<hash>.zip      assets/ (ui, i18n, audio, content), the two
+##                          coaches and every equipment piece: the first load
+##   figures-K.<hash>.zip   the fighters and summons: fetched in the
+##                          background from the login on, and awaited by
+##                          the first fight
 ##   arena-NN-K.<hash>.zip  one arena's layout, shapes, kits and models,
 ##                          downloaded when a fight on it starts
 ##   manifest.json          group -> {"bytes", "parts": [{"url", "bytes"}]};
@@ -36,11 +39,18 @@ func _initialize() -> void:
 	var missing := []
 	var groups := {}   # name -> {source (res://) -> path inside the zip}
 	var boot := {}
+	var figures := {}
 	_assets("res://assets", "assets", boot)
-	for files: Dictionary in [Pack.figure_files(), Pack.equipment_files()]:
-		for src: String in files:
-			boot[src] = "art/" + files[src]
+	var figs := Pack.figure_files()
+	for src: String in figs:
+		var to: String = "art/" + figs[src]
+		# the coaches are drawn from the first screens on: they come with boot
+		(boot if to.get_file().begins_with("coach_") else figures)[src] = to
+	var eq := Pack.equipment_files()   # the lobby dresses the coach at once
+	for src: String in eq:
+		boot[src] = "art/" + eq[src]
 	groups["boot"] = boot
+	groups["figures"] = figures
 	for arena in range(1, Layout.RELEASE + 1):
 		var files := Pack.arena_files(arena, missing)
 		var g := {}

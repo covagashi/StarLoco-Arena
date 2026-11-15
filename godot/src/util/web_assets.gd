@@ -8,16 +8,20 @@ extends RefCounted
 ## AssetPaths and ArenaLayout.root() read from ROOT on the web, so every
 ## raw read in the game works unchanged.
 ##
-## The bundles: "boot" (assets/, the 3D figures and the equipment) before
-## the first screen (web_boot.gd), and "arena-NN" when a fight on that
+## The bundles: "boot" (assets/, the coaches and their equipment) before
+## the first screen (web_boot.gd); "figures" (LATER: fighters and summons)
+## in the background from then on, and awaited by the first fight; "arena-NN" when a fight on that
 ## arena starts (fight_view.gd). Only one arena stays unpacked at a time:
 ## ROOT lives in memory, and a 2 GB device has no room for all six.
+## One download at a time: ensure() calls queue behind each other.
 
 ## In memory, not user:// — that one is mirrored to IndexedDB and read
 ## back whole at every start.
 const ROOT := "/tmp/pippop"
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 const ARENA_PREFIX := "arena-"
+## What the first screens don't draw: off the first load.
+const LATER := ["figures"]
 
 ## group -> {"url", "bytes"}, from bundles/manifest.json
 static var _manifest := {}
@@ -26,6 +30,8 @@ static var _have := {}
 ## what drop_models left of an arena, deleted with the next one
 static var _leftover := []
 static var _req: HTTPRequest
+## an ensure() is running; the next one waits for it
+static var _busy := false
 ## the group being downloaded, its size and what of it is done, for
 ## progress()
 static var _group := ""
@@ -82,6 +88,22 @@ static func downloading() -> String:
 static func ensure(groups: Array) -> bool:
 	if not active():
 		return true
+	var tree := Engine.get_main_loop() as SceneTree
+	while _busy:
+		await tree.process_frame
+	_busy = true
+	var ok: bool = await _ensure(groups)
+	_busy = false
+	return ok
+
+
+## Starts the LATER groups downloading without waiting for them.
+static func fetch_later() -> void:
+	if active():
+		ensure(LATER)
+
+
+static func _ensure(groups: Array) -> bool:
 	if _manifest.is_empty() and not await _load_manifest():
 		return false
 	for g: String in groups:

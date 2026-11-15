@@ -309,3 +309,54 @@ a escuchar entrecortada" (demo en oracle-2, su equipo).
   407 MB.
 - Subido a oracle-2. No lo he oído (aquí no hay salida de audio): queda que
   el hermano lo pruebe.
+
+### Firefox, combate entero, primera carga, inventario (2026-11-15)
+
+Dueño: "sí, hazlo" (los cuatro pendientes, en orden).
+
+1. **Firefox 155** (el de Playwright, en ventana dentro de `gamescope
+   --backend headless`, que le da la GPU AMD real: `radeonsi, phoenix`).
+   Funciona entero, pero **gasta bastante más que Chromium**:
+
+   | Momento | Pestaña | Proceso principal |
+   |---|---|---|
+   | Login | 445 MB | 411 MB |
+   | Lobby | 602–653 MB | 327–427 MB |
+   | Combate (arena del mundo 12) | 625–744 MB | 513–593 MB |
+
+   Pestaña en el lobby, por `smaps`: 474 MB de montón (wasm de Godot, JS,
+   ficheros en memoria) y 94 MB de código compilado del motor (Firefox
+   guarda dos niveles de compilación del wasm). El proceso principal lleva
+   el WebGL. **En Firefox no se cumple el ≤ 500 MB**: queda abierto (abajo).
+2. **Combate entero contra oracle-2**, en Firefox y por internet, cuenta
+   nueva: JUGAR → jefe → tutorial → luchador → entrenamiento → combate
+   hasta el final (`fight ended id=1` en el log de oracle-2).
+3. **Primera carga 34,5 MB** (antes 50,9): `boot` lleva `assets/`, los dos
+   jefes y el equipo (el lobby viste al jefe al momento): 24 MB. Luchadores
+   e invocaciones (`figures`, 16,3 MB) se bajan en segundo plano desde la
+   pantalla de login (`WebAssets.fetch_later`), y el primer combate los
+   espera con su barra si aún no han llegado. Las descargas van de una en
+   una (`ensure` hace cola). Una vista que dibuja un luchador antes de que
+   lleguen (crear luchador en los primeros segundos) lo muestra al siguiente
+   refresco: `figure.gd` lo vuelve a buscar en cada `load_action`.
+   Comprobado: combate en la arena 6 con las figuras llegadas por detrás.
+4. **Inventario**: `CardFace` dibujaba la imagen de cada carta
+   decodificándola en el momento, todas en el mismo fotograma.
+   Ahora la pide (`_tex_soon`) y se redibuja cuando está: 4 imágenes por
+   fotograma. Peor fotograma al abrirlo con la CPU ×4: 50 → 33 ms.
+   `inventory_smoke` y `fight_smoke` OK, 1491/0.
+
+Todo subido a https://140.238.172.196/.
+
+### Lo que queda para cerrar S44
+
+- **Firefox ≤ 500 MB.** Las palancas que quedan, de más a menos efecto:
+  - un motor web propio sin los módulos que no usamos (el wasm de 39 MB
+    baja; Firefox guarda su código compilado dos veces);
+  - no tener en memoria a la vez el fichero y lo que se carga de él
+    (texturas e imágenes de la interfaz que ya están decodificadas);
+  - figuras por luchador en vez de todas.
+
+  La primera es la grande (compilar Godot para web con emscripten aquí,
+  una o dos horas de máquina) y la propongo como siguiente paso.
+- Dominio o itch.io (dueño); de momento, la IP.
