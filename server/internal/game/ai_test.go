@@ -102,3 +102,21 @@ func TestRunAITurnBlockerEndsTurn(t *testing.T) {
 		t.Errorf("blocker summon did not move toward the enemy")
 	}
 }
+
+// TestRunAITurnEndsTheTurnOfAFighterThatDiedOnIt (S40, found by the balance
+// simulation): a fighter killed on its own turn — the damage its attack
+// bounced back, a lethal trap — still has the turn, since a death only
+// announces itself. runAITurn used to return without ending it, so an offline
+// match looped forever on the dead fighter. It must move the turn on.
+func TestRunAITurnEndsTheTurnOfAFighterThatDiedOnIt(t *testing.T) {
+	f, caster, enemy := summonTestFight()
+	f.Timeline = []*FightFighter{caster, enemy}
+	f.turnIndex = 0
+	caster.HP = 0 // died during its own turn, before the AI's end-of-turn
+
+	f.runAITurn(caster)
+
+	if f.turnIndex != 1 || f.currentFighter() != enemy {
+		t.Fatalf("the turn stayed on the dead fighter (turnIndex %d)", f.turnIndex)
+	}
+}

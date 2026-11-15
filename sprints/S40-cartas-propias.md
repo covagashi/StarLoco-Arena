@@ -315,3 +315,36 @@ cobre, plata, oro).
   acaba en 120 s). Apuntado para revisarlo aparte.
 - Pendiente de interfaz: las repetidas convertidas no salen en la pantalla
   de resultados (8300 solo lleva cartas); las fichas sí llegan al monedero.
+
+### Paso 2.6: la comprobación IA contra IA (2026-11-15)
+
+`internal/game/balance_sim_test.go`, a demanda (`S40_SIM=40 go test
+./internal/game/ -run TestBalanceSim -v`): combates sin conexión completos
+(el camino de los torneos de S29) entre equipos espejo (Iop, Cra, Feca), así
+que solo cambia el equipo. 3.240 combates en 45 s.
+
+**Un fallo de verdad encontrado y arreglado:** si un luchador de la IA moría
+en su propio turno (por ejemplo, por el daño que le devolvía un enemigo con
+reflejo, acción 89), `runAITurn` no cerraba el turno: un combate sin conexión
+se quedaba en bucle para siempre (torneos de S29) y uno en vivo esperaba al
+reloj del turno. Prueba de regresión
+`TestRunAITurnEndsTheTurnOfAFighterThatDiedOnIt` (falla sin el arreglo).
+`TestGhostFightReplaysWithItsSeed` sigue fallando a veces por otra causa: un
+combate en vivo de más de 80 rondas que pasa de los 120 s.
+
+**Lo que dicen los combates:**
+- **El orden de turno manda más que las cartas, y de forma errática:** con
+  −30 de iniciativa el equipo gana el 100 %; con +30, el 0 %; con +60 o +80,
+  ~45 %. La IA que mueve primero se acerca, se queda a tiro y recibe el
+  golpe con todos los PA del rival. Por lo mismo, **+1 PM hace perder** (carta
+  104: 25 %; 158: 28 %; 95: 40 %).
+- Sin iniciativa y con un solo luchador equipado, **el valor apenas predice
+  la ventaja** (r = 0,35). **Las defensivas salen baratas:** +10 % de
+  resistencia a todo y +10 PV (112, valor 150) gana el 100 %; 113 y 114
+  (valor 100) el 90–93 %; 163, 130 y 133 el 95–100 %.
+- La IA no usa el ataque de las armas (solo el golpe cuerpo a cuerpo
+  genérico), así que las armas solo cuentan por sus bonus pasivos.
+
+**Conclusión:** con esta IA no se puede confirmar el equilibrio de
+movilidad e iniciativa; las defensivas sí parecen baratas. Decisiones del
+dueño, abajo.

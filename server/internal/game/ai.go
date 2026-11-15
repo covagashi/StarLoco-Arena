@@ -77,9 +77,13 @@ func (f *Fight) runAITurn(ff *FightFighter) {
 		f.runArchetypeTurn(ff)
 	}
 
-	// If the fighter died mid-turn (kamikaze cast / lethal cell) or its cast
-	// ended the fight, the turn already advanced centrally — don't end it again.
-	if ff.HP <= 0 || f.Phase() != PhaseAction || !f.isCurrentTurn(ff.WireID) {
+	// If its cast ended the fight, or something already moved the turn on,
+	// there is nothing to end. A fighter that DIED on its own turn is not that
+	// case: a death never advances the turn by itself (applyHPDelta only
+	// announces it), so one killed by the damage its own attack bounced back
+	// (89, rebound) kept the turn — an offline match then looped on it forever
+	// and a live one waited out the turn clock. End it whether alive or not.
+	if f.Phase() != PhaseAction || !f.isCurrentTurn(ff.WireID) {
 		return
 	}
 	f.endTurn(ff.WireID)
