@@ -271,11 +271,17 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
 Del informe del hermano del dueño (Firefox Android) y de cerrar S44. Lo que
 espera al dueño lleva **(dueño)**.
 
-- [ ] **Canales del chat** (dueño): hoy siete (Todo, General, Comercio,
-      Grupo, Clan, Privados, Sistema). Propuesta: Todo · Privados · Sistema.
-- [ ] **Pantalla de bienvenida e ilustraciones vex** en lugar de las capturas
-      3D de los menús (el jefe sigue en 3D) (dueño). Propuesta de un agente
-      Fable en `~/codigo/capturas/s44/arte/`.
+- [x] **Canales del chat**: de siete a tres, Todo · Privados · Clan (el
+      juego sí tiene clanes; los grupos eran del 2vs2, escondido). Los
+      mensajes del juego, en gris (el dueño veía amarillos sin sentido); el
+      texto de ayuda dice qué hacer (2026-11-16).
+- [ ] **Splash de carga e ilustraciones vex** en lugar de las capturas 3D de
+      los menús (el jefe sigue en 3D). Dueño, 2026-11-16: "que sea un
+      splash, una carga", no páginas de bienvenida; dibujos "cualquier
+      dibujo de Fable con vex, algo chulo". Splash en curso
+      (`~/codigo/capturas/s44/splash/`). Las ilustraciones de las losetas
+      del lobby irán dentro de la loseta, sin tapar el título (heurística
+      mía: el dueño no vio la diferencia en la pregunta).
 - [ ] **Tutorial de entrada largo** (dueño): 8 + 4 páginas de Aldebrán y 10
       de Nilo antes de la primera pelea.
 - [ ] **Cartas sin ilustración propia**: las de arena y los peinados llevan

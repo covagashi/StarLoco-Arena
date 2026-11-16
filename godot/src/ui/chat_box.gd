@@ -47,12 +47,15 @@ const LIGHT_COLORS := {
 	"clan": "#00796b",
 	"channel": "#1565c0",
 	"server": "#c62828",
-	"system": "#5f5320",
-	"me": "#5f5320",
+	"system": "#6b7080",
+	"me": "#6b7080",
 	"error": "#c62828",
 }
-const LIGHT_INLINE := {"[color=green]": "[color=#1e7b34]", "[color=yellow]": "[color=#8a6d00]",
-	"[color=red]": "[color=#c62828]", "[color=gray]": "[color=#5c6070]"}
+## A game line's own colours on the light backdrop: the greens and yellows
+## (connected, an achievement) take the line's quiet grey, so only an error
+## stands out. The owner saw yellow lines and could not tell what they meant.
+const LIGHT_INLINE := {"[color=green]": "[color=#6b7080]", "[color=yellow]": "[color=#6b7080]",
+	"[color=red]": "[color=#c62828]", "[color=gray]": "[color=#6b7080]"}
 const CHAT_ERROR_KEYS := {
 	3206: "chat.err.malformed",
 	3210: "chat.err.privileges",
@@ -64,7 +67,10 @@ const CHAT_ERROR_KEYS := {
 ## Filter tabs, in display order: every stored line maps its kind to one.
 ## "channel" (named channels such as the global "*") shares the trade tab —
 ## it is the same kind of opt-in broadcast pipe.
-const TABS := ["all", "say", "trade", "group", "clan", "whisper", "system"]
+## Only the tabs a player uses (dueño, 2026-11-16: "¿realmente el juego
+## tiene clanes y todo eso?"): no groups without 2vs2, no trade channel, and
+## everything said and every game line already shows in Todo.
+const TABS := ["all", "whisper", "clan"]
 const KIND_TAB := {
 	"say": "say", "me": "say", "channel": "trade", "trade": "trade",
 	"group": "group", "clan": "clan", "whisper": "whisper",

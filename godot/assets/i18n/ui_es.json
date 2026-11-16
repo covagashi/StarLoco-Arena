@@ -37,7 +37,7 @@
   "nav.help": "Ayuda",
   "nav.city": "Servicios",
   "chat.send": "Enviar",
-  "chat.placeholder": "chat — /w, /t, /p, /c, /friend, /ignore, /clap…",
+  "chat.placeholder": "Escribe un mensaje · /w nombre para un privado",
   "chat.tab.all": "Todo",
   "chat.tab.say": "General",
   "chat.tab.trade": "Comercio",
