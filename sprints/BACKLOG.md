@@ -278,8 +278,10 @@ espera al dueño lleva **(dueño)**.
 - [ ] **Splash de carga e ilustraciones vex** en lugar de las capturas 3D de
       los menús (el jefe sigue en 3D). Dueño, 2026-11-16: "que sea un
       splash, una carga", no páginas de bienvenida; dibujos "cualquier
-      dibujo de Fable con vex, algo chulo". Splash en curso
-      (`~/codigo/capturas/s44/splash/`). Las ilustraciones de las losetas
+      dibujo de Fable con vex, algo chulo". **Splash hecho** (2026-11-16,
+      `godot/tools/splash/splash.vx.js`): la carga web y lo que enseña el
+      navegador mientras baja el motor; las decisiones las tomó Fable
+      ("hazlo con fable"). Faltan las losetas del lobby. Las ilustraciones de las losetas
       del lobby irán dentro de la loseta, sin tapar el título (heurística
       mía: el dueño no vio la diferencia en la pregunta).
 - [ ] **Tutorial de entrada largo** (dueño): 8 + 4 páginas de Aldebrán y 10

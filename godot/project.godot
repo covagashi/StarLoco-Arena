@@ -5,10 +5,21 @@ config_version=5
 
 [application]
 
-config/name="StarLoco Arena"
+config/name="Pippop Arena"
+; The name players see (the browser tab, the window). The saved data keeps
+; its old folder (user://: settings and, in the browser, the demo account),
+; so renaming the game did not sign anybody out.
+config/use_custom_user_dir=true
+config/custom_user_dir_name="godot/app_userdata/StarLoco Arena"
 run/main_scene="res://src/main.tscn"
 run/main_scene.web="res://src/web/web_boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+; S44: the loading splash (vex, godot/tools/splash/splash.vx.js), also what
+; the browser shows while it downloads the engine
+boot_splash/image="res://src/web/splash.png"
+boot_splash/bg_color=Color(0.9137, 0.9176, 0.9451, 1)
+boot_splash/fullsize=true
+boot_splash/use_filter=true
 
 [audio]
 
