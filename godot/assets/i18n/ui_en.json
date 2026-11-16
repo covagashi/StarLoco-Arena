@@ -37,7 +37,7 @@
   "nav.help": "Help",
   "nav.city": "Services",
   "chat.send": "Send",
-  "chat.placeholder": "Type a message · /w name for a private one",
+  "chat.placeholder": "Type a message…",
   "chat.tab.all": "All",
   "chat.tab.say": "Local",
   "chat.tab.trade": "Trade",

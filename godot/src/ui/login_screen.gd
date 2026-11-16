@@ -48,9 +48,13 @@ func _init() -> void:
 	_box.theme = UiStyle.theme()
 	add_child(_box)
 	_drifts = StyleB.backdrop(_box, REF, "ARENA", "PPA // LOGIN · 00", "coach_ghost", Vector2(0.28, 0.45), 380.0)
-	_figs = [UiStyle.figure(_box, "fighter_a", Vector2(60, 240), 420),
-		UiStyle.figure(_box, "fighter_b", Vector2(430, 230), 430),
-		UiStyle.figure(_box, "coach", Vector2(236, 130), 560)]
+	# the vex figures (S44, tools/scene_vex) are wider than the old renders:
+	# a little smaller and further apart, the coach in front
+	_figs = [UiStyle.figure(_box, "fighter_a", Vector2(36, 270), 390),
+		UiStyle.figure(_box, "fighter_b", Vector2(450, 262), 398),
+		UiStyle.figure(_box, "coach", Vector2(214, 150), 500)]
+	for f: Control in _figs:   # they sway on their feet (StyleB.sway)
+		f.pivot_offset = f.size * Vector2(0.5, 0.92)
 	_brand_block()
 	_language()
 	_form_block()
@@ -260,6 +264,7 @@ func _enter() -> void:
 func _process(dt: float) -> void:
 	_t += dt
 	StyleB.drift(_drifts, _t)
+	StyleB.sway(_figs, _t)
 
 
 func set_proxies(list: Array, selected: String) -> void:

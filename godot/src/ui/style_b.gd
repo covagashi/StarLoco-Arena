@@ -71,8 +71,60 @@ static func backdrop(parent: Control, size: Vector2, word: String, code: String,
 	band.vertex_colors = PackedColorArray([Color(CORAL, 0.1), Color(CORAL, 0.0), Color(CORAL, 0.0), Color(CORAL, 0.1)])
 	parent.add_child(band)
 	drifts.append([band, band.position, Vector2(0, 10), 17.0])
+	splash_dress(parent, size, centre.x * size.x)
 	parent.add_child(frame_lines(size, code))
 	return drifts
+
+
+## The loading splash's dressing (S44, tools/splash/splash.vx.js), so every
+## screen around it looks like the same game: a pale coral beam falling
+## behind the figures (`beam_x`: its centre at the bottom), a thin wedge in
+## the top right corner, coral speed lines and a few four-point sparkles.
+static func splash_dress(parent: Control, size: Vector2, beam_x: float) -> void:
+	var beam := Polygon2D.new()
+	beam.polygon = PackedVector2Array([Vector2(beam_x - 60, 0), Vector2(beam_x + 360, 0),
+		Vector2(beam_x + 160, size.y - 140), Vector2(beam_x - 140, size.y - 140)])
+	beam.vertex_colors = PackedColorArray([Color(CORAL, 0.2), Color(CORAL, 0.12),
+		Color(CORAL, 0.02), Color(CORAL, 0.06)])
+	parent.add_child(beam)
+	var wedge := Polygon2D.new()
+	wedge.polygon = PackedVector2Array([Vector2(size.x - 160, 0), Vector2(size.x, 0), Vector2(size.x - 90, 300)])
+	wedge.color = Color(CORAL, 0.1)
+	parent.add_child(wedge)
+	var bits := Control.new()
+	bits.size = size
+	bits.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bits.draw.connect(func():
+		for i in 4:   # speed lines, leaning like the splash's
+			var y := 250.0 + i * 22.0
+			var x := beam_x + 380.0 - i * 18.0
+			bits.draw_line(Vector2(x, y), Vector2(x + 120 - i * 14, y - 6), Color(CORAL, 0.45), 3.0, true)
+		for s: Array in [[Vector2(beam_x - 210, 140), 9.0, CORAL], [Vector2(beam_x + 330, 470), 7.0, CORAL],
+				[Vector2(beam_x - 260, 520), 6.0, INK], [Vector2(beam_x + 420, 120), 5.0, INK]]:
+			sparkle(bits, s[0], s[1], s[2]))
+	parent.add_child(bits)
+
+
+## A four-point star, the splash's sparkle.
+static func sparkle(on: CanvasItem, at: Vector2, r: float, colour: Color) -> void:
+	var t := r * 0.28
+	on.draw_colored_polygon(PackedVector2Array([at + Vector2(0, -r), at + Vector2(t, -t), at + Vector2(r, 0),
+		at + Vector2(t, t), at + Vector2(0, r), at + Vector2(-t, t), at + Vector2(-r, 0), at + Vector2(-t, -t)]), colour)
+
+
+## The menus' figures sway on their feet, a little out of step, like paper
+## cut-outs (owner: "como PaRappa the Rapper"). Rotation only, about the
+## pivot the caller set at the feet, on top of each figure's own angle, so
+## the entrance tween (position) and the tiles' hover (scale) keep working.
+static func sway(figs: Array, t: float, degrees := 1.8) -> void:
+	for i in figs.size():
+		var f: Control = figs[i]
+		if not is_instance_valid(f):
+			continue
+		if not f.has_meta("sway_base"):
+			f.set_meta("sway_base", f.rotation_degrees)
+		var period := 1.6 + 0.37 * i
+		f.rotation_degrees = float(f.get_meta("sway_base")) + degrees * sin(TAU * t / period + i * 1.3)
 
 
 ## The frame's thin lines (top and bottom rules, a centre column), crosses

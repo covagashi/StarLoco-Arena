@@ -26,6 +26,7 @@ signal team_picked(preset_id: int)
 
 const Direction8 := preload("res://src/util/direction8.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
+const StyleB := preload("res://src/ui/style_b.gd")
 const Features := preload("res://src/features.gd")
 const REF := Vector2(1280, 720)
 const CHAT_RECT := Rect2(24, 540, 330, 150)
@@ -209,6 +210,7 @@ func _backdrop() -> void:
 	band.vertex_colors = PackedColorArray([Color(CORAL, 0.1), Color(CORAL, 0.0), Color(CORAL, 0.0), Color(CORAL, 0.1)])
 	_box.add_child(band)
 	_drift.append([band, band.position, Vector2(0, 10), 17.0])
+	StyleB.splash_dress(_box, REF, 470.0)   # behind the coach
 	var lines := Control.new()
 	lines.size = REF
 	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -742,8 +744,9 @@ func _tile_figures(id: String, mask: Control, size: Vector2, c: Dictionary) -> v
 			add.call("story_a", Vector2(size.x - 60 - 135, 18), 240)
 			add.call("story_b", Vector2(size.x - 210 - 70, 110), 140, -6.0)
 		"ranked":
-			add.call("fighter_a", Vector2(24, 36), 200)
-			add.call("fighter_b", Vector2(size.x - 26 - 70, 36), 200)
+			# both on the right, clear of the title (the vex fighters are wide)
+			add.call("fighter_a", Vector2(size.x - 190, 46), 180)
+			add.call("fighter_b", Vector2(size.x - 26 - 84, 36), 192)
 		"tourn":
 			add.call("tour", Vector2(size.x - 30 - 70, 26), 210)
 
@@ -998,6 +1001,8 @@ func _search_mode_text() -> String:
 func _process(dt: float) -> void:
 	# the backdrop drifts, slowly (each piece on its own period)
 	_clock_t += dt
+	for c: Dictionary in _cards.values():
+		StyleB.sway(c.figs, _clock_t, 1.4)
 	for d in _drift:
 		var phase: float = TAU * _clock_t / float(d[3])
 		d[0].position = d[1] + d[2] * sin(phase)

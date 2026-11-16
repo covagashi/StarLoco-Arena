@@ -281,7 +281,11 @@ espera al dueño lleva **(dueño)**.
       dibujo de Fable con vex, algo chulo". **Splash hecho** (2026-11-16,
       `godot/tools/splash/splash.vx.js`): la carga web y lo que enseña el
       navegador mientras baja el motor; las decisiones las tomó Fable
-      ("hazlo con fable"). Faltan las losetas del lobby. Las ilustraciones de las losetas
+      ("hazlo con fable"). **Login y losetas del lobby también** (2026-11-16):
+      los mismos personajes del splash en vex, el fondo del splash (haz
+      coral, cuña, líneas de velocidad, destellos) en login, creación,
+      lobby y paneles grandes, y las figuras se balancean sobre los pies. El
+      pollito de Historia, cambiado por un diablillo del Gran Reloj. Las ilustraciones de las losetas
       del lobby irán dentro de la loseta, sin tapar el título (heurística
       mía: el dueño no vio la diferencia en la pregunta).
 - [ ] **Tutorial de entrada largo** (dueño): 8 + 4 páginas de Aldebrán y 10
