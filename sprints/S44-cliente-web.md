@@ -436,3 +436,25 @@ Playwright de este fichero.
 Lo que sigue va en [BACKLOG §13](./BACKLOG.md): canales del chat,
 bienvenida e ilustraciones vex, tutorial largo, cartas sin ilustración,
 móvil, Firefox, cuenta demo → cuenta normal, dominio.
+
+### Para los amigos: https://alfa-pippop.covaga.dev (2026-11-16)
+
+Dueño: "¿podemos enmascarar la IP con la URL de un Worker de Cloudflare?",
+"usa covaga.dev… alfa-pippop.covaga.dev", "hazlo tú, tienes el token".
+
+- El token de la sesión de wrangler (`~/.config/.wrangler`) no tiene
+  permiso de DNS, pero sí de Workers: un **Worker con dominio propio**
+  (`alfa-pippop`, fuente en `server/deploy/cloudflare/alfa-pippop.worker.js`)
+  crea su registro él solo y lo pasa todo, WebSocket incluido, al servidor.
+  La sesión había caducado (14-11); se renovó con su `refresh_token`.
+- Cloudflare no deja a un Worker llamar a una IP (error 1003): el origen es
+  `140-238-172-196.sslip.io`, un nombre que resuelve a la IP, con su propio
+  certificado en Caddy (el mismo bloque que la IP).
+- La IP del jugador: el Worker la manda en `X-Pippop-Client`; Caddy la
+  toma solo si la petición viene de rangos de Cloudflare
+  (`trusted_proxies` + `client_ip_headers`) y se la pasa al juego en
+  `X-Forwarded-For`. Comprobado: el log de oracle-2 muestra la IP de casa.
+  Límite conocido: otro Worker de Cloudflare (de cualquiera) podría poner esa
+  cabecera; solo serviría para saltarse el tope de cuentas demo por IP.
+- Recorrido real por el dominio: carga, JUGAR, cuenta demo, jefe, lobby.
+- La IP directa (https://140.238.172.196/) sigue funcionando.
