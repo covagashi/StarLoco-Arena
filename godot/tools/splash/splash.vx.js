@@ -35,8 +35,6 @@ pal({
   v0: "#146a6a", v1: "#2a9a98", v2: "#5fc9c3", v3: "#aef0ea",   // teal
   i0: "#0f4b50", i1: "#1e7d80", i2: "#3bb0ad",                  // the mask (dark teal)
   p1: "#d9aab8",                                                // B's lips/blush
-  // the chick
-  y0: "#c98f10", y1: "#ffcf2e", y2: "#ffe878", y3: "#fff7c4",
 })
 
 const LIGHT = 315
@@ -332,19 +330,6 @@ sprite("fighter_b", { w: 440, h: 380, outline: "k", ow: 4 }, tf({ x: 0, y: 0 },
 ))
 
 // ============================================================================
-// The chick mascot. Box 120 x 120.
-// ============================================================================
-sprite("_chick", { w: 120, h: 120, outline: "k", ow: 3 },
-  ...spiky([52, 40, 44, 6, 60, 30, 66, 2, 74, 32, 88, 12, 80, 44], ["y0", "y1", "y2", "y2"], { sd: 5, hd: 5, rim: 1.2 }),
-  ...part([34, 78, 50, 108, 50, 114, 26, 114, 20, 100], ["o1", "o2", "o3", "o3"], { sd: 4, hd: 4, rim: 1, smooth: 0.5 }),
-  ...part([80, 78, 96, 108, 100, 114, 76, 114, 68, 100], ["o1", "o2", "o3", "o3"], { sd: 4, hd: 4, rim: 1, smooth: 0.5 }),
-  ...part([62, 32, 94, 40, 108, 66, 102, 94, 76, 106, 44, 104, 22, 86, 18, 58, 34, 38], ["y0", "y1", "y2", "y3"], { sd: 9, hd: 10, rim: 1.8 }),
-  circle(86, 62, 15, "w2"), circle(86, 62, 15, EDGE(1.8)), circle(92, 64, 7, "k"), circle(90, 61, 2.5, "w2"),
-  circle(60, 60, 10, "w2"), circle(60, 60, 10, EDGE(1.6)), circle(64, 62, 4.5, "k"), circle(62.5, 60, 1.6, "w2"),
-  ...part([96, 72, 118, 76, 100, 86], ["o1", "o2", "o3", "o3"], { sd: 3, hd: 3, rim: 0, smooth: 0.2 }),
-)
-
-// ============================================================================
 // The splash
 // ============================================================================
 const W = 1280, H = 720
@@ -401,8 +386,7 @@ scene("splash", { w: W, h: H, bg: "bg0" },
     text(60, 350, "ARENA", { ...DISPLAY(190), fill: "bg2", stroke: "bg2", sw: 4 }),
     text(60, 350, "ARENA", { ...DISPLAY(190), fill: "k" }),
     poly([64, 372, 420, 372, 416, 382, 60, 382], "cr"),
-    // the chick mascot perched on the corner of the tag, looking at the fight
-    stamp("_chick", 296, 150, { anchor: "bottom", scale: 0.72 }),
+    spark(312, 120, 8, "cr"),
   ),
   spark(452, 128, 12), spark(482, 168, 7), spark(420, 100, 6, "k"),
   // ---- the fighters: A leaping behind-left, B dashing behind-right, the brawler in front ----
