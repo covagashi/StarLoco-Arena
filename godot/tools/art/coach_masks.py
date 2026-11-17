@@ -27,6 +27,13 @@ OUT = Path(__file__).resolve().parents[2] / "art/characters/out"
 HAIR_FROM = 0.84
 ## Above this share the face: a pale texel there may be the white of an eye.
 FACE_FROM = 0.8
+## The face band where the eyes are: a triangle there with this share of
+## iris texels (strongly coloured, not skin: the amber and the blue irises;
+## dark texels alone are not enough, the hair's ink lines are dark too) is
+## an eye, and neither it nor its neighbours (the white around it) can be
+## hair.
+EYE_BAND = (0.74, 0.93)
+EYE_SHARE = 0.04
 
 
 def read_glb(path):
@@ -114,14 +121,29 @@ def masks(name):
     # hair: pale triangles from the top of the head, grown over the mesh
     # through pale triangles (a ponytail, the nape) — never through skin
     near = neighbours(pos, idx)
+    inky = covered & (sat > 0.5) & (mx > 0.35) & ~warm
+    t_inky = np.bincount(tri.ravel(), inky.ravel(), n) / np.maximum(cnt, 1)
+    eye_t = (share > EYE_BAND[0]) & (share < EYE_BAND[1]) & (t_inky[1:] >= EYE_SHARE) & (t_warm[1:] < 0.5)
+    # the white of the eye: very bright and neutral (a grey lock of hair
+    # beside the eye is darker and stays hair)
+    bright = covered & (mx > 0.85) & (sat < 0.12)
+    t_bright = np.bincount(tri.ravel(), bright.ravel(), n) / np.maximum(cnt, 1)
+    no_hair = eye_t.copy()
+    for i in np.nonzero(eye_t)[0]:
+        for j in near[i]:
+            if share[j] < EYE_BAND[1] and t_bright[j + 1] >= 0.3:
+                no_hair[j] = True
     hair_t = np.zeros(len(idx), bool)
-    todo = [i for i in range(len(idx)) if share[i] > HAIR_FROM and t_pale[i + 1] >= 0.5]
+    # S47 (owner: "al cambiar el color del pelo cambia el de los ojos"):
+    # the white of an eye was a pale triangle above the neck, so it seeded
+    # hair and took the hair colour; the eyes and their rim never do now
+    todo = [i for i in range(len(idx)) if share[i] > HAIR_FROM and t_pale[i + 1] >= 0.5 and not no_hair[i]]
     for i in todo:
         hair_t[i] = True
     while todo:
         i = todo.pop()
         for j in near[i]:
-            if not hair_t[j] and t_pale[j + 1] >= 0.5 and t_warm[j + 1] < 0.3:
+            if not hair_t[j] and not no_hair[j] and t_pale[j + 1] >= 0.5 and t_warm[j + 1] < 0.3:
                 hair_t[j] = True
                 todo.append(j)
     skin_t = (t_warm[1:] >= 0.5) & ~hair_t
@@ -156,7 +178,7 @@ def masks(name):
             "hair_ref": float(np.percentile(lum[(m[..., 1] > 127) & covered], 80))}
     (OUT / f"{name}_mask.json").write_text(json.dumps(refs) + "\n")
     print(f"{name}: skin {int((m[..., 0] > 127).sum())} px, hair {int((m[..., 1] > 127).sum())} px "
-          f"({int(hair_t.sum())} hair triangles), {refs}")
+          f"({int(hair_t.sum())} hair triangles, {int(eye_t.sum())} eye triangles kept out), {refs}")
     return tex, img
 
 

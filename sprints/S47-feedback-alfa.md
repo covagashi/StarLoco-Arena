@@ -298,3 +298,28 @@ El dueño: "sigue". Qué confundía, mirado en el código y en el servidor:
 servidor, se mueve al probar una carta 800 → 700, el panel cabe en la
 ventana), `loadout_smoke` 7/7, `native_panels` sin fallos,
 `run_tests.sh --headless` 1492/0.
+
+## Punto 1, primera parte — los ojos con el color del pelo (2026-11-17)
+
+**Causa:** los coach de Meshy llevan una sola textura y el tinte de pelo va
+por una máscara pintada por color (`tools/art/coach_masks.py`): todo
+triángulo claro por encima del cuello empezaba "pelo". El blanco de los
+ojos es claro y está por encima del cuello, así que la coach mujer teñía
+los ojos con el pelo (y el hombre tenía manchas junto a un ojo).
+
+**Arreglo:** un triángulo de la franja de la cara con iris (color saturado
+que no es piel: el ámbar y el azul) es ojo; ni él ni sus vecinos muy
+blancos (el blanco del ojo) pueden ser pelo. El resto igual: el hombre
+queda con 839 triángulos de pelo (840 antes), la mujer con 707 (720: los
+13 de los ojos). `build.py` rehace las máscaras al cambiar el script.
+
+**Verificado:** `test/coach_face_preview.gd` (nuevo: las dos caras de cerca
+con pelo verde y rojo), antes y después en
+`~/codigo/capturas/s47/coach/ojos-antes.png` y `ojos-despues.png`;
+`run_tests.sh --headless` 1492/0.
+
+**Lo que queda del punto 1:** rehacer las mallas a ~40 000 triángulos
+(hoy 5 000 por el pipeline de S35b) y los triángulos y mechones mal
+pintados. Es arte: un paso, enseñarlo y esperar al dueño. Ojo con la demo
+web (≤ 50 MB de primera carga, equipos de 4 GB): 8× triángulos en los dos
+coach hay que medirlo.

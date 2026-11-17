@@ -40,3 +40,11 @@ se mueve en vivo al probar cartas, y el 6000 deja de parecer un tope por
 luchador: es del equipo (o el de la liga en Ranking). Columna Valor en
 Equipo. Un label con ajuste tardío ensanchaba el panel a 1807 px: arreglado.
 `s47_smoke` 22/22, `loadout_smoke` 7/7, unidad 1492/0.
+
+## Más tarde: punto 1, los ojos teñidos
+
+El blanco de los ojos de la coach entraba en la máscara de pelo
+(`coach_masks.py`: claro + por encima del cuello). Ahora el ojo (iris
+saturado) y su blanco quedan fuera; el pelo, igual que antes. Comprobado con
+`test/coach_face_preview.gd` (caras de cerca, pelo verde y rojo). Falta la
+parte de arte del punto 1 (mallas a ~40k triángulos).
