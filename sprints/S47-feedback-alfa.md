@@ -262,3 +262,9 @@ Tres preguntas al dueño con el mapa delante; "sí a las tres, hazlo".
   una copia limpia): busca tótems y fuegos en Servicios, que se quitaron en
   S18/S26, y el icono Social por su texto. Smoke viejo, apuntado en BACKLOG
   §8.
+
+### El mapa, después
+
+`~/codigo/capturas/s47/mapa-despues/index.html` (49 pantallas, el de
+antes sigue en `mapa/`), rehecho con `godot/tools/screen_map.sh`: las dos
+pasadas sin errores de script.
