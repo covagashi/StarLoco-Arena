@@ -258,6 +258,12 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
 
 ## 12. Deuda técnica
 
+- [ ] **Criterios 147 y 222 sin mantener en el servidor** (S47 tanda 1):
+      el puesto del ranking 2vs2 y el de evolución, que piden "Cumbre de
+      los Ases" y "Metamorfosis final". `coach_statistics.go` no los toca,
+      así que esos logros no se pueden conseguir. El 2vs2 está escondido;
+      el de evolución sí importa.
+
 - [ ] **B-189: un árbol de la arena tapa al luchador** (dueño, 2026-11-11, visto en
       [S35c](./S35c-ropa-y-equipo.md) paso 1). En la vista del combate
       (`test/fight_ui_preview.tscn`, arena 10, `FIGHT_UI_FECA=1 FIGHT_UI_FOCUS=1,3`)
@@ -292,9 +298,10 @@ espera al dueño lleva **(dueño)**.
       de Nilo antes de la primera pelea.
 - [ ] **Cartas sin ilustración propia**: las de arena y los peinados llevan
       el pictograma de su familia.
-- [ ] **Móvil**: escribir (no hay teclado en pantalla), la mitad de la
-      pantalla en negro en Firefox Android (sin reproducir: barra o teclado
-      cambiando el alto), y la interfaz entera pensada para 1280×720.
+- [ ] **Móvil**: escribir (teclado en pantalla activado en el export,
+      S47 tanda 1, sin probar en un móvil real), la mitad de la pantalla en
+      negro en Firefox Android (sin reproducir: barra o teclado cambiando el
+      alto), y la interfaz entera pensada para 1280×720 (S47, W2/W4).
 - [ ] **Firefox gasta más que Chromium** (pestaña 600–740 MB, más 330–590 del
       proceso principal): aceptado por el dueño ("en Firefox funciona bien").
       Si hiciera falta: motor web propio sin los módulos que no se usan.

@@ -56,8 +56,8 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		"fighterEquipmentDialog": ["teamManagement"],
 		"coachStatisticsDialog": ["localCoach"], "cardBookDialog": ["localCoach", "tomeManager"],
 		"ladderInformationDialog": ["ladderManager", "league"], "calendarDialog": ["calendar"],
-		"achievementDialog": ["achievementManager"], "socialDialog": ["friends", "ignore", "guild"],
-		"guildDialog": ["friends", "ignore", "guild"],
+		"achievementDialog": ["achievementManager"], "socialDialog": ["friends", "ignore", "guild", "social"],
+		"guildDialog": ["friends", "ignore", "guild", "social"],
 		"guildManagementDialog": ["guild", "guildSelectedRank"],
 		"guildCoachStatsDialog": ["guildCoachStats"],
 		"cityDialog": ["city"],
@@ -230,6 +230,14 @@ func _team() -> void:
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var roster := column(split)
 	label(roster, I18n.t("team.count", {"n": rows.size()}), 20)
+	# S47 (owner, points 6-7): a fighter made from Torneos did not show in
+	# Historia and the count read 0 — the modes keep different fighters
+	# (evolution ones grow; classic ones have a fixed level and wear cards),
+	# so each tab says whose it lists until the screens are reorganised
+	var note := _muted(roster, I18n.t("team.mode_note_classic" if classic else "team.mode_note_evo"))
+	note.name = "ModeNote"
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var living := table(roster, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_pos")], ["name", "breed_name", "placement"], rows, func(_item): schedule_refresh())
 	if tab == 0 and _fallen_section(roster):
 		living.custom_minimum_size.y = 76   # the fallen table sits below it
@@ -269,7 +277,7 @@ func _team() -> void:
 	if tab in [3, 4]:
 		# S09: the search of the tournament picked above (28611 with the
 		# preset its kind sends); the lobby bar shows it and cancels it
-		var fb := button(footer, I18n.t("team.find_tourn"), func(): send("nativeTournSearch", [tourn]), tourn >= 0)
+		var fb := button(footer, I18n.t("team.find_tourn"), func(): send("nativeTournSearch", [tourn]), tourn >= 0 and not rows.is_empty())
 		fb.name = "FindTournament"
 	elif tab == 0:
 		# Historia (S21): the campaign, not the evolution PvP queue
@@ -278,7 +286,8 @@ func _team() -> void:
 		else:
 			button(footer, I18n.t("story.open"), func(): send("nativeStory")).name = "OpenStory"
 	else:
-		button(footer, I18n.t("team.find_fight"), func(): send("setClassicReadyForFight"), true)
+		# S47 (point 7): nothing to search with until a classic fighter exists
+		button(footer, I18n.t("team.find_fight"), func(): send("setClassicReadyForFight"), not rows.is_empty())
 
 
 ## The Tournaments / Legends tabs' tournament: the editions we are entered in
@@ -892,6 +901,13 @@ func _social() -> void:
 			send(add, [edit.text.strip_edges()]))
 	edit.text_submitted.connect(func(text):
 		if not text.strip_edges().is_empty(): send(add, [text.strip_edges()]))
+	# S47 (owner, point 10): the result of "Añadir" was only a chat line;
+	# main keeps it in `social.status` and the panel says it here
+	var status := str(data("social.status", ""))
+	if status != "":
+		var st := label(body, status, 15)
+		st.name = "SocialStatus"
+		st.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 	if tab < 2:
 		button(toolbar, I18n.t("social.remove_sel"), func(): send("removeFromFriendList" if tab == 0 else "removeFromIgnoreList", [selected]), not selected.is_empty())
 	if tab == 0:

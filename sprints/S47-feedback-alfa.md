@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** ⚪ por empezar — solo apuntado, el dueño pidió no arreglar aún (poco % de sesión)
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1 de arreglos hecha (2026-11-17, abajo); queda la reorganización de pantallas, las mallas, el tutorial y el inventario
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -100,3 +100,52 @@ apuntado, nada arreglado.
 - W10. **Foco inicial:** 17 de 29 scripts de UI no ponen el cursor en el
   campo de texto al abrirse; en el ordenador hay que hacer clic antes de
   escribir.
+
+## Tanda 1 — los arreglos rápidos (2026-11-17)
+
+El dueño: "sigue con los bug fixes". Hecho lo que era arreglo y no rediseño
+(puntos 2, 6–7 en parte, 9, 10, 14 y W1, W3, W8, W10); lo que es
+reorganización de pantallas (3, 5, 8, 13, 15, 16), arte (1, 11) o un sprint
+propio (4, 12) sigue como está, abajo el porqué.
+
+| Punto | Qué se hizo | Dónde |
+|---|---|---|
+| 2 / W1 | Los modales **escalan con la ventana** como el lobby (ambos contra 1280×720); antes `lobby_panel.gd` no pasaba de 1:1 y el modal quedaba diminuto en pantalla completa. Sigue encogiendo en ventanas pequeñas. No hace falta un `stretch` global: login, creación, lobby y pantallas de héroe ya escalaban solas; el combate mide su HUD contra la ventana | `lobby_panel.gd` `_layout` |
+| 9 / W8 | **Fuera "Esc vuelve · Enter confirma el campo activo"** de todos los modales y el "· Esc" del tooltip de cerrar. El pie del modal solo aparece cuando un panel fija acciones en él | `lobby_panel.gd`, `ui_*.json` (`panel.hint` y `panel.footer_hint` borradas) |
+| 10 | **Añadir amigo responde en el propio modal**: "X añadido a amigos", "No hay ningún jefe que se llame X", "la lista está llena…" (también quitar, ignorar y dejar de ignorar). El chat sigue recibiendo la línea. El servidor contesta 3204 (nombre desconocido, `[u8 len]name`) y 3216 (lista llena): el cliente no los leía | `main.gd` (`_social_status`, `OP_USER_NOT_FOUND`, `OP_OPERATION_NOT_PERMITTED`), `lobby_panels.gd` `_social` |
+| 14 | **Los logros dicen lo que piden**: el texto del criterio con su meta en el `[#1]` ("Hilar 5 triunfos seguidos."), bajo la descripción cuando la hay. Antes, con descripción, solo salía esta: "Gana partidas seguidas." para los ocho Marcha. Tres criterios no tenían nombre y salían como `#147`, `#167`, `#222`: 167 es la fuerza máxima de equipo en 1vs1 (`coach_statistics.go`), 147 el puesto del ranking 2vs2 y 222 el del ranking de evolución (por su posición entre los criterios y la categoría de sus logros). **Ojo:** el servidor no mantiene 147 ni 222, así que "Cumbre de los Ases" y "Metamorfosis final" no se pueden conseguir hoy; apuntado en el BACKLOG §12 | `main.gd` `_achievement_asks`, `content_*.json` |
+| 6–7 | Las pestañas de Equipo **dicen de quién son los luchadores que listan**: los de Historia (evolución, crecen) y los de Élite/Torneos (clásicos, nivel fijo con cartas) son luchadores distintos en el servidor, y "Crear luchador" crea el del modo de la pestaña. "Buscar combate" y "Buscar torneo" quedan **apagados sin luchadores**. Unificar la lista es parte del rediseño (punto 5) | `lobby_panels.gd` `_team` |
+| W3 | **Teclado en pantalla en el móvil**: `html/experimental_virtual_keyboard=true` | `export_presets.cfg` |
+| W10 | **El cursor entra en el primer campo** al abrir un modal con campos (Social, Inventario, correo…), salvo en pantallas táctiles (levantaría el teclado antes de leer nada). Como el campo se traga el primer Esc, el modal lo captura él mismo y cierra | `lobby_panel.gd` `focus_first_field`, `_input` |
+
+### Por qué lo demás no entra en esta tanda
+
+- **11, iconos repetidos del inventario.** No es un fallo del código: los
+  iconos propios (`assets/ui/cards/coach/`, 392) solo cubren el equipo del
+  coach (tipos 2, 4–13). Las demás cartas llevan el pictograma de su
+  familia, de ahí la repetición: tipo 26 (282 cartas), 24 (190), 30 (99),
+  25 (30), 29 (23), 3 (8), 1 (10)… Es el pendiente "Cartas sin ilustración
+  propia" del BACKLOG §13: hacen falta ilustraciones (S40/S38), no un
+  arreglo.
+- **1, mallas de los coach.** Arte (pipeline Meshy, `S35b`), sesión propia.
+- **3, 5, 8, 13, 15, 16.** Reorganización de pantallas: primero el mapa de
+  pantallas (3), luego decidir con el dueño (modo Q&A).
+- **4, 12.** Tutorial e inventario: sprints propios sobre el flujo nuevo.
+- **W2, W4–W7, W9.** Móvil vertical, posiciones fijas, texto pequeño,
+  táctil, pila de pantallas, animación del lobby: caen con la
+  reorganización, no antes.
+
+### Verificado
+
+- `godot/run_tests.sh --headless`: 20 suites, 1491 comprobaciones, 0
+  fallos (`own_text`: 102 criterios con nombre, antes 99).
+- `godot/run_tests.sh --visual` (xvfb, 1280×720 y 800×600): sin fallos; los
+  modales siguen dentro de la ventana.
+- `test/ui_review_preview.tscn` a **1920×1080** bajo xvfb: Social y Equipo
+  a 1,5× (el modal llena la pantalla como el lobby), el cursor en "Nombre
+  del jefe", el pie sin la pista. La primera pasada sacó Equipo fuera de la
+  ventana: la nota por modo era una línea sin ajuste; arreglado con
+  autowrap.
+- No probado en vivo: la respuesta 3204/3216 en el modal Social contra un
+  servidor (la ruta es la misma que la de la línea del chat, que sí llegaba)
+  y el teclado en pantalla en un móvil real.

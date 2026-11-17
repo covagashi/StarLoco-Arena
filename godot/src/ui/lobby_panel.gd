@@ -10,6 +10,9 @@ signal closed
 signal requested(event: String, args: Array, item: Variant, index: int)
 
 const REF := Vector2(1120, 620)
+## The screen the sheet is drawn for (lobby_screen.REF): the sheet scales
+## with it, so it keeps its size relative to the lobby behind it.
+const SCREEN := Vector2(1280, 720)
 var panel_name := ""
 var frame_size := REF   # a smaller window (a conversation) sets its own
 var model: GuiModel
@@ -102,8 +105,10 @@ func _ready() -> void:
 	body.add_theme_constant_override("separation", 14)
 	scroll.add_child(body)
 	# The footer (S15, the owner: "no se nota el footer del modal"): under a
-	# thin rule, holding the window's actions and the key hint, so they read
-	# apart from the content that scrolls above.
+	# thin rule, holding the window's actions, so they read apart from the
+	# content that scrolls above. S47: the key hint ("Esc vuelve · Enter
+	# confirma") is gone (owner, point 9: there is no Esc on a phone), so the
+	# footer shows only while a panel pins actions in it.
 	var footer := PanelContainer.new()
 	footer.name = "Footer"
 	var fs := StyleBoxFlat.new()
@@ -121,8 +126,8 @@ func _ready() -> void:
 	footer.add_child(foot)
 	pinned_actions = row(foot)
 	pinned_actions.hide()
-	var hint := label(foot, I18n.t("panel.hint"), 12)
-	hint.add_theme_color_override("font_color", UiStyle.BROWN)
+	footer.visible = false
+	pinned_actions.visibility_changed.connect(func(): footer.visible = pinned_actions.visible)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	model.changed.connect(_model_changed)
@@ -182,7 +187,12 @@ func _layout() -> void:
 	# have no parent rect and the shade came out 0x0.
 	_shade.position = -position
 	_shade.size = vp
-	var factor := minf(1.0, minf((vp.x - 32) / frame_size.x, (vp.y - 32) / frame_size.y))
+	# S47 (owner, point 2: "modales demasiado pequeños en pantalla
+	# completa"): the sheet grows with the window as the lobby does (both
+	# against 1280×720), and still shrinks to fit a smaller one. Before, it
+	# never scaled past 1:1, so it sat tiny in the middle of a big screen.
+	var screen := minf(vp.x / SCREEN.x, vp.y / SCREEN.y)
+	var factor := minf(screen, minf((vp.x - 32) / frame_size.x, (vp.y - 32) / frame_size.y))
 	frame.size = frame_size
 	_sheet.size = frame_size
 	_sheet.scale = Vector2(factor, factor)
@@ -204,6 +214,37 @@ func refresh() -> void:
 	_refresh_pending = false
 	_layout.call_deferred()
 	_bind_focus.call_deferred()
+	focus_first_field.call_deferred()
+
+
+## S47 (web audit, W10): a panel that asks for text opens with the cursor in
+## its first field, so the player types at once instead of clicking first.
+## Only when nothing inside the window holds the focus already (the close
+## cross is where a panel starts), and not on a touch screen, where a focused
+## field raises the on-screen keyboard over the panel before it was read.
+func focus_first_field() -> void:
+	if not is_inside_tree() or frame == null or DisplayServer.is_touchscreen_available():
+		return
+	var owner := get_viewport().gui_get_focus_owner()
+	if owner != null and owner != close_button and frame.is_ancestor_of(owner):
+		return
+	for edit in frame.find_children("*", "LineEdit", true, false):
+		if edit.is_visible_in_tree() and edit.focus_mode != Control.FOCUS_NONE and edit.editable:
+			edit.grab_focus()
+			edit.caret_column = edit.text.length()
+			return
+
+
+## Escape closes the window even while a field has the focus: the field
+## would otherwise swallow the first Escape to leave editing, and the player
+## would press it twice (gui_layer closes on the unhandled key).
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed or event.keycode != KEY_ESCAPE:
+		return
+	var owner := get_viewport().gui_get_focus_owner()
+	if owner is LineEdit and frame != null and frame.is_ancestor_of(owner):
+		get_viewport().set_input_as_handled()
+		closed.emit()
 
 
 ## Name of the focused control inside the window, before a rebuild ("" if

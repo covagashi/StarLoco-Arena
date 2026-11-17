@@ -222,6 +222,8 @@ const OP_IGNORE_LIST := 3146             # [u8 n]{str8 name}
 const OP_FRIEND_ADDED := 3156            # [u8 name][u8 note][i64 id]…
 const OP_IGNORE_ADDED := 3158            # [u8 name][u8 note]
 const OP_FRIEND_REMOVED := 3160          # [u8 name]
+const OP_USER_NOT_FOUND := 3204          # S2C [u8 name] — a social edit on a name nobody has
+const OP_OPERATION_NOT_PERMITTED := 3216 # S2C empty — the friend/ignore list is full
 const OP_IGNORE_REMOVED := 3162          # [u8 name]
 const OP_FRIEND_ONLINE := 3148           # [u8 name]…[i64 id]…
 const OP_FRIEND_OFFLINE := 3150          # [u8 name][u8 note]
@@ -1704,19 +1706,23 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 				"id": int(d.get("id", -1)), "online": true, "notify": 1})
 			_log_line("[color=light_green]%s[/color]" % I18n.t("social.added",
 				{"name": d.name}))
+			_social_status(I18n.t("social.added", {"name": d.name}))
 		OP_FRIEND_REMOVED:
 			var d := Codec.decode(opcode, payload)
 			State.friends = State.friends.filter(
 				func(f): return f.name != d.name)
 			_log_line(I18n.t("social.removed", {"name": d.name}))
+			_social_status(I18n.t("social.removed", {"name": d.name}))
 		OP_IGNORE_ADDED:
 			var d := Codec.decode(opcode, payload)
 			State.ignored.append(d.name)
 			_log_line("[i]%s[/i]" % I18n.t("social.ignored", {"name": d.name}))
+			_social_status(I18n.t("social.ignored", {"name": d.name}))
 		OP_IGNORE_REMOVED:
 			var d := Codec.decode(opcode, payload)
 			State.ignored.erase(d.name)
 			_log_line(I18n.t("social.unignored", {"name": d.name}))
+			_social_status(I18n.t("social.unignored", {"name": d.name}))
 		OP_FRIEND_ONLINE:
 			var d := Codec.decode(opcode, payload)
 			for f in State.friends:
@@ -1740,6 +1746,18 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i]%s[/i]" % I18n.t("social.ignored_offline",
 				{"name": d.name}))
+		OP_USER_NOT_FOUND:
+			# S47 (owner, point 10): a name nobody has — said in the Social
+			# panel itself when it is open, not only in the chat
+			# [u8 len]name (server sendUserNotFound); the generated def
+			# knows only an i8, so read it by hand
+			var who := payload.get_str("u8")
+			var msg := I18n.t("social.not_found", {"name": who})
+			_log_line("[color=red]%s[/color]" % msg)
+			_social_status(msg)
+		OP_OPERATION_NOT_PERMITTED:
+			_log_line("[color=red]%s[/color]" % I18n.t("social.not_permitted"))
+			_social_status(I18n.t("social.not_permitted"))
 		_:
 			pass
 	# friend/ignore/guild pushes — keep the social dialog's model fresh
@@ -3324,6 +3342,7 @@ func _on_gui_dialog_opened(name: String) -> void:
 		"socialDialog":
 			# the Clan tab lives here too: without this the member list stayed
 			# empty (only the old debug pane asked for 512)
+			_social_status("")
 			_push_social_model()
 			_request_guild_refresh()
 		"guildDialog":
@@ -3374,6 +3393,13 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_push_cardbook_model()   # embedded inventory include
 			if name == "exchangeDialog":
 				_push_exchange_model()
+
+
+## S47: what the last social action came to ("X añadido a amigos", "no hay
+## ningún jefe que se llame…"), shown under the Social panel's field; the
+## chat gets the same line. "" clears it.
+func _social_status(text: String) -> void:
+	_gui.model.set_value("social", {"status": text})
 
 
 ## friends.list / ignore.list / guild.{members,name} for the social tabs.
@@ -4322,19 +4348,32 @@ func _achievement_items() -> Array:
 	return items
 
 
-## The data's description, or — when it has none — its conditions: each
-## statistic with its target, each card it wants.
+## What the achievement asks: its conditions — each statistic's text with
+## the target in place of its "[#1]", each card it wants — under the data's
+## description when it has one. S47 (owner, point 14): the description alone
+## said "Gana partidas seguidas." for all eight Marcha tiers; the target is
+## what tells them apart, so it is always shown.
 func _achievement_asks(aid: int, info: Dictionary) -> String:
-	var d := NpcDialogs.achievement_desc(aid)
-	if d.strip_edges() != "":
-		return d
 	var parts: Array = []
+	var d := NpcDialogs.achievement_desc(aid).strip_edges()
+	if d != "":
+		parts.append(d)
 	for c in info.get("conds", []):
 		if str(c.kind) == "card":
 			parts.append(I18n.t("ach.needs_card", {"card": Cards.name_of(int(c.id))}))
 		else:
-			parts.append("%s: %d" % [NpcDialogs.criterion_name(int(c.id)), int(c.thr)])
+			parts.append(_criterion_line(int(c.id), int(c.thr)))
 	return "\n".join(parts)
+
+
+## A statistic condition as a sentence: the criterion's text with the
+## target in its "[#1]" slot; a text without the slot stands alone when the
+## target is 1 ("Encontrarte con el demonio Mimo") and carries it otherwise.
+static func _criterion_line(crit_id: int, thr: int) -> String:
+	var text := NpcDialogs.criterion_name(crit_id)
+	if text.contains("[#1]"):
+		return text.replace("[#1]", str(thr))
+	return text if thr <= 1 else "%s (%d)" % [text, thr]
 
 
 func _push_achievement_model() -> void:
