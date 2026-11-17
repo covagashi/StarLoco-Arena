@@ -8,6 +8,9 @@ extends "res://test/world_smoke.gd"
 ##    letter) leaves the screen open with its error; a good name closes it
 ##    and the fighter is in the roster as an evolution one. The same as
 ##    Élite gives a classic fighter. An empty name never reaches the server.
+## 1b. Hechizos y cartas (point 16): the value shown is the server's budget
+##    (600 + cards), it moves with a tried card, and the line under it says
+##    what it adds up and what it limits.
 ## 2. Torneos: three tabs (Mis torneos, Calendario, Clasificación); the
 ##    ranking tab asks the server for the tournament board. Equipo has no
 ##    Torneos tab and Clasificación no tournament tab.
@@ -25,6 +28,7 @@ func _audit() -> void:
 	i18n.set_locale("es")
 	await _recruit(true)
 	await _recruit(false)
+	await _value()
 	await _tournaments()
 	await _stats_tab()
 	await _icons()
@@ -162,4 +166,51 @@ func _icons() -> void:
 	var groups: Array = _main._gui.model.get_value("city").get("groups", [])
 	_record(0, "no Buzón in Servicios", not groups.any(func(g): return int(g.kind) == 2),
 		"%s" % [groups.map(func(g): return g.name)])
+	_close_all()
+
+
+func _value() -> void:
+	_close_all()
+	var fs: Array = State2.roster.filter(func(f): return int(f.get("type", 0)) == 1 and not f.get("cards", []).is_empty())
+	if fs.is_empty():
+		fs = State2.roster.filter(func(f): return int(f.get("type", 0)) == 1)
+	if fs.is_empty():
+		_record(6011, "value", false, "no Élite fighter")
+		return
+	var f: Dictionary = fs[0]
+	_main._on_eq_edit_fighter([f], null)
+	await _wait(func(): return _main._gui.is_open("fighterEquipmentDialog"), 3.0)
+	await create_timer(1.0).timeout
+	var p = _main._gui.dialogs.get("fighterEquipmentDialog")
+	var v: Label = p.find_child("FighterValue", true, false)
+	var why: Label = p.find_child("ValueWhy", true, false)
+	var shown := int(v.text.get_slice(" ", 1)) if v != null else -1
+	_record(6011, "value = server", shown == int(f.get("budget", -2)) and why != null and why.text.contains("600"),
+		"'%s' vs budget %s · '%s'" % [v.text if v else "—", f.get("budget"), why.text.left(60) if why else "—"])
+	var vp := root.get_visible_rect().size
+	var fr: Rect2 = p.frame.get_global_rect()
+	_record(6011, "fits the window", fr.end.x <= vp.x + 1 and fr.end.y <= vp.y + 1,
+		"frame %s, why min %s" % [fr, why.get_combined_minimum_size() if why else "—"])
+	await _shot("value")
+	p.tab = 1
+	p.schedule_refresh()
+	await create_timer(0.8).timeout
+	var pool = p.find_child("Pool", true, false)
+	var card: Button = null
+	if pool != null:
+		for c in pool.get_children():
+			if c is Button and not (c as Button).disabled:
+				card = c
+				break
+	if card == null:
+		_record(6011, "value moves", false, "no card to try")
+		return
+	var card_name := str(card.name)   # the press rebuilds the grid
+	card.pressed.emit()
+	await create_timer(0.8).timeout
+	v = p.find_child("FighterValue", true, false)
+	var now := int(v.text.get_slice(" ", 1))
+	_record(6011, "value moves", now == _main._eq_value() and now != shown,
+		"tried %s: %d → %d" % [card_name, shown, now])
+	await _shot("value-tried")
 	_close_all()

@@ -3064,6 +3064,17 @@ const _EQ_FIELDS := ["weaponEquipment", "petEquipment", "cloakEquipment",
 const _EQ_PER_PAGE := 12
 
 var _eq_fid := -1
+const FIGHTER_BASE_VALUE := 600   # server breedBaseValue (B-058)
+
+
+func _eq_value() -> int:
+	var v := FIGHTER_BASE_VALUE
+	for s in _eq_cards:
+		if int(_eq_cards[s]) != 0:
+			v += FighterCards.value_of(int(_eq_cards[s]))
+	return v
+
+
 var _eq_cards := {}          # slot int 0-4 -> card template id
 var _eq_spells: Array = []   # spell ids currently equipped
 var _eq_save_state := ""     # "" / "saving" / "saved" / "error" (S20: the panel says it)
@@ -3155,7 +3166,11 @@ func _push_fequip_model() -> void:
 		"resWindPercent": 0,
 		"dmgEarthPercent": 0, "dmgFirePercent": 0, "dmgWaterPercent": 0,
 		"dmgWindPercent": 0,
-		"value": int(f.get("budget", 0)),
+		# S47 (owner, point 16): the value as the server counts it — the
+		# class's 600 plus each worn card (computeFighterBudget) — live with
+		# the draft, so trying a card shows what it costs
+		"value": _eq_value(), "cardsValue": _eq_value() - FIGHTER_BASE_VALUE,
+		"elite": int(f.get("type", 2)) == 1,
 		"actorDescriptorLibrary": Fighter3D.fighter_key(breed, sex),
 		"actorMaterial": Palettes.fighter_tints(
 			int(f.get("skin", 0)), int(f.get("hair", 0)),

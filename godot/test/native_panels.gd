@@ -147,7 +147,7 @@ func exercise_controls() -> void:
 	var tree: Tree = find_tree(panel)
 	tree.get_root().get_first_child().select(0)
 	await create_timer(0.1).timeout
-	check(find_button(panel, "Equipamiento y hechizos") != null, "populated fighter selection exposes actions")
+	check(find_button(panel, "Hechizos y cartas") != null, "populated fighter selection exposes actions")
 	await shot("team-populated")
 	# S21: the Historia tab's footer opens the campaign (no evolution queue)
 	var fight_button: Button = panel.find_child("OpenStory", true, false) if main._tm_tab() == 0 else find_button(panel, "Buscar combate")
@@ -163,7 +163,7 @@ func exercise_controls() -> void:
 	panel.requested.disconnect(main._on_native_lobby_action)
 	var events: Array = []
 	panel.requested.connect(func(event, args, item, index): events.append([event, args, item, index]))
-	await click(find_button(panel, "Equipamiento y hechizos"))
+	await click(find_button(panel, "Hechizos y cartas"))
 	check(not events.is_empty() and events[0][0] == "editFighter" and events[0][2].id == 1, "native action carries selected fighter")
 	await click(panel.close_button)
 	main._push_team_model()

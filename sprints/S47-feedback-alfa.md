@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); quedan las mallas (1), el tutorial (4), el inventario (12) y Equipo (16)
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); punto 16 hecho; quedan las mallas (1), el tutorial (4), el inventario (12) y los iconos (11)
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -268,3 +268,33 @@ Tres preguntas al dueño con el mapa delante; "sí a las tres, hazlo".
 `~/codigo/capturas/s47/mapa-despues/index.html` (49 pantallas, el de
 antes sigue en `mapa/`), rehecho con `godot/tools/screen_map.sh`: las dos
 pasadas sin errores de script.
+
+## Punto 16 — el «Equipo» del luchador (2026-11-17)
+
+El dueño: "sigue". Qué confundía, mirado en el código y en el servidor:
+
+- **"Equipo" es a la vez *team* y *equipamiento*.** La pantalla de
+  hechizos y cartas de un luchador se llamaba "Equipo del luchador" y su
+  botón "Equipamiento y hechizos", al lado del panel Equipo (el plantel).
+  Ahora se llama **Hechizos y cartas** (título, botón y pestaña "Cartas").
+- **"Valor 1240 / 6000" no decía de qué.** El valor es lo que el servidor
+  llama presupuesto: **600 de la clase + el valor de cada carta que lleva**
+  (`computeFighterBudget`). El 6000 no es un tope por luchador sino del
+  **equipo entero** (`maxTeamBudget`), y en Ranking el tope es el de la
+  liga (Bronce 4000 … Diamante 6000). La pantalla dice ahora "Valor 800"
+  y debajo "Valor = 600 de su clase + 200 de sus cartas = 800: cuanto más
+  alto, más fuerte va. Tu equipo de Élite suma el valor de sus luchadores
+  y no puede pasar del presupuesto de tu liga (Bronce: 4000)" (Historia:
+  "no pueden pasar de 6000").
+- **El valor se mueve al probar una carta** (antes era el guardado); se
+  calcula igual que el servidor.
+- **La tabla de Equipo tiene la columna Valor**, que es lo que suma la
+  línea "presupuesto del equipo" de Élite.
+- De paso: una línea con ajuste que se activaba después de entrar en el
+  panel lo ensanchaba a 1807 px (se salía de la ventana); se crea ya
+  ajustada. Pasaba también con la nota por modo de Equipo.
+
+**Verificado:** `s47_smoke` 22/22 en vivo (el valor mostrado = el del
+servidor, se mueve al probar una carta 800 → 700, el panel cabe en la
+ventana), `loadout_smoke` 7/7, `native_panels` sin fallos,
+`run_tests.sh --headless` 1492/0.

@@ -31,3 +31,12 @@ Detalle en `sprints/S47-feedback-alfa.md` (Reorganización 1).
   BACKLOG §8.
 - La línea de error de Reclutar se vio en vivo (texto), su aspecto final
   solo por maquetación.
+
+## Más tarde: punto 16 ("sigue")
+
+"Equipo del luchador" → **Hechizos y cartas** (en español "equipo" es
+también el plantel). El valor se explica y desglosa (600 de clase + cartas),
+se mueve en vivo al probar cartas, y el 6000 deja de parecer un tope por
+luchador: es del equipo (o el de la liga en Ranking). Columna Valor en
+Equipo. Un label con ajuste tardío ensanchaba el panel a 1807 px: arreglado.
+`s47_smoke` 22/22, `loadout_smoke` 7/7, unidad 1492/0.

@@ -233,11 +233,11 @@ func _team() -> void:
 	# Historia and the count read 0 — the modes keep different fighters
 	# (evolution ones grow; classic ones have a fixed level and wear cards),
 	# so each tab says whose it lists until the screens are reorganised
-	var note := _muted(roster, I18n.t("team.mode_note_classic" if classic else "team.mode_note_evo"))
+	var note := label(roster, I18n.t("team.mode_note_classic" if classic else "team.mode_note_evo"), 16)
 	note.name = "ModeNote"
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var living := table(roster, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_pos")], ["name", "breed_name", "placement"], rows, func(_item): schedule_refresh())
+	note.add_theme_color_override("font_color", UiStyle.BROWN)
+	# S47 (point 16): each fighter's value, the number the team budget adds up
+	var living := table(roster, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_value"), I18n.t("team.col_pos")], ["name", "breed_name", "budget", "placement"], rows, func(_item): schedule_refresh())
 	if tab == 0 and _fallen_section(roster):
 		living.custom_minimum_size.y = 76   # the fallen table sits below it
 	var detail := column(split, false)
@@ -1464,8 +1464,22 @@ func _equipment() -> void:
 	_equip_figure(split, fighter)
 	var head := row(main)
 	label(head, str(fighter.get("name", "")), 24)
-	var budget := label(head, I18n.t("fe.budget", {"n": int(fighter.get("value", 0))}), 16)
-	budget.add_theme_color_override("font_color", UiStyle.BROWN)
+	var budget := label(head, I18n.t("fe.budget", {"n": int(fighter.get("value", 0))}), 18)
+	budget.name = "FighterValue"
+	budget.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
+	# S47 (owner, point 16: "¿el valor de qué es?"): what it adds up and
+	# what it limits
+	var lg: Dictionary = data("league", {})
+	var elite := bool(fighter.get("elite", false))
+	var why := I18n.t("fe.value_sum", {"cards": int(fighter.get("cardsValue", 0)),
+		"n": int(fighter.get("value", 0))}) + " " + (I18n.t("fe.value_elite", {
+		"league": I18n.t("league.%d" % int(lg.get("tier", 0))), "cap": int(lg.get("budget", 6000))})
+		if elite and not lg.is_empty() else I18n.t("fe.value_story"))
+	# label() wraps before it joins the column: a line that wrapped only
+	# after joining widened the whole sheet to its one-line width first
+	var wl := label(main, why, 16)
+	wl.name = "ValueWhy"
+	wl.add_theme_color_override("font_color", UiStyle.BROWN)
 	tabs(main, [I18n.t("fe.spells"), I18n.t("fe.equip")])
 	if tab == 0:
 		var spells: Array = data("teamManagement.editableFighter.breedSpells", [])
