@@ -25,15 +25,12 @@ func _audit() -> void:
 	# the old pickers were OptionButtons of 47 colours each
 	var pickers: Array = p.find_children("*", "OptionButton", true, false) \
 		.filter(func(o): return o.item_count > 12)
-	var preview_tints: Dictionary = p._preview.tints if p._preview != null else {"?": 0}
+	var preview_tints: Dictionary = p._spr.tints if p._spr != null else {"?": 0}
 	_record(6001, "form", pickers.is_empty() and preview_tints.is_empty(),
 		"%d colour picker(s), preview tints %s" % [pickers.size(), preview_tints])
-	var edit: LineEdit = p.find_children("*", "LineEdit", true, false)[0]
+	var edit: LineEdit = p.find_child("FighterName", true, false)
 	edit.text = NAME
-	var create: Button = null
-	for b in p.find_children("*", "Button", true, false):
-		if b.text == root.get_node("I18n").t("fc.create"):
-			create = b
+	var create: Button = p.find_child("Recruit", true, false)   # S47: the recruit screen
 	_seen.clear()
 	create.pressed.emit()
 	await _wait(func(): return _seen.has(6000) and _seen.has(6006), 5.0)

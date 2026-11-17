@@ -47,17 +47,15 @@ func _new_fighter_turn() -> void:
 	if p == null:
 		_record(0, "creation", false, "fighterCreationDialog did not open")
 		return
-	var right: Button = null
-	for b in p.find_children("*", "Button", true, false):
-		if b.text == "▶":
-			right = b
-	var before := int(p._preview_dir)
-	var look_before := str(p._preview_look)
+	# S47: the recruit screen's chevron
+	var right: Button = p.find_child("TurnRight", true, false)
+	var before := int(p._dir)
+	var look_before := str(p._look)
 	if right != null:
 		right.pressed.emit()
 	await create_timer(0.3).timeout
-	_record(0, "creation turn", right != null and int(p._preview_dir) == ((before + 1) & 7)
-		and str(p._preview_look) != look_before and str(p._preview_look) != "",
-		"▶ : %d → %d, look '%s' → '%s'" % [before, int(p._preview_dir), look_before, str(p._preview_look)])
+	_record(0, "creation turn", right != null and int(p._dir) == ((before + 1) & 7)
+		and str(p._look) != look_before and str(p._look) != "",
+		"▶ : %d → %d, look '%s' → '%s'" % [before, int(p._dir), look_before, str(p._look)])
 	await _shot("creation-turned")
 	_close_all()

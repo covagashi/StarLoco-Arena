@@ -27,21 +27,22 @@ func _audit() -> void:
 	await _wait(func(): return _main._gui.is_open("teamManagementDialog"), 3.0)
 	await create_timer(0.5).timeout
 	var team = _main._gui.dialogs.get("teamManagementDialog")
-	var want := [i18n.t("team.tab_evolution"), i18n.t("team.tab_elite"), i18n.t("team.tab_tournaments")]
+	# S47: no Torneos tab (tournaments have their own screen)
+	var want := [i18n.t("team.tab_evolution"), i18n.t("team.tab_elite")]
 	var tabs: Array = []
 	for b in team.find_children("*", "Button", true, false):
 		if b.toggle_mode and b.text in [i18n.t("team.tab_evolution"), i18n.t("team.tab_elite"),
 				i18n.t("team.tab_duo"), i18n.t("team.tab_tournaments"), i18n.t("team.tab_legends")]:
 			tabs.append(b.text)
 	_record(0, "team tabs", tabs == want, "tabs: %s" % ", ".join(tabs))
-	# the Tournaments tab is mode 3, not the third button's index 2
+	# the Élite tab keeps its retail mode id 1
 	for b in team.find_children("*", "Button", true, false):
-		if b.toggle_mode and b.text == i18n.t("team.tab_tournaments"):
+		if b.toggle_mode and b.text == i18n.t("team.tab_elite"):
 			b.pressed.emit()
 	await create_timer(0.6).timeout
 	var mode := int(_main._gui.model.get_value("gamePreferences", "lastSelectedGameModeId"))
-	_record(0, "tab id", mode == 3 and int(team.tab) == 3, "Torneos → mode %d, tab %d" % [mode, int(team.tab)])
-	await _shot("team-torneos")
+	_record(0, "tab id", mode == 1 and int(team.tab) == 1, "Élite → mode %d, tab %d" % [mode, int(team.tab)])
+	await _shot("team-elite")
 	for b in team.find_children("*", "Button", true, false):
 		if b.toggle_mode and b.text == i18n.t("team.tab_evolution"):
 			b.pressed.emit()

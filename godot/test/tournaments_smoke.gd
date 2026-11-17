@@ -11,7 +11,7 @@ extends "res://test/totems_smoke.gd"
 ## 2. Calendar: the scheduled tournament sits on the day of its search period,
 ##    with its periods, its kind and its registration deadline; registering
 ##    marks it entered; the bracket is drawn by rounds.
-## 3. Team → Torneos: the tournament is listed with its search open; "Buscar
+## 3. Torneos → Mis torneos (S47; it was Team → Torneos): the tournament is listed with its search open; "Buscar
 ##    rival del torneo" (28611) brings up the lobby's searching bar, and the
 ##    bar's cancel (28609 → 28610) takes it down.
 ## 4. A search period opens during the session: 28646 → toast, search open.
@@ -73,6 +73,9 @@ func _carry() -> void:
 
 func _calendar_s09() -> void:
 	var panel = await _menu("nav.calendar", "calendarDialog")
+	if panel != null:
+		panel.tab = 1   # S47: Torneos → Calendario
+		panel.schedule_refresh()
 	await _wait(func(): return _seen.has(17003) and _seen.has(28602), 3.0)
 	await create_timer(0.3).timeout
 	var tid := _tid_named(OPEN_CUP)
@@ -114,19 +117,20 @@ func _calendar_s09() -> void:
 	await _shot("cal-bracket")
 
 
+## S47: the search lives in Torneos → Mis torneos (Equipo lost its tab).
 func _team_tab() -> void:
 	_close_all()
-	_main._gui.open("teamManagementDialog")
-	await _wait(func(): return _main._gui.is_open("teamManagementDialog"), 3.0)
+	_main._gui.open("calendarDialog")
+	await _wait(func(): return _main._gui.is_open("calendarDialog"), 3.0)
 	await _wait(func(): return _seen.has(28602), 3.0)
-	var panel = _main._gui.dialogs.get("teamManagementDialog")
-	panel.tab = 3
+	var panel = _main._gui.dialogs.get("calendarDialog")
+	panel.tab = 0
 	panel.schedule_refresh()
 	await create_timer(0.6).timeout
-	var pick: OptionButton = panel.find_child("TournamentPick", true, false)
-	var find: Button = panel.find_child("FindTournament", true, false)
-	_record(13, "team tab", pick != null and find != null and not find.disabled,
-		"Torneos: '%s', button %s" % [pick.get_item_text(pick.selected) if pick != null else "—",
+	var tid := _tid_named(OPEN_CUP)
+	var find: Button = panel.find_child("Search%d" % tid, true, false)
+	_record(13, "team tab", find != null and not find.disabled,
+		"Mis torneos: '%s', button %s" % [OPEN_CUP,
 			"enabled" if find != null and not find.disabled else "disabled"])
 	await _shot("team-tournaments")
 	if find == null or find.disabled:
@@ -158,6 +162,9 @@ func _period_opens() -> void:
 
 func _create() -> void:
 	var panel = await _menu("nav.calendar", "calendarDialog")
+	if panel != null:
+		panel.tab = 1   # S47: Torneos → Calendario
+		panel.schedule_refresh()
 	await create_timer(0.4).timeout
 	var create: Button = panel.find_child("CreateTournament", true, false) if panel != null else null
 	if create == null or create.disabled:

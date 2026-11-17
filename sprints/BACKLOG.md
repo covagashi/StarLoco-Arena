@@ -200,6 +200,11 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
 
 ## 8. Tooling y CI
 
+- [ ] **`totems_smoke` desfasado** (visto en S47, 2026-11-17): busca los
+      tótems y los fuegos artificiales en Servicios (quitados en S18/S26) y
+      el icono Social por su texto (los iconos no tienen texto). Falla 4/4
+      también antes de S47. Reescribirlo contra Torneos y Social.
+
 - [ ] **Hacer que la CI se dispare con los pushes** — bloqueante. Solo hay una
       ejecución en todo el repo, lanzada a mano; ningún push lanza `ci.yml`. Mirar
       *Actions* → habilitar workflows en el fork (detalle en [`S02`](./S02-studio-tooling.md)).

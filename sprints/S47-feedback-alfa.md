@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1 de arreglos y el mapa de pantallas (punto 3) hechos (2026-11-17, abajo); siguiente: decidir la reorganización con el dueño (Q&A)
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); quedan las mallas (1), el tutorial (4), el inventario (12) y Equipo (16)
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -198,3 +198,67 @@ equipo o clan, paneles de demonio.
 
 Con el mapa delante, decidir con el dueño la reorganización (puntos 5–8,
 13, 15, 16), en preguntas cortas (modo Q&A).
+
+## Reorganización 1 (2026-11-17)
+
+Tres preguntas al dueño con el mapa delante; "sí a las tres, hazlo".
+
+### 1. Reclutar, pantalla propia (puntos 3, 5 y 7)
+
+- `src/ui/recruit_screen.gd`, como las referencias: las 12 clases con su
+  retrato a la izquierda, sexo y modo encima (Historia / Élite y Torneos,
+  con una línea que dice qué significa cada uno), el luchador grande en el
+  centro con las flechas para girarlo, y en la hoja de la derecha la
+  dificultad (estrellas), los roles, una descripción propia de la clase y
+  sus 10 ataques (icono, PA, alcance, elemento). Nombre y «¡RECLUTAR!»
+  abajo. Sustituye al modal: todas las entradas llegan aquí.
+- **Entradas directas:** «Reclutar» de Historia, «Crear equipo» de Ranking,
+  «¡A luchar!» y «Entrenamiento» sin luchadores de ese modo abren
+  Reclutar en su modo. Con luchadores pero sin equipo, Equipo como antes.
+- La pantalla espera la respuesta del servidor: un nombre rechazado se
+  queda con el motivo; si sale bien se cierra y avisa "X se une a tu
+  equipo (modo)".
+- Las descripciones, dificultad y roles son míos (los datos no traían);
+  el diseño visual lo pulió un agente Fable (regla del dueño).
+
+### 2. Torneos en un solo sitio (puntos 8 y 13)
+
+- El Calendario pasa a ser **Torneos**, con tres pestañas: **Mis torneos**
+  (en los que estás, qué equipo juega, buscar rival y ver cuadro),
+  **Calendario** (el de antes, para apuntarse) y **Clasificación** (la de
+  torneos, que estaba en Clasificación).
+- **Equipo pierde la pestaña Torneos**: un torneo clásico juega con el
+  equipo de Élite elegido (el servidor acepta cualquier equipo clásico,
+  `TestTournamentTeamKind`), que se elige en Torneos o en la loseta de
+  Ranking. **Clasificación pierde la de torneos.**
+- La loseta Torneos y la lista de la izquierda abren esta pantalla.
+
+### 3. Iconos de arriba (puntos 15 y Estadísticas)
+
+- **Estadísticas del jefe es una pestaña de Logros.**
+- El icono de barras desaparece; en su sitio, **Amigos** (dos personas,
+  nuevo en el atlas: `tools/make_lobby_bg.py --icons`, hueco 10) que abre
+  Social. El **bocadillo abre el Buzón**, que sale de Servicios. Orden:
+  Amigos, Buzón, Ayuda, Menú.
+
+### Verificado
+
+- `test/s47_smoke.gd` contra un servidor local en red aislada: **19/19**.
+  Reclutar como Historia y como Élite (nombre vacío: aviso sin enviar;
+  "1234": el servidor lo rechaza y la pantalla lo dice; nombre bueno: se
+  cierra y el luchador está en el plantel con su tipo y clase), las tres
+  pestañas de Torneos (la clasificación pide su tabla al servidor), Equipo
+  solo con Historia y Élite, Clasificación sin torneos, Logros con
+  Estadísticas (8 filas), Amigos → Social, Buzón → buzón con su lista,
+  Menú → menú, sin icono de barras y sin Buzón en Servicios.
+- `run_tests.sh --headless` 1492/0, `--visual` sin fallos (la escena de
+  revisión incluye Reclutar: 12 clases, 10 ataques, botón dentro).
+- Smokes en vivo pasados a los sitios nuevos y en verde: `modes_smoke`
+  (Equipo: Historia y Élite), `colours_smoke` y `coach_turn_smoke` (la
+  pantalla de reclutar crea y gira), `mailbox_smoke` (desde el icono),
+  `story_smoke`, `tournaments_smoke` sembrado (10/10: buscar rival desde
+  Mis torneos).
+- `totems_smoke` falla 4/4, **igual en el commit anterior** (comprobado en
+  una copia limpia): busca tótems y fuegos en Servicios, que se quitaron en
+  S18/S26, y el icono Social por su texto. Smoke viejo, apuntado en BACKLOG
+  §8.

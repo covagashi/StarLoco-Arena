@@ -66,7 +66,12 @@ ICON_PATHS = [
     # City: two houses, the taller one with a door.
     [[(3,27),(29,27)],[(5,27),(5,15),(12,8),(19,15),(19,27)],[(10,27),(10,20),(14,20),(14,27)],
      [(19,18),(24,13),(29,18),(29,27)],[(23,22),(25,22)]],
+    # S47: Friends (the Social panel) — two people side by side; their
+    # heads are the circles in ICON_HEADS.
+    [[(3,27),(3,22),(10,18),(17,22),(17,27)],[(15,26),(15,22),(22,18),(29,22),(29,27)]],
 ]
+# Heads drawn as circles: slot -> [(cx, cy, r)] (slot 1 keeps its own below).
+ICON_HEADS = {10: [(10, 11, 4), (22, 11, 4)]}
 
 
 # Light icons on the dark stone buttons (src/ui/ui_style.gd).
@@ -81,6 +86,10 @@ def make_icons():
         for stroke in strokes:
             di.line([(sc(i*32+x),sc(y)) for x,y in stroke], fill=ICON_INK, width=sc(2), joint='curve')
     di.ellipse([sc(9+32),sc(4),sc(17+32),sc(12)], outline=ICON_INK, width=sc(2))
+    for slot, heads in ICON_HEADS.items():
+        for cx, cy, r in heads:
+            x = slot * 32 + cx
+            di.ellipse([sc(x - r), sc(cy - r), sc(x + r), sc(cy + r)], outline=ICON_INK, width=sc(2))
     icons.resize((32*n,32), Image.Resampling.LANCZOS).save('assets/ui/lobby_icons.png')
 
 

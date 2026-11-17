@@ -19,12 +19,13 @@ const EVO_PVP := false
 
 
 ## The Team panel tabs that show, by retail game-mode id (0 evolution,
-## 1 elite, 2 2v2, 3 tournaments, 4 legends).
+## 1 elite, 2 2v2, 3 tournaments, 4 legends). S47 (owner): no Tournaments
+## tab — tournaments live in their own screen (Torneos) and a classic one
+## fields the Élite team.
 static func team_modes() -> Array:
 	var modes := [0, 1]
 	if DUO:
 		modes.append(2)
-	modes.append(3)
 	if LEGENDS:
 		modes.append(4)
 	return modes

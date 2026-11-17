@@ -17,17 +17,11 @@ var MailboxPanel: GDScript
 
 func _audit() -> void:
 	MailboxPanel = load("res://src/ui/mailbox_panel.gd")
-	var city_panel = await _open_city()
-	var sid := -1
-	if city_panel != null:
-		var city: Dictionary = _main._gui.model.get_value("city")
-		for g in city.get("groups", []):
-			if int(g.kind) == 2 and not g.services.is_empty():
-				sid = int(g.services[0].id)
-				break
-	var b: Button = await _service_button(sid) if sid > 0 else null
+	# S47: the mailbox is the lobby's bubble icon (no longer in Servicios)
+	_close_all()
+	var b: Button = _main._lobby_screen.find_child("Menu_mailboxDialog", true, false)
 	if b == null:
-		_record(2, "Mailbox", false, "no mailbox in the City panel")
+		_record(2, "Mailbox", false, "no mailbox icon in the lobby")
 		return
 	_seen.clear()
 	b.pressed.emit()

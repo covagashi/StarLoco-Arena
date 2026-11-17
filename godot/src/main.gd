@@ -296,6 +296,8 @@ func _ready() -> void:
 	for panel_name in preload("res://src/ui/lobby_panels.gd").TITLES:
 		_gui.native_factories[panel_name] = _make_native_lobby_panel
 	_gui.native_factories["cardMasterDialog"] = _make_card_master_panel
+	# S47: a new fighter is a screen of its own (recruit_screen.gd)
+	_gui.native_factories["fighterCreationDialog"] = _make_recruit_panel
 	_gui.native_factories["mailboxDialog"] = _make_mailbox_panel
 	_gui.native_factories["fusionLabDialog"] = _make_fusion_panel
 	_gui.native_factories["npcTalkDialog"] = _make_talk_panel
@@ -924,9 +926,16 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			if int(d.result) == 0:
 				_log_line("[color=green]%s[/color]" % I18n.t("fighter.created",
 					{"name": d.fighter.get("name", "?")}))
+				# S47: the recruit screen closes on the server's yes
+				if _gui.is_open("fighterCreationDialog"):
+					_gui.close("fighterCreationDialog")
+					_toast(I18n.t("recruit.joined", {"name": d.fighter.get("name", "?"),
+						"mode": I18n.t("recruit.mode_story" if _create_fighter_evo else "recruit.mode_elite")}))
 			else:
 				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
 					{"code": int(d.result)}))
+				_gui.model.set_value("recruit", {"status": "",
+					"error": I18n.t("recruit.err_server", {"code": int(d.result)})})
 		OP_FIGHTER_DELETE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
@@ -1512,7 +1521,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			for s in sm.get("stats", []):
 				State.coach_stats[int(s.id)] = s.value
 			# refresh localCoach's statistics* fields for any open stats screen
-			if _gui.is_open("coachStatisticsDialog"):
+			if _gui.is_open("coachStatisticsDialog") or _gui.is_open("achievementDialog"):
 				_push_local_coach()
 		510:  # GuildRecord — guild name/demon/rank table for our guild
 			var d := Codec.decode(opcode, payload)
@@ -1834,8 +1843,8 @@ func _on_practice_pressed() -> void:
 	# S10: a new coach has no fighters; the server would field an invented
 	# one. Point at where to recruit instead.
 	if State.roster.is_empty():
-		_log_line("[color=red]%s[/color]" % I18n.t("fight.need_fighter"))
-		_toast(I18n.t("fight.need_fighter"))
+		# S47: straight to recruiting (it used to name two ways there)
+		_on_new_fighter_dialog([], null, true)
 		return
 	# TeamTest 26330 doubles as overworld challenge launch:
 	# [i32 challengeId][i16 99] — 34 = "Démon de la 58ème minute" practice
@@ -2340,7 +2349,17 @@ func _on_new_fighter_dialog(_args: Array, _w, evo := false, breed := 1) -> void:
 		"actorAnimation": "AnimStatique", "actorDirection": 3},
 		"editableFighter")
 	_refresh_editable_fighter()
+	_gui.model.set_value("recruit", {"status": "", "error": ""})
 	_gui.open("fighterCreationDialog")
+
+
+## S47 (owner): with nobody to play, the tiles lead straight to recruiting
+## for their mode; with fighters but no team, to Equipo as before.
+func _has_fighters(evo: bool) -> bool:
+	for fr in State.roster:
+		if int(fr.get("type", 2)) == (2 if evo else 1):
+			return true
+	return false
 
 
 func _refresh_editable_fighter() -> void:
@@ -2416,7 +2435,7 @@ func _on_gui_create_fighter(_args: Array, _w) -> void:
 	w.put_u16(blob.size())
 	w.put_bytes(blob)
 	Session.send(OP_FIGHTER_CREATE, w.raw(), 2)
-	_gui.close("fighterCreationDialog")
+	# the screen stays until 6000 says how it went (S47)
 	DebugLog.add("fighter create sent: %s" % fname)
 
 
@@ -3371,9 +3390,11 @@ func _on_gui_dialog_opened(name: String) -> void:
 			_tourn_status = {}
 			_tourn_bracket = {}
 			_push_calendar_model()
+			_push_tourn_search_model()   # S47: "Mis torneos"
 		"achievementDialog":
 			_ach_sel = {"type": -1, "sub": -1}
 			_push_achievement_model()
+			_push_local_coach()   # S47: its Estadísticas tab
 		"optionsDialog":
 			_push_options_model()
 		"fusionLabDialog":
@@ -3702,7 +3723,7 @@ const LOBBY_WORLDS := [23, 24, 25, 26, 27, 28, 37]
 ## the Team panel's fallen section, the tournament totem (13) the Calendar and
 ## the demon totem (11) the clan tab + the Ranking's demon tab (S18).
 const _CITY_ONE_PER_KIND := [2, 12]
-const _CITY_HIDDEN := [4, 8, 9, 10, 11, 12, 13]   # 9 Demon I: Historia's narrator; 12 fireworks: dropped (owner, S26)
+const _CITY_HIDDEN := [2, 4, 8, 9, 10, 11, 12, 13]   # 2 mailbox: the lobby's bubble icon (S47)   # 9 Demon I: Historia's narrator; 12 fireworks: dropped (owner, S26)
 ## Display order of the kinds in the City panel: shops and mail first.
 const _CITY_ORDER := [1, 2, 14, 12, 3, 7, 6, 9, 5, 15, 11, 13]
 ## S10: the tutorial island's people, brought to the lobby (no worlds, S05):
@@ -5164,7 +5185,14 @@ func _show_lobby_screen() -> void:
 		$UI.add_child(_lobby_screen)
 		$UI.move_child(_lobby_screen, 0)
 		_lobby_screen.bind_model(_gui.model, $UI/Chat)
-		_lobby_screen.dialog_requested.connect(func(n): _gui.toggle(n))
+		_lobby_screen.dialog_requested.connect(func(n):
+			if n == "mailboxDialog" and not _gui.is_open(n):
+				# S47: the bubble icon opens the mailbox on its list, fresh
+				_mail_mode = "list"
+				_mail_status = {}
+				_mail_loading = true
+				Session.send(OP_MAILBOX_REQ, PackedByteArray(), 3)
+			_gui.toggle(n))
 		_lobby_screen.action_requested.connect(_on_lobby_action)
 		_lobby_screen.team_picked.connect(func(pid):
 			_tm_preset_sel = pid
@@ -5183,6 +5211,13 @@ func _show_lobby_screen() -> void:
 func _make_native_lobby_panel(panel_name: String) -> Control:
 	var panel := preload("res://src/ui/lobby_panels.gd").new()
 	panel.panel_name = panel_name
+	panel.model = _gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
+func _make_recruit_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/recruit_screen.gd").new()
 	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel
@@ -5292,6 +5327,15 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 		"nativeStory":
 			_gui.close("teamManagementDialog")
 			_open_story()
+			return
+		"nativePickTeam":
+			# S47: the Torneos screen picks the Élite team, as the Ranking tile does
+			_tm_preset_sel = int(args[0])
+			_push_hub_model()
+			return
+		"nativeTeamTab":
+			_gui.model.set_value("gamePreferences", int(args[0]), "lastSelectedGameModeId")
+			_gui.open("teamManagementDialog")
 			return
 		"nativeLadderTab":
 			_ladder_tab = int(args[0])
@@ -5751,8 +5795,12 @@ func _on_lobby_action(action: String) -> void:
 				_on_cancel_search()
 			_gui.open("ghostDialog")
 		"team_story", "team_elite":
+			var evo := action == "team_story"
+			if not _has_fighters(evo):
+				_on_new_fighter_dialog([], null, evo)
+				return
 			_gui.model.set_value("gamePreferences",
-				0 if action == "team_story" else 1, "lastSelectedGameModeId")
+				0 if evo else 1, "lastSelectedGameModeId")
 			_gui.open("teamManagementDialog")
 		"tourn_search":
 			var hub: Variant = _gui.model.get_value("hub")

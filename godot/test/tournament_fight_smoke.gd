@@ -7,8 +7,8 @@ extends "res://test/pvp_smoke.gd"
 ##
 ## Seed (server stopped, a COPY of arena.db): one scheduled edition "Copa
 ## Final" whose only search period is open now, with "test" (1) and "test2"
-## (2) entered — so their fixture is the final. The main client presses
-## Equipo → Torneos → "Buscar rival del torneo" (28611 → 28612, the lobby's
+## (2) entered — so their fixture is the final. The main client presses (S47:
+## Torneos → Mis torneos) "Buscar rival" (28611 → 28612, the lobby's
 ## searching bar); the bot sends its own 28611; the server pairs them (28614
 ## both, then the fight). The main client readies, passes its turns and
 ## surrenders after a while, so test2 wins the final: the bracket's root, the
@@ -81,27 +81,27 @@ func _on_bot_msg(op: int, raw: PackedByteArray) -> void:
 ## The main client searches through the real Team panel, then the bot joins.
 func _main_searches() -> void:
 	await create_timer(1.0).timeout
-	_main._gui.open("teamManagementDialog")
-	await create_timer(1.5).timeout   # 28601 → 28602 for the tab
+	# S47: Torneos → Mis torneos (Equipo lost its Torneos tab)
+	_main._gui.open("calendarDialog")
+	await create_timer(1.5).timeout   # 28601 → 28602 for the list
 	for tid in _main._tourn_rows:
 		if str(_main._tourn_rows[tid].get("name", "")) == CUP:
 			_tid = int(tid)
-	var panel = _main._gui.dialogs.get("teamManagementDialog")
+	var panel = _main._gui.dialogs.get("calendarDialog")
 	if panel == null or _tid < 0:
-		_finish(1, "FAIL no team panel or no '%s' in the list" % CUP)
+		_finish(1, "FAIL no Torneos panel or no '%s' in the list" % CUP)
 		return
-	panel.tab = 3
-	panel.draft["tournament"] = _tid
+	panel.tab = 0
 	panel.schedule_refresh()
 	await create_timer(0.6).timeout
-	var find: Button = panel.find_child("FindTournament", true, false)
+	var find: Button = panel.find_child("Search%d" % _tid, true, false)
 	if find == null or find.disabled:
-		_finish(1, "FAIL 'Buscar rival del torneo' missing or disabled")
+		_finish(1, "FAIL 'Buscar rival' missing or disabled")
 		return
 	find.pressed.emit()
 	await create_timer(1.0).timeout
 	print("[s09] main searching (bar up=%s)" % _searching_seen)
-	_main._gui.close("teamManagementDialog")
+	_main._gui.close("calendarDialog")
 	var w := WireWriter.new()
 	w.put_i64(_tid)
 	w.put_i64(_bot_coach)

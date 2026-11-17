@@ -74,6 +74,9 @@ func _confirm(panel) -> bool:
 
 func _calendar() -> void:
 	var panel = await _menu("nav.calendar", "calendarDialog")
+	if panel != null:
+		panel.tab = 1   # S47: Torneos → Calendario
+		panel.schedule_refresh()
 	await _wait(func(): return _seen.has(17003) and _seen.has(28602), 3.0)
 	await create_timer(0.3).timeout
 	var cell := {}

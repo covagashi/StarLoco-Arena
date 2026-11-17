@@ -89,13 +89,14 @@ func _run() -> void:
 		# UI_REVIEW_ALL=1 shoots every panel (screen inventory, S05).
 		if OS.get_environment("UI_REVIEW_ALL") != "" or name in [
 				"teamManagementDialog", "socialDialog", "cardBookDialog",
-				"fighterCreationDialog", "optionsDialog"]:
+				"optionsDialog"]:
 			await _shot(name)
 		panel.queue_free()
 		await get_tree().process_frame
 	await _card_master(model, vp)
 	await _mailbox(model, vp)
 	await _fusion(model, vp)
+	await _recruit(model, vp)
 	var bug := preload("res://src/ui/bug_report.gd").new("")
 	add_child(bug)
 	bug.popup_centered()
@@ -276,3 +277,28 @@ func _fusion(model: GuiModel, vp: Vector2) -> void:
 	await _shot("fusion-result")
 	fp.queue_free()
 	await get_tree().process_frame
+
+
+## S47: the recruit screen, on a Espadachín (class 8), as Historia.
+func _recruit(model: GuiModel, vp: Vector2) -> void:
+	var f3d := preload("res://src/anims/fighter3d.gd")
+	for breed in [8, 2]:
+		model.set_value("teamManagement", {"breedId": breed, "sex": 0, "version": 2,
+			"skin": Palettes.NO_TINT, "hair": Palettes.NO_TINT, "eye": Palettes.NO_TINT,
+			"name": "", "actorDescriptorLibrary": f3d.fighter_key(breed, 0),
+			"actorMaterial": Palettes.fighter_tints(Palettes.NO_TINT, Palettes.NO_TINT, Palettes.NO_TINT)},
+			"editableFighter")
+		var r := preload("res://src/ui/recruit_screen.gd").new()
+		r.model = model
+		add_child(r)
+		await get_tree().create_timer(1.6).timeout
+		_check(r.find_child("Attacks", true, false) != null
+			and r.find_child("Attacks", true, false).get_child_count() == 10,
+			"recruit: ten attacks")
+		_check(r.find_child("Class12", true, false) != null, "recruit: twelve classes")
+		var go: Control = r.find_child("Recruit", true, false)
+		_check(go != null and go.get_global_rect().end.x <= vp.x + 1
+			and go.get_global_rect().end.y <= vp.y + 1, "recruit button inside the window")
+		await _shot("recruit-%d" % breed)
+		r.queue_free()
+		await get_tree().process_frame

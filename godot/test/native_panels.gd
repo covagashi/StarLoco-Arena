@@ -67,8 +67,6 @@ func run() -> void:
 		return
 	await create_timer(1.0).timeout
 	for name in PanelScript.TITLES:
-		if name == "fighterCreationDialog":
-			main._on_new_fighter_dialog([], null, true)
 		var panel = main._gui.open(name)
 		await create_timer(0.15).timeout
 		check(is_instance_of(panel, PanelScript), "native " + name)
@@ -135,7 +133,7 @@ func exercise_controls() -> void:
 	await create_timer(0.2).timeout
 	check(main._gui.is_open("fighterCreationDialog"), "native fighter creation from team")
 	var creation = main._gui.dialogs["fighterCreationDialog"]
-	check(not creation._preview.current.is_empty(), "fighter preview loaded")
+	check(not creation._spr.current.is_empty(), "fighter preview loaded")
 	await shot("fighter-preview")
 	await click(creation.close_button)
 	check(main._gui.is_open("teamManagementDialog"), "closing child keeps team panel")

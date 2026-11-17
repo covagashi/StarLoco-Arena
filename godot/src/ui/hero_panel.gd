@@ -12,6 +12,7 @@ const R_SHEET := Rect2(820, 100, 430, 480)
 
 var stage: Control
 var sheet_title: Label
+var sheet_tag: Label    # the small tag over sheet_title ("SLOT" unless a panel says)
 var _header_title: Label
 var _drifts: Array = []
 var _t := 0.0
@@ -82,7 +83,8 @@ func _ready() -> void:
 	sheet_title.name = "SheetTitle"
 	UiStyle.display(sheet_title, 30)
 	sheet_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	inner.add_child(UiStyle.tag("SLOT"))
+	sheet_tag = UiStyle.tag("SLOT")
+	inner.add_child(sheet_tag)
 	inner.add_child(sheet_title)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

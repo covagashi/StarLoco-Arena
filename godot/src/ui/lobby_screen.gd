@@ -42,12 +42,15 @@ const CORAL := UiStyle.B_CORAL
 ## left; "top" = icons top right. The order is the icon atlas's (slot i + 1).
 const MENUS := [
 	["nav.team", "teamManagementDialog", "nav"],
-	["nav.stats", "coachStatisticsDialog", "top"],
+	# S47 (owner): the bars icon was the coach's statistics, now a tab of
+	# Logros; the slot is the friends (two people, atlas slot 10)
+	["nav.social", "socialDialog", "top", 10],
 	["nav.inventory", "coachInventoryDialog", "nav"],
 	["nav.ladder", "ladderInformationDialog", "nav"],
 	["nav.calendar", "calendarDialog", "nav"],
 	["nav.achievements", "achievementDialog", "nav"],
-	["nav.social", "socialDialog", "top"],
+	# S47 (owner, point 15): the speech bubble is the mailbox
+	["nav.mail", "mailboxDialog", "top", 7],
 	["nav.help", "tooltipDialog", "top"],
 	["nav.city", "cityDialog", "nav"],
 	# S47: the Menu (Options, Replays, report a bug, disconnect, quit) had

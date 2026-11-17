@@ -1,0 +1,33 @@
+# 2026-11-17 — S47: reorganización 1 (reclutar, torneos, iconos)
+
+El dueño, a las tres preguntas tras el mapa: "sí a las tres, hazlo".
+Detalle en `sprints/S47-feedback-alfa.md` (Reorganización 1).
+
+## Qué se hizo
+
+- **Reclutar**, pantalla propia (`src/ui/recruit_screen.gd`) en lugar del
+  modal: 12 clases con retrato, sexo y modo explicados, figura grande,
+  dificultad, roles, descripción propia y los 10 ataques. Las losetas y el
+  Entrenamiento sin luchadores llevan directo aquí. Espera la respuesta del
+  servidor (error en pantalla, éxito cierra y avisa). Aspecto pulido por un
+  agente Fable (peana con nombre y botón, retratos con aro, medallones).
+- **Torneos** en un solo sitio: el Calendario es ahora Torneos con Mis
+  torneos, Calendario y Clasificación. Equipo y Clasificación pierden sus
+  pestañas de torneos; el torneo clásico juega con el equipo de Élite.
+- **Iconos**: Estadísticas pasa a pestaña de Logros; el hueco es Amigos
+  (icono nuevo en el atlas); el bocadillo abre el Buzón, que sale de
+  Servicios.
+
+## Verificado
+
+- `test/s47_smoke.gd` 19/19 en vivo (reclutar Historia y Élite con nombre
+  vacío, rechazado y bueno; Torneos; Logros; iconos).
+- `run_tests.sh --headless` 1492/0 y `--visual`; smokes `modes`, `colours`,
+  `coach_turn`, `mailbox`, `story`, `tournaments` (sembrado) en verde.
+
+## No verificado / encontrado
+
+- `totems_smoke` falla 4/4 también antes de estos cambios: smoke viejo,
+  BACKLOG §8.
+- La línea de error de Reclutar se vio en vivo (texto), su aspecto final
+  solo por maquetación.

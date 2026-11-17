@@ -18,10 +18,9 @@ const TITLES := {
 	"menuDialog": "panel.menu", "teamManagementDialog": "panel.team",
 	"evolutionDialog": "panel.team", "coachStatisticsDialog": "panel.stats",
 	"cardBookDialog": "panel.inventory", "ladderInformationDialog": "panel.ladder",
-	"calendarDialog": "panel.calendar", "achievementDialog": "panel.achievements",
+	"calendarDialog": "panel.tournaments", "achievementDialog": "panel.achievements",
 	"socialDialog": "panel.social", "tooltipDialog": "panel.help",
 	"optionsDialog": "panel.options",
-	"fighterCreationDialog": "panel.new_fighter",
 	"fighterEquipmentDialog": "panel.fighter_equip",
 	"teamNameDialog": "panel.new_team", "team2vs2NameDialog": "panel.new_team2v2",
 	"newTeamTournamentDialog": "panel.new_team_tournament",
@@ -33,13 +32,10 @@ const TITLES := {
 	"ghostDialog": "panel.ghosts",
 	"storyDialog": "panel.story",
 }
-var _preview
 var _eq_fig = null            # S35c: the equipment panel's figure (figure.gd)
 var _eq_fig_set := ""
-var _preview_look := ""
-var _preview_dir := Direction8.FRONT
 
-const FORMS := ["fighterCreationDialog", "teamNameDialog", "team2vs2NameDialog", "newTeamTournamentDialog", "optionsDialog"]
+const FORMS := ["teamNameDialog", "team2vs2NameDialog", "newTeamTournamentDialog", "optionsDialog"]
 const BOARDS := ["list1vs1", "listReputation", "list2vs2", "listGuild", "listTournamentInTheMonth", "listGlickoRating", "listDemon"]
 const EQ_FIELDS := ["weaponEquipment", "petEquipment", "cloakEquipment", "hatEquipment", "dofusEquipment"]
 const LOCALES := ["es", "en", "fr"]
@@ -47,16 +43,15 @@ const LOCALES := ["es", "en", "fr"]
 
 func _model_changed(model_name: String, _field: String, _value: Variant) -> void:
 	if panel_name in FORMS:
-		if panel_name == "fighterCreationDialog" and model_name == "teamManagement":
-			_sync_preview()
 		return
 	var watched := {
 		"teamManagementDialog": ["teamManagement", "evolutionTeam", "tournamentSearch", "league"],
 		"evolutionDialog": ["teamManagement", "evolutionTeam", "tournamentSearch"],
 		"fighterEquipmentDialog": ["teamManagement"],
 		"coachStatisticsDialog": ["localCoach"], "cardBookDialog": ["localCoach", "tomeManager"],
-		"ladderInformationDialog": ["ladderManager", "league"], "calendarDialog": ["calendar"],
-		"achievementDialog": ["achievementManager"], "socialDialog": ["friends", "ignore", "guild", "social"],
+		"ladderInformationDialog": ["ladderManager", "league"],
+		"calendarDialog": ["calendar", "tournamentSearch", "ladderManager", "hub"],
+		"achievementDialog": ["achievementManager", "localCoach"], "socialDialog": ["friends", "ignore", "guild", "social"],
 		"guildDialog": ["friends", "ignore", "guild", "social"],
 		"guildManagementDialog": ["guild", "guildSelectedRank"],
 		"guildCoachStatsDialog": ["guildCoachStats"],
@@ -66,6 +61,11 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 	}
 	if model_name.split(".")[0] in watched.get(panel_name, []):
 		schedule_refresh()
+
+
+## S47: the calendar panel is Torneos now.
+func tag_name() -> String:
+	return "TOURNAMENTS" if panel_name == "calendarDialog" else super.tag_name()
 
 
 func _exit_tree() -> void:
@@ -99,7 +99,6 @@ func refresh() -> void:
 		"guildCoachStatsDialog": _guild_member()
 		"tooltipDialog": _help()
 		"optionsDialog": _options()
-		"fighterCreationDialog": _fighter_creation()
 		"fighterEquipmentDialog": _equipment()
 		"teamNameDialog", "team2vs2NameDialog", "newTeamTournamentDialog": _team_name()
 		"cityDialog": _city()
@@ -394,7 +393,7 @@ func _statistics() -> void:
 	var coach: Dictionary = data("localCoach", {})
 	label(body, str(coach.get("name", "")), 24)
 	var rows: Array = []
-	for entry in [["stats.fights", "statisticsTotalFights"], ["stats.wins", "statisticsTotalFightsWon"], ["stats.losses", "statisticsTotalFightsLost"], ["stats.win_streak", "statisticsConsecutiveWins"], ["stats.time_played", "statisticsTotalPlayTime"], ["stats.time_fights", "statisticsTotalFightsTime"], ["stats.tourn_pts", "statisticsTournamentPoints"], ["stats.reputation", "standing"]]:
+	for entry in [["stats.fights", "statisticsTotalFights"], ["stats.wins", "statisticsTotalFightsWon"], ["stats.losses", "statisticsTotalFightsLost"], ["stats.streak", "statisticsConsecutiveWins"], ["stats.play_time", "statisticsTotalPlayTime"], ["stats.fight_time", "statisticsTotalFightsTime"], ["stats.tourn_pts", "statisticsTournamentPoints"], ["stats.reputation", "standing"]]:
 		var value: Variant = coach.get(entry[1], 0)
 		# the wire reports the two time counters in seconds — minutes read better
 		if entry[1] in ["statisticsTotalPlayTime", "statisticsTotalFightsTime"]:
@@ -554,7 +553,11 @@ func _ladder() -> void:
 	if tab == 0:
 		_season_line()
 		_league_line(false)
-	tabs(body, [I18n.t("ladder.tab_1v1"), I18n.t("ladder.tab_boss"), I18n.t("ladder.tab_2v2"), I18n.t("ladder.tab_clans"), I18n.t("ladder.tab_tourn"), I18n.t("ladder.tab_pro"), I18n.t("ladder.tab_demon")], func(i): send("nativeLadderTab", [i]))
+	# S47: the tournament board moved to Torneos; ids keep LADDER_TABS order
+	if tab == LADDER_TOURN:
+		tab = 0
+	tabs(body, [I18n.t("ladder.tab_1v1"), I18n.t("ladder.tab_boss"), I18n.t("ladder.tab_2v2"), I18n.t("ladder.tab_clans"), I18n.t("ladder.tab_pro"), I18n.t("ladder.tab_demon")],
+		func(i): send("nativeLadderTab", [i]), [0, 1, 2, 3, 5, 6])
 	var fields := [["position", "coachName", "totalVictories", "totalDefeats"], ["position", "creatorCoachName", "reputation", "totalVictories"], ["position", "teamName", "totalVictories", "totalDefeats"], ["position", "name", "bossName", "strength"], ["position", "name", "points"], ["position", "coachName", "guildName", "rating"], ["position", "demonName", "guildName", "quarterlyReputationPoints"]]
 	var headings := [
 		[I18n.t("ladder.col_rank"), I18n.t("ladder.col_player"), I18n.t("ladder.col_wins"), I18n.t("ladder.col_losses")],
@@ -585,7 +588,89 @@ func _ladder() -> void:
 			UiStyle.primary(b, 18)
 
 
+## Torneos (S47, owner: one place for tournaments): what you are entered in
+## and the search, the month's calendar, and the tournament ranking that
+## lived in Clasificación. Equipo lost its Torneos tab: a classic tournament
+## fields the Élite team picked here (or in the Ranking tile).
 func _calendar() -> void:
+	if not draft.has("tourn_tab"):
+		draft["tourn_tab"] = true
+		tab = 0 if not data("tournamentSearch.rows", []).is_empty() else 1
+	tabs(body, [I18n.t("tourn.tab_mine"), I18n.t("tourn.tab_calendar"), I18n.t("tourn.tab_ranking")],
+		func(i): if i == 2: send("nativeLadderTab", [LADDER_TOURN]))
+	match tab:
+		0: _my_tournaments()
+		2: _tournament_ranking()
+		_: _calendar_month()
+
+
+const LADDER_TOURN := 4   # main.LADDER_TABS: the tournament points board
+
+
+## The editions this coach is entered in: kind, which team plays, the search.
+func _my_tournaments() -> void:
+	var rows: Array = data("tournamentSearch.rows", [])
+	if rows.is_empty():
+		label(body, I18n.t("tourn.none"), 18).name = "NoTournaments"
+		button(body, I18n.t("tourn.to_calendar"), func(): tab = 1; schedule_refresh()).name = "ToCalendar"
+		return
+	# the Élite team a classic tournament fields
+	var teams: Array = data("hub.ranked.teams", [])
+	var bar := row(body)
+	var head := label(bar, I18n.t("tourn.team"), 18)
+	head.autowrap_mode = TextServer.AUTOWRAP_OFF
+	head.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if teams.is_empty():
+		label(bar, I18n.t("tourn.no_team")).name = "NoTeam"
+		button(bar, I18n.t("tourn.make_team"), func(): closed.emit(); send("nativeTeamTab", [1])).name = "MakeTeam"
+	else:
+		var sel := int(data("hub.ranked.selected", -1))
+		var picked := 0
+		for i in teams.size():
+			if int(teams[i].id) == sel:
+				picked = i
+		var pick := choices(bar, teams.map(func(t): return str(t.name)), picked,
+			func(i): send("nativePickTeam", [int(teams[i].id)]))
+		pick.name = "TeamPick"
+		pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_muted(body, I18n.t("tourn.team_note"))
+	for r in rows:
+		var tid := int(r.id)
+		var card := PanelContainer.new()
+		card.name = "Tourn%d" % tid
+		card.add_theme_stylebox_override("panel", UiStyle.box(Color.WHITE, UiStyle.B_INK, 2, 12))
+		body.add_child(card)
+		var col := VBoxContainer.new()
+		card.add_child(col)
+		label(col, str(r.name), 20)
+		var classic := int(r.get("kind", TournamentDefs.CLASSIC)) == TournamentDefs.CLASSIC
+		var state := I18n.t("cal.searching") if bool(r.get("searching", false)) else (
+			I18n.t("team.search_open") if bool(r.get("open", false)) else I18n.t("team.search_shut"))
+		col.add_child(UiStyle.caption("%s · %s" % [
+			I18n.t("tourn.plays_elite") if classic else I18n.t("team.tourn_titulars"), state]))
+		var acts := row(col)
+		var searching := bool(r.get("searching", false))
+		button(acts, I18n.t("cal.search_cancel") if searching else I18n.t("cal.search"),
+			func(): send("nativeTournSearch", [tid]),
+			searching or (bool(r.get("open", false)) and (not classic or not teams.is_empty()))).name = "Search%d" % tid
+		button(acts, I18n.t("cal.bracket"), func(): send("nativeTournTree", [tid])).name = "Bracket%d" % tid
+
+
+## The month's tournament points (the board Clasificación used to show).
+func _tournament_ranking() -> void:
+	var rows: Array = data("ladderManager." + BOARDS[LADDER_TOURN], [])
+	var board := table(body, [I18n.t("ladder.col_rank"), I18n.t("ladder.col_name"), I18n.t("ladder.col_points")],
+		["position", "name", "points"], rows)
+	board.name = "Board"
+	var me := str(data("localCoach.name", ""))
+	for it in board.get_root().get_children():
+		var m: Variant = it.get_metadata(0)
+		if m is Dictionary and str(m.get("name", "")) == me:
+			it.set_text(0, "▶ " + it.get_text(0))
+			it.select(0)
+
+
+func _calendar_month() -> void:
 	var toolbar := row(body)
 	button(toolbar, I18n.t("cal.prev"), func(): selected = {}; send("showPreviousMonth"))
 	label(toolbar, str(data("calendar.currentMonth", I18n.t("panel.calendar"))), 22)
@@ -797,6 +882,12 @@ func _ach_icon(path: String) -> Texture2D:
 
 
 func _achievements() -> void:
+	# S47 (owner): the coach's statistics are a tab here (the top icon is
+	# the friends now)
+	tabs(body, [I18n.t("ach.tab_list"), I18n.t("ach.tab_stats")])
+	if tab == 1:
+		_statistics()
+		return
 	var toolbar := row(body)
 	label(toolbar, I18n.t("ach.points", {"n": data("achievementManager.achievementsTotalPoints", 0)}), 22)
 	var types: Array = [{"name": I18n.t("ach.all_types"), "cat": -1}] + data("achievementManager.achievementTypesList", [])
@@ -1220,7 +1311,7 @@ func _help() -> void:
 				label(body, "· " + I18n.t("help.fight%d" % i))
 		3:
 			for key in ["nav.team", "nav.inventory", "nav.ladder", "nav.calendar", "nav.achievements",
-					"nav.city", "nav.stats", "nav.social"]:
+					"nav.city", "nav.social", "nav.mail"]:
 				var h := label(body, I18n.t(key), 20)
 				h.add_theme_color_override("font_color", UiStyle.ACCENT_INK)
 				label(body, I18n.t("help.panel_%s" % key.trim_prefix("nav.")))
@@ -1327,64 +1418,6 @@ func _supported_resolutions() -> Array:
 	if native not in out:
 		out.append(native)
 	return out
-
-
-func _fighter_creation() -> void:
-	var fighter: Dictionary = data("teamManagement.editableFighter", {})
-	var split := row(body)
-	var form := column(split)
-	label(form, I18n.t("fc.subtitle"), 22)
-	var name_field := field(form, "fighter_name", I18n.t("fc.name_ph"), str(fighter.get("name", "")))
-	name_field.max_length = 20
-	var bar := row(form)
-	var breeds: Array = range(1, 13).map(func(b): return I18n.t("breed.%d" % b))
-	choices(bar, breeds, int(fighter.get("breedId", 1)) - 1, func(i): send("setFighterBreedId", [i + 1]))
-	choices(bar, [I18n.t("fc.sex_m"), I18n.t("fc.sex_f")], int(fighter.get("sex", 0)), func(i): send("setFighterSex", [i]))
-	# the original Wakfu/Dofus pick: version 2 recruits to the evolution
-	# roster, version 1 to a classic preset
-	choices(bar, [I18n.t("fc.v_classic"), I18n.t("fc.v_evo")],
-		clampi(int(fighter.get("version", 1)) - 1, 0, 1),
-		func(i): send("setFighterVersion", [i + 1]))
-	var stage := Control.new()
-	stage.custom_minimum_size = Vector2(320, 330)
-	split.add_child(stage)
-	_preview = preload("res://src/anims/figure.gd").new()
-	_preview.foot_pivot = true
-	_preview.position = Vector2(160, 300)
-	_preview.scale = Vector2(2.5, 2.5)
-	stage.add_child(_preview)
-	var spin := row(form)
-	button(spin, "◀", func(): _preview_dir = (_preview_dir - 1) & 7; _preview_look = ""; _sync_preview())
-	button(spin, "▶", func(): _preview_dir = (_preview_dir + 1) & 7; _preview_look = ""; _sync_preview())
-	_preview_look = ""
-	_sync_preview()
-	var error := label(body, "")
-	var submit := func():
-		if name_field.text.strip_edges().is_empty():
-			error.text = I18n.t("fc.err_name")
-			return
-		model.set_value("teamManagement", name_field.text.strip_edges(), "editableFighter.name")
-		send("createFighter")
-	button(body, I18n.t("fc.create"), submit)
-	name_field.text_submitted.connect(func(_text): submit.call())
-
-
-func _sync_preview() -> void:
-	if not is_instance_valid(_preview):
-		return
-	var fighter: Dictionary = data("teamManagement.editableFighter", {})
-	var lib := str(fighter.get("actorDescriptorLibrary", ""))
-	if lib.is_empty():
-		return
-	_preview.tints = fighter.get("actorMaterial", {})
-	var look := "%s/%s/%s/%s/%d" % [lib, fighter.get("skin", 0), fighter.get("hair", 0), fighter.get("eye", 0), _preview_dir]
-	if look == _preview_look:
-		return
-	_preview_look = look
-	# actorDescriptorLibrary is the figure key (Fighter3D.fighter_key)
-	var set_dir := lib
-	if not Direction8.load_idle(_preview, set_dir, _preview_dir):
-		Direction8.load_idle_any(_preview, set_dir)
 
 
 func _team_name() -> void:
