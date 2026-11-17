@@ -13,6 +13,23 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-191 · The lobby had no way to Options, Replays, bug report, disconnect or quit
+
+- **Symptom:** found drawing the S47 screen map: from the lobby the language,
+  volumes, full screen and resolution could not be changed, the replays list
+  could not be opened, and there was no "Desconectar" or "Salir". All of it
+  lives in the Menu panel, and no button opened it.
+- **Root cause:** commit `00b0e33e` (2026-10-07, the lobby's native rebuild)
+  dropped `["Menú", "menuDialog"]` from the lobby's menu list; the panel and
+  its children stayed, with no entry. The S45 redesign kept the list as it
+  was. The icon atlas still carried the menu's three bars in slot 0.
+- **Fix:** `lobby_screen.gd` `MENUS` gets `["nav.menu", "menuDialog", "top",
+  0]`, the last top-right icon, drawn from atlas slot 0 (an entry may name
+  its slot; the others keep i + 1). Client only.
+- **Verified:** `godot/test/screen_map.gd` against a local server (both a new
+  and a populated account) reaches Menú from the lobby button and Opciones
+  and Replays from it; `run_tests.sh --headless` 1491/0.
+
 ### B-190 · A single-target effect ignored its own target conditions (weapon 34 hit for 112)
 
 - **Symptom:** fighter card 34 (a ranged weapon, 5 AP, valued 100) took

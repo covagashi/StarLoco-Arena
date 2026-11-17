@@ -50,6 +50,10 @@ const MENUS := [
 	["nav.social", "socialDialog", "top"],
 	["nav.help", "tooltipDialog", "top"],
 	["nav.city", "cityDialog", "nav"],
+	# S47: the Menu (Options, Replays, report a bug, disconnect, quit) had
+	# lost its button on 2026-10-07; back as the last top icon, on the
+	# atlas's slot 0 (the three bars), which nothing else used
+	["nav.menu", "menuDialog", "top", 0],
 ]
 ## The three mode tiles: [id, title key, rect inside TILES, tag, field colour, dot colour].
 const MODES := [
@@ -371,7 +375,7 @@ func _coins_and_top(icons: Texture2D) -> void:
 			continue
 		var atlas := AtlasTexture.new()
 		atlas.atlas = icons
-		atlas.region = Rect2((i + 1) * 32, 0, 32, 32)
+		atlas.region = Rect2(_icon_slot(i) * 32, 0, 32, 32)
 		var b := Button.new()
 		b.name = "Menu_" + str(entry[1])
 		b.custom_minimum_size = Vector2(40, 40)
@@ -402,7 +406,7 @@ func _rail(icons: Texture2D) -> void:
 			continue
 		var atlas := AtlasTexture.new()
 		atlas.atlas = icons
-		atlas.region = Rect2((i + 1) * 32, 0, 32, 32)
+		atlas.region = Rect2(_icon_slot(i) * 32, 0, 32, 32)
 		var b := Button.new()
 		b.name = "Menu_" + str(entry[1])
 		b.position = Vector2(24, y)
@@ -442,6 +446,12 @@ func _rail(icons: Texture2D) -> void:
 		y += 52.0
 		n += 1
 	_reorder_menus()
+
+
+## The atlas slot of menu i: its own when it names one, else i + 1.
+static func _icon_slot(i: int) -> int:
+	var entry: Array = MENUS[i]
+	return int(entry[3]) if entry.size() > 3 else i + 1
 
 
 ## _menu_buttons in MENUS order (texts and tests index them by it).

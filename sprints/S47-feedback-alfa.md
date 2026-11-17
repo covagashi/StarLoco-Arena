@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1 de arreglos hecha (2026-11-17, abajo); queda la reorganización de pantallas, las mallas, el tutorial y el inventario
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1 de arreglos y el mapa de pantallas (punto 3) hechos (2026-11-17, abajo); siguiente: decidir la reorganización con el dueño (Q&A)
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -149,3 +149,52 @@ propio (4, 12) sigue como está, abajo el porqué.
 - No probado en vivo: la respuesta 3204/3216 en el modal Social contra un
   servidor (la ruta es la misma que la de la línea del chat, que sí llegaba)
   y el teclado en pantalla en un móvil real.
+
+## Punto 3 — el mapa de pantallas (2026-11-17)
+
+El dueño: "empieza". Primero del orden propuesto.
+
+- **Dónde:** `~/codigo/capturas/s47/mapa/index.html` (abrir en el
+  navegador de la Ally). Arriba el recorrido como árbol (qué abre qué, en
+  amarillo lo que se abre desde varios sitios), luego lo que enseña el mapa
+  y la galería: 51 pantallas, cada una con todas las formas de llegar.
+- **Cómo se hizo:** `godot/test/screen_map.gd` juega el cliente contra un
+  servidor local como un jugador (login → crear jefe → intro → cada botón
+  del lobby y cada pestaña → cada loseta → «Crear luchador» por pestaña →
+  cada grupo de Servicios y lo que abren → combate de entrenamiento), con
+  una cuenta nueva y con `test`. `godot/tools/screen_map.sh OUT` lo repite
+  entero en una red aislada y `tools/screen_map_page.py` monta la página;
+  las notas (árbol y hallazgos) van a mano en `OUT/notas.html`. Sirve para
+  comparar después de reorganizar.
+
+### Lo que enseña
+
+| Hallazgo | Puntos |
+|---|---|
+| **Opciones, Replays, Reportar bug, Desconectar y Salir no tenían entrada** desde el 7-oct: el lobby perdió el botón de Menú. **Arreglado** (B-191): icono de tres rayas arriba a la derecha, el que el atlas tenía sin usar. Dónde vive al final, con la reorganización | nuevo |
+| Reclutar no tiene camino directo: «Reclutar» (Historia), «Crear equipo» (Ranking) y «¡A luchar!» sin equipo abren Equipo, donde «Crear luchador» es un botón pequeño; el otro camino es Servicios → Aprendizaje → un maestro | 3, 5 |
+| Equipo se abre desde cinco sitios y su pie repite las losetas (Entrenamiento, Historia, Buscar combate) | 7, 8 |
+| Los torneos están en cuatro sitios: loseta, Calendario (lista y loseta), pestaña de Equipo y pestaña de Clasificación | 8, 13 |
+| Dos clasificaciones: Clasificación y la pestaña de Fantasmas | 8 |
+| La campaña no tiene entrada propia: sin luchadores la loseta lleva a Equipo | 6, 8 |
+| La intro son 12 páginas seguidas; el resto del tutorial es la lista «Primeros pasos» de Ayuda | 4 |
+| El bocadillo abre Social; el chat no tiene icono; el Buzón está en Servicios | 15 |
+| Nuevo luchador: modal con nombre, tres desplegables y una figura; sin descripción, dificultad ni ataques | 5 |
+| Estadísticas del jefe: icono suelto con ocho cifras | — |
+
+Sin capturar (piden un estado concreto): equipar hechizos, esferas, el
+informe del combate, subir de nivel, elegir carta, intercambio, crear
+equipo o clan, paneles de demonio.
+
+### Verificado
+
+- Las dos pasadas del mapa terminan sin errores de script (54 capturas la
+  cuenta nueva, 47 la de datos, combate incluido), antes y después de
+  devolver el Menú; tras el arreglo llegan a Opciones y Replays desde el
+  icono.
+- `run_tests.sh --headless`: 1491/0.
+
+### Siguiente
+
+Con el mapa delante, decidir con el dueño la reorganización (puntos 5–8,
+13, 15, 16), en preguntas cortas (modo Q&A).
