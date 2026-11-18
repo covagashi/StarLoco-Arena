@@ -1532,5 +1532,20 @@
   "guide.step_284": "Gagne les trois défis du Démon III (Histoire, ch. 1).",
   "guide.step_278": "Bats les quatre démons des minutes (ch. 2).",
   "guide.step_277": "Bats le démon des 12 minutes (ch. 2).",
-  "guide.step_279": "Parle au Démon I pour savoir la suite."
+  "guide.step_279": "Parle au Démon I pour savoir la suite.",
+  "inv.for_what": "À quoi elles servent",
+  "inv.card_tag": "Carte",
+  "inv.in_set": "Collection {name} : tu en as {have} sur {of}.",
+  "inv.wear_it": "La mettre au chef",
+  "inv.sets_show": "Collections",
+  "inv.sets_started": "Commencées",
+  "inv.sets_done": "Complètes",
+  "inv.sets_all": "Toutes",
+  "inv.search_sets_ph": "Chercher une collection",
+  "inv.sets_none": "Rien ici. Obtiens des cartes en combat, chez le Card Master ou à l'autel.",
+  "inv.set_tag": "Collection",
+  "inv.set_pick_hint": "Choisis une collection pour voir ses bonus et ce qu'il te manque.",
+  "inv.set_progress": "Tu as {have} cartes sur {of}.",
+  "inv.set_complete": "Collection complète !",
+  "inv.set_missing": "Il t'en manque {n}"
 }

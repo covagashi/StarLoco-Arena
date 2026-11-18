@@ -1532,5 +1532,20 @@
   "guide.step_284": "Win Demon III's three challenges (Story, ch. 1).",
   "guide.step_278": "Beat the four demons of the minutes (ch. 2).",
   "guide.step_277": "Beat the demon of the 12 minutes (ch. 2).",
-  "guide.step_279": "Talk to Demon I to learn what comes next."
+  "guide.step_279": "Talk to Demon I to learn what comes next.",
+  "inv.for_what": "What they are for",
+  "inv.card_tag": "Card",
+  "inv.in_set": "Collection {name}: you have {have} of {of}.",
+  "inv.wear_it": "Put it on the coach",
+  "inv.sets_show": "Collections",
+  "inv.sets_started": "Started",
+  "inv.sets_done": "Complete",
+  "inv.sets_all": "All",
+  "inv.search_sets_ph": "Search a collection",
+  "inv.sets_none": "Nothing here. Get cards in fights, at the Card Master or at the altar.",
+  "inv.set_tag": "Collection",
+  "inv.set_pick_hint": "Pick a collection to see its bonuses and what you lack.",
+  "inv.set_progress": "You have {have} of {of} cards.",
+  "inv.set_complete": "Collection complete!",
+  "inv.set_missing": "You lack {n}"
 }

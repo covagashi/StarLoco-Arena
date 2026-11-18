@@ -22,13 +22,8 @@ func _audit() -> void:
 	_record(5200, "all", all.size() == State.inventory.size(), "%d tiles, inventory %d" % [all.size(), State.inventory.size()])
 	# consumables only
 	# coach equipment (test owns some; no consumables)
-	var kinds: OptionButton = p.find_child("KindPick", true, false)
-	var ci := -1
-	for i in kinds.item_count:
-		if kinds.get_item_text(i) == i18n.t("inv.kind_coach"):
-			ci = i
-	kinds.select(ci)
-	kinds.item_selected.emit(ci)
+	# S47: what the cards are for is the screen's left list now
+	(p.find_child("Kind_coach", true, false) as Button).pressed.emit()
 	await create_timer(0.5).timeout
 	var cons := _tiles(p)
 	var want := 0
@@ -43,9 +38,7 @@ func _audit() -> void:
 		_record(5200, "what for", use != null and use.text == i18n.t("inv.use_coach"), "'%s'" % (use.text.left(50) if use != null else "—"))
 		await _shot("inventory-coach")
 	# by value, every type (controls are rebuilt on refresh: find them again)
-	kinds = p.find_child("KindPick", true, false)
-	kinds.select(0)
-	kinds.item_selected.emit(0)
+	(p.find_child("Kind_all", true, false) as Button).pressed.emit()
 	await create_timer(0.4).timeout
 	var sort: OptionButton = p.find_child("SortPick", true, false)
 	sort.select(1)
@@ -97,6 +90,21 @@ func _audit() -> void:
 		var stxt := sb.text if sb != null else ""
 		_record(5200, "set bonuses", stxt.begins_with("Con ") and stxt.contains(" puestas: "), "'%s'" % stxt.replace("\n", " / "))
 		await _shot("inventory-set-bonuses")
+	# S47: the album: collections started, one picked
+	p.tab = 1
+	p.selected = {}
+	p.schedule_refresh()
+	await create_timer(0.8).timeout
+	var album = p.find_child("Album", true, false)
+	var strips: Array = album.get_children().filter(func(c): return c is Button) if album != null else []
+	_record(5200, "album", album != null, "%d collections started" % strips.size())
+	await _shot("inventory-album")
+	if not strips.is_empty():
+		strips[0].pressed.emit()
+		await create_timer(0.6).timeout
+		var miss = p.find_child("SetMissing", true, false)
+		_record(5200, "album pick", p.sheet_title.text != "", "'%s', missing: %s" % [p.sheet_title.text, miss != null])
+		await _shot("inventory-album-pick")
 	_close_all()
 	i18n.set_locale(lang_before)
 

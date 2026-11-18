@@ -298,6 +298,8 @@ func _ready() -> void:
 	_gui.native_factories["cardMasterDialog"] = _make_card_master_panel
 	# S47: a new fighter is a screen of its own (recruit_screen.gd)
 	_gui.native_factories["fighterCreationDialog"] = _make_recruit_panel
+	# S47: the inventory too (inventory_screen.gd)
+	_gui.native_factories["cardBookDialog"] = _make_inventory_panel
 	_gui.native_factories["mailboxDialog"] = _make_mailbox_panel
 	_gui.native_factories["fusionLabDialog"] = _make_fusion_panel
 	_gui.native_factories["npcTalkDialog"] = _make_talk_panel
@@ -5227,6 +5229,13 @@ func _show_lobby_screen() -> void:
 func _make_native_lobby_panel(panel_name: String) -> Control:
 	var panel := preload("res://src/ui/lobby_panels.gd").new()
 	panel.panel_name = panel_name
+	panel.model = _gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
+func _make_inventory_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/inventory_screen.gd").new()
 	panel.model = _gui.model
 	panel.requested.connect(_on_native_lobby_action)
 	return panel

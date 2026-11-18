@@ -48,3 +48,15 @@ El blanco de los ojos de la coach entraba en la máscara de pelo
 saturado) y su blanco quedan fuera; el pelo, igual que antes. Comprobado con
 `test/coach_face_preview.gd` (caras de cerca, pelo verde y rojo). Falta la
 parte de arte del punto 1 (mallas a ~40k triángulos).
+
+## 2026-11-18: coach de 40k, prueba de carga web, guía e inventario
+
+- Coach hombre a 40k desde el original nuevo de Meshy (610k, pose en A):
+  pipeline con `--lower_arms` y `--weld_normals`; +0,9 MB de primera carga,
+  misma memoria. No adoptado aún (dueño).
+- `tools/web/load_test.mjs` y la marca web `window.__pippop`. Tiempos
+  absolutos inválidos: la Ally estaba cargada por otras sesiones.
+- Punto 4: la guía del lobby (`guide_smoke` 6/6, nuevo y `test`).
+- Punto 12: inventario como pantalla propia con álbum de colecciones
+  (`inventory_smoke` 6/6).
+- Para seguir: «Dónde retomar» al final de `sprints/S47-feedback-alfa.md`.

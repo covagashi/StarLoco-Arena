@@ -1532,5 +1532,20 @@
   "guide.step_284": "Gana los tres retos del Demonio III (Historia, cap. 1).",
   "guide.step_278": "Vence a los cuatro demonios de los minutos (cap. 2).",
   "guide.step_277": "Vence al demonio de los 12 minutos (cap. 2).",
-  "guide.step_279": "Habla con el Demonio I para saber qué viene después."
+  "guide.step_279": "Habla con el Demonio I para saber qué viene después.",
+  "inv.for_what": "Para qué sirven",
+  "inv.card_tag": "Carta",
+  "inv.in_set": "Colección {name}: tienes {have} de {of}.",
+  "inv.wear_it": "Ponérsela al jefe",
+  "inv.sets_show": "Colecciones",
+  "inv.sets_started": "Empezadas",
+  "inv.sets_done": "Completas",
+  "inv.sets_all": "Todas",
+  "inv.search_sets_ph": "Buscar colección",
+  "inv.sets_none": "Nada por aquí. Consigue cartas en combate, en el Card Master o en el altar.",
+  "inv.set_tag": "Colección",
+  "inv.set_pick_hint": "Elige una colección para ver sus bonus y lo que te falta.",
+  "inv.set_progress": "Tienes {have} de {of} cartas.",
+  "inv.set_complete": "¡Colección completa!",
+  "inv.set_missing": "Te faltan {n}"
 }

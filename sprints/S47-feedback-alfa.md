@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4 y 16 hechos; quedan el inventario (12), los iconos (11) y la coach mujer a 40k (1)
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (primera pasada) hechos; quedan el diseño del inventario, los iconos (11) y la coach mujer a 40k (1) — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -405,3 +405,38 @@ responder; decidido con criterio, aquí el porqué).
 1, aro en Servicios, IR abre Servicios, ocultar/mostrar) y 6/6 con `test`
 (paso 3, aro en la loseta Historia, IR abre Historia). Capturas en
 `~/codigo/capturas/s47/guia/`. `run_tests.sh --headless` 1492/0.
+
+## Punto 12 — el inventario, primera pasada (2026-11-18)
+
+- `src/ui/inventory_screen.gd`: pantalla propia en lugar del modal.
+  **Cartas:** a la izquierda para qué sirven (con cuántas tienes de cada
+  tipo), la búsqueda, el orden y "Equipo del coach"; en el centro las
+  cartas; a la derecha la elegida en grande, qué hace, para qué sirve, su
+  colección ("tienes 3 de 8"), copias y valor, y "Ponérsela al jefe" si es
+  equipo del coach. **Colecciones:** un álbum: cada colección con su
+  barra y sus cartas en pequeño (las que faltan, apagadas), las más cerca
+  de completarse primero; Empezadas / Completas / Todas; la elegida dice
+  sus bonus y qué falta.
+- **Verificado:** `inventory_smoke` 6/6 en vivo (todas, equipo del coach,
+  para qué sirve, por valor, álbum, elegir colección);
+  `run_tests.sh --headless` 1493/0.
+
+## Dónde retomar (contexto nuevo)
+
+1. **Inventario:** pasada de diseño con un agente Fable, como en Reclutar
+   (el desplegable de orden aún es el estilo antiguo; la ficha de la
+   derecha necesita desplazarse con textos largos).
+2. **Iconos repetidos (11):** ilustraciones propias por familia (Fable +
+   vex o kiln), BACKLOG §13.
+3. **Coach mujer a 40k** (al final, dueño): el original está en
+   `~/codigo/capturas/s47/meshy-hd/coach_7001_f_hd.glb` (676 936 tris);
+   mismo método que el hombre: reducción previa a 80k con
+   `predecimate`, luego `meshy_fighter.py --tris=40000 --menu=1
+   --weld_normals=1 --lower_arms=10 --arm_slack=0.06` (sus opciones de
+   `figures.json`; `--cut` probablemente sobra en pose en A).
+4. **Adoptar los coach de 40k** cuando el dueño diga: receta en
+   `figures.json` (src nuevo, opciones), `check.py` FIG_TRIS para los
+   coach, y medir el panel Equipo del coach con GPU.
+5. **Repetir la prueba de carga web** con la Ally libre
+   (`tools/web/load_test.mjs`; la marca `window.__pippop` ya está).
+6. Lo que queda de la auditoría web: W2 (móvil vertical), W4–W7, W9.
