@@ -2,7 +2,9 @@ extends Node2D
 ## S38b: the card template (src/ui/card_face.gd) on real cards, offline:
 ## every family and every rarity at the inventory tile's size (150 x 180),
 ## and four at the detail's size (250 x 300). Writes a PNG to look at.
-##   xvfb-run godot --path godot --resolution 1280x720 test/card_face_preview.tscn -- out.png
+##   xvfb-run godot --path godot --resolution 1280x720 test/card_face_preview.tscn -- out.png [ids [big]]
+## `ids` (comma-separated coach card ids) replaces the first two rows, and a
+## second list `big` the four at the detail's size.
 
 const CardFace := preload("res://src/ui/card_face.gd")
 # [card, is_fighter] — row 1: coach gear gold and copper, a haircut (coach,
@@ -28,18 +30,28 @@ func _run() -> void:
 	bg.color = Color("e9ecf1")
 	bg.size = Vector2(1280, 720)
 	add_child(bg)
-	for i in CARDS.size():
-		var f := CardFace.make(int(CARDS[i][0]), Vector2(150, 180), bool(CARDS[i][1]), "", "Valor 79")
+	var cards := CARDS
+	if args.size() > 1:
+		cards = []
+		for id in args[1].split(","):
+			cards.append([int(id), false])
+	for i in cards.size():
+		var f := CardFace.make(int(cards[i][0]), Vector2(150, 180), bool(cards[i][1]), "", "Valor 79")
 		f.position = Vector2(16 + (i % 7) * 176, 12 + (i / 7) * 192)
 		f.size = Vector2(150, 180)
 		add_child(f)
-	for i in BIG.size():
-		var f := CardFace.make(int(BIG[i][0]), Vector2(250, 300), bool(BIG[i][1]))
+	var big := BIG
+	if args.size() > 2:
+		big = []
+		for id in args[2].split(","):
+			big.append([int(id), false])
+	for i in big.size():
+		var f := CardFace.make(int(big[i][0]), Vector2(250, 300), bool(big[i][1]))
 		f.position = Vector2(16 + i * 262, 404)
 		f.size = Vector2(250, 300)
 		add_child(f)
-	await get_tree().process_frame
-	await get_tree().process_frame
+	# the art decodes off the main thread (CardFace._tex_soon): give it time
+	await get_tree().create_timer(1.5).timeout
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out)
 	print("[card_face_preview] ", out)

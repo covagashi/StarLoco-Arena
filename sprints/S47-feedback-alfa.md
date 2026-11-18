@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; quedan los iconos (11) y la coach mujer a 40k (1) — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; punto 11 hecho; queda la coach mujer a 40k (1) — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -447,12 +447,44 @@ base fuera de la figura, `run_tests.sh --headless` 1493/0. El smoke usa una
 copia de la base con las cartas 409, 137 y 316 sembradas. Capturas en
 `~/codigo/capturas/s47/inventario/`.
 
+## Punto 11 — iconos propios para las cartas que se repetían (2026-11-18)
+
+Dueño: "quita los textos decorativos y sigue con los iconos". Primero se
+quitaron los códigos decorativos de todas las pantallas (`PPA // …`, la
+palabra perfilada del fondo, el "INVENTORY" sobre el título).
+
+- **Cartas de regla que nombran algo** (212, "@spell/@fcard/@breed"):
+  enseñan lo que regulan — el icono propio del hechizo, la pieza del
+  objeto del luchador o el retrato de la clase (`CardFace._ruled_art`,
+  `OwnText.ref_of`).
+- **93 subfamilias con pictograma propio** (agente Opus, esfuerzo alto),
+  mismo trazo blanco que los de familia: pomada, elixir, runa, bandera,
+  cohete, gema, faro, cronómetro, etiqueta de precio… 303 ficheros por
+  las variantes: la pócima lleva una marca de lo que hace (llama, gota,
+  escudo, ojo…), "Gran" un destello, "suprema" una corona, "menor" más
+  pequeña, y el color o elemento del nombre como acento (gemas, rubí y
+  zafiro, fuegos artificiales, pelo/piel/ojos, sabores). 703 cartas; solo
+  los 8 peinados siguen con `hair.webp`. ~660 KB.
+- `tools/icons/card_sub_glyphs.py` dibuja, `card_art.py --sub` regenera
+  `assets/ui/cards/sub/` y el mapa `assets/content/card_art.json` (reglas
+  por tipo y nombre en español; los mapas de arena de las reglas, por el
+  nombre de su colección). Los tipos 15–19 son partes de mascota: un
+  pictograma por hueco (corazón, pata, cabeza, parche, ovillo), aunque el
+  nombre diga otra cosa ("Hoja de col" → cabeza de gato).
+- **Pendiente de mirar:** "Hechizo vetado" y "Clase vetada" se leen pero
+  van cargados (la raya tapa parte de la figura); los iconos de hechizo
+  traen su placa gris de botón dentro de la ventana de la carta.
+
+**Verificado:** `test/unit/card_art_test.gd` (cada clave con su fichero,
+ninguna carta fuera del mapa salvo el equipo del coach, `art_path` en
+cinco casos), `run_tests.sh --headless` 1502/0. Hojas en
+`~/codigo/capturas/s47/iconos/` (01–15, con `README.txt`).
+
 ## Dónde retomar (contexto nuevo)
 
 1. ~~Inventario, pasada de diseño~~ hecha (arriba); falta la opinión del
    dueño.
-2. **Iconos repetidos (11):** ilustraciones propias por familia (Fable +
-   vex o kiln), BACKLOG §13.
+2. ~~Iconos repetidos (11)~~ hechos (arriba); falta la opinión del dueño.
 3. **Coach mujer a 40k** (al final, dueño): el original está en
    `~/codigo/capturas/s47/meshy-hd/coach_7001_f_hd.glb` (676 936 tris);
    mismo método que el hombre: reducción previa a 80k con

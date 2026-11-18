@@ -2,9 +2,9 @@ extends Control
 ## S38b: a card drawn in the template the owner chose (option B of
 ## tools/icons/card_template_options.py): a frame in the metal of its rarity
 ## (black lacquer, copper, silver, gold), the colour of its family inside, its
-## 3D piece (coach and fighter equipment) or the family's pictogram on a soft
-## light, the name on an ink ribbon, the family's medallion at the top left
-## and one to four diamonds for the rarity. Laid out on a 150 x 180 card and
+## 3D piece (coach and fighter equipment), its sub-family's pictogram or the
+## family's on a soft light, the name on an ink ribbon, the family's
+## medallion at the top left and one to four diamonds for the rarity. Laid out on a 150 x 180 card and
 ## scaled to the control's size; `sub` (a value, a price) goes at the foot.
 ## The art comes from tools/icons/card_art.py (assets/ui/cards/).
 ## The text is drawn unscaled (its size follows the card's scale) so the
@@ -13,6 +13,7 @@ extends Control
 const Cards := preload("res://src/gamedata/cards.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const FighterCards := preload("res://src/gamedata/fightercards.gd")
+const OwnText := preload("res://src/gamedata/own_text.gd")
 const BASE := Vector2(150, 180)
 const INK := Color("1c2030")
 # family → its colour (the sheet's)
@@ -38,6 +39,8 @@ const HAIR_TYPES := [3, 29]
 const NAME_W := BASE.x - 26.0   # the ribbon's text width
 
 static var _art_cache := {}   # asset path → Texture2D (null when missing)
+const SUB_ART := "content/card_art.json"
+static var _sub_map = null    # card_art.json, once read (Dictionary)
 ## Art a face drew without: asset path → ids of the faces waiting for it.
 ## A grid of new cards (the inventory) decodes a few images a frame instead
 ## of all of them in one long frame, which also cut the music on the web
@@ -79,8 +82,9 @@ static func _tex(rel: String) -> Texture2D:
 	return _art_cache[rel]
 
 
-## The piece for coach and fighter gear, the hair pictogram for haircuts and
-## hair colours without one, else the family's pictogram.
+## The piece for coach and fighter gear (a combat rule: what it rules on),
+## else the card's sub-family pictogram (S47: a pócima, a rune, a rocket…),
+## the hair pictogram for haircuts, else the family's pictogram.
 static func art_of(cid: int, is_fighter: bool) -> Texture2D:
 	return _tex(art_path(cid, is_fighter))
 
@@ -93,12 +97,42 @@ static func art_path(cid: int, is_fighter: bool) -> String:
 		piece = "ui/cards/fighter/%d.webp" % cid
 	elif fam == "coach":
 		piece = "ui/cards/coach/%d.webp" % cid
+	elif fam == "combat":
+		piece = _ruled_art(cid)
 	if piece != "" and AssetPaths.exists(piece):
 		return piece
+	if not is_fighter:
+		var key := str(_sub_art().get(str(cid), ""))
+		if key != "" and AssetPaths.exists("ui/cards/sub/%s.webp" % key):
+			return "ui/cards/sub/%s.webp" % key
 	if not is_fighter and int(Cards.meta(cid).get("type", -1)) in HAIR_TYPES \
 			and AssetPaths.exists("ui/cards/family/hair.webp"):
 		return "ui/cards/family/hair.webp"
 	return "ui/cards/family/%s.webp" % fam
+
+
+## S47: card id → its sub-family pictogram (content/card_art.json, written
+## by tools/icons/card_art.py from the card's type and name), read once.
+static func _sub_art() -> Dictionary:
+	if _sub_map == null:
+		_sub_map = AssetPaths.read_json(SUB_ART, {})
+	return _sub_map
+
+
+## S47: a combat rule card that bans or re-prices one spell, fighter item or
+## class shows that one's art (our spell icon, item piece, class portrait).
+static func _ruled_art(cid: int) -> String:
+	var ref := OwnText.ref_of("card", cid)
+	if ref.is_empty():
+		return ""
+	match ref[0]:
+		"spell":
+			return "ui/spells/%d.png" % ref[1]
+		"fcard":
+			return "ui/cards/fighter/%d.webp" % ref[1]
+		"breed":
+			return "ui/portraits/%d.png" % (int(ref[1]) * 10)
+	return ""
 
 
 ## The texture if it is decoded already; else null, and this face redraws

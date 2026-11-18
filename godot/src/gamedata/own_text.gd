@@ -65,5 +65,14 @@ static func _resolve(ref: String, fallback: String) -> String:
 	return fallback
 
 
+## What a "@kind:id" text points at, as [kind, id]; [] for a plain text
+## (S47: a combat rule card draws the art of what it rules on).
+static func ref_of(kind: String, id: int) -> Array:
+	var t := str(_table("en").get("%s.%d" % [kind, id], ""))
+	if not t.begins_with("@"):
+		return []
+	return [t.substr(1).get_slice(":", 0), int(t.get_slice(":", 1))]
+
+
 static func has_text(kind: String, id: int) -> bool:
 	return _table("en").has("%s.%d" % [kind, id])

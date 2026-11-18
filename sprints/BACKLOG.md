@@ -301,8 +301,8 @@ espera al dueño lleva **(dueño)**.
       mía: el dueño no vio la diferencia en la pregunta).
 - [ ] **Tutorial de entrada largo** (dueño): 8 + 4 páginas de Aldebrán y 10
       de Nilo antes de la primera pelea.
-- [ ] **Cartas sin ilustración propia**: las de arena y los peinados llevan
-      el pictograma de su familia.
+- [x] **Cartas sin ilustración propia**: pictograma por subfamilia (S47
+      punto 11); solo los peinados siguen con el de pelo.
 - [ ] **Móvil**: escribir (teclado en pantalla activado en el export,
       S47 tanda 1, sin probar en un móvil real), la mitad de la pantalla en
       negro en Firefox Android (sin reproducir: barra o teclado cambiando el
