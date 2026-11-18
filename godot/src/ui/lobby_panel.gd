@@ -67,7 +67,6 @@ func _ready() -> void:
 	var head := VBoxContainer.new()
 	head.add_theme_constant_override("separation", -4)
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(UiStyle.tag("PPA // " + tag_name()))
 	title = Label.new()
 	title.name = "Title"
 	UiStyle.display(title, 40)
@@ -146,11 +145,6 @@ func _ready() -> void:
 	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_sheet, "position", to, 0.3)
 	tw.tween_property(_sheet, "modulate:a", 1.0, 0.22)
-
-
-## The small code over the title ("PPA // SOCIAL"); a panel can say its own.
-func tag_name() -> String:
-	return panel_name.trim_suffix("Dialog").to_upper()
 
 
 ## An interface sound (S39, the Audio autoload), when the autoload is there.

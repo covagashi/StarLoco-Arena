@@ -63,11 +63,6 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		schedule_refresh()
 
 
-## S47: the calendar panel is Torneos now.
-func tag_name() -> String:
-	return "TOURNAMENTS" if panel_name == "calendarDialog" else super.tag_name()
-
-
 func _exit_tree() -> void:
 	if is_instance_valid(_eq_fig) and _eq_fig.get_parent() == null:
 		_eq_fig.free()

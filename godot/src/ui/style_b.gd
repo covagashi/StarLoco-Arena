@@ -142,9 +142,10 @@ static func frame_lines(size: Vector2, code: String, mid := 640.0) -> Control:
 		for p in [Vector2(mid if mid > 0.0 else size.x * 0.5, 92), Vector2(24, size.y - 56), Vector2(size.x - 24, size.y - 56)]:
 			lines.draw_line(p - Vector2(7, 0), p + Vector2(7, 0), INK, 2.0)
 			lines.draw_line(p - Vector2(0, 7), p + Vector2(0, 7), INK, 2.0)
-		var f := UiStyle.bold(700)
-		var w := f.get_string_size(code, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-		lines.draw_string(f, Vector2(size.x - 24 - w, 104), code, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UiStyle.B_FAINT))
+		if code != "":
+			var f := UiStyle.bold(700)
+			var w := f.get_string_size(code, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			lines.draw_string(f, Vector2(size.x - 24 - w, 104), code, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UiStyle.B_FAINT))
 	return lines
 
 

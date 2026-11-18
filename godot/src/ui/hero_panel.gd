@@ -43,9 +43,8 @@ func _ready() -> void:
 	stage.custom_minimum_size = HREF
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(stage)
-	_drifts = StyleB.backdrop(stage, HREF, hero_word(), "PPA // " + panel_name.trim_suffix("Dialog").to_upper(),
-		"", Vector2(0.4, 0.45), 400.0)
-	# top left: back (an ink box), the tag and the title
+	_drifts = StyleB.backdrop(stage, HREF, "", "", "", Vector2(0.4, 0.45), 400.0)
+	# top left: back (an ink box) and the title
 	close_button = StyleB.button(false, 26)
 	close_button.name = "Close"
 	close_button.text = "‹"
@@ -58,7 +57,6 @@ func _ready() -> void:
 	head.position = Vector2(96, 16)
 	head.add_theme_constant_override("separation", -4)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head.add_child(UiStyle.tag(hero_tag()))
 	title = Label.new()
 	UiStyle.display(title, 44)
 	head.add_child(title)
@@ -126,16 +124,6 @@ func _ready() -> void:
 	close_button.grab_focus()
 	StyleB.enter(self, [sheet], Vector2(60, 0), 0.2, 0.0, 0.5)
 	StyleB.enter(self, [head], Vector2(0, -24), 0.1)
-
-
-## The word outlined behind the screen and the tag over the title; a
-## panel sets its own.
-func hero_word() -> String:
-	return "PIPPOP"
-
-
-func hero_tag() -> String:
-	return panel_name.trim_suffix("Dialog").to_upper()
 
 
 func _process(dt: float) -> void:

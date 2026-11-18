@@ -66,14 +66,6 @@ func _ready() -> void:
 	StyleB.enter(self, [_left], Vector2(-40, 0), 0.15, 0.0, 0.5)
 
 
-func hero_word() -> String:
-	return "CARDS"
-
-
-func hero_tag() -> String:
-	return "INVENTORY"
-
-
 func _model_changed(model_name: String, _field: String, _value: Variant) -> void:
 	var root := model_name.split(".")[0]
 	if root == "localCoach" or root == "tomeManager":

@@ -47,7 +47,7 @@ func _init() -> void:
 	_box.clip_contents = true
 	_box.theme = UiStyle.theme()
 	add_child(_box)
-	_drifts = StyleB.backdrop(_box, REF, "ARENA", "PPA // LOGIN · 00", "coach_ghost", Vector2(0.28, 0.45), 380.0)
+	_drifts = StyleB.backdrop(_box, REF, "", "", "coach_ghost", Vector2(0.28, 0.45), 380.0)
 	# the vex figures (S44, tools/scene_vex) are wider than the old renders:
 	# a little smaller and further apart, the coach in front
 	_figs = [UiStyle.figure(_box, "fighter_a", Vector2(36, 270), 390),
@@ -142,7 +142,6 @@ func _form_block() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 	form.add_child(col)
-	col.add_child(UiStyle.tag("LOGIN · 00"))
 	var head := Label.new()
 	head.text = I18n.t("login.ribbon")
 	UiStyle.display(head, 44)

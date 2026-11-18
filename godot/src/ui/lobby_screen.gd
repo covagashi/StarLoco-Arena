@@ -230,10 +230,7 @@ func _backdrop() -> void:
 		for p in [Vector2(640, 92), Vector2(24, 664), Vector2(REF.x - 24, 664)]:
 			lines.draw_line(p - Vector2(7, 0), p + Vector2(7, 0), INK, 2.0)
 			lines.draw_line(p - Vector2(0, 7), p + Vector2(0, 7), INK, 2.0)
-		var f := UiStyle.bold(700)
-		var t := "PPA // LOBBY · 01"
-		var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-		lines.draw_string(f, Vector2(REF.x - 24 - w, 104), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UiStyle.B_FAINT))
+		)
 	_box.add_child(lines)
 
 

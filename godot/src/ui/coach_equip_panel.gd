@@ -58,10 +58,6 @@ func _ready() -> void:
 	refresh()
 
 
-func hero_word() -> String:
-	return "COACH"
-
-
 func _model_changed(model_name: String, _field: String, _value: Variant) -> void:
 	var root := model_name.split(".")[0]
 	if root == "coachEquip" or root == "localCoach":

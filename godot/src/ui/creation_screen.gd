@@ -53,7 +53,7 @@ func _init() -> void:
 	_box.clip_contents = true
 	_box.theme = UiStyle.theme()
 	add_child(_box)
-	_drifts = StyleB.backdrop(_box, REF, "COACH", "PPA // CREATE · 02", "", Vector2(0.45, 0.45), 400.0)
+	_drifts = StyleB.backdrop(_box, REF, "", "", "", Vector2(0.45, 0.45), 400.0)
 	_box.add_child(_height_chart())
 	_header()
 	_section_list()

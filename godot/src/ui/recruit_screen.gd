@@ -90,14 +90,6 @@ func _ready() -> void:
 	_enter.call_deferred()
 
 
-func hero_word() -> String:
-	return "RECRUIT"
-
-
-func hero_tag() -> String:
-	return "RECRUIT · " + I18n.t("recruit.tag_mode_evo" if _version() == 2 else "recruit.tag_mode_classic").to_upper()
-
-
 func _fighter() -> Dictionary:
 	var f: Variant = data("teamManagement.editableFighter", {})
 	return f if f is Dictionary else {}
