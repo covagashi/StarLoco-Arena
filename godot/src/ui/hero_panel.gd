@@ -13,6 +13,9 @@ const R_SHEET := Rect2(820, 100, 430, 480)
 var stage: Control
 var sheet_title: Label
 var sheet_tag: Label    # the small tag over sheet_title ("SLOT" unless a panel says)
+var sheet_scroll: ScrollContainer   # `body` scrolls inside it when the paper is short
+var _paper: PanelContainer
+var _more: Control      # the cue at the paper's foot: it goes on below
 var _header_title: Label
 var _drifts: Array = []
 var _t := 0.0
@@ -68,6 +71,7 @@ func _ready() -> void:
 	sheet.theme = UiStyle.paper_theme()
 	stage.add_child(sheet)
 	var paper := PanelContainer.new()
+	_paper = paper
 	var ps := StyleB.plate()
 	ps.content_margin_left = 26
 	ps.content_margin_right = 22
@@ -90,10 +94,21 @@ func _ready() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inner.add_child(scroll)
+	sheet_scroll = scroll
 	body = VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 12)
 	scroll.add_child(body)
+	# the paper goes on below: a fade over the last lines and a coral chevron
+	# on the foot margin, only while the body can still scroll down
+	_more = Control.new()
+	_more.name = "More"
+	_more.size = R_SHEET.size
+	_more.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_more.draw.connect(_draw_more)
+	sheet.add_child(_more)
+	scroll.get_v_scroll_bar().value_changed.connect(func(_v): _more.queue_redraw())
+	scroll.get_v_scroll_bar().changed.connect(_more.queue_redraw)
 	pinned_actions = HBoxContainer.new()
 	pinned_actions.name = "Actions"
 	pinned_actions.alignment = BoxContainer.ALIGNMENT_END
@@ -126,6 +141,60 @@ func hero_tag() -> String:
 func _process(dt: float) -> void:
 	_t += dt
 	StyleB.drift(_drifts, _t)
+
+
+func _draw_more() -> void:
+	var bar := sheet_scroll.get_v_scroll_bar()
+	if bar.max_value - bar.page - bar.value <= 1.0:
+		return
+	var ps: StyleBoxFlat = _paper.get_theme_stylebox("panel")
+	var w := _paper.size.x
+	var foot := _paper.size.y - ps.content_margin_bottom
+	var x0 := ps.content_margin_left
+	var x1 := w - ps.content_margin_right - bar.size.x
+	var fade := 44.0
+	_more.draw_polygon(PackedVector2Array([Vector2(x0, foot - fade), Vector2(x1, foot - fade), Vector2(x1, foot), Vector2(x0, foot)]),
+		PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0.96), Color(1, 1, 1, 0.96)]))
+	var m := Vector2(w * 0.5, foot + ps.content_margin_bottom * 0.5)
+	var chevron := PackedVector2Array([m + Vector2(-9, -4), m + Vector2(0, 4), m + Vector2(9, -4)])
+	var shadow := PackedVector2Array()
+	for p in chevron:
+		shadow.append(p + Vector2(2, 2))
+	_more.draw_polyline(shadow, Color(UiStyle.B_INK, 0.9), 3.0, true)
+	_more.draw_polyline(chevron, UiStyle.B_CORAL, 3.0, true)
+
+
+## The paper hardened (the recruit's, S47): `size` tall, a hard ink shadow
+## and an ink rim instead of the soft shade, a coral corner cut at the
+## bottom right — like every other box on a screen whose stage draws slabs.
+func harden_sheet(size: Vector2) -> void:
+	var sheet: Control = stage.get_node("Sheet")
+	sheet.size = size
+	_paper.size = size
+	_more.size = size
+	var ps: StyleBoxFlat = _paper.get_theme_stylebox("panel").duplicate()
+	ps.shadow_size = 0
+	ps.border_width_left = 2
+	ps.border_width_right = 2
+	ps.border_width_bottom = 2
+	ps.border_width_top = 4
+	ps.bg_color = Color(1, 1, 1, 0.96)
+	_paper.add_theme_stylebox_override("panel", ps)
+	var sh := Control.new()
+	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sh.draw.connect(func(): sh.draw_rect(Rect2(Vector2(7, 7), size), Color(UiStyle.B_INK, 0.9)))
+	sheet.add_child(sh)
+	sheet.move_child(sh, 0)
+	var corner := Control.new()   # a coral corner cut at the bottom right, over the paper
+	corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	corner.draw.connect(func():
+		var c := size
+		corner.draw_colored_polygon(PackedVector2Array([c + Vector2(-34, 0), c, c + Vector2(0, -34)]), UiStyle.B_CORAL)
+		corner.draw_line(c + Vector2(-34, 0), c + Vector2(0, -34), UiStyle.B_INK, 2.0, true))
+	sheet.add_child(corner)
+	var inner: VBoxContainer = _paper.get_child(0)
+	inner.add_theme_constant_override("separation", 4)
+	body.add_theme_constant_override("separation", 8)
 
 
 func _layout() -> void:

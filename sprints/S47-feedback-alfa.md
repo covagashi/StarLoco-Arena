@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (primera pasada) hechos; quedan el diseño del inventario, los iconos (11) y la coach mujer a 40k (1) — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; quedan los iconos (11) y la coach mujer a 40k (1) — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -421,11 +421,36 @@ responder; decidido con criterio, aquí el porqué).
   para qué sirve, por valor, álbum, elegir colección);
   `run_tests.sh --headless` 1493/0.
 
+## Punto 12 — pasada de diseño del inventario (2026-11-18)
+
+Dueño: "usa opus 5.5 en esfuerzo alto, creo que fable sería demasiado";
+la pasada la empezó un agente Fable y la terminó y verificó uno de Opus.
+
+- **Orden:** tres botones inclinados (Nombre / Valor / Cantidad), como los
+  de sexo y modo de Reclutar, en lugar del desplegable antiguo.
+- **La ficha de la derecha se desplaza**, con un degradado y un chevrón
+  coral al pie mientras queda texto debajo; el título encoge (30 → 20) en
+  vez de cortarse. "Ponérsela al jefe" queda fijo abajo a la derecha.
+- Filtros sobre una losa con cinta coral y cuentas en oro, búsqueda
+  enmarcada, tipo de carta como medallón con rombos de rareza; en el álbum
+  cada colección es una losa con su barra, en oro y con destello si está
+  completa.
+- `style_b.gd` recoge `ribbon()`, `choice()` y `draw_slab()` (salen de
+  `recruit_screen.gd`); `hero_panel.gd` gana `harden_sheet()` y el aviso de
+  "hay más abajo", que también usa el Equipo del coach.
+- Arreglado: la pista sin carta elegida era una línea sin ajuste que
+  empujaba la ficha fuera de la pantalla.
+
+**Verificado:** `inventory_smoke` 12/12 a 1280×720 y 12/12 a 1920×1080
+(escala ×1,5), `s47_smoke` (Reclutar) 22/22 e idéntico píxel a píxel a la
+base fuera de la figura, `run_tests.sh --headless` 1493/0. El smoke usa una
+copia de la base con las cartas 409, 137 y 316 sembradas. Capturas en
+`~/codigo/capturas/s47/inventario/`.
+
 ## Dónde retomar (contexto nuevo)
 
-1. **Inventario:** pasada de diseño con un agente Fable, como en Reclutar
-   (el desplegable de orden aún es el estilo antiguo; la ficha de la
-   derecha necesita desplazarse con textos largos).
+1. ~~Inventario, pasada de diseño~~ hecha (arriba); falta la opinión del
+   dueño.
 2. **Iconos repetidos (11):** ilustraciones propias por familia (Fable +
    vex o kiln), BACKLOG §13.
 3. **Coach mujer a 40k** (al final, dueño): el original está en

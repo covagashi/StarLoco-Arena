@@ -250,3 +250,82 @@ static func enter(owner: Node, nodes: Array, offset: Vector2, delay := 0.0, gap 
 		tw.tween_property(n, "modulate:a", 1.0, time * 0.8).set_delay(delay + gap * k)
 		k += 1
 	return tw
+
+## A ribbon with swallowtail ends and a hard shadow, its text white and
+## leaning (the recruit's plate cap, the inventory's lists). `lit`: a coral
+## rule under the text (the pointer is on what it names).
+static func ribbon(c: Control, text: String, fill: Color, font_size: int, lit := false) -> void:
+	var s := c.size
+	var k := s.y * 0.4
+	var shape := PackedVector2Array([Vector2(0, 0), Vector2(s.x, 0), Vector2(s.x - k, s.y * 0.5),
+		Vector2(s.x, s.y), Vector2(0, s.y), Vector2(k, s.y * 0.5)])
+	var sh := PackedVector2Array()
+	for p in shape:
+		sh.append(p + Vector2(3, 3))
+	c.draw_colored_polygon(sh, Color(INK, 0.9 if fill != INK else 0.35))
+	c.draw_colored_polygon(shape, fill)
+	var font := UiStyle.display_font()
+	var t := text.to_upper()
+	var ts := font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var at := Vector2((s.x - ts.x) * 0.5, (s.y + font_size * 0.72) * 0.5)
+	c.draw_string(font, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
+	if lit:
+		c.draw_line(Vector2(at.x, at.y + 4), Vector2(at.x + ts.x, at.y + 4), CORAL, 2.0)
+
+
+## A choice among a few (sex, mode, an order): a slanted face with a hard
+## shadow, coral and white text when picked, white with an ink rim and ink
+## text when not.
+static func choice(font_size := 16) -> Button:
+	var b := Button.new()
+	b.toggle_mode = true
+	b.focus_mode = Control.FOCUS_ALL
+	for st in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+		b.add_theme_stylebox_override(st, StyleBoxEmpty.new())
+	for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color",
+			"font_hover_pressed_color", "font_disabled_color"]:
+		b.add_theme_color_override(col, Color(0, 0, 0, 0))
+	b.add_theme_constant_override("outline_size", 0)
+	var font := UiStyle.display_font()
+	b.draw.connect(func():
+		var s := b.size - Vector2(4, 4)
+		var k := 10.0
+		var face := PackedVector2Array([Vector2(k, 0), Vector2(s.x, 0), Vector2(s.x - k, s.y), Vector2(0, s.y)])
+		var on := b.button_pressed
+		var lit := b.is_hovered() or b.has_focus()
+		var sh := PackedVector2Array()
+		for p in face:
+			sh.append(p + Vector2(4, 4))
+		b.draw_colored_polygon(sh, Color(INK, 0.9 if on else 0.25))
+		b.draw_colored_polygon(face, CORAL if on else Color.WHITE)
+		var loop := face.duplicate()
+		loop.append(face[0])
+		b.draw_polyline(loop, CORAL if lit and not on else INK, 2.0, true)
+		var t := b.text.to_upper()
+		var ts := font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+		b.draw_string(font, Vector2((s.x - ts.x) * 0.5, (s.y + font_size * 0.72) * 0.5), t,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE if on else INK))
+	for sig in [b.mouse_entered, b.mouse_exited, b.focus_entered, b.focus_exited, b.toggled]:
+		sig.connect(func(_a = null): b.queue_redraw())
+	return b
+
+
+## A white slab with a hard ink shadow and a cut bottom-right corner (the
+## recruit's class plate, the inventory's lists and album); `rules` faint
+## technical lines across it, so the slab is paper. Returns the face, for a
+## rim a caller draws over it.
+static func draw_slab(c: CanvasItem, s: Vector2, cut := 22.0, rules := 0) -> PackedVector2Array:
+	var face := PackedVector2Array([Vector2(0, 0), Vector2(s.x, 0), Vector2(s.x, s.y - cut),
+		Vector2(s.x - cut, s.y), Vector2(0, s.y)])
+	var sh := PackedVector2Array()
+	for p in face:
+		sh.append(p + Vector2(6, 6))
+	c.draw_colored_polygon(sh, Color(INK, 0.9))
+	c.draw_colored_polygon(face, Color(1, 1, 1, 0.96))
+	var loop := face.duplicate()
+	loop.append(face[0])
+	c.draw_polyline(loop, INK, 2.5, true)
+	for i in rules:
+		var y := 60.0 + i * 72.0
+		c.draw_line(Vector2(10, y), Vector2(s.x - 10, y), Color(INK, 0.06), 1.0)
+	return face

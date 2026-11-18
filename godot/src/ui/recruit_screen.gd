@@ -58,7 +58,7 @@ var _built := false
 func _ready() -> void:
 	panel_name = "fighterCreationDialog"
 	super._ready()
-	_harden_sheet()
+	harden_sheet(R_PAPER)
 	_left_column()
 	_ped = Control.new()
 	_ped.size = HREF
@@ -122,39 +122,6 @@ func _enter() -> void:
 	StyleB.enter(self, [_picker], Vector2(-40, 0), 0.15, 0.0, 0.5)
 
 
-## The paper hero_panel built: taller (the ten attacks and their line
-## fit without a scrollbar), a hard ink shadow and an ink rim instead of
-## the soft shade, like every other box on this screen.
-func _harden_sheet() -> void:
-	var sheet: Control = stage.get_node("Sheet")
-	sheet.size = R_PAPER
-	var paper: PanelContainer = sheet.get_child(0)
-	paper.size = R_PAPER
-	var ps: StyleBoxFlat = paper.get_theme_stylebox("panel").duplicate()
-	ps.shadow_size = 0
-	ps.border_width_left = 2
-	ps.border_width_right = 2
-	ps.border_width_bottom = 2
-	ps.border_width_top = 4
-	ps.bg_color = Color(1, 1, 1, 0.96)
-	paper.add_theme_stylebox_override("panel", ps)
-	var sh := Control.new()
-	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sh.draw.connect(func(): sh.draw_rect(Rect2(Vector2(7, 7), R_PAPER), Color(UiStyle.B_INK, 0.9)))
-	sheet.add_child(sh)
-	sheet.move_child(sh, 0)
-	var corner := Control.new()   # a coral corner cut at the bottom right, over the paper
-	corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	corner.draw.connect(func():
-		var c := Vector2(R_PAPER.x, R_PAPER.y)
-		corner.draw_colored_polygon(PackedVector2Array([c + Vector2(-34, 0), c, c + Vector2(0, -34)]), UiStyle.B_CORAL)
-		corner.draw_line(c + Vector2(-34, 0), c + Vector2(0, -34), UiStyle.B_INK, 2.0, true))
-	sheet.add_child(corner)
-	var inner: VBoxContainer = paper.get_child(0)
-	inner.add_theme_constant_override("separation", 4)
-	body.add_theme_constant_override("separation", 8)
-
-
 ## Left: the sex, the mode with what it means, then the twelve classes on
 ## a plate under a coral ribbon, the class under the pointer on an ink one.
 func _left_column() -> void:
@@ -169,7 +136,7 @@ func _left_column() -> void:
 	sexes.add_theme_constant_override("separation", 8)
 	_picker.add_child(sexes)
 	for sex in [0, 1]:
-		var b := _choice()
+		var b := StyleB.choice()
 		b.name = "Sex%d" % sex
 		b.text = I18n.t("fc.sex_m" if sex == 0 else "fc.sex_f")
 		b.toggle_mode = true
@@ -182,7 +149,7 @@ func _left_column() -> void:
 	modes.add_theme_constant_override("separation", 8)
 	_picker.add_child(modes)
 	for v in [2, 1]:
-		var b := _choice()
+		var b := StyleB.choice()
 		b.name = "Mode%s" % ("Story" if v == 2 else "Elite")
 		b.text = I18n.t("recruit.mode_story" if v == 2 else "recruit.mode_elite")
 		b.toggle_mode = true
@@ -204,29 +171,13 @@ func _left_column() -> void:
 	plate.position = R_PLATE.position
 	plate.size = R_PLATE.size
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	plate.draw.connect(func():
-		var s := plate.size
-		var c := 22.0
-		var face := PackedVector2Array([Vector2(0, 0), Vector2(s.x, 0), Vector2(s.x, s.y - c),
-			Vector2(s.x - c, s.y), Vector2(0, s.y)])
-		var sh := PackedVector2Array()
-		for p in face:
-			sh.append(p + Vector2(6, 6))
-		plate.draw_colored_polygon(sh, Color(UiStyle.B_INK, 0.9))
-		plate.draw_colored_polygon(face, Color(1, 1, 1, 0.96))
-		var loop := face.duplicate()
-		loop.append(face[0])
-		plate.draw_polyline(loop, UiStyle.B_INK, 2.5, true)
-		# a faint grid of the splash's technical lines, so the plate is paper
-		for i in 3:
-			var y := 60.0 + i * 72.0
-			plate.draw_line(Vector2(10, y), Vector2(s.x - 10, y), Color(UiStyle.B_INK, 0.06), 1.0))
+	plate.draw.connect(func(): StyleB.draw_slab(plate, plate.size, 22.0, 3))
 	_picker.add_child(plate)
 	var cap := Control.new()
 	cap.position = Vector2(R_PLATE.position.x - 6, R_PLATE.position.y - 12)
 	cap.size = Vector2(R_PLATE.size.x + 12, 26)
 	cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cap.draw.connect(func(): _draw_ribbon(cap, I18n.t("recruit.pick_class"), UiStyle.B_CORAL, 15))
+	cap.draw.connect(func(): StyleB.ribbon(cap, I18n.t("recruit.pick_class"), UiStyle.B_CORAL, 15))
 	_picker.add_child(cap)
 	for i in 12:
 		var breed := i + 1
@@ -261,65 +212,8 @@ func _left_column() -> void:
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint.draw.connect(func():
 		var breed := _hint_breed if _hint_breed > 0 else _breed()
-		_draw_ribbon(_hint, I18n.t("breed.%d" % breed), UiStyle.B_INK, 16, _hint_breed > 0))
+		StyleB.ribbon(_hint, I18n.t("breed.%d" % breed), UiStyle.B_INK, 16, _hint_breed > 0))
 	_picker.add_child(_hint)
-
-
-## A ribbon with swallowtail ends and a hard shadow, its text white and
-## leaning. `lit`: a coral rule under the text (the pointer is on a class).
-static func _draw_ribbon(c: Control, text: String, fill: Color, font_size: int, lit := false) -> void:
-	var s := c.size
-	var k := s.y * 0.4
-	var shape := PackedVector2Array([Vector2(0, 0), Vector2(s.x, 0), Vector2(s.x - k, s.y * 0.5),
-		Vector2(s.x, s.y), Vector2(0, s.y), Vector2(k, s.y * 0.5)])
-	var sh := PackedVector2Array()
-	for p in shape:
-		sh.append(p + Vector2(3, 3))
-	c.draw_colored_polygon(sh, Color(UiStyle.B_INK, 0.9 if fill != UiStyle.B_INK else 0.35))
-	c.draw_colored_polygon(shape, fill)
-	var font := UiStyle.display_font()
-	var t := text.to_upper()
-	var ts := font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var at := Vector2((s.x - ts.x) * 0.5, (s.y + font_size * 0.72) * 0.5)
-	c.draw_string(font, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
-	if lit:
-		c.draw_line(Vector2(at.x, at.y + 4), Vector2(at.x + ts.x, at.y + 4), UiStyle.B_CORAL, 2.0)
-
-
-## A two-way choice (sex, mode): a slanted face with a hard shadow, coral
-## and white text when picked, white with an ink rim and ink text when not.
-func _choice() -> Button:
-	var b := Button.new()
-	b.toggle_mode = true
-	b.focus_mode = Control.FOCUS_ALL
-	for st in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
-		b.add_theme_stylebox_override(st, StyleBoxEmpty.new())
-	for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color",
-			"font_hover_pressed_color", "font_disabled_color"]:
-		b.add_theme_color_override(col, Color(0, 0, 0, 0))
-	b.add_theme_constant_override("outline_size", 0)
-	var font := UiStyle.display_font()
-	b.draw.connect(func():
-		var s := b.size - Vector2(4, 4)
-		var k := 10.0
-		var face := PackedVector2Array([Vector2(k, 0), Vector2(s.x, 0), Vector2(s.x - k, s.y), Vector2(0, s.y)])
-		var on := b.button_pressed
-		var lit := b.is_hovered() or b.has_focus()
-		var sh := PackedVector2Array()
-		for p in face:
-			sh.append(p + Vector2(4, 4))
-		b.draw_colored_polygon(sh, Color(UiStyle.B_INK, 0.9 if on else 0.25))
-		b.draw_colored_polygon(face, UiStyle.B_CORAL if on else Color.WHITE)
-		var loop := face.duplicate()
-		loop.append(face[0])
-		b.draw_polyline(loop, UiStyle.B_CORAL if lit and not on else UiStyle.B_INK, 2.0, true)
-		var t := b.text.to_upper()
-		var ts := font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)
-		b.draw_string(font, Vector2((s.x - ts.x) * 0.5, (s.y + 16 * 0.72) * 0.5), t,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE if on else UiStyle.B_INK))
-	for sig in [b.mouse_entered, b.mouse_exited, b.focus_entered, b.focus_exited, b.toggled]:
-		sig.connect(func(_a = null): b.queue_redraw())
-	return b
 
 
 ## A class tile: its portrait in a ring (the combat HUD's), a hard ink

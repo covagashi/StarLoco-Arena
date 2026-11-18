@@ -4,6 +4,7 @@ extends "res://test/world_smoke.gd"
 ## S41: a picked card says what it does (its effects, our text) and a set its
 ## bonuses — when the `test` coach owns card 409 (a two-condition potion),
 ## card 137 (worn: resurrection bonus) and a card of set 1, those are checked.
+## S47: the order is three choices; with card 316 the paper scrolls.
 ##
 ##   godot --path godot -s test/inventory_smoke.gd [-- --shot-dir=D]
 
@@ -20,6 +21,7 @@ func _audit() -> void:
 	var p = _main._gui.dialogs.get("cardBookDialog")
 	var all := _tiles(p)
 	_record(5200, "all", all.size() == State.inventory.size(), "%d tiles, inventory %d" % [all.size(), State.inventory.size()])
+	await _shot("inventory-cards")
 	# consumables only
 	# coach equipment (test owns some; no consumables)
 	# S47: what the cards are for is the screen's left list now
@@ -40,9 +42,7 @@ func _audit() -> void:
 	# by value, every type (controls are rebuilt on refresh: find them again)
 	(p.find_child("Kind_all", true, false) as Button).pressed.emit()
 	await create_timer(0.4).timeout
-	var sort: OptionButton = p.find_child("SortPick", true, false)
-	sort.select(1)
-	sort.item_selected.emit(1)
+	(p.find_child("Sort_value", true, false) as Button).pressed.emit()   # S47: the order is three choices
 	await create_timer(0.5).timeout
 	var vals: Array = []
 	var cards = load("res://src/gamedata/cards.gd")
@@ -72,6 +72,17 @@ func _audit() -> void:
 		var txt := fx.text if fx != null else ""
 		_record(5200, "worn effects", txt.contains("+25 % a tus cartas de resurrección") and txt.contains("combate de Historia"), "'%s'" % txt.replace("\n", " / "))
 		await _shot("inventory-worn")
+	# S47: a long sheet scrolls (card 316, four effects): the paper's body can go down
+	var tile316: Variant = p.find_child("Card316", true, false)
+	if tile316 != null:
+		tile316.pressed.emit()
+		await create_timer(0.6).timeout
+		var bar: VScrollBar = p.sheet_scroll.get_v_scroll_bar()
+		_record(5200, "long sheet scrolls", bar.max_value > bar.page + 1.0, "range %d, page %d" % [bar.max_value, bar.page])
+		await _shot("inventory-long")
+		p.sheet_scroll.scroll_vertical = int(bar.max_value)   # to its foot: the last line whole, no cue
+		await create_timer(0.3).timeout
+		await _shot("inventory-long-end")
 	# S41: a rule card on a class or a spell takes that one's name
 	if p.find_child("Card559", true, false) != null:
 		_record(5200, "rule card names", cards.name_of(559) == i18n.t("breed.1") \
@@ -98,6 +109,8 @@ func _audit() -> void:
 	var album = p.find_child("Album", true, false)
 	var strips: Array = album.get_children().filter(func(c): return c is Button) if album != null else []
 	_record(5200, "album", album != null, "%d collections started" % strips.size())
+	# S47: the hint on an empty paper wraps; it used to widen the paper off the screen
+	_record(5200, "paper fits", p._paper.size.x <= p.R_SHEET.size.x + 0.5, "paper %d wide" % p._paper.size.x)
 	await _shot("inventory-album")
 	if not strips.is_empty():
 		strips[0].pressed.emit()
