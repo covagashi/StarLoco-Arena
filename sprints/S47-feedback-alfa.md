@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; punto 11 hecho; queda la coach mujer a 40k (1) — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (las dos coach a 40k, sin adoptar) hechos — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -480,12 +480,34 @@ ninguna carta fuera del mapa salvo el equipo del coach, `art_path` en
 cinco casos), `run_tests.sh --headless` 1502/0. Hojas en
 `~/codigo/capturas/s47/iconos/` (01–15, con `README.txt`).
 
+## Punto 1 — la coach mujer a 40k (2026-11-18)
+
+Mismo método que el hombre, sin cambiar `figures.json` (lo decide el dueño):
+
+1. `tools/blender/characters/predecimate.py` (nuevo, el paso que con el
+   hombre se hizo a mano): 676 936 → 79 999 triángulos en 6,5 min,
+   `meshy-hd/coach_7001_f_80k.glb`.
+2. `meshy_fighter.py --tris=40000 --menu=1 --weld_normals=1
+   --lower_arms=10 --arm_slack=0.06` (8 min): 40 000 triángulos, 2,3 MB,
+   20 huesos, 14 animaciones, brazos bajados de 31° a 10°, 244 vértices
+   reclamados por el brazo. Sin `--cut` (en pose en A sobra).
+3. `coach_masks.py` sobre ella: 10 517 triángulos de pelo, 45 de ojos
+   fuera de la máscara.
+
+**Resultado:** `meshy-hd/coach_7001_40k.glb` (+ `_mask.png/json`). Pelo
+mucho más definido, ojos limpios: con pelo verde y rojo los ojos siguen
+azules. Hoja: `~/codigo/capturas/s47/coach/coach-mujer-40k.png`.
+**A saber:** el original HD que hizo el dueño no tiene las orejas en punta
+de la de 5k; y quedan unas motas del color del pelo en las patillas, junto
+a la mejilla (la máscara de pelo roza la piel ahí). El juego sigue con la
+de 5k: `art/characters/out/` se restauró tras las capturas.
+
 ## Dónde retomar (contexto nuevo)
 
 1. ~~Inventario, pasada de diseño~~ hecha (arriba); falta la opinión del
    dueño.
 2. ~~Iconos repetidos (11)~~ hechos (arriba); falta la opinión del dueño.
-3. **Coach mujer a 40k** (al final, dueño): el original está en
+3. ~~Coach mujer a 40k~~ hecha (arriba), sin adoptar. Era: (al final, dueño): el original está en
    `~/codigo/capturas/s47/meshy-hd/coach_7001_f_hd.glb` (676 936 tris);
    mismo método que el hombre: reducción previa a 80k con
    `predecimate`, luego `meshy_fighter.py --tris=40000 --menu=1
