@@ -152,6 +152,7 @@ func _init() -> void:
 	var icons := ImageTexture.create_from_image(AssetPaths.load_image("ui/lobby_icons.png"))
 	_coins_and_top(icons)
 	_rail(icons)
+	_guide_card()
 	for m in MODES:
 		_card(m)
 	_quick = _b_button(true, 34)
@@ -982,7 +983,131 @@ func bind_model(model, chat: Control) -> void:
 	_sync_hub()
 	_sync_season()
 	_sync_wallet()
+	_sync_guide()
 	_relayout()
+
+
+## --- the guide (S47, owner point 4: "tiene que haber algún tipo de
+## tutorial guiado") --------------------------------------------------------
+## A card under the list on the left: the step of "Primeros pasos" the coach
+## is on, what to do in one line, "IR" (straight there: action "guide") and
+## a cross to hide it (action "guide_hide"; Ayuda brings it back). A coral
+## ring pulses around the lobby control that step uses. main pushes
+## `guide` {step, total, title, text, target, hidden}; step < 0 = all done.
+
+const GUIDE_RECT := Rect2(24, 430, 300, 100)   # ends clear of the chat (540)
+var _guide: Control
+var _guide_tag: Label
+var _guide_text: Label
+var _guide_go: Button
+var _guide_ring: Control
+var _guide_target := ""
+
+
+func _guide_card() -> void:
+	_guide = PanelContainer.new()
+	_guide.name = "Guide"
+	_guide.position = GUIDE_RECT.position
+	_guide.size = GUIDE_RECT.size
+	_guide.clip_contents = true
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color.WHITE
+	sb.border_color = INK
+	sb.set_border_width_all(2)
+	sb.border_width_left = 6
+	sb.shadow_color = Color(INK, 0.9)
+	sb.shadow_size = 0
+	sb.shadow_offset = Vector2(4, 4)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 8
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	_guide.add_theme_stylebox_override("panel", sb)
+	_box.add_child(_guide)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 2)
+	_guide.add_child(col)
+	var head := HBoxContainer.new()
+	col.add_child(head)
+	_guide_tag = Label.new()
+	_guide_tag.name = "GuideTag"
+	_guide_tag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_text(_guide_tag, 12, CORAL)
+	head.add_child(_guide_tag)
+	var hide := Button.new()
+	hide.name = "GuideHide"
+	hide.text = "×"
+	hide.flat = true
+	hide.focus_mode = Control.FOCUS_ALL
+	hide.add_theme_font_size_override("font_size", 18)
+	hide.add_theme_color_override("font_color", UiStyle.B_FAINT)
+	hide.pressed.connect(func(): action_requested.emit("guide_hide"))
+	head.add_child(hide)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 8)
+	col.add_child(body)
+	_guide_text = Label.new()
+	_guide_text.name = "GuideText"
+	_guide_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_guide_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_guide_text.custom_minimum_size = Vector2(180, 0)
+	_guide_text.max_lines_visible = 2
+	_guide_text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_text(_guide_text, 12, INK)
+	body.add_child(_guide_text)
+	_guide_go = _b_button(true, 18)
+	_guide_go.name = "GuideGo"
+	_guide_go.custom_minimum_size = Vector2(70, 40)
+	_guide_go.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_guide_go.pressed.connect(func(): action_requested.emit("guide"))
+	body.add_child(_guide_go)
+	# the ring: drawn over everything, around the step's control
+	_guide_ring = Control.new()
+	_guide_ring.name = "GuideRing"
+	_guide_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_guide_ring.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_guide_ring.draw.connect(_draw_guide_ring)
+	add_child(_guide_ring)
+
+
+func _guide_model() -> Dictionary:
+	var v: Variant = _model.get_value("guide") if _model != null else null
+	return v if v is Dictionary else {}
+
+
+func _sync_guide() -> void:
+	if _guide == null:
+		return
+	var g := _guide_model()
+	var on := not g.is_empty() and int(g.get("step", -1)) >= 0 and not bool(g.get("hidden", false))
+	_guide.visible = on
+	_guide_target = str(g.get("target", "")) if on else ""
+	if on:
+		_guide_tag.text = _t("guide.tag", {"n": int(g.step) + 1, "of": int(g.get("total", 0))}).to_upper()
+		_guide_text.text = str(g.get("text", ""))
+		_guide_go.text = _t("guide.go")
+		_guide_go.tooltip_text = str(g.get("title", ""))
+	_guide_ring.queue_redraw()
+
+
+## The control the step uses: a lobby menu button or a mode tile's button.
+func _guide_target_node() -> Control:
+	if _guide_target == "":
+		return null
+	var n := _box.find_child(_guide_target, true, false)
+	return n as Control if n is Control and (n as Control).is_visible_in_tree() else null
+
+
+func _draw_guide_ring() -> void:
+	var t := _guide_target_node()
+	if t == null or _searching:
+		return
+	var r := t.get_global_rect()
+	r.position -= _guide_ring.get_global_rect().position
+	r = r.grow(6)
+	var pulse := 0.5 + 0.5 * sin(_clock_t * 4.0)
+	_guide_ring.draw_rect(r, Color(CORAL, 0.35 + 0.5 * pulse), false, 3.0 + 2.0 * pulse)
+	_guide_ring.draw_rect(r.grow(6 + 4 * pulse), Color(CORAL, 0.25 * (1.0 - pulse)), false, 2.0)
 
 
 ## Matchmaking state: "Buscando rival…" + Cancelar while a search runs.
@@ -1019,6 +1144,8 @@ func _process(dt: float) -> void:
 	for d in _drift:
 		var phase: float = TAU * _clock_t / float(d[3])
 		d[0].position = d[1] + d[2] * sin(phase)
+	if _guide_target != "" and is_instance_valid(_guide_ring):
+		_guide_ring.queue_redraw()
 	# now and then the coach strikes its pose (not stiff: owner, S45)
 	_next_pose -= dt
 	if _next_pose <= 0.0 and _lib != "" and not _searching:
@@ -1067,6 +1194,7 @@ func _on_model_changed(model_name: String, _field: String, _value: Variant) -> v
 		"hub": _sync_hub()
 		"season": _sync_season()
 		"wallet": _sync_wallet()
+		"guide": _sync_guide()
 
 
 func _hub() -> Dictionary:

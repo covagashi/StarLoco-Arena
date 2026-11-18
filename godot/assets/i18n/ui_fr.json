@@ -1523,5 +1523,14 @@
   "fe.value_sum": "Valeur = 600 pour sa classe + {cards} pour ses cartes = {n} : plus elle est haute, plus il est fort.",
   "fe.value_elite": "Ton équipe d'Élite additionne la valeur de ses combattants et ne peut dépasser le budget de ta ligue ({league} : {cap}).",
   "fe.value_story": "Tes titulaires d'Histoire additionnent leur valeur et ne peuvent dépasser 6000.",
-  "team.col_value": "Valeur"
+  "team.col_value": "Valeur",
+  "guide.tag": "Guide · étape {n} sur {of}",
+  "guide.go": "ALLER",
+  "guide.show": "Afficher le guide dans le lobby",
+  "guide.step_275": "Parle à Nilo et au Démon III, dans Services.",
+  "guide.step_276": "Recrute trois combattants pour ton équipe d'Histoire.",
+  "guide.step_284": "Gagne les trois défis du Démon III (Histoire, ch. 1).",
+  "guide.step_278": "Bats les quatre démons des minutes (ch. 2).",
+  "guide.step_277": "Bats le démon des 12 minutes (ch. 2).",
+  "guide.step_279": "Parle au Démon I pour savoir la suite."
 }

@@ -1523,5 +1523,14 @@
   "fe.value_sum": "Valor = 600 de su clase + {cards} de sus cartas = {n}: cuanto más alto, más fuerte va.",
   "fe.value_elite": "Tu equipo de Élite suma el valor de sus luchadores y no puede pasar del presupuesto de tu liga ({league}: {cap}).",
   "fe.value_story": "Tus titulares de Historia suman su valor y no pueden pasar de 6000.",
-  "team.col_value": "Valor"
+  "team.col_value": "Valor",
+  "guide.tag": "Guía · paso {n} de {of}",
+  "guide.go": "IR",
+  "guide.show": "Mostrar la guía en el lobby",
+  "guide.step_275": "Habla con Nilo y con el Demonio III, en Servicios.",
+  "guide.step_276": "Recluta tres luchadores para tu equipo de Historia.",
+  "guide.step_284": "Gana los tres retos del Demonio III (Historia, cap. 1).",
+  "guide.step_278": "Vence a los cuatro demonios de los minutos (cap. 2).",
+  "guide.step_277": "Vence al demonio de los 12 minutos (cap. 2).",
+  "guide.step_279": "Habla con el Demonio I para saber qué viene después."
 }

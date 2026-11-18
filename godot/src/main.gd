@@ -1505,6 +1505,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					"pts": " (+%d pts)" % pts if pts > 0 else ""}))
 				_log_line("[color=yellow]%s[/color]" % I18n.t("ach.unlocked",
 					{"name": aname}))
+				_push_guide_model()   # S47: the guide moves on
 				# the tutorial scenario this achievement opens (S10)
 				if Scenarios.ACHIEVEMENT_SCRIPTS.has(aid):
 					_queue_scenario(int(Scenarios.ACHIEVEMENT_SCRIPTS[aid]))
@@ -5352,6 +5353,11 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			_gui.model.set_value("gamePreferences", int(args[0]), "lastSelectedGameModeId")
 			_gui.open("teamManagementDialog")
 			return
+		"nativeGuideShow":
+			_gui.model.set_value("gamePreferences", false, "guideHidden")
+			_gui._save_settings()
+			_push_guide_model()
+			return
 		"nativeLadderTab":
 			_ladder_tab = int(args[0])
 			_ladder_start = 0
@@ -5752,7 +5758,52 @@ func _on_season(season: Dictionary) -> void:
 ## teams with the one Ranking will field, and the tournament this coach can
 ## search now. Pushed whenever the roster, the presets or the tournament
 ## state change.
+## --- the guide (S47, owner point 4) -----------------------------------------
+## The tutorial is the "Primeros pasos" achievement chain (Scenarios
+## .TUTORIAL_STEPS); the lobby's guide card says the first one not done, the
+## control it uses (a ring pulses on it) and IR takes the player there.
+func _push_guide_model() -> void:
+	if _gui == null:
+		return
+	var steps: Array = Scenarios.TUTORIAL_STEPS
+	var at := -1
+	for i in steps.size():
+		if not NpcDialogs.achievement_done(int(steps[i]), State.criteria, State.inventory):
+			at = i
+			break
+	var g := {"step": at, "total": steps.size(), "hidden":
+		bool(_gui.model.get_value("gamePreferences", "guideHidden") == true)}
+	if at >= 0:
+		var aid := int(steps[at])
+		g["aid"] = aid
+		g["title"] = NpcDialogs.achievement_name(aid)
+		g["text"] = I18n.t("guide.step_%d" % aid)
+		g["target"] = _guide_target(aid)
+	_gui.model.set_value("guide", g)
+
+
+func _guide_target(aid: int) -> String:
+	match aid:
+		275: return "Menu_cityDialog"
+		276: return "Play_story" if not _has_fighters(true) else "Menu_teamManagementDialog"
+	return "Play_story"
+
+
+func _guide_go() -> void:
+	var g: Variant = _gui.model.get_value("guide")
+	if not (g is Dictionary) or int(g.get("step", -1)) < 0:
+		return
+	match int(g.get("aid", 0)):
+		275:
+			_gui.open("cityDialog")   # it opens on Aprendizaje, Nilo first
+		276:
+			_on_new_fighter_dialog([], null, true)
+		_:
+			_open_story()
+
+
 func _push_hub_model() -> void:
+	_push_guide_model()
 	if _gui == null:
 		return
 	var titulars := 0
@@ -5799,6 +5850,11 @@ func _push_hub_model() -> void:
 func _on_lobby_action(action: String) -> void:
 	match action:
 		"cancel_search": _on_cancel_search()
+		"guide": _guide_go()
+		"guide_hide":
+			_gui.model.set_value("gamePreferences", true, "guideHidden")
+			_gui._save_settings()
+			_push_guide_model()
 		"practice": _on_practice_pressed()
 		"fight": _on_fight_pressed()
 		"quick": _on_quick_search()

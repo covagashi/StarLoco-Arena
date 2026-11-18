@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); punto 16 hecho; quedan las mallas (1), el tutorial (4), el inventario (12) y los iconos (11)
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4 y 16 hechos; quedan el inventario (12), los iconos (11) y la coach mujer a 40k (1)
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -383,3 +383,25 @@ oracle-2 para tener tiempos reales.
 
 **Pendiente del dueño:** adoptarlo (receta nueva en `figures.json` y subir
 el tope de `check.py`, hoy 5 000) y hacer la mujer igual.
+
+## Punto 4 — el tutorial guiado (2026-11-18)
+
+Dueño: "sigue con los otros puntos" (las preguntas de diseño quedaron sin
+responder; decidido con criterio, aquí el porqué).
+
+- **La guía es la cadena de "Primeros pasos" que ya existía** (los seis
+  logros del tutorial, `Scenarios.TUTORIAL_STEPS`), así que el servidor ya
+  sabe en qué paso va cada jefe y no hay estado nuevo que guardar.
+- **Una tarjeta en el lobby**, bajo la lista de la izquierda: "GUÍA · PASO
+  N DE 6", qué hacer en una línea y **IR**, que lleva a la pantalla
+  (Servicios → Aprendizaje; Reclutar en modo Historia; Historia). Un **aro
+  coral late** alrededor del botón real que usa ese paso. Con la cruz se
+  oculta (se guarda en las preferencias) y **Ayuda → Empezar** la vuelve a
+  mostrar. Al terminar los seis pasos desaparece.
+- La intro de 12 páginas sigue igual: ya se puede cerrar con "Cerrar", y
+  acortarla es contenido del dueño (BACKLOG §13).
+
+**Verificado:** `test/guide_smoke.gd` en vivo, 6/6 con un jefe nuevo (paso
+1, aro en Servicios, IR abre Servicios, ocultar/mostrar) y 6/6 con `test`
+(paso 3, aro en la loseta Historia, IR abre Historia). Capturas en
+`~/codigo/capturas/s47/guia/`. `run_tests.sh --headless` 1492/0.

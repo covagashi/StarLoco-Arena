@@ -51,7 +51,7 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		"coachStatisticsDialog": ["localCoach"], "cardBookDialog": ["localCoach", "tomeManager"],
 		"ladderInformationDialog": ["ladderManager", "league"],
 		"calendarDialog": ["calendar", "tournamentSearch", "ladderManager", "hub"],
-		"achievementDialog": ["achievementManager", "localCoach"], "socialDialog": ["friends", "ignore", "guild", "social"],
+		"achievementDialog": ["achievementManager", "localCoach"], "tooltipDialog": ["guide"], "socialDialog": ["friends", "ignore", "guild", "social"],
 		"guildDialog": ["friends", "ignore", "guild", "social"],
 		"guildManagementDialog": ["guild", "guildSelectedRank"],
 		"guildCoachStatsDialog": ["guildCoachStats"],
@@ -1339,6 +1339,9 @@ func _first_steps() -> void:
 			line.add_theme_color_override("font_color", UiStyle.BROWN)
 	if next < 0:
 		label(body, I18n.t("help.steps_done"))
+	elif bool(data("guide.hidden", false)):
+		# S47: the lobby's guide card was hidden; it comes back from here
+		button(body, I18n.t("guide.show"), func(): send("nativeGuideShow")).name = "GuideShow"
 
 
 func _options() -> void:

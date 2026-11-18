@@ -1523,5 +1523,14 @@
   "fe.value_sum": "Value = 600 for its class + {cards} for its cards = {n}: the higher, the stronger it is.",
   "fe.value_elite": "Your Elite team adds up its fighters' values and may not go over your league's budget ({league}: {cap}).",
   "fe.value_story": "Your Story starters add up their values and may not go over 6000.",
-  "team.col_value": "Value"
+  "team.col_value": "Value",
+  "guide.tag": "Guide · step {n} of {of}",
+  "guide.go": "GO",
+  "guide.show": "Show the guide in the lobby",
+  "guide.step_275": "Talk to Nilo and Demon III, in Services.",
+  "guide.step_276": "Recruit three fighters for your Story team.",
+  "guide.step_284": "Win Demon III's three challenges (Story, ch. 1).",
+  "guide.step_278": "Beat the four demons of the minutes (ch. 2).",
+  "guide.step_277": "Beat the demon of the 12 minutes (ch. 2).",
+  "guide.step_279": "Talk to Demon I to learn what comes next."
 }
