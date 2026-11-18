@@ -662,7 +662,15 @@ def add_extras(K, ob, r):
     bpy.ops.object.join()
 
 
-def build(K, rig, name, r):
+## The garment's own faces, before add_extras' pieces; check.py allows
+## 3500 triangles and 256 KB (a patterned garment splits more vertices, so
+## main() builds it again with a lower cap until it fits).
+MAX_TRIS = 3000
+BUDGET_TRIS = 3500
+BUDGET_KB = 256
+
+
+def build(K, rig, name, r, max_tris=MAX_TRIS):
     r = {**DEFAULTS[r["kind"]], **r}
     me = bpy.data.meshes.new(name)
     ob = bpy.data.objects.new(name, me)
@@ -683,6 +691,16 @@ def build(K, rig, name, r):
     bm.free()
     for p in me.polygons:
         p.use_smooth = True
+    # S47: the coaches are 40k now, so their faces are dense; bring the cloth
+    # back to the budget it had on the 5k body (check.py GARMENT_TRIS), its
+    # skin weights carried by the collapse, before a skirt doubles it
+    tri = len(me.polygons)
+    cap = max_tris // 2 if r["thick"] > 0 else max_tris
+    if tri > cap:
+        dec = ob.modifiers.new("cap", "DECIMATE")
+        dec.ratio = cap / tri
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.modifier_apply(modifier="cap")
     ob.parent = rig
     if r["thick"] > 0:   # a skirt: seen from under, the inside shows
         sol = ob.modifiers.new("thick", "SOLIDIFY")
@@ -701,11 +719,16 @@ def build(K, rig, name, r):
     bpy.ops.object.select_all(action="DESELECT")
     ob.select_set(True)
     rig.select_set(True)
+    # flat colours need no UVs (a third of a dense garment's bytes); a mark
+    # keeps them for its emblem
     bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=True,
-                              export_animations=False, export_def_bones=False, export_yup=True)
+                              export_animations=False, export_def_bones=False, export_yup=True,
+                              export_texcoords=r["kind"] == "mark")
     tri = sum(len(p.vertices) - 2 for p in me.polygons)
-    print("[garment] %s %s tris=%d kb=%d" % (out, r["kind"], tri, os.path.getsize(out) // 1024))
+    kb = os.path.getsize(out) // 1024
+    print("[garment] %s %s tris=%d kb=%d" % (out, r["kind"], tri, kb))
     bpy.data.objects.remove(ob)
+    return tri, kb
 
 
 def main():
@@ -717,7 +740,12 @@ def main():
     for name, r in recipes.items():
         if only and name not in only:
             continue
-        build(K, rig, name, r)
+        cap = MAX_TRIS
+        for _ in range(4):
+            tri, kb = build(K, rig, name, r, cap)
+            if tri <= BUDGET_TRIS and kb <= BUDGET_KB:
+                break
+            cap = int(cap * min(0.85, BUDGET_TRIS / tri, BUDGET_KB / kb))
 
 
 main()

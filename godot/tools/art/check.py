@@ -44,6 +44,10 @@ FIG_BONES = 20
 FIG_TEX = 1024
 FIG_KB = 1200
 FIG_HEIGHT = 1.45
+# S47: the two coaches, from the owner's HD Meshy originals (pre-reduced to
+# 80k by tools/blender/characters/predecimate.py), seen up close in menus.
+COACH_TRIS = 40000
+COACH_KB = 2600
 # An equipment piece (S35c): small, flat-coloured kiln, no texture.
 EQUIP_TRIS = 1500
 EQUIP_KB = 256
@@ -177,8 +181,10 @@ def check_figures(r):
         g = Glb(path)
         size += g.size
         lo, hi = g.bounds()
-        if g.tris > FIG_TRIS:
-            r.fail(f"figure {name}: {g.tris} triangles > {FIG_TRIS}")
+        coach = name.startswith("coach_")
+        max_tris, max_kb = (COACH_TRIS, COACH_KB) if coach else (FIG_TRIS, FIG_KB)
+        if g.tris > max_tris:
+            r.fail(f"figure {name}: {g.tris} triangles > {max_tris}")
         if g.bones > FIG_BONES:
             r.fail(f"figure {name}: {g.bones} bones > {FIG_BONES}")
         missing = [a for a in ANIMS if a not in g.anims]
@@ -187,8 +193,8 @@ def check_figures(r):
         for im in g.images:
             if max(im["w"], im["h"]) > FIG_TEX:
                 r.fail(f"figure {name}: texture {im['w']}×{im['h']} > {FIG_TEX}")
-        if g.size > FIG_KB * 1024:
-            r.fail(f"figure {name}: {g.size // 1024} KB > {FIG_KB} KB")
+        if g.size > max_kb * 1024:
+            r.fail(f"figure {name}: {g.size // 1024} KB > {max_kb} KB")
         if "src" in fig:   # the modelled crystal hovers at its own height
             if abs(hi[1] - lo[1] - FIG_HEIGHT) > 0.01:
                 r.fail(f"figure {name}: {hi[1] - lo[1]:.3f} high, not {FIG_HEIGHT}")

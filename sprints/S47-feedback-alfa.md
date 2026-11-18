@@ -70,7 +70,8 @@ apuntado, nada arreglado.
   `project.godot` no define stretch: 1 px de canvas = 1 px de UI, y el modal
   de 1120×620 (`lobby_panel.gd:12`) se ve diminuto maximizado o en pantalla
   completa (punto 2). Fijar `canvas_items` + `expand` con una referencia.
-- W2. **En móvil no cabe:** un móvil vertical (~390×844) desborda el modal de
+- W2. ~~**En móvil no cabe:**~~ **Fuera (dueño, 2026-11-18): "el móvil
+  nunca estará en vertical, siempre horizontal".** Antes: un móvil vertical (~390×844) desborda el modal de
   1120 px. Choca con el requisito de dispositivos de 4 GB (móviles).
 - W3. **No se puede escribir en móvil:**
   `html/experimental_virtual_keyboard=false` (nombre del luchador, chat,
@@ -502,6 +503,30 @@ de la de 5k; y quedan unas motas del color del pelo en las patillas, junto
 a la mejilla (la máscara de pelo roza la piel ahí). El juego sigue con la
 de 5k: `art/characters/out/` se restauró tras las capturas.
 
+## Punto 1 — adoptar los coach de 40k (2026-11-18)
+
+Dueño: "sí, adopta los 40".
+
+- `figures.json`: `coach_7000` y `coach_7001` salen de los originales HD
+  reducidos a 80k (`PIPPOP_MESHY/coach_7000_m_hd/`, `coach_7001_f_hd/`,
+  fuera de git) con `tris=40000`, `weld_normals`, `lower_arms=10` (la mujer
+  además `arm_slack=0.06`), sin `joints` (los guardados eran de brazos
+  bajados).
+- `check.py`: tope propio para los coach, 40 000 triángulos y 2 600 KB.
+- **Las prendas** se hacen con las caras del cuerpo, así que se habían
+  multiplicado (hasta 9 600 triángulos): `coach_garment.py` las reduce a
+  3 000 antes de los extras, vuelve a hacer la que aún pase de 3 500 / 256
+  KB con un tope menor, y ya no guarda UV en las de color plano (un tercio
+  del peso; las marcas sí, por su emblema). Probado en los tres pantalones
+  que fallaban: 209–248 KB.
+- Las figuras de los luchadores estaban desfasadas desde el cambio de
+  `meshy_fighter.py` de esta mañana: reconstruidas (sin cambios en sus
+  opciones).
+- **A medias:** el dueño apagó la Ally durante el build de las prendas.
+  Al volver: `python3 tools/art/build.py` (unos 50 min, solo las prendas
+  de los dos coach) y que el check salga limpio; luego mirar un coach
+  vestido (`test/coach_look_smoke.gd`).
+
 ## Dónde retomar (contexto nuevo)
 
 1. ~~Inventario, pasada de diseño~~ hecha (arriba); falta la opinión del
@@ -513,9 +538,12 @@ de 5k: `art/characters/out/` se restauró tras las capturas.
    `predecimate`, luego `meshy_fighter.py --tris=40000 --menu=1
    --weld_normals=1 --lower_arms=10 --arm_slack=0.06` (sus opciones de
    `figures.json`; `--cut` probablemente sobra en pose en A).
-4. **Adoptar los coach de 40k** cuando el dueño diga: receta en
+4. **Adoptar los coach de 40k:** hecho salvo el build de las prendas (ver
+   arriba, "A medias"). Era: receta en
    `figures.json` (src nuevo, opciones), `check.py` FIG_TRIS para los
    coach, y medir el panel Equipo del coach con GPU.
-5. **Repetir la prueba de carga web** con la Ally libre
+5. ~~Repetir la prueba de carga web~~ — no hace falta (dueño, 2026-11-18).
+   Era: con la Ally libre
    (`tools/web/load_test.mjs`; la marca `window.__pippop` ya está).
-6. Lo que queda de la auditoría web: W2 (móvil vertical), W4–W7, W9.
+6. Lo que queda de la auditoría web: W4–W7, W9 (W2 fuera: el móvil
+   siempre en horizontal).
