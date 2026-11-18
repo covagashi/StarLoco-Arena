@@ -350,6 +350,7 @@ func _ready() -> void:
 	_relayout()
 	name_edit.grab_focus()
 	_enter.call_deferred()
+	preload("res://src/ui/login_screen.gd")._mark("creation")   # S47: the web load test
 
 
 ## The entrance: the coach sweeps in, the title drops, the list types in,

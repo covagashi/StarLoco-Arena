@@ -61,7 +61,11 @@ def read_glb(path):
     pos = acc(prim["attributes"]["POSITION"])
     uv = acc(prim["attributes"]["TEXCOORD_0"])
     idx = acc(prim["indices"]).reshape(-1, 3)
-    im = j["images"][0]
+    # the albedo: the base colour's image (S47: a newer Meshy export puts
+    # its normal map first)
+    mat = j["materials"][prim.get("material", 0)]
+    tex_i = mat.get("pbrMetallicRoughness", {}).get("baseColorTexture", {}).get("index", 0)
+    im = j["images"][j["textures"][tex_i]["source"]]
     v = j["bufferViews"][im["bufferView"]]
     data = blob[v.get("byteOffset", 0):v.get("byteOffset", 0) + v["byteLength"]]
     from io import BytesIO

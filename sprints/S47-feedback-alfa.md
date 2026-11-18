@@ -323,3 +323,63 @@ con pelo verde y rojo), antes y después en
 pintados. Es arte: un paso, enseñarlo y esperar al dueño. Ojo con la demo
 web (≤ 50 MB de primera carga, equipos de 4 GB): 8× triángulos en los dos
 coach hay que medirlo.
+
+## Punto 1, segunda parte — coach hombre a 40 000 triángulos (2026-11-18)
+
+Dueño: "haz el coach hombre a 40k y enséñamelo", y "hagamos la prueba,
+ya que tiene web, podemos hacer test de velocidad de carga".
+
+- **El original de siempre tiene 20 861 triángulos** (un export "lowpoly"
+  de Meshy), así que de él no salen 40k. El dueño generó uno nuevo:
+  `~/codigo/capturas/s47/meshy-hd/coach_7000_m_hd.glb`, **610 242
+  triángulos**, en pose en A y con tres texturas (color, normales,
+  metal-rugosidad). También el de la mujer (676 936), sin tocar aún.
+- **Cómo se construyó** (sin cambiar todavía `figures.json`):
+  1. Reducción previa en Blender a 80 000 (el script en Python era
+     inviable con 610k: 20 min sin acabar la limpieza; el modificador lo
+     hace en 6 min): `meshy-hd/coach_7000_m_80k.glb`.
+  2. `meshy_fighter.py --tris=40000 --menu=1 --weld_normals=1
+     --lower_arms=10` sin `--joints` (las articulaciones guardadas son de
+     brazos bajados; las detectadas encajan en la pose en A).
+- **Cambios en el pipeline** (opcionales, las figuras de 5k no cambian):
+  - `--lower_arms`: pesa en pose en A (los brazos quedan separados del
+    cuerpo) y después baja los brazos a 10° de la vertical y fija esa
+    postura como reposo; antes asigna al brazo los vértices que el pesado
+    había dado al cuerpo (puntas de dedos, codos), que se quedaban flotando.
+  - `--weld_normals`: una normal y unos pesos por posición, para que el
+    contorno de tinta no se abra en picos en las costuras (con 21k se veían
+    en el corte del brazo).
+  - Las pasadas de suavizado de pesos crecen con la densidad (4 a 5k).
+  - Solo se guarda la textura de color (el shader no lee las otras), y
+    `coach_masks.py` lee la textura del color base, no la primera imagen.
+- **Resultado:** 39 999 triángulos, 2,3 MB (antes 880 KB). Pelo mucho más
+  definido, cara más fina, ojos limpios. Hoja:
+  `~/codigo/capturas/s47/coach/coach-hombre-40k.png`.
+
+### Prueba de carga web (Chromium, Playwright, GPU AMD)
+
+`godot/tools/web/load_test.mjs`: sirve la exportación con gzip, red
+limitada por perfil, mide hasta el login (marca nueva del juego en web:
+`window.__pippop`), pulsa JUGAR y mide "Crea tu jefe" (memoria PSS del
+navegador y fotogramas).
+
+| | 5k (hoy) | 40k (nuevo) |
+|---|---|---|
+| Paquete `boot` | 25,04 MB | 25,90 MB |
+| Primera carga por la red | 36,6 MB | 37,5 MB |
+| Hasta el login, 4G | 366 s | 396 s |
+| Hasta el login, fibra | 299 s | 350 s |
+| De JUGAR a "Crea tu jefe" | 29 s | 34 s |
+| Memoria en "Crea tu jefe" | 715 MB | 709 MB |
+| Fotogramas en "Crea tu jefe" | 3,8 | 4,0 |
+
+**Los tiempos absolutos no valen:** la Ally estaba cargada por otros
+procesos (un servidor Java en contenedor y una compilación Gradle, carga
+media 26 con 16 núcleos), y la descarga y la descompresión del wasm van por
+CPU. La comparación sí: misma máquina y mismo momento. El coach nuevo suma
+**0,9 MB** a la primera carga, la memoria no cambia y los tiempos crecen
+entre un 8 y un 17 %. Pendiente: repetir con la máquina libre o en
+oracle-2 para tener tiempos reales.
+
+**Pendiente del dueño:** adoptarlo (receta nueva en `figures.json` y subir
+el tope de `check.py`, hoy 5 000) y hacer la mujer igual.

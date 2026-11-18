@@ -251,6 +251,14 @@ func _ready() -> void:
 	if name_edit.visible:
 		name_edit.grab_focus()
 	_enter.call_deferred()
+	_mark("login")
+
+
+## S47: in the browser, the moment a screen is up, for the load test
+## (tools/web/load_test.mjs reads window.__pippop); nothing on desktop.
+static func _mark(screen: String) -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("(window.__pippop = window.__pippop || {})['%s'] = performance.now()" % screen)
 
 
 ## The entrance: the figures sweep in from the left one after another, the

@@ -7,6 +7,9 @@ rig_anims.py.
     blender -b -P tools/blender/characters/meshy_fighter.py -- <in.glb> <out.glb>
         [--tris=5000] [--tex=1024] [--joints=<overrides.json>] [--arm_slack=0.03] [--thumb=0] [--sleeve=2.2] [--cut=<z>] [--debug=<dir>]
         [--overhead_out=40]   (raised arms open into a V: short arms, big head)
+        [--weld_normals=1]    (one normal and one weight set per position: seams stay shut)
+        [--lower_arms=10]     (an A-pose original: arms brought down to this many degrees
+                               from the vertical, and that becomes the rest pose)
 
 What it does, in order:
 1. Joins the meshes, merges the seam duplicates Meshy leaves, drops
@@ -29,14 +32,14 @@ import sys
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": "", "menu": ""}
+OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": "", "menu": "", "weld_normals": "", "lower_arms": ""}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -154,6 +157,24 @@ def shrink_textures(ob, px):
     sizes = []
     for m in ob.data.materials:
         m.name = NAME
+        # S47: a newer Meshy export also carries a normal and a
+        # metallic-roughness map; the toon shader reads only the albedo, so
+        # every image not feeding Base Color goes (smaller file, and the
+        # coach masks find the albedo as the only image)
+        bsdf = next((x for x in m.node_tree.nodes if x.type == "BSDF_PRINCIPLED"), None)
+        if bsdf:
+            keep = set()
+            todo = [l.from_node for l in bsdf.inputs["Base Color"].links]
+            while todo:
+                x = todo.pop()
+                keep.add(x)
+                todo += [l.from_node for i in x.inputs for l in i.links]
+            for n in list(m.node_tree.nodes):
+                if n.type == "TEX_IMAGE" and n not in keep:
+                    m.node_tree.nodes.remove(n)
+            for name in ["Normal", "Metallic", "Roughness"]:
+                for l in list(bsdf.inputs[name].links):
+                    m.node_tree.links.remove(l)
         for n in m.node_tree.nodes:
             if n.type == "TEX_IMAGE" and n.image:
                 img = n.image
@@ -798,8 +819,13 @@ def skin(ob, rig, J):
             vg[n].add([v.index], x / tot, "REPLACE")
     LOG["heat_fallbacks"] = unweighted
     # soften the jumps (sleeve tops, the armpit): the cut edges are split,
-    # so nothing bleeds between an arm and the body below the cut
-    smooth_weights(ob, factor=0.5, repeat=4)
+    # so nothing bleeds between an arm and the body below the cut. The passes
+    # go by mesh neighbours, so a denser mesh needs more of them to soften
+    # the same distance (S47: at ~21k triangles 4 passes left the elbows
+    # tearing); 4 at the 5k figures, as before.
+    passes = max(4, round(4 * (len(ob.data.polygons) / 5000) ** 0.5))
+    LOG["weight_passes"] = passes
+    smooth_weights(ob, factor=0.5, repeat=passes)
     names = {g.index: g.name for g in ob.vertex_groups}
     for v in ob.data.vertices:  # the head stays rigid
         if v.co.z > head_z:
@@ -905,6 +931,8 @@ def main():
         debug_render(ob, None, J)
     rig = build_armature(B)
     skin(ob, rig, J)
+    if OPT["lower_arms"]:
+        lower_arms(ob, rig, J, float(OPT["lower_arms"]))
     # the feet-on-the-floor fix measures from the sole: heel under the
     # ankle, toe under the foot bone's tail
     rig_anims.ANKLE = (J["foot.L"].z + J["foot.R"].z) / 2
@@ -915,6 +943,64 @@ def main():
     if OPT["drop_weapon"]:
         drop_weapon(ob)
     export(ob, rig, J)
+
+
+def lower_arms(ob, rig, J, deg):
+    """S47 (--lower_arms): the newer Meshy originals stand in an A-pose,
+    arms out at ~40 degrees; the clips (rig_anims) start from the rest pose,
+    so the coach walked with its arms spread. Weighted in the A-pose (the
+    arms stand clear of the body, which helps), each upper arm is turned
+    down about the front axis until shoulder → hand is `deg` from the
+    vertical, the mesh takes that pose and it becomes the new rest."""
+    # the weighting rules expect hanging arms: in an A-pose some arm
+    # vertices (finger tips, the outside of the elbow) went to the body and
+    # would stay behind; a vertex whose nearest bone is an arm's and that
+    # has no weight on that arm goes to that bone
+    segs = {bn.name: (bn.head_local.copy(), bn.tail_local.copy()) for bn in rig.data.bones if bn.use_deform}
+    names = {g.index: g.name for g in ob.vertex_groups}
+    claimed = 0
+    for v in ob.data.vertices:
+        near = min(segs, key=lambda n: seg_dist(v.co, *segs[n]))
+        arm = ARM_CHAIN + ("hand_tip",)
+        if near.split(".")[0] not in arm or "." not in near:
+            continue
+        side = near.split(".")[1]
+        if any(names[g.group].endswith("." + side) and names[g.group].split(".")[0] in arm
+               and g.weight > 0.05 for g in v.groups):
+            continue
+        for g in list(v.groups):
+            ob.vertex_groups[g.group].remove([v.index])
+        ob.vertex_groups[near].add([v.index], 1.0, "REPLACE")
+        claimed += 1
+    LOG["arm_verts_claimed"] = claimed
+    bpy.ops.object.select_all(action="DESELECT")
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode="POSE")
+    turned = {}
+    for S, sign in (("L", 1.0), ("R", -1.0)):
+        pb = rig.pose.bones[f"upper_arm.{S}"]
+        head = J[f"upper_arm.{S}"]
+        hand = J[f"hand_tip.{S}"]
+        v = hand - head
+        now = math.degrees(math.atan2(abs(v.x), -v.z))
+        turn = math.radians(max(0.0, now - deg)) * sign
+        R = (Matrix.Translation(head) @ Matrix.Rotation(turn, 4, "Y") @ Matrix.Translation(-head))
+        pb.matrix = R @ pb.matrix
+        bpy.context.view_layer.update()
+        turned[S] = round(now, 1)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    # bake the pose into the mesh, then make it the rest
+    mod = next(m for m in ob.modifiers if m.type == "ARMATURE")
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode="POSE")
+    bpy.ops.pose.armature_apply(selected=False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    m = ob.modifiers.new("Armature", "ARMATURE")
+    m.object = rig
+    LOG["arms_lowered_from"] = turned
 
 
 def drop_weapon(ob):
@@ -940,7 +1026,49 @@ def drop_weapon(ob):
     bm.free()
 
 
+def weld_normals(ob):
+    """S47: vertices that share a position (the arm cut, UV seams) get the
+    same normal, the average of theirs. The ink outline is the mesh pushed
+    out along its normals (toon_outline.gdshader): with a normal per side, a
+    split seam opened into dark spikes, which a dense mesh (the 21k coach)
+    showed all along the arm cut."""
+    me = ob.data
+    groups = {}
+    for v in me.vertices:
+        groups.setdefault(tuple(round(c, 5) for c in v.co), []).append(v.index)
+    normals = [v.normal.copy() for v in me.vertices]
+    welded = 0
+    moved = 0
+    for idxs in groups.values():
+        if len(idxs) < 2:
+            continue
+        avg = sum((me.vertices[i].normal for i in idxs), Vector()).normalized()
+        for i in idxs:
+            normals[i] = avg
+        welded += len(idxs)
+        # and the same weights, so the two sides of a seam move together
+        # (with a weight per side the arm cut opened a slit when it bent)
+        ws = [{g.group: g.weight for g in me.vertices[i].groups} for i in idxs]
+        if all(w == ws[0] for w in ws):
+            continue
+        keys = set().union(*ws)
+        mean = {k: sum(w.get(k, 0.0) for w in ws) / len(ws) for k in keys}
+        top = sorted(((k, x) for k, x in mean.items() if x > 0.01), key=lambda kv: -kv[1])[:4]
+        tot = sum(x for _, x in top) or 1.0
+        for i in idxs:
+            for g in list(me.vertices[i].groups):
+                ob.vertex_groups[g.group].remove([i])
+            for k, x in top:
+                ob.vertex_groups[k].add([i], x / tot, "REPLACE")
+            moved += 1
+    me.normals_split_custom_set_from_vertices(normals)
+    LOG["welded_normals"] = welded
+    LOG["welded_weights"] = moved
+
+
 def export(ob, rig, J):
+    if OPT["weld_normals"]:
+        weld_normals(ob)
     os.makedirs(os.path.dirname(os.path.abspath(OUT)), exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
     ob.select_set(True)
