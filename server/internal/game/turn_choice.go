@@ -24,9 +24,12 @@ import (
 
 // openerFirstTurnMP is the MP the opening side's fighters get on top of their
 // own on their first turn (owner 2026-11-19: "+PM al que abre"). Without it the
-// opener walks into reach first and loses (30 % in the mirror, TestTurnChoiceSim);
-// with it, it can reach and strike first. Sent in 60051 so the client counts it.
-var openerFirstTurnMP int32 = 2
+// opener walks into reach first and loses (27 % in the mirror, TestTurnChoiceSim);
+// +1 to +3 change nothing (23-30 %), +4 lets it reach and strike first (57 %).
+// (+2 first looked right only because the bonus made the opener's AI a kiter
+// that walked away on turn 1; see classifyAI.) Sent in 60051 so the client
+// counts it.
+var openerFirstTurnMP int32 = 4
 
 // openerBonusMP is the extra MP ff starts this turn with: its first turn, on
 // the opening side, and not a summon.
@@ -109,17 +112,17 @@ func (f *Fight) chooserIsServerDriven() bool {
 }
 
 // aiOpens is a server-driven chooser's pick, on the placed cells: open when
-// one of its fighters can already hurt an enemy (its own walk and its longest
-// harmful range); otherwise cede. Counting the opener's extra MP as reach made
-// it open too often: reaching is not winning the exchange (TestTurnChoiceSim:
-// 0.47 against 0.58 for always ceding, at +2).
+// one of its fighters could hurt an enemy on its first turn (its walk, the
+// opener's extra MP, its longest harmful range); otherwise cede. At +4 it
+// opens nearly always and wins 0.51-0.56 (always opening 0.57, always
+// ceding 0.43, TestTurnChoiceSim).
 func (f *Fight) aiOpens() bool {
 	t := f.Teams[f.chooser]
 	if t == nil {
 		return true
 	}
 	for _, ff := range t.Fighters {
-		reach := ff.MaxMP + f.aiStrikeRange(ff)
+		reach := ff.MaxMP + openerFirstTurnMP + f.aiStrikeRange(ff)
 		for _, o := range f.allFighters() {
 			if o.HP > 0 && f.areOpponents(ff, o) && manhattanDist(ff.Pos, o.Pos) <= reach {
 				return true

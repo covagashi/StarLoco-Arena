@@ -60,7 +60,7 @@ func TestCardContentRoundTrip(t *testing.T) {
 func TestBundleCardsWithoutRetailData(t *testing.T) {
 	b := LoadBundle(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if b.Spells.Len() != 203 || b.Challenges.Len() != 39 || b.Achievements.Len() != 332 ||
-		b.Summonings.Len() != 53 || b.SphereBoards.BoardCount() != 15 {
+		b.Summonings.Len() != 54 || b.SphereBoards.BoardCount() != 15 {
 		t.Fatalf("rules: spells %d, challenges %d, achievements %d, summonings %d, boards %d",
 			b.Spells.Len(), b.Challenges.Len(), b.Achievements.Len(), b.Summonings.Len(), b.SphereBoards.BoardCount())
 	}

@@ -162,7 +162,13 @@ func (f *Fight) classifyAI(ff *FightFighter) aiBehavior {
 	}
 	switch {
 	case damages:
-		if ff.MP >= kiteMPThreshold {
+		// its own MP, not this turn's: the opener's first-turn bonus (S46)
+		// made every opener a kiter that summoned and walked away
+		mp := ff.MaxMP
+		if mp <= 0 {
+			mp = ff.MP
+		}
+		if mp >= kiteMPThreshold {
 			return behaviorKite
 		}
 		return behaviorAggressive

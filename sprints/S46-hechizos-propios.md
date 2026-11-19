@@ -191,6 +191,25 @@ fuera de alcance y abre en alcance). `fight_smoke` en las dos ramas
 rival elige y nos cede (abrimos con 5 PM en la barra); elegimos nosotros,
 pulsamos "Ceder" y el orden pasa al rival, que abre con 5 PM.
 
+### Corrección de C (fase D, 2026-11-19): +4 PM, no +2
+
+Los +2 PM "funcionaban" por un fallo: con 5 PM el primer turno,
+`classifyAI` hacía del que abría un luchador "de huida" (umbral 4 PM), que
+invocaba o pegaba y **se alejaba**. Arreglado (mira sus PM de base), y
+medido otra vez (`S46_SIM=600`):
+
+| PM extra | abriendo siempre | eligiendo (IA) |
+|---|---|---|
+| 0 | 0,27 | 0,75 |
+| 1 | 0,24–0,30 | 0,73 |
+| 2 | 0,23–0,27 | 0,74 |
+| 3 | 0,23–0,27 | 0,74 |
+| **4** | **0,57** | **0,51–0,56** |
+
+Con +1..+3 el que abre sigue entrando en alcance sin llegar a golpear; con
++4 llega y pega primero. **Ahora +4**, y la IA cuenta esos PM al decidir:
+abre casi siempre (ceder siempre da 0,43). La iniciativa vale unos 5 puntos.
+
 ## D. Clases contra clases (2026-11-19, en curso)
 
 **Decisiones del dueño:** mandan **duelos y tríos**, las dos medias en
