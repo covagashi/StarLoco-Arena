@@ -141,3 +141,58 @@ ventaja: eso se ajusta en la fase D, con las clases.
 
 Iniciativa, de paso (sin cambiar aún): −30 a los tres 0,72; +30 0,16; +60
 0,28; +80 0,27. Mover segundo pesa todavía más que en S40: es la fase C.
+
+## C. Elegir turno (2026-11-19) ✅
+
+**Decisión del dueño, segunda tanda:** con las salidas actuales el que abre
+pierde (0,27–0,30 en el espejo: entra primero en alcance), así que con "el
+que gana elige" la iniciativa ganaba 7 de cada 10. El dueño: **+PM al que
+abre** en su primer turno.
+
+**Reglas nuevas** (`server/internal/game/turn_choice.go`):
+
+- Los turnos **alternan equipo a equipo**, cada equipo en su orden de
+  iniciativa (antes, una sola lista por iniciativa: un equipo rápido jugaba
+  sus tres seguidos). Si un equipo tiene más luchadores, los que sobran van
+  al final.
+- **Elige** el equipo con más iniciativa (la suma de sus luchadores;
+  empate: el luchador más rápido; luego el lado 0). Por defecto abre.
+- El humano elige en la colocación con un botón encima de Listo ("Ceder el
+  turno" / "Empezar yo"); la línea de ayuda dice quién elige y quién empieza.
+  La IA y los fantasmas eligen al acabar la colocación: abren solo si ya
+  llegan a golpear con su paso y su alcance; si no, ceden.
+- **El que abre camina +2 PM** en su primer turno (no las invocaciones).
+- Opcodes propios: 60050 C2S `[u8 open]`, 60051 S2C `[u8 elige][u8 abre]
+  [u8 PM extra][u8 n]{[i64 luchador]}` (tras el 8000, tras cada elección y al
+  acabar la colocación; las repeticiones lo graban).
+
+**Medido** (`S46_SIM=600 go test ./internal/game/ -run TestTurnChoiceSim`,
+el lado con +30 de iniciativa en los tres elige, contra el espejo desnudo):
+
+| PM extra al que abre | abriendo siempre | eligiendo (IA) |
+|---|---|---|
+| 0 | 0,26 | 0,74 |
+| 1 | 0,39 | 0,62 |
+| **2 (elegido)** | **0,45** | **0,54** |
+| 3 | 0,49 | 0,47 |
+| 4 | 0,50 | 0,53 |
+
+Con +2 la iniciativa vale unos 5 puntos (lo que una buena carta) y abrir ya
+no es perder. Con +3 y +4 el ruido tapa la diferencia; +2 cambia menos el
+primer turno (5 PM en vez de 3). **Probé que la IA contara los PM extra**
+al decidir: abría más y ganaba menos (0,47 contra 0,58 cediendo siempre):
+llegar no es ganar el intercambio. Se quedó la regla simple.
+
+**Pruebas:** `turn_choice_test.go` (orden alterno, equipos desiguales,
+empate, la elección solo del lado que elige y solo en colocación, PM extra
+solo al primer turno del que abre y nunca a una invocación, la IA cede
+fuera de alcance y abre en alcance). `fight_smoke` en las dos ramas
+(`godot/tools/no_retail_smoke.sh`, y con `SMOKE_ARGS=--challenge=24`): el
+rival elige y nos cede (abrimos con 5 PM en la barra); elegimos nosotros,
+pulsamos "Ceder" y el orden pasa al rival, que abre con 5 PM.
+
+## D. Clases contra clases — siguiente
+
+Las cartas de iniciativa (88, 89, 162, 164) se miden otra vez en la fase D:
+ahora la iniciativa solo decide quién elige, así que +30 y +80 valen lo
+mismo; su precio debería ser plano o la iniciativa dar algo más.
