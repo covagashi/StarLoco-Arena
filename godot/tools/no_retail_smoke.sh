@@ -3,6 +3,8 @@
 ##
 ##   godot/tools/no_retail_smoke.sh [arena.db]
 ##   SMOKES="fight_smoke hub_smoke" godot/tools/no_retail_smoke.sh
+##   SMOKE_GREP='who opens|after the button' godot/tools/no_retail_smoke.sh
+##   SMOKE_ARGS=--challenge=24 godot/tools/no_retail_smoke.sh   (user args to the smoke)
 ##
 ## Since S43 the repo holds nothing from the old client; this builds and starts
 ## the server on a copy of the database (default server/arena.db: fight_smoke
@@ -65,7 +67,8 @@ for smoke in ${SMOKES:-fight_smoke}; do
 	echo "[smoke] playing $smoke"
 	log="$WORK/$smoke.log"
 	rc=0
-	ARENA_ASSET_TRACE=1 ${WRAP[@]+"${WRAP[@]}"} "$GODOT" --path "$REPO/godot" -s "test/$smoke.gd" >"$log" 2>&1 || rc=$?
+	ARENA_ASSET_TRACE=1 ${WRAP[@]+"${WRAP[@]}"} "$GODOT" --path "$REPO/godot" -s "test/$smoke.gd" \
+		${SMOKE_ARGS:+-- $SMOKE_ARGS} >"$log" 2>&1 || rc=$?
 	bad=0
 	if [[ $rc -ne 0 ]]; then
 		echo "[smoke] FAIL $smoke exited $rc"
@@ -79,6 +82,8 @@ for smoke in ${SMOKES:-fight_smoke}; do
 		echo "[smoke] FAIL $smoke looked for files that are not there"
 		bad=1
 	fi
+	# SMOKE_GREP=<regex>: print the smoke's own lines that match, pass or fail
+	[[ -n "${SMOKE_GREP:-}" ]] && { grep -E "$SMOKE_GREP" "$log" || true; }
 	if [[ $bad -ne 0 ]]; then
 		grep -E "FAIL|SCRIPT ERROR|^ERROR: [a-z]" "$log" | head -20 || true
 		fail=1

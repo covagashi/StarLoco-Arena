@@ -238,6 +238,7 @@ func _skin_fight_ui() -> void:
 		if b is Button:
 			_round_menu_button(b)
 	_style_pass_button()
+	_make_open_button(theme)
 	# the spells sit in one dark pill (S45)
 	var bar_bg := StyleBoxFlat.new()
 	bar_bg.bg_color = Color(0.07, 0.08, 0.16, 0.86)
@@ -426,6 +427,9 @@ func _layout_fight_ui() -> void:
 	_end_turn.add_theme_font_size_override("font_size", 26 if pass_size == PASS_SIZE else 20)
 	var pass_pos := Vector2(vp.x - 20.0 - pass_size.x, vp.y - pass_size.y - 22.0)
 	_anchor_rect($UI/PassBtn, Vector4(0, 0, 0, 0), Rect2(pass_pos, pass_size))
+	if _open_btn != null:
+		_anchor_rect(_open_btn, Vector4(0, 0, 0, 0),
+			Rect2(pass_pos + Vector2(0, -54), Vector2(pass_size.x, 44)))
 	var n := 0
 	for c in $UI/SpellScroll/SpellBar.get_children():
 		if c is Control and not c.is_queued_for_deletion():
@@ -653,6 +657,8 @@ const OP_ACTOR_APPEAR := 4102
 ## S35c, Godot only: each coach's worn cards, right after 8000 (the server's
 ## fight_packets.go buildFightCoachLooks). [u8 n]{[i64 coachId][u8 m]{[u8 slot][i32 card]}}
 const OP_FIGHT_COACH_LOOKS := 60040
+const OP_TURN_CHOICE := 60050    # C2S [u8 open] — the choosing side opens (1) or cedes (0)
+const OP_TURN_ORDER := 60051     # S2C [u8 chooser][u8 opener][u8 opener MP][u8 n]{[i64 fid]}
 const OP_PLACEMENT := 8022
 const OP_START_PRESENTATION := 8010
 const OP_END_PRESENTATION := 8018
@@ -714,6 +720,12 @@ var _table_turn := 0     # last 8100 round counter (cooldowns compare it)
 var _spell_btns := {}    # spell id -> Button (for the cooldown lock refresh)
 var _turns_taken := {}   # fighter id -> own-turn count (client alh_1.NC)
 var _placement := false  # 8020 → 8028 window: 8021 moves are legal
+## Who opens (S46, 60051): the side with more initiative chooses while placing;
+## the opening side walks _opener_mp further on its first turn.
+var _chooser_side := -1
+var _opener_side := -1
+var _opener_mp := 0
+var _open_btn: Button = null
 var _selected := -1      # our fighter selected for placement
 var _turn_left := -1.0   # countdown of the acting fighter's clock (−1 off)
 var _turn_mode := {}     # coach id -> aez_0.dBh: 1 normal, 2 reduced, 6 a sixth
@@ -780,6 +792,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 	match opcode:
 		OP_FIGHT_COACH_LOOKS:
 			_coach_looks(payload)
+		OP_TURN_ORDER:
+			_turn_order(payload)
 		OP_ACTOR_APPEAR:
 			var d := Codec.decode(opcode, payload)
 			for a in d.get("actors", []):
@@ -810,10 +824,12 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_wire_fight_focus.call_deferred()
 			_set_phase("fight.phase.placement")
 			placement_began.emit()
+			_refresh_open_choice()
 			_refresh_timeline()   # banner: PLACEMENT + its clock
 			queue_redraw()
 		OP_END_PLACEMENT:
 			_placement = false
+			_refresh_open_choice()
 			_refresh_timeline()
 			_turn_left = -1.0
 			_end_turn.text = I18n.t("fight.pass")
@@ -1945,6 +1961,10 @@ func _on_turn_begin(fid: int) -> void:
 	var stats := _base_stats(f)
 	_ap_left = int(stats[1])
 	_mp_left = int(stats[2])
+	# the opening side's first turn walks further (S46, server openerBonusMP)
+	if int(_turns_taken[fid]) == 1 and not f.get("summon", false) \
+			and int(f.get("team", -1)) == _opener_side:
+		_mp_left += _opener_mp
 	if ours:
 		_build_spell_bar(f)
 	else:
@@ -2638,6 +2658,94 @@ func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file("res://src/main.tscn")
 
 
+## --- who opens (S46) -------------------------------------------------------
+## 60051 after 8000, after each choice and as placement ends: the side with
+## more initiative (chooser) picks whether it opens; the order is the new
+## timeline. Our side choosing shows a button over PASS while we place.
+
+## The secondary button over PASS: a dark pill, its words visible (unlike
+## the icon-only round menu buttons).
+func _make_open_button(theme: Theme) -> void:
+	if _open_btn != null:
+		return
+	var b := Button.new()
+	b.name = "OpenBtn"
+	b.theme = theme
+	b.visible = false
+	b.focus_mode = Control.FOCUS_ALL
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.08, 0.16, 0.88)
+	sb.border_color = Color(1, 1, 1, 0.85)
+	sb.border_width_top = 2
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	var hover := sb.duplicate()
+	hover.bg_color = Color(0.17, 0.2, 0.41, 0.95)
+	var focus := StyleBoxFlat.new()
+	focus.draw_center = false
+	focus.border_color = UiStyle.B_CORAL
+	focus.set_border_width_all(2)
+	focus.set_expand_margin_all(2)
+	for st in [["normal", sb], ["hover", hover], ["pressed", hover], ["focus", focus]]:
+		b.add_theme_stylebox_override(st[0], st[1])
+	b.add_theme_color_override("font_color", Color("f1e5c1"))
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_font_size_override("font_size", 18)
+	b.add_theme_font_override("font", UiStyle.bold(800))
+	b.pressed.connect(_on_open_pressed)
+	$UI.add_child(b)
+	_open_btn = b
+
+
+func _turn_order(payload: WireReader) -> void:
+	if payload.remaining() < 4:
+		return
+	_chooser_side = payload.get_u8()
+	_opener_side = payload.get_u8()
+	_opener_mp = payload.get_u8()
+	var tl := []
+	for i in payload.get_u8():
+		if payload.remaining() < 8:
+			break
+		tl.append(int(payload.get_i64()))
+	if not tl.is_empty():
+		State.fight_data["timeline"] = tl
+	_refresh_open_choice()
+	_refresh_timeline()
+
+
+## Whether our side is the one choosing (and we are a player, not a viewer).
+func _we_choose() -> bool:
+	return not State.spectating and _chooser_side >= 0 and _my_team() == _chooser_side
+
+
+## The button (ours to choose, while placing) and the hint line saying who
+## opens and why.
+func _refresh_open_choice() -> void:
+	if _open_btn == null:
+		return
+	var placing := _placement and _chooser_side >= 0 and not State.spectating
+	_open_btn.visible = placing and _we_choose()
+	if _open_btn.visible:
+		var we_open := _opener_side == _chooser_side
+		_open_btn.text = I18n.t("fight.open.cede" if we_open else "fight.open.take")
+		_open_btn.tooltip_text = I18n.t("fight.open.tip", {"mp": _opener_mp})
+	if not placing:
+		return
+	var key := "fight.open.we_open" if _opener_side == _my_team() else "fight.open.they_open"
+	var why := "fight.open.we_choose" if _we_choose() else "fight.open.they_choose"
+	info.text = "%s %s" % [I18n.t(why), I18n.t(key, {"mp": _opener_mp})]
+
+
+func _on_open_pressed() -> void:
+	if not _we_choose() or not _placement or State.net == null:
+		return
+	var w := WireWriter.new()
+	# opening now → cede; ceded → open
+	w.put_u8(0 if _opener_side == _chooser_side else 1)
+	State.net.send_message(OP_TURN_CHOICE, w.raw(), 3)
+
+
 ## --- placement phase -------------------------------------------------------
 ## 8021 C2S: [i64 fighterId][i32 x][i32 y][i16 z] — server validates the cell
 ## is one of OUR team's start cells, walkable and unoccupied (8022 confirms).
@@ -2649,6 +2757,7 @@ func confirm_placement() -> void:
 	if not _placement or State.spectating:
 		return
 	_placement = false
+	_refresh_open_choice()
 	_end_turn.disabled = true
 	# the retail's progressDialog "waitingForOpponents" (jR): until 8028
 	# the other side may still be placing

@@ -5,6 +5,9 @@ extends SceneTree
 ## consumes State.net.message_received itself: 4102 placements, phase
 ## acks (8011/8023), everything after.
 ##   godot --headless --path godot -s test/fight_smoke.gd
+## S46: `-- --challenge=24` fights another challenge (24, the Curandero
+## master, has less initiative than the test team, so our side chooses who
+## opens); the demon-name check is challenge 34's only.
 ## S37: under xvfb, `-- --fx-shots=<dir>` photographs every spell cast and
 ## close-combat hit (8110/8112) at 0.15, 0.35 and 0.6 s, for the effects.
 
@@ -30,6 +33,9 @@ var _fighter_info_ok := false  # S07: the timeline card opens the fighter sheet
 var _versus_ok := false        # S07: the versus screen before placement
 var _card_landed := false
 var _timeline_checked := false
+var _turn_choice_ok := false   # S46: who opens — the button, the new order
+var _opener_mp_checked := false
+var _opener_mp_ok := false     # S46: the opener's first turn shows its extra MP
 var _faced := false
 var _range_seen := false
 var _path_seen := false
@@ -43,10 +49,13 @@ var _cd_seen := false
 var _lang_before := ""
 var _fx_dir := ""
 var _fx_n := 0
+var _challenge := 34
 
 
 func _init() -> void:
 	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--challenge="):
+			_challenge = int(a.substr(12))
 		if a.begins_with("--fx-shots="):
 			_fx_dir = a.substr(11)
 			DirAccess.make_dir_recursive_absolute(_fx_dir)
@@ -104,10 +113,10 @@ func _launch_challenge() -> void:
 		return
 	_challenged = true
 	var w := WireWriter.new()
-	w.put_i32(34)      # challenge id 34 — "Démon de la 58ème minute"
+	w.put_i32(_challenge)  # by default 34 — "Démon de la 58ème minute"
 	w.put_u16(99)      # 99 = overworld challenge (not team preset)
 	client.send_message(26330, w.raw(), 2)
-	print("[smoke] challenge 34 sent")
+	print("[smoke] challenge %d sent" % _challenge)
 
 
 func _show_fight() -> void:
@@ -162,8 +171,14 @@ func _show_fight() -> void:
 	if not _versus_ok:
 		_finish(1, "FAIL no versus screen before placement")
 		return
-	if not _ai_names_ok:
+	if not _ai_names_ok and _challenge == 34:
 		_finish(1, "FAIL the AI opponents kept their French names")
+		return
+	if not _turn_choice_ok:
+		_finish(1, "FAIL who opens: no 60051, or the choice did not reorder the turns")
+		return
+	if not _opener_mp_ok:
+		_finish(1, "FAIL the opener's first turn did not show its extra MP")
 		return
 	_done_ok = true
 	_finish(0, "fight rendered")
@@ -192,6 +207,9 @@ func _on_placement() -> void:
 		if fight_scene.request_place_at(cell):
 			print("[smoke] scripted placement -> %s" % cell)
 			break
+	await _check_turn_choice()
+	if finished or fight_scene == null:
+		return
 	create_timer(0.6).timeout.connect(func():
 		if fight_scene != null and not finished:
 			fight_scene.confirm_placement()
@@ -199,6 +217,39 @@ func _on_placement() -> void:
 			var b: Button = fight_scene._end_turn
 			_waiting_seen = b.disabled and b.text == root.get_node("I18n").t("fight.waiting")
 			print("[smoke] ready -> button '%s' disabled=%s" % [b.text, b.disabled]))
+
+
+## S46: 60051 says who chooses; our side choosing shows the button over PASS,
+## and pressing it hands the opening to the other side (a new 60051).
+func _check_turn_choice() -> void:
+	var fv = fight_scene
+	if fv._chooser_side < 0 or fv._opener_side < 0:
+		print("[smoke] FAIL no 60051 before placement")
+		return
+	var btn: Button = fv._open_btn
+	var tl: Array = State.fight_data.get("timeline", [])
+	print("[smoke] who opens: chooser side %d, opener %d, +%d MP, we are %d, button %s"
+		% [fv._chooser_side, fv._opener_side, fv._opener_mp, fv._my_team(),
+			btn.visible if btn != null else "none"])
+	if not fv._we_choose():
+		_turn_choice_ok = btn != null and not btn.visible \
+			and fv.info.text.begins_with(root.get_node("I18n").t("fight.open.they_choose"))
+		return
+	if btn == null or not btn.visible:
+		print("[smoke] FAIL our side chooses but no button")
+		return
+	var before: int = fv._opener_side
+	btn.pressed.emit()
+	var waited := 0.0
+	while fv._opener_side == before and waited < 3.0:
+		await create_timer(0.1).timeout
+		waited += 0.1
+	tl = State.fight_data.get("timeline", [])
+	var first: Dictionary = State.fighters.get(int(tl[0]), {}) if not tl.is_empty() else {}
+	print("[smoke] after the button: opener %d, first in the order team %s, button '%s'"
+		% [fv._opener_side, first.get("team", "?"), btn.text])
+	_turn_choice_ok = fv._opener_side != before \
+		and int(first.get("team", -1)) == fv._opener_side
 
 
 ## S07: the versus screen comes up on 8010 with both sides, hands over to
@@ -300,6 +351,15 @@ func _check_fighter_info(ours_fid: int) -> void:
 
 ## turn_began policy for the harness: one short move request, then pass.
 func _on_fight_turn(fid: int, ours: bool) -> void:
+	# S46: the very first turn is the opener's, with its extra MP on the bar
+	if not _opener_mp_checked and fight_scene != null:
+		_opener_mp_checked = true
+		var f: Dictionary = State.fighters.get(fid, {})
+		var base := int(fight_scene._base_stats(f)[2])
+		_opener_mp_ok = int(f.get("team", -1)) == fight_scene._opener_side \
+			and fight_scene._mp_left == base + fight_scene._opener_mp
+		print("[smoke] first turn: team %s, %d MP (base %d + %d) ok=%s" % [f.get("team", "?"),
+			fight_scene._mp_left, base, fight_scene._opener_mp, _opener_mp_ok])
 	# Timeline check (runs on every 8104): one HUD card per 8000 timeline
 	# entry (S17 side columns) and exactly the acting fighter's card active.
 	if not _timeline_checked and fight_scene != null:
