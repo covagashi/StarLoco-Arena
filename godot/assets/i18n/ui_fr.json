@@ -1478,7 +1478,7 @@
   "recruit.difficulty": "Difficulté",
   "recruit.attacks": "Attaques",
   "recruit.attack_line": "{name} · {ap} PA · portée {min}–{max}",
-  "recruit.attack_hint": "Survole une attaque pour voir son coût et sa portée.",
+  "recruit.attack_hint": "Touche une attaque pour voir son coût et sa portée.",
   "recruit.name_ph": "Nom du combattant",
   "recruit.go": "RECRUTER !",
   "recruit.err_name": "Donne-lui un nom.",

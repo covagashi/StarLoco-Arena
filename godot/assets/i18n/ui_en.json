@@ -1478,7 +1478,7 @@
   "recruit.difficulty": "Difficulty",
   "recruit.attacks": "Attacks",
   "recruit.attack_line": "{name} · {ap} AP · range {min}–{max}",
-  "recruit.attack_hint": "Point at an attack to see its cost and range.",
+  "recruit.attack_hint": "Tap an attack to see its cost and range.",
   "recruit.name_ph": "Fighter's name",
   "recruit.go": "RECRUIT!",
   "recruit.err_name": "Give it a name.",

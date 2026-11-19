@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas) W9 y W5 hechos — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas) W9, W5 y W6 hechos — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -551,7 +551,7 @@ Dueño: "sí, adopta los 40".
    Era: con la Ally libre
    (`tools/web/load_test.mjs`; la marca `window.__pippop` ya está).
 6. Lo que queda de la auditoría web: W4–W7 (W2 fuera: el móvil
-   siempre en horizontal; W9 y W5 hechos, abajo).
+   siempre en horizontal; W9, W5 y W6 hechos, abajo).
 
 ## Deuda técnica
 
@@ -611,3 +611,49 @@ Verificado: el mapa de pantallas (`tools/screen_map.sh`, 48 + 46
 pantallas) antes y después comparado imagen a imagen; mirados lobby, login,
 creación de jefe, reclutar, logros, altar de fusión y combate, sin
 desbordes. `run_tests.sh --headless` 1502/0; `coach_look_smoke` 1/0.
+
+## W6 — el táctil (2026-11-19)
+
+Con el dedo los botones ya funcionaban (Godot emula el ratón desde el
+toque) y lo que se ilumina al pasar por encima solo es adorno. Lo que se
+perdía era la **información que solo sale al pasar el ratón**: unos 45
+`tooltip_text` (coste y alcance de cada hechizo y carta en combate, lo que
+paga y lo que arriesga cada tarjeta del lobby, por qué un capítulo está
+cerrado, el detalle de los hechizos del luchador, los nombres en la línea
+de turnos…). Godot no enseña nunca un tooltip a un dedo.
+
+- **`TouchTips`** (autoload nuevo, `src/ui/touch_tips.gd`): manteniendo el
+  dedo quieto 0,45 s sobre algo con tooltip, su texto sale en un globo
+  blanco con filete de tinta encima del dedo (debajo si no cabe), 16 px,
+  escalado con la ventana como las pantallas, 4 s o hasta el siguiente
+  toque. **Al levantar ese dedo no se pulsa nada**: se comen las dos
+  liberaciones (el ratón emulado y el propio toque, que los controles de
+  Godot 4 también toman como pulsación). Un toque corto pulsa como siempre;
+  un dedo que se arrastra no cuenta. Solo los toques lo activan: con ratón
+  no cambia nada.
+- Busca el control de encima bajo el dedo (orden del árbol, capas, cajas
+  escaladas, listas recortadas) y sube a su padre más cercano con tooltip.
+- Reclutar ya enseñaba el detalle del ataque al tocarlo (toma el foco); su
+  pista pasa de «Pasa por un ataque…» a «Toca un ataque…» (es/en/fr).
+- Errata de paso: «esferas para **la** Constelación» (dos textos decían
+  «el»).
+
+Verificado: `test/unit/touch_tips_test.gd` (búsqueda bajo el dedo y partido
+de líneas, 15 comprobaciones); `test/touch_tips_smoke.gd` con toques reales
+(mantener enseña y no pulsa, toque corto pulsa, arrastrar no cuenta, nada
+debajo no enseña nada: 6/6); `test/touch_tips_look.gd` en el lobby real
+contra un servidor local: el globo con el texto completo de la tarjeta
+Historia y sin lanzar el combate al levantar el dedo; `fight_smoke` termina
+el combate; `run_tests.sh --headless` 1517/0.
+
+### Para el dueño: el tamaño en un móvil
+
+Todas las pantallas se dibujan contra 1280×720 y encogen hasta caber. Un
+móvil en horizontal tiene unos 390 px CSS de alto, así que la interfaz
+entera queda al **54 %**: el texto de 14 px se ve como de 7–8 y los
+botones de 40 px (cerrar, ayuda) como de 22, por debajo de los 44 que pide
+un dedo. W5 y W6 lo alivian pero no lo resuelven. La solución de fondo es
+una referencia más pequeña para pantallas bajas (p. ej. 960×540, todo un
+33 % más grande en el móvil), y eso pide recolocar las pantallas: es W4.
+**Pregunta:** ¿hacemos W4 con esa referencia para el móvil, o el móvil
+queda como está para la demo?

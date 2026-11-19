@@ -38,6 +38,7 @@ driver/output_latency.web=500
 I18n="*res://src/i18n/i18n.gd"
 Session="*res://src/session.gd"
 Audio="*res://src/audio/audio.gd"
+TouchTips="*res://src/ui/touch_tips.gd"
 
 [display]
 
