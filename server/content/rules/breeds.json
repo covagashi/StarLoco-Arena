@@ -1,0 +1,14 @@
+[
+{"ID":1,"HP":70,"AP":6,"MP":3,"Init":20,"CCElement":3,"Block":60,"Dodge":100},
+{"ID":2,"HP":65,"AP":6,"MP":3,"Init":40,"CCElement":2,"Block":0,"Dodge":100},
+{"ID":3,"HP":65,"AP":6,"MP":3,"Init":60,"CCElement":3,"Block":0,"Dodge":100},
+{"ID":4,"HP":70,"AP":6,"MP":3,"Init":50,"CCElement":4,"Block":20,"Dodge":100},
+{"ID":5,"HP":60,"AP":6,"MP":3,"Init":80,"CCElement":1,"Block":0,"Dodge":100},
+{"ID":6,"HP":70,"AP":6,"MP":3,"Init":70,"CCElement":3,"Block":0,"Dodge":100},
+{"ID":7,"HP":60,"AP":6,"MP":3,"Init":0,"CCElement":1,"Block":0,"Dodge":100},
+{"ID":8,"HP":75,"AP":6,"MP":3,"Init":10,"CCElement":2,"Block":40,"Dodge":100},
+{"ID":9,"HP":65,"AP":6,"MP":3,"Init":75,"CCElement":4,"Block":0,"Dodge":100},
+{"ID":10,"HP":65,"AP":6,"MP":3,"Init":30,"CCElement":2,"Block":0,"Dodge":100},
+{"ID":11,"HP":80,"AP":6,"MP":3,"Init":90,"CCElement":4,"Block":20,"Dodge":100},
+{"ID":12,"HP":75,"AP":6,"MP":3,"Init":100,"CCElement":1,"Block":40,"Dodge":100}
+]

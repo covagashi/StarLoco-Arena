@@ -24,6 +24,7 @@ import (
 func Build(cards *gamedata.CardContent, rules *gamedata.RulesContent) (map[string][]byte, error) {
 	tables := map[string]any{
 		"spells.json":       spells(rules.Spells),
+		"breeds.json":       breeds(rules.Breeds),
 		"effects.json":      effects(rules.Spells, cards.Fighters),
 		"areas.json":        areas(rules.StaticEffects),
 		"cards.json":        coachCards(cards.Cards),
@@ -395,6 +396,16 @@ func byKey[K cmp.Ordered, V any](m map[K]V) []V {
 	out := make([]V, 0, len(keys))
 	for _, k := range keys {
 		out = append(out, m[k])
+	}
+	return out
+}
+
+// breeds is the class table the client shows before the server says more
+// (S46): {breed: {hp, ap, mp, init}}.
+func breeds(b *gamedata.Breeds) map[string]map[string]int32 {
+	out := map[string]map[string]int32{}
+	for _, x := range b.All() {
+		out[fmt.Sprint(x.ID)] = map[string]int32{"hp": x.HP, "ap": x.AP, "mp": x.MP, "init": x.Init}
 	}
 	return out
 }

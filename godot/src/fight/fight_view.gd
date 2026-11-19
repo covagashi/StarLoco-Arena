@@ -16,6 +16,7 @@ const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 const ArtStyle := preload("res://src/util/art_style.gd")
 const FightHud := preload("res://src/fight/fight_hud.gd")
 const State := preload("res://src/state.gd")
+const Breeds := preload("res://src/gamedata/breeds.gd")
 const Codec := preload("res://src/net/codec.gd")
 const CardsDB := preload("res://src/gamedata/cards.gd")
 const Spells := preload("res://src/gamedata/spells.gd")
@@ -688,12 +689,6 @@ const OP_DIR_CHANGE := 4522      # S2C header+[i64 fid][u8 dir]
 const OP_FIGHTER_TACKLED := 4506 # S2C header+[i64 tackled][i64 tackler]
 const OP_FIGHTER_OUCH := 4902    # S2C header+[i64 fid] — crit-hit "ouch !"
 const OP_TURN_DURATION := 8250   # S2C [i64 coachId][u8 normal] — idle penalty
-
-## Breed base stats (server breed.go): [HP, AP, MP] — AP/MP refill each turn.
-const BREED_STATS := {1: [70, 6, 3], 2: [65, 6, 3], 3: [65, 6, 3],
-	4: [70, 6, 3], 5: [60, 6, 3], 6: [70, 6, 3], 7: [60, 6, 3],
-	8: [75, 6, 3], 9: [65, 6, 3], 10: [65, 6, 3], 11: [80, 6, 3],
-	12: [75, 6, 3]}
 
 var _fight_over := false
 var _map_lbl: Label = null   # replaces the debug MapId field in live fights
@@ -1700,7 +1695,7 @@ func _hp_max(f: Dictionary) -> int:
 	if int(f.get("hp", 0)) > 0:
 		return int(f.hp)
 	if str(f.get("type", "player")) == "player":
-		return int(BREED_STATS.get(int(f.get("breed", 1)), [0, 0, 0])[0])
+		return int(Breeds.stats(int(f.get("breed", 1)), [0, 0, 0])[0])
 	return 0
 
 
@@ -2052,7 +2047,7 @@ func fight_hud_model() -> Dictionary:
 func _base_stats(f: Dictionary) -> Array:
 	if f.get("summon", false):
 		return [0, int(f.get("ap", 6)), int(f.get("mp", 3))]
-	return BREED_STATS.get(int(f.get("breed", 1)), [60, 6, 3])
+	return Breeds.stats(int(f.get("breed", 1)), [60, 6, 3])
 
 
 func _on_timeline_chip(fid: int) -> void:

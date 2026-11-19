@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/StarLoco/arena-2.70/content"
 	"github.com/StarLoco/arena-2.70/internal/domain"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 )
@@ -47,48 +48,35 @@ const (
 	closeCombatCritDamages int32 = 7
 )
 
-// breedTable maps breed id (1..12) -> base stats, taken from the 2.70 client's own
-// breed enum `xq`.
+// breedTable maps breed id (1..12) -> base stats. Since S46 it is our data,
+// server/content/rules/breeds.json (gamedata.Breed), read once at start-up.
 //
-// The enum is obfuscated, but v2.04b ships the UNOBFUSCATED twin of the very same
-// table (`Breed.java`), and the two line up argument for argument, which is what
-// pins each position:
+// It started as the 2.70 client's own breed enum `xq`. The enum is obfuscated,
+// but v2.04b ships the UNOBFUSCATED twin of the very same table (`Breed.java`),
+// and the two line up argument for argument, which is what pinned each column:
 //
 //	           id  HP  AP  MP  INIT  crit  fumble  VALUE  element  ccAP ccDmg ccCrit
 //	2.04b FECA  1  70   6   3    50     5       1    400    WATER     5    5      7
 //	2.70  Feca  1  70   6   3    20     0       0    600    ban       5    5      7
 //
-// The client reaches them as ok()=HP, ol()=AP, om()=MP, DK()=initiative (which
-// seeds characteristic Lr.bqA, the one ee_2 renders as "initiativePoints"),
-// DN()=close-combat element, DO()/DP()/DQ()=the 5/5/7 close-combat trio.
-//
-// **Our table used to be the 2.04b one.** 2.70 re-tuned three things, and all three
-// were wrong here:
-//   - INITIATIVE: every one of the 12 values changed. Initiative decides turn
-//     order, so the whole timeline was built on the 2006 numbers. 2.70's are
-//     unique per breed (no ties), where 2.04b's had many duplicates.
-//   - Cra's close-combat element: WATER in 2.04b, AIR in 2.70 (see B-057).
-//   - The base value: 400 -> 600 (see breedBaseValue).
-//
-// 2.70's close-combat element split is a clean 3/3/3/3:
-//
-//	fire  (fv_1.bam) = Xelor, Eniripsa, Pandawa
-//	water (fv_1.ban) = Feca, Enutrof, Ecaflip
-//	air   (fv_1.bao) = Sram, Cra, Sacrier
-//	earth (fv_1.bap) = Osamodas, Iop, Sadida
-var breedTable = map[uint8]breedBaseStats{
-	1:  {HP: 70, AP: 6, MP: 3, Init: 20, CCElement: elemWater, Block: 60, Dodge: 100}, // Feca
-	2:  {HP: 65, AP: 6, MP: 3, Init: 40, CCElement: elemEarth, Block: 0, Dodge: 100},  // Osamodas
-	3:  {HP: 65, AP: 6, MP: 3, Init: 60, CCElement: elemWater, Block: 0, Dodge: 100},  // Enutrof
-	4:  {HP: 70, AP: 6, MP: 3, Init: 50, CCElement: elemAir, Block: 20, Dodge: 100},   // Sram
-	5:  {HP: 60, AP: 6, MP: 3, Init: 80, CCElement: elemFire, Block: 0, Dodge: 100},   // Xelor
-	6:  {HP: 70, AP: 6, MP: 3, Init: 70, CCElement: elemWater, Block: 0, Dodge: 100},  // Ecaflip
-	7:  {HP: 60, AP: 6, MP: 3, Init: 0, CCElement: elemFire, Block: 0, Dodge: 100},    // Eniripsa
-	8:  {HP: 75, AP: 6, MP: 3, Init: 10, CCElement: elemEarth, Block: 40, Dodge: 100}, // Iop
-	9:  {HP: 65, AP: 6, MP: 3, Init: 75, CCElement: elemAir, Block: 0, Dodge: 100},    // Cra
-	10: {HP: 65, AP: 6, MP: 3, Init: 30, CCElement: elemEarth, Block: 0, Dodge: 100},  // Sadida
-	11: {HP: 80, AP: 6, MP: 3, Init: 90, CCElement: elemAir, Block: 20, Dodge: 100},   // Sacrier
-	12: {HP: 75, AP: 6, MP: 3, Init: 100, CCElement: elemFire, Block: 40, Dodge: 100}, // Pandawa
+// The client reached them as ok()=HP, ol()=AP, om()=MP, DK()=initiative,
+// DN()=close-combat element, DO()/DP()/DQ()=the 5/5/7 close-combat trio. 2.70's
+// initiatives are unique per breed (no ties); its close-combat elements split
+// 3/3/3/3 (fire Xelor, Eniripsa, Pandawa; water Feca, Enutrof, Ecaflip; air
+// Sram, Cra, Sacrier; earth Osamodas, Iop, Sadida).
+var breedTable = loadBreedTable()
+
+func loadBreedTable() map[uint8]breedBaseStats {
+	bs, err := gamedata.LoadBreeds(content.Rules)
+	if err != nil {
+		panic(err) // embedded, so only a broken checkout gets here
+	}
+	m := map[uint8]breedBaseStats{}
+	for _, b := range bs.All() {
+		m[b.ID] = breedBaseStats{HP: b.HP, AP: b.AP, MP: b.MP, Init: b.Init,
+			CCElement: b.CCElement, Block: b.Block, Dodge: b.Dodge}
+	}
+	return m
 }
 
 // Base critical/fumble rates (%), from the 2.70 client's breed table (xq's 6th and

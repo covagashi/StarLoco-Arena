@@ -1,6 +1,6 @@
 # S46 — Hechizos propios (datos)
 
-**Planificado:** 2026-11-14 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ⚪ esbozo (tras S40)
+**Planificado:** 2026-11-14 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-19)
 
 ## Decisión del dueño (2026-11-14)
 
@@ -93,3 +93,29 @@ nada (de "Llega de S40"):
    ¿casillas de salida más lejos, o que la iniciativa dé otra cosa?
 4. **Armas:** pesan poco frente a los hechizos (arriba). ¿Más daño, menos
    PA, o se quedan como bonus pasivos con un ataque de apoyo?
+
+## Decisiones del dueño (2026-11-19)
+
+1. **Solo números** de los 203 hechizos (daño, PA, alcance, enfriamiento):
+   mismos ids, así las recetas de VFX (S37), los sonidos (S39) y las cartas
+   `@spell:<id>` siguen valiendo.
+2. **Las clases entran** (vida, PA, PM, iniciativa, placaje): salen de
+   `breed.go` y del `BREED_STATS` del cliente a `server/content/rules/`.
+3. **Iniciativa: el que la gana elige turno** (empezar o ceder). La IA elige
+   lo que le conviene.
+4. **Armas: 1 PA menos**, mismo daño.
+
+## Plan (2026-11-19)
+
+- **A. Clases a datos.** `server/content/rules/breeds.json`, leído por
+  `gamedata`; `exportclient` lo lleva a `godot/assets/content/`, y el
+  cliente deja su `BREED_STATS` copiado a mano. Mismos valores: ninguna
+  prueba cambia.
+- **B. Armas −1 PA**, y se vuelven a medir con `S40_SIM` (la tabla de
+  arriba).
+- **C. Elegir turno.** Orden de equipo contra equipo; el equipo con más
+  iniciativa decide en la colocación si abre o cede (botón; si no decide,
+  abre). La IA y los fantasmas deciden solos.
+- **D. Clases contra clases.** Simulación nueva (cada clase contra cada
+  clase, espejos de equipo), y se tocan números de hechizos y clases hasta
+  que ninguna se salga del 40–60 %.

@@ -15,6 +15,7 @@ import (
 // server/content/rules/, embedded by package content, with the retail ids.
 //
 //	spells.json                  spell templates (by id)
+//	breeds.json                  the fighter classes' base stats (S46)
 //	summonings.json              summoned creatures
 //	static_effects.json          glyphs, traps and other static effects
 //	challenges.json              challenge definitions
@@ -35,6 +36,7 @@ import (
 // RulesContent is the rules data of one content tree.
 type RulesContent struct {
 	Spells         *Spells
+	Breeds         *Breeds
 	Summonings     *Summonings
 	StaticEffects  *StaticEffects
 	Challenges     *Challenges
@@ -50,6 +52,7 @@ type RulesContent struct {
 
 const (
 	rulesSpells          = "spells.json"
+	rulesBreeds          = "breeds.json"
 	rulesSummonings      = "summonings.json"
 	rulesStaticEffects   = "static_effects.json"
 	rulesChallenges      = "challenges.json"
@@ -71,6 +74,7 @@ const (
 func LoadRulesContent(fsys fs.FS) (*RulesContent, error) {
 	var (
 		spells  []*Spell
+		breeds  []*Breed
 		sums    []*Summoning
 		statics []*StaticEffect
 		chals   []*Challenge
@@ -91,6 +95,7 @@ func LoadRulesContent(fsys fs.FS) (*RulesContent, error) {
 		into any
 	}{
 		{rulesSpells, &spells},
+		{rulesBreeds, &breeds},
 		{rulesSummonings, &sums},
 		{rulesStaticEffects, &statics},
 		{rulesChallenges, &chals},
@@ -113,6 +118,9 @@ func LoadRulesContent(fsys fs.FS) (*RulesContent, error) {
 	if len(spells) == 0 {
 		return nil, fmt.Errorf("rules content: %s is empty", rulesSpells)
 	}
+	if len(breeds) == 0 {
+		return nil, fmt.Errorf("rules content: %s is empty", rulesBreeds)
+	}
 
 	ach := NewAchievements(achs...)
 	for _, c := range cats {
@@ -125,6 +133,7 @@ func LoadRulesContent(fsys fs.FS) (*RulesContent, error) {
 	}
 	return &RulesContent{
 		Spells:         NewSpells(spells...),
+		Breeds:         NewBreeds(breeds...),
 		Summonings:     NewSummonings(sums...),
 		StaticEffects:  NewStaticEffects(statics...),
 		Challenges:     NewChallenges(chals...),
@@ -191,6 +200,7 @@ func WriteRulesContent(dir string, r *RulesContent) error {
 		fn   func(string) error
 	}{
 		{rulesSpells, func(p string) error { return writeContentFile(p, byKey(r.Spells.All())) }},
+		{rulesBreeds, func(p string) error { return writeContentFile(p, r.Breeds.All()) }},
 		{rulesSummonings, func(p string) error { return writeContentFile(p, byKey(r.Summonings.All())) }},
 		{rulesStaticEffects, func(p string) error { return writeContentFile(p, byKey(r.StaticEffects.All())) }},
 		{rulesChallenges, func(p string) error { return writeContentFile(p, byKey(r.Challenges.All())) }},
