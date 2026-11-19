@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
 )
 
@@ -209,13 +210,19 @@ func sendMatchCancelled(to *Session) error {
 
 // readReversedIDs reads [i32 N] then N i64 ids (they were written reversed by
 // the client; we keep wire order — callers that need original order can flip).
+//
+// N is a coach's whole roster, up to maxFightersPerCoach. It used to stop at
+// 64 and return nothing WITHOUT reading the ids, so what followed was read
+// from the middle of one: a coach with 65+ fighters accepting a match (23114)
+// had its accept byte read as a decline (S48, found by ask2_smoke). An N no
+// roster can have is a broken frame, refused.
 func readReversedIDs(r *protocol.Reader) ([]int64, error) {
 	n, err := r.I32()
 	if err != nil {
 		return nil, err
 	}
-	if n < 0 || n > 64 {
-		return nil, nil
+	if n < 0 || n > maxFightersPerCoach {
+		return nil, fmt.Errorf("roster of %d ids", n)
 	}
 	ids := make([]int64, 0, n)
 	for i := int32(0); i < n; i++ {

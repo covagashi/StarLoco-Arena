@@ -13,6 +13,37 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-192 · A Historia fighter could get stuck on its sphere board
+
+- **Symptom:** the Constelación of the test coach's fighter showed nothing
+  within reach and "Comprar" stayed off for good (`screens_smoke`, 2026-11-20).
+- **Root cause:** the server and the retail client let a fighter buy a node it
+  already owns again for a tenth of its cost — the only way back out of a
+  branch, since a path only crosses empty cells — but the native board's
+  flood-fill (`kanodo_board.gd`) never lit an owned node. A fighter whose last
+  purchase was in a dead branch had no way out. An owned barrier also asked for
+  its card again, server side.
+- **Fix:** owned frontier nodes are lit (the cost line says "ya es tuya: …
+  la décima parte"); a barrier already owned is bought back with no card
+  (`handlers_spheres.go`). The cursor ring (white) and the reach border (pale
+  yellow) were drawn for the old dark board: on the S45 white panel neither
+  showed — now ink and coral.
+- **Verified:** `unit` `TestSphereRebuyWalksBackThroughAnOwnedBarrier` (fails
+  without the fix); `screens_smoke` 11/11 with the stuck fighter; `client-ui`
+  the board capture before / after.
+
+### B-191 · Accepting a found match declined it for a coach with over 64 fighters
+
+- **Symptom:** both sides pressed Aceptar on "Combate encontrado" and the
+  match fell through; the server logged "match declined" for a coach who had
+  accepted (`ask2_smoke`, 2026-11-20).
+- **Root cause:** `readReversedIDs` stopped at 64 roster ids and returned
+  nothing WITHOUT reading them, so 23114's accept byte was read from the middle
+  of an id. A coach may own up to 100 fighters (`maxFightersPerCoach`).
+- **Fix:** read up to `maxFightersPerCoach`; a larger count is a broken frame.
+- **Verified:** `unit` `TestReversedIDsReadsAWholeRoster`; `ask2_smoke` 5/5
+  (was 4/5) with the 70-fighter test coach.
+
 ### B-189 · A tree's canopy hid a fighter completely
 
 - **Symptom:** in the fight view (arena 10, `test/fight_ui_preview.tscn` with
