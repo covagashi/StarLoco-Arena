@@ -171,12 +171,12 @@ func _kind_row(text: String, n: int, on: bool) -> Button:
 		b.draw_polyline(loop, UiStyle.B_CORAL if lit and not on else UiStyle.B_INK, 2.0, true)
 		# the count on an ink tab at the right end
 		var cnt := str(n)
-		var cw := cf.get_string_size(cnt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+		var cw := cf.get_string_size(cnt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 		var tw := cw + 20.0
 		b.draw_colored_polygon(PackedVector2Array([Vector2(s.x - tw, 0), Vector2(s.x, 0),
 			Vector2(s.x - k, s.y), Vector2(s.x - tw - k, s.y)]), UiStyle.B_INK)
 		b.draw_string(cf, Vector2(s.x - tw - k * 0.5 + (tw - cw) * 0.5, (s.y + 13 * 0.72) * 0.5), cnt,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiStyle.B_GOLD)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiStyle.B_GOLD)
 		b.draw_string(font, Vector2(k + 8, (s.y + 15 * 0.72) * 0.5), text.to_upper(),
 			HORIZONTAL_ALIGNMENT_LEFT, s.x - tw - k - 20, 15, Color.WHITE if on else UiStyle.B_INK))
 	for sig in [b.mouse_entered, b.mouse_exited, b.focus_entered, b.focus_exited]:

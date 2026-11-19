@@ -99,7 +99,6 @@ var _hair_fx := 0     # S37: the hair effect on the figure now
 var _hair_on: Object  # …and the figure it was put on (a rebuild drops it)
 var _dir := Direction8.FRONT    # wire dir the coach sprite faces
 var _subtitle: Label            # the search card's heading
-var _hint: Label
 var _menu_buttons: Array = []
 var _actions: Array[Button] = []   # every button that starts something
 var _cards := {}                # mode id -> {root, title, phrase, wins, team, warn, play, extra, pick, chip, mask, figs}
@@ -166,14 +165,9 @@ func _init() -> void:
 	_quick_hint.position = Vector2(TILES.x + 4, 592)
 	_quick_hint.size = Vector2(300, 40)
 	_quick_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_text(_quick_hint, 13, UiStyle.B_MUTE)
+	_text(_quick_hint, 14, UiStyle.B_MUTE)
 	_box.add_child(_quick_hint)
 	_search_card()
-	_hint = Label.new()
-	_hint.position = Vector2(CHAT_RECT.position.x, 698)
-	_hint.size = Vector2(CHAT_RECT.size.x, 16)
-	_text(_hint, 11, UiStyle.B_FAINT)
-	_box.add_child(_hint)
 	_wire_focus()
 	resized.connect(_relayout)
 	I18n.locale_changed.connect(func(_l): _retranslate())
@@ -429,7 +423,7 @@ func _rail(icons: Texture2D) -> void:
 		b.draw.connect(func():
 			var lit := b.is_hovered() or b.has_focus()
 			var f := UiStyle.bold(700)
-			b.draw_string(f, Vector2(0, 30), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UiStyle.B_FAINT)
+			b.draw_string(f, Vector2(0, 30), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiStyle.B_FAINT)
 			b.draw_string(_font, Vector2(70, 33), b.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 21,
 				CORAL if lit else INK)
 			b.draw_texture_rect(atlas, Rect2(28, 11, 28, 28), false, CORAL if lit else INK)
@@ -620,7 +614,8 @@ func _card(m: Array) -> void:
 	c.phrase.size = Vector2(240, 56)
 	c.phrase.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	c.phrase.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_text(c.phrase, 12, Color("4a5064"))
+	_text(c.phrase, 14, Color("4a5064"))
+	c.phrase.add_theme_constant_override("line_spacing", -6)   # S47 W5: three lines at 14 px
 	c.phrase.visible = big
 	root.add_child(c.phrase)
 	# what it pays and its warning: the tile's tooltip (_retranslate)
@@ -642,7 +637,7 @@ func _card(m: Array) -> void:
 	chip.position = Vector2(pad - 6, h - 16 - 26 - (0 if big else 30))
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.team = Label.new()
-	_text(c.team, 12, INK)
+	_text(c.team, 14, INK)
 	chip.add_child(c.team)
 	root.add_child(chip)
 	c.chip = chip
@@ -660,7 +655,7 @@ func _card(m: Array) -> void:
 		pick.add_theme_stylebox_override("hover", ph)
 		pick.add_theme_stylebox_override("focus", UiStyle.box(Color(0, 0, 0, 0), CORAL, 2, 0))
 		pick.add_theme_font_override("font", UiStyle.bold(800))
-		pick.add_theme_font_size_override("font_size", 12)
+		pick.add_theme_font_size_override("font_size", 14)
 		pick.add_theme_constant_override("outline_size", 0)
 		for col in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color", "font_hover_pressed_color"]:
 			pick.add_theme_color_override(col, INK)
@@ -972,8 +967,8 @@ func bind_model(model, chat: Control) -> void:
 			display.add_theme_stylebox_override("normal", ds)
 			display.add_theme_font_override("normal_font", UiStyle.bold(800))
 			display.add_theme_font_override("bold_font", UiStyle.bold(900))
-			display.add_theme_font_size_override("normal_font_size", 13)
-			display.add_theme_font_size_override("bold_font_size", 13)
+			display.add_theme_font_size_override("normal_font_size", 14)
+			display.add_theme_font_size_override("bold_font_size", 14)
 			display.add_theme_color_override("default_color", INK)
 	_model.changed.connect(_on_model_changed)
 	_sync()
@@ -1050,7 +1045,7 @@ func _guide_card() -> void:
 	_guide_text.custom_minimum_size = Vector2(180, 0)
 	_guide_text.max_lines_visible = 2
 	_guide_text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_text(_guide_text, 12, INK)
+	_text(_guide_text, 14, INK)
 	body.add_child(_guide_text)
 	_guide_go = _b_button(true, 18)
 	_guide_go.name = "GuideGo"
@@ -1321,7 +1316,6 @@ func _retranslate() -> void:
 	_cancel_search.text = _t("lobby.cancel_search")
 	_ghost_offer.text = _t("hub.ghost_offer")
 	_search_mode.text = _search_mode_text()
-	_hint.text = _t("lobby.chat_hint")
 	_quick.text = _t("hub.quick")
 	_quick_hint.text = _t("hub.quick_hint")
 	for m in MODES:
@@ -1384,7 +1378,7 @@ func _chat_theme() -> Theme:
 	t.set_stylebox("pressed", "Button", on)
 	t.set_stylebox("hover_pressed", "Button", on)
 	t.set_font("font", "Button", UiStyle.display_font())
-	t.set_font_size("font_size", "Button", 13)
+	t.set_font_size("font_size", "Button", 14)
 	t.set_constant("outline_size", "Button", 0)
 	t.set_color("font_color", "Button", UiStyle.B_MUTE)
 	t.set_color("font_hover_color", "Button", CORAL)

@@ -682,7 +682,7 @@ static func caption(text: String) -> Label:
 	var l := Label.new()
 	l.text = text.to_upper()
 	l.add_theme_font_override("font", _body(900, 1))
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", 14)
 	# its colour comes from the theme: lavender on navy, brown on paper
 	l.theme_type_variation = "Caption"
 	return l
@@ -756,7 +756,7 @@ static func tag(text: String, colour := B_MUTE) -> Label:
 	var l := Label.new()
 	l.text = text.to_upper()
 	l.add_theme_font_override("font", _body(800, 3))
-	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_font_size_override("font_size", 12)
 	l.add_theme_color_override("font_color", colour)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
@@ -895,7 +895,7 @@ static func paper_theme(pad := 10) -> Theme:
 		t.set_stylebox(st, "Tree", head)
 	t.set_color("title_button_color", "Tree", B_MUTE)
 	t.set_font("title_button_font", "Tree", _body(800, 2))
-	t.set_font_size("title_button_font_size", "Tree", 11)
+	t.set_font_size("title_button_font_size", "Tree", 14)
 	t.set_color("guide_color", "Tree", Color(ink, 0.06))
 	for bar in ["VScrollBar", "HScrollBar"]:
 		var gut := StyleBoxFlat.new()

@@ -33,7 +33,7 @@ size_flags_vertical = 3
 theme_override_styles/normal = SubResource("1")
 bbcode_enabled = true
 scroll_following = true
-theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/normal_font_size = 14
 
 [node name="Row" type="HBoxContainer" parent="."]
 theme_override_constants/separation = 6

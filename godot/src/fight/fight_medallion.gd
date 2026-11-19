@@ -84,14 +84,14 @@ func _draw() -> void:
 	var cx := x
 	for i in mini(buffs.size(), MAX_CHIPS):
 		var t := str(buffs[buffs.size() - 1 - i])
-		var w := body.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 18.0
+		var w := body.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 18.0
 		if cx + w > size.x:
 			break
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(0.07, 0.08, 0.16, 0.85)
 		sb.skew = Vector2(0.25, 0)
 		draw_style_box(sb, Rect2(cx, y + 34.0, w, 22.0))
-		draw_string(body, Vector2(cx + 9.0, y + 50.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiStyle.INK)
+		draw_string(body, Vector2(cx + 9.0, y + 50.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiStyle.INK)
 		cx += w + 6.0
 
 

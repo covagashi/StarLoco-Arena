@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas) y W9 hechos — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas) W9 y W5 hechos — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -551,7 +551,7 @@ Dueño: "sí, adopta los 40".
    Era: con la Ally libre
    (`tools/web/load_test.mjs`; la marca `window.__pippop` ya está).
 6. Lo que queda de la auditoría web: W4–W7 (W2 fuera: el móvil
-   siempre en horizontal; W9 hecho, abajo).
+   siempre en horizontal; W9 y W5 hechos, abajo).
 
 ## Deuda técnica
 
@@ -582,3 +582,32 @@ mucho, a 30 fps no se nota el paso.
 - `run_tests.sh --headless`: 21 suites, 1502 comprobaciones, 0 fallos.
 - **Sin medir** en un móvil: el tope es de motor, no depende del
   dispositivo.
+
+## W5 — el texto pequeño (2026-11-19)
+
+Unas 50 llamadas con tamaños de 10–13 px (todas contra la referencia de
+1280×720; en un móvil en horizontal la interfaz encoge a unos 850 px de
+ancho, así que 12 px se quedaban en unos 8). **Decisión:**
+
+- Lo que se lee (pistas, frases de las tarjetas, línea del equipo, la guía,
+  el chat y sus pestañas, avisos, puntos de logro, PA, costes y vida en
+  combate, contadores, la cabecera de las tablas) sube a **14 px**.
+- Los rótulos en mayúsculas espaciadas (`UiStyle.tag`: «SEASON»,
+  «STORY · 01», «GUÍA · PASO 3 DE 6»…) y los numerales de adorno (01–06 del
+  menú, la regla de la creación) suben de 10–11 a **12 px**: en mayúscula
+  negrita ya tienen la altura de una minúscula de 14, y a 14 rompían el
+  estilo B.
+- Quedan fuera: el texto de las caras de las cartas (`card_face.gd` lo
+  ajusta a la carta, mínimo 9, y escala con ella) y el `1` de
+  `fight_view.gd`, que es un botón sin texto a propósito.
+- La frase de la tarjeta Historia ya no cabía en dos líneas: interlineado
+  −6 para que entren las tres antes de la etiqueta del equipo.
+- **Fuera «Enter para escribir en el chat»** (`lobby.chat_hint`): quedaba
+  debajo del campo del chat (ya pasaba antes, a 11 px) y es una pista de
+  teclado como las que quitó el punto 9; el campo ya dice «Escribe un
+  mensaje…».
+
+Verificado: el mapa de pantallas (`tools/screen_map.sh`, 48 + 46
+pantallas) antes y después comparado imagen a imagen; mirados lobby, login,
+creación de jefe, reclutar, logros, altar de fusión y combate, sin
+desbordes. `run_tests.sh --headless` 1502/0; `coach_look_smoke` 1/0.

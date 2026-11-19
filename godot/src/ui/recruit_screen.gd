@@ -154,7 +154,7 @@ func _left_column() -> void:
 	_mode_tip.position = Vector2(28, 192)
 	_mode_tip.size = Vector2(286, 42)
 	_mode_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_mode_tip.add_theme_font_size_override("font_size", 13)
+	_mode_tip.add_theme_font_size_override("font_size", 14)
 	_mode_tip.add_theme_color_override("font_color", UiStyle.B_MUTE)
 	_mode_tip.add_theme_constant_override("outline_size", 0)
 	_picker.add_child(_mode_tip)
@@ -433,7 +433,7 @@ func _class_sheet(breed: int) -> void:
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	body.add_child(grid)
-	var detail := label(body, I18n.t("recruit.attack_hint"), 13)
+	var detail := label(body, I18n.t("recruit.attack_hint"), 14)
 	detail.name = "AttackDetail"
 	detail.add_theme_font_override("font", UiStyle.bold(800))
 	detail.add_theme_color_override("font_color", UiStyle.B_MUTE)
@@ -457,8 +457,8 @@ func _medal(role: String) -> Control:
 		_role_icon(c, role, at)
 		var f := UiStyle.bold(900)
 		var t := I18n.t("role." + role).to_upper()
-		var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-		c.draw_string(f, Vector2((c.size.x - w) * 0.5, 64), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiStyle.B_INK))
+		var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		c.draw_string(f, Vector2((c.size.x - w) * 0.5, 64), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiStyle.B_INK))
 	return c
 
 
@@ -535,7 +535,7 @@ func _attack(s: Dictionary, detail: Label) -> Control:
 		b.draw_colored_polygon(PackedVector2Array([r.position + Vector2(0, h - 19), r.position + Vector2(25, h - 19),
 			r.position + Vector2(20, h), r.position + Vector2(0, h)]), UiStyle.B_INK)
 		b.draw_string(UiStyle.bold(900), r.position + Vector2(5, h - 5), str(int(s.get("ap", 0))),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiStyle.B_GOLD)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiStyle.B_GOLD)
 		b.draw_rect(r, UiStyle.B_CORAL if lit else UiStyle.B_INK, false, 3.0 if lit else 2.0))
 	for sig in [b.mouse_entered, b.focus_entered]:
 		sig.connect(func():

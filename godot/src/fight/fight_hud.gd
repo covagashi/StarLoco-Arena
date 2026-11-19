@@ -374,8 +374,8 @@ func _draw_peek() -> void:
 	_peek_card.draw_string(b9, r.position + Vector2(31, 27), str(_names.get(_peek, "")),
 		HORIZONTAL_ALIGNMENT_LEFT, w - 90, 15, ink)
 	var side := I18n.t("fi.ours" if ours else "fi.theirs")
-	var sw := b8.get_string_size(side, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
-	_peek_card.draw_string(b8, r.position + Vector2(w - 14 - sw, 26), side, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, soft)
+	var sw := b8.get_string_size(side, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+	_peek_card.draw_string(b8, r.position + Vector2(w - 14 - sw, 26), side, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, soft)
 	var bar := Rect2(r.position + Vector2(14, 38), Vector2(w - 28, 8))
 	_peek_card.draw_rect(bar, Color("e3ddcb"))
 	if c.hp_max > 0:
@@ -384,4 +384,4 @@ func _draw_peek() -> void:
 		else ("-%d %s" % [c.lost, I18n.t("fight.hp_short")] if c.lost > 0 else "?")
 	if c.dead:
 		life = "KO"
-	_peek_card.draw_string(b8, r.position + Vector2(14, 64), life, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("3b3f66"))
+	_peek_card.draw_string(b8, r.position + Vector2(14, 64), life, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("3b3f66"))

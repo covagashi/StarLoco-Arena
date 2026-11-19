@@ -100,8 +100,8 @@ func _ready() -> void:
 		var b := Button.new()
 		b.toggle_mode = true
 		b.text = I18n.t("chat.tab." + t)
-		b.add_theme_font_size_override("font_size", 11)
-		b.custom_minimum_size = Vector2(0, 20)
+		b.add_theme_font_size_override("font_size", 14)
+		b.custom_minimum_size = Vector2(0, 26)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.button_pressed = t == _tab
 		b.pressed.connect(func(): _set_tab(t))

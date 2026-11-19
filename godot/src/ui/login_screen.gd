@@ -103,8 +103,8 @@ func _language() -> void:
 		lang_btn.draw_arc(c + Vector2(6, 0), 12, PI - 0.98, PI + 0.98, 12, col, 1.8, true)
 		var f := UiStyle.bold(700)
 		var tag := I18n.t("login.language").to_upper()
-		var tw := f.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-		lang_btn.draw_string(f, Vector2(lang_btn.size.x - 40 - tw, 14), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UiStyle.B_MUTE)
+		var tw := f.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		lang_btn.draw_string(f, Vector2(lang_btn.size.x - 40 - tw, 14), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiStyle.B_MUTE)
 		var code := I18n.lang.to_upper()
 		var df := UiStyle.display_font()
 		var cw := df.get_string_size(code, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x
@@ -197,7 +197,7 @@ func _form_block() -> void:
 	proxy_opt.add_theme_stylebox_override("hover", chip_h)
 	proxy_opt.add_theme_stylebox_override("focus", UiStyle.box(Color(0, 0, 0, 0), CORAL, 2, 0))
 	proxy_opt.add_theme_font_override("font", UiStyle.bold(800))
-	proxy_opt.add_theme_font_size_override("font_size", 13)
+	proxy_opt.add_theme_font_size_override("font_size", 14)
 	proxy_opt.add_theme_constant_override("outline_size", 0)
 	for c in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color",
 			"font_hover_pressed_color", "font_disabled_color"]:

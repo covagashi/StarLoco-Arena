@@ -64,7 +64,7 @@ func _init(url: String) -> void:
 	_repro = _field(vb, "bug.field.repro", _text_edit())
 
 	_status = Label.new()
-	_status.add_theme_font_size_override("font_size", 13)
+	_status.add_theme_font_size_override("font_size", 14)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vb.add_child(_status)
 

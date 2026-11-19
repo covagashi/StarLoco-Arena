@@ -101,7 +101,7 @@ func _height_chart() -> Control:
 			var long := n % 5 == 0
 			c.draw_line(Vector2(x - (12 if long else 6), y), Vector2(x, y), Color(INK, 0.35 if long else 0.2), 1.0)
 			if long:
-				c.draw_string(f, Vector2(x + 6, y + 4), "%.1f" % (n * 0.2), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UiStyle.B_FAINT)
+				c.draw_string(f, Vector2(x + 6, y + 4), "%.1f" % (n * 0.2), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiStyle.B_FAINT)
 			y -= 20.0
 			n += 1)
 	return c
@@ -159,7 +159,7 @@ func _section_list() -> void:
 			b.add_theme_color_override(col, CORAL)
 		var num := "%02d" % n
 		b.draw.connect(func():
-			b.draw_string(UiStyle.bold(700), Vector2(0, 34), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.B_FAINT)
+			b.draw_string(UiStyle.bold(700), Vector2(0, 34), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiStyle.B_FAINT)
 			if b.button_pressed:
 				b.draw_line(Vector2(40, 48), Vector2(200, 48), CORAL, 3.0))
 		for sig in [b.mouse_entered, b.mouse_exited, b.focus_entered, b.focus_exited]:
@@ -258,7 +258,7 @@ func _swatches(parent: Control, palette: Array, n: int, cells: Dictionary, field
 		note.text = I18n.t(note_key)
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		note.add_theme_font_override("font", UiStyle.bold(800))
-		note.add_theme_font_size_override("font_size", 12)
+		note.add_theme_font_size_override("font_size", 14)
 		note.add_theme_color_override("font_color", UiStyle.B_MUTE)
 		page.add_child(note)
 	parent.add_child(page)

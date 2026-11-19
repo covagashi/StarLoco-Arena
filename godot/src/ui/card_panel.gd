@@ -58,7 +58,7 @@ func _tile(parent: Node, item: Dictionary, chosen: bool, badge := "",
 	if badge != "":
 		var tag := Label.new()
 		tag.text = badge
-		tag.add_theme_font_size_override("font_size", 12)
+		tag.add_theme_font_size_override("font_size", 14)
 		tag.add_theme_font_override("font", UiStyle.bold(900))
 		tag.add_theme_color_override("font_color", Color.WHITE)
 		var ts := StyleBoxFlat.new()

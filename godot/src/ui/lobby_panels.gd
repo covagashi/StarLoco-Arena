@@ -857,7 +857,7 @@ func _achievements() -> void:
 		bar.custom_minimum_size.y = 8
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(bar)
-		var pts := _small(col, I18n.t("ach.pts", {"n": int(it.get("points", 0))}), 12)
+		var pts := _small(col, I18n.t("ach.pts", {"n": int(it.get("points", 0))}), 14)
 		pts.add_theme_color_override("font_color", UiStyle.ACCENT_INK if bool(it.get("done", false)) else UiStyle.BROWN)
 	var detail := column(split, false)
 	detail.custom_minimum_size.x = 300
@@ -1537,7 +1537,7 @@ func _spell_tile(parent: Node, sp: Dictionary, equipped: bool, full: bool) -> vo
 	var nm := _small(col, str(sp.get("name", "")), 14)
 	nm.clip_text = true
 	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var ap := _small(col, I18n.t("fe.ap", {"n": int(sp.get("actionPoints", 0))}), 12)
+	var ap := _small(col, I18n.t("fe.ap", {"n": int(sp.get("actionPoints", 0))}), 14)
 	ap.add_theme_color_override("font_color", UiStyle.ACCENT_INK if equipped else UiStyle.BROWN)
 	var item := sp
 	b.pressed.connect(func(): send("removeSpell" if equipped else "addSpell", [], item))

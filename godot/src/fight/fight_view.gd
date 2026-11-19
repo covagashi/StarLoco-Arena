@@ -256,7 +256,7 @@ func _skin_fight_ui() -> void:
 	$UI/Chat/Row/Input.theme = theme
 	$UI/Chat/Row/SendBtn.theme = theme
 	for tab in $UI/Chat/Tabs.get_children():
-		tab.add_theme_font_size_override("font_size", 13)
+		tab.add_theme_font_size_override("font_size", 14)
 
 
 ## PASS (end turn / ready): the one big button (S17), bottom-right in the
@@ -307,12 +307,12 @@ func _draw_pass_key() -> void:
 		return
 	var f := UiStyle.bold(800)
 	var t := I18n.t("fight.key_space")
-	var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 16.0
+	var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0
 	var r := Rect2(b.size.x - 24.0 - w, (b.size.y - 24.0) * 0.5, w, 24.0)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(UiStyle.B_INK, 0.25)
 	b.draw_style_box(sb, r)
-	b.draw_string(f, Vector2(r.position.x + 8.0, r.position.y + 16.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+	b.draw_string(f, Vector2(r.position.x + 8.0, r.position.y + 16.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 
 
 ## A menu button as a dark round button with its icon; its words move to
@@ -1569,7 +1569,7 @@ func chat_bubble(coach_id: int, text: String) -> void:
 	var b := Label.new()
 	b.name = "Bubble"
 	b.text = text.left(120)
-	b.add_theme_font_size_override("font_size", 11)
+	b.add_theme_font_size_override("font_size", 14)
 	b.add_theme_color_override("font_color", Color(1, 1, 0.85))
 	b.add_theme_color_override("font_shadow_color", Color(0, 0, 0))
 	b.add_theme_constant_override("shadow_offset_x", 1)
@@ -1647,7 +1647,7 @@ func _nameplate(spr: Figure, fid: int) -> void:
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.position = Vector2(-70, -100)
 		lbl.size = Vector2(140, 18)
-		lbl.add_theme_font_size_override("font_size", 13)
+		lbl.add_theme_font_size_override("font_size", 14)
 		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
 		lbl.add_theme_constant_override("shadow_offset_x", 1)
 		lbl.add_theme_constant_override("shadow_offset_y", 1)
@@ -1703,7 +1703,7 @@ func _float_text(fid: int, text: String, color: Color) -> void:
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.position = Vector2(-40, -104)
 	lbl.size = Vector2(80, 16)
-	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_font_size_override("font_size", 14)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
 	if spr.scale.x < 0.0:   # a mirrored fighter: unmirror the text, keep it centred
@@ -1739,7 +1739,7 @@ func _add_event_card(ev: int, evname: String) -> void:
 	var lab := Label.new()
 	lab.name = "Text"
 	lab.text = evname if not evname.is_empty() else "Event %d" % ev
-	lab.add_theme_font_size_override("font_size", 12)
+	lab.add_theme_font_size_override("font_size", 14)
 	card.add_child(lab)
 	# the retail card shows its effects on hover (fightEventCards, S07)
 	card.tooltip_text = NpcDialogs.event_desc(ev)
@@ -1763,7 +1763,7 @@ func _add_event_card(ev: int, evname: String) -> void:
 		# clip_text drops the label's minimum width: give it the text's own,
 		# up to what the strip can hold (the tooltip keeps the rest)
 		var font := lab.get_theme_font("font")
-		var w := font.get_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 4.0
+		var w := font.get_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 4.0
 		lab.custom_minimum_size.x = minf(w, 520.0)
 	# remove_child first: queue_free alone leaves the node counted until the
 	# end of the frame, and this loop spun forever on the 5th round card,
@@ -2268,7 +2268,7 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 	else:
 		b.text = label.left(4)
 		b.clip_text = true
-		b.add_theme_font_size_override("font_size", 11)
+		b.add_theme_font_size_override("font_size", 14)
 	# S45: a rounded slot in the dark pill; the armed one glows in pop
 	var slot := StyleBoxFlat.new()
 	slot.bg_color = Color(0, 0, 0, 0)
@@ -2299,7 +2299,7 @@ func _action_button(label: String, icon_rel: String, ap: int) -> Button:
 		cost.name = "Cost"
 		cost.text = str(ap)
 		cost.add_theme_font_override("font", UiStyle.bold(900))
-		cost.add_theme_font_size_override("font_size", 12)
+		cost.add_theme_font_size_override("font_size", 14)
 		cost.add_theme_color_override("font_color", Color.WHITE)
 		var badge := StyleBoxFlat.new()
 		badge.bg_color = Color("2f74f0")
@@ -3584,7 +3584,7 @@ func _draw_ground_overlays() -> void:
 			ci.draw_colored_polygon(dm, Color(col.r, col.g, col.b, 0.25))
 			ci.draw_polyline(dm + PackedVector2Array([dm[0]]), col, 1.5)
 			ci.draw_string(ThemeDB.fallback_font, ctr + Vector2(-3.5, 4), letter,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col))
 	# placed traps/glyphs/auras — footprint tinted per the type-210 template.
 	# Retail reveals own-team areas unconditionally (aX(true)); an enemy
 	# caster's only show while that caster is visible (aew_1.aoy) — an
@@ -3704,7 +3704,7 @@ func _draw_top_overlays() -> void:
 			else Color(1.0, 0.35, 0.3, 0.9)
 		var mp_at := _iso(_hover.x + 0.5, _hover.y + 0.5, _cells[_hover].alt) + Vector2(8, -10)
 		draw_string(ThemeDB.fallback_font, mp_at,
-			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, pc)
+			"%d MP" % path.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, pc)
 	if debug_overlay:
 		# white crosshair at each live actor's cell center
 		for id in _actor_cells:

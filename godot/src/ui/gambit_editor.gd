@@ -78,7 +78,7 @@ func _rebuild() -> void:
 	hint.text = I18n.t("gambit.fallback") if not rules.is_empty() else I18n.t("gambit.none")
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hint.add_theme_font_size_override("font_size", 13)
+	hint.add_theme_font_size_override("font_size", 14)
 	bottom.add_child(hint)
 	add_child(bottom)
 
