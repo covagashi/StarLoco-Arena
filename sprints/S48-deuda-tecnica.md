@@ -1,6 +1,6 @@
 # S48 — Deuda técnica
 
-**Planificado:** 2026-11-19 · **Hito:** — · **Tamaño:** M · **Estado:** 🔵 en curso
+**Planificado:** 2026-11-19 · **Hito:** — · **Tamaño:** M · **Estado:** ✅ cerrado (2026-11-19)
 
 ## Decisión del dueño (2026-11-19)
 
@@ -61,3 +61,18 @@ follaje). Las marcas del suelo siguen ocultándose. Vista previa de B-189
 antes y después: de Arel solo se veían los pies; ahora se ven su silueta y
 la cabeza de otra luchadora a través de las hojas, y el brazo de un panda
 a través de una caja. Detalle en `server/docs/BUGS.md` (B-189).
+
+## 4. Funciones del studio sin uso ✅ (obsoleto)
+
+Ya no existen: S43 (`72fb6d0d`) las borró al quitar los lectores del
+cliente antiguo. Solo quedaba la línea del BACKLOG.
+
+## Cierre (2026-11-19)
+
+Los cuatro puntos cerrados. Pruebas: `go test ./...`,
+`godot/run_tests.sh --headless` (24 suites, 1544), `fight_smoke` y
+`totems_smoke` (7/7) bajo `unshare -rn`.
+
+Siguen en el BACKLOG, esperando al dueño: la CI con los pushes (habilitar
+*Actions* en el fork), JS en el portal web, MySQL/Postgres o solo SQLite,
+la ropa de los coach, los iconos de vetado y las opiniones pendientes de S47.

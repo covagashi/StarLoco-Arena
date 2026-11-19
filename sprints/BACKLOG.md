@@ -213,7 +213,7 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
       `script-src 'self'` y romper el invariante que fija `security_headers_test.go`
       (sin scripts → XSS almacenado inexplotable). Alternativa sin JS: mejorar el
       panel con formularios y GET normales.
-- [ ] Studio: `GetMapGfx` / `GetMapSprites` / `GetMapRender` (Go) no tienen
+- [x] (2026-11-19, S48: obsoleto — S43 las borró con los lectores retail) Studio: `GetMapGfx` / `GetMapSprites` / `GetMapRender` (Go) no tienen
       consumidor en el frontend desde que knip borró sus envoltorios TS (S02).
       Conectarlos a una vista o borrarlos.
 - [x] (2026-10-25: obsoleto — `tools/proto-gen` se borró en S32; `generated/` se edita a mano) (Opcional) `tools/proto-gen/gen_messages.py` es un generador de código, no
