@@ -327,7 +327,10 @@ type Fight struct {
 	punching    bool // a close-combat blow is landing (161)
 
 	Teams    [2]*FightTeam
-	Timeline []*FightFighter // initiative-descending turn order
+	Timeline []*FightFighter // turn order: the sides alternate, each by initiative (turn_choice.go)
+	// chooser is the side with more initiative, which picks whether it opens;
+	// opener is the side that does (S46, turn_choice.go).
+	chooser, opener uint8
 
 	// turnAutoPassed marks the CURRENT turn as one the server is passing on the
 	// fighter's behalf (skip-turn, petrified, or a disconnected team). The turn is

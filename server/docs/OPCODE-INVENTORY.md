@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 371 |
-| **C2S handled (H)** | 126 |
-| **S2C emitted (E)** | 168 |
+| Rows in the master table | 373 |
+| **C2S handled (H)** | 127 |
+| **S2C emitted (E)** | 169 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -560,6 +560,8 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60044 | C2S | H | Godot extension (no retail class) | `handleCardPickChoose` (S40) - `[i32 cardId]`, one card of the pending "pick one of three" offer; a card outside it is refused; answered by 60045 |
 | 60045 | S2C | E | Godot extension (no retail class) | the coach's card picks (S40), with every 60001, after 60044 and when a win makes an offer - `[u8 wins][u8 every][u8 n] n×{[i32 offered coach card]}` (n = 0: none pending) |
 | 60046 | S2C | E | Godot extension (no retail class) | the coach's leagues (S40), with every 60001 and after each fight - `[u8 rankedTier][i32 rankedBudget][u8 ghostTier][i32 ghostBudget]`, tier 0 bronze .. 4 diamond, budget 4000..6000 |
+| 60050 | C2S | H | Godot extension (no retail class) | `handleTurnChoice` (S46) - `[u8 open]`, 1 opens and 0 cedes; placement only, and only a coach of the side with more initiative; answered by 60051 |
+| 60051 | S2C | E | Godot extension (no retail class) | who opens (S46, `turn_choice.go`), after 8000, after each 60050 and as placement ends (the final order) - `[u8 chooser side][u8 opening side][u8 opener's first-turn MP][u8 n] n×{[i64 fighter wire id]}`, the turn order |
 
 ---
 

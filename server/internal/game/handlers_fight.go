@@ -1,7 +1,6 @@
 package game
 
 import (
-	"sort"
 	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
@@ -147,6 +146,7 @@ func (d *Deps) startFightWithTeamsSeeded(a *arena, teamA, teamB *FightTeam, prac
 				_ = m.Session.Send(createFrame)
 			}
 			sendFightCoachLooks(f, m.Session)
+			f.sendTurnOrder(m.Session)
 		}
 		// ACTOR_APPEAR (4102): insert coach + fighter avatars into the client's
 		// iso render list + show them. The avatars are created HIDDEN during the
@@ -302,21 +302,14 @@ func (d *Deps) buildFightTeamCapped(sess *Session, side uint8, cells []Pos, rost
 	return team, nil
 }
 
-// buildTimeline orders all fighters into the turn order: descending initiative
-// (breed base init), stable so ties keep the team-A-before-team-B insertion
-// order. The client plays exactly this order (it does no re-sort of its own), so
-// this is what decides who acts first each round.
+// buildTimeline is the opening turn order: the side with more initiative
+// chooses (initiativeChooser) and opens until it says otherwise
+// (turn_choice.go). The client plays exactly this order (no re-sort of its
+// own), refreshed by 60051.
 func buildTimeline(f *Fight) []*FightFighter {
-	var tl []*FightFighter
-	for _, t := range f.Teams {
-		if t != nil {
-			tl = append(tl, t.Fighters...)
-		}
-	}
-	sort.SliceStable(tl, func(i, j int) bool {
-		return fighterInit(tl[i]) > fighterInit(tl[j])
-	})
-	return tl
+	f.chooser = initiativeChooser(f)
+	f.opener = f.chooser
+	return buildTimelineOpening(f, f.opener)
 }
 
 // --- phase-gate handlers ---
@@ -449,6 +442,7 @@ func (f *Fight) advanceToObservation() {
 	if !f.transition(PhasePlacement, PhaseObservation) {
 		return
 	}
+	f.settleOpener()
 	end, _ := buildEmpty(protocol.OpEndPlacement)
 	f.broadcast(end)
 	start, _ := buildEmpty(protocol.OpStartObservation)
@@ -518,6 +512,7 @@ func (f *Fight) beginTurn(ff *FightFighter) {
 	// (a killer cell, a turn-start glyph, a fighter dead on arrival).
 	f.turnActions = 0
 	refillFighter(ff)
+	ff.MP += f.openerBonusMP(ff) // before turnsTaken counts this turn
 	// Mirror the client's own per-fighter timeline counter (alh_1.aAw), which it
 	// bumps at exactly this point. Buff expiry is expressed against it.
 	ff.turnsTaken++

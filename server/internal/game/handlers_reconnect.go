@@ -100,6 +100,7 @@ func (d *Deps) sendFightResync(sess *Session, f *Fight, spectator bool) {
 		_ = sess.Send(create)
 	}
 	sendFightCoachLooks(f, sess)
+	f.sendTurnOrder(sess)
 	// 3. Insert + show every actor at its CURRENT cell.
 	if appear, err := buildActorAppearForFight(f); err == nil {
 		_ = sess.Send(appear)

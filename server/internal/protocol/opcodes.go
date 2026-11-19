@@ -661,6 +661,14 @@ const (
 	OpCardPickChoose = 60044 // C2S
 	OpCardPicks      = 60045 // S2C
 	OpLeague         = 60046 // S2C
+
+	// Choosing who opens (S46, game/turn_choice.go) — Godot only. The side
+	// with more initiative chooses while placing; 60051 goes after 8000 and
+	// after each choice, and once more as placement ends (the final order).
+	// 60050 [u8 open: 1 open, 0 cede]
+	// 60051 [u8 chooser side][u8 opening side][u8 opener's first-turn MP][u8 n]{[i64 fighter wire id]}
+	OpTurnChoice = 60050 // C2S
+	OpTurnOrder  = 60051 // S2C
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

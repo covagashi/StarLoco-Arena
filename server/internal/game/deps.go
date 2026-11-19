@@ -138,6 +138,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerStoryHandlers(r, d)
 	registerSeasonHandlers(r, d)
 	registerCosmeticHandlers(r, d)
+	registerTurnChoiceHandlers(r, d)
 	registerCardPickHandlers(r, d)
 	registerOfflineTournamentHandlers(r, d)
 	registerGhostHandlers(r, d)
