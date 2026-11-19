@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (las dos coach a 40k, sin adoptar) hechos — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas) y W9 hechos — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -522,10 +522,16 @@ Dueño: "sí, adopta los 40".
 - Las figuras de los luchadores estaban desfasadas desde el cambio de
   `meshy_fighter.py` de esta mañana: reconstruidas (sin cambios en sus
   opciones).
-- **A medias:** el dueño apagó la Ally durante el build de las prendas.
-  Al volver: `python3 tools/art/build.py` (unos 50 min, solo las prendas
-  de los dos coach) y que el check salga limpio; luego mirar un coach
-  vestido (`test/coach_look_smoke.gd`).
+- ~~**A medias:** el dueño apagó la Ally durante el build de las prendas.~~
+  Terminado el 2026-11-19: `build.py` rehízo las prendas de los dos coach
+  (70 s, el resto ya estaba) y el check sale limpio (0 fallos, 0 avisos;
+  208 prendas, 23,9 MB). `coach_look_smoke` 1/0 contra un servidor local
+  (en `unshare -rn`, el emulador Android tenía el 5555): el coach de 40k
+  en el lobby y en Equipo del coach, con sombrero. Una vista aparte con los
+  dos coach vestidos (camisa, pantalón o falda, botas: `torso_squire`,
+  `pants_grilembore`, `torso_camisa`, `skirt_gobkool`, `torso_kamas`,
+  `pants_bombachos`…) no enseña piel atravesando: las franjas claras del
+  cuello y la cintura son las `bands` de esas prendas.
 
 ## Dónde retomar (contexto nuevo)
 
@@ -538,12 +544,29 @@ Dueño: "sí, adopta los 40".
    `predecimate`, luego `meshy_fighter.py --tris=40000 --menu=1
    --weld_normals=1 --lower_arms=10 --arm_slack=0.06` (sus opciones de
    `figures.json`; `--cut` probablemente sobra en pose en A).
-4. **Adoptar los coach de 40k:** hecho salvo el build de las prendas (ver
-   arriba, "A medias"). Era: receta en
+4. ~~**Adoptar los coach de 40k**~~ hecho, prendas incluidas (2026-11-19). Era: receta en
    `figures.json` (src nuevo, opciones), `check.py` FIG_TRIS para los
    coach, y medir el panel Equipo del coach con GPU.
 5. ~~Repetir la prueba de carga web~~ — no hace falta (dueño, 2026-11-18).
    Era: con la Ally libre
    (`tools/web/load_test.mjs`; la marca `window.__pippop` ya está).
-6. Lo que queda de la auditoría web: W4–W7, W9 (W2 fuera: el móvil
-   siempre en horizontal).
+6. Lo que queda de la auditoría web: W4–W7 (W2 fuera: el móvil
+   siempre en horizontal; W9 hecho, abajo).
+
+## W9 — los menús a 30 fps en la web (2026-11-19)
+
+La animación del lobby (fondo que deriva, figuras de las tarjetas que se
+mecen) mueve controles cada fotograma, y el coach es una figura 3D de 40k
+triángulos en un `SubViewport` con `UPDATE_ALWAYS`: en los menús se
+dibujaba todo a la frecuencia de la pantalla (60–120 Hz). **Decisión:** en
+la web los menús (escena `main`) van con `Engine.max_fps = 30`
+(`main.gd`, `MENU_FPS`) y el combate lo levanta a 0 al entrar
+(`fight_view.gd`); a la vuelta, `main.tscn` lo pone otra vez. Solo en la
+web (`OS.has_feature("web")`): el escritorio, los smokes headless y las
+capturas siguen igual. Con la pestaña oculta el navegador ya para
+`requestAnimationFrame`, no hace falta más. La deriva es de 6 px/s como
+mucho, a 30 fps no se nota el paso.
+
+- `run_tests.sh --headless`: 21 suites, 1502 comprobaciones, 0 fallos.
+- **Sin medir** en un móvil: el tope es de motor, no depende del
+  dispositivo.

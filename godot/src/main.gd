@@ -272,6 +272,8 @@ var _barter_wanted := -1      # card id picked for exchange
 var _gui: GuiLayer            # the native panels' router (GuiLayer)
 const NativeLobbyPanel := preload("res://src/ui/lobby_panel.gd")
 var _lobby_screen
+## S47 W9: the web menus' frame cap (fight_view.gd sets it back to 0).
+const MENU_FPS := 30
 var _lobby_ready := false
 ## The saved screen/sound preferences go in once per run: main.tscn is
 ## reloaded after every fight, and re-applying the window mode would flicker.
@@ -289,6 +291,11 @@ const WINDOW_TITLE := "Pippop Arena"
 
 func _ready() -> void:
 	get_window().title = WINDOW_TITLE
+	# S47 W9: the menus redraw the coach (a 3D figure in a SubViewport) and
+	# the drifting backdrop every frame; on the web 30 fps is plenty there
+	# and halves the work on a modest phone. The fight lifts the cap.
+	if OS.has_feature("web"):
+		Engine.max_fps = MENU_FPS
 	Session.connected.connect(_on_connected)
 	Session.disconnected.connect(_on_disconnected)
 	Session.message.connect(_on_message)

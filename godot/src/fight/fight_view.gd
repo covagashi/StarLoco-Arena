@@ -86,6 +86,7 @@ var _replay_bar: Control = null  # S11 transport, only while a replay plays
 
 func _ready() -> void:
 	Audio.play_music("fight")
+	Engine.max_fps = 0   # S47 W9: the menus cap the web at 30; a fight runs free
 	if WebAssets.active():
 		set_process(false)   # nothing below has run yet
 		set_process_unhandled_input(false)
