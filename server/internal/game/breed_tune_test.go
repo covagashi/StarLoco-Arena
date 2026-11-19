@@ -184,6 +184,10 @@ func TestBreedTune(t *testing.T) {
 	}
 	damp := 0.4
 	fmt.Sscan(os.Getenv("S46_TUNE_DAMP"), &damp)
+	// S46_TUNE_COMMON=1: one lever per class on the mean of duel and trio. The
+	// two-lever step went to extremes (Pandawa damage ×2.5 with HP ×0.6): a
+	// class whose duel and trio differ a lot cannot be fixed by these numbers.
+	common := os.Getenv("S46_TUNE_COMMON") != ""
 	for r := 0; r <= rounds; r++ {
 		apply()
 		dw, tw := breedMatrix(t, d, n, duel), breedMatrix(t, d, n, trio)
@@ -196,10 +200,16 @@ func TestBreedTune(t *testing.T) {
 			if r == rounds {
 				continue
 			}
-			dl, dh := tuneStep(0.5-md, 0.5-mt, damp)
+			var dl, dh float64
+			if common {
+				// one lever on the mean of the two; HP stays
+				dl = damp * (1 - (md+mt)) / (tuneJ[0][0] + tuneJ[1][0])
+			} else {
+				dl, dh = tuneStep(0.5-md, 0.5-mt, damp)
+			}
 			l := lever(b)
-			l[b] = math.Min(4, math.Max(0.4, l[b]*math.Exp(dl)))
-			hp[b] = math.Min(1.8, math.Max(0.6, hp[b]*math.Exp(dh)))
+			l[b] = math.Min(2.5, math.Max(0.5, l[b]*math.Exp(dl)))
+			hp[b] = math.Min(1.4, math.Max(0.7, hp[b]*math.Exp(dh)))
 		}
 		t.Logf("round %d (worst %.2f off): %s", r, worst, row.String())
 		if r < rounds {

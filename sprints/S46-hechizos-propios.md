@@ -191,8 +191,67 @@ fuera de alcance y abre en alcance). `fight_smoke` en las dos ramas
 rival elige y nos cede (abrimos con 5 PM en la barra); elegimos nosotros,
 pulsamos "Ceder" y el orden pasa al rival, que abre con 5 PM.
 
-## D. Clases contra clases — siguiente
+## D. Clases contra clases (2026-11-19, en curso)
 
-Las cartas de iniciativa (88, 89, 162, 164) se miden otra vez en la fase D:
-ahora la iniciativa solo decide quién elige, así que +30 y +80 valen lo
-mismo; su precio debería ser plano o la iniciativa dar algo más.
+**Decisiones del dueño:** mandan **duelos y tríos**, las dos medias en
+40–60 %; el Curandero sube con **curas más fuertes**; palancas: daño y
+curas, PA/alcance/enfriamiento, vida de las clases, invocaciones.
+
+**Simulación** (`S46_BREEDS=100 go test ./internal/game/ -run TestBreedSim`):
+duelos (uno contra uno, las 66 parejas) y tríos (la clase + Iop + Arquero
+contra el mismo par con la otra clase). Cada clase con su invocación más
+cara, su primera cura y sus hechizos de daño, seis como mucho.
+`S46_ONLY=4` mide solo las parejas de una clase; `S46_DROP=69` quita un
+hechizo del kit.
+
+**Dos arreglos de IA antes de medir nada** (lo que medía era la IA, no la
+clase):
+
+1. **La IA no invocaba nunca** (`ai_summon.go`): invoca su criatura más
+   cara en la casilla libre más cercana al enemigo antes de atacar. Domador
+   en tríos 0,17 → 0,58.
+2. **La IA pegaba a la invocación más cercana**: el Arquero se pasaba doce
+   turnos con el doble de 40 PV de la Sombra. Ahora prefiere un luchador de
+   verdad (salvo para rematar) y camina hacia el luchador más cercano.
+
+**Primera foto (sin tocar datos), media de duelos / tríos:**
+
+| clase | duelos | tríos |
+|---|---|---|
+| Sombra (Sram) | 0,78 | 0,82 |
+| Arquero (Crâ) | 0,65 | 0,64 |
+| Domador (Osamodas) | 0,59 | 0,49 |
+| Buscaoro (Enutrof) | 0,58 | 0,49 |
+| Relojero (Xélor) | 0,57 | 0,59 |
+| Furia (Sacrieur) | 0,55 | 0,48 |
+| Bastión (Féca) | 0,53 | 0,61 |
+| Espadachín (Iop) | 0,52 | 0,40 |
+| Curandero (Eniripsa) | 0,43 | 0,08 |
+| Panda (Pandawa) | 0,28 | 0,55 |
+| Jardinero (Sadida) | 0,26 | 0,31 |
+| Tahúr (Ecaflip) | 0,26 | 0,53 |
+
+**El ajustador** (`TestBreedTune`, `S46_TUNE_WRITE=1` escribe los datos
+medidos; con multiplicadores 1 los ficheros salen idénticos): un
+multiplicador por clase de daño (curas en el Curandero, vida de las
+criaturas en el Jardinero), redondeado como se guarda.
+
+- **Con una palanca** hacia la media de las dos medidas se estanca en
+  0,20–0,28 de la peor clase: la Sombra con el daño a ×0,5 (el tope) sigue
+  en 0,66; el Jardinero con las muñecas a ×2,5 de vida sigue en 0,31; y
+  varias clases tienen el duelo y el trío muy separados (Tahúr 0,22/0,51,
+  Curandero con curas ×2,2: 0,63/0,34).
+- **Con dos palancas** (daño y vida, por la matriz medida: el daño mueve el
+  duelo el doble que el trío, la vida los dos igual) llega a extremos (Panda
+  daño ×2,5 y vida ×0,6; Curandero curas ×0,4 y vida ×1,8). Lo paré: no es
+  un diseño, es el ajuste persiguiendo el ruido.
+
+**Conclusión:** con los números de daño solo se acerca la media; lo que
+separa a las de los extremos es su mecánica: el doble de la Sombra (40 PV,
+6 PA, sin plantilla: un segundo luchador), las muñecas del Jardinero (10–12
+PV, quitan 1 PA), las curas frente al daño en un trío. Preguntas al dueño
+antes de seguir. Los datos del juego **no han cambiado** en esta fase.
+
+Pendiente de la fase C: las cartas de iniciativa (88, 89, 162, 164) ahora
+solo deciden quién elige, así que +30 y +80 valen lo mismo; su precio
+debería ser plano o la iniciativa dar algo más.
