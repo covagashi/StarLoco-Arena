@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
 	"github.com/StarLoco/arena-2.70/internal/protocol"
@@ -110,8 +111,9 @@ func handleSphereBuy(s *Session, f *protocol.C2SFrame) error {
 
 	// A Barrier opens only for one of the cards it names, and only if the coach
 	// actually holds that card. consumeCard is the same removal the demon totems
-	// use, so a card offered but not held buys nothing.
-	if target.IsBarrier() {
+	// use, so a card offered but not held buys nothing. One already opened is
+	// walked back through for its tenth, with no card again (S48).
+	if target.IsBarrier() && !slices.Contains(owned, target.ID) {
 		if !sphereAcceptsCard(target, cardID) {
 			s.log.Debug("sphere buy: card not accepted by this barrier",
 				"sphere", sphereID, "card", cardID)

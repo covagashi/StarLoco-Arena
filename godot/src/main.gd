@@ -7244,7 +7244,11 @@ func _on_sphere_pick(n: Dictionary, reachable: bool) -> void:
 			{"list": ", ".join(names)}))
 	if n.get("fx", []).size() > 0:
 		lines.append(I18n.t("kanodo.fx", {"fx": str(n.fx)}))
-	lines.append(I18n.t("kanodo.cost", {"xp": int(n.get("xp", 0))}))
+	var f: Variant = _fighter_by_id(_kanodo_fid)
+	if f != null and f.get("spheres", []).has(int(n.id)):
+		lines.append(I18n.t("kanodo.cost_owned", {"xp": int(n.get("xp", 0)) / 10}))
+	else:
+		lines.append(I18n.t("kanodo.cost", {"xp": int(n.get("xp", 0))}))
 	if not reachable:
 		lines.append(I18n.t("kanodo.unreachable"))
 	_kanodo_lines = lines
@@ -7257,7 +7261,8 @@ func _on_sphere_buy() -> void:
 	if f == null or _kanodo_pick.is_empty():
 		return
 	var card := 0
-	if String(_kanodo_pick.get("kind", "")) == "barrier":
+	# a barrier already opened is walked back through with no card (S48)
+	if String(_kanodo_pick.get("kind", "")) == "barrier" and not f.spheres.has(int(_kanodo_pick.id)):
 		for c in _kanodo_pick.get("barrier", []):
 			if int(State.inventory.get(int(c), 0)) > 0:
 				card = int(c)

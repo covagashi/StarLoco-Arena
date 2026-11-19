@@ -50,7 +50,7 @@ func _ranking() -> void:
 			if it.get_text(0).begins_with("▶"):
 				marked = it.get_text(1)
 	var tab_buttons: int = lp.find_children("*", "Button", true, false).filter(func(b): return b.toggle_mode).size() if lp != null else 0
-	_record(27500, "ranking", board != null and tab_buttons == 7 and marked == State.my_coach_name,
+	_record(27500, "ranking", board != null and tab_buttons == 6 and marked == State.my_coach_name,
 		"%d tab buttons, %d rows, your row marked: '%s'" % [tab_buttons, rows, marked])
 	await _shot("ranking")
 

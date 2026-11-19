@@ -12,6 +12,7 @@ extends Control
 signal sphere_clicked(node: Dictionary)
 
 const Kanodo := preload("res://src/gamedata/kanodo.gd")
+const UiStyle := preload("res://src/ui/ui_style.gd")
 
 const CELL := 16
 const KIND_COLOR := {
@@ -64,8 +65,10 @@ func set_state(board: int, owned: Array, cursor: Vector2i) -> void:
 				if nb.get("kind", "") == "deadend":
 					continue
 				if Kanodo.has_payload(nb):
-					if not _owned.has(int(nb.get("id", -1))):
-						_lit[int(nb.get("id", -1))] = true
+					# an owned one too: walking back onto it costs a tenth,
+					# the only way out of a branch already bought (S48; a
+					# fighter was stuck with nothing lit)
+					_lit[int(nb.get("id", -1))] = true
 					continue
 				visited[int(nb.get("id", -1))] = true
 				stack.append(nb)
@@ -104,7 +107,9 @@ func _draw() -> void:
 			draw_circle(p, r, col.darkened(0.45))
 			draw_arc(p, r, 0, TAU, 16, col, 1.5)
 		if _lit.has(int(n.id)):
-			draw_arc(p, r + 3, 0, TAU, 24, Color(1, 1, 0.6), 2.0)
+			# S48: coral, not the pale yellow of the old dark board (S45 made
+			# the panel white and both marks all but vanished)
+			draw_arc(p, r + 3, 0, TAU, 24, UiStyle.B_CORAL, 2.5)
 		if kind == "deadend":
 			draw_line(p + Vector2(-4, -4), p + Vector2(4, 4),
 				Color(0.6, 0.2, 0.2), 1.5)
@@ -112,7 +117,7 @@ func _draw() -> void:
 				Color(0.6, 0.2, 0.2), 1.5)
 	if _cursor.x >= 0:
 		draw_arc(_cell({"x": _cursor.x, "y": _cursor.y}), 10,
-			0, TAU, 28, Color.WHITE, 2.5)
+			0, TAU, 28, UiStyle.B_INK, 3.0)
 
 
 func _gui_input(ev: InputEvent) -> void:
