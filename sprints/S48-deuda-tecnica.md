@@ -33,3 +33,20 @@ cliente ya filtra los ocultos y no los anuncia). Prueba
 `TestNoVisibleUnreachableAchievement`: ningún logro visible pide un
 criterio que nadie mantiene. Si un día vuelve el 2vs2 o hay un ranking de
 Historia, se quita el `Hidden`.
+
+## 2. `totems_smoke` ✅
+
+Antes, 3 de 7 (Servicios, búsqueda, Social y fuegos fallaban; S47 lo vio
+4/4 en sus partes). Ahora **7 de 7**
+(`SMOKES=totems_smoke godot/tools/no_retail_smoke.sh <copia sembrada>`,
+bajo `unshare -rn`):
+
+- **Fuera** Servicios sin tótems y los fuegos artificiales: el lanzador
+  solo se abre ya desde un elemento del mundo, y el juego no tiene mundos.
+- Los botones del lobby se buscan por su `tooltip_text` (son iconos desde
+  S45), no por su texto: Social abre otra vez.
+- Inscribirse y buscar rival, en torneos distintos: la inscripción se
+  cierra en cuanto se abre la ventana de búsqueda, así que el smoke se
+  inscribe en el primer torneo del calendario abierto para él (no sin
+  conexión, sin carta de entrada que falte) y busca rival desde **Mis
+  torneos**. Si el calendario no tiene ninguno, el fallo lista los que hay.

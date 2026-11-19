@@ -1,32 +1,33 @@
 extends "res://test/world_smoke.gd"
 
-## S18: what the tournament totem, the demon totem and the firework launcher
-## became, end to end against a live server. In Spanish.
+## S18: what the tournament totem and the demon totem became, end to end
+## against a live server. In Spanish. (S48: rewritten — the totems and the
+## firework launcher left Services in S18/S26, and the lobby buttons are
+## icons, found by their tooltip.)
 ##
 ##   godot --path godot -s test/totems_smoke.gd [-- --shot-dir=D]
 ##
-## 1. Services lists no totem (kinds 11, 13) but still the fireworks (12).
-## 2. Calendar: a tournament day shows "Inscribirme"; register (4607 → 28608)
-##    → "Inscrito", "Ver cuadro" (28649 → 28650) shows the bracket, and with
-##    the search window open "Buscar rival" (28611) answers in the detail.
-## 3. Social → Clan: a clan with no demon; the leader opens the offering,
+## 1. Torneos → Calendario: the month's first played (not offline)
+##    tournament open to us shows "Inscribirme"; register
+##    (4607 → 28608) → "Inscrito", "Ver cuadro" (28649 → 28650) shows the
+##    bracket. Torneos → Mis torneos: a tournament the test coach is in, with
+##    its search window open, answers "Buscar rival" (28611).
+## 2. Social → Clan: a clan with no demon; the leader opens the offering,
 ##    picks a demon, puts a card, offers (5470 → 5403): the clan now serves
 ##    it, the card is gone, the demon's clan ladder (27511) is refreshed — it
 ##    lists only ACTIVE clans (5+ members), so the 1-member test clan shows
 ##    the "no active clan" line instead.
-## 4. Fireworks: two in the launcher, "Lanzar" → two 22094 → two fireworks
-##    on the lobby sky.
 ##
 ## With the server stopped, seed server/arena.db (test coach = 1, its clan = 2):
 ##   update tournaments set search_period_start=datetime('now','-1 minute'),
 ##     search_period_minutes=60 where id=1;
 ##   update guilds set demon_id=0 where id=2;
-##   insert into coach_cards(coach_id,template_id,quantity,pos) values(1,128,1,0),(1,515,2,0)
+##   insert into coach_cards(coach_id,template_id,quantity,pos) values(1,128,1,0)
 ## and restore afterwards (demon_id=16, the search period to 0, delete the
-## guild_demon_reputations row the offering adds, the leftover 515s).
+## guild_demon_reputations row the offering adds) — or play it on a copy:
+##   godot/tools/no_retail_smoke.sh <seeded copy>  with SMOKES=totems_smoke
 
 const OFFER_CARD := 128      # Weerdtrot Boots: tradable, value 57
-const FIREWORK := 515        # Yellow Fairywork (a rocket)
 
 var _lang_before := ""
 
@@ -36,28 +37,16 @@ func _audit() -> void:
 	_lang_before = i18n.lang
 	i18n.set_locale("es")
 	await create_timer(0.2).timeout
-	await _services()
 	await _calendar()
 	await _clan_demon()
-	await _fireworks()
 	i18n.set_locale(_lang_before)
-
-
-func _services() -> void:
-	var city = await _open_city()
-	var kinds: Array = []
-	if city != null:
-		for g in _main._gui.model.get_value("city").get("groups", []):
-			kinds.append(int(g.kind))
-	_record(13, "services", city != null and not 11 in kinds and not 13 in kinds and 12 in kinds,
-		"no totems among %s, fireworks still there" % [kinds])
-	_close_all()
 
 
 func _menu(key: String, dialog: String):
 	_close_all()
+	# the lobby buttons are icons: their name is the tooltip (S45)
 	for b in _main._lobby_screen._menu_buttons:
-		if b.text == root.get_node("I18n").t(key):
+		if b.tooltip_text == root.get_node("I18n").t(key):
 			b.pressed.emit()
 	await _wait(func(): return _main._gui.is_open(dialog), 3.0)
 	await create_timer(0.5).timeout
@@ -80,17 +69,27 @@ func _calendar() -> void:
 	await _wait(func(): return _seen.has(17003) and _seen.has(28602), 3.0)
 	await create_timer(0.3).timeout
 	var cell := {}
+	var ev := {}
 	for c in _main._gui.model.get_value("calendar").get("calendar", []):
-		if not c.get("events", []).is_empty():
-			cell = c
-			break
+		for e in c.get("events", []):
+			# the first played one we can enter: an offline tournament has no
+			# search (S29), a ticketed one wants its entry card
+			var enterable: bool = bool(e.get("regOpen", true)) and (int(e.get("entryCard", 0)) == 0
+				or int(e.get("entryOwned", 0)) > 0)
+			if not bool(e.get("offline", false)) and enterable and ev.is_empty():
+				cell = c
+				ev = e
 	if panel == null or cell.is_empty():
-		_record(13, "calendar", false, "no tournament on this month's calendar")
+		var seen_evs := []
+		for c in _main._gui.model.get_value("calendar").get("calendar", []):
+			for e in c.get("events", []):
+				seen_evs.append("%s d%s off=%s reg=%s entry=%s/%s" % [e.get("id"), c.get("day"),
+					e.get("offline"), e.get("regOpen"), e.get("entryCard"), e.get("entryOwned")])
+		_record(13, "calendar", false, "no played tournament open to us: %s" % [seen_evs])
 		return
 	panel.selected = cell
 	panel.schedule_refresh()
 	await create_timer(0.3).timeout
-	var ev: Dictionary = cell.events[0]
 	var tid := int(ev.id)
 	var reg: Button = panel.find_child("Register%d" % tid, true, false)
 	_record(13, "tournament", reg != null and not reg.disabled,
@@ -120,17 +119,37 @@ func _calendar() -> void:
 	_record(13, "bracket", _seen.has(28650) and (drawn is HBoxContainer or empty != null),
 		"28649 → 28650: %d seat(s) %s" % [slots.size(), slots.values()])
 	await _shot("cal-bracket")
-	var search: Button = panel.find_child("Search%d" % tid, true, false)
-	if search == null:
-		_record(13, "search", false, "no Buscar rival (is the search window seeded open?)")
+	await _search()
+
+
+## Buscar rival from Torneos → Mis torneos: the first enabled one among the
+## tournaments the test coach is in (the seed opens tournament 1's window;
+## on 2026-11-19 it was 2600003's, open by its own schedule). Not the
+## calendar's: registration closes once a search window opens.
+func _search() -> void:
+	var panel = await _menu("nav.calendar", "calendarDialog")
+	if panel == null:
+		_record(13, "search", false, "Torneos did not open")
 		return
+	panel.tab = 0
+	panel.schedule_refresh()
+	await create_timer(0.5).timeout
+	var search: Button = null
+	for b in panel.find_children("Search*", "Button", true, false):
+		if not b.disabled:
+			search = b
+			break
+	if search == null:
+		_record(13, "search", false, "no Buscar rival in Mis torneos (is tournament 1's search seeded open?)")
+		return
+	var tid := int(str(search.name).trim_prefix("Search"))
 	_seen.clear()
 	search.pressed.emit()
 	await _wait(func(): return _seen.has(28612) or _seen.has(28616), 3.0)
 	await create_timer(0.4).timeout
-	var st = panel.find_child("TournStatus%d" % tid, true, false)
-	_record(13, "search", (_seen.has(28612) or _seen.has(28616)) and st != null,
-		"28611 → %s, '%s'" % ["28612" if _seen.has(28612) else "28616", st.text if st != null else "—"])
+	_record(13, "search", _seen.has(28612) or _seen.has(28616),
+		"%d: 28611 → %s" % [tid, "28612" if _seen.has(28612) else ("28616" if _seen.has(28616) else "nothing")])
+	await _shot("tourn-search")
 
 
 func _clan_demon() -> void:
@@ -189,41 +208,3 @@ func _clan_demon() -> void:
 		"5470 → 5403 '%s'; clan serves %s; card %d → %d; ladder %s" % [d.get("status", {}).get("text", ""),
 			d.get("demonName", ""), qty, int(State.inventory.get(OFFER_CARD, 0)), clans])
 	await _shot("demon-done")
-
-
-func _fireworks() -> void:
-	var city = await _open_city()
-	var sid := -1
-	if city != null:
-		for g in _main._gui.model.get_value("city").get("groups", []):
-			if int(g.kind) == 12:
-				sid = int(g.services[0].id)
-	var b: Button = await _service_button(sid) if sid > 0 else null
-	if b == null:
-		_record(12, "fireworks", false, "no launcher in Services")
-		return
-	b.pressed.emit()
-	await _wait(func(): return _main._gui.is_open("fireworkDialog"), 3.0)
-	await create_timer(0.4).timeout
-	var fp = _main._gui.dialogs.get("fireworkDialog")
-	var add: Button = fp.find_child("Add%d" % FIREWORK, true, false) if fp != null else null
-	if add == null or add.disabled:
-		_record(12, "launcher", false, "no Yellow Fairywork to launch (seed the db)")
-		return
-	add.pressed.emit()
-	await create_timer(0.3).timeout
-	add = fp.find_child("Add%d" % FIREWORK, true, false)
-	add.pressed.emit()
-	await create_timer(0.3).timeout
-	var slots: Array = _main._gui.model.get_value("fireworkNative").get("slots", [])
-	_record(12, "launcher", slots.size() == 2, "native launcher, %d in the show" % slots.size())
-	await _shot("fw-launcher")
-	var shown_before := int(_main._fw_shown)
-	_seen.clear()
-	fp.find_child("Launch", true, false).pressed.emit()
-	await create_timer(0.9).timeout
-	await _shot("fw-sky")
-	await _wait(func(): return int(_main._fw_shown) - shown_before >= 2, 4.0)
-	_record(12, "show", not _main._gui.is_open("fireworkDialog")
-		and int(_main._fw_shown) - shown_before == 2,
-		"Lanzar → %d × 22094 on the lobby sky" % (int(_main._fw_shown) - shown_before))

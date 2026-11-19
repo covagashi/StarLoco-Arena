@@ -200,7 +200,7 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
 
 ## 8. Tooling y CI
 
-- [ ] **`totems_smoke` desfasado** (visto en S47, 2026-11-17): busca los
+- [x] (2026-11-19, S48: 7/7) **`totems_smoke` desfasado** (visto en S47, 2026-11-17): busca los
       tótems y los fuegos artificiales en Servicios (quitados en S18/S26) y
       el icono Social por su texto (los iconos no tienen texto). Falla 4/4
       también antes de S47. Reescribirlo contra Torneos y Social.
