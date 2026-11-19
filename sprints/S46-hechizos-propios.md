@@ -119,3 +119,25 @@ nada (de "Llega de S40"):
 - **D. Clases contra clases.** Simulación nueva (cada clase contra cada
   clase, espejos de equipo), y se tocan números de hechizos y clases hasta
   que ninguna se salga del 40–60 %.
+
+## B. Armas −1 PA (2026-11-19) ✅
+
+Las 23 armas cuestan 1 PA menos (`server/content/cards/fighter.json`; las
+de 3 PA a 2, las de 6 a 5). Medidas igual que antes (`S40_SIM=200`, una en
+el Iop contra el espejo desnudo; espejo 0,52):
+
+| | 1 PA más (antes) | 1 PA menos |
+|---|---|---|
+| el arma 34 | 0,53 | 0,52 |
+| las 23 | 0,46–0,54 | 0,47–0,57 |
+| correlación ventaja/valor | r = −0,04 | r = −0,03 |
+
+**Por qué apenas se mueven:** con el PA de menos, un arma da 3–4 de daño
+por PA (6–8 por 2 PA, 10 por 3), lo mismo que los hechizos de daño de las
+clases (Iop 3,3; Sacrificado hasta 9 con el 409). La IA ya las elige cuando
+rinden más y ahora lo hace más a menudo (el 2 sube a 0,57), pero un arma es
+una opción más, no un extra que gane solo. Su valor sigue sin predecir la
+ventaja: eso se ajusta en la fase D, con las clases.
+
+Iniciativa, de paso (sin cambiar aún): −30 a los tres 0,72; +30 0,16; +60
+0,28; +80 0,27. Mover segundo pesa todavía más que en S40: es la fase C.

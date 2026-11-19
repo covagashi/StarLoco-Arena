@@ -106,13 +106,13 @@ func TestFighterCardUseEffectsReal(t *testing.T) {
 	}
 	t.Logf("%d/%d fighter cards have an active (weapon) ability", usable, fc.Len())
 
-	// Card 85 is a melee weapon: 4 AP, range 1-1, with a normal and a critical
+	// Card 85 is a melee weapon: 3 AP (4 until S46 took one off every weapon), range 1-1, with a normal and a critical
 	// damage variant. Its shape is what the use path is built against.
 	if c := fc.Get(85); c == nil {
 		t.Error("card 85 missing")
 	} else {
-		if c.APCost != 4 || c.RangeMin != 1 || c.RangeMax != 1 {
-			t.Errorf("card 85 = %d AP range %d-%d, want 4 AP range 1-1",
+		if c.APCost != 3 || c.RangeMin != 1 || c.RangeMax != 1 {
+			t.Errorf("card 85 = %d AP range %d-%d, want 3 AP range 1-1 (4 before S46)",
 				c.APCost, c.RangeMin, c.RangeMax)
 		}
 		var normal, crit int
