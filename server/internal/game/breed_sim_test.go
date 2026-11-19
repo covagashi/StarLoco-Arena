@@ -3,10 +3,11 @@ package game
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
+	"slices"
 	"sort"
 	"strings"
-	"slices"
 	"testing"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
@@ -42,6 +43,19 @@ func simKit(d *Deps, br uint8) []domain.FighterSpell {
 			heal = sp
 		}
 	}
+	drop := map[int32]bool{} // S46_DROP=69,73: leave these out (to see what a spell weighs)
+	for _, f := range strings.Split(os.Getenv("S46_DROP"), ",") {
+		var v int32
+		if _, err := fmt.Sscan(f, &v); err == nil {
+			drop[v] = true
+		}
+	}
+	if summon != nil && drop[summon.ID] {
+		summon = nil
+	}
+	if heal != nil && drop[heal.ID] {
+		heal = nil
+	}
 	var ids []int32
 	for _, sp := range []*gamedata.Spell{summon, heal} {
 		if sp != nil {
@@ -49,7 +63,7 @@ func simKit(d *Deps, br uint8) []domain.FighterSpell {
 		}
 	}
 	for _, s := range breedSpellRepertoire(d.Spells, br) {
-		if len(ids) < maxLoadoutSpells && !slices.Contains(ids, s.SpellID) {
+		if len(ids) < maxLoadoutSpells && !slices.Contains(ids, s.SpellID) && !drop[s.SpellID] {
 			ids = append(ids, s.SpellID)
 		}
 	}
@@ -77,9 +91,20 @@ func breedMatrix(t *testing.T, d *Deps, n int, team func(id uint, br uint8) *dom
 	for _, a := range simAllBreeds {
 		wr[a] = map[uint8]float64{}
 	}
+	only := map[uint8]bool{} // S46_ONLY=4,10: just the pairs with these classes
+	for _, f := range strings.Split(os.Getenv("S46_ONLY"), ",") {
+		var v int
+		if _, err := fmt.Sscan(f, &v); err == nil {
+			only[uint8(v)] = true
+		}
+	}
 	for i, a := range simAllBreeds {
 		wr[a][a] = 0.5
 		for _, b := range simAllBreeds[i+1:] {
+			if len(only) > 0 && !only[a] && !only[b] {
+				wr[a][b], wr[b][a] = math.NaN(), math.NaN()
+				continue
+			}
 			w := winRate(t, d, team(1, a), team(2, b), n)
 			wr[a][b], wr[b][a] = w, 1-w
 		}
@@ -107,11 +132,17 @@ func logBreedMatrix(t *testing.T, title string, wr map[uint8]map[uint8]float64) 
 		sum := 0.0
 		for _, b := range simAllBreeds {
 			fmt.Fprintf(&row, " %.2f |", wr[a][b])
-			if a != b {
+			if a != b && !math.IsNaN(wr[a][b]) {
 				sum += wr[a][b]
 			}
 		}
-		m := sum / float64(len(simAllBreeds)-1)
+		k := 0
+		for _, b := range simAllBreeds {
+			if a != b && !math.IsNaN(wr[a][b]) {
+				k++
+			}
+		}
+		m := sum / float64(max(k, 1))
 		fmt.Fprintf(&row, " **%.2f** |", m)
 		t.Log(row.String())
 		avgs = append(avgs, avg{a, m})

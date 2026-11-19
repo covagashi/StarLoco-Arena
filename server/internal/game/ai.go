@@ -178,7 +178,7 @@ func (f *Fight) classifyAI(ff *FightFighter) aiBehavior {
 // playAggressiveAI closes into spell range of the nearest enemy and casts until
 // out of AP or range.
 func (f *Fight) playAggressiveAI(ff *FightFighter) {
-	target := f.nearestOpponent(ff)
+	target := f.nearestRealOpponent(ff)
 	if target == nil {
 		return
 	}
@@ -190,7 +190,7 @@ func (f *Fight) playAggressiveAI(ff *FightFighter) {
 // playKiteAI casts at the nearest enemy from range, then retreats with leftover
 // MP (hit-and-run).
 func (f *Fight) playKiteAI(ff *FightFighter) {
-	target := f.nearestOpponent(ff)
+	target := f.nearestRealOpponent(ff)
 	if target == nil {
 		return
 	}
@@ -453,7 +453,7 @@ func (f *Fight) chooseAITarget(ff *FightFighter) *FightFighter {
 	var (
 		bestKill   *FightFighter // reachable AND finishable this cast
 		bestKillHP int32
-		bestHurt   *FightFighter // reachable, lowest HP
+		bestHurt   *FightFighter // reachable, lowest HP, a real fighter if any
 		bestHurtHP int32
 	)
 	for _, fr := range f.allFighters() {
@@ -467,7 +467,13 @@ func (f *Fight) chooseAITarget(ff *FightFighter) *FightFighter {
 		if dmg >= fr.HP && (bestKill == nil || fr.HP < bestKillHP) {
 			bestKill, bestKillHP = fr, fr.HP
 		}
-		if bestHurt == nil || fr.HP < bestHurtHP {
+		// S46: a real fighter over a creature. Hitting the nearest summon let
+		// a decoy soak a whole fight: an Arquero spent twelve turns on the
+		// Sombra's 40 HP double while the Sombra waited (88 % duels won).
+		switch {
+		case bestHurt == nil,
+			bestHurt.isSummon() && !fr.isSummon(),
+			bestHurt.isSummon() == fr.isSummon() && fr.HP < bestHurtHP:
 			bestHurt, bestHurtHP = fr, fr.HP
 		}
 	}
@@ -1019,6 +1025,27 @@ func (f *Fight) nearestOpponent(self *FightFighter) *FightFighter {
 		if best == nil || d < bestDist || (d == bestDist && aiTargetPreferred(fr, best)) {
 			best, bestDist = fr, d
 		}
+	}
+	return best
+}
+
+// nearestRealOpponent is the nearest enemy that is not a summon, or the nearest
+// one when only creatures are left: where an attacker walks to (S46), so a
+// decoy in front does not hold it off the fighter behind.
+func (f *Fight) nearestRealOpponent(self *FightFighter) *FightFighter {
+	var best *FightFighter
+	var bestDist int32
+	for _, fr := range f.allFighters() {
+		if fr.HP <= 0 || !f.areOpponents(self, fr) || fr.hasState(stateInvisible) || fr.isSummon() {
+			continue
+		}
+		d := manhattanDist(self.Pos, fr.Pos)
+		if best == nil || d < bestDist || (d == bestDist && aiTargetPreferred(fr, best)) {
+			best, bestDist = fr, d
+		}
+	}
+	if best == nil {
+		return f.nearestOpponent(self)
 	}
 	return best
 }
