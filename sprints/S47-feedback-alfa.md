@@ -553,6 +553,18 @@ Dueño: "sí, adopta los 40".
 6. Lo que queda de la auditoría web: W4–W7 (W2 fuera: el móvil
    siempre en horizontal; W9 hecho, abajo).
 
+## Deuda técnica
+
+- **La ropa de los coach no convence** (dueño, 2026-11-19: "no me convence
+  la ropa"), vista sobre los coach de 40k: camisas, pantalones, faldas y
+  botas de `coach_garment.py` (`art/equipment/garments.json`: color base y
+  franjas sobre las caras del cuerpo). Queda como está y se rehace más
+  adelante; falta saber qué no convence (forma, colores planos, franjas en
+  dientes de sierra, lo pegada al cuerpo…). Vista de referencia: los dos
+  coach con `torso_squire` + `pants_grilembore` + `boots_squire`,
+  `torso_camisa` + `skirt_gobkool` + `boots_alucard` y `torso_kamas` +
+  `pants_bombachos`.
+
 ## W9 — los menús a 30 fps en la web (2026-11-19)
 
 La animación del lobby (fondo que deriva, figuras de las tarjetas que se
