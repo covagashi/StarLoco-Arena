@@ -659,8 +659,11 @@ func TestGambitCastKeepsTheFriendlyFireAndSupportGates(t *testing.T) {
 			realSpellSummon))
 		sc.runTurn(t, sc.self)
 
+		// Since S46 the archetype calls the creature itself (ai_summon.go), on
+		// a free cell: what must never happen is the rule's cast AT the enemy.
+		atEnemy := fmt.Sprintf("spell=%d target=(%d,%d)", realSpellSummon, sc.enemy.Pos.X, sc.enemy.Pos.Y)
 		for _, d := range sc.castDetails() {
-			if strings.Contains(d, fmt.Sprintf("spell=%d", realSpellSummon)) {
+			if strings.Contains(d, atEnemy) {
 				t.Errorf("cast row %q: a non-harmful spell was fired at an enemy", d)
 			}
 		}

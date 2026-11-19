@@ -98,6 +98,9 @@ func (f *Fight) runArchetypeTurn(ff *FightFighter) {
 	// the archetype; it is the same log slot a fired gambit rule occupies, so the
 	// action rows that follow read identically either way.
 	f.logDecision(ff, decisionBehavior, behavior.String())
+	// A creature first (S46): it acts right after its caster this round, and
+	// nothing else in the archetypes ever casts one.
+	f.aiSummonCast(ff)
 	switch behavior {
 	case behaviorSelfBuff:
 		f.playSelfBuffAI(ff)
