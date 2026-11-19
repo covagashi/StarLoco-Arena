@@ -86,8 +86,18 @@ func _revive(panel, st: int) -> void:
 	var now := int(f.get("state", -1)) if f != null else -1
 	var status: Dictionary = _main._gui.model.get_value("evolutionTeam").get("reviveStatus", {})
 	var want := 0 if st == 2 else 1
-	_record(10, "revive %d" % st, done and now == want and _seen.has(6006)
-		and bool(status.get("ok", false)) and int(State.inventory.get(REVIVE_CARD, 0)) <= qty - 1
+	var spent: bool = int(State.inventory.get(REVIVE_CARD, 0)) <= qty - 1
+	# a resurrection is a roll (25 %, ×2 with two cards): back in its slot, or
+	# the card spent, the fighter still fallen and the footer saying so (S48)
+	if not done:
+		await _wait(func(): return _main._revive_pending.is_empty() and not str(_main._gui.model.get_value("evolutionTeam").get("reviveStatus", {}).get("text", "")).is_empty(), 3.0)
+		status = _main._gui.model.get_value("evolutionTeam").get("reviveStatus", {})
+		f = _main._fighter_by_id(fid)
+		now = int(f.get("state", -1)) if f != null else -1
+	var came_back: bool = done and now == want and _seen.has(6006) and bool(status.get("ok", false))
+	var roll_failed: bool = not done and now == st and not bool(status.get("ok", true)) \
+		and str(status.get("text", "")).begins_with(root.get_node("I18n").t("team.revive_fail").split(":")[0])
+	_record(10, "revive %d" % st, (came_back or roll_failed) and spent
 		and panel.find_child("ReviveStatus", true, false) != null and _fits(panel),
 		"%s: state %d → %d, card %d → %d, '%s' in the footer, no scroll" % [item.get("name", "?"), st, now,
 			qty, int(State.inventory.get(REVIVE_CARD, 0)), status.get("text", "")])

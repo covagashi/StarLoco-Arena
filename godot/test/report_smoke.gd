@@ -107,13 +107,16 @@ func _victory_condition() -> void:
 	w.put_bytes(line)
 	_sess.send(3153, w.raw(), 3)
 	var over: bool = await _wait(func(): return _seen.has(8300), 60.0)
-	await create_timer(1.0).timeout
+	# count at once: the re-entry (4600) that follows empties the fighter
+	# index, and it can land within the second waited below (S48)
 	var enemy_alive := 0
 	if is_instance_valid(fight):
 		for fid in State.fighters:
 			if int(State.fighters[fid].get("coach", -1)) != State.my_coach_id \
 					and not fight._dead.get(fid, false):
 				enemy_alive += 1
+	await create_timer(1.0).timeout
+	if is_instance_valid(fight):
 		fight._end_fight_ack()
 	var back: bool = await _wait(func():
 		var sc = current_scene
@@ -235,11 +238,13 @@ func _normal_path() -> void:
 		if is_instance_valid(m) and _sess.message.is_connected(m._on_message):
 			_sess.message.disconnect(m._on_message)
 	await create_timer(5.0).timeout
-	_sess.send(8151, PackedByteArray(), 3)
-	await _wait(func(): return _seen.has(8300), 8.0)
-	await create_timer(1.0).timeout
 	var fight = current_scene
-	if fight == null or not fight.has_method("_end_fight_ack"):
+	_sess.send(8151, PackedByteArray(), 3)
+	# the fight view drains its own 8300 (the harness never sees it) and its
+	# VICTORIA / DERROTA goes on by itself after 2.5 s (S21): wait on the view
+	# (S48)
+	await _wait(func(): return is_instance_valid(fight) and "_fight_over" in fight and fight._fight_over, 8.0)
+	if fight == null or not is_instance_valid(fight) or not fight.has_method("_end_fight_ack"):
 		_record(8300, "normal path", false, "no fight view as the current scene")
 		return
 	fight._end_fight_ack()    # the result modal's "Continuar"

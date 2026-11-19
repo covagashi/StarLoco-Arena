@@ -2,7 +2,8 @@ extends "res://test/world_smoke.gd"
 
 ## S20: Nilo's tree in Spanish, live — no French left on the way, and the
 ## reply that used to say goodbye and open the orientation lesson (group 69)
-## now asks the question that lesson answers.
+## now asks the question that lesson answers. (S48: the texts are ours
+## since S41, so the smoke looks for the new wording.)
 ##
 ##   godot --path godot -s test/nilo_smoke.gd [-- --shot-dir=D]
 
@@ -31,23 +32,23 @@ func _audit() -> void:
 	var spr_ok: bool = face is TextureRect and (face as TextureRect).texture != null
 	_record(0, "face", spr_ok, "Nilo's portrait beside his words: %s" % str(spr_ok))
 	var tackle := _choice(p, "placaje") != null
-	var orient := _choice(p, "¿Importa hacia dónde mira mi luchador?") != null
+	var orient := _choice(p, "¿La orientación de mis luchadores cuenta") != null
 	var french := _choice(p, "kézaco") != null
 	_record(0, "group 8", tackle and orient and not french,
 		"placaje=%s, orientación=%s, francés=%s" % [str(tackle), str(orient), str(french)])
 	await _shot("nilo-8")
-	if not await _pick(p, "¿Importa hacia dónde mira"):
+	if not await _pick(p, "¿La orientación de mis luchadores"):
 		return
 	var speech: RichTextLabel = p.find_child("Speech", true, false)
 	var text := speech.get_parsed_text() if speech != null else ""
-	_record(0, "group 69", text.begins_with("Sí:") and text.find("Oui") < 0,
+	_record(0, "group 69", text.begins_with("Claro") and text.find("Oui") < 0,
 		"'%s…'" % text.left(60))
 	await _shot("nilo-69")
-	if await _pick(p, "Tengo más preguntas"):
-		await _pick(p, "Háblame de las cartas")
-		var cards_ok := _choice(p, "¿Para qué me sirven las cartas?") != null and _choice(p, "kards") == null
+	if await _pick(p, "tengo otra duda"):
+		await _pick(p, "¿Y las cartas? Ilumíname")
+		var cards_ok := _choice(p, "¿Y las cartas para qué valen?") != null and _choice(p, "kards") == null
 		_record(0, "group 74", cards_ok, "the card questions are in Spanish")
-		if await _pick(p, "¿Cómo se consiguen las cartas?"):
+		if await _pick(p, "¿Dónde me hago con cartas?"):
 			speech = p.find_child("Speech", true, false)
 			text = speech.get_parsed_text() if speech != null else ""
 			_record(0, "group 80", text.begins_with("Hay muchas") and text.find("ogrin") < 0,

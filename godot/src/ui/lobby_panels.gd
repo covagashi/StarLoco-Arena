@@ -222,13 +222,19 @@ func _team() -> void:
 	var split := row(body)
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var roster := column(split)
-	label(roster, I18n.t("team.count", {"n": rows.size()}), 20)
+	# S48: the count and the note share a line — on 720 px stacked they left
+	# the two tables one row each and the body scrolling
+	var head := row(roster)
+	var count := label(head, I18n.t("team.count", {"n": rows.size()}), 20)
+	count.autowrap_mode = TextServer.AUTOWRAP_OFF
+	count.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	# S47 (owner, points 6-7): a fighter made from Torneos did not show in
 	# Historia and the count read 0 — the modes keep different fighters
 	# (evolution ones grow; classic ones have a fixed level and wear cards),
 	# so each tab says whose it lists until the screens are reorganised
-	var note := label(roster, I18n.t("team.mode_note_classic" if classic else "team.mode_note_evo"), 16)
+	var note := label(head, I18n.t("team.mode_note_classic" if classic else "team.mode_note_evo"), 14)
 	note.name = "ModeNote"
+	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	note.add_theme_color_override("font_color", UiStyle.BROWN)
 	# S47 (point 16): each fighter's value, the number the team budget adds up
 	var living := table(roster, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_value"), I18n.t("team.col_pos")], ["name", "breed_name", "budget", "placement"], rows, func(_item): schedule_refresh())
@@ -259,6 +265,7 @@ func _team() -> void:
 				var leg := button(evo_row, I18n.t("team.make_legend"), func(): confirm_action(I18n.t("team.make_legend_confirm"), func(): send("becomeALegend", [selected], selected)))
 				leg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button(detail, I18n.t("team.delete_fighter"), func(): confirm_action(I18n.t("team.delete_fighter_confirm", {"name": selected.get("name", "")}), func(): send("deleteFighter", [selected], selected)))
+	_tighten(detail)
 	pinned_actions.show()
 	var footer := pinned_actions
 	var hint := label(footer, I18n.t("team.synced"))
@@ -281,6 +288,15 @@ func _team() -> void:
 	else:
 		# S47 (point 7): nothing to search with until a classic fighter exists
 		button(footer, I18n.t("team.find_fight"), func(): send("setClassicReadyForFight"), not rows.is_empty())
+
+
+## S48: a fighter's detail column, packed so a fallen one (its state, the
+## Resurrect button and the reason it is off) fits 1280 × 720 unscrolled.
+func _tighten(col: Node) -> void:
+	col.add_theme_constant_override("separation", 8)
+	for c in col.get_children():
+		if c is Label:
+			c.add_theme_constant_override("line_spacing", -4)
 
 
 ## The Tournaments / Legends tabs' tournament: the editions we are entered in

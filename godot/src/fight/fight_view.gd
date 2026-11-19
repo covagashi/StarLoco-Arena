@@ -3198,6 +3198,9 @@ func _anim_probe(spr: Figure, set_dir: String, wire_dir: int, base: String,
 ## back to the coach's figure when the fighter's has no such clip.
 func _load_fighter_anim(spr: Figure, fid: int, wire_dir: int,
 		base := "AnimStatique") -> void:
+	# a walk can finish after the 8300 emptied the fighter index (S48)
+	if not State.fighters.has(fid):
+		return
 	var f: Dictionary = State.fighters[fid]
 	var set_dir := _anim_set(f)
 	# a carrier idles on the carry pose until the throw

@@ -312,11 +312,14 @@ func _on_fight_turn(fid: int, ours: bool) -> void:
 				return
 			# push anyone adjacent — spell 67's mask is permissive; the Sparring
 			# AI walks in to melee us, so an enemy target is just as good
-			var ally := _fighter_in_range(me, 1, 1, fid)
+			# S48: only a victim with a free cell behind it moves — a push into
+			# a fighter or a wall moves nobody (right), and the smoke used to
+			# retry that same blocked push every turn
+			var ally := _pushable_in_reach(me, fid)
 			if ally < 0:
-				# nobody adjacent: close in on the nearest fighter (S08: it
-				# used to end its turn until the timeout on spread spawns)
-				var dest := _next_to_nearest(me, fid)
+				# nobody to push from here: walk to a cell from which someone
+				# can be (S08: it used to end its turn until the timeout)
+				var dest := _push_spot(me, fid)
 				if dest.x >= 0 and fight_scene.request_move_to(dest):
 					create_timer(2.2).timeout.connect(func():
 						if fight_scene != null and not finished:
@@ -515,6 +518,48 @@ func _next_to_nearest(me: Vector3i, fid: int) -> Vector2i:
 				best = path
 	if best.is_empty() or fight_scene._mp_left <= 0:
 		return Vector2i(-1, -1)
+	var step: Vector3i = best[mini(best.size(), fight_scene._mp_left) - 1]
+	return Vector2i(step.x, step.y)
+
+
+## A walkable, free cell (the smoke's view of the arena).
+func _free_ground(cell: Vector2i, fid: int) -> bool:
+	return fight_scene._cells.has(cell) and fight_scene._cells[cell].get("ground", false) \
+		and not _occupied(cell, fid)
+
+
+## An adjacent living fighter whose cell behind (away from `me`) is free.
+func _pushable_in_reach(me: Vector3i, fid: int) -> int:
+	for id in fight_scene._actor_cells:
+		var iid := int(id)
+		if iid == fid or fight_scene._dead.get(iid, false):
+			continue
+		var p: Vector3i = fight_scene._actor_cells[id]
+		if _cell_dist(me, p) != 1:
+			continue
+		if _free_ground(Vector2i(p.x * 2 - me.x, p.y * 2 - me.y), fid):
+			return iid
+	return -1
+
+
+## The step toward the nearest cell next to a living fighter that has a free
+## cell on its far side, or (-1, -1).
+func _push_spot(me: Vector3i, fid: int) -> Vector2i:
+	var best: Array = []
+	for id in fight_scene._actor_cells:
+		var iid := int(id)
+		if iid == fid or fight_scene._dead.get(iid, false):
+			continue
+		var p: Vector3i = fight_scene._actor_cells[id]
+		for dxy in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var stand := Vector2i(p.x - dxy.x, p.y - dxy.y)
+			if not _free_ground(stand, fid) or not _free_ground(Vector2i(p.x + dxy.x, p.y + dxy.y), fid):
+				continue
+			var path: Array = fight_scene._find_path(Vector2i(me.x, me.y), stand, fid)
+			if not path.is_empty() and (best.is_empty() or path.size() < best.size()):
+				best = path
+	if best.is_empty() or fight_scene._mp_left <= 0:
+		return _next_to_nearest(me, fid)
 	var step: Vector3i = best[mini(best.size(), fight_scene._mp_left) - 1]
 	return Vector2i(step.x, step.y)
 

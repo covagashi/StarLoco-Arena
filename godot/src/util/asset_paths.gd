@@ -91,7 +91,7 @@ static func reset_roots() -> void:
 ## root wins anyway: the caller's own file_exists check still fails, but
 ## the push_error/"missing …" line it prints names a plausible path
 ## instead of a bare filename.
-static func resolve(rel: String) -> String:
+static func resolve(rel: String, probe := false) -> String:
 	var key := normalize(rel)
 	if _cache.has(key):
 		return _cache[key]
@@ -106,14 +106,17 @@ static func resolve(rel: String) -> String:
 		out = (all[0] + key) if not all.is_empty() else key
 		# S43: tools/no_retail_smoke.sh sets ARENA_ASSET_TRACE=1 to catch any
 		# read of a file that is not there (read_json and friends stay quiet).
-		if OS.get_environment("ARENA_ASSET_TRACE") == "1":
+		# exists() only asks (a fallback follows), so it is no missing read.
+		if not probe and OS.get_environment("ARENA_ASSET_TRACE") == "1":
 			print("[assets] missing %s" % key)
-	_cache[key] = out
+	# a probe's miss is not cached: a real read later must still be traced
+	if not (probe and not FileAccess.file_exists(out)):
+		_cache[key] = out
 	return out
 
 
 static func exists(rel: String) -> bool:
-	return FileAccess.file_exists(resolve(rel))
+	return FileAccess.file_exists(resolve(rel, true))
 
 
 ## "" when the file is missing — every gamedata table treats an empty read
