@@ -11,7 +11,7 @@ const PATH := "res://assets/i18n/content_%s.json"
 ## and their descriptions, achievement criteria, summons, event cards).
 const COUNTS := {"card": 907, "fcard": 75, "set": 138, "cond": 111, "spell": 139,
 	"npc": 224, "chal": 39, "dlg": 61, "dlgr": 148, "ach": 332, "achd": 173,
-	"crit": 102, "summon": 53, "event": 51, "eventd": 51, "eventl": 51}
+	"crit": 102, "summon": 54, "event": 51, "eventd": 51, "eventl": 51}
 ## (crit: 99 from retail plus the three the achievements used without a
 ## name, 147, 167 and 222 — S47.)
 ## Names fit a ribbon or a row; long texts (npc, dlg, achd, eventd, eventl)

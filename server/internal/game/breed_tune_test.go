@@ -26,11 +26,13 @@ import (
 // round's data into server/content/rules.
 
 // healTuned are the classes tuned by their heals rather than their damage;
-// summonTuned by their creatures' HP (the Jardinero's dolls: its damage at
-// ×2.6 still left it at 0.36 in trios).
+// summonTuned by their creatures' HP. The Jardinero went that way first (its
+// damage at ×2.6 had left it at 0.36 in trios), but its dolls at ×2.5 HP
+// still left it at 0.32: since then its dolls stay at ×2 (S46_TUNE_FROM) and
+// its damage is the lever, like everyone's.
 var (
 	healTuned   = map[uint8]bool{7: true}
-	summonTuned = map[uint8]bool{10: true}
+	summonTuned = map[uint8]bool{}
 )
 
 // scaledSummonings is orig with the HP of the creatures each class's spells
@@ -188,20 +190,41 @@ func TestBreedTune(t *testing.T) {
 	// two-lever step went to extremes (Pandawa damage ×2.5 with HP ×0.6): a
 	// class whose duel and trio differ a lot cannot be fixed by these numbers.
 	common := os.Getenv("S46_TUNE_COMMON") != ""
+	// S46_TUNE_TRIO=1: the owner's target (2026-11-19), trios 40-60 and duels
+	// 35-65, one lever per class, HP kept.
+	trioFirst := os.Getenv("S46_TUNE_TRIO") != ""
+	// the landscape is in steps (a point of damage changes how many hits a
+	// fighter takes, and flips a whole pairing), so keep the best round
+	bestWorst, bestLine := math.Inf(1), ""
 	for r := 0; r <= rounds; r++ {
 		apply()
+		played := line()
 		dw, tw := breedMatrix(t, d, n, duel), breedMatrix(t, d, n, trio)
 		var row strings.Builder
 		worst := 0.0
 		for _, b := range simAllBreeds {
 			md, mt := mean(dw, b), mean(tw, b)
-			worst = math.Max(worst, math.Max(math.Abs(md-0.5), math.Abs(mt-0.5)))
+			if trioFirst {
+				worst = math.Max(worst, math.Max(math.Abs(mt-0.5)-0.1, math.Abs(md-0.5)-0.15))
+			} else {
+				worst = math.Max(worst, math.Max(math.Abs(md-0.5), math.Abs(mt-0.5)))
+			}
 			fmt.Fprintf(&row, "%s d%.2f t%.2f ×%.2f hp×%.2f | ", fighterBreedName(b), md, mt, lever(b)[b], hp[b])
 			if r == rounds {
 				continue
 			}
 			var dl, dh float64
-			if common {
+			if trioFirst {
+				// owner: trios 40-60, duels 35-65 — aim the trio at 0.5 and
+				// pull a duel only once it leaves its band
+				e := 0.5 - mt
+				if md < 0.35 {
+					e += 0.35 - md
+				} else if md > 0.65 {
+					e += 0.65 - md
+				}
+				dl = damp * e / 0.45
+			} else if common {
 				// one lever on the mean of the two; HP stays
 				dl = damp * (1 - (md+mt)) / (tuneJ[0][0] + tuneJ[1][0])
 			} else {
@@ -212,11 +235,15 @@ func TestBreedTune(t *testing.T) {
 			hp[b] = math.Min(1.4, math.Max(0.7, hp[b]*math.Exp(dh)))
 		}
 		t.Logf("round %d (worst %.2f off): %s", r, worst, row.String())
+		if worst < bestWorst {
+			bestWorst, bestLine = worst, played
+		}
 		if r < rounds {
 			t.Logf("next: %s", line())
 		}
 	}
 	t.Logf("multipliers of the last round: %s", line())
+	t.Logf("best round (worst %.2f off): %s", bestWorst, bestLine)
 	if os.Getenv("S46_TUNE_WRITE") != "" {
 		writeTuned(t, d)
 	}

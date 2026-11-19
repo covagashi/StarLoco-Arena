@@ -271,6 +271,80 @@ separa a las de los extremos es su mecánica: el doble de la Sombra (40 PV,
 PV, quitan 1 PA), las curas frente al daño en un trío. Preguntas al dueño
 antes de seguir. Los datos del juego **no han cambiado** en esta fase.
 
+### Segunda tanda del dueño y el ajuste (2026-11-19)
+
+**Decisiones:** el doble de la Sombra, **más flojo**; las muñecas del
+Jardinero, **más fuertes**; **tríos estrictos 40–60, duelos 35–65**, solo
+números.
+
+**Cambios de mecánica (a mano):**
+
+- **Doble sombra** (69) llama a una criatura propia, la 56 (15 PV, 6 PA,
+  3 PM, placaje 20; antes, sin plantilla, 40 PV por defecto). Nombre
+  `summon.56` en los tres idiomas.
+- **Muñeca loca** (plantilla 4) 12 → 25 PV y su hechizo (107) quita 2 PA en
+  vez de 1; **Muñeca mártir** (8) 10 → 20 PV.
+- **Manecilla ardiente** (43, Relojero) alcance 2–6 → 2–5: el Relojero vive
+  de ella y su daño salta de 0,38 a 0,65 en tríos entre 4 y 5 puntos; el
+  alcance deja el punto medio (0,57).
+
+**Otro fallo de IA, el que más pesaba:** el arreglo de `classifyAI` (ver
+"Corrección de C"): con los PM extra del primer turno, todo el que abría
+huía. Solo con eso el Curandero pasó de 0,08 a 0,37 en tríos.
+
+**El ajuste** (`TestBreedTune`, `S46_TUNE_TRIO=1`: el trío a 0,5 y el
+duelo solo si sale de 35–65; una palanca por clase, guardando la mejor
+ronda porque el terreno va a saltos: un punto de daño cambia de cuántos
+golpes cae alguien). Diez rondas con pasos largos y ocho de afinado desde
+la mejor; luego el Jardinero y el Relojero a mano. Multiplicadores
+finales, sobre los números originales (redondeados como se guardan):
+
+| clase | palanca | × |
+|---|---|---|
+| Bastión (Féca) | daño | 0,67 |
+| Domador (Osamodas) | daño | 1,38 |
+| Buscaoro (Enutrof) | daño | 0,99 |
+| Sombra (Sram) | daño | 0,59 |
+| Relojero (Xélor) | daño | 0,77 (+ Manecilla 2–5) |
+| Tahúr (Ecaflip) | daño | 1,09 |
+| Curandero (Eniripsa) | curas | 1,78 |
+| Espadachín (Iop) | daño | 0,77 |
+| Arquero (Crâ) | daño | 0,75 |
+| Jardinero (Sadida) | daño ×1,45, criaturas vida ×2 (sobre lo de arriba) |
+| Furia (Sacrieur) | daño | 0,87 |
+| Panda (Pandawa) | daño | 0,87 |
+
+Cambian 44 hechizos y 4 criaturas (`spells.json`, `summonings.json`); la
+vida de las clases no se tocó.
+
+**Comprobado aparte** (`S46_BREEDS=200 go test ./internal/game/ -run
+TestBreedSim`, semillas nuevas, sobre los datos guardados):
+
+| clase | duelos antes → ahora | tríos antes → ahora |
+|---|---|---|
+| Bastión | 0,53 → 0,31 | 0,61 → 0,56 |
+| Domador | 0,59 → 0,51 | 0,49 → 0,46 |
+| Buscaoro | 0,58 → 0,70 | 0,49 → 0,47 |
+| Sombra | 0,78 → 0,77 | 0,82 → 0,45 |
+| Relojero | 0,57 → 0,22 | 0,59 → 0,58 |
+| Tahúr | 0,26 → 0,39 | 0,53 → 0,42 |
+| Curandero | 0,43 → 0,65 | 0,08 → 0,49 |
+| Espadachín | 0,52 → 0,38 | 0,40 → 0,59 |
+| Arquero | 0,65 → 0,51 | 0,64 → 0,48 |
+| Jardinero | 0,26 → 0,68 | 0,31 → 0,42 |
+| Furia | 0,55 → 0,60 | 0,48 → 0,53 |
+| Panda | 0,28 → 0,28 | 0,55 → 0,54 |
+
+("antes" es la primera foto, con las dos primeras correcciones de IA pero
+aún con el fallo de huida.)
+
+**Tríos: las 12 entre 0,42 y 0,59. ✅** **Duelos: 7 fuera de 35–65**
+(Sombra 0,77, Buscaoro 0,70, Jardinero 0,68, Curandero 0,65 al borde;
+Bastión 0,31, Panda 0,28, Relojero 0,22). Con una palanca por clase el
+trío manda; separar el duelo del trío pide mecánica (lo que una clase hace
+sola frente a lo que hace con dos compañeros), o la vida y el daño en
+sentidos contrarios, que llevaba a extremos. **Pregunta al dueño.**
+
 Pendiente de la fase C: las cartas de iniciativa (88, 89, 162, 164) ahora
 solo deciden quién elige, así que +30 y +80 valen lo mismo; su precio
 debería ser plano o la iniciativa dar algo más.
