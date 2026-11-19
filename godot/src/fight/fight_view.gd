@@ -87,6 +87,7 @@ var _replay_bar: Control = null  # S11 transport, only while a replay plays
 func _ready() -> void:
 	Audio.play_music("fight")
 	Engine.max_fps = 0   # S47 W9: the menus cap the web at 30; a fight runs free
+	_guard_leave(true)
 	if WebAssets.active():
 		set_process(false)   # nothing below has run yet
 		set_process_unhandled_input(false)
@@ -753,7 +754,17 @@ const WEAPON_FAMILY := {
 	8004: "108", 8006: "114", 8007: "111"}
 
 
+## S47 W7: a fight has no window for the browser's Back to close, so Back
+## (a mouse's side button too) would leave the page mid-fight: while it
+## lasts the browser asks first.
+static func _guard_leave(on: bool) -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.onbeforeunload = %s" % (
+			"function (e) { e.preventDefault(); return ''; }" if on else "null"))
+
+
 func _exit_tree() -> void:
+	_guard_leave(false)
 	# If we leave the tree without being freed (e.g. replaced by an explicit
 	# add_child in tests), drop the net subscription — a stale instance would
 	# keep consuming the shared WireReader and starve the new scene.

@@ -24,6 +24,13 @@ var _label: Label
 func _ready() -> void:
 	layer = 128
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process(false)
+
+
+## The bubble, built the first time it shows: an autoload is ready before
+## the web build has unpacked assets/, and UiStyle caches the fonts it reads
+## (one read now would leave every screen without its font).
+func _build() -> void:
 	_bubble = PanelContainer.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color.WHITE
@@ -42,7 +49,6 @@ func _ready() -> void:
 	_bubble.add_child(_label)
 	_bubble.visible = false
 	add_child(_bubble)
-	set_process(false)
 
 
 func _input(event: InputEvent) -> void:
@@ -76,11 +82,11 @@ func _process(dt: float) -> void:
 			_hold = -1.0
 			if show_tip_at(_start):
 				_eat_release = true
-	if _bubble.visible:
+	if _bubble != null and _bubble.visible:
 		_left -= dt
 		if _left <= 0.0:
 			hide_tip()
-	if _hold < 0.0 and not _bubble.visible:
+	if _hold < 0.0 and (_bubble == null or not _bubble.visible):
 		set_process(false)
 
 
@@ -90,6 +96,8 @@ func show_tip_at(p: Vector2) -> bool:
 	var text := tip_at(get_tree().root, p, self)
 	if text == "":
 		return false
+	if _bubble == null:
+		_build()
 	var vp := get_viewport().get_visible_rect().size
 	var k := maxf(1.0, minf(vp.x / REF.x, vp.y / REF.y))
 	_text = text
@@ -128,11 +136,12 @@ static func wrap_text(text: String, font: Font, size: int, width: float) -> Stri
 
 
 func hide_tip() -> void:
-	_bubble.visible = false
+	if _bubble != null:
+		_bubble.visible = false
 
 
 func tip_text() -> String:
-	return _text if _bubble.visible else ""
+	return _text if _bubble != null and _bubble.visible else ""
 
 
 ## The tooltip of the topmost control under `p`, or of its nearest parent

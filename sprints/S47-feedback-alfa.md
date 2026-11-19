@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas) W9, W5 y W6 hechos — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas) W9, W5, W6 y W7 hechos — ver «Dónde retomar»
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -551,7 +551,7 @@ Dueño: "sí, adopta los 40".
    Era: con la Ally libre
    (`tools/web/load_test.mjs`; la marca `window.__pippop` ya está).
 6. Lo que queda de la auditoría web: W4–W7 (W2 fuera: el móvil
-   siempre en horizontal; W9, W5 y W6 hechos, abajo).
+   siempre en horizontal; W9, W5, W6 y W7 hechos, abajo).
 
 ## Deuda técnica
 
@@ -663,3 +663,41 @@ como está; lo táctil se cuida para las tabletas (una tableta en horizontal,
 ~1024×768 CSS, ve la interfaz a ~1:1). W4 deja de ser la referencia
 pequeña: queda en revisar que las pantallas aguanten un cambio de tamaño
 de ventana en el PC.
+
+## W7 — la pila de ventanas y el «atrás» del navegador (2026-11-19)
+
+La pila ya existía: `GuiLayer.dialogs` guarda las ventanas en el orden en
+que se abren y Esc cierra la de arriba (las pantallas nuevas, Reclutar e
+Inventario, también son ventanas de `GuiLayer`). Lo que faltaba era el
+**«atrás» del navegador**, que en PC también es el botón lateral del ratón.
+
+- `GuiLayer` (web): cada ventana que se abre añade una entrada al historial
+  (`pushState`); **«atrás» cierra la de arriba**; una ventana cerrada desde
+  el juego (×, Esc, una ventana que sustituye a otra) devuelve su entrada
+  con `history.back()` y su `popstate` no se toma por un «atrás», así que
+  el historial y las ventanas nunca se desfasan. Al irse a un combate con
+  ventanas abiertas, devuelve las entradas que quedan. Sin ventanas
+  abiertas, «atrás» es del navegador.
+- **En combate** no hay ventana que cerrar: mientras dura, el navegador
+  pregunta antes de salir de la página (`onbeforeunload`), para que un
+  «atrás» sin querer no te saque a mitad de pelea.
+- Marca para las pruebas web: `window.__pippop.gui` (ventanas abiertas y
+  entradas).
+- **Fallo mío, cazado aquí:** el autoload `TouchTips` (W6) pedía su fuente
+  en `_ready`, antes de que la web descomprima `assets/`; `UiStyle` guarda
+  las fuentes en caché, así que **en la web todo el juego se quedaba sin
+  letra** (cuadritos). Ahora monta el globo la primera vez que lo enseña.
+  En escritorio no se notaba.
+
+Verificado: `test/unit/gui_history_test.gd` (con un historial de mentira
+asíncrono como el del navegador: «atrás» cierra solo la de arriba, la × y
+Esc devuelven su entrada, una ventana que sustituye a otra sobrevive al
+`back()` de la anterior, «atrás» sin ventanas, cambio de escena: 11/11).
+En Chromium real con la exportación web (`tools/web/back_test.mjs`,
+servidor local con WebSocket y cuentas demo): cuenta demo → crea tu jefe →
+la conversación de bienvenida, Logros e Inventario se cierran con «atrás»,
+Esc devuelve su entrada, la página nunca sale del juego. La pregunta al
+salir, en Chromium con la misma línea de JS: con ella pregunta, sin ella
+sale. `run_tests.sh --headless` 1528/0, `fight_smoke` termina.
+**Sin probar:** la pregunta al salir dentro de un combate real en la web
+(la cuenta demo nueva no llega a un combate sin reclutar).

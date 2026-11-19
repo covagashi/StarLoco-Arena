@@ -18,6 +18,15 @@ var handlers := {}          # method -> Callable(args: Array, ctx: Ctx)
 var dialogs := {}           # canonical name -> native Control
 var native_factories := {}  # canonical name -> Callable returning Control
 var settings_path := "user://gui_settings.cfg"
+## S47 W7: the browser's Back closes the window on top. Every window opened
+## adds a history entry; Back (popstate) closes the top one; a window closed
+## from the game takes its own entry back so the two never drift. `history`
+## is the browser's (BrowserHistory on the web, null elsewhere; tests put a
+## stand-in there).
+var history: Object = null
+var _entries := 0        # history entries our windows hold
+var _skip_pops := 0      # popstates of our own history.back() calls
+var _popping := false    # closing because of Back: its entry is gone already
 
 ## Logical names the lobby still asks for → the panel that answers them.
 const DIALOG_ALIASES := {
@@ -38,6 +47,39 @@ func _init() -> void:
 
 func _ready() -> void:
 	_load_settings()
+	if history == null and OS.has_feature("web"):
+		history = BrowserHistory.new(_on_popstate)
+
+
+func _exit_tree() -> void:
+	# off to a fight (a scene change frees the open windows without closing
+	# them): hand the browser its entries back, and stop listening
+	if history != null:
+		if _entries > 0:
+			history.go(-_entries)
+			_entries = 0
+		history.detach()
+
+
+## Back in the browser: the window on top closes (nothing when none is open:
+## the browser then goes where it goes).
+func _on_popstate(_args := []) -> void:
+	if _skip_pops > 0:
+		_skip_pops -= 1
+		return
+	_entries = maxi(0, _entries - 1)
+	if dialogs.is_empty():
+		return
+	_popping = true
+	close(str(dialogs.keys().back()))
+	_popping = false
+	_mark()
+
+
+## window.__pippop.gui = the open windows and our entries (tools/web tests).
+func _mark() -> void:
+	if history != null and history.has_method("mark"):
+		history.mark(dialogs.keys(), _entries)
 
 
 func open(name: String, model_values := {}) -> Control:
@@ -55,6 +97,10 @@ func open(name: String, model_values := {}) -> Control:
 	add_child(root)
 	dialogs[fname] = root
 	root.closed.connect(close.bind(fname))
+	if history != null:
+		history.push()
+		_entries += 1
+		_mark()
 	dialog_opened.emit(fname)
 	return root
 
@@ -71,6 +117,11 @@ func close(name: String) -> void:
 		dialogs[fname].hide()
 		dialogs[fname].queue_free()
 		dialogs.erase(fname)
+		if history != null and not _popping and _entries > 0:
+			_entries -= 1
+			_skip_pops += 1
+			history.back()
+			_mark()
 
 
 func is_open(name: String) -> bool:
@@ -162,3 +213,30 @@ func _save_settings() -> void:
 			continue
 		c.set_value("prefs", k, gp[k])
 	c.save(settings_path)
+
+
+## The page's history, through JavaScriptBridge (web only).
+class BrowserHistory extends RefCounted:
+	var _cb: JavaScriptObject   # kept: the browser calls it on popstate
+	var _window: JavaScriptObject
+
+	func _init(on_pop: Callable) -> void:
+		_window = JavaScriptBridge.get_interface("window")
+		_cb = JavaScriptBridge.create_callback(on_pop)
+		_window.addEventListener("popstate", _cb)
+
+	func push() -> void:
+		_window.history.pushState(JavaScriptBridge.create_object("Object"), "")
+
+	func back() -> void:
+		_window.history.back()
+
+	func go(n: int) -> void:
+		_window.history.go(n)
+
+	func detach() -> void:
+		_window.removeEventListener("popstate", _cb)
+
+	func mark(open: Array, entries: int) -> void:
+		JavaScriptBridge.eval("(window.__pippop = window.__pippop || {}).gui = %s"
+			% JSON.stringify({"open": open, "entries": entries}))
