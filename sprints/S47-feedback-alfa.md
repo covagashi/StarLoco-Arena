@@ -1,6 +1,6 @@
 # S47 — Feedback de la alfa (dueño, 2026-11-16)
 
-**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** 🟡 en curso — tanda 1, mapa de pantallas y reorganización 1 (reclutar, torneos, iconos) hechos (2026-11-17, abajo); puntos 4, 16 y 12 (con su pasada de diseño) hechos; puntos 11 y 1 (los dos coach a 40k, adoptados con sus prendas); la auditoría web entera (W4–W7, W9) y los cabos sueltos hechos (2026-11-19); falta la opinión del dueño sobre el inventario y los iconos — ver «Dónde retomar»
+**Planificado:** 2026-11-16 · **Hito:** M7 / M5 · **Tamaño:** L · **Estado:** ✅ cerrado (2026-11-19, dueño: «cierra el S47») — los 16 puntos, la auditoría web (W1, W3–W10; W2 fuera) y los cabos sueltos hechos; lo que queda pasa al BACKLOG (ver «Cierre»)
 
 Dictado del dueño tras probar la demo. Referencias en [`ref/S47/`](./ref/S47/):
 `crear-personaje-ref-1.webp` y `crear-personaje-ref-2.webp` (pantalla de
@@ -784,11 +784,55 @@ W4; los dos «sin probar» se prueban en vez de dejarlos así.
   acaban por encima de las dos (`talk_panel.gd` `_place`). Visto en las
   capturas de `talk_smoke` (7/7).
 - Visto de paso en la consola web al entrar al combate: cuatro `Parameter
-  "material" is null` (GLES3, `material_storage.cpp`). No rompen nada
-  visible; apuntado, sin mirar.
+  "material" is null` (GLES3, `material_storage.cpp`). ~~Apuntado, sin
+  mirar~~ arreglado, abajo.
 
 Lo único que queda sin probar en el sprint es el teclado en pantalla en un
 móvil real (W3): necesita el aparato, y el móvil queda como está en la
 demo (dueño).
 
 `run_tests.sh --headless` 1528/0.
+
+## `Parameter "material" is null` en la web (2026-11-19)
+
+El dueño: «investiga Parameter "material" is null y cuando termines,
+cierra el S47».
+
+- **Dónde:** una exportación de depuración (trae la traza de GDScript) en
+  Chromium da la línea: `arena_view.gd` `load_world`, el `cells.free()`
+  que suelta las celdas sueltas después de aplanar la arena en MultiMesh.
+  Justo antes se cambiaba `_builder` por uno nuevo, y el viejo era el
+  último que guardaba algunos materiales (sus copias teñidas y volteadas)
+  que esas celdas aún usaban: el motor los soltaba con las celdas vivas y,
+  al liberarlas, cada una pedía un material que ya no existía (los cuatro
+  mensajes: sombras, animado, parámetros, dependencias). **Arreglo:**
+  primero las celdas, luego el constructor. En el escritorio no salía
+  nunca (`fight_smoke`, el mapa de pantallas con `--fight`); por qué solo
+  la web no lo he aclarado, el orden nuevo es el correcto en los dos.
+- **Solo en dos arenas:** el entrenamiento cae en una arena al azar.
+  `tools/web/fight_load_test.mjs` encadena N entrenamientos en una sesión
+  web (entrar, ⇥ y Enter para salir) y cuenta los errores del motor por
+  arena; con un servidor de prueba que reparte las arenas por turno (copia
+  temporal del servidor, no está en el repo) cubre las seis. **Cliente de
+  antes:** worlds 12 y 15 con 4 errores cada uno, 5, 10, 21 y 36 limpios.
+  **Con el arreglo:** 6 de 6 sin errores, las arenas enteras en las
+  capturas.
+- `tools/web/leave_test.mjs` imprime con `CONSOLE=all` la consola entera
+  (las trazas de una exportación de depuración).
+- `run_tests.sh --headless` 1528/0; `fight_smoke` termina el combate.
+
+## Cierre (2026-11-19)
+
+Hecho: los 16 puntos del dueño, la auditoría web (W1, W3–W10; W2 fuera por
+decisión del dueño) y los cabos sueltos. Pasa al BACKLOG lo que no es mío o
+no se puede hacer aquí:
+
+- **Opinión del dueño** sobre la pasada de diseño del inventario (punto
+  12) y los iconos propios de las cartas (punto 11): sin respuesta al
+  cerrar; si pide cambios, se hacen en el sprint que toque.
+- **Iconos «Hechizo vetado» y «Clase vetada»** cargados (la raya tapa la
+  figura; los de hechizo traen su placa gris).
+- **La ropa de los coach** (deuda técnica, arriba): rehacer cuando se sepa
+  qué no convence.
+- **Teclado en pantalla en un móvil real** (W3): ya estaba en el BACKLOG
+  §13, «Móvil».

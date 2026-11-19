@@ -48,7 +48,10 @@ await new Promise((ok) => server.listen(8091, "127.0.0.1", ok));
 
 const browser = await chromium.launch({ channel: "chromium", args: ["--no-sandbox", "--use-angle=vulkan", "--ignore-gpu-blocklist"] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-page.on("console", (m) => { if (/error/i.test(m.type())) console.log("[console]", m.text().slice(0, 200)); });
+// CONSOLE=all prints every console line whole (a debug export's backtraces)
+const all = process.env.CONSOLE === "all";
+page.on("console", (m) => { if (all || /error/i.test(m.type())) console.log("[console]", all ? m.text() : m.text().slice(0, 200)); });
+const stepLog = (what) => console.log("[step]", what);
 const mark = (k) => page.evaluate((k) => (window.__pippop || {})[k] ?? null, k).catch(() => null);
 const until = async (k, ms) => { const end = Date.now() + ms; while (Date.now() < end) { const v = await mark(k); if (v !== null) return v; await page.waitForTimeout(500); } return null; };
 const gui = () => mark("gui");
@@ -75,11 +78,13 @@ for (let i = 0; i < 4; i++) {                      // the intro, closed with Esc
 }
 await shot("1-lobby");
 check(!(await guarded()), "lobby: nothing asks before leaving");
+stepLog("recruit screen");
 await page.mouse.click(1175, 316);                 // Historia → RECLUTAR
 await page.waitForTimeout(4000);
 await shot("2-recruit");
 await page.mouse.click(435, 666);                  // the name field
 await page.keyboard.type("Probador");
+stepLog("recruit");
 await page.mouse.click(700, 666);                  // ¡RECLUTAR!
 await page.waitForTimeout(5000);
 for (let i = 0; i < 3; i++) {                      // whatever opened after it
@@ -89,12 +94,14 @@ for (let i = 0; i < 3; i++) {                      // whatever opened after it
 	await page.waitForTimeout(1500);
 }
 await shot("3-recruited");
+stepLog("training");
 await page.mouse.click(1130, 147);                 // ENTRENAMIENTO
 let fight = false;
 for (let i = 0; i < 60 && !fight; i++) { await page.waitForTimeout(1000); fight = await guarded(); }
 await page.waitForTimeout(4000);
 await shot("4-fight");
 check(fight, "fight: the leave guard is on");
+stepLog("back");
 const before = page.url();
 dialogs = [];
 await page.goBack({ waitUntil: "commit", timeout: 8000 }).catch(() => {});

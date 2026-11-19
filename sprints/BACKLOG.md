@@ -277,6 +277,17 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
       sobre él (o dibujarse su silueta), como hace el ocultador de la arena
       (`ArenaScene.occluder`) con el resto. Sin mirar aún la causa.
 
+- [ ] **La ropa de los coach no convence** (dueño, 2026-11-19, al cerrar
+      [S47](./S47-feedback-alfa.md)): camisas, pantalones, faldas y botas de
+      `coach_garment.py`. Antes de rehacerla, preguntar qué no convence
+      (forma, colores planos, franjas, lo pegada al cuerpo). Detalle y vistas
+      de referencia en S47, «Deuda técnica».
+- [ ] **Iconos «Hechizo vetado» y «Clase vetada» cargados** (S47 punto 11):
+      la raya tapa parte de la figura y los de hechizo traen su placa gris de
+      botón dentro de la ventana de la carta.
+- [ ] **Opinión del dueño pendiente** (al cerrar S47): la pasada de diseño
+      del inventario (punto 12) y los iconos propios de las cartas (punto 11).
+
 ## 13. Demo web (lo que dejó [S44](./S44-cliente-web.md), 2026-11-15)
 
 Del informe del hermano del dueño (Firefox Android) y de cerrar S44. Lo que

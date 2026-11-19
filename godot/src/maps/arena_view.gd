@@ -171,8 +171,11 @@ func load_world(world_id: int) -> bool:
 			continue
 		cells.add_child(_builder.build_cell(p, shape.cells[p], layout.cells[p], shape.floor_y))
 	_root.add_child(_builder.flatten(cells))
-	_builder = ArenaScene.new()   # its templates: the flattened copy is all a fight needs
+	# the loose cells first, then the builder: it holds materials they still
+	# draw with, and the other way round the web build (GLES3) freed them
+	# under live instances ('Parameter "material" is null', S47)
 	cells.free()
+	_builder = ArenaScene.new()   # its templates: the flattened copy is all a fight needs
 	_cam = ArenaScene.game_camera(720.0, 1.0, Vector3.ZERO)
 	_cam.cull_mask &= ~DEPTH_LAYER
 	_vp.add_child(_cam)

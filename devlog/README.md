@@ -63,3 +63,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-11-17 | [S47: la primera tanda de arreglos de la alfa (modales que escalan, sin pista Esc, amigos en el modal, logros claros)](./2026-11-17-s47-arreglos.md) |
 | 2026-11-17 | [S47: el mapa de pantallas (51 pantallas, árbol del recorrido) y el Menú de vuelta en el lobby (B-191)](./2026-11-17-s47-mapa.md) |
 | 2026-11-17 | [S47: reorganización 1 — Reclutar como pantalla, Torneos en un solo sitio, Amigos y Buzón arriba](./2026-11-17-s47-reorganizacion.md) |
+| 2026-11-19 | [S47: W4, cabos sueltos, `material is null` y cierre](./2026-11-19-s47-cierre.md) |
