@@ -5,7 +5,8 @@ extends "res://test/pvp_smoke.gd"
 ##
 ##   godot --path godot -s test/tournament_fight_smoke.gd
 ##
-## Seed (server stopped, a COPY of arena.db): one scheduled edition "Copa
+## Seed (server stopped, a COPY of arena.db): one scheduled Evolution
+## edition (def 12 — classic ones play offline since S29) "Copa
 ## Final" whose only search period is open now, with "test" (1) and "test2"
 ## (2) entered — so their fixture is the final. The main client presses (S47:
 ## Torneos → Mis torneos) "Buscar rival" (28611 → 28612, the lobby's
@@ -105,7 +106,9 @@ func _main_searches() -> void:
 	var w := WireWriter.new()
 	w.put_i64(_tid)
 	w.put_i64(_bot_coach)
-	w.put_i16(-1)
+	# S29 plays classic cups offline, so a live final is an Evolution one,
+	# which fields the Historia titulars: preset 99 (S48; it sent -1, classic)
+	w.put_i16(99)
 	_bot.send_message(28611, w.raw(), 2)
 	print("[s09] bot 28611 for %d" % _tid)
 

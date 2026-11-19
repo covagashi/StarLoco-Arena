@@ -1779,8 +1779,11 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_FIGHT_ERROR:
 			var d := Codec.decode(opcode, payload)
 			DebugLog.add("fight creation refused, code %d" % int(d.get("f1", -1)))
-			_log_line("[color=red]%s[/color]" % I18n.t("fight.refused",
-				{"code": int(d.get("f1", -1))}))
+			# S48: say why in words — the bare code told the player nothing
+			var code := int(d.get("f1", -1))
+			var why := "fight.refused.%d" % code
+			_log_line("[color=red]%s[/color]" % (I18n.t(why) if I18n.has(why)
+				else I18n.t("fight.refused", {"code": code})))
 		OP_PONG:
 			pass  # keepalive reply
 		_:

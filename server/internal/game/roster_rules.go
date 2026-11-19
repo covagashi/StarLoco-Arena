@@ -41,6 +41,10 @@ const (
 	rosterTooManySameBreed
 	rosterOverBudget
 	rosterDeadFighter
+	// rosterUnderEvolutionBudget: an evolution team below its minimum. It used
+	// to report rosterOverBudget, so the player read "too expensive" for a
+	// team that was too cheap (S48); the client has its own message for it.
+	rosterUnderEvolutionBudget
 )
 
 // code maps a violation to the client error code that renders the right message.
@@ -52,6 +56,8 @@ func (v rosterViolation) code() uint8 {
 		return protocol.FightErrTooManySameBreed
 	case rosterOverBudget:
 		return protocol.FightErrInvalidTeamBudget
+	case rosterUnderEvolutionBudget:
+		return protocol.FightErrMinEvolutionBudget
 	default:
 		return protocol.FightErrUnableToCreate
 	}
@@ -69,6 +75,8 @@ func (v rosterViolation) String() string {
 		return "too many of one breed"
 	case rosterOverBudget:
 		return "over budget"
+	case rosterUnderEvolutionBudget:
+		return "under the evolution minimum"
 	case rosterDeadFighter:
 		return "dead fighter fielded"
 	default:
@@ -123,7 +131,7 @@ func validateRoster(chosen []*domain.Fighter, evolution bool, budgetCap int32) r
 		// Sandbagging guard: evolution feeds progression (XP, morale, fatigue,
 		// wounds, permanent death), so a near-zero-cost roster farms rated matches
 		// against opponents who spent the full budget, with nothing at risk.
-		return rosterOverBudget
+		return rosterUnderEvolutionBudget
 	}
 	return rosterOK
 }

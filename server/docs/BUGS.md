@@ -13,6 +13,25 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-193 · An Evolution cup fielded the Elite fighters, and "too cheap" read as "too expensive"
+
+- **Symptom:** a live Evolution final paired both coaches and never started;
+  the server logged "fight refused: illegal roster … over budget" with four
+  fighters (`tournament_fight_smoke`, 2026-11-20).
+- **Root cause:** `tournamentRoster` took ALL the titulars for an Evolution or
+  graveyard cup; state 0 is every fighter's default, so the Elite fighters
+  came along with their gear and the line-up passed the league budget. S21
+  had split the Historia starters off (`storyRoster`) for challenges but not
+  for tournaments. Separately, an evolution team BELOW its 5000 minimum was
+  reported as `rosterOverBudget` (code 46, "over budget") although the client
+  has its own code (78), and the client printed only "código N".
+- **Fix:** Evolution and graveyard cups field the Historia starters only;
+  `rosterUnderEvolutionBudget` answers 78; the client words every 26310 code
+  (34, 45, 46, 63, 69, 78) in the three languages.
+- **Verified:** `unit` `TestEvolutionCupFieldsOnlyHistoriaStarters`,
+  `TestValidateRoster` (78 for the minimum); `tournament_fight_smoke` plays the
+  final to the end with legal Historia teams.
+
 ### B-192 · A Historia fighter could get stuck on its sphere board
 
 - **Symptom:** the Constelación of the test coach's fighter showed nothing

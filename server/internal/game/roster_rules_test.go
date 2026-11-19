@@ -50,7 +50,7 @@ func TestRosterRulesAreEnforcedServerSide(t *testing.T) {
 		{"dead fighter fielded", rosterOf([3]int{1, 10, int(domain.FighterStateDead)}), false, rosterDeadFighter, 0},
 		{"graveyard fighter fielded", rosterOf([3]int{1, 10, int(domain.FighterStateGraveyard)}), false, rosterDeadFighter, 0},
 		{"evolution below the minimum budget", rosterOf([3]int{1, 100, 0}), true,
-			rosterOverBudget, protocol.FightErrInvalidTeamBudget},
+			rosterUnderEvolutionBudget, protocol.FightErrMinEvolutionBudget},
 		{"evolution at the minimum budget", rosterOf([3]int{1, 5000, 0}), true, rosterOK, 0},
 	}
 	for _, tc := range cases {

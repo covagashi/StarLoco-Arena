@@ -60,7 +60,7 @@ func (d *Deps) tournamentPresetAllowed(tid int64, preset uint16) bool {
 //
 // Classic plays the named preset (IDOR-guarded by resolveTeamRoster), falling
 // back to the titular line-up as the tournament path always has. Evolution
-// and graveyard play the titular line-up: that is what 99 means everywhere
+// and graveyard play the Historia titulars: that is what 99 means everywhere
 // else (handlers_evolution_search.go), and the graveyard dialog only lists
 // who of that team has died. Legendary plays the legendary titulars.
 func (d *Deps) tournamentRoster(coachID uint, tid int64, preset uint16, seats int) []int64 {
@@ -71,7 +71,12 @@ func (d *Deps) tournamentRoster(coachID uint, tid int64, preset uint16, seats in
 	case legendTeamPreset:
 		return d.fightersInState(coachID, domain.FighterStateLegendary, seats)
 	case evolutionTeamPreset, graveyardTeamPreset:
-		return d.titularRoster(coachID, seats)
+		// Historia's starters only (S48): state 0 is every fighter's default,
+		// so the titulars include the Elite ones, and an Evolution cup fielded
+		// them — with their gear, over the league budget, refused at the
+		// fixture (found by tournament_fight_smoke). No fallback: an Elite
+		// fighter has no evolution to bank.
+		return d.titulars(coachID, seats, historiaFighter)
 	}
 	if r := d.resolveTeamRoster(coachID, uint(preset)); len(r) > 0 {
 		return r
