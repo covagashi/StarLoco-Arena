@@ -50,3 +50,14 @@ bajo `unshare -rn`):
   inscribe en el primer torneo del calendario abierto para él (no sin
   conexión, sin carta de entrada que falte) y busca rival desde **Mis
   torneos**. Si el calendario no tiene ninguno, el fallo lista los que hay.
+
+## 3. B-189: el árbol tapa al luchador ✅
+
+El ocultador de la arena borraba cada píxel de algo en 2D que la arena
+tuviera delante. Ahora un luchador (y su sombra) **no se borra**: donde la
+arena lo tapa se dibuja su silueta translúcida en azul claro (frío, para que
+se lea en las arenas cálidas; probé antes un crema y se perdía en el
+follaje). Las marcas del suelo siguen ocultándose. Vista previa de B-189
+antes y después: de Arel solo se veían los pies; ahora se ven su silueta y
+la cabeza de otra luchadora a través de las hojas, y el brazo de un panda
+a través de una caja. Detalle en `server/docs/BUGS.md` (B-189).

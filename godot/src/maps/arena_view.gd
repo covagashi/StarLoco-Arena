@@ -33,6 +33,8 @@ const DEPTH_LAYER := 1 << 19
 ## 0.26 in depth. A neighbour's prop is 0.61 nearer and still covers.
 const BIAS_UP := 0.45
 const BIAS_FLAT := 0.35
+## B-189: what shows of a fighter where the arena covers it.
+const SILHOUETTE := Color(0.82, 0.9, 1.0, 0.62)
 
 const DEPTH_SHADER_CODE := """
 shader_type spatial;
@@ -83,7 +85,12 @@ void fragment() {
 	float y = upright ? max(pix_y, foot_y) : pix_y;
 	float d = DX * (y + 21.5 + alt * 10.0) / 21.5 + DY * alt * ALT;
 	if (e != vec3(0.0) && scene > d + (upright ? BIAS_UP : BIAS_FLAT)) {
-		discard;
+		if (!upright) {
+			discard;   // a mark behind a pillar is simply not seen
+		}
+		// B-189: a fighter is never lost behind the scenery — where the arena
+		// covers it, its silhouette shows through in a light ink
+		COLOR = vec4(SILHOUETTE.rgb, COLOR.a * SILHOUETTE.a);
 	}
 }
 """
@@ -122,7 +129,8 @@ static func arena_of(world_id: int) -> int:
 static func _defines() -> String:
 	return "const float DX = %f; const float DY = %f; const float D_OFF = %f; " % [DX, DY, D_OFF] \
 		+ "const float D_RANGE = %f; const float ALT = %f; " % [D_RANGE, Layout.ALT] \
-		+ "const float BIAS_UP = %f; const float BIAS_FLAT = %f;" % [BIAS_UP, BIAS_FLAT]
+		+ "const float BIAS_UP = %f; const float BIAS_FLAT = %f; " % [BIAS_UP, BIAS_FLAT] \
+		+ "const vec4 SILHOUETTE = vec4(%f, %f, %f, %f);" % [SILHOUETTE.r, SILHOUETTE.g, SILHOUETTE.b, SILHOUETTE.a]
 
 
 func _init() -> void:

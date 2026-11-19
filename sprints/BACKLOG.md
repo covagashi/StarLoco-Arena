@@ -269,7 +269,7 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
       así que esos logros no se pueden conseguir. El 2vs2 está escondido;
       el de evolución sí importa.
 
-- [ ] **B-189: un árbol de la arena tapa al luchador** (dueño, 2026-11-11, visto en
+- [x] (2026-11-19, S48: silueta donde la arena lo tapa) **B-189: un árbol de la arena tapa al luchador** (dueño, 2026-11-11, visto en
       [S35c](./S35c-ropa-y-equipo.md) paso 1). En la vista del combate
       (`test/fight_ui_preview.tscn`, arena 10, `FIGHT_UI_FECA=1 FIGHT_UI_FOCUS=1,3`)
       Arel queda entero detrás de la copa del árbol. Un luchador nunca debería

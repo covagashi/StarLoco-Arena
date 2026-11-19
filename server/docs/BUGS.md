@@ -13,6 +13,24 @@ decompiled client, no runtime) · `client-unit` (Godot headless GDScript lane,
 
 ---
 
+### B-189 · A tree's canopy hid a fighter completely
+
+- **Symptom:** in the fight view (arena 10, `test/fight_ui_preview.tscn` with
+  `FIGHT_UI_FECA=1 FIGHT_UI_FOCUS=1,3`) Arel stood behind the canopy of a
+  tree and only his feet showed (owner, 2026-11-11, S35c).
+- **Root cause:** the arena occluder (`arena_view.gd`, `OCCLUDE_SHADER_CODE`)
+  discards every 2D pixel the 3D arena stands in front of. That is right for
+  a ground mark behind a pillar, but a fighter must never vanish: the player
+  loses where it is.
+- **Fix:** an upright item (a fighter, its shadow) is no longer discarded
+  where the arena covers it: those pixels draw as a translucent pale-blue
+  silhouette (`SILHOUETTE`, cool so it reads on the warm arenas). Flat marks
+  still hide. Client only.
+- **Verified:** `client-ui` — the preview above before (Arel's body gone) and
+  after (his silhouette and another fighter's head through the leaves, a
+  panda's arm through a crate); `run_tests.sh --headless` 1544/0;
+  `fight_smoke` with no shader error (S48).
+
 ### B-191 · The lobby had no way to Options, Replays, bug report, disconnect or quit
 
 - **Symptom:** found drawing the S47 screen map: from the lobby the language,
