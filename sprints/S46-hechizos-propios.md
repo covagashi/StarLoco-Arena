@@ -1,6 +1,6 @@
 # S46 — Hechizos propios (datos)
 
-**Planificado:** 2026-11-14 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-19)
+**Planificado:** 2026-11-14 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ✅ cerrado (2026-11-19)
 
 ## Decisión del dueño (2026-11-14)
 
@@ -343,8 +343,62 @@ aún con el fallo de huida.)
 Bastión 0,31, Panda 0,28, Relojero 0,22). Con una palanca por clase el
 trío manda; separar el duelo del trío pide mecánica (lo que una clase hace
 sola frente a lo que hace con dos compañeros), o la vida y el daño en
-sentidos contrarios, que llevaba a extremos. **Pregunta al dueño.**
+sentidos contrarios, que llevaba a extremos.
 
-Pendiente de la fase C: las cartas de iniciativa (88, 89, 162, 164) ahora
-solo deciden quién elige, así que +30 y +80 valen lo mismo; su precio
-debería ser plano o la iniciativa dar algo más.
+**Decidido por heurística (dueño: «elige heurísticamente y decide»):** los
+duelos se aceptan como piedra-papel-tijera. El JcJ es 3 contra 3 (el 2vs2
+está oculto) y ahí las doce están en 40–60; los únicos 1 contra 1 son los
+retos de maestro de clase, que son JcE. No se tocan más hechizos por los
+duelos.
+
+### Reajuste final con +2 PM (2026-11-19)
+
+Con los datos nuevos y la IA corregida, **abrir dejó de perder**: sin PM
+extra el que abre gana 0,49, y con +4 ganaba 0,71 (la iniciativa valía 25
+puntos: una carta de +30 ganaba a cualquier arma). Decidido por heurística:
+**+2 PM**, la menor cantidad que mantiene la regla del dueño, y **reajustar
+las clases** sobre esa regla (con +2 los tríos se habían descolocado:
+Tahúr 0,71, Jardinero 0,23).
+
+`TestBreedTune` con `S46_TUNE_TRIO=1 S46_TUNE_TRIO_ONLY=1` (solo tríos),
+partiendo de los datos de arriba, ocho rondas; la mejor (la 7, tríos
+0,44–0,54). Multiplicadores **sobre la pasada anterior**: Bastión ×0,89,
+Domador ×0,74, Buscaoro ×0,71, Sombra ×0,94, Relojero ×1,10, Tahúr ×0,74,
+Curandero curas ×1,19, Espadachín ×1,18, Arquero ×0,88, Jardinero ×1,80,
+Furia ×1,17, Panda ×1,08.
+
+**Comprobado aparte** (`S46_BREEDS=200`, semillas nuevas, datos guardados):
+
+| clase | tríos | duelos |
+|---|---|---|
+| Domador | 0,54 | 0,55 |
+| Relojero | 0,53 | 0,56 |
+| Tahúr | 0,52 | 0,21 |
+| Sombra | 0,52 | 0,79 |
+| Panda | 0,51 | 0,30 |
+| Buscaoro | 0,51 | 0,47 |
+| Arquero | 0,50 | 0,25 |
+| Curandero | 0,49 | 0,61 |
+| Furia | 0,49 | 0,63 |
+| Jardinero | 0,48 | 0,75 |
+| Espadachín | 0,46 | 0,62 |
+| Bastión | 0,45 | 0,27 |
+
+**Tríos 0,45–0,54 ✅.** Duelos fuera de banda, aceptados (arriba).
+
+Turno, con estos datos (`S46_SIM=600`): abrir siempre 0,51, ceder siempre
+0,54, la elección de la IA 0,48. **Cartas de iniciativa** (`S40_SIM=400`,
+en los tres contra el espejo): −30 0,53, +30 0,49, +60 0,48, +80 0,52: ya
+no mueven el resultado, así que su valor (50, el mínimo) está bien. Que
+den algo más lo decidirá el dueño si quiere que la iniciativa pese.
+
+## Cierre (2026-11-19)
+
+- El servidor no lee ningún hechizo del retail (desde S43) ✅.
+- Partidas equilibradas en IA contra IA: tríos 0,45–0,54 ✅; la regla de
+  turno, 0,47–0,54 ✅; armas e iniciativa, cerca del espejo ✅.
+- Pruebas: `go test ./...`, `godot/run_tests.sh --headless` (24 suites),
+  `fight_smoke` en las dos ramas de la elección (con `unshare -rn`).
+- Abierto para más adelante: los duelos (piedra-papel-tijera, decidido);
+  los retos juegan con su repertorio de solo daño (`breedSpellRepertoire`),
+  no con invocaciones ni curas.

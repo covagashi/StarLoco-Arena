@@ -23,13 +23,15 @@ import (
 // side's fighters walk further on their first turn (openerFirstTurnMP).
 
 // openerFirstTurnMP is the MP the opening side's fighters get on top of their
-// own on their first turn (owner 2026-11-19: "+PM al que abre"). Without it the
-// opener walks into reach first and loses (27 % in the mirror, TestTurnChoiceSim);
-// +1 to +3 change nothing (23-30 %), +4 lets it reach and strike first (57 %).
-// (+2 first looked right only because the bonus made the opener's AI a kiter
+// own on their first turn (owner 2026-11-19: "+PM al que abre"). With the
+// retail numbers the opener walked into reach first and lost (27 % in the
+// mirror); after S46's class pass and AI fixes opening is even with or
+// without it (TestTurnChoiceSim: +0 0.49, +2 0.47, +3 0.51) and +4 tips it
+// (0.71). +2 is kept as the owner's rule at its least disruptive. (A first
+// +2 had looked right only because the bonus made the opener's AI a kiter
 // that walked away on turn 1; see classifyAI.) Sent in 60051 so the client
 // counts it.
-var openerFirstTurnMP int32 = 4
+var openerFirstTurnMP int32 = 2
 
 // openerBonusMP is the extra MP ff starts this turn with: its first turn, on
 // the opening side, and not a summon.
@@ -113,9 +115,9 @@ func (f *Fight) chooserIsServerDriven() bool {
 
 // aiOpens is a server-driven chooser's pick, on the placed cells: open when
 // one of its fighters could hurt an enemy on its first turn (its walk, the
-// opener's extra MP, its longest harmful range); otherwise cede. At +4 it
-// opens nearly always and wins 0.51-0.56 (always opening 0.57, always
-// ceding 0.43, TestTurnChoiceSim).
+// opener's extra MP, its longest harmful range); otherwise cede. Measured
+// after S46: its pick 0.48, always opening 0.51, always ceding 0.54 —
+// within the noise, so initiative no longer decides fights.
 func (f *Fight) aiOpens() bool {
 	t := f.Teams[f.chooser]
 	if t == nil {

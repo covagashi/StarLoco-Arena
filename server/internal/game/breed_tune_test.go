@@ -193,6 +193,9 @@ func TestBreedTune(t *testing.T) {
 	// S46_TUNE_TRIO=1: the owner's target (2026-11-19), trios 40-60 and duels
 	// 35-65, one lever per class, HP kept.
 	trioFirst := os.Getenv("S46_TUNE_TRIO") != ""
+	// S46_TUNE_TRIO_ONLY=1 (with S46_TUNE_TRIO): duels left out — decided
+	// 2026-11-19, duels are rock-paper-scissors; the PvP is 3 against 3.
+	trioOnly := os.Getenv("S46_TUNE_TRIO_ONLY") != ""
 	// the landscape is in steps (a point of damage changes how many hits a
 	// fighter takes, and flips a whole pairing), so keep the best round
 	bestWorst, bestLine := math.Inf(1), ""
@@ -204,7 +207,9 @@ func TestBreedTune(t *testing.T) {
 		worst := 0.0
 		for _, b := range simAllBreeds {
 			md, mt := mean(dw, b), mean(tw, b)
-			if trioFirst {
+			if trioOnly {
+				worst = math.Max(worst, math.Abs(mt-0.5)-0.1)
+			} else if trioFirst {
 				worst = math.Max(worst, math.Max(math.Abs(mt-0.5)-0.1, math.Abs(md-0.5)-0.15))
 			} else {
 				worst = math.Max(worst, math.Max(math.Abs(md-0.5), math.Abs(mt-0.5)))
@@ -218,15 +223,17 @@ func TestBreedTune(t *testing.T) {
 				// owner: trios 40-60, duels 35-65 — aim the trio at 0.5 and
 				// pull a duel only once it leaves its band
 				e := 0.5 - mt
-				if md < 0.35 {
-					e += 0.35 - md
-				} else if md > 0.65 {
-					e += 0.65 - md
+				if !trioOnly {
+					if md < 0.35 {
+						e += 0.35 - md
+					} else if md > 0.65 {
+						e += 0.65 - md
+					}
 				}
 				dl = damp * e / 0.45
 			} else if common {
 				// one lever on the mean of the two; HP stays
-				dl = damp * (1 - (md+mt)) / (tuneJ[0][0] + tuneJ[1][0])
+				dl = damp * (1 - (md + mt)) / (tuneJ[0][0] + tuneJ[1][0])
 			} else {
 				dl, dh = tuneStep(0.5-md, 0.5-mt, damp)
 			}
