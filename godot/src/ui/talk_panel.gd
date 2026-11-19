@@ -328,10 +328,15 @@ func _place(has_face: bool) -> void:
 	box = Rect2(box.position.x, box.end.y - h, box.size.x, h)
 	_plate.position = box.position
 	_plate.size = box.size
-	_choice_scroll.size.y = box.position.y - 16 - CHOICES.position.y
-	body.custom_minimum_size.y = _choice_scroll.size.y
 	_name_ribbon.reset_size()
 	_name_ribbon.position = box.position + Vector2(22, -_name_ribbon.get_combined_minimum_size().y + 8)
+	# the replies end above the name ribbon and "who" (S47: the last reply
+	# sat on "TU GUÍA EN EL GRAN RELOJ"), not just above the plate
+	var top := box.position.y
+	if _name_ribbon.visible:
+		top = minf(_name_ribbon.position.y, box.position.y - 28)
+	_choice_scroll.size.y = top - 12 - CHOICES.position.y
+	body.custom_minimum_size.y = _choice_scroll.size.y
 	_who.position = Vector2(_name_ribbon.position.x + _name_ribbon.get_combined_minimum_size().x + 18, box.position.y - 28)
 	_who.visible = _who.text != ""
 	close_button.position = Vector2(box.end.x - 46, box.position.y + 6)

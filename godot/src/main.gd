@@ -690,6 +690,8 @@ func _send_auth(login_txt: String, pass_txt: String) -> void:
 
 func _on_message(opcode: int, raw: PackedByteArray) -> void:
 	var payload := WireReader.new(raw)
+	if opcode == OP_USER_NOT_FOUND or opcode == OP_OPERATION_NOT_PERMITTED:
+		_social_refused(opcode, raw)   # before the chat box, which keeps them
 	if log.feed(opcode, payload):
 		return  # chat family handled by the chat box
 	match opcode:
@@ -1765,18 +1767,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_log_line("[i]%s[/i]" % I18n.t("social.ignored_offline",
 				{"name": d.name}))
-		OP_USER_NOT_FOUND:
-			# S47 (owner, point 10): a name nobody has — said in the Social
-			# panel itself when it is open, not only in the chat
-			# [u8 len]name (server sendUserNotFound); the generated def
-			# knows only an i8, so read it by hand
-			var who := payload.get_str("u8")
-			var msg := I18n.t("social.not_found", {"name": who})
-			_log_line("[color=red]%s[/color]" % msg)
-			_social_status(msg)
-		OP_OPERATION_NOT_PERMITTED:
-			_log_line("[color=red]%s[/color]" % I18n.t("social.not_permitted"))
-			_social_status(I18n.t("social.not_permitted"))
 		_:
 			pass
 	# friend/ignore/guild pushes — keep the social dialog's model fresh
@@ -3446,6 +3436,21 @@ func _on_gui_dialog_opened(name: String) -> void:
 ## chat gets the same line. "" clears it.
 func _social_status(text: String) -> void:
 	_gui.model.set_value("social", {"status": text})
+
+
+## S47 (owner, point 10): a social edit the server refused — a name nobody
+## has (3204, [u8 len]name, sendUserNotFound) or a full list (3216, empty)
+## — said in the Social panel itself. The chat box takes both first (its
+## own line, and it stops main seeing them), so this reads its own copy;
+## until 2026-11-19 these were cases after the chat box and never ran.
+func _social_refused(opcode: int, raw: PackedByteArray) -> void:
+	if opcode == OP_USER_NOT_FOUND:
+		var who := WireReader.new(raw).get_str("u8")
+		_social_status(I18n.t("social.not_found", {"name": who}))
+	else:
+		_social_status(I18n.t("social.not_permitted"))
+	if _gui.is_open("socialDialog"):
+		_push_social_model()
 
 
 ## friends.list / ignore.list / guild.{members,name} for the social tabs.

@@ -149,7 +149,8 @@ propio (4, 12) sigue como está, abajo el porqué.
   autowrap.
 - No probado en vivo: la respuesta 3204/3216 en el modal Social contra un
   servidor (la ruta es la misma que la de la línea del chat, que sí llegaba)
-  y el teclado en pantalla en un móvil real.
+  y el teclado en pantalla en un móvil real. **Probada el 2026-11-19 y no
+  funcionaba** (ver «Cabos sueltos», abajo).
 
 ## Punto 3 — el mapa de pantallas (2026-11-17)
 
@@ -699,8 +700,8 @@ la conversación de bienvenida, Logros e Inventario se cierran con «atrás»,
 Esc devuelve su entrada, la página nunca sale del juego. La pregunta al
 salir, en Chromium con la misma línea de JS: con ella pregunta, sin ella
 sale. `run_tests.sh --headless` 1528/0, `fight_smoke` termina.
-**Sin probar:** la pregunta al salir dentro de un combate real en la web
-(la cuenta demo nueva no llega a un combate sin reclutar).
+~~**Sin probar:** la pregunta al salir dentro de un combate real en la web~~
+probada el 2026-11-19 («Cabos sueltos», abajo).
 
 ## W4 — las pantallas aguantan un cambio de tamaño de ventana (2026-11-19)
 
@@ -745,8 +746,49 @@ conversación sale por abajo de la ventana a propósito (igual a 1280×720).
 
 **Visto y no tocado** (no es de W4): en la conversación, la línea «TU GUÍA
 EN EL GRAN RELOJ» queda debajo de la cinta de la primera respuesta.
-Pendiente para la reorganización de pantallas.
+~~Pendiente~~ arreglado en «Cabos sueltos», abajo.
 
 Verificado: `run_tests.sh --headless` 1528/0; el mapa a los cinco tamaños
 sin controles fuera salvo el busto; hojas de contacto mirando todas las
 pantallas a 2560×1080 y 1024×768.
+
+## Cabos sueltos (2026-11-19)
+
+Con los 16 puntos y la auditoría web hechos, el dueño: «sigue con el
+siguiente punto del sprint». Quedaban dos «sin probar» y un solape visto en
+W4; los dos «sin probar» se prueban en vez de dejarlos así.
+
+- **Añadir amigo, la respuesta en el modal (punto 10): no funcionaba.** El
+  nombre que no existe (3204) y la lista llena (3216) no salían nunca en
+  el panel: la caja del chat se queda esos dos mensajes (`chat_box.feed`
+  devuelve true) antes de que `main` los vea, así que lo que se escribió en
+  la tanda 1 eran casos que no se ejecutaban (solo «añadido» y «eliminado»
+  llegaban, por otra ruta). Ahora `main._social_refused` los lee antes que
+  el chat (su propia copia del mensaje) y refresca el panel. Probado con
+  `test/social_smoke.gd` como el jugador (escribe el nombre, pulsa
+  «Añadir»; para quitar, selecciona la fila y pulsa «Eliminar
+  seleccionado») contra un servidor con una copia de la base: nombre
+  inexistente, `test2` añadido, con `rules.max_social_list_entries: 1`
+  (`--full`) un segundo amigo → «la lista está llena», y `test2` quitado.
+  Antes del arreglo: 2 de 4 fallaban; después: 4/4.
+- **La pregunta al salir en un combate web (W7): funciona.**
+  `tools/web/leave_test.mjs` en Chromium con la exportación de hoy y un
+  servidor local con cuentas demo: JUGAR → crea el jefe → Historia →
+  RECLUTAR → «Probador» → ENTRENAMIENTO, y en el combate «atrás». Lobby: no
+  pregunta; combate: la guarda está puesta, «atrás» lanza la pregunta del
+  navegador (`beforeunload`) y, al cancelarla, la página sigue en el
+  combate. 4/4.
+- **La conversación: la última respuesta tapaba «TU GUÍA EN EL GRAN
+  RELOJ».** Las respuestas bajaban hasta 16 px por encima de la placa, en
+  la franja de la cinta con el nombre y de la línea de quién habla; ahora
+  acaban por encima de las dos (`talk_panel.gd` `_place`). Visto en las
+  capturas de `talk_smoke` (7/7).
+- Visto de paso en la consola web al entrar al combate: cuatro `Parameter
+  "material" is null` (GLES3, `material_storage.cpp`). No rompen nada
+  visible; apuntado, sin mirar.
+
+Lo único que queda sin probar en el sprint es el teclado en pantalla en un
+móvil real (W3): necesita el aparato, y el móvil queda como está en la
+demo (dueño).
+
+`run_tests.sh --headless` 1528/0.
