@@ -16,6 +16,12 @@ extends SceneTree
 ##
 ## Writes DIR/NN-name.png and DIR/index.tsv (file, screen, how it was
 ## reached). Needs a real renderer (xvfb), not --headless.
+##
+## W4: --sizes=1920x1080,1024x768,... resizes the window on every screen
+## after its capture (the screen already open, as a browser window or canvas
+## changes), saves DIR/sizes/NN-name@WxH.png, lists in DIR/resize.tsv every
+## visible control that ends up outside the window, and puts 1280×720 back.
+## The xvfb screen must be as big as the largest size.
 
 var _main
 var _i18n
@@ -24,6 +30,8 @@ var _login := ""
 var _n := 0
 var _rows: Array = []
 var _shot_dialogs := {}   # dialog name -> true once captured
+var _sizes: Array[Vector2i] = []
+var _resize_rows: Array = []
 
 
 func _initialize() -> void:
@@ -52,6 +60,74 @@ func _shot(name: String, screen: String, how: String) -> void:
 	img.save_png(_out.path_join(file))
 	_rows.append([file, screen, how])
 	print("[map] ", file, " — ", screen)
+	if not _sizes.is_empty():
+		await _resized_shots(file.get_basename(), screen)
+
+
+func _set_window(sz: Vector2i) -> void:
+	root.size = sz   # under xvfb (no window manager) window_set_size leaves the viewport as it was
+	await _wait(func(): return Vector2i(root.get_visible_rect().size) == sz, 3.0)
+	await process_frame
+	await process_frame
+
+
+func _resized_shots(base: String, screen: String) -> void:
+	DirAccess.make_dir_recursive_absolute(_out.path_join("sizes"))
+	for sz in _sizes:
+		await _set_window(sz)
+		await RenderingServer.frame_post_draw
+		var tag := "%dx%d" % [sz.x, sz.y]
+		var img := root.get_texture().get_image()
+		if img != null:
+			img.save_png(_out.path_join("sizes/%s@%s.png" % [base, tag]))
+		var out := _outside(Rect2(Vector2.ZERO, Vector2(sz)))
+		_resize_rows.append([base, tag, str(out.size()), "; ".join(out)])
+		if not out.is_empty():
+			print("[map] ", base, "@", tag, " outside: ", ", ".join(out))
+	await _set_window(Vector2i(1280, 720))
+
+
+## Visible controls of the main window (clipped by their clipping parents)
+## that stick out of it by more than 2 px. A control that covers the whole
+## window is fine, and so is a screen's Backdrop layer (it covers on purpose).
+func _outside(win: Rect2) -> PackedStringArray:
+	var out := PackedStringArray()
+	for c in root.find_children("*", "Control", true, false):
+		var ctl := c as Control
+		if ctl.get_viewport() != root or not ctl.is_visible_in_tree():
+			continue
+		var r := _clipped_rect(ctl)
+		if r.size.x < 1.0 or r.size.y < 1.0 or r.encloses(win) or "/Backdrop/" in str(ctl.get_path()):
+			continue
+		if win.grow(2.0).encloses(r):
+			continue
+		out.append("%s %s" % [_path_of(ctl), str(Rect2i(r))])
+	return out
+
+
+func _clipped_rect(ctl: Control) -> Rect2:
+	var xf := ctl.get_global_transform()
+	var r := xf * Rect2(Vector2.ZERO, ctl.size)
+	var p := ctl.get_parent()
+	while p != null:
+		if p is Control and (p.clip_contents or p is ScrollContainer):
+			var pr: Rect2 = p.get_global_transform() * Rect2(Vector2.ZERO, p.size)
+			r = r.intersection(pr)
+			if r.size.x <= 0.0 or r.size.y <= 0.0:
+				return Rect2()
+		elif p is CanvasLayer or p is Window:
+			break
+		p = p.get_parent()
+	return r
+
+
+func _path_of(ctl: Control) -> String:
+	var parts := PackedStringArray()
+	var n: Node = ctl
+	while n != null and n != _main and n != root and parts.size() < 5:
+		parts.insert(0, "%s(%s)" % [n.name, n.get_class()])
+		n = n.get_parent()
+	return "/".join(parts)
 
 
 func _close_all() -> void:
@@ -115,6 +191,10 @@ func _run() -> void:
 			_out = a.trim_prefix("--out=")
 		elif a == "--fight":
 			fight = true
+		elif a.begins_with("--sizes="):
+			for t in a.trim_prefix("--sizes=").split(",", false):
+				var wh := t.split("x")
+				_sizes.append(Vector2i(int(wh[0]), int(wh[1])))
 	if _login == "" or _out == "":
 		push_error("[map] --as=LOGIN --out=DIR")
 		quit(2)
@@ -367,3 +447,8 @@ func _write_index() -> void:
 	for r in _rows:
 		f.store_line("\t".join(r))
 	f.close()
+	if not _sizes.is_empty():
+		f = FileAccess.open(_out.path_join("resize.tsv"), FileAccess.WRITE)
+		for r in _resize_rows:
+			f.store_line("\t".join(r))
+		f.close()

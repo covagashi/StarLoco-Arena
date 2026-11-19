@@ -550,8 +550,8 @@ Dueño: "sí, adopta los 40".
 5. ~~Repetir la prueba de carga web~~ — no hace falta (dueño, 2026-11-18).
    Era: con la Ally libre
    (`tools/web/load_test.mjs`; la marca `window.__pippop` ya está).
-6. Lo que queda de la auditoría web: W4–W7 (W2 fuera: el móvil
-   siempre en horizontal; W9, W5, W6 y W7 hechos, abajo).
+6. ~~Lo que queda de la auditoría web: W4–W7~~ hecha (W2 fuera: el móvil
+   siempre en horizontal; W4, W5, W6, W7 y W9, abajo).
 
 ## Deuda técnica
 
@@ -701,3 +701,52 @@ salir, en Chromium con la misma línea de JS: con ella pregunta, sin ella
 sale. `run_tests.sh --headless` 1528/0, `fight_smoke` termina.
 **Sin probar:** la pregunta al salir dentro de un combate real en la web
 (la cuenta demo nueva no llega a un combate sin reclutar).
+
+## W4 — las pantallas aguantan un cambio de tamaño de ventana (2026-11-19)
+
+Con la demo PC primero (dueño, arriba), W4 quedó en comprobar que las
+pantallas aguantan que la ventana del navegador cambie de tamaño con la
+pantalla ya abierta. Las «128 posiciones fijas» no son el problema: cada
+pantalla se dibuja en una hoja de 1280×720 que se escala entera y se
+recoloca al cambiar la ventana (login, creación, lobby, modales,
+pantallas de héroe, conversación, combate).
+
+**Cómo se mira:** `screen_map.gd --sizes=…` (y `SIZES=… tools/screen_map.sh`):
+en cada pantalla que alcanza, tras su captura, cambia la ventana a cada
+tamaño, guarda `sizes/NN-nombre@WxH.png` y apunta en `resize.tsv` todo
+control visible que se salga de la ventana. Pasada con 1920×1080,
+1366×768, 1024×768, 2560×1080 (ultrapanorámico) y 800×600: 48 + 46
+pantallas × 5 tamaños.
+
+Lo que salió y se arregló:
+
+- **El fondo no llegaba a los bordes** en una ventana que no es 16:9: la
+  hoja encaja sin recortes y deja franjas a los lados (ultrapanorámico) o
+  arriba y abajo (4:3), lisas y con el corte duro del haz, la luz y el
+  fantasma del coach; en el lobby, franjas **gris oscuro** (no tenía color
+  de fondo). **Decisión:** el fondo va en su propia capa (`StyleB.back_layer`)
+  que **cubre** la ventana (`StyleB.cover`, recorta lo que sobra) y el
+  contenido sigue encajado encima. Las reglas del marco, las líneas de
+  velocidad y los destellos siguen con el contenido (si no, un destello
+  caía sobre «TEST» o «PESETAS»). Login, creación, lobby (y sus modales
+  encima) y las pantallas de héroe (Reclutar, Inventario, Equipo del
+  coach). A 16:9 cubrir y encajar son lo mismo: a 1280×720 las capturas
+  no cambian (diferencias < 0,6 %, la animación).
+- **El aviso de evento de ronda en combate** («BAJÓN» y su efecto) se
+  colocaba una vez con el tamaño del momento; vive 2,5 s y, si la ventana
+  cambiaba entretanto, se salía (a 1024 px quedaba cortado a la derecha).
+  Ahora va anclado (`fight_view.gd` `_announce_event`).
+- De paso, `screen_map.sh` dejaba **servidores huérfanos** (el `kill`
+  mataba la subshell, no el servidor): había cinco de pasadas anteriores
+  ocupando memoria. Ahora `exec`.
+
+Lo que el chequeo marca y está bien: el busto del que habla en la
+conversación sale por abajo de la ventana a propósito (igual a 1280×720).
+
+**Visto y no tocado** (no es de W4): en la conversación, la línea «TU GUÍA
+EN EL GRAN RELOJ» queda debajo de la cinta de la primera respuesta.
+Pendiente para la reorganización de pantallas.
+
+Verificado: `run_tests.sh --headless` 1528/0; el mapa a los cinco tamaños
+sin controles fuera salvo el busto; hojas de contacto mirando todas las
+pantallas a 2560×1080 y 1024×768.

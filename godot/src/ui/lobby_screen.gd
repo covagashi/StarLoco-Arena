@@ -87,6 +87,7 @@ void fragment() {
 }"""
 
 var _box: Control
+var _back: Control  # the backdrop, scaled to cover the window (W4)
 var _font: Font
 var _name: Label
 var _level: Label
@@ -131,6 +132,7 @@ var _next_pose := 14.0          # seconds to the next idle gesture
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_back = StyleB.back_layer(self, REF)
 	_box = Control.new()
 	_box.size = REF
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -184,7 +186,7 @@ func _backdrop() -> void:
 	mat.shader = Shader.new()
 	mat.shader.code = _LIGHT
 	light.material = mat
-	_box.add_child(light)
+	_back.add_child(light)
 	var word := Label.new()
 	word.text = "PIPPOP"
 	UiStyle.display(word, 300, Color(0, 0, 0, 0))
@@ -192,7 +194,7 @@ func _backdrop() -> void:
 	word.add_theme_constant_override("outline_size", 4)
 	word.position = Vector2(-30, 40)
 	word.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_box.add_child(word)
+	_back.add_child(word)
 	_drift.append([word, word.position, Vector2(40, 0), 38.0])
 	var tex := UiStyle.scene_texture("coach_ghost")
 	if tex != null:
@@ -205,14 +207,14 @@ func _backdrop() -> void:
 		ghost.position = Vector2(250, -220)
 		ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ghost.modulate.a = 0.55
-		_box.add_child(ghost)
+		_back.add_child(ghost)
 		_drift.append([ghost, ghost.position, Vector2(0, 16), 23.0])
 	var band := Polygon2D.new()
 	band.polygon = PackedVector2Array([Vector2(0, 360), Vector2(720, 260), Vector2(720, 430), Vector2(0, 530)])
 	band.vertex_colors = PackedColorArray([Color(CORAL, 0.1), Color(CORAL, 0.0), Color(CORAL, 0.0), Color(CORAL, 0.1)])
-	_box.add_child(band)
+	_back.add_child(band)
 	_drift.append([band, band.position, Vector2(0, 10), 17.0])
-	StyleB.splash_dress(_box, REF, 470.0)   # behind the coach
+	StyleB.splash_dress(_back, REF, 470.0, _box)   # behind the coach
 	var lines := Control.new()
 	lines.size = REF
 	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1354,6 +1356,7 @@ func _relayout() -> void:
 	var s := minf(vp.x / REF.x, vp.y / REF.y)
 	_box.scale = Vector2(s, s)
 	_box.position = (vp - REF * s) / 2.0
+	StyleB.cover(_back, REF, vp)
 	if is_instance_valid(_chat):
 		_chat.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		_chat.custom_minimum_size = Vector2.ZERO

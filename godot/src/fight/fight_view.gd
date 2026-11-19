@@ -1818,9 +1818,8 @@ func _announce_event(evname: String, effect: String) -> void:
 	box.name = "EventAnnounce"
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	var vp := get_viewport().get_visible_rect().size
-	box.position = Vector2(vp.x * 0.1, vp.y * 0.26)
-	box.size = Vector2(vp.x * 0.8, 120)
+	# anchored, not placed: it lives 2.5 s and the window can change meanwhile (W4)
+	_anchor_rect(box, Vector4(0.1, 0.26, 0.9, 0.26), Rect2(0, 0, 0, 120))
 	$UI.add_child(box)
 	var font := UiStyle.title_font()
 	for part in [[evname.to_upper(), 40, Color("e2bd6e")], [effect, 20, Color("f1e5c1")]]:

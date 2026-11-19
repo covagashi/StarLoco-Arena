@@ -4,6 +4,7 @@
 ## fight), then writes the page (tools/screen_map_page.py).
 ##
 ##   godot/tools/screen_map.sh OUT_DIR [arena.db]
+##   SIZES=1920x1080,1024x768 godot/tools/screen_map.sh OUT_DIR   # W4: resize each screen
 ##
 ## Runs in its own network namespace (unshare -rn): port 5555 on the host may
 ## belong to something else. Needs xvfb-run and Go. OUT_DIR/notas.html, if
@@ -13,6 +14,9 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT="$(realpath -m "$1")"
 DB="${2:-$REPO/server/arena.db}"
 GODOT="${GODOT:-$(command -v godot || echo "$HOME/.local/bin/godot")}"
+SIZES="${SIZES:-}"
+SCREEN=1280x720
+[ -n "$SIZES" ] && SCREEN=2560x1440
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 (cd "$REPO/server" && go build -o "$WORK/arena" ./cmd/server)
@@ -31,12 +35,12 @@ YAML
 cat > "$WORK/one.sh" <<SH
 #!/usr/bin/env bash
 ip link set lo up 2>/dev/null || true
-cd "$WORK" && ./arena -config config.yaml > "\$1.server.log" 2>&1 &
+(cd "$WORK" && exec ./arena -config config.yaml) > "\$1.server.log" 2>&1 &
 SP=\$!
 for _ in \$(seq 60); do grep -q "Game data" "\$1.server.log" 2>/dev/null && break; sleep 0.25; done
 cd "$REPO/godot"
-env -u DISPLAY xvfb-run -a -s "-screen 0 1280x720x24" timeout 900 "$GODOT" --path . \
-	--resolution 1280x720 -s test/screen_map.gd -- --out="\$1" "\${@:2}" > "\$1.godot.log" 2>&1
+env -u DISPLAY xvfb-run -a -s "-screen 0 ${SCREEN}x24" timeout 1800 "$GODOT" --path . \
+	--resolution 1280x720 -s test/screen_map.gd -- --out="\$1" ${SIZES:+--sizes=$SIZES} "\${@:2}" > "\$1.godot.log" 2>&1
 rc=\$?
 kill \$SP 2>/dev/null
 exit \$rc

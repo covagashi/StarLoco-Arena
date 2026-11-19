@@ -28,7 +28,7 @@ static var _light_sh: Shader
 ## frame lines with `code` ("PPA // LOGIN · 00") at the top right. Returns
 ## the drift list for drift(): [node, base, amplitude, period].
 static func backdrop(parent: Control, size: Vector2, word: String, code: String,
-		ghost := "", centre := Vector2(0.3, 0.4), band_y := 360.0) -> Array:
+		ghost := "", centre := Vector2(0.3, 0.4), band_y := 360.0, front: Control = null) -> Array:
 	var drifts: Array = []
 	var light := ColorRect.new()
 	light.size = size
@@ -71,16 +71,39 @@ static func backdrop(parent: Control, size: Vector2, word: String, code: String,
 	band.vertex_colors = PackedColorArray([Color(CORAL, 0.1), Color(CORAL, 0.0), Color(CORAL, 0.0), Color(CORAL, 0.1)])
 	parent.add_child(band)
 	drifts.append([band, band.position, Vector2(0, 10), 17.0])
-	splash_dress(parent, size, centre.x * size.x)
-	parent.add_child(frame_lines(size, code))
+	splash_dress(parent, size, centre.x * size.x, front)
+	(front if front != null else parent).add_child(frame_lines(size, code))
 	return drifts
+
+
+## W4: the backdrop's own layer, behind the screen's content box. The box
+## fits the window (nothing of it is cut) and leaves bands on a window of
+## another shape (ultrawide, 4:3); this layer covers it instead (cover()),
+## so the light, the beam and the ghost reach every edge.
+static func back_layer(parent: Control, size: Vector2) -> Control:
+	var back := Control.new()
+	back.name = "Backdrop"
+	back.size = size
+	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(back)
+	return back
+
+
+## Scale `back` (designed at `size`) to cover `vp`, centred: what sticks out
+## falls outside the window.
+static func cover(back: Control, size: Vector2, vp: Vector2) -> void:
+	var s := maxf(vp.x / size.x, vp.y / size.y)
+	back.scale = Vector2(s, s)
+	back.position = (vp - size * s) / 2.0
 
 
 ## The loading splash's dressing (S44, tools/splash/splash.vx.js), so every
 ## screen around it looks like the same game: a pale coral beam falling
 ## behind the figures (`beam_x`: its centre at the bottom), a thin wedge in
 ## the top right corner, coral speed lines and a few four-point sparkles.
-static func splash_dress(parent: Control, size: Vector2, beam_x: float) -> void:
+## The lines and sparkles sit among the content: with `front` they go there
+## (the content box), so a covering backdrop (W4) never drops one on a label.
+static func splash_dress(parent: Control, size: Vector2, beam_x: float, front: Control = null) -> void:
 	var beam := Polygon2D.new()
 	beam.polygon = PackedVector2Array([Vector2(beam_x - 60, 0), Vector2(beam_x + 360, 0),
 		Vector2(beam_x + 160, size.y - 140), Vector2(beam_x - 140, size.y - 140)])
@@ -102,7 +125,7 @@ static func splash_dress(parent: Control, size: Vector2, beam_x: float) -> void:
 		for s: Array in [[Vector2(beam_x - 210, 140), 9.0, CORAL], [Vector2(beam_x + 330, 470), 7.0, CORAL],
 				[Vector2(beam_x - 260, 520), 6.0, INK], [Vector2(beam_x + 420, 120), 5.0, INK]]:
 			sparkle(bits, s[0], s[1], s[2]))
-	parent.add_child(bits)
+	(front if front != null else parent).add_child(bits)
 
 
 ## A four-point star, the splash's sparkle.

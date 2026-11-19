@@ -11,6 +11,7 @@ const HREF := Vector2(1280, 720)
 const R_SHEET := Rect2(820, 100, 430, 480)
 
 var stage: Control
+var _back: Control      # the backdrop, scaled to cover the window (W4)
 var sheet_title: Label
 var sheet_tag: Label    # the small tag over sheet_title ("SLOT" unless a panel says)
 var sheet_scroll: ScrollContainer   # `body` scrolls inside it when the paper is short
@@ -28,6 +29,7 @@ func _ready() -> void:
 	_shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	_shade.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	add_child(_shade)
+	_back = StyleB.back_layer(self, HREF)
 	_sheet = Control.new()
 	_sheet.name = "Screen"
 	_sheet.size = HREF
@@ -43,7 +45,7 @@ func _ready() -> void:
 	stage.custom_minimum_size = HREF
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(stage)
-	_drifts = StyleB.backdrop(stage, HREF, "", "", "", Vector2(0.4, 0.45), 400.0)
+	_drifts = StyleB.backdrop(_back, HREF, "", "", "", Vector2(0.4, 0.45), 400.0, stage)
 	# top left: back (an ink box) and the title
 	close_button = StyleB.button(false, 26)
 	close_button.name = "Close"
@@ -192,6 +194,7 @@ func _layout() -> void:
 	var s := minf(vp.x / HREF.x, vp.y / HREF.y)
 	_sheet.scale = Vector2(s, s)
 	_sheet.position = (vp - HREF * s) / 2.0
+	StyleB.cover(_back, HREF, vp)
 
 
 ## A raised button for the actions row: "Deshacer" in navy, the main one

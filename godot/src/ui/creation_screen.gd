@@ -27,6 +27,7 @@ const INK := UiStyle.B_INK
 const CORAL := UiStyle.B_CORAL
 
 var _box: Control
+var _back: Control  # the backdrop, scaled to cover the window (W4)
 var _model                   # GuiModel (GuiLayer.model) — localCoach lives here
 var _spr                     # figure.gd: the 3D coach
 var name_edit: LineEdit
@@ -48,12 +49,13 @@ var _acts: Control
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_back = StyleB.back_layer(self, REF)
 	_box = Control.new()
 	_box.size = REF
 	_box.clip_contents = true
 	_box.theme = UiStyle.theme()
 	add_child(_box)
-	_drifts = StyleB.backdrop(_box, REF, "", "", "", Vector2(0.45, 0.45), 400.0)
+	_drifts = StyleB.backdrop(_back, REF, "", "", "", Vector2(0.45, 0.45), 400.0, _box)
 	_box.add_child(_height_chart())
 	_header()
 	_section_list()
@@ -435,3 +437,4 @@ func _relayout() -> void:
 	var s := minf(vp.x / REF.x, vp.y / REF.y)
 	_box.scale = Vector2(s, s)
 	_box.position = (vp - REF * s) / 2.0
+	StyleB.cover(_back, REF, vp)

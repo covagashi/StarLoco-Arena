@@ -28,6 +28,7 @@ var err_lbl: Label
 var lang_btn: Button
 var _lang_menu: PopupMenu
 var _box: Control  # REF-sized child, scaled+centered
+var _back: Control  # the backdrop, scaled to cover the window (W4)
 var _drifts: Array = []
 var _t := 0.0
 var _figs: Array = []
@@ -42,12 +43,13 @@ func _init() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
+	_back = StyleB.back_layer(self, REF)
 	_box = Control.new()
 	_box.size = REF
 	_box.clip_contents = true
 	_box.theme = UiStyle.theme()
 	add_child(_box)
-	_drifts = StyleB.backdrop(_box, REF, "", "", "coach_ghost", Vector2(0.28, 0.45), 380.0)
+	_drifts = StyleB.backdrop(_back, REF, "", "", "coach_ghost", Vector2(0.28, 0.45), 380.0, _box)
 	# the vex figures (S44, tools/scene_vex) are wider than the old renders:
 	# a little smaller and further apart, the coach in front
 	_figs = [UiStyle.figure(_box, "fighter_a", Vector2(36, 270), 390),
@@ -337,6 +339,7 @@ func _relayout() -> void:
 	var s := minf(vp.x / REF.x, vp.y / REF.y)
 	_box.scale = Vector2(s, s)
 	_box.position = (vp - REF * s) / 2.0
+	StyleB.cover(_back, REF, vp)
 
 
 func _do_submit() -> void:
