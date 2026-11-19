@@ -655,5 +655,11 @@ botones de 40 px (cerrar, ayuda) como de 22, por debajo de los 44 que pide
 un dedo. W5 y W6 lo alivian pero no lo resuelven. La solución de fondo es
 una referencia más pequeña para pantallas bajas (p. ej. 960×540, todo un
 33 % más grande en el móvil), y eso pide recolocar las pantallas: es W4.
-**Pregunta:** ¿hacemos W4 con esa referencia para el móvil, o el móvil
-queda como está para la demo?
+~~**Pregunta:** ¿hacemos W4 con esa referencia para el móvil, o el móvil
+queda como está para la demo?~~ **Dueño (2026-11-19):** "deja el móvil
+como está en la demo, que sea pc first pero que tenga respuestas táctiles
+por si la gente usa tablet". La demo es **PC primero**; el móvil se queda
+como está; lo táctil se cuida para las tabletas (una tableta en horizontal,
+~1024×768 CSS, ve la interfaz a ~1:1). W4 deja de ser la referencia
+pequeña: queda en revisar que las pantallas aguanten un cambio de tamaño
+de ventana en el PC.
