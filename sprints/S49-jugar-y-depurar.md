@@ -11,7 +11,7 @@ bajo xvfb y `unshare -rn` (un qemu ocupa el 5555).
 
 - Los 48 smokes del cliente, uno a uno, cada uno con su servidor y una
   copia de la base sembrada como pide su cabecera
-  (`/tmp/claude-1000/play/seeded.sh <smoke> [args]`, fuera del repo).
+  (`godot/tools/seeded_smoke.sh <smoke> [args]`).
 - 600 combates IA contra IA con tríos al azar de las doce clases, contando
   avisos, errores, pánicos y combates que no acaban.
 
@@ -44,9 +44,9 @@ fallo: anotado para cuando se toque el equilibrio.
 siembra y sus argumentos (al empezar: 33 de 48). `go test ./...` y
 `run_tests.sh --headless` (24 suites, 1544) en verde.
 
-Para repetirla, la siembra de cada smoke está en su cabecera; la de la final
-de torneo en vivo, en B-193 (una copa de Evolución con `test` y `test2`
-inscritos y equipos de Historia de 5000–6000).
+Para repetirla: `godot/tools/seeded_smoke.sh <smoke> ["args"]` siembra una
+copia de la base como pide cada cabecera y lo juega aislado (la final en
+vivo, con `godot/test/seed_tournament_final.py`).
 
 Queda como diseño, no como fallo: los combates con Curandero duran un 30 %
 más y un 4 % de los combates IA llega al tope de 40 rondas.
