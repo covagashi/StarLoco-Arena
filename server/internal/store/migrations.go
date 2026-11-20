@@ -308,6 +308,14 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.Account{})
 		},
 	},
+	{
+		// Fighter slots (S50): the ones a coach earned on top of the base.
+		Version: 23,
+		Name:    "coach_extra_fighter_slots",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.Coach{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.

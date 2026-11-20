@@ -8,6 +8,16 @@
 set -u
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 s=$1; tmp=$(mktemp -d); db=$tmp/$s.db; cp server/arena.db $db
+# S50: a coach owns 8 fighters (up to 10 earned). The dev base's `test` grew
+# to ~80 before that; keep the ones the seeds name (1, 5, 15, 245; 4-10 for
+# revive_edge's full bench) so the smokes that recruit have room.
+keep="1,2,3,5,15,245"   # two Elite titulars (2, 3) for the ghost smokes
+case $s in   # the ones that recruit, up to three at a time
+  displace_smoke|colours_smoke|carry_smoke|special_smoke|s47_smoke|summon_smoke) keep="1,5,15,245" ;;
+esac
+[ "$s" = revive_edge_smoke ] && keep="1,4,5,6,7,8,9,10,15,245"
+[ "$s" = slots_smoke ] && keep="1,2,3,4,5,6,15,245"   # every slot taken
+python3 -c "import sqlite3,sys;c=sqlite3.connect(sys.argv[1]);c.execute('delete from fighters where coach_id=1 and id not in (%s)' % sys.argv[2]);c.commit()" $db "$keep"
 case $s in
 revive_smoke) sql="update fighters set state=2 where id=15; update fighters set state=3 where id=1; insert into coach_cards(coach_id,template_id,quantity,pos) values(1,305,2,0);" ;;
 revive_edge_smoke) sql="update fighters set state=2 where id=1; update fighters set state=3 where id=15; update fighters set state=1 where id between 4 and 10; insert into coach_cards(coach_id,template_id,quantity,pos) values(1,137,3,0),(1,305,1,0);" ;;

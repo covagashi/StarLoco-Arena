@@ -590,6 +590,8 @@
   "team.delete_confirm": "Delete this team?",
   "team.titulars": "Starters and bench",
   "team.count": "Fighters · {n}",
+  "team.slots": "Slots {used}/{slots}",
+  "recruit.no_slot": "Every slot is taken ({used}/{slots}): free one, or earn another in an event.",
   "team.mode_note_evo": "Story fighters grow with their fights. Elite fighters are different ones: make them from their tab.",
   "team.mode_note_classic": "Elite fighters: fixed level, equipped with cards; they play Ranking and classic tournaments. Story fighters are made from their tab.",
   "team.col_name": "Name",

@@ -120,6 +120,9 @@ static var web_base_url := ""
 ## Server-announced (60001 key offline_tournaments, S29): classic tournaments
 ## are played by the server with each entrant's latest ghost.
 static var offline_tournaments := false
+## Server-announced (60001 key fighter_slots, S50): how many fighters the
+## coach may own, Historia and Élite together (8, up to 10 earned).
+static var fighter_slots := 8
 
 ## Active UI locale ("es"/"en"/"fr") — set by the I18n autoload at boot and on
 ## every language switch; chat/bug-report payloads read it for user[lang].

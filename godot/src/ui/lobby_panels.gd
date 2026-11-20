@@ -235,6 +235,11 @@ func _team() -> void:
 	var note := label(head, I18n.t("team.mode_note_classic" if classic else "team.mode_note_evo"), 14)
 	note.name = "ModeNote"
 	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# S50: the coach's slots, both modes together
+	var slots := label(head, I18n.t("team.slots", {"used": State.roster.size(), "slots": State.fighter_slots}), 14)
+	slots.name = "Slots"
+	slots.autowrap_mode = TextServer.AUTOWRAP_OFF
+	slots.size_flags_horizontal = Control.SIZE_SHRINK_END
 	note.add_theme_color_override("font_color", UiStyle.BROWN)
 	# S47 (point 16): each fighter's value, the number the team budget adds up
 	var living := table(roster, [I18n.t("team.col_name"), I18n.t("team.col_class"), I18n.t("team.col_value"), I18n.t("team.col_pos")], ["name", "breed_name", "budget", "placement"], rows, func(_item): schedule_refresh())

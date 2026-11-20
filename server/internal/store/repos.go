@@ -565,6 +565,16 @@ func (r *CoachRepo) Cosmetics(coachID uint) ([]int32, error) {
 	return out, nil
 }
 
+// GrantFighterSlot adds one earned fighter slot, up to max extra; reports
+// whether one was added. The guard is in the WHERE, so two grants racing
+// cannot pass the cap.
+func (r *CoachRepo) GrantFighterSlot(coachID uint, max uint8) (bool, error) {
+	res := r.db.Model(&domain.Coach{}).
+		Where("id = ? AND extra_fighter_slots < ?", coachID, max).
+		Update("extra_fighter_slots", gorm.Expr("extra_fighter_slots + 1"))
+	return res.RowsAffected > 0, res.Error
+}
+
 // SetHairFx stores the hair effect the coach shows (0 = none). The caller
 // checks it owns it.
 func (r *CoachRepo) SetHairFx(coachID uint, id int32) error {

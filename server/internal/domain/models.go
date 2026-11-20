@@ -44,6 +44,10 @@ type Coach struct {
 	// HairFx is the hair effect cosmetic the coach shows (S37, a
 	// CoachCosmetic it owns; 0 = none).
 	HairFx int32 `gorm:"not null;default:0"`
+	// ExtraFighterSlots are the fighter slots earned on top of the base ones
+	// (S50, owner: 8 of series, up to 10, Historia and Élite together; what
+	// grants them is decided later — game.grantFighterSlot).
+	ExtraFighterSlots uint8 `gorm:"not null;default:0"`
 
 	// World position
 	PosX int32 `gorm:"not null;default:1"`

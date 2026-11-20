@@ -68,16 +68,16 @@ func handleFighterCreate(s *Session, f *protocol.C2SFrame) error {
 	if err != nil {
 		return s.sendFighterCreateError()
 	}
-	// SECURITY: cap the fighter pool. The client refuses to even OPEN the creation
-	// dialog past 100 (hu_2.java:30-43) and retail answered 6000 with status 20
-	// ("Nombre maximum de combattants atteint"), so this is a retail rule, not a
-	// new one. Unbounded creation grows the DB, makes every relog serialize the
-	// whole roster into 6006, and supplies the ammunition for an oversized fight
-	// roster since ownership is all buildFightTeamFor requires.
+	// Cap the fighter pool at the coach's slots (S50, owner: 8 of series, up to
+	// 10 earned, Historia and Élite together; retail allowed 100). Retail
+	// answered 6000 with status 20 ("Nombre maximum de combattants atteint").
+	// Every fighter counts, the dead and retired too: they hold their slot
+	// until resurrected or deleted. A coach already over (made before S50)
+	// keeps its fighters and creates no more.
 	if existing, err := s.deps.Store.Fighters.ListByCoach(s.Coach.ID); err == nil &&
-		len(existing) >= maxFightersPerCoach {
+		len(existing) >= fighterSlots(s.Coach) {
 		s.log.Warn("fighter creation refused: pool full",
-			"coach", s.Coach.ID, "have", len(existing))
+			"coach", s.Coach.ID, "have", len(existing), "slots", fighterSlots(s.Coach))
 		return s.sendFighterCreateStatus(fighterCreateNoMoreRoom)
 	}
 
@@ -474,10 +474,41 @@ func (s *Session) canonicalEquipSlots(cards []domain.FighterObject) []domain.Fig
 	return out
 }
 
-// maxFightersPerCoach mirrors the client's own pool limit (hu_2.java:30:
-// `adY.atu().amq().size() <= 100`), which retail also enforced server-side via
-// FighterCreateResult status 20.
+// maxFightersPerCoach is the retail pool limit (hu_2.java:30:
+// `adY.atu().amq().size() <= 100`): no roster on the wire is longer, so it
+// stays the protocol's sanity bound (readReversedIDs). The game's own limit
+// is fighterSlots (S50).
 const maxFightersPerCoach = 100
+
+// Fighter slots (S50, owner 2026-11-20): a coach has baseFighterSlots, and
+// earns up to maxExtraFighterSlots more (by events, decided later).
+const (
+	baseFighterSlots     = 8
+	maxExtraFighterSlots = 2
+)
+
+// fighterSlots is how many fighters this coach may own.
+func fighterSlots(c *domain.Coach) int {
+	if c == nil {
+		return baseFighterSlots
+	}
+	return baseFighterSlots + int(min(c.ExtraFighterSlots, maxExtraFighterSlots))
+}
+
+// grantFighterSlot gives the coach one more fighter slot, up to the cap, and
+// tells its client. The reward hook for the events that will grant one.
+func (d *Deps) grantFighterSlot(c *domain.Coach) (bool, error) {
+	if c == nil || d.Store == nil {
+		return false, nil
+	}
+	ok, err := d.Store.Coaches.GrantFighterSlot(c.ID, maxExtraFighterSlots)
+	if ok {
+		c.Mu.Lock()
+		c.ExtraFighterSlots++
+		c.Mu.Unlock()
+	}
+	return ok, err
+}
 
 // fighterCreateNoMoreRoom is the client's status 20 on 6000, rendered as
 // "Nombre maximum de combattants atteint !" (ce_1.java:76-79).

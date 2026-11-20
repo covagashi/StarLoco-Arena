@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/StarLoco/arena-2.70/internal/protocol"
+	"strconv"
 )
 
 // Client-config opcodes are a Godot-client extension: the retail client never
@@ -15,35 +16,15 @@ import (
 // "https://arena.example.com", which the client's bug reporter POSTs to
 // ("/{lang}/bug-report"). Absent when the portal is disabled.
 // "offline_tournaments" = "1" when classic tournaments play themselves
-// (S29); absent otherwise.
+// (S29); absent otherwise. "fighter_slots" = how many fighters the coach may
+// own (S50: 8, up to 10 earned).
 func registerClientConfigHandlers(r *Router, d *Deps) {
 	r.Register(protocol.OpClientConfigRequest, handleClientConfigRequest)
 }
 
 func handleClientConfigRequest(s *Session, _ *protocol.C2SFrame) error {
 	s.godot.Store(true)
-	w := protocol.NewWriter()
-	keys := 0
-	if s.deps.WebBaseURL != "" {
-		keys++
-	}
-	if s.deps.OfflineTournaments {
-		keys++
-	}
-	w.U8(uint8(keys))
-	if s.deps.WebBaseURL != "" {
-		w.StringU8("web_base_url")
-		w.StringU16(s.deps.WebBaseURL)
-	}
-	if s.deps.OfflineTournaments {
-		w.StringU8("offline_tournaments")
-		w.StringU16("1")
-	}
-	frame, err := protocol.EncodeS2C(protocol.OpClientConfig, w.Bytes())
-	if err != nil {
-		return err
-	}
-	if err := s.Send(frame); err != nil {
+	if err := s.sendClientConfig(); err != nil {
 		return err
 	}
 	if err := s.sendCosmetics(nil); err != nil { // S37: the coach's cosmetics ride along
@@ -54,4 +35,34 @@ func handleClientConfigRequest(s *Session, _ *protocol.C2SFrame) error {
 		return err
 	}
 	return s.sendLeague()
+}
+
+// sendClientConfig is 60001, the key/value map above. Sent again when a value
+// changes during the session (S50: a fighter slot earned).
+func (s *Session) sendClientConfig() error {
+	type kv struct{ k, v string }
+	var pairs []kv
+	if s.deps.WebBaseURL != "" {
+		pairs = append(pairs, kv{"web_base_url", s.deps.WebBaseURL})
+	}
+	if s.deps.OfflineTournaments {
+		pairs = append(pairs, kv{"offline_tournaments", "1"})
+	}
+	if s.Coach != nil {
+		s.Coach.Mu.Lock()
+		slots := fighterSlots(s.Coach)
+		s.Coach.Mu.Unlock()
+		pairs = append(pairs, kv{"fighter_slots", strconv.Itoa(slots)})
+	}
+	w := protocol.NewWriter()
+	w.U8(uint8(len(pairs)))
+	for _, p := range pairs {
+		w.StringU8(p.k)
+		w.StringU16(p.v)
+	}
+	frame, err := protocol.EncodeS2C(protocol.OpClientConfig, w.Bytes())
+	if err != nil {
+		return err
+	}
+	return s.Send(frame)
 }

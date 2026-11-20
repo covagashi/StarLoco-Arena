@@ -93,6 +93,35 @@ func (s *Session) sendCosmetics(owned []int32) error {
 
 // gmCosmetic is /COSMETIC <coach> <id>: grants a cosmetic (the S30 shop's job
 // later) and refreshes that coach's panel if it is online.
+// gmFighterSlot is /FIGHTERSLOT <coach>: one more fighter slot (S50), the
+// stand-in for the events that will grant them.
+func (s *Session) gmFighterSlot(args []string) error {
+	if len(args) < 1 {
+		return s.gmFeedback("usage: /FIGHTERSLOT <coach>")
+	}
+	target, err := s.deps.Store.Coaches.GetByName(args[0])
+	if err != nil || target == nil {
+		return s.gmFeedback("no such coach")
+	}
+	t := s.deps.sessionForCoach(target.ID)
+	c := target
+	if t != nil && t.Coach != nil {
+		c = t.Coach // the live coach, so its slots update in place
+	}
+	ok, err := s.deps.grantFighterSlot(c)
+	if err != nil {
+		return s.gmFeedback("grant failed: " + err.Error())
+	}
+	if !ok {
+		return s.gmFeedback(fmt.Sprintf("%s already has every fighter slot (%d)", target.Name, fighterSlots(c)))
+	}
+	if t != nil {
+		_ = t.sendClientConfig()
+	}
+	s.log.Info("GM gave fighter slot", "by", s.Coach.Name, "to", target.Name, "slots", fighterSlots(c))
+	return s.gmFeedback(fmt.Sprintf("%s now has %d fighter slots", target.Name, fighterSlots(c)))
+}
+
 func (s *Session) gmCosmetic(args []string) error {
 	if len(args) < 2 {
 		return s.gmFeedback("usage: /COSMETIC <coach> <id 1-4: hair fire, frost, storm, gold>")

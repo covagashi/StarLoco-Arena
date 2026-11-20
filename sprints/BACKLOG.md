@@ -263,6 +263,9 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
 
 ## 12. Deuda técnica
 
+- [ ] **(dueño) Qué da cada plaza de luchador extra** (S50: 8 de serie, hasta 10):
+      temporada, Historia, logros…; hoy solo `/FIGHTERSLOT` (GM). La de pago, con S30.
+
 - [x] (2026-11-19, S48: sus 16 logros, ocultos — no hay ranking 2vs2 ni de evolución) **Criterios 147 y 222 sin mantener en el servidor** (S47 tanda 1):
       el puesto del ranking 2vs2 y el de evolución, que piden "Cumbre de
       los Ases" y "Metamorfosis final". `coach_statistics.go` no los toca,

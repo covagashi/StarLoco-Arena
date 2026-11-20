@@ -821,6 +821,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					State.web_base_url = _web_base_url(v)
 				elif k == "offline_tournaments":
 					State.offline_tournaments = v == "1"
+				elif k == "fighter_slots":
+					State.fighter_slots = maxi(1, int(v))
+					if _gui != null:
+						_push_team_model()
 			DebugLog.add("client config: web_base_url=%s" % State.web_base_url)
 		OP_GHOST_LIST:
 			var list := []
@@ -945,8 +949,10 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			else:
 				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
 					{"code": int(d.result)}))
-				_gui.model.set_value("recruit", {"status": "",
-					"error": I18n.t("recruit.err_server", {"code": int(d.result)})})
+				var err_text := I18n.t("recruit.no_slot", {"used": State.roster.size(),
+					"slots": State.fighter_slots}) if int(d.result) == 20 \
+					else I18n.t("recruit.err_server", {"code": int(d.result)})
+				_gui.model.set_value("recruit", {"status": "", "error": err_text})
 		OP_FIGHTER_DELETE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
@@ -2343,6 +2349,11 @@ var _create_fighter_evo := false
 
 
 func _on_new_fighter_dialog(_args: Array, _w, evo := false, breed := 1) -> void:
+	# S50: every slot taken (Historia and Élite together) — say so here
+	# rather than let the server refuse the finished form
+	if State.roster.size() >= State.fighter_slots:
+		_toast(I18n.t("recruit.no_slot", {"used": State.roster.size(), "slots": State.fighter_slots}))
+		return
 	_create_fighter_evo = evo
 	_gui.model.set_value("teamManagement", {
 		"breedId": breed, "sex": 0, "version": 2 if evo else 1,

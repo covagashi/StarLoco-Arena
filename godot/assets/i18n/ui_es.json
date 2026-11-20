@@ -590,6 +590,8 @@
   "team.delete_confirm": "¿Eliminar este equipo?",
   "team.titulars": "Titulares y suplentes",
   "team.count": "Luchadores · {n}",
+  "team.slots": "Plazas {used}/{slots}",
+  "recruit.no_slot": "Tienes todas tus plazas ocupadas ({used}/{slots}): libera una o gana otra en un evento.",
   "team.mode_note_evo": "Los luchadores de Historia crecen con sus combates. Los de Élite son otros: se crean desde su pestaña.",
   "team.mode_note_classic": "Luchadores de Élite: nivel fijo, equipados con cartas; juegan Ranking y los torneos clásicos. Los de Historia se crean desde su pestaña.",
   "team.col_name": "Nombre",

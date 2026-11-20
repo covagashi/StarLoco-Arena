@@ -590,6 +590,8 @@
   "team.delete_confirm": "Supprimer cette équipe ?",
   "team.titulars": "Titulaires et remplaçants",
   "team.count": "Lutteurs · {n}",
+  "team.slots": "Places {used}/{slots}",
+  "recruit.no_slot": "Toutes tes places sont prises ({used}/{slots}) : libère-en une ou gagnes-en une lors d'un événement.",
   "team.mode_note_evo": "Les combattants d'Histoire grandissent avec leurs combats. Ceux d'Élite sont d'autres combattants : crée-les depuis leur onglet.",
   "team.mode_note_classic": "Combattants d'Élite : niveau fixe, équipés de cartes ; ils jouent le Classement et les tournois classiques. Ceux d'Histoire se créent depuis leur onglet.",
   "team.col_name": "Nom",

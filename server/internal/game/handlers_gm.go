@@ -43,7 +43,7 @@ func handleGMCommand(s *Session, line string) error {
 
 	switch verb {
 	case "HELP":
-		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0] /TABLETURN n /GIVECARD coach cardId [qty] /COSMETIC coach id /AUTOPILOT [on|off]")
+		return s.gmFeedback("Commands: /HELP /ANNOUNCE msg /WHERE /TP x y [z] /WORLD id [x y] /WHO /STRENGTH n /FSTATE fighterId state /ENDFIGHT [win|lose] /EVOFIGHT /SUDDENDEATH /MAPDESTRUCT [x y [effectId]] /ARENA [worldId|0] /TABLETURN n /GIVECARD coach cardId [qty] /COSMETIC coach id /FIGHTERSLOT coach /AUTOPILOT [on|off]")
 	case "ANNOUNCE":
 		if len(args) == 0 {
 			return s.gmFeedback("usage: /ANNOUNCE <message>")
@@ -90,6 +90,8 @@ func handleGMCommand(s *Session, line string) error {
 		return s.gmGiveCard(args)
 	case "COSMETIC":
 		return s.gmCosmetic(args)
+	case "FIGHTERSLOT":
+		return s.gmFighterSlot(args)
 	default:
 		// Retail has a frame for this and it is translated: 3206
 		// (error.chat.malformedCommand -> "Commande incorrecte."). The old
