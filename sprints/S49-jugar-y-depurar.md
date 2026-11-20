@@ -1,6 +1,6 @@
 # S49 — Jugar y depurar
 
-**Planificado:** 2026-11-19 · **Hito:** — · **Tamaño:** M · **Estado:** 🔵 en curso
+**Planificado:** 2026-11-19 · **Hito:** — · **Tamaño:** M · **Estado:** ✅ cerrado (2026-11-20)
 
 ## Decisión del dueño (2026-11-19)
 
@@ -37,3 +37,16 @@ las copas de Evolución).
 40 rondas, casi todos con un Curandero (sus curas a ~2,1× de S46 alargan
 los combates: 21,2 rondas de media frente a 16,3 sin él). Es diseño, no un
 fallo: anotado para cuando se toque el equilibrio.
+
+## Cierre (2026-11-20)
+
+**Pasada final: los 48 smokes en verde**, cada uno con su servidor, su
+siembra y sus argumentos (al empezar: 33 de 48). `go test ./...` y
+`run_tests.sh --headless` (24 suites, 1544) en verde.
+
+Para repetirla, la siembra de cada smoke está en su cabecera; la de la final
+de torneo en vivo, en B-193 (una copa de Evolución con `test` y `test2`
+inscritos y equipos de Historia de 5000–6000).
+
+Queda como diseño, no como fallo: los combates con Curandero duran un 30 %
+más y un 4 % de los combates IA llega al tope de 40 rondas.
