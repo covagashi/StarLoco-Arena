@@ -42,3 +42,25 @@ que pide titulares de Élite, aparte tras dejarle dos).
 
 - Qué da cada plaza extra (temporada, Historia, logros…).
 - La de pago, con la tienda (S30).
+
+## Desplegado en oracle-2 (2026-11-21)
+
+El dueño: «hazlo». Todo lo de S46–S50 (commit `8fcf8d7c`) en la demo:
+**https://alfa-pippop.covaga.dev** (y https://140.238.172.196/).
+
+- **Servidor:** binario estático compilado aquí, imagen
+  `dofusarena-2.70:s50` (`~/arena-s50/build`, mismo Dockerfile y
+  `config.oracle.yaml` que S44), contenedor `deploy-arena-1` con los mismos
+  volúmenes, puertos y variables. Migración 23 aplicada
+  (`coaches.extra_fighter_slots`); `/health` 200.
+- **Web:** export y paquetes nuevos en `/srv/pippop-demo` (los zips viejos
+  siguen ahí, con otro hash: no estorban).
+- **Comprobado:** `fight_load_test.mjs` contra `wss://alfa-pippop.covaga.dev/ws`:
+  cuenta demo, jefe, recluta y dos combates (arenas 5 y 12) sin errores del
+  motor; las dos URLs sirven el mismo manifiesto y `index.pck` que el export.
+- **Volver atrás:** base en `~/arena-s50/arena.db.bak-2026-11-21` (copiada
+  con el servidor parado); el contenedor anterior, parado como
+  `deploy-arena-1-s44` (imagen `:s44`); la web anterior en
+  `~/arena-s50/web-prev-s44`. Parar y borrar `deploy-arena-1`, renombrar el
+  `-s44`, arrancarlo, y copiar la web de vuelta. Con la base de antes si
+  hace falta (la migración 23 solo añade una columna).
