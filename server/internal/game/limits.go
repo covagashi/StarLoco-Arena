@@ -43,6 +43,10 @@ type Limits struct {
 	// creates per hour (0 = no cap).
 	DemoAccounts  bool
 	DemoPerIPHour int
+
+	// ResetPerIPHour caps the password-reset codes (S51) one address asks
+	// for per hour (0 = no cap).
+	ResetPerIPHour int
 }
 
 // IsDemoLogin reports whether a login is one the web demo generates:
@@ -77,6 +81,7 @@ type connGuard struct {
 	perIP    map[string]int
 	loginHit map[string][]time.Time
 	demoHit  map[string][]time.Time
+	resetHit map[string][]time.Time
 
 	now func() time.Time // swappable in tests
 }
@@ -87,6 +92,7 @@ func newConnGuard(l Limits) *connGuard {
 		perIP:    make(map[string]int),
 		loginHit: make(map[string][]time.Time),
 		demoHit:  make(map[string][]time.Time),
+		resetHit: make(map[string][]time.Time),
 	}
 }
 
@@ -191,6 +197,30 @@ func (g *connGuard) allowDemo(ip string) bool {
 	return true
 }
 
+// allowReset reports whether ip may ask for another password-reset code
+// this hour (S51).
+func (g *connGuard) allowReset(ip string) bool {
+	if g.limits.ResetPerIPHour <= 0 {
+		return true
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	now := g.clock()
+	cutoff := now.Add(-time.Hour)
+	kept := g.resetHit[ip][:0]
+	for _, h := range g.resetHit[ip] {
+		if h.After(cutoff) {
+			kept = append(kept, h)
+		}
+	}
+	if len(kept) >= g.limits.ResetPerIPHour {
+		g.resetHit[ip] = kept
+		return false
+	}
+	g.resetHit[ip] = append(kept, now)
+	return true
+}
+
 // sweepLoginHits drops empty per-IP entries so a long-running server does not
 // accumulate one map key per address that ever attempted a login.
 func (g *connGuard) sweepLoginHits() {
@@ -214,6 +244,11 @@ func (g *connGuard) sweepLoginHits() {
 	for ip, hits := range g.demoHit {
 		if len(hits) == 0 || !hits[len(hits)-1].After(hour) {
 			delete(g.demoHit, ip)
+		}
+	}
+	for ip, hits := range g.resetHit {
+		if len(hits) == 0 || !hits[len(hits)-1].After(hour) {
+			delete(g.resetHit, ip)
 		}
 	}
 }

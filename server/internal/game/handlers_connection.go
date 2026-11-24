@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/StarLoco/arena-2.70/internal/domain"
@@ -138,8 +139,22 @@ func handleAuthentication(s *Session, f *protocol.C2SFrame) error {
 		return nil
 	}
 
+	// S51: an email login (a saved web account) is stored lower-cased.
+	isEmail := strings.Contains(auth.Login, "@")
+	if isEmail {
+		auth.Login = store.NormalizeEmail(auth.Login)
+	}
+
 	acc, err := s.deps.Store.Accounts.FindByName(auth.Login)
-	if errors.Is(err, store.ErrNotFound) && s.guard != nil && s.guard.limits.DemoAccounts &&
+	if errors.Is(err, store.ErrNotFound) && isEmail {
+		// Never auto-register an email login, even with auto_register on:
+		// a mistyped email in «Ya tengo cuenta» would create an empty
+		// account. Emails only come from saving a demo account (60070).
+		s.log.Info("unknown email login refused", "login", auth.Login)
+		result, _ := handshake.EncodeAuthResult(protocol.AuthInvalidLogin)
+		_ = s.Send(result)
+		return nil
+	} else if errors.Is(err, store.ErrNotFound) && s.guard != nil && s.guard.limits.DemoAccounts &&
 		IsDemoLogin(auth.Login) {
 		// S44: the web demo's "Play" button, under the login it generated
 		// and kept in the browser. Capped per address and hour so the table
@@ -195,7 +210,9 @@ func handleAuthentication(s *Session, f *protocol.C2SFrame) error {
 		s.log.Info("account auto-created", "login", auth.Login, "admin", first)
 	} else if err != nil {
 		return err
-	} else if !s.deps.Store.Accounts.VerifyPassword(acc, auth.Password) {
+	} else if !s.deps.Store.Accounts.VerifyPassword(acc, auth.Password) &&
+		!s.deps.Store.Accounts.VerifyKey(acc.ID, auth.Password) {
+		// S51: a saved account's browser logs in with a device key instead.
 		result, _ := handshake.EncodeAuthResult(protocol.AuthInvalidLogin)
 		_ = s.Send(result)
 		return nil

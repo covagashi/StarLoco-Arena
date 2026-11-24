@@ -116,9 +116,9 @@ if this block drifts.
 
 | Bucket | Count |
 |---|---|
-| Rows in the master table | 373 |
-| **C2S handled (H)** | 127 |
-| **S2C emitted (E)** | 169 |
+| Rows in the master table | 381 |
+| **C2S handled (H)** | 131 |
+| **S2C emitted (E)** | 173 |
 | **Inactive (I)** | 5 |
 | **Never implement (X)** | 4 |
 | **Not implemented (-)** | 68 |
@@ -562,6 +562,14 @@ obfuscated client class from the CSV; real class name is used when the CSV knows
 | 60046 | S2C | E | Godot extension (no retail class) | the coach's leagues (S40), with every 60001 and after each fight - `[u8 rankedTier][i32 rankedBudget][u8 ghostTier][i32 ghostBudget]`, tier 0 bronze .. 4 diamond, budget 4000..6000 |
 | 60050 | C2S | H | Godot extension (no retail class) | `handleTurnChoice` (S46) - `[u8 open]`, 1 opens and 0 cedes; placement only, and only a coach of the side with more initiative; answered by 60051 |
 | 60051 | S2C | E | Godot extension (no retail class) | who opens (S46, `turn_choice.go`), after 8000, after each 60050 and as placement ends (the final order) - `[u8 chooser side][u8 opening side][u8 opener's first-turn MP][u8 n] n×{[i64 fighter wire id]}`, the turn order |
+| 60070 | C2S | H | Godot extension (no retail class) | `handleClaimAccount` (S51, `account_save.go`) - `[str email][str password]` (u8-length UTF-8); saves the caller's demo account under the email (`AccountRepo.ClaimDemo`); answered by 60071 |
+| 60071 | S2C | E | Godot extension (no retail class) | claim result (S51) - `[u8 code]`: 0 ok, 1 not demo, 2 bad email, 3 weak password, 4 email taken, 5 rate limited, 8 failed |
+| 60072 | C2S | H | Godot extension (no retail class) | `handleIssueKey` (S51) - empty; a saved (non-demo) account's browser asks a device key; answered by 60073 |
+| 60073 | S2C | E | Godot extension (no retail class) | device key (S51) - `[str key]`, 32 hex chars (16 random bytes, stored as SHA-256), "" = refused |
+| 60074 | C2S | H | Godot extension (no retail class) | `handleResetRequest` (S51) - `[str email]`, also before authentication; emails a 6-digit code (15 min, 5 tries); capped per address and per account; answered by 60075 |
+| 60075 | S2C | E | Godot extension (no retail class) | reset request result (S51) - `[u8 code]`: 0 sent (also for an unknown email: no enumeration), 2 bad email, 5 rate limited, 8 failed |
+| 60076 | C2S | H | Godot extension (no retail class) | `handleResetConfirm` (S51) - `[str email][str code][str newPassword]`, also before authentication; sets the password and forgets every device key; answered by 60077 |
+| 60077 | S2C | E | Godot extension (no retail class) | reset confirm result (S51) - `[u8 code]`: 0 ok, 2 bad email, 3 weak password, 5 rate limited, 6 wrong code, 7 expired or out of tries, 8 failed |
 
 ---
 

@@ -22,6 +22,7 @@ import (
 	"github.com/StarLoco/arena-2.70/internal/config"
 	"github.com/StarLoco/arena-2.70/internal/game"
 	"github.com/StarLoco/arena-2.70/internal/gamedata"
+	"github.com/StarLoco/arena-2.70/internal/mail"
 	"github.com/StarLoco/arena-2.70/internal/store"
 	"github.com/StarLoco/arena-2.70/internal/update"
 	"github.com/StarLoco/arena-2.70/internal/version"
@@ -383,6 +384,11 @@ func buildDeps(cfg config.Config, st *store.Store, log *slog.Logger) *game.Deps 
 		Log:         log,
 	}
 	deps.OfflineTournaments = cfg.World.OfflineTournamentsEnabled() // S29
+	// S51: the password-reset codes; without a host it logs them (dev mode).
+	deps.Mailer = mail.New(mail.Config{
+		Host: cfg.Mail.Host, Port: cfg.Mail.Port, Username: cfg.Mail.Username,
+		Password: cfg.Mail.Password, From: cfg.Mail.From, FromName: cfg.Mail.FromName,
+	}, log)
 	deps.UseGameData(data)
 	return deps
 }
@@ -490,5 +496,6 @@ func limitsFromConfig(cfg config.Config) game.Limits {
 		DisableFirstAccountAdmin: !l.FirstAccountAdmin(),
 		DemoAccounts:             l.DemoAccounts,
 		DemoPerIPHour:            l.DemoPerIPHour(),
+		ResetPerIPHour:           l.ResetPerIPHour(),
 	}
 }

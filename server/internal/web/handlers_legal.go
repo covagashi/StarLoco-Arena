@@ -28,8 +28,8 @@ import (
 //
 // Bump both together whenever the substance changes, not for a typo.
 const (
-	legalVersion = "1.0"
-	legalUpdated = "2026-08-31"
+	legalVersion = "1.1"
+	legalUpdated = "2026-11-24"
 )
 
 // legalData backs all three static legal pages.

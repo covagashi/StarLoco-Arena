@@ -52,7 +52,8 @@ func (r *SeasonRepo) RankedTop(n int) ([]Standing, error) {
 		Where("id NOT IN (?)", r.demoCoaches()).
 		Order("strength DESC, name ASC").Limit(n).Find(&cs).Error
 	out := make([]Standing, 0, len(cs))
-	for _, c := range cs {
+	for i := range cs {
+		c := &cs[i] // domain.Coach holds a mutex: no copies (go vet)
 		out = append(out, Standing{CoachID: c.ID, Rating: c.Strength})
 	}
 	return out, err
@@ -108,7 +109,8 @@ func (r *SeasonRepo) Close(seasonID uint, results []domain.SeasonResult, now tim
 		if err := tx.Select("id", "strength").Where("strength > ?", domain.StrengthMin).Find(&cs).Error; err != nil {
 			return err
 		}
-		for _, c := range cs {
+		for i := range cs {
+			c := &cs[i] // domain.Coach holds a mutex: no copies (go vet)
 			if err := tx.Model(&domain.Coach{}).Where("id = ?", c.ID).
 				Update("strength", domain.SoftReset(c.Strength, domain.StrengthMin)).Error; err != nil {
 				return err

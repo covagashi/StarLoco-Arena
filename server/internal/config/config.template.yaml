@@ -392,3 +392,24 @@ limits:
   demo_accounts: false
   # How many demo accounts one address may create per hour. -1 = no cap.
   demo_accounts_per_ip_hour: 5
+  # How many "forgot my password" codes one address may ask for per hour
+  # (saved web accounts, S51). -1 = no cap.
+  password_resets_per_ip_hour: 5
+
+
+# -----------------------------------------------------------------------------
+#  Mail - the SMTP account the server sends its few emails from: today only
+#  the 6-digit code that resets the password of a saved web account.
+# -----------------------------------------------------------------------------
+mail:
+  # Leave host empty and nothing is sent: the code is written to the log
+  # instead (dev mode). Implicit TLS only (port 465). Every value can also come
+  # from ARENA_MAIL_HOST / _PORT / _USERNAME / _PASSWORD / _FROM / _FROM_NAME,
+  # which keeps the password out of this file.
+  host: ""
+  port: 465
+  username: ""
+  password: ""
+  # The sender address, and the name players see (always Pippop Arena).
+  from: ""
+  from_name: "Pippop Arena"

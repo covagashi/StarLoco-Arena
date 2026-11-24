@@ -669,6 +669,39 @@ const (
 	// 60051 [u8 chooser side][u8 opening side][u8 opener's first-turn MP][u8 n]{[i64 fighter wire id]}
 	OpTurnChoice = 60050 // C2S
 	OpTurnOrder  = 60051 // S2C
+
+	// Saving a web demo account (S51, «Guardar mi progreso», game/account_save.go)
+	// — Godot only. Strings are u8-length UTF-8. Logins with "@" are emails
+	// (lower-cased); a saved browser logs in with email + a device key it got
+	// from 60073, never with the password.
+	// 60070 [str email][str password] (authenticated, demo only) → 60071 [u8 code]
+	// 60072 empty (authenticated, not demo) → 60073 [str key] (32 hex chars, "" = refused)
+	// 60074 [str email] (also before authentication) → 60075 [u8 code]; "sent"
+	//       for an unknown email too, so nobody can probe which emails play
+	// 60076 [str email][str code][str newPassword] (also before authentication)
+	//       → 60077 [u8 code]; success forgets every device key of the account
+	// Codes: AccountSave* below.
+	OpClaimAccount       = 60070 // C2S
+	OpClaimAccountResult = 60071 // S2C
+	OpIssueKey           = 60072 // C2S
+	OpDeviceKey          = 60073 // S2C
+	OpResetRequest       = 60074 // C2S
+	OpResetRequestResult = 60075 // S2C
+	OpResetConfirm       = 60076 // C2S
+	OpResetConfirmResult = 60077 // S2C
+)
+
+// Result codes of 60071 / 60075 / 60077 (S51).
+const (
+	AccountSaveOK          = 0 // saved / code sent / password changed
+	AccountSaveNotDemo     = 1 // the account is not a demo one (60070)
+	AccountSaveBadEmail    = 2 // not an email address
+	AccountSaveWeakPass    = 3 // password shorter than 8 (or over 72 bytes)
+	AccountSaveEmailTaken  = 4 // another account has the email (60070)
+	AccountSaveRateLimited = 5 // too many tries, wait
+	AccountSaveWrongCode   = 6 // the reset code does not match (60077)
+	AccountSaveCodeExpired = 7 // no code, expired, or out of tries: ask again (60077)
+	AccountSaveFailed      = 8 // a server error
 )
 
 // Auth result codes carried by OpClientAuthResult (1024).

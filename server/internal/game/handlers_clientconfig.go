@@ -54,6 +54,14 @@ func (s *Session) sendClientConfig() error {
 		s.Coach.Mu.Unlock()
 		pairs = append(pairs, kv{"fighter_slots", strconv.Itoa(slots)})
 	}
+	if s.Account != nil {
+		// S51: a demo account offers «Guardar mi progreso».
+		demo := "0"
+		if s.Account.IsDemo {
+			demo = "1"
+		}
+		pairs = append(pairs, kv{"account_demo", demo})
+	}
 	w := protocol.NewWriter()
 	w.U8(uint8(len(pairs)))
 	for _, p := range pairs {

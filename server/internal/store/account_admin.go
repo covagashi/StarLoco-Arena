@@ -143,6 +143,13 @@ func (r *AccountRepo) DeleteAccount(id uint) error {
 			}
 		}
 
+		// Browser keys and a pending reset code (S51).
+		if err := tx.Where("account_id = ?", id).Delete(&domain.AccountKey{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("account_id = ?", id).Delete(&domain.PasswordReset{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&domain.Account{}, id).Error
 	})
 }

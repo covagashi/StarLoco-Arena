@@ -91,7 +91,15 @@ type Deps struct {
 	// (opcode 60000 -> 60001). Set from web.public_url, else derived from the
 	// bound portal listener; empty when the portal is disabled.
 	WebBaseURL string
-	Log        *slog.Logger
+	// Mailer emails the password-reset codes of saved accounts (S51); nil
+	// logs the code instead (dev mode), like an unconfigured mail.Mailer.
+	Mailer ResetMailer
+	Log    *slog.Logger
+}
+
+// ResetMailer sends a password-reset code to an email address.
+type ResetMailer interface {
+	SendResetCode(to, code string) error
 }
 
 // RegisterAll wires every feature handler group onto the router.
@@ -142,6 +150,7 @@ func RegisterAll(r *Router, d *Deps) {
 	registerCardPickHandlers(r, d)
 	registerOfflineTournamentHandlers(r, d)
 	registerGhostHandlers(r, d)
+	registerAccountSaveHandlers(r, d)
 }
 
 // UseGameData copies a loaded bundle into the container. cmd/server and the e2e

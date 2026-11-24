@@ -65,6 +65,19 @@ type Config struct {
 	DB          DBConfig          `yaml:"db"`
 	World       WorldConfig       `yaml:"world"`
 	Rules       RulesConfig       `yaml:"rules"`
+	Mail        MailConfig        `yaml:"mail"`
+}
+
+// MailConfig is the SMTP account the server sends its few emails from (S51:
+// the password-reset code of a saved account). Implicit TLS, port 465.
+// Empty host = dev mode: the code is logged instead of sent.
+type MailConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	From     string `yaml:"from"`
+	FromName string `yaml:"from_name"`
 }
 
 // WebConfig configures the browser-facing portal where players register their
@@ -469,6 +482,24 @@ func (c *Config) applyEnv() {
 	if v, ok := envInt("ARENA_DB_MAX_IDLE_CONNS"); ok {
 		c.DB.MaxIdleConns = v
 	}
+	if v := os.Getenv("ARENA_MAIL_HOST"); v != "" {
+		c.Mail.Host = v
+	}
+	if v, ok := envInt("ARENA_MAIL_PORT"); ok {
+		c.Mail.Port = v
+	}
+	if v := os.Getenv("ARENA_MAIL_USERNAME"); v != "" {
+		c.Mail.Username = v
+	}
+	if v := os.Getenv("ARENA_MAIL_PASSWORD"); v != "" {
+		c.Mail.Password = v
+	}
+	if v := os.Getenv("ARENA_MAIL_FROM"); v != "" {
+		c.Mail.From = v
+	}
+	if v := os.Getenv("ARENA_MAIL_FROM_NAME"); v != "" {
+		c.Mail.FromName = v
+	}
 	if v, ok := envInt("ARENA_AOI_RADIUS"); ok {
 		c.World.AoIRadius = v
 	}
@@ -605,6 +636,9 @@ type LimitsConfig struct {
 	// DemoAccountsPerIPHour caps the demo accounts one address creates per
 	// hour. Default 5. -1 disables.
 	DemoAccountsPerIPHour int `yaml:"demo_accounts_per_ip_hour"`
+	// PasswordResetsPerIPHour caps the "forgot my password" codes one
+	// address asks for per hour (S51). Default 5. -1 disables.
+	PasswordResetsPerIPHour int `yaml:"password_resets_per_ip_hour"`
 }
 
 // Limit accessors: 0 means "use the default", negative means "disabled".
@@ -616,6 +650,9 @@ func (l LimitsConfig) loginAttemptsPerMinute() int { return limitOr(l.LoginAttem
 
 // DemoPerIPHour is the demo accounts cap per address and hour (0 = none).
 func (l LimitsConfig) DemoPerIPHour() int { return limitOr(l.DemoAccountsPerIPHour, 5) }
+
+// ResetPerIPHour is the password-reset requests cap per address and hour.
+func (l LimitsConfig) ResetPerIPHour() int { return limitOr(l.PasswordResetsPerIPHour, 5) }
 
 // MaxConnections etc. are the exported forms the game package consumes.
 func (l LimitsConfig) MaxConns() int           { return l.maxConnections() }

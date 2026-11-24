@@ -316,6 +316,15 @@ var migrations = []migration{
 			return tx.AutoMigrate(&domain.Coach{})
 		},
 	},
+	{
+		// Saved accounts (S51, «Guardar mi progreso»): the browser keys of an
+		// account and its pending password-reset code.
+		Version: 24,
+		Name:    "account_keys_password_resets",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&domain.AccountKey{}, &domain.PasswordReset{})
+		},
+	},
 }
 
 // runMigrations applies every step the database has not recorded yet, in order.
