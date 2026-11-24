@@ -626,7 +626,7 @@ func _show_login_screen() -> void:
 		hosts.append(str(it.get("text", it)) if it is Dictionary else str(it))
 	if hosts.is_empty():
 		hosts = ["140.238.172.196:3000", "127.0.0.1:5555"]
-	if WebAssets.active():   # S44: the page's own server, nothing to pick
+	if WebAssets.active():   # S44: one server, nothing to pick
 		hosts = [WebAssets.server_url()]
 	_login_screen.set_proxies(hosts, str(pm.get("selected", hosts[0])))
 	_login_screen.name_edit.text = str(
@@ -653,7 +653,7 @@ func _on_login_submit(login: String, password: String, proxy: String) -> void:
 
 
 ## Opens the connection to a "host:port" proxy; the web demo always plays on
-## its page's server instead (S44, WebAssets.server_url).
+## the production server instead (S44, WebAssets.server_url).
 func _connect_proxy(proxy: String) -> void:
 	if WebAssets.active():
 		var url := WebAssets.server_url()

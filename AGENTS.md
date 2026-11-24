@@ -134,7 +134,6 @@ python3 tools/art/build.py                 # build what is stale, then run the c
 python3 tools/art/build.py arena5 feca_f   # only these kits / figures
 python3 tools/art/build.py --dry-run       # what is stale
 python3 tools/art/build.py --show 5:1      # then a real fight on arena 5 with the Feca, to art-show.png
-python3 tools/art/build.py --pack ../dist/linux   # then copy the art beside an export
 python3 -I tools/art/check.py              # the checks alone
 ```
 
@@ -152,8 +151,11 @@ python3 -I tools/art/check.py              # the checks alone
   them the figures already built are kept.
 - **Every new source folder or font goes in `godot/art/CREDITS.md`** with who
   made it and on what terms; the checks fail otherwise.
-- An exported game reads the art from the `art/` folder beside its executable
-  (`tools/art/pack_arenas.gd`: arenas and figures). `--old-art` (after `--`)
+- The only client build is the web one, published on itch.io (S51; no
+  desktop builds): `tools/web/pack_web.gd` zips the art (arenas and figures,
+  via `tools/art/pack_arenas.gd`) into bundles beside the export, and the
+  client plays on `wss://alfa-pippop.covaga.dev/ws` unless the page carries
+  `?server=`. `--old-art` (after `--`)
   or `PIPPOP_OLD_ART=1` plays with the retail sprites while both coexist.
 
 ## Releases

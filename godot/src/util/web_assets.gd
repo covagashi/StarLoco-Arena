@@ -18,6 +18,8 @@ extends RefCounted
 ## In memory, not user:// — that one is mirrored to IndexedDB and read
 ## back whole at every start.
 const ROOT := "/tmp/pippop"
+## The production game server, behind its Cloudflare Worker (S44).
+const SERVER := "wss://alfa-pippop.covaga.dev/ws"
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
 const ARENA_PREFIX := "arena-"
 ## What the first screens don't draw: off the first load.
@@ -51,13 +53,14 @@ static func base_url() -> String:
 
 
 ## The game server the page plays on: ?server=<ws url> when given (local
-## tests), else /ws on the page's own host, over wss:// on an https page.
+## tests), else SERVER. The page itself is served by itch.io (S51), not by
+## the game server, so its own host is no hint.
 static func server_url() -> String:
 	if not active():
 		return ""
-	return str(JavaScriptBridge.eval(
-		"new URLSearchParams(location.search).get('server') || "
-		+ "((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws')"))
+	var given := str(JavaScriptBridge.eval(
+		"new URLSearchParams(location.search).get('server') || ''"))
+	return given if given != "" else SERVER
 
 
 static func has(group: String) -> bool:

@@ -6,7 +6,6 @@
     python3 tools/art/build.py equipment       only the equipment pieces
     python3 tools/art/build.py --dry-run       list what is stale, build nothing
     python3 tools/art/build.py --force         rebuild everything selected
-    python3 tools/art/build.py --pack <dist>   then pack it beside an export
     python3 tools/art/build.py --show 5:1      then a fight on arena 5 with
                                                breed 1 (Feca) to a PNG
 
@@ -408,7 +407,6 @@ def main():
     ap.add_argument("--force", action="store_true", help="rebuild everything selected")
     ap.add_argument("-j", "--jobs", type=int, default=3, help="Blender AO bakes at once")
     ap.add_argument("--no-check", action="store_true")
-    ap.add_argument("--pack", metavar="DIST", help="then copy the art beside an export (pack_arenas.gd)")
     ap.add_argument("--show", metavar="ARENA[:BREED]", help="then capture a fight on that arena")
     ap.add_argument("--shot", default="art-show.png", help="where --show writes (default art-show.png)")
     a = ap.parse_args()
@@ -446,9 +444,6 @@ def main():
         r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check.py")], cwd=GODOT)
         if r.returncode != 0:
             sys.exit("[build] checks failed")
-    if a.pack:
-        run([godot_cmd(), "--headless", "--path", GODOT, "-s", "tools/art/pack_arenas.gd", "--", os.path.abspath(a.pack)],
-            GODOT, f"pack -> {a.pack}")
     if a.show:
         show(a.show, a.shot)
 

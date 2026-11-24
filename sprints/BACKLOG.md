@@ -326,5 +326,4 @@ espera al dueño lleva **(dueño)**.
       Si hiciera falta: motor web propio sin los módulos que no se usan.
 - [ ] **Pasar una cuenta demo a una cuenta con correo y contraseña** sin perder
       el progreso, si la demo tiene tirón.
-- [ ] **Dominio o itch.io** (dueño): hoy https://140.238.172.196/ con
-      certificado de IP de 6 días que Caddy renueva solo.
+- [x] **Dominio o itch.io:** itch.io, solo el cliente web (2026-11-24, [S51](./S51-itchio.md)).
