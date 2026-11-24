@@ -123,6 +123,11 @@ static var offline_tournaments := false
 ## Server-announced (60001 key fighter_slots, S50): how many fighters the
 ## coach may own, Historia and Élite together (8, up to 10 earned).
 static var fighter_slots := 8
+## S51: the account is a web demo one (60001 "account_demo"), so the game
+## offers «Guardar mi progreso»; and whether it already offered it after a
+## win this session (once per session at most).
+static var account_demo := false
+static var save_offered := false
 
 ## Active UI locale ("es"/"en"/"fr") — set by the I18n autoload at boot and on
 ## every language switch; chat/bug-report payloads read it for user[lang].

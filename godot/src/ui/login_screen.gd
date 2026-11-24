@@ -10,6 +10,11 @@ extends Control
 ## own demo account (DemoAccount), on the page's server.
 
 signal submit(login: String, password: String, proxy: String)
+## S51 «Ya tengo cuenta» (demo screens only): log in with an email and its
+## password; ask for a reset code; set a new password with it.
+signal account_login(email: String, password: String, proxy: String)
+signal reset_request(email: String, proxy: String)
+signal reset_confirm(email: String, code: String, password: String, proxy: String)
 
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const DemoAccount := preload("res://src/web/demo_account.gd")
@@ -34,6 +39,13 @@ var _t := 0.0
 var _figs: Array = []
 var _brand: Control
 var _form: Control
+var _play_col: VBoxContainer   # the usual form (JUGAR in the demo)
+var _acct: VBoxContainer       # «Ya tengo cuenta» and the reset, in its place
+var _acct_mode := ""
+var _acct_err: Label
+var _acct_go: Button
+var _acct_fields := {}         # name -> LineEdit of the shown mode
+var _reset_email := ""
 
 
 func _init() -> void:
@@ -144,6 +156,7 @@ func _form_block() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 	form.add_child(col)
+	_play_col = col
 	var head := Label.new()
 	head.text = I18n.t("login.ribbon")
 	UiStyle.display(head, 44)
@@ -223,7 +236,7 @@ func _form_block() -> void:
 	btn.custom_minimum_size.y = 64
 	btn.pressed.connect(_do_submit)
 	col.add_child(btn)
-	if WebAssets.active():
+	if DemoAccount.demo_ui():
 		for r in rows:
 			r.visible = false
 		var note := Label.new()
@@ -238,6 +251,19 @@ func _form_block() -> void:
 		btn.pressed.disconnect(_do_submit)
 		btn.pressed.connect(_do_play)
 		btn.name = "Play"
+		# S51: a saved account comes back here — an ink button under JUGAR
+		var have := StyleB.button(false, 20)
+		have.name = "HaveAccount"
+		have.text = I18n.t("login.have_account")
+		have.custom_minimum_size.y = 44
+		have.pressed.connect(func(): show_account("login"))
+		_gap(col, 4)
+		col.add_child(have)
+		_acct = VBoxContainer.new()
+		_acct.name = "Account"
+		_acct.add_theme_constant_override("separation", 8)
+		_acct.visible = false
+		form.add_child(_acct)
 		form.reset_size.call_deferred()   # without the hidden rows
 
 	name_edit.focus_next = name_edit.get_path_to(pass_edit)
@@ -353,7 +379,197 @@ func _do_submit() -> void:
 	submit.emit(login, pass_edit.text, proxy)
 
 
-## The web demo's JUGAR: this browser's demo account, made on first use.
+## The web demo's JUGAR: this browser's account — the demo one, made on
+## first use, or the saved one (email + device key, S51).
 func _do_play() -> void:
 	var acc := DemoAccount.load_or_create()
-	submit.emit(acc.login, acc.password, "")
+	submit.emit(acc.login, acc.password, _proxy())
+
+
+## The server picked (the web build ignores it: one server).
+func _proxy() -> String:
+	if proxy_opt.selected >= 0:
+		return proxy_opt.get_item_text(proxy_opt.selected)
+	return ""
+
+
+## --- «Ya tengo cuenta» (S51) ---------------------------------------------------
+## The plate swaps JUGAR for one of three small forms: "login" (correo,
+## contraseña, ENTRAR, ¿Olvidaste la contraseña?), "forgot" (correo, ENVIAR
+## CÓDIGO), "reset" (código, contraseña nueva ×2, CAMBIAR Y ENTRAR); "" goes
+## back to JUGAR. main.gd answers through set_account_error / reset_sent.
+func show_account(mode: String) -> void:
+	if _acct == null:
+		return
+	var keep_email := ""
+	if _acct_fields.has("email"):
+		keep_email = (_acct_fields.email as LineEdit).text
+	_acct_mode = mode
+	_play_col.visible = mode == ""
+	_acct.visible = mode != ""
+	# the code form is the tallest: the plate starts a little higher
+	_form.position.y = R_FORM.position.y - (28.0 if mode == "reset" else 0.0)
+	_acct.add_theme_constant_override("separation", 6 if mode == "reset" else 8)
+	for c in _acct.get_children():
+		_acct.remove_child(c)
+		c.queue_free()
+	_acct_fields = {}
+	set_error("")
+	if mode != "":
+		var head := Label.new()
+		head.name = "AccountTitle"
+		head.text = I18n.t("login.acct.%s_title" % mode)
+		head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		head.custom_minimum_size.x = R_FORM.size.x - 68
+		UiStyle.display(head, 30)
+		head.add_theme_constant_override("line_spacing", -10)
+		_acct.add_child(head)
+		var text := I18n.t("login.acct.%s_text" % mode, {"email": _reset_email})
+		if text != "":
+			var note := Label.new()
+			note.text = text
+			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			note.custom_minimum_size.x = R_FORM.size.x - 68
+			note.add_theme_font_size_override("font_size", 14)
+			note.add_theme_constant_override("line_spacing", -4)
+			note.add_theme_color_override("font_color", INK)
+			_acct.add_child(note)
+		_gap(_acct, 2)
+		match mode:
+			"login":
+				_acct_field("email", "save.email", false, keep_email)
+				_acct_field("password", "save.password", true)
+			"forgot":
+				_acct_field("email", "save.email", false, keep_email)
+			"reset":
+				_acct_field("code", "login.acct.code", false)
+				(_acct_fields.code as LineEdit).max_length = 6
+				_acct_field("password", "save.new_password", true)
+				_acct_field("again", "save.again", true)
+		_acct_err = Label.new()
+		_acct_err.name = "AccountError"
+		_acct_err.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_acct_err.custom_minimum_size.x = R_FORM.size.x - 68
+		_acct_err.add_theme_font_override("font", UiStyle.bold(800))
+		_acct_err.add_theme_font_size_override("font_size", 14)
+		_acct_err.add_theme_color_override("font_color", CORAL)
+		_acct_err.visible = false
+		_acct.add_child(_acct_err)
+		_gap(_acct, 4)
+		_acct_go = StyleB.button(true, 24)
+		_acct_go.name = "AccountGo"
+		_acct_go.text = I18n.t("login.acct.%s_go" % mode)
+		_acct_go.custom_minimum_size.y = 50
+		_acct_go.pressed.connect(_acct_submit)
+		_acct.add_child(_acct_go)
+		var links := HBoxContainer.new()
+		links.add_theme_constant_override("separation", 18)
+		_acct.add_child(links)
+		if mode == "login":
+			links.add_child(_link("Forgot", "login.acct.forgot", func(): show_account("forgot")))
+		if mode == "reset":
+			links.add_child(_link("Resend", "login.acct.resend", func(): show_account("forgot")))
+		var sp := Control.new()
+		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		links.add_child(sp)
+		links.add_child(_link("Back", "login.acct.back", func(): show_account("")))
+		var first: LineEdit = _acct_fields.values()[0]
+		if first.text != "" and _acct_fields.size() > 1:
+			first = _acct_fields.values()[1]
+		first.grab_focus.call_deferred()
+	_form.reset_size.call_deferred()
+
+
+func account_mode() -> String:
+	return _acct_mode
+
+
+## A server or local error under the shown form ("" hides it); the
+## button comes back.
+func set_account_error(msg: String) -> void:
+	if _acct_err == null or not is_instance_valid(_acct_err):
+		set_error(msg)
+		return
+	_acct_err.text = msg
+	_acct_err.visible = msg != ""
+	set_account_busy(false)
+
+
+func set_account_busy(on: bool) -> void:
+	if _acct_go != null and is_instance_valid(_acct_go):
+		_acct_go.disabled = on
+
+
+## 60075 "sent": on to the code form.
+func reset_sent() -> void:
+	show_account("reset")
+
+
+func _acct_field(key: String, tag_key: String, secret: bool, initial := "") -> void:
+	var t := UiStyle.tag(I18n.t(tag_key))
+	_acct.add_child(t)
+	var e := LineEdit.new()
+	e.name = "Acct" + key.capitalize()
+	e.custom_minimum_size.y = 42
+	StyleB.field(e, 18)
+	e.secret = secret
+	e.text = initial
+	e.max_length = 72 if secret else 64
+	e.text_submitted.connect(func(_t): _acct_submit())
+	_acct.add_child(e)
+	_acct_fields[key] = e
+
+
+func _link(node_name: String, key: String, cb: Callable) -> LinkButton:
+	var l := LinkButton.new()
+	l.name = node_name
+	l.text = I18n.t(key)
+	l.add_theme_font_override("font", UiStyle.bold(800))
+	l.add_theme_font_size_override("font_size", 15)
+	l.add_theme_color_override("font_color", INK)
+	l.add_theme_color_override("font_hover_color", CORAL)
+	l.add_theme_color_override("font_focus_color", CORAL)
+	l.add_theme_color_override("font_pressed_color", CORAL)
+	l.underline = LinkButton.UNDERLINE_MODE_ON_HOVER
+	l.pressed.connect(cb)
+	return l
+
+
+func _acct_text(key: String) -> String:
+	return (_acct_fields[key] as LineEdit).text if _acct_fields.has(key) else ""
+
+
+func _acct_submit() -> void:
+	if _acct_go != null and _acct_go.disabled:
+		return
+	var err := ""
+	match _acct_mode:
+		"login":
+			var email := _acct_text("email").strip_edges().to_lower()
+			err = DemoAccount.check_email(email)
+			if err == "" and _acct_text("password") == "":
+				err = "login.acct.no_password"
+			if err == "":
+				set_account_error("")
+				set_account_busy(true)
+				account_login.emit(email, _acct_text("password"), _proxy())
+		"forgot":
+			var email := _acct_text("email").strip_edges().to_lower()
+			err = DemoAccount.check_email(email)
+			if err == "":
+				_reset_email = email
+				set_account_error("")
+				set_account_busy(true)
+				reset_request.emit(email, _proxy())
+		"reset":
+			var code := _acct_text("code").strip_edges()
+			if code.length() != 6 or not code.is_valid_int():
+				err = "login.acct.code_format"
+			else:
+				err = DemoAccount.check_password(_acct_text("password"), _acct_text("again"))
+			if err == "":
+				set_account_error("")
+				set_account_busy(true)
+				reset_confirm.emit(_reset_email, code, _acct_text("password"), _proxy())
+	if err != "":
+		set_account_error(I18n.t(err))

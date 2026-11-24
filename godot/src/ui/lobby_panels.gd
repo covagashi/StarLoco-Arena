@@ -58,6 +58,7 @@ func _model_changed(model_name: String, _field: String, _value: Variant) -> void
 		"cityDialog": ["city"],
 		"ghostDialog": ["ghosts", "league"],
 		"storyDialog": ["story", "evolutionTeam", "teamManagement"],
+		"optionsDialog": ["saveAccount"],   # S51: its entry goes once saved
 	}
 	if model_name.split(".")[0] in watched.get(panel_name, []):
 		schedule_refresh()
@@ -1332,6 +1333,14 @@ func _options() -> void:
 	save.toggled.connect(func(value): model.set_value("gamePreferences", value, "saveReplays"); send("setSaveReplay"))
 	body.add_child(save)
 	label(body, I18n.t("opt.account"), 22)
+	# S51: while the account is a web demo one, save it with an email
+	if bool(data("saveAccount.demo", false)):
+		label(body, I18n.t("opt.save_progress_text"), 15).add_theme_color_override("font_color", UiStyle.B_MUTE)
+		var save_btn := button(body, I18n.t("opt.save_progress"), func(): send("openSaveAccount"))
+		save_btn.name = "SaveProgress"
+		save_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		save_btn.custom_minimum_size.x = 320
+		UiStyle.primary(save_btn, 18)
 	button(body, I18n.t("opt.destroy_coach"), func(): confirm_action(I18n.t("coach.destroy_confirm"), func(): send("destroyCoach")))
 
 

@@ -68,6 +68,16 @@ const OP_TOURN_REPLAY_REQ := 60034     # C2S [i64 tid][i32 slot]
 const OP_TOURN_REPLAY_CHUNK := 60035   # S2C [i64 tid][i32 slot][u16 index][u16 count][bytes]
 const OP_FIGHTER_EQUIP_REQUEST := 60022  # C2S [i64 fighterId] (S22)
 const OP_FIGHTER_EQUIP := 60023          # S2C [i64 fighterId][u16 n]{i32 cardId} — what it may wear
+## S51 «Guardar mi progreso» (server game/account_save.go): strings u8 UTF-8,
+## the results one u8 code (DemoAccount.code_key words them).
+const OP_CLAIM_ACCOUNT := 60070        # C2S [str email][str password] (demo only)
+const OP_CLAIM_ACCOUNT_RESULT := 60071 # S2C [u8 code]
+const OP_ISSUE_KEY := 60072            # C2S empty (saved account)
+const OP_DEVICE_KEY := 60073           # S2C [str key] — "" = refused
+const OP_RESET_REQUEST := 60074        # C2S [str email] (before auth too)
+const OP_RESET_REQUEST_RESULT := 60075 # S2C [u8 code] — 0 "sent", unknown emails too
+const OP_RESET_CONFIRM := 60076        # C2S [str email][str code][str password]
+const OP_RESET_CONFIRM_RESULT := 60077 # S2C [u8 code]
 const OP_GHOST_LADDER := 60017         # S2C [i32 elo][i32 rank][i32 fights][i32 wins][u16 n]{str, i32×3, u8}
 const OP_COACH_CREATE_REQ := 2048
 const OP_COACH_CREATE := 2049
@@ -282,6 +292,13 @@ var _login_screen             # baked-art login (PippopLogin via preload)
 var _create_screen            # baked-art coach creation (PippopCoachCreation)
 var _pending_login := ""      # login queued while connecting
 var _pending_pass := ""       # password queued while connecting
+## S51: how the login in flight was made — "demo" (JUGAR, a demo key),
+## "saved" (JUGAR, email + device key), "account" («Ya tengo cuenta», email
+## + password: a device key is asked once in), "" otherwise.
+var _login_mode := ""
+var _acct_email := ""         # the email of an "account" login / a claim
+var _pending_send: Callable   # a frame to send once connected (the reset)
+var _acct_proxy := ""         # the server the reset forms talk to
 
 
 ## What the window says. project.godot keeps "StarLoco Arena" as the internal
@@ -319,6 +336,7 @@ func _ready() -> void:
 	_gui.native_factories["teamPickDialog"] = _make_team_pick_panel
 	_gui.native_factories["kanodoDialog"] = _make_kanodo_panel
 	_gui.native_factories["coachEquipDialog"] = _make_equip_panel
+	_gui.native_factories["saveAccountDialog"] = _make_save_account_panel
 	add_child(_gui)
 	if not _prefs_applied:
 		_prefs_applied = true
@@ -582,9 +600,135 @@ func _exit_tree() -> void:
 
 func _on_connected() -> void:
 	_log_line("[color=green]%s[/color]" % I18n.t("net.connected"))
+	if _pending_send.is_valid():
+		var f := _pending_send
+		_pending_send = Callable()
+		f.call()
 	if _pending_login != "":
 		_send_auth(_pending_login, _pending_pass)
 		_pending_login = ""
+
+
+## --- «Guardar mi progreso» (S51) ---------------------------------------------
+## The login screen's «Ya tengo cuenta»: email + password once, then the
+## server's device key is what this browser keeps (never the password).
+func _on_account_login(email: String, password: String, proxy: String) -> void:
+	_login_mode = "account"
+	_acct_email = email
+	_login_name = email
+	_login_pass = password
+	if Session.is_online():
+		_send_auth(email, password)
+	else:
+		_pending_login = email
+		_pending_pass = password
+		_connect_proxy(proxy)
+
+
+## Sends `op` now, or once the socket is up: the reset works before any
+## login, on a socket of its own (the server drops an unauthenticated one
+## after a while, and the next request simply reconnects).
+func _send_or_connect(op: int, payload: PackedByteArray, proxy: String) -> void:
+	if Session.is_online():
+		Session.send(op, payload, 3)
+	else:
+		_pending_send = func(): Session.send(op, payload, 3)
+		_connect_proxy(proxy)
+
+
+func _on_reset_request(email: String, proxy: String) -> void:
+	_acct_email = email
+	_acct_proxy = proxy
+	var w := WireWriter.new()
+	w.put_str(email, "u8", "utf8")
+	_send_or_connect(OP_RESET_REQUEST, w.raw(), proxy)
+
+
+func _on_reset_confirm(email: String, code: String, password: String, proxy: String) -> void:
+	_acct_email = email
+	_acct_proxy = proxy
+	_login_pass = password   # logs in with it once the server agrees
+	var w := WireWriter.new()
+	w.put_str(email, "u8", "utf8")
+	w.put_str(code, "u8", "utf8")
+	w.put_str(password, "u8", "utf8")
+	_send_or_connect(OP_RESET_CONFIRM, w.raw(), proxy)
+
+
+func _make_save_account_panel(_panel_name: String) -> Control:
+	var panel := preload("res://src/ui/save_account_panel.gd").new()
+	panel.model = _gui.model
+	panel.requested.connect(_on_native_lobby_action)
+	return panel
+
+
+## Opens the save sheet at `stage` ("ask" after a win, "form" from Opciones).
+func _open_save_account(stage: String) -> void:
+	if not State.account_demo:
+		return
+	_gui.model.set_value("saveAccount", {"demo": true, "stage": stage, "error": "", "busy": false})
+	if not _gui.is_open("saveAccountDialog"):
+		_gui.open("saveAccountDialog")
+
+
+## After a won fight, once per session at most, while the account is a demo
+## one: "¿Guardas tu progreso?" — once the fight report (and a level up)
+## is closed, so it never hides them.
+func _offer_save_after_win(after: Control) -> void:
+	if not State.account_demo or State.save_offered:
+		return
+	State.save_offered = true
+	if after == null:
+		_open_save_account("ask")
+		return
+	after.closed.connect(func():
+		var lvl = _gui.dialogs.get("coachLevelUpDialog") if _gui.is_open("coachLevelUpDialog") else null
+		if lvl != null:
+			lvl.closed.connect(func(): _open_save_account.call_deferred("ask"), CONNECT_ONE_SHOT)
+		else:
+			_open_save_account.call_deferred("ask"), CONNECT_ONE_SHOT)
+
+
+func _on_save_action(event: String, args: Array) -> void:
+	match event:
+		"nativeSaveLater":
+			_gui.close("saveAccountDialog")
+		"nativeSaveNow":
+			_open_save_account("form")
+		"nativeSaveDone":
+			_gui.close("saveAccountDialog")
+		"nativeSaveSubmit":
+			var email := str(args[0]).strip_edges().to_lower()
+			var err := DemoAccount.check_email(email)
+			if err == "":
+				err = DemoAccount.check_password(str(args[1]), str(args[2]))
+			if err != "":
+				_gui.model.set_value("saveAccount", err, "error")
+				return
+			_acct_email = email
+			_gui.model.set_value("saveAccount", "", "error")
+			_gui.model.set_value("saveAccount", true, "busy")
+			var w := WireWriter.new()
+			w.put_str(email, "u8", "utf8")
+			w.put_str(str(args[1]), "u8", "utf8")
+			Session.send(OP_CLAIM_ACCOUNT, w.raw(), 3)
+
+
+## 60071: saved — the demo key becomes this browser's device key, and the
+## file now logs in with the email.
+func _on_claim_result(code: int) -> void:
+	if code != 0:
+		_gui.model.set_value("saveAccount", DemoAccount.code_key(code), "error")
+		_gui.model.set_value("saveAccount", false, "busy")
+		return
+	var acc := DemoAccount.load_saved()
+	if not acc.is_empty() and not bool(acc.get("claimed", false)):
+		DemoAccount.save_claimed(_acct_email, str(acc.password))
+	State.account_demo = false
+	_gui.model.set_value("saveAccount", {"demo": false, "stage": "done", "error": "",
+		"busy": false, "email": _acct_email})
+	if not _gui.is_open("saveAccountDialog"):
+		_gui.open("saveAccountDialog")
 
 
 func _on_retail_logon(args: Array, _widget: GuiLayer.Ctx) -> void:
@@ -620,6 +764,9 @@ func _show_login_screen() -> void:
 	_login_screen = preload("res://src/ui/login_screen.gd").new()
 	$UI.add_child(_login_screen)   # CanvasLayer — camera must not shift it
 	_login_screen.submit.connect(_on_login_submit)
+	_login_screen.account_login.connect(_on_account_login)
+	_login_screen.reset_request.connect(_on_reset_request)
+	_login_screen.reset_confirm.connect(_on_reset_confirm)
 	var pm: Dictionary = _gui.model.values.get("proxy", {})
 	var hosts: Array = []
 	for it in pm.get("list", []):
@@ -637,6 +784,9 @@ func _show_login_screen() -> void:
 
 
 func _on_login_submit(login: String, password: String, proxy: String) -> void:
+	_login_mode = ""
+	if DemoAccount.demo_ui() and (login.begins_with("demo-") or "@" in login):
+		_login_mode = "saved" if "@" in login else "demo"
 	_gui.model.values["account.name"] = login
 	_gui.model.values["account.password"] = password
 	var pm: Dictionary = _gui.model.values.get("proxy", {})
@@ -702,6 +852,14 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 			var code := payload.get_u8()
 			if code == 0:
 				_log_line("[color=green]%s[/color]" % I18n.t("net.auth_ok"))
+				if _login_mode == "account":
+					# S51: this browser keeps a device key, not the password
+					Session.send(OP_ISSUE_KEY, PackedByteArray(), 3)
+					_login_pass = ""
+			elif _login_mode == "account" and _login_screen != null:
+				_login_screen.set_account_error(I18n.t("login.bad_credentials"))
+			elif _login_mode == "saved" and _login_screen != null:
+				_login_screen.set_error(I18n.t("login.saved_refused"))
 			else:
 				_log_line("[color=red]%s[/color]" % I18n.t(
 					"net.auth_refused", {"code": code}))
@@ -709,7 +867,7 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					# the web demo has no password to get wrong: a refusal
 					# there is the server's cap on new demo accounts (S44)
 					_login_screen.set_error(I18n.t("login.demo_refused"
-						if WebAssets.active() else "login.bad_credentials"))
+						if DemoAccount.demo_ui() else "login.bad_credentials"))
 		OP_COACH_CREATE_REQ:
 			_open_coach_creation()
 		OP_COACH_CREATION_RESULT:
@@ -821,11 +979,35 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					State.web_base_url = _web_base_url(v)
 				elif k == "offline_tournaments":
 					State.offline_tournaments = v == "1"
+				elif k == "account_demo":   # S51
+					State.account_demo = v == "1"
+					_gui.model.set_value("saveAccount", State.account_demo, "demo")
 				elif k == "fighter_slots":
 					State.fighter_slots = maxi(1, int(v))
 					if _gui != null:
 						_push_team_model()
 			DebugLog.add("client config: web_base_url=%s" % State.web_base_url)
+		OP_CLAIM_ACCOUNT_RESULT:
+			_on_claim_result(payload.get_u8())
+		OP_DEVICE_KEY:
+			var key := payload.get_str("u8", "utf8")
+			if key != "" and _acct_email != "":
+				DemoAccount.save_claimed(_acct_email, key)
+				DebugLog.add("device key saved for %s" % _acct_email)
+		OP_RESET_REQUEST_RESULT:
+			var rc := payload.get_u8()
+			if _login_screen != null:
+				if rc == 0:
+					_login_screen.reset_sent()
+				else:
+					_login_screen.set_account_error(I18n.t(DemoAccount.code_key(rc)))
+		OP_RESET_CONFIRM_RESULT:
+			var cc := payload.get_u8()
+			if _login_screen != null:
+				if cc == 0:   # the new password works: in with it
+					_on_account_login(_acct_email, _login_pass, _acct_proxy)
+				else:
+					_login_screen.set_account_error(I18n.t(DemoAccount.code_key(cc)))
 		OP_GHOST_LIST:
 			var list := []
 			for i in payload.get_u16():
@@ -2266,7 +2448,7 @@ func _open_coach_creation() -> void:
 		_login_screen = null
 	_gui.model.set_value("localCoach", {
 		"sex": 0, "skin": 1, "hair": 1,
-		"name": DemoAccount.coach_name() if WebAssets.active() \
+		"name": DemoAccount.coach_name() if DemoAccount.demo_ui() \
 			else _login_name.strip_edges().left(20),
 		"actorDescriptorLibrary": "coach_7000",
 		"actorAnimation": "AnimStatique",
@@ -5368,6 +5550,15 @@ func _make_talk_panel(_panel_name: String) -> Control:
 
 ## Native controls reuse existing handlers with the same item-event context.
 func _on_native_lobby_action(event: String, args: Array, item: Variant, index: int) -> void:
+	if event.begins_with("nativeSave"):   # S51
+		_on_save_action(event, args)
+		return
+	if event == "openSaveAccount":   # from Opciones: over it, which stays
+		# (closing it first and opening this in the same frame lost a
+		# browser history entry: two such swaps in a row — Menú → Opciones
+		# → this — sent the web page Back off the game)
+		_open_save_account("form")
+		return
 	match event:
 		"nativeOpen":
 			_gui.open(str(args[0]))
@@ -6469,6 +6660,8 @@ func _show_fight_result() -> void:
 	if level_now > level_before and report != null:
 		_gui.model.set_value("levelUp", {"level": level_now})
 		report.closed.connect(func(): _gui.open("coachLevelUpDialog"), CONNECT_ONE_SHOT)
+	if outcome == "victory":
+		_offer_save_after_win(report)   # S51, a demo account only
 
 
 ## The retail graveyard element: the fallen fighters are a section of the
