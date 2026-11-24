@@ -45,6 +45,10 @@ demo y llega a «Crea tu jefe» (la cuenta demo de la prueba caduca sola a los
       Pasar una clave de API de butler (va a `~/.secrets`).
 - [ ] Subir: `--export-release Web`, `pack_web.gd`, y `butler push
       dist/web <usuario>/pippop-arena:web` (un solo canal).
+- [ ] **Antes de publicar** (dueño, 2026-11-24): «Guardar mi progreso» pasa
+      la cuenta demo a una cuenta con correo y contraseña, sin perder nada,
+      y se puede recuperar la contraseña por correo. Correo por Cloudflare
+      (el dueño paga Workers), como el SMTP de pasaexam.
 - [ ] Probar un combate entero desde la página en borrador (Chrome y
       Firefox), luego hacerla pública.
 - [ ] Poner la URL en `ITCH` del Worker y desplegarlo; en oracle-2, que

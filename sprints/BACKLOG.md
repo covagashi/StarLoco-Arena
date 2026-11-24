@@ -263,8 +263,10 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
 
 ## 12. Deuda técnica
 
-- [ ] **(dueño) Qué da cada plaza de luchador extra** (S50: 8 de serie, hasta 10):
-      temporada, Historia, logros…; hoy solo `/FIGHTERSLOT` (GM). La de pago, con S30.
+- [ ] **Qué da cada plaza de luchador extra** (S50: 8 de serie, hasta 10).
+      Dueño, 2026-11-24: **una al terminar Historia y otra al llegar en una
+      temporada a la primera liga por encima de la inicial**. Por hacer
+      (`grantFighterSlot`); hoy solo `/FIGHTERSLOT` (GM). La de pago, con S30.
 
 - [x] (2026-11-19, S48: sus 16 logros, ocultos — no hay ranking 2vs2 ni de evolución) **Criterios 147 y 222 sin mantener en el servidor** (S47 tanda 1):
       el puesto del ranking 2vs2 y el de evolución, que piden "Cumbre de
@@ -282,8 +284,9 @@ borraron en S32 (2026-10-25; quedan en el historial de git). Lo que hay en
 
 - [ ] **La ropa de los coach no convence** (dueño, 2026-11-19, al cerrar
       [S47](./S47-feedback-alfa.md)): camisas, pantalones, faldas y botas de
-      `coach_garment.py`. Antes de rehacerla, preguntar qué no convence
-      (forma, colores planos, franjas, lo pegada al cuerpo). Detalle y vistas
+      `coach_garment.py`. Dueño, 2026-11-24: fallan **la forma, los colores y
+      texturas, y las botas** (no la variedad). Antes de rehacerla, preguntar
+      el detalle de cada una. Detalle y vistas
       de referencia en S47, «Deuda técnica».
 - [ ] **Iconos «Hechizo vetado» y «Clase vetada» cargados** (S47 punto 11):
       la raya tapa parte de la figura y los de hechizo traen su placa gris de
@@ -313,8 +316,10 @@ espera al dueño lleva **(dueño)**.
       pollito de Historia, cambiado por un diablillo del Gran Reloj. Las ilustraciones de las losetas
       del lobby irán dentro de la loseta, sin tapar el título (heurística
       mía: el dueño no vio la diferencia en la pregunta).
-- [ ] **Tutorial de entrada largo** (dueño): 8 + 4 páginas de Aldebrán y 10
-      de Nilo antes de la primera pelea.
+- [x] **Tutorial de entrada largo:** se queda como está (dueño,
+      2026-11-24: «si ya hay un skip, me parece bien; 3 bocadillos es muy
+      poco»). De paso: Aldebrán se presentaba como «Altair» (`npc.94`),
+      corregido en es/en/fr.
 - [x] **Cartas sin ilustración propia**: pictograma por subfamilia (S47
       punto 11); solo los peinados siguen con el de pelo.
 - [ ] **Móvil**: escribir (teclado en pantalla activado en el export,
@@ -325,5 +330,7 @@ espera al dueño lleva **(dueño)**.
       proceso principal): aceptado por el dueño ("en Firefox funciona bien").
       Si hiciera falta: motor web propio sin los módulos que no se usan.
 - [ ] **Pasar una cuenta demo a una cuenta con correo y contraseña** sin perder
-      el progreso, si la demo tiene tirón.
+      el progreso. Dueño, 2026-11-24: **antes de publicar en itch.io**, con
+      correo (recuperar la contraseña); los correos, por Cloudflare (paga
+      Workers, 5 €), reaprovechando lo de pasaexam. Va en [S51](./S51-itchio.md).
 - [x] **Dominio o itch.io:** itch.io, solo el cliente web (2026-11-24, [S51](./S51-itchio.md)).
