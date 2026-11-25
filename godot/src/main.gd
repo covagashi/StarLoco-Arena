@@ -5438,6 +5438,10 @@ func _show_lobby_screen() -> void:
 			if id == State.my_coach_id:
 				_lobby_screen.show_bubble(text))
 	_lobby_screen.set_actions_ready(_lobby_ready)
+	if not State.wallet.is_empty():
+		# S53: back from a fight this is a new lobby: the coins it knew (it
+		# showed 0 tokens until the server sent the wallet again)
+		_gui.model.set_value("wallet", State.wallet.duplicate())
 	if State.tutorial_fought:
 		# S53: back from the tutorial's fight — it is done, say so once
 		State.tutorial_fought = false

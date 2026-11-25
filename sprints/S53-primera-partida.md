@@ -243,3 +243,42 @@ del 3D), no el mapa (los `layout` siguen como los dejó el dueño el
 `safaridriver`, pero Safari pide «Permitir la automatización remota»
 (Ajustes → Avanzado → funciones de desarrollador; menú Desarrollador), que
 solo puede activar el dueño.
+
+### Cierre: la partida entera como jugador nuevo, en el build web — 2026-11-25
+
+`godot/tools/web/first_play_test.mjs` (nuevo) en Chromium sobre el build
+web, contra un servidor local (oracle-2 limita las cuentas demo por
+dirección y hora, y hoy ya había hecho muchas), a **1280×720** y a
+**1920×1080**, y cambiando a 1920×1080 y vuelta en mitad del combate.
+Recorrido: Jugar como invitado → jefe → intro de Aldebrán → foco en
+Historia (un clic fuera no abre nada) → Reclutar en modo tutorial → lobby →
+la práctica de Nilo → salir → resultado → «¡Ya sabes pelear!». Capturas
+miradas una a una. Lo que encontró y se arregló:
+
+- **El historial echaba del juego.** Cada «Siguiente» de la intro cierra y
+  vuelve a abrir el diálogo; el `history.back()` (asíncrono) del cierre se
+  cruzaba con el `pushState` de la apertura y, al pasar de la intro 0 a la
+  1, el historial retrocedía hasta `about:blank` (en el marco de itch,
+  página vacía). Ahora `gui_layer.gd` iguala las entradas a las ventanas
+  abiertas una vez por fotograma y nunca con un `go()` a medio llegar
+  (`gui_history_test`: el caso de cerrar y abrir en fotogramas distintos).
+- **Salir de la práctica con ⇥** no cerraba el tutorial (la escena cambia
+  antes del 8300): ahora sí.
+- **«Fichas 0» al volver de un combate** (el lobby nuevo no tenía la
+  cartera hasta que el servidor la reenviaba): se la pasa el de antes.
+- **Los bocadillos del tutorial no crecían con la ventana** (a 1920×1080
+  quedaban pequeños) y el botón «¡A jugar!» salía cortado.
+
+Verificado: `run_tests.sh --headless` 26 suites, **1685** comprobaciones, 0
+fallos; `first_play_smoke` 14/0; `first_play_test.mjs` a las dos
+resoluciones sin salir del juego, con las capturas de cada paso.
+
+## Pendiente
+
+- **A6 / A10 en Safari** (figuras blancas, hierba levantada): falta un
+  Safari que se pueda controlar; el dueño puede activar «Permitir la
+  automatización remota» en el MacBook.
+- **Dentro de la práctica**, la guía de Nilo parpadea lo que toca, pero el
+  resto del HUD sigue pulsable.
+- **A4 / A5:** las mallas de los coaches y los luchadores (arte, con hojas
+  antes/después al dueño).

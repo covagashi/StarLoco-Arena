@@ -59,6 +59,7 @@ func _ready() -> void:
 	_button = StyleB.button(true, 18)
 	_button.name = "BubbleButton"
 	_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_button.custom_minimum_size = Vector2(190, 50)
 	_button.pressed.connect(func(): pressed.emit())
 	col.add_child(_button)
 	# «Saltar tutorial», then «¿Seguro?» Sí / No in its place
@@ -161,8 +162,13 @@ func _place() -> void:
 	else:
 		_hole = Rect2()
 	var s := size
+	# the lobby scales its stage with the window (1280×720 at 1): so does the bubble
+	var k := clampf(minf(s.x / 1280.0, s.y / 720.0), 1.0, 2.5)
+	_bubble.scale = Vector2(k, k)
+	_skip.scale = Vector2(k, k)
+	_ask.scale = Vector2(k, k)
 	_bubble.reset_size()
-	var b := _bubble.get_combined_minimum_size()
+	var b := _bubble.get_combined_minimum_size() * k
 	var at: Vector2
 	if _hole.has_area():
 		# beside the hole, on the side with more room, kept on screen
@@ -180,9 +186,9 @@ func _place() -> void:
 	at.y = clampf(at.y, 16, s.y - 16 - b.y)
 	_bubble.position = at
 	_skip.reset_size()
-	_skip.position = Vector2(s.x - _skip.size.x - 24, 74)   # under the top bar
+	_skip.position = Vector2(s.x - _skip.size.x * k - 24 * k, 74 * k)   # under the top bar
 	_ask.reset_size()
-	_ask.position = Vector2(s.x - _ask.get_combined_minimum_size().x - 24, 70)
+	_ask.position = Vector2(s.x - _ask.get_combined_minimum_size().x * k - 24 * k, 70 * k)
 
 
 func _draw() -> void:

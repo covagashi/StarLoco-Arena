@@ -25,8 +25,15 @@ var settings_path := "user://gui_settings.cfg"
 ## stand-in there).
 var history: Object = null
 var _entries := 0        # history entries our windows hold
-var _skip_pops := 0      # popstates of our own history.back() calls
+var _skip_pops := 0      # popstates of our own history.go() calls
 var _popping := false    # closing because of Back: its entry is gone already
+## S53: the entries follow the open windows once a frame, never while a go()
+## is on its way. Pushing and going back as each window opened and closed
+## drifted: back() lands later (async), so a window closed in one frame and
+## another opened in the next (Aldebrán's intro, scenario 0 then 1) pushed
+## from an entry the back() then left, and the history walked off the game
+## (about:blank; inside itch's frame, an empty page).
+var _sync_queued := false
 
 ## Logical names the lobby still asks for → the panel that answers them.
 const DIALOG_ALIASES := {
@@ -66,6 +73,7 @@ func _exit_tree() -> void:
 func _on_popstate(_args := []) -> void:
 	if _skip_pops > 0:
 		_skip_pops -= 1
+		_queue_sync()   # windows may have opened or closed meanwhile
 		return
 	_entries = maxi(0, _entries - 1)
 	if dialogs.is_empty():
@@ -97,10 +105,7 @@ func open(name: String, model_values := {}) -> Control:
 	add_child(root)
 	dialogs[fname] = root
 	root.closed.connect(close.bind(fname))
-	if history != null:
-		history.push()
-		_entries += 1
-		_mark()
+	_queue_sync()
 	dialog_opened.emit(fname)
 	return root
 
@@ -117,11 +122,32 @@ func close(name: String) -> void:
 		dialogs[fname].hide()
 		dialogs[fname].queue_free()
 		dialogs.erase(fname)
-		if history != null and not _popping and _entries > 0:
-			_entries -= 1
-			_skip_pops += 1
-			history.back()
-			_mark()
+		if not _popping:
+			_queue_sync()
+
+
+func _queue_sync() -> void:
+	if history == null or _sync_queued:
+		return
+	_sync_queued = true
+	_sync_history.call_deferred()
+
+
+## As many entries as open windows: push the missing ones, or one go(-n)
+## for the extra ones — then wait for its popstate before anything else.
+func _sync_history() -> void:
+	_sync_queued = false
+	if history == null or _skip_pops > 0:
+		return   # a go() is still on its way: its popstate syncs again
+	var want := dialogs.size()
+	while _entries < want:
+		history.push()
+		_entries += 1
+	if _entries > want:
+		_skip_pops += 1
+		history.go(want - _entries)
+		_entries = want
+	_mark()
 
 
 func is_open(name: String) -> bool:

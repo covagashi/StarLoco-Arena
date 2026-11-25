@@ -2799,6 +2799,9 @@ func _on_back_pressed() -> void:
 		d.confirmed.connect(func():
 			if State.net != null:
 				State.net.send_message(8151, PackedByteArray(), 3)
+			if State.tutorial_fight:   # S53: leaving the practice ends the tutorial too
+				State.tutorial_fight = false
+				State.tutorial_fought = true
 			get_tree().change_scene_to_file("res://src/main.tscn"))
 		d.canceled.connect(d.queue_free)
 		add_child(d)
