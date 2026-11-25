@@ -1,6 +1,6 @@
 # S38 — Cartas, iconos e interfaz
 
-**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** 🔵 en curso (retratos hechos, 2026-11-13)
+**Planificado:** 2026-10-25 · **Hito:** M7 — Arte propio · **Tamaño:** L · **Estado:** ✅ cerrado (2026-11-14, S38b)
 
 ## Alcance
 
