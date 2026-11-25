@@ -18,6 +18,18 @@ const LEGENDS := false
 const EVO_PVP := false
 
 
+## «Guardar mi progreso» (S51): turning the guest account into one with an
+## email and password, «Ya tengo cuenta» and the reset code. Off for the
+## alpha (owner, 2026-11-25: "al ser una alfa, déjalo como guest"): everyone
+## plays as a guest of this browser. The server keeps the opcodes; the S51
+## smokes switch it on with `-- --save-account`.
+const SAVE_ACCOUNT := false
+
+
+static func save_account() -> bool:
+	return SAVE_ACCOUNT or OS.get_cmdline_user_args().has("--save-account")
+
+
 ## The Team panel tabs that show, by retail game-mode id (0 evolution,
 ## 1 elite, 2 2v2, 3 tournaments, 4 legends). S47 (owner): no Tournaments
 ## tab — tournaments live in their own screen (Torneos) and a classic one

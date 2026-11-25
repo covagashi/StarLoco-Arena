@@ -25,7 +25,7 @@ SERVER_PID=$!
 trap 'kill $SERVER_PID 2>/dev/null' EXIT
 for _ in $(seq 50); do grep -q "Game data" server.log 2>/dev/null && break; sleep 0.2; done
 EMAIL="Smoke.$RANDOM@example.com"
-ARGS=(--demo-ui --email="$EMAIL" --password=primera123 --new-password=segunda456
+ARGS=(--demo-ui --save-account --email="$EMAIL" --password=primera123 --new-password=segunda456
 	--server-log="$WORK/server.log" --shot-dir="$SHOTS")
 fail=0
 run() {   # run <phase> <browser> [more args]
@@ -43,7 +43,7 @@ run reset 3
 run refused 2
 # the same forms in French and English, for their captures (longer words)
 EMAIL="Smoke.$RANDOM@example.com"
-ARGS=(--demo-ui --email="$EMAIL" --password=primera123 --new-password=segunda456
+ARGS=(--demo-ui --save-account --email="$EMAIL" --password=primera123 --new-password=segunda456
 	--server-log="$WORK/server.log" --shot-dir="$SHOTS")
 run claim 4 --lang=fr
 run reset 5 --lang=en

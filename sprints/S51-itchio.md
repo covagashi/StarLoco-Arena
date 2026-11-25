@@ -149,6 +149,25 @@ paso**, Nilo en un bocadillo en cada momento (colocar, Listo, moverse,
 atacar, terminar turno), parpadea lo que hay que tocar, y solo avanza cuando
 lo haces. Va después de «Guardar mi progreso».
 
+### Invitado en la alfa (dueño, 2026-11-25)
+
+«Pon la opción de entrar como guest; al ser una alfa, déjalo como guest.»
+En preguntas: **renombrar y esconder lo de guardar**.
+
+- JUGAR pasa a **«Jugar como invitado»** (en «Play as guest», fr «Jouer en
+  invité»), y la nota dice «Alfa gratis… juegas como invitado».
+- **«Guardar mi progreso» apagado** con `Features.SAVE_ACCOUNT = false`: no
+  sale el aviso tras la victoria, ni «Ya tengo cuenta», ni la entrada de
+  Opciones. El código y el servidor se quedan; se enciende con el
+  interruptor. Los smokes de S51 lo encienden con `-- --save-account`;
+  `save_account_test.mjs` necesita un export con el interruptor encendido.
+- Con esto, publicar en itch.io ya no espera a los correos.
+
+**Verificado:** `run_tests.sh --headless` 25 suites, 1601/0;
+`save_account_smoke.sh` (con `--save-account`) todas las fases OK; build web
+con el interruptor apagado: la entrada es solo «Jugar como invitado», en
+es/en/fr (`~/codigo/capturas/s51/invitado/`).
+
 ## Falta
 
 - [ ] **Dueño:** crear la cuenta y la página de itch.io (nombre Pippop

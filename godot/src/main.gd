@@ -664,7 +664,7 @@ func _make_save_account_panel(_panel_name: String) -> Control:
 
 ## Opens the save sheet at `stage` ("ask" after a win, "form" from Opciones).
 func _open_save_account(stage: String) -> void:
-	if not State.account_demo:
+	if not State.account_demo or not Features.save_account():
 		return
 	_gui.model.set_value("saveAccount", {"demo": true, "stage": stage, "error": "", "busy": false})
 	if not _gui.is_open("saveAccountDialog"):
@@ -675,7 +675,7 @@ func _open_save_account(stage: String) -> void:
 ## one: "¿Guardas tu progreso?" — once the fight report (and a level up)
 ## is closed, so it never hides them.
 func _offer_save_after_win(after: Control) -> void:
-	if not State.account_demo or State.save_offered:
+	if not State.account_demo or State.save_offered or not Features.save_account():
 		return
 	State.save_offered = true
 	if after == null:

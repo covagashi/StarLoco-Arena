@@ -18,6 +18,7 @@ signal reset_confirm(email: String, code: String, password: String, proxy: Strin
 
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const DemoAccount := preload("res://src/web/demo_account.gd")
+const Features := preload("res://src/features.gd")
 const StyleB := preload("res://src/ui/style_b.gd")
 const REF := Vector2(1280, 720)
 const LANGS := ["es", "en", "fr"]
@@ -252,13 +253,15 @@ func _form_block() -> void:
 		btn.pressed.connect(_do_play)
 		btn.name = "Play"
 		# S51: a saved account comes back here — an ink button under JUGAR
-		var have := StyleB.button(false, 20)
-		have.name = "HaveAccount"
-		have.text = I18n.t("login.have_account")
-		have.custom_minimum_size.y = 44
-		have.pressed.connect(func(): show_account("login"))
-		_gap(col, 4)
-		col.add_child(have)
+		# (off for the alpha: Features.SAVE_ACCOUNT)
+		if Features.save_account():
+			var have := StyleB.button(false, 20)
+			have.name = "HaveAccount"
+			have.text = I18n.t("login.have_account")
+			have.custom_minimum_size.y = 44
+			have.pressed.connect(func(): show_account("login"))
+			_gap(col, 4)
+			col.add_child(have)
 		_acct = VBoxContainer.new()
 		_acct.name = "Account"
 		_acct.add_theme_constant_override("separation", 8)

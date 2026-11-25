@@ -1334,7 +1334,7 @@ func _options() -> void:
 	body.add_child(save)
 	label(body, I18n.t("opt.account"), 22)
 	# S51: while the account is a web demo one, save it with an email
-	if bool(data("saveAccount.demo", false)):
+	if bool(data("saveAccount.demo", false)) and Features.save_account():
 		label(body, I18n.t("opt.save_progress_text"), 15).add_theme_color_override("font_color", UiStyle.B_MUTE)
 		var save_btn := button(body, I18n.t("opt.save_progress"), func(): send("openSaveAccount"))
 		save_btn.name = "SaveProgress"

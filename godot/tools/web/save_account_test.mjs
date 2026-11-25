@@ -9,7 +9,8 @@
 //       <web dir> <ws url> <out dir> <server log>
 //
 // The server log tells what the server did (saved, key issued, logins).
-// Needs a game server with ws_addr and limits.demo_accounts on.
+// Needs a game server with ws_addr and limits.demo_accounts on, and a web
+// export built with Features.SAVE_ACCOUNT = true (off for the alpha).
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
