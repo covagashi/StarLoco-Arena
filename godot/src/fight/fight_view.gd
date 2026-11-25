@@ -154,6 +154,13 @@ func _ready() -> void:
 	_fx_ground.name = "FxGround"   # S37: effect rings and glyphs, over the marks
 	add_child(_fx_ground)
 	move_child(_fx_ground, _actors.get_index())
+	# S53 (owner: "no sé cuál soy ni se ilumina el que tiene el turno"): an
+	# arrow bobbing over the acting fighter's head, above every figure
+	_turn_mark = Node2D.new()
+	_turn_mark.name = "TurnMark"
+	add_child(_turn_mark)
+	move_child(_turn_mark, _actors.get_index() + 1)
+	_turn_mark.draw.connect(_draw_turn_mark)
 	_fight_hud = FightHud.new()
 	if ArtStyle.hud_life() == "ring":
 		_fight_hud.hp_style = FightHud.FighterCard.HpStyle.RING
@@ -213,7 +220,8 @@ func _ready() -> void:
 		_replay_bar.theme = _lobby_theme()
 		_replay_bar.leave_requested.connect(_on_back_pressed)
 		$UI.add_child(_replay_bar)
-	get_viewport().size_changed.connect(_layout_fight_ui)
+	_scale_with_window(true)
+	get_viewport().size_changed.connect(_on_window_resized)
 	_layout_fight_ui()
 	_wire_fight_focus.call_deferred()
 
@@ -405,6 +413,46 @@ const SPELL_SIDE := 56.0
 ## arena label top-left, menu top-right, hints and event cards under the
 ## banner, spells beside the medallion, PASS bottom-centre (or bottom-right
 ## when the spells would reach it), the chat over the bottom-right when open.
+## --- the window (S53, owner: "la redimensión es muy mala y se ve todo muy
+## pequeño"; "el zoom no puede ser infinito") ------------------------------
+## In a fight the window scales its content from a 1280×720 base (Godot's
+## canvas_items stretch, aspect expand), so the HUD and the board grow with
+## it; the lobby keeps its own scaling, so leaving the fight puts it back.
+## The camera fits the floor to what the HUD leaves, on entry and on every
+## resize, and the wheel stays within ZOOM_MIN..ZOOM_MAX of that fit.
+const BASE_SIZE := Vector2i(1280, 720)
+const ZOOM_MIN := 0.75
+const ZOOM_MAX := 3.0
+var _arena_box := Rect2()
+var _fit_zoom := 1.0
+var _user_zoom := 1.0
+
+
+func _scale_with_window(on: bool) -> void:
+	var w := get_window()
+	if w == null or w != get_tree().root:
+		return   # a fight under a test harness's own viewport
+	w.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS if on else Window.CONTENT_SCALE_MODE_DISABLED
+	w.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	w.content_scale_size = BASE_SIZE
+
+
+func _on_window_resized() -> void:
+	_layout_fight_ui()
+	_fit_camera()
+
+
+## The zoom that shows the whole floor in the room the HUD leaves (the top
+## banner and the bottom bar), within 0.5..2.5.
+func _fit_camera() -> void:
+	if not _arena_box.has_area() or cam == null:
+		return
+	var vis := get_viewport().get_visible_rect().size
+	var room := Vector2(maxf(vis.x - 120.0, 200.0), maxf(vis.y - 260.0, 200.0))
+	_fit_zoom = clampf(minf(room.x / _arena_box.size.x, room.y / (_arena_box.size.y + 90.0)), 0.5, 2.5)
+	cam.zoom = Vector2.ONE * _fit_zoom * _user_zoom
+
+
 func _layout_fight_ui() -> void:
 	var vp := get_viewport().get_visible_rect().size
 	_fight_hud.layout_hud()
@@ -597,6 +645,8 @@ func _load() -> void:
 		for pos in _sorted:
 			box = box.expand(_iso(pos.x + 0.5, pos.y + 0.5, _cells[pos].alt))
 		cam.position = box.get_center()
+		_arena_box = box
+		_fit_camera()
 		cam.make_current()
 
 
@@ -779,6 +829,7 @@ static func _guard_leave(on: bool) -> void:
 
 func _exit_tree() -> void:
 	_guard_leave(false)
+	_scale_with_window(false)
 	# If we leave the tree without being freed (e.g. replaced by an explicit
 	# add_child in tests), drop the net subscription — a stale instance would
 	# keep consuming the shared WireReader and starve the new scene.
@@ -2048,6 +2099,38 @@ func _no_clock() -> bool:
 ## acting fighter's medallion and the turn banner; clicking a card centres
 ## the camera. Every change marks the HUD dirty; one push per frame.
 const TEAM_TINTS := [Color(0.3, 0.5, 1.0), Color(1.0, 0.4, 0.3)]
+## S53: the rings say mine / theirs, not team 0 / 1 (team 1 drew our own red)
+const MINE := Color(0.25, 0.55, 1.0)
+const THEIRS := Color(1.0, 0.32, 0.3)
+const FIGURE_H := 1.45 * 43.0 * 1.41421356   # Fighter3D.BUILT_HEIGHT × PX
+var _turn_mark: Node2D
+var _mark_t := 0.0
+
+
+## A fighter's ring colour: ours blue, the rival's red; a spectator sees the
+## sides' own colours.
+func _side_color(f: Dictionary) -> Color:
+	var mine := _my_team()
+	if mine < 0 or State.spectating:
+		return TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
+	return MINE if int(f.get("team", -1)) == mine else THEIRS
+
+
+## The acting fighter's arrow: an ink-rimmed chevron in its side's colour,
+## bobbing over its head.
+func _draw_turn_mark() -> void:
+	if _placement or _fight_over or not _sprites.has(_current_fid) or _dead.has(_current_fid):
+		return
+	var spr: Figure = _sprites[_current_fid]
+	if spr.modulate.a < 0.05:
+		return
+	var f: Dictionary = State.fighters.get(_current_fid, {})
+	var col := _side_color(f)
+	var tip := spr.position + Vector2(0, -FIGURE_H * 0.82 + 5.0 * sin(_mark_t * 5.0))
+	var pts := PackedVector2Array([tip, tip + Vector2(-15, -18), tip + Vector2(-6, -18),
+		tip + Vector2(-6, -34), tip + Vector2(6, -34), tip + Vector2(6, -18), tip + Vector2(15, -18)])
+	_turn_mark.draw_colored_polygon(pts, col)
+	_turn_mark.draw_polyline(pts + PackedVector2Array([pts[0]]), Color(0.08, 0.09, 0.16), 2.5, true)
 var _hud_dirty := false
 
 func _build_timeline() -> void:
@@ -2899,6 +2982,9 @@ const OP_MOVE_REQ := 4503
 
 
 func _process(delta: float) -> void:
+	_mark_t += delta
+	if is_instance_valid(_turn_mark):
+		_turn_mark.queue_redraw()   # only the arrow moves: the floor redraws on events
 	if _turn_left >= 0.0:
 		_turn_left = maxf(_turn_left - delta, 0.0)
 	_fight_hud.set_clock(_turn_left)
@@ -3598,12 +3684,23 @@ func _cell_poly(x: int, y: int, alt: float) -> PackedVector2Array:
 
 
 ## Iso-proportioned ground ellipse for the fighter base rings.
-func _draw_base_ring(ci: CanvasItem, ctr: Vector2, col: Color, w: float) -> void:
+func _draw_base_ring(ci: CanvasItem, ctr: Vector2, col: Color, w: float, k := 1.0) -> void:
+	ci.draw_polyline(_base_pts(ctr, k), col, w, true)
+
+
+## S53: the same ellipse filled (the side's colour under the feet).
+func _draw_base_disc(ci: CanvasItem, ctr: Vector2, col: Color, k := 1.0) -> void:
+	var pts := _base_pts(ctr, k)
+	pts.remove_at(pts.size() - 1)
+	ci.draw_colored_polygon(pts, col)
+
+
+func _base_pts(ctr: Vector2, k: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in 25:
 		var a := TAU * float(i) / 24.0
-		pts.append(ctr + Vector2(cos(a) * HW * 0.55, sin(a) * HH * 0.55))
-	ci.draw_polyline(pts, col, w)
+		pts.append(ctr + Vector2(cos(a) * HW * 0.6 * k, sin(a) * HH * 0.6 * k))
+	return pts
 
 
 func _alt_color(alt: float) -> Color:
@@ -3808,19 +3905,22 @@ func _draw_ground_overlays() -> void:
 			continue                 # fully hidden — don't leak the position
 		var p: Vector3i = _actor_cells[id]
 		var ctr := _iso(p.x + 0.5, p.y + 0.5, p.z)
-		var col: Color = TEAM_TINTS[clampi(int(f.get("team", 0)), 0, 1)]
+		var col := _side_color(f)
 		var dead: bool = _dead.has(id)
-		var acting: bool = id == _current_fid
+		var acting: bool = id == _current_fid and not _placement
 		if dead:
 			_under_actor(p, func(ci):
 				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.15), 1.0))
 		elif acting:
+			# S53: a fuller disc, a bright rim and a second ring round it
 			_under_actor(p, func(ci):
-				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.3), 5.0)
-				_draw_base_ring(ci, ctr, col.lightened(0.3), 2.0))
+				_draw_base_disc(ci, ctr, Color(col.r, col.g, col.b, 0.45), 1.0)
+				_draw_base_ring(ci, ctr, col.lightened(0.35), 3.5)
+				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.5), 2.0, 1.3))
 		else:
 			_under_actor(p, func(ci):
-				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.65), 1.5))
+				_draw_base_disc(ci, ctr, Color(col.r, col.g, col.b, 0.28), 1.0)
+				_draw_base_ring(ci, ctr, Color(col.r, col.g, col.b, 0.9), 2.5))
 	if _placement:
 		# our start cells glow; selected fighter gets a ring
 		var t := _my_team()
@@ -3912,9 +4012,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			cam.zoom *= 1.15
+			_user_zoom = clampf(_user_zoom * 1.15, ZOOM_MIN, ZOOM_MAX)
+			cam.zoom = Vector2.ONE * _fit_zoom * _user_zoom
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			cam.zoom *= 0.87
+			_user_zoom = clampf(_user_zoom * 0.87, ZOOM_MIN, ZOOM_MAX)
+			cam.zoom = Vector2.ONE * _fit_zoom * _user_zoom
 		elif event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				_press_pos = event.position
@@ -3929,6 +4031,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion:
 		if _dragging:
 			cam.position -= event.relative / cam.zoom
+			if _arena_box.has_area():   # S53: the floor never leaves the screen
+				var b := _arena_box.grow(120.0)
+				cam.position = cam.position.clamp(b.position, b.end)
 			return
 		var cell: Variant = _cell_at(get_global_mouse_position())
 		_update_name_hover(cell)

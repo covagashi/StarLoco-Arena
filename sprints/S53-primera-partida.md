@@ -192,3 +192,28 @@ la tarjeta, bocadillo legible a su lado.
 
 Pendiente de B1: dentro del combate la guía de Nilo parpadea lo que toca,
 pero el resto de la interfaz sigue pulsable; va con B2.
+
+### Combate legible (A7–A9) — 2026-11-25
+
+- **A7:** los anillos dicen *míos / suyos* (azul / rojo), no equipo 0 / 1:
+  si eras el equipo 1 tus luchadores salían en rojo. Disco de color bajo los
+  pies y aro más grueso; el que tiene el turno, disco más lleno, aro
+  brillante y un segundo aro, y una flecha de su color que bota sobre su
+  cabeza (`TurnMark`, encima de todas las figuras).
+- **A9:** durante el combate la ventana escala su contenido desde
+  1280×720 (`canvas_items`, aspecto `expand`): el HUD y el tablero crecen
+  con la ventana; al salir vuelve como estaba (el lobby tiene su escalado).
+  La cámara encaja el suelo en lo que deja el HUD al entrar y en cada cambio
+  de tamaño.
+- **A8:** la rueda queda entre 0,75× y 3× de ese encaje, y el arrastre no
+  saca el suelo de la pantalla.
+- Comprobado con capturas a 1280×720, 1920×1080, 1024×640 y 1600×720 (las
+  dos primeras, idénticas en proporción) y de cerca: flecha azul sobre Humo,
+  aro azul bajo él y rojo bajo el muñeco.
+
+**A6 (figuras blancas y translúcidas):** no se reproduce en Chromium (las
+figuras salen con su color, captura de un combate real contra oracle-2).
+Es de Safari: las figuras se pintan en un SubViewport con fondo
+transparente y Safari mezcla ese alfa de otra manera. El WebKit de
+Playwright no arranca en Bazzite (le faltan bibliotecas de Ubuntu). Queda
+abierto: probar en un contenedor con WebKit o con el Safari del dueño.
