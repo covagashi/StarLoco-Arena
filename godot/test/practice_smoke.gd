@@ -15,6 +15,9 @@ extends "res://test/world_smoke.gd"
 ## turns as the MP need); 5. the spell blinks, then the foe once it is armed;
 ## a cast at an empty cell first (292) when the AP allow two; 6. the hit:
 ## the AP globe (293), then the spell or End turn (294); End turn → gone.
+## Since the owner's «1 contra 1 con un muñeco» the fight is our first titular
+## against the training dummy: it passes its turn and the second blow fells
+## it, ending the fight.
 ## --skip-at=N presses "Saltar práctica" on step N and checks it stays gone.
 ## The fight is surrendered at the end.
 
@@ -144,7 +147,34 @@ func _play() -> void:
 	await create_timer(0.6).timeout
 	_record(6, "end turn", g.step == S.DONE and not _ov.bubble.visible, "the practice closes with the turn")
 	await _shot_n("done")
-	await _end()
+	await _second_blow(sid)
+
+
+## S52 (1 vs 1 with a dummy): the dummy passes its turn, and the second blow
+## fells it — what 293 promises — and wins the fight.
+func _second_blow(sid: int) -> void:
+	var dummy: int = _ov._foe
+	var cell: Vector2i = _ov._cell_of(dummy)
+	var left: int = _fv._hp_max(State.fighters.get(dummy, {})) - int(_fv._hp_lost.get(dummy, 0))
+	if not await _wait(func(): return _fv._is_my_turn(), 20.0):
+		_record(7, "second blow", false, "our turn never came back")
+		await _end()
+		return
+	await create_timer(0.6).timeout
+	var still: bool = _ov._cell_of(dummy) == cell
+	_seen.erase(4520)
+	_fv._on_spell_button(sid)
+	_fv.request_cast_at(sid, cell)
+	# the fight view goes once the fight is over: read it before
+	await _wait(func(): return _seen.has(4520), 6.0)
+	var dead: bool = is_instance_valid(_fv) and _fv._dead.get(dummy, false)
+	await create_timer(0.5).timeout
+	if is_instance_valid(_fv):
+		await _shot_n("felled")
+	await _wait(func(): return _seen.has(8300), 8.0)
+	_record(7, "second blow", still and left > 0 and dead and _seen.has(8300),
+		"the dummy stayed on %s (%s), had %d HP after the first blow; the second fells it (dead %s, fight over %s)"
+			% [cell, still, left, dead, _seen.has(8300)])
 
 
 ## One wrong step first: a free cell next to ours that is not the goal nor in

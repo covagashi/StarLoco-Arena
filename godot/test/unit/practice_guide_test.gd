@@ -191,6 +191,19 @@ func _overlay_parts(t) -> void:
 		if PracticeOverlay.lesson_spell({"spells": ids}) < 0:
 			none.append(b)
 	t.ok(none.is_empty(), "every class has a lesson spell (none for %s)" % [none])
+	# the server's dummy: our name for it, the stuffed sack's figure
+	var AiNames = load("res://src/gamedata/ai_names.gd")
+	var fight := {"teams": [{"id": 1, "fighters": [
+		{"id": 9, "coach": AiNames.CHALLENGE_COACH, "breed": 1, "name": "Mannequin", "hp_lost": 60},
+		{"id": 8, "coach": 7, "breed": 1, "name": "Mannequin"}]}]}
+	AiNames.localize(fight)
+	var dummy: Dictionary = fight.teams[0].fighters[0]
+	var player: Dictionary = fight.teams[0].fighters[1]
+	t.eq([dummy.name, dummy.get("look"), dummy.get("dummy")],
+		[NpcDialogs.npc_name(316), 8003, true], "the server's dummy: npc.316 and look 8003")
+	t.eq([player.name, player.get("look")], ["Mannequin", null], "a player's fighter of that name is left alone")
+	var base: int = load("res://src/gamedata/breeds.gd").stats(1, [0, 0, 0])[0]
+	t.eq([dummy.get("hp"), dummy.get("hp_lost")], [base - 60, 0], "its life: breed life − hpLost, nothing lost")
 
 
 ## Nilo's pages read in the three languages, with this fight's names in.
@@ -206,7 +219,8 @@ func _texts(t) -> void:
 				bad.append(id)
 		t.ok(bad.is_empty(), "%s: Nilo's 13 pages fill in (bad %s)" % [lang, bad])
 		var page := NpcDialogs.npc_name(291).format(vars)
-		t.ok("Golpe" in page and "Bastión" in page, "%s: 291 names the spell and the foe" % lang)
+		t.ok("Golpe" in page, "%s: 291 names the spell" % lang)
+		t.ok(NpcDialogs.npc_name(316) != "", "%s: the dummy has a name (npc.316)" % lang)
 		var retail := ["Presión", "Pressure", "Pression", "Lanudo", "Woolly", "Laineux", "espadachín", "Swordsman", "Bretteur"]
 		var left := []
 		for id in range(282, 295):
