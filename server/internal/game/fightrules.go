@@ -85,6 +85,22 @@ func rulesFromParameters(ps []gamedata.Parameter) fightRules {
 	return r
 }
 
+// noClockTurn is the turn clock from which a fight counts as having none: a
+// rule that adds an hour or more (Nilo's practice, challenge 46: +3 600 000
+// ms) means "take your time", not a longer turn.
+const noClockTurn = 10 * time.Minute
+
+// placementClockFor is the placement window: the usual placementClock, or —
+// in a fight with no turn clock — as long as a turn (S52). The guided practice
+// talks the player through placing; a 30-second window placed them while they
+// read, and npc.283 promises that practice has no clock.
+func (f *Fight) placementClockFor() time.Duration {
+	if f != nil && f.Rules.TurnClock >= noClockTurn {
+		return f.Rules.TurnClock
+	}
+	return placementClock
+}
+
 // rulesForChallenge resolves the ruleset a challenge fight runs under.
 func (d *Deps) rulesForChallenge(challengeID int32) fightRules {
 	if challengeID == 0 || d.ChallengeDefs == nil {

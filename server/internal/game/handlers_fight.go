@@ -343,7 +343,7 @@ func (f *Fight) advanceToPlacement() {
 	f.broadcast(end)
 	start, _ := buildEmpty(protocol.OpStartPlacement)
 	f.broadcast(start)
-	f.armClock(placementClock, (*Fight).advanceToObservation)
+	f.armClock(f.placementClockFor(), (*Fight).advanceToObservation)
 }
 
 func handleMoveToPlacement(s *Session, frame *protocol.C2SFrame) error {

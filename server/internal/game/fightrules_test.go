@@ -125,3 +125,26 @@ func TestFightRulesArePerFight(t *testing.T) {
 			bare.turnClockFor(), bare.suddenDeathTurnFor())
 	}
 }
+
+// TestPlacementClockFollowsNoClockRules (S52): Nilo's practice (challenge 46,
+// +1 h per turn) places at the player's pace; every other fight keeps the
+// 30-second window, a shorter or slightly longer turn included.
+func TestPlacementClockFollowsNoClockRules(t *testing.T) {
+	practice := &Fight{Rules: rulesFromParameters([]gamedata.Parameter{
+		{Type: gamedata.ParamTypeTurnDurationMS, Params: []int32{3600000}},
+	})}
+	if got := practice.placementClockFor(); got != practice.Rules.TurnClock || got < time.Hour {
+		t.Errorf("practice placement window = %v, want the turn clock (%v)", got, practice.Rules.TurnClock)
+	}
+	for _, delta := range []int32{0, 10000, -10000} {
+		f := &Fight{Rules: rulesFromParameters([]gamedata.Parameter{
+			{Type: gamedata.ParamTypeTurnDurationMS, Params: []int32{delta}},
+		})}
+		if got := f.placementClockFor(); got != placementClock {
+			t.Errorf("turn delta %d ms: placement window = %v, want %v", delta, got, placementClock)
+		}
+	}
+	if got := (*Fight)(nil).placementClockFor(); got != placementClock {
+		t.Errorf("nil fight: %v", got)
+	}
+}
