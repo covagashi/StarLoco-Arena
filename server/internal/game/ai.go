@@ -68,6 +68,10 @@ func (f *Fight) runAITurn(ff *FightFighter) {
 	if f.Phase() != PhaseAction || !f.isCurrentTurn(ff.WireID) {
 		return
 	}
+	if ff.Dummy {
+		f.endTurn(ff.WireID) // the training dummy never acts (S52)
+		return
+	}
 	// GAMBIT RULES FIRST, archetype second (gambit_eval.go). A fighter whose
 	// owner authored a rule list plays that list; the archetype is the fallback
 	// for a fighter with no rules and for a turn where no rule applies, which is

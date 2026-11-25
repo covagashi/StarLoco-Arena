@@ -131,6 +131,9 @@ type FightFighter struct {
 	// So: if an AI fighter is silently doing nothing but walking and punching, this
 	// field being 0 is the first thing to check.
 	SummonSpellID int32
+	// Dummy marks Nilo's training dummy (S52, practice_dummy.go): it passes
+	// every turn and any damaging hit takes half its maximum life.
+	Dummy bool
 	// Gambits is this fighter's ordered gambit rule list (gambit.go), or nil when
 	// it has none. On an AI-driven turn the rules are evaluated BEFORE the
 	// archetype AI, and the archetype plays whenever no rule applies — so nil

@@ -545,6 +545,9 @@ func (f *Fight) applyHPDelta(caster, victim *FightFighter, runEffectID, genericI
 			}
 		}
 	}
+	if delta < 0 {
+		delta = -dummyBlow(victim, -delta) // S52: two blows fell the dummy
+	}
 	before := victim.HP
 	victim.HP += delta
 	if victim.HP < 0 {
@@ -1098,6 +1101,7 @@ func (f *Fight) applyCollisionDamage(_ *FightFighter, victim *FightFighter, amou
 	if victim == nil || amount <= 0 {
 		return
 	}
+	amount = dummyBlow(victim, amount)
 	victim.HP -= amount
 	if victim.HP < 0 {
 		victim.HP = 0
@@ -1338,7 +1342,7 @@ func (f *Fight) applyFallbackDamage(caster *FightFighter, target Pos) {
 	if victim == nil {
 		return
 	}
-	dmg := int32(defaultSpellDamage)
+	dmg := dummyBlow(victim, int32(defaultSpellDamage))
 	if dmg > victim.HP {
 		dmg = victim.HP
 	}

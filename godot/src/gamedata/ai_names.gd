@@ -68,11 +68,31 @@ static func fighter_name(coach_id: int, breed: int, name: String) -> String:
 	return name
 
 
+## Nilo's training dummy (S52, server practice_dummy.go dummyName): its
+## name is npc.316 and it wears the stuffed sack (summon look 8003, the
+## Bloqueadora's figure and portrait — no art of its own).
+const DUMMY := "Mannequin"
+const DUMMY_NAME := 316
+const DUMMY_LOOK := 8003
+
+
 ## Rewrites the coach and fighter names of a decoded 8000 in place.
 static func localize(fight: Dictionary) -> void:
 	for c in fight.get("coaches", []):
 		c["name"] = coach_name(int(c.get("id", 0)), str(c.get("name", "")))
 	for t in fight.get("teams", []):
 		for f in t.get("fighters", []):
+			if is_ai_coach(int(f.get("coach", 0))) and str(f.get("name", "")) == DUMMY:
+				var n := NpcDialogs.npc_name(DUMMY_NAME)
+				f["name"] = n if n != "" else DUMMY
+				f["look"] = DUMMY_LOOK
+				f["dummy"] = true
+				# its life is its own, not its breed's: the server counts its
+				# hpLost from the breed's (fight_packets.go), so that gives it
+				var base := int(load("res://src/gamedata/breeds.gd").stats(
+					int(f.get("breed", 1)), [0, 0, 0])[0])
+				f["hp"] = maxi(base - int(f.get("hp_lost", 0)), 1)
+				f["hp_lost"] = 0
+				continue
 			f["name"] = fighter_name(int(f.get("coach", 0)), int(f.get("breed", 0)),
 				str(f.get("name", "")))

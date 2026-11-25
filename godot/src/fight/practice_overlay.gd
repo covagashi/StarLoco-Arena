@@ -12,10 +12,11 @@ extends Control
 ##     HUD control (Ready / End turn, a spell slot, the turn bar, the AP
 ##     globe), or a pulsing coral diamond and a bouncing arrow on a cell.
 ##
-## The foe ("{foe}") is the living enemy nearest our acting fighter, kept
-## while it lives; the spell ("{spell}") is that fighter's cheapest attack
-## that reaches an adjacent cell (the retail lesson's "Presión", which no
-## class has any more).
+## Since the owner's «1 contra 1 con un muñeco» (S52) the fight is our first
+## titular against a training dummy (server practice_dummy.go); the foe is
+## the living enemy nearest our acting fighter — the dummy — and the spell
+## ("{spell}") that fighter's cheapest attack that reaches an adjacent cell
+## (the retail lesson's "Presión", which no class has any more).
 
 const PracticeGuide := preload("res://src/fight/practice_guide.gd")
 const NpcDialogs := preload("res://src/gamedata/npcdialogs.gd")
@@ -438,12 +439,19 @@ func _move_goal() -> Vector2i:
 	return _goal
 
 
-## Step 1's cell: a free start cell of ours, the one nearest the enemy side.
+## Step 1's cell: a free start cell of ours, the one nearest the foes (the
+## dummy, S52; the enemy start cells before they stand anywhere).
 func _placement_goal() -> Vector2i:
 	if _place_cell.x > -9999 and fv._occupied_fighter(_place_cell) < 0:
 		return _place_cell
 	var t: int = fv._my_team()
-	var foes: Array = fv._fmd.get("team%d" % (1 - t), [])
+	var foes: Array = []
+	for id in fv._actor_cells:
+		if _enemy(int(id)) and not fv._dead.get(int(id), false):
+			var p: Vector3i = fv._actor_cells[id]
+			foes.append({"x": p.x, "y": p.y})
+	if foes.is_empty():
+		foes = fv._fmd.get("team%d" % (1 - t), [])
 	var best := Vector2i(-9999, -9999)
 	var best_d := 1 << 30
 	for c in fv._fmd.get("team%d" % t, []):

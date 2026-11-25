@@ -362,7 +362,15 @@ func writeCombatFighterBlob(w *protocol.Writer, ff *FightFighter) {
 	// (max − delta). At a fresh fight start every fighter is full so all three are
 	// 0; on a mid-fight RESUME (sendFightResync re-sends CREATE_FIGHT) these carry
 	// the live damage/spend so the client rebuilds the fight at its current state.
-	w.I32(maxI32(0, ff.MaxHP-ff.HP))
+	if ff.Dummy {
+		// Nilo's training dummy (S52): the client takes a fighter's maximum life
+		// from its breed, and the dummy's is its own, so its hpLost is counted
+		// from the breed's: the client (ai_names.gd) reads its life as
+		// breed HP − hpLost and starts it at 0 lost.
+		w.I32(maxI32(0, fighterMaxHP(ff.Fighter.BreedID)-ff.HP))
+	} else {
+		w.I32(maxI32(0, ff.MaxHP-ff.HP))
+	}
 	// EFFECTIVE AP/MP (see effectiveAP/effectiveMP): a petrified fighter reads 0
 	// of both and a rooted one reads 0 MP, so the gauges the client rebuilds on
 	// a resume/spectate match what it would derive for itself.

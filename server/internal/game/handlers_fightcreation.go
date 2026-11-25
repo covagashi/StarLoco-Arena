@@ -173,19 +173,37 @@ func (s *Session) startPvEChallengeMode(challengeID int32, practiceOnly bool) er
 	// exists, and silently hand the coach a single fighter against a whole demon
 	// team.)
 	fightArena := s.deps.pickArena()
-	roster := s.deps.storyRoster(s.Coach.ID, len(fightArena.team0))
+	seats := len(fightArena.team0)
+	if challengeID == practiceChallenge {
+		// Nilo's practice (S52): the first titular alone against a dummy
+		fightArena = s.deps.practiceArenaFor()
+		seats = 1
+	}
+	roster := s.deps.storyRoster(s.Coach.ID, seats)
 	teamA, err := s.deps.buildFightTeamFor(s, 0, fightArena.team0, roster)
 	if err != nil {
 		return refuseFightError(err, s)
 	}
-	teamB := s.deps.buildChallengeTeam(1, fightArena.startCells(1), challengeID, len(teamA.Fighters))
+	var teamB *FightTeam
+	if challengeID == practiceChallenge {
+		teamB = s.deps.buildDummyTeam(1, fightArena, teamA)
+	} else {
+		teamB = s.deps.buildChallengeTeam(1, fightArena.startCells(1), challengeID, len(teamA.Fighters))
+	}
 	// Historia (S21): the first win of a campaign challenge counts like an
 	// evolution fight; once won, it is practice (no XP to farm, no death).
 	story := !practiceOnly && isStoryChallenge(challengeID) && !s.deps.challengeAlreadyDone(s.Coach.ID, challengeID)
 	s.log.Info("challenge fight", "coach", s.Coach.Name, "challenge", challengeID,
 		"opponents", len(teamB.Fighters), "opponent", teamB.Coach().Name, "story", story)
 	return s.deps.startFightWithTeamsSeeded(fightArena, teamA, teamB, true, challengeID, false,
-		func(f *Fight) { f.Story = story })
+		func(f *Fight) {
+			f.Story = story
+			if challengeID == practiceChallenge {
+				// no clock, so no hurry either: the arena never shrinks under
+				// a player who is still learning (S52)
+				f.Rules.SuddenDeathTurn = practiceNoSuddenDeath
+			}
+		})
 }
 
 // sendFightCreationError sends FIGHT_CREATION_ERROR (26310 nx_1):
