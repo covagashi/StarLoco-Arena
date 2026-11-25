@@ -16,8 +16,8 @@ import (
 //     whatever the attack, a critical included (dummyBlow);
 //   - its maximum life is twice the base damage of the player's lesson attack
 //     (the cheapest damaging spell that reaches the next cell, else the weapon),
-//     so the number that floats over it reads like that attack's own (at most
-//     a breed-1 fighter's life, which the wire counts it from).
+//     so the number that floats over it reads like that attack's own (the
+//     8000's maxima block carries it to the client, writeFighterMaxima).
 //
 // Nothing else changes: every other challenge is built as before.
 
@@ -92,10 +92,7 @@ func (d *Deps) buildDummyTeam(side uint8, a *arena, player *FightTeam) *FightTea
 		lead = player.Fighters[0]
 		from = lead.Pos
 	}
-	hp := 2 * d.lessonDamage(lead)
-	// at most its breed's life: the wire counts the dummy's from there
-	// (writeCombatFighterBlob)
-	hp = max(dummyMinHP, min(fighterMaxHP(1), hp))
+	hp := max(dummyMinHP, 2*d.lessonDamage(lead))
 	ff := &FightFighter{
 		WireID:  FighterWireIDBase + int64(practiceChallenge)*1024 + int64(side)*8,
 		CoachID: challengeCoachID,

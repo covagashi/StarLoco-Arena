@@ -87,8 +87,10 @@ static func localize(fight: Dictionary) -> void:
 				f["name"] = n if n != "" else DUMMY
 				f["look"] = DUMMY_LOOK
 				f["dummy"] = true
-				# its life is its own, not its breed's: the server counts its
-				# hpLost from the breed's (fight_packets.go), so that gives it
+				if f.has("hp"):
+					continue   # its life came in the 8000's maxima block
+				# a replay from before that block: the server counted its
+				# hpLost from the breed's life, so that gives it
 				var base := int(load("res://src/gamedata/breeds.gd").stats(
 					int(f.get("breed", 1)), [0, 0, 0])[0])
 				f["hp"] = maxi(base - int(f.get("hp_lost", 0)), 1)

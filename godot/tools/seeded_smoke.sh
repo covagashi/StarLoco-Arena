@@ -25,6 +25,12 @@ tourn_offline_smoke) sql="update tournaments set search_period_start=strftime('%
 screens_smoke) sql="insert into coach_cards(coach_id,template_id,quantity,pos) values(1,131,1,0);" ;;
 tournament_fight_smoke) python3 godot/test/seed_tournament_final.py $db; sql="" ;;
 totems_smoke) sql="update tournaments set search_period_start=datetime('now','-1 minute'), search_period_minutes=60 where id=1; update guilds set demon_id=0 where id=2; insert into coach_cards(coach_id,template_id,quantity,pos) values(1,128,1,0);" ;;
+# S52: a 3-AP lesson attack (spell 4, the next cell) for the Historia
+# titulars (5, 15), who only had the weapon. Fighter 5 is wounded to 5 AP:
+# one cast a turn, and the bar must say 5. "--healed" lifts its wounds, so
+# two casts fit and the miss (292) plays live.
+practice_smoke) sql="delete from fighter_spells where fighter_id in (5,15) and spell_id=4; insert into fighter_spells(fighter_id,slot,spell_id) values(5,0,4),(15,0,4);"
+  case "${2:-}" in *--healed*) sql="$sql delete from fighter_conditions where fighter_id=5;" ;; esac ;;
 cardpick_smoke) sql="insert into card_picks(coach_id,wins,picks,offer,drops_since_rare) values(1,0,0,'543,900,861',0);" ;;
 tournaments_smoke) cp $db $tmp/arena.db; python3 godot/test/seed_tournaments.py $tmp; db=$tmp/arena.db; sql="" ;;
 *) sql="" ;;

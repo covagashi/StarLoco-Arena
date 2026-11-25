@@ -173,3 +173,50 @@ en ~15 turnos, «un golpe más y caerá» no siempre cierto), el dueño eligió
   `es-01`…`es-15`, `fr-01`…`fr-15`, `en-01`…`en-08`, `es-strip-eventos`;
   miradas: el saco se lee como muñeco, el bocadillo no tapa lo que parpadea,
   el francés cabe.
+
+
+## PA de verdad en la barra; el 292 en vivo (2026-11-25)
+
+El dueño preguntó por qué no se probaba el 292 en vivo. Al darle a Humo un
+ataque de 3 PA en la base de pruebas, el segundo lanzamiento lo rechazaba el
+servidor («cast refused: AP», 2 de 3), y el cliente seguía mostrando 3 PA y
+hacía parpadear el hechizo.
+
+### Hecho
+
+- **El fallo (de siempre, no de S52):** la barra de combate tomaba los PA, PM
+  y la vida máxima solo de la clase (`fight_view._base_stats`). El servidor
+  suma cartas, nodos de esfera y heridas
+  (`computeFighterStatsWithConditions`). Un luchador herido o equipado veía
+  PA que no tenía y podía pulsar hechizos que el servidor rechazaba.
+- **Servidor:** el 8000 termina con los máximos reales de cada luchador
+  (`writeFighterMaxima`): `[n × {i64 luchador, i32 vida, i32 PA, i32 PM}][u8 n]["SLMX"]`.
+  Va al final y se lee desde el final, así que una repetición grabada antes
+  (sin la marca) sigue cargando con los de la clase.
+- **Cliente:** `codec_overrides._fighter_maxima` los lee y los pone en el
+  luchador (`hp`, `ap`, `mp`); `_base_stats` y `_hp_max` los usan.
+- **Muñeco:** se va el apaño del `hpLost` contado desde la vida de la clase.
+  Su vida llega en el bloque de máximos, como la de todos, y deja de estar
+  topada por la vida de la clase 1. `ai_names.gd` solo lo convierte en una
+  repetición antigua.
+- **Base de pruebas (`seeded_smoke.sh practice_smoke`):** los titulares de
+  Historia (5, 15) reciben «Empuje firme» (3 PA, casilla de al lado). Humo 5
+  está herido (5 PA): un golpe por turno, sin 292. Con `--healed` se le
+  quitan las heridas: 6 PA, dos lanzamientos y el 292 en vivo.
+  `--expect-ap=N` comprueba los PA con que la barra abre el primer turno.
+
+### Verificado
+
+- Go: `go vet ./...` y `go test ./...` en verde; `TestPracticeDummyLifeOnTheWire`
+  comprueba el `hpLost` propio del muñeco y el bloque de máximos (vida del
+  muñeco 10; un luchador herido 5 PA y 2 PM).
+- `run_tests.sh --headless`: 26 suites, 1680 comprobaciones, 0 fallos (el
+  bloque leído desde el final, sin marca, demasiado corto; el muñeco con y
+  sin bloque).
+- `practice_smoke --expect-ap=5` (herido): **20/0**; la barra abre con 5.
+  `--healed --expect-ap=6`: **22/0**, con el 292 en vivo (lanza a una casilla
+  vacía, Nilo dice 292, parpadea «Empuje firme», luego el golpe y el 293).
+  es y fr **19/0** con capturas nuevas. `tutorial_smoke` 10/0,
+  `guide_smoke` 6/0, `fight_smoke` y `replay_smoke` OK.
+- Capturas: `~/codigo/capturas/s52/es-*`, `fr-*` (barra con 5 PA) y
+  `es-292-fallo-sano.png`.

@@ -44,3 +44,14 @@ Textos 282/284/289/291–293 ajustados. De paso: la franja oscura de las
 cartas de evento (fallo de S24: las cartas antiguas guardaban el ancho del
 efecto) y la muerte súbita, apagada en la práctica. 292 en vivo sigue sin
 salir (el luchador de pruebas solo tiene el arma).
+
+## Después: PA de verdad en la barra
+
+Probando en vivo el «has fallado» (292) salió un fallo antiguo: la barra de
+combate sacaba PA, PM y vida solo de la clase, sin cartas, esferas ni
+heridas, así que un luchador herido veía un PA que el servidor no le daba.
+Ahora el servidor cierra el mensaje de inicio de combate con los máximos
+reales de cada luchador y el cliente los usa; las repeticiones antiguas
+siguen cargando. El muñeco recibe su vida por la misma vía. El 292 ya se
+prueba en vivo con un luchador sano, y la barra de uno herido se comprueba
+con 5 PA.

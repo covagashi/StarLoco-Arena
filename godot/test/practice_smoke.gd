@@ -19,6 +19,9 @@ extends "res://test/world_smoke.gd"
 ## against the training dummy: it passes its turn and the second blow fells
 ## it, ending the fight.
 ## --skip-at=N presses "Saltar práctica" on step N and checks it stays gone.
+## --expect-ap=N checks the bar opens our first turn with N AP: the seed's
+## titular is wounded (5 of 6), or healed with --healed (seeded_smoke.sh),
+## and the bar must show the server's AP, not the breed's (S52).
 ## The fight is surrendered at the end.
 
 const PracticeGuide := preload("res://src/fight/practice_guide.gd")
@@ -27,6 +30,7 @@ const S := PracticeGuide.Step
 
 var _lang := "es"
 var _skip_at := -1
+var _expect_ap := -1
 var _fv
 var _ov
 var _n := 0
@@ -38,6 +42,8 @@ func _audit() -> void:
 			_lang = a.trim_prefix("--lang=")
 		if a.begins_with("--skip-at="):
 			_skip_at = int(a.trim_prefix("--skip-at="))
+		if a.begins_with("--expect-ap="):
+			_expect_ap = int(a.trim_prefix("--expect-ap="))
 	var i18n = root.get_node("I18n")
 	var lang_before: String = i18n.lang
 	i18n.set_locale(_lang)
@@ -106,6 +112,9 @@ func _play() -> void:
 	await create_timer(0.6).timeout
 	_ov._next.pressed.emit()   # Continuar
 	await create_timer(0.4).timeout
+	if _expect_ap >= 0 and await _wait(func(): return _fv._is_my_turn(), 30.0):
+		_record(4, "AP", _fv._ap_left == _expect_ap,
+			"the bar opens the turn with %d AP (want %d)" % [_fv._ap_left, _expect_ap])
 	# 4. walk
 	if g.step == S.MOVE:
 		await _check(4, "rect", _fv._fight_hud.get_node("Timeline"))   # 288

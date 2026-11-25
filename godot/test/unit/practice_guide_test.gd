@@ -203,7 +203,22 @@ func _overlay_parts(t) -> void:
 		[NpcDialogs.npc_name(316), 8003, true], "the server's dummy: npc.316 and look 8003")
 	t.eq([player.name, player.get("look")], ["Mannequin", null], "a player's fighter of that name is left alone")
 	var base: int = load("res://src/gamedata/breeds.gd").stats(1, [0, 0, 0])[0]
-	t.eq([dummy.get("hp"), dummy.get("hp_lost")], [base - 60, 0], "its life: breed life − hpLost, nothing lost")
+	t.eq([dummy.get("hp"), dummy.get("hp_lost")], [base - 60, 0], "an old replay: breed life − hpLost, nothing lost")
+	var now := {"teams": [{"id": 1, "fighters": [{"id": 9, "coach": AiNames.CHALLENGE_COACH,
+		"breed": 1, "name": "Mannequin", "hp_lost": 4, "hp": 10, "ap": 0, "mp": 0}]}]}
+	AiNames.localize(now)
+	t.eq([now.teams[0].fighters[0].hp, now.teams[0].fighters[0].hp_lost], [10, 4],
+		"with the 8000's maxima: its own life and hpLost, untouched")
+	# the 8000's maxima block, read from the end (S52, fight_packets.go)
+	var Codec = load("res://src/net/codec_overrides.gd")
+	var tail := PackedByteArray([1, 2, 3])   # the fight grid before it
+	for row in [[77, 75, 5, 2], [-3, 10, 0, 0]]:
+		tail.append_array(_be_row(row))
+	tail.append(2)
+	tail.append_array("SLMX".to_ascii_buffer())
+	t.eq(Codec._fighter_maxima(tail), {77: [75, 5, 2], -3: [10, 0, 0]}, "maxima block: two fighters")
+	t.eq(Codec._fighter_maxima(PackedByteArray([1, 2, 3, 4, 5, 6])), {}, "no magic (an old replay): nothing")
+	t.eq(Codec._fighter_maxima("SLMX".to_ascii_buffer()), {}, "too short: nothing")
 
 
 ## Nilo's pages read in the three languages, with this fight's names in.
@@ -230,3 +245,14 @@ func _texts(t) -> void:
 		t.ok(left.is_empty(), "%s: no retail spell, foe or class left in them %s" % [lang, left])
 	if was != "":
 		I18n.set_locale(was)
+
+
+## One maxima row as the server writes it: i64 + 3 × i32, big-endian.
+func _be_row(row: Array) -> PackedByteArray:
+	var out := PackedByteArray()
+	for i in range(7, -1, -1):
+		out.append((int(row[0]) >> (8 * i)) & 0xff)
+	for v in row.slice(1):
+		for i in range(3, -1, -1):
+			out.append((int(v) >> (8 * i)) & 0xff)
+	return out

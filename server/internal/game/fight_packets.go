@@ -125,7 +125,36 @@ func buildCreateFight(f *Fight, deckCoach *domain.Coach, spectator bool) ([]byte
 	// client renders placement cells + fighters (an empty grid renders nothing).
 	writeFightGrid(w, f.Arena())
 
+	writeFighterMaxima(w, f)
+
 	return protocol.EncodeS2C(protocol.OpCreateFight, w.Bytes())
+}
+
+// fighterMaximaMagic closes the 8000 when it carries the fighter maxima block.
+const fighterMaximaMagic = "SLMX"
+
+// writeFighterMaxima appends every fighter's real maximum life, AP and MP (S52):
+// breed, cards, sphere nodes and conditions, as computeFighterStatsWithConditions
+// made them. Without it the client took them from the breed alone, so a
+// wounded or equipped fighter's bar showed AP the server would refuse. It goes
+// LAST and is read from the end, [n × {i64 fighter, i32 hp, i32 ap, i32 mp}]
+// [u8 n]["SLMX"], so a replay recorded before it (no magic) still parses.
+func writeFighterMaxima(w *protocol.Writer, f *Fight) {
+	n := 0
+	for _, t := range f.Teams {
+		for _, ff := range t.Fighters {
+			if n == 255 {
+				break
+			}
+			w.I64(ff.WireID)
+			w.I32(ff.MaxHP)
+			w.I32(ff.MaxAP)
+			w.I32(ff.MaxMP)
+			n++
+		}
+	}
+	w.U8(uint8(n))
+	w.Raw([]byte(fighterMaximaMagic))
 }
 
 // writeFightGrid emits the aoq_0.f fight-grid for the practice arena. Because the
@@ -362,15 +391,7 @@ func writeCombatFighterBlob(w *protocol.Writer, ff *FightFighter) {
 	// (max − delta). At a fresh fight start every fighter is full so all three are
 	// 0; on a mid-fight RESUME (sendFightResync re-sends CREATE_FIGHT) these carry
 	// the live damage/spend so the client rebuilds the fight at its current state.
-	if ff.Dummy {
-		// Nilo's training dummy (S52): the client takes a fighter's maximum life
-		// from its breed, and the dummy's is its own, so its hpLost is counted
-		// from the breed's: the client (ai_names.gd) reads its life as
-		// breed HP − hpLost and starts it at 0 lost.
-		w.I32(maxI32(0, fighterMaxHP(ff.Fighter.BreedID)-ff.HP))
-	} else {
-		w.I32(maxI32(0, ff.MaxHP-ff.HP))
-	}
+	w.I32(maxI32(0, ff.MaxHP-ff.HP))
 	// EFFECTIVE AP/MP (see effectiveAP/effectiveMP): a petrified fighter reads 0
 	// of both and a rooted one reads 0 MP, so the gauges the client rebuilds on
 	// a resume/spectate match what it would derive for itself.

@@ -2127,6 +2127,9 @@ func fight_hud_model() -> Dictionary:
 func _base_stats(f: Dictionary) -> Array:
 	if f.get("summon", false):
 		return [0, int(f.get("ap", 6)), int(f.get("mp", 3))]
+	# the 8000's maxima (S52): cards, sphere nodes and wounds included
+	if f.has("ap"):
+		return [int(f.get("hp", 0)), int(f.ap), int(f.get("mp", 0))]
 	return Breeds.stats(int(f.get("breed", 1)), [60, 6, 3])
 
 

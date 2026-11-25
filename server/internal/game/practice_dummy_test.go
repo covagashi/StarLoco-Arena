@@ -172,32 +172,55 @@ func TestPracticeDummyLifeFollowsTheLessonAttack(t *testing.T) {
 		dmg := d.lessonDamage(&FightFighter{Fighter: fr, MaxAP: 6})
 		team := d.buildDummyTeam(1, &practiceArena, &FightTeam{Fighters: []*FightFighter{{Fighter: fr, MaxAP: 6}}})
 		hp := team.Fighters[0].MaxHP
-		if dmg <= 0 || hp != max(dummyMinHP, min(fighterMaxHP(1), 2*dmg)) {
+		if dmg <= 0 || hp != max(dummyMinHP, 2*dmg) {
 			t.Errorf("breed %d: lesson damage %d, dummy life %d", b, dmg, hp)
 		}
 	}
 }
 
-// On the wire its hpLost counts from its breed's life (the client's maximum),
-// so the client reads its own life; everyone else's is unchanged.
+// On the wire the dummy's hpLost is its own, like anyone's, and the 8000's
+// maxima block (read from the end) carries every fighter's real maximum life,
+// AP and MP — the dummy's life, a wounded fighter's AP.
 func TestPracticeDummyLifeOnTheWire(t *testing.T) {
 	f := buildTestFight()
 	dummy := f.Teams[1].Fighters[0]
 	dummy.Dummy, dummy.MaxHP, dummy.HP = true, 10, 5
-	lost := func(ff *FightFighter) int32 {
-		w := protocol.NewWriter()
-		writeCombatFighterBlob(w, ff)
-		b := w.Bytes()
-		r := protocol.NewReader(b[len(b)-12:])
-		v, _ := r.I32()
-		return v
-	}
-	if got, want := lost(dummy), fighterMaxHP(1)-5; got != want {
-		t.Errorf("dummy hpLost %d, want %d (breed life − its HP)", got, want)
+	w := protocol.NewWriter()
+	writeCombatFighterBlob(w, dummy)
+	b := w.Bytes()
+	if v, _ := protocol.NewReader(b[len(b)-12:]).I32(); v != 5 {
+		t.Errorf("dummy hpLost %d, want 5 (its life − its HP)", v)
 	}
 	me := f.Teams[0].Fighters[0]
-	me.HP = 990
-	if got := lost(me); got != 10 {
-		t.Errorf("a fighter's hpLost %d, want 10", got)
+	me.MaxAP, me.MaxMP = 5, 2 // a wound took one of each
+	frame, err := buildCreateFight(f, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(frame[len(frame)-4:]) != fighterMaximaMagic {
+		t.Fatalf("8000 ends %q, want the maxima magic", frame[len(frame)-4:])
+	}
+	n := int(frame[len(frame)-5])
+	want := 0
+	for _, tm := range f.Teams {
+		want += len(tm.Fighters)
+	}
+	if n != want {
+		t.Fatalf("maxima rows %d, want %d", n, want)
+	}
+	rows := protocol.NewReader(frame[len(frame)-5-20*n : len(frame)-5])
+	got := map[int64][3]int32{}
+	for range n {
+		id, _ := rows.I64()
+		hp, _ := rows.I32()
+		ap, _ := rows.I32()
+		mp, _ := rows.I32()
+		got[id] = [3]int32{hp, ap, mp}
+	}
+	if g := got[dummy.WireID]; g[0] != 10 {
+		t.Errorf("dummy maxima %v, want life 10", g)
+	}
+	if g := got[me.WireID]; g != [3]int32{me.MaxHP, 5, 2} {
+		t.Errorf("fighter maxima %v, want [%d 5 2]", g, me.MaxHP)
 	}
 }

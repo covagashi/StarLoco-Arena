@@ -581,6 +581,34 @@ static func _fight_creation(r: WireReader) -> Dictionary:
 							r.get_i32(), r.get_i32()]}
 	out.dd = r.get_u8()
 	out.tail = r.get_rest()
+	var maxima := _fighter_maxima(out.tail)
+	for t in out.teams:
+		for f in t.fighters:
+			if maxima.has(f.id):
+				var m: Array = maxima[f.id]
+				f.hp = m[0]
+				f.ap = m[1]
+				f.mp = m[2]
+	return out
+
+
+## S52: the server closes the 8000 with every fighter's real maximum life, AP
+## and MP (breed, cards, sphere nodes, wounds): [n × {i64 fighter, i32 hp,
+## i32 ap, i32 mp}][u8 n]["SLMX"], read from the end. A replay recorded before
+## it has no magic, and the breed's stand in (fight_view._base_stats).
+static func _fighter_maxima(tail: PackedByteArray) -> Dictionary:
+	var out := {}
+	var size := tail.size()
+	if size < 5 or tail.slice(size - 4).get_string_from_ascii() != "SLMX":
+		return out
+	var n := int(tail[size - 5])
+	var start := size - 5 - 20 * n
+	if start < 0:
+		return out
+	var r := WireReader.new(tail.slice(start, size - 5))
+	for i in n:
+		var id := r.get_i64()
+		out[id] = [r.get_i32(), r.get_i32(), r.get_i32()]
 	return out
 
 
