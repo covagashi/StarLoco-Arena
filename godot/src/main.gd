@@ -5334,7 +5334,6 @@ var _npc := {}                # open NPC dialog {name, replies}
 var _fired_triggers := {}     # zone-trigger element ids already run this session
 var _scenario_queue := []     # pending tutorial monologues (overlapping zones)
 const BAAN_TUTORIAL := 46      # "Tutorial de Baan" (challenge, mode 9)
-var _baan_lesson_done := false # his lesson plays once per session
 
 ## Ranking window tabs (retail ladderInformationDialog order): the request
 ## opcode and a payload builder; replies land in _on_message below.
@@ -6276,15 +6275,9 @@ func _challenge_choice(chal: int, mode := 99, label := "") -> Dictionary:
 func _launch_challenge(chal: int, mode: int) -> void:
 	if chal <= 0:
 		return
-	if chal == BAAN_TUTORIAL and not _baan_lesson_done:
-		# S10: Baan's two lessons (scenarios 200, 201) before his fight
-		_baan_lesson_done = true
-		_talk_close()
-		_talk_face = FACE_NILO
-		var sc := Scenarios.script(200)
-		var pages: Array = sc.get("pages", []) + Scenarios.script(201).get("pages", [])
-		_talk_pages(I18n.t("talk.baan"), pages, func(): _launch_challenge(chal, mode))
-		return
+	# S52: Nilo's lessons (scenarios 200, 201) no longer play before his
+	# fight (BAAN_TUTORIAL): he says them inside it, one step at a time, as
+	# the player does each thing (src/fight/practice_overlay.gd).
 	var w := WireWriter.new()
 	w.put_i32(chal)
 	w.put_u16(mode)

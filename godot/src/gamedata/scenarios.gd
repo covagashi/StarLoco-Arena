@@ -41,7 +41,8 @@ const SCRIPTS := {
 	119: {"pages": [307, 306, 305, 304]},
 	# Baan's tutorial (challenge 46, record fields 200/201): placement, then
 	# moving and casting. Retail ran them inside the fight on its own cues;
-	# here they are the lesson before the fight (S10).
+	# since S52 so do we, step by step (src/fight/practice_guide.gd); S10
+	# played them as a lesson before the fight.
 	200: {"speaker": "baan", "pages": [282, 283, 284, 285]},
 	201: {"speaker": "baan", "pages": [286, 287, 288, 289, 293, 294]},
 }

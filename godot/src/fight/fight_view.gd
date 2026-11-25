@@ -30,6 +30,7 @@ const DebugLog := preload("res://src/util/debug_log.gd")
 const Palettes := preload("res://src/gamedata/palettes.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const LobbyPanel := preload("res://src/ui/lobby_panel.gd")
+const PracticeOverlay := preload("res://src/fight/practice_overlay.gd")
 
 ## Server direction (Direction8) -> the direction asked for; 3/4/7 are
 ## horizontal mirrors of 1/0/5 (the figure turns itself back, Fighter3D._face).
@@ -77,6 +78,7 @@ var _fx_ground: Node2D
 @onready var _face_btn: Button = $UI/Menu/FaceBtn
 @onready var _chat_btn: Button = $UI/Menu/ChatBtn
 var _fight_hud: FightHud   # S17 cards + medallion + turn banner (created in _ready)
+var _practice: PracticeOverlay = null   # S52: Nilo's guided practice (challenge 46 only)
 var _name_hover := -1      # fighter whose name shows over the map (hover)
 var _card_hover := -1      # fighter whose card the pointer is on
 var _dragging := false
@@ -161,6 +163,11 @@ func _ready() -> void:
 	_fight_hud.clock_max = TURN_CLOCK
 	_fight_hud.card_pressed.connect(_on_timeline_chip)
 	_fight_hud.card_hovered.connect(_on_card_hover)
+	# S52: Nilo talks the player through his practice, step by step; made
+	# before the net drain below, which may already hold the 8020
+	if PracticeOverlay.wanted(State.fight_data, State.spectating, State.replay != null):
+		_practice = PracticeOverlay.new(self)
+		$UI.add_child(_practice)
 	# When we arrived here from a live fight the world id is the arena id.
 	if State.fight_world >= 0:
 		$UI/TopBar/MapId.text = str(State.fight_world)
@@ -801,6 +808,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 		OP_PLACEMENT:
 			var d := Codec.decode(opcode, payload)
 			_move_actor(int(d.id), Vector3i(int(d.x), int(d.y), int(d.z)))
+			if _practice != null and _placement:
+				_practice.placed(int(d.id))
 		OP_START_PRESENTATION:
 			# the versus screen (S07); its "¡A luchar!" — or a few seconds —
 			# sends the 8011 every coach owes before placement (arch 3, empty)
@@ -811,7 +820,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# sends 8021 for the selected fighter. Ready = 8023.
 			_close_versus()
 			_placement = true
-			_turn_left = TURN_CLOCK          # placementClock is the same 30s
+			# placementClock is the same 30s — none in a practice (S52)
+			_turn_left = -1.0 if _no_clock() else TURN_CLOCK
 			_end_turn.text = I18n.t("fight.ready")
 			_end_turn.disabled = false
 			for fid in State.fighters:
@@ -827,8 +837,12 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_refresh_open_choice()
 			_refresh_timeline()   # banner: PLACEMENT + its clock
 			queue_redraw()
+			if _practice != null:
+				_practice.placement()
 		OP_END_PLACEMENT:
 			_placement = false
+			if _practice != null:
+				_practice.ready_pressed()
 			_refresh_open_choice()
 			_refresh_timeline()
 			_turn_left = -1.0
@@ -869,6 +883,10 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var d := Codec.decode(opcode, payload)
 			_on_turn_begin(int(d.get("f2", -1)))
 		OP_TURN_END:
+			if _practice != null and payload.remaining() >= 16:
+				payload.get_i32()
+				payload.get_i32()
+				_practice.turn_ended(int(payload.get_i64()))
 			_current_fid = -1
 			_turn_left = -1.0
 			_end_turn.disabled = true
@@ -900,6 +918,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# even a fumble counts against the frequency limits (the server
 			# storeCasts after the roll); a bare-cell cast has no target
 			_note_cast(caster, sid, aimed)
+			if _practice != null:
+				_practice.cast(caster, miss != 0, aimed)
 			# scripts lead with setMobileLookAt(caster, dest) — the caster
 			# turns to the aimed cell before its gesture (apb_1/agv_0.D)
 			if aimed.x > -999:
@@ -931,6 +951,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			_fight_log(I18n.t("fight.log_attack", {"name": aname,
 				"mark": (I18n.t("fight.mark_fail") if wmiss else
 					I18n.t("fight.mark_crit") if wcrit else "")}))
+			if _practice != null:
+				_practice.cast(atk, wmiss != 0, waim)
 			if waim.x > -999:
 				_face_toward(atk, waim)
 			if wmiss or wcrit:
@@ -968,6 +990,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				"card": FighterCards.label(cid),
 				"mark": (I18n.t("fight.mark_fail") if cmiss else
 					I18n.t("fight.mark_crit") if ccrit else "")}))
+			if _practice != null:
+				_practice.cast(user, cmiss != 0, caim)
 			if caim.x > -999:
 				_face_toward(user, caim)
 			if cmiss or ccrit:
@@ -998,6 +1022,9 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 				var cspr: Figure = _sprites.get(carrier)
 				if cspr != null:
 					_restore_idle(cspr, carrier)
+			if _practice != null and not path.is_empty():
+				var last: Vector3i = path.back()
+				_practice.moved(fid, Vector2i(last.x, last.y))
 			if path.size() > 1:
 				path.pop_front()   # drop the origin cell
 				_walk[fid] = path
@@ -1046,6 +1073,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			var dname := str(State.fighters.get(dead, {}).get("name", ""))
 			_fight_log(I18n.t("fight.log_dead", {"name": dname}))
 			_kill_actor(dead)
+			if _practice != null:
+				_practice.died(dead)
 		OP_RUNNING_EFFECT:
 			_on_running_effect(Codec.decode(opcode, payload))
 		OP_BUFF_ATTACH:
@@ -1068,6 +1097,8 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# answer with a fresh 4600 back to the overworld.
 			State.fight_result = Codec.decode(opcode, payload)
 			_fight_over = true
+			if _practice != null:
+				_practice.fight_over()
 			_turn_left = -1.0
 			State.spectating = false
 			info.text = ""
@@ -1950,6 +1981,8 @@ func _on_turn_begin(fid: int) -> void:
 	_turn_left = maxf(31.0, float(State.fight_data.get("ca", 0)) / 1000.0)
 	var f: Dictionary = State.fighters.get(fid, {})
 	_turn_left /= _turn_divisor(int(f.get("coach", -1)), bool(f.get("summon", false)))
+	if _no_clock():
+		_turn_left = -1.0   # Nilo's practice: no clock to show (S52)
 	# Summons share their caster's coach id but are server-AI-driven
 	# (Father set, ai.go) — no bar, no End turn for them.
 	var ours: bool = int(f.get("coach", -1)) == State.my_coach_id \
@@ -1976,6 +2009,14 @@ func _on_turn_begin(fid: int) -> void:
 	_layout_fight_ui.call_deferred()   # the spell row changed width
 	_wire_fight_focus.call_deferred()
 	turn_began.emit(fid, ours)
+	if _practice != null:
+		_practice.turn_began(fid, ours)
+
+
+## A fight whose turns have no real clock (Nilo's practice, challenge 46: an
+## hour per turn, the server places at the same pace) shows none (S52).
+func _no_clock() -> bool:
+	return float(State.fight_data.get("ca", 0)) >= 600000.0
 
 
 ## --- turn timeline ---------------------------------------------------------
@@ -2759,6 +2800,8 @@ func confirm_placement() -> void:
 	_placement = false
 	_refresh_open_choice()
 	_end_turn.disabled = true
+	if _practice != null:
+		_practice.ready_pressed()
 	# the retail's progressDialog "waitingForOpponents" (jR): until 8028
 	# the other side may still be placing
 	_end_turn.text = I18n.t("fight.waiting")
