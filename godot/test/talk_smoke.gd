@@ -82,10 +82,11 @@ func _demon1(services: Array) -> void:
 		return
 	var t := _talk()
 	var pages := int(t.get("pages", 0))
+	# S53: no page count any more (the owner: "quita eso de página 1 de 8")
 	var page_label = panel.find_child("Page", true, false)
 	var spoken: String = panel.find_child("Speech", true, false).text
 	_record(9, "opens", str(t.get("name", "")) == "Demonio I" and pages >= 2
-		and page_label != null and spoken.length() > 20,
+		and page_label == null and spoken.length() > 20,
 		"'%s', %d pages, '%s…'" % [t.get("name", ""), pages, spoken.left(40)])
 	await _shot("talk-demon1")
 	var walked := 1

@@ -7,9 +7,11 @@ extends "res://src/ui/lobby_panel.gd"
 ## like the references' character screens and a visual novel, not a sheet —
 ## the screen behind stays in sight under a light veil, the speaker stands
 ## big on the left, what they say sits on a plate along the bottom under a
-## ribbon with their name, the replies stack on the right above it, and
-## "Siguiente" / "Aceptar" / "Cerrar" sit in the plate's corner. Without a
-## face the plate spans the width.
+## ribbon with their name, and "Siguiente" / "Aceptar" / "Cerrar" sit in
+## the plate's corner. Without a face the plate spans the width.
+## S53 (owner: "es raro que las opciones de respuesta estén afuera del
+## cuadro de texto"; "quita eso de página 1 de 8"): the replies sit inside
+## the plate, under what is said, and there is no page count.
 ##
 ## Reads the `talk` model (main.gd _talk_show): {name, text (BBCode), page,
 ## pages, face, choices:[{label, kind}]} with kind reply / challenge /
@@ -21,8 +23,8 @@ const BOX := Rect2(410, 520, 830, 172)          # the plate, beside a face
 const BOX_WIDE := Rect2(40, 520, 1200, 172)     # …and without one
 const PORTRAIT := Rect2(-14, 166, 476, 560)     # a standing portrait (ours), to the bottom edge
 const MEDAL := Rect2(110, 270, 230, 230)        # a small square one (a class)
-const MAX_H := 330.0                            # the tallest the plate grows
-const CHOICES := Rect2(690, 64, 550, 432)       # the replies, bottom-aligned
+const MAX_H := 520.0                            # the tallest the plate grows
+const CHOICES_MAX_H := 300.0                    # the replies past this scroll
 ## the old name of the face box's size; the portraits are drawn to it
 const FACE_SIZE := Vector2(170, 200)
 
@@ -31,7 +33,6 @@ var _plate: PanelContainer
 var _name_ribbon: PanelContainer
 var _who: Label
 var _speech: RichTextLabel
-var _page: Label
 var _face_slot: Control
 var _choice_scroll: ScrollContainer
 var _caption: Label
@@ -82,19 +83,7 @@ func _build_stage() -> void:
 	_face_slot.name = "FaceSlot"
 	_face_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stage.add_child(_face_slot)
-	# the replies: a column on the right, its last one just over the plate
-	_choice_scroll = ScrollContainer.new()
-	_choice_scroll.name = "Choices"
-	_choice_scroll.position = CHOICES.position
-	_choice_scroll.size = CHOICES.size
-	_choice_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_stage.add_child(_choice_scroll)
-	body = VBoxContainer.new()
-	body.alignment = BoxContainer.ALIGNMENT_END
-	body.custom_minimum_size = Vector2(CHOICES.size.x - 12, CHOICES.size.y)
-	body.add_theme_constant_override("separation", 8)
-	_choice_scroll.add_child(body)
-	# the plate: what they say, the page, the actions in its corner
+	# the plate: what they say, the replies under it, the actions in its corner
 	_plate = PanelContainer.new()
 	_plate.name = "Plate"
 	var ps := StyleB.plate(0.97)
@@ -118,13 +107,17 @@ func _build_stage() -> void:
 	_speech.add_theme_font_size_override("bold_font_size", 21)
 	_speech.add_theme_color_override("default_color", UiStyle.PAPER_INK)
 	col.add_child(_speech)
+	_choice_scroll = ScrollContainer.new()
+	_choice_scroll.name = "Choices"
+	_choice_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(_choice_scroll)
+	body = VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 8)
+	_choice_scroll.add_child(body)
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 12)
 	col.add_child(foot)
-	_page = UiStyle.caption("")
-	_page.name = "Page"
-	_page.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	foot.add_child(_page)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(spacer)
@@ -178,14 +171,11 @@ func refresh() -> void:
 	var face: Dictionary = talk.get("face", {})
 	var has_face := _show_face(face)
 	_who.text = I18n.t(str(face.who)).to_upper() if has_face and str(face.get("who", "")) != "" else ""
-	var pages := int(talk.get("pages", 0))
-	_page.text = I18n.t("talk.page", {"n": int(talk.get("page", 1)), "of": pages}).to_upper() if pages > 1 else ""
 	var rows: Array = talk.get("choices", [])
 	var listed := rows.filter(func(c): return str(c.kind) in ["reply", "challenge"])
 	if listed.any(func(c): return str(c.kind) == "challenge"):
 		_caption = UiStyle.caption(I18n.t("talk.challenges"))
 		_caption.name = "ChallengesCaption"
-		_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		body.add_child(_caption)
 	var first: Button = null
 	var main: Button = null
@@ -213,7 +203,7 @@ func refresh() -> void:
 	var target: Button = main if main != null else first
 	if target != null:
 		target.grab_focus.call_deferred()
-	_choice_scroll.scroll_vertical = 1 << 20   # the newest reply, at the bottom
+	_choice_scroll.scroll_vertical = 0
 
 
 ## A reply: a white slanted plate, ink text from the left; coral under the
@@ -322,21 +312,19 @@ func _place(has_face: bool) -> void:
 	var width := box.size.x - 30 - 58
 	var text_h := UiStyle.body_font().get_multiline_string_size(_speech.get_parsed_text(),
 		HORIZONTAL_ALIGNMENT_LEFT, width, 21).y + 8
-	var foot_h := maxf(pinned_actions.get_combined_minimum_size().y, _page.get_combined_minimum_size().y)
-	var h := clampf(26 + text_h + 6 + foot_h + 16, box.size.y, MAX_H)
-	_speech.custom_minimum_size.y = minf(text_h, MAX_H - 26 - 6 - foot_h - 16)
+	var foot_h := pinned_actions.get_combined_minimum_size().y
+	var replies := body.get_child_count() > 0
+	_choice_scroll.visible = replies
+	var choices_h := minf(body.get_combined_minimum_size().y, CHOICES_MAX_H) if replies else 0.0
+	_choice_scroll.custom_minimum_size.y = choices_h
+	var gaps := 6 * (3 if replies else 2)
+	var h := clampf(26 + text_h + choices_h + gaps + foot_h + 16, box.size.y, MAX_H)
+	_speech.custom_minimum_size.y = minf(text_h, MAX_H - 26 - choices_h - gaps - foot_h - 16)
 	box = Rect2(box.position.x, box.end.y - h, box.size.x, h)
 	_plate.position = box.position
 	_plate.size = box.size
 	_name_ribbon.reset_size()
 	_name_ribbon.position = box.position + Vector2(22, -_name_ribbon.get_combined_minimum_size().y + 8)
-	# the replies end above the name ribbon and "who" (S47: the last reply
-	# sat on "TU GUÍA EN EL GRAN RELOJ"), not just above the plate
-	var top := box.position.y
-	if _name_ribbon.visible:
-		top = minf(_name_ribbon.position.y, box.position.y - 28)
-	_choice_scroll.size.y = top - 12 - CHOICES.position.y
-	body.custom_minimum_size.y = _choice_scroll.size.y
 	_who.position = Vector2(_name_ribbon.position.x + _name_ribbon.get_combined_minimum_size().x + 18, box.position.y - 28)
 	_who.visible = _who.text != ""
 	close_button.position = Vector2(box.end.x - 46, box.position.y + 6)
@@ -357,7 +345,7 @@ func _layout() -> void:
 ## The entrance: the speaker slides in from the left, the plate rises.
 func _enter() -> void:
 	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	for n: Control in [_face_slot, _plate, _name_ribbon, _choice_scroll]:
+	for n: Control in [_face_slot, _plate, _name_ribbon]:
 		var off := Vector2(-40, 0) if n == _face_slot else Vector2(0, 24)
 		var to := n.position
 		n.position = to + off

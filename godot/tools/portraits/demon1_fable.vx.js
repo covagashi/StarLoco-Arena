@@ -129,7 +129,8 @@ const skull = (dx, dy, st) => blob(sh(SKULL, dx, dy), st)
 // the numeral I: a serifed bar
 const NUM = [74, 164, 96, 164, 96, 169, 89, 170, 89, 189, 96, 190, 96, 195, 74, 195, 74, 190, 81, 189, 81, 170, 74, 169]
 
-sprite("demon1", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, y: -3 },
+// S53: drawn 16 units lower: the top ran past the canvas and showed cut flat
+sprite("demon1", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, y: 13 },
   // ---- behind everything: the horns ----
   sym(85,
     ...cel(horn, ["n0", "n1", "n2", "n3"], { sd: 6, hd: 7, rim: 2 }),

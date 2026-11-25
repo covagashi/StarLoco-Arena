@@ -115,9 +115,11 @@ for (let i = 0; i < 9; i++) {
 }
 
 // the sticks: two big branches on top, a stump on the hat's face, twigs on the sides
-const STICK_L = band([[64, 56], [57, 40], [49, 24], [42, 8]], (i, t) => 10.5 - 3 * t)
-const STICK_R = band([[108, 52], [112, 34], [113, 18], [112, 4]], (i, t) => 11 - 3 * t)
-const STICK_RB = band([[112, 22], [120, 14], [126, 9]], (i, t) => 5.5 - 2 * t)      // a side shoot on the right stick
+// S53: the tips end 10-11 units below the canvas top: at y 4-8 their ink ran
+// off the edge and the talk window showed them cut flat
+const STICK_L = band([[64, 56], [58, 42], [52, 28], [46, 16]], (i, t) => 10.5 - 3 * t)
+const STICK_R = band([[108, 52], [111, 38], [112, 26], [111, 15]], (i, t) => 11 - 3 * t)
+const STICK_RB = band([[111, 29], [119, 22], [125, 18]], (i, t) => 5.5 - 2 * t)      // a side shoot on the right stick
 const STUMP = band([[124, 82], [131, 70], [135, 62]], (i, t) => 8 - 2 * t)
 const TWIG_L = band([[22, 84], [12, 74], [6, 64]], (i, t) => 6.5 - 2 * t)
 const TWIG_R = band([[152, 88], [160, 82], [164, 74]], (i, t) => 6 - 2 * t)
@@ -167,15 +169,15 @@ const wood = (P, dir = 1, rim = 1.2) => [
 sprite("aldebran", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, y: -3 },
   // ---- behind everything: the sticks that rise out of the hat ----
   ...wood(STICK_L, 1),
-  curve([44, 12, 47, 20, 46, 28], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
-  curve([53, 30, 55, 38], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
+  curve([48, 20, 51, 28, 50, 34], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
+  curve([56, 40, 58, 47], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
   ...wood(STICK_RB, 1, 0.9),
   ...wood(STICK_R, 1),
-  curve([114, 10, 116, 18, 115, 26], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
-  curve([109, 36, 110, 44], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
+  curve([113, 20, 114, 27, 113, 33], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
+  curve([109, 42, 110, 48], { stroke: "d0", sw: 1.1, opacity: 0.6 }),
   // cut ends: a pale ring of fresh wood at the tips
-  ellipse(42, 8.5, 4.2, 2.2, { fill: "d3" }), ellipse(42, 8.5, 4.2, 2.2, EDGE(1.2)),
-  ellipse(112, 4.5, 4.4, 2.2, { fill: "d3" }), ellipse(112, 4.5, 4.4, 2.2, EDGE(1.2)),
+  ellipse(46, 16.5, 4.2, 2.2, { fill: "d3" }), ellipse(46, 16.5, 4.2, 2.2, EDGE(1.2)),
+  ellipse(111, 15.5, 4.4, 2.2, { fill: "d3" }), ellipse(111, 15.5, 4.4, 2.2, EDGE(1.2)),
   ...wood(TWIG_L, -1, 0.9),
   ...wood(TWIG_R, 1, 0.9),
   // ---- the body, the arms ----

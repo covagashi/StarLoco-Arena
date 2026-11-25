@@ -173,7 +173,8 @@ function eye(cx, cy, dir, tilt) {
   ]
 }
 
-sprite("demon3", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, y: -3 },
+// S53: drawn 16 units lower: the top ran past the canvas and showed cut flat
+sprite("demon3", { w: 164, h: 194, scale: 1, outline: "k", ow: 3 }, tf({ x: -3, y: 13 },
   // ---- the mist, behind everything that is not the robe ----
   // ---- the plume horns, behind the head ----
   sym(85,

@@ -10,7 +10,14 @@ does the timeline:
     the ink came out muddy, AniCraft does not premultiply);
   - a blink (the lids layer, a hard switch);
   - a sparkle (at the overlay file's `// SPARK_C = [x, y]`) turns and fades.
-48 frames at 24 fps (2 s). Writes per NPC, into OUT/<npc>/, the .anicraft
+48 frames at 24 fps (2 s).
+S53: a portrait that touches the stage's top or sides (Aldebrán's sticks,
+Demon I's wings, Demon III's horn, Nilo's ears) showed cut flat in the talk
+window, the breath lifting it further; fit() moves the figure down (the
+bottom sits under the screen's edge, a cut there never shows) or shrinks it
+about its feet until MARGIN is free, and its overlays and the sparkle follow.
+It also writes the still portrait (<npc>.png) the window shows without the
+sheet. Writes per NPC, into OUT/<npc>/, the .anicraft
 document, a GIF to look at and AniCraft's sprite sheet; then packs the game's
 sheet — every other frame (12 fps, the loop is slow), WebP — as
 assets/ui/portraits/npc/<npc>_idle.webp + .json, which talk_panel.gd plays.
@@ -32,13 +39,16 @@ W, H, FPS, N = 340, 400, 24, 48
 BREATH = 0.012        # how much taller at the top of the breath
 SPARK = 56            # the sparkle sprite's side at 2x
 STEP = 2              # the game keeps every STEP-th frame (24 fps → 12)
+MARGIN = 12           # free 2x pixels at the top and sides (the breath takes 5)
 ASSETS = "assets/ui/portraits/npc"
 # npc → the portrait's render (under <npc dir>) and the frames its lids show
 NPCS = {
     "nilo": {"portrait": "fable/sprites/nilo@2x.png", "blink": (30, 34)},
     "aldebran": {"portrait": "fable_aldebran/sprites/aldebran@2x.png", "blink": (36, 40)},
-    "demon1": {"portrait": "fable_demon1/sprites/demon1@2x.png", "blink": (26, 30)},
-    "demon3": {"portrait": "fable_demon3/sprites/demon3@2x.png", "blink": (32, 36)},
+    # S53: these two portraits are drawn 16 units lower (*_fable.vx.js); their
+    # overlays, drawn where the figure was, follow by `lower` 2x pixels
+    "demon1": {"portrait": "fable_demon1/sprites/demon1@2x.png", "blink": (26, 30), "lower": 32},
+    "demon3": {"portrait": "fable_demon3/sprites/demon3@2x.png", "blink": (32, 36), "lower": 32},
 }
 
 
@@ -96,17 +106,56 @@ def spark_centre(npc):
     return (float(m.group(1)) * 2, float(m.group(2)) * 2)   # 1x → the 2x stage
 
 
+def fit(npc, src, work):
+    """The figure and its overlays moved down / shrunk about the feet so the
+    portrait keeps MARGIN free at the top and sides; returns the file names
+    (under `work`) and the sparkle centre, moved the same way."""
+    cfg = NPCS[npc]
+    names = {"figure": cfg["portrait"], "glow": f"anim/sprites/{npc}_glow@2x.png",
+             "blink": f"anim/sprites/{npc}_blink@2x.png"}
+    fig = Image.open(os.path.join(src, names["figure"])).convert("RGBA")
+    x0, y0, x1, _ = fig.getchannel("A").getbbox()
+    cx = W / 2
+    dy = max(0, MARGIN - y0)   # down first: the cut falls below the screen
+    s = 1.0
+    if x0 < MARGIN:
+        s = min(s, (cx - MARGIN) / (cx - x0))
+    if x1 > W - MARGIN:
+        s = min(s, (W - MARGIN - cx) / (x1 - cx))
+    ox, oy = cx - cx * s, H - H * s + dy
+
+    def move(img, lower=0):
+        if lower:
+            img = img.crop((0, -lower, img.width, img.height - lower))
+        img = img.resize((round(img.width * s), round(img.height * s)), Image.LANCZOS) if s < 1 else img
+        out = Image.new("RGBA", (W, H))
+        out.alpha_composite(img, (round(ox), round(oy)))
+        return out
+    os.makedirs(os.path.join(work, npc), exist_ok=True)
+    files = {}
+    for k, rel in names.items():
+        files[k] = os.path.join(work, npc, k + ".png")
+        lower = 0 if k == "figure" else cfg.get("lower", 0)
+        move(Image.open(os.path.join(src, rel)).convert("RGBA"), lower).save(files[k])
+    c = spark_centre(npc)
+    c = (c[0], c[1] + cfg.get("lower", 0))
+    still = move(fig)
+    still.save(f"{ASSETS}/{npc}.png")
+    return files, (ox + c[0] * s, oy + c[1] * s), (s, dy)
+
+
 def animate(npc, src, out):
     cfg = NPCS[npc]
-    c = spark_centre(npc)
+    files, c, how = fit(npc, src, out)
+    print(f"{npc}: fit scale {how[0]:.3f}, down {how[1]} px")
     a = AniCraft()
     a("doc.set_stage", width=W, height=H, fps=FPS, background="#ffffff")
     layers = {}
-    for name, path, at in [("figure", cfg["portrait"], {"x": 0, "y": 0}),
-                           ("glow", f"anim/sprites/{npc}_glow@2x.png", {"x": 0, "y": 0}),
-                           ("blink", f"anim/sprites/{npc}_blink@2x.png", {"x": 0, "y": 0}),
-                           ("spark", f"anim/sprites/{npc}_spark@2x.png", {"cx": c[0], "cy": c[1]})]:
-        r = a("file.import", path=os.path.join(src, path), **at)
+    for name, path, at in [("figure", files["figure"], {"x": 0, "y": 0}),
+                           ("glow", files["glow"], {"x": 0, "y": 0}),
+                           ("blink", files["blink"], {"x": 0, "y": 0}),
+                           ("spark", os.path.join(src, f"anim/sprites/{npc}_spark@2x.png"), {"cx": c[0], "cy": c[1]})]:
+        r = a("file.import", path=os.path.abspath(path), **at)
         layers[name] = r["layer"]
         a("layer.rename", layer=r["layer"], name=name)
     for l in a("doc.info")["layers"]:   # the empty layer a new document has
