@@ -1806,6 +1806,12 @@ func _add_event_card(ev: int, evname: String) -> void:
 			var t := c.get_node_or_null("Text") as Label
 			if t != null and c != card:
 				t.text = t.text.get_slice(" · ", 0)   # older: the name only
+				# …and its own width again: the room the effect line took
+				# stayed reserved, and the strip ran off the left of the
+				# screen as a dark band (S52, seen as «Dios Espadachín»)
+				t.custom_minimum_size.x = 0.0
+				t.clip_text = false
+				t.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	card.modulate = Color(1.0, 0.95, 0.6, 1.0)
 	# this round's card carries what it does (S24)
 	var effect := _event_line(ev)
@@ -1817,7 +1823,14 @@ func _add_event_card(ev: int, evname: String) -> void:
 		# up to what the strip can hold (the tooltip keeps the rest)
 		var font := lab.get_theme_font("font")
 		var w := font.get_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 4.0
-		lab.custom_minimum_size.x = minf(w, 520.0)
+		# …and what the older names leave of the strip, so they stay in it
+		var room0: float = strip.size.x if strip.size.x > 0.0 else 640.0
+		var others := 0.0
+		for c in strip.get_children():
+			if c != card and c is Control:
+				others += (c as Control).get_combined_minimum_size().x \
+					+ strip.get_theme_constant("separation")
+		lab.custom_minimum_size.x = minf(w, clampf(room0 - others - 24.0, 240.0, 520.0))
 	# remove_child first: queue_free alone leaves the node counted until the
 	# end of the frame, and this loop spun forever on the 5th round card,
 	# freezing the client in every fight that lasted that long (S08)
@@ -1825,6 +1838,12 @@ func _add_event_card(ev: int, evname: String) -> void:
 		var old := strip.get_child(0)
 		strip.remove_child(old)
 		old.queue_free()
+	# what does not fit the strip's width goes, oldest first
+	var room: float = strip.size.x if strip.size.x > 0.0 else 640.0
+	while strip.get_child_count() > 1 and strip.get_combined_minimum_size().x > room:
+		var old2 := strip.get_child(0)
+		strip.remove_child(old2)
+		old2.queue_free()
 
 
 ## A god card (1–11, 27: retail's deck) only touches its own class; the
