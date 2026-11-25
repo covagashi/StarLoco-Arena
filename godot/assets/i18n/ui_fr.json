@@ -1617,5 +1617,15 @@
   "save.err.expired": "Le code a expiré ou est épuisé. Demandes-en un autre.",
   "save.err.failed": "Le serveur a eu un problème. Réessaie dans un moment.",
   "opt.save_progress": "Sauvegarder ma progression",
-  "opt.save_progress_text": "Ta partie n'existe que dans ce navigateur."
+  "opt.save_progress_text": "Ta partie n'existe que dans ce navigateur.",
+  "tutorial.skip": "Passer le tutoriel",
+  "tutorial.skip_ask": "Passer le tutoriel ?",
+  "tutorial.skip_yes": "Oui, passer",
+  "tutorial.skip_no": "Non",
+  "tutorial.recruit": "Il te faut d'abord un combattant. Appuie sur Histoire pour recruter le premier.",
+  "tutorial.recruit_note": "Ce combattant est pour l'Histoire : il grandit combat après combat. Ceux d'Élite et des Tournois se recrutent à part, plus tard. Recruter est gratuit. En haut, tes jetons (ils achètent des cartes) et tes pesetas (gagnées pendant la saison, pour la boutique).",
+  "tutorial.fight": "Tu as un combattant ! Appuie sur Histoire : ton premier combat, avec Nilo qui t'apprend pas à pas contre un mannequin d'entraînement.",
+  "tutorial.done": "Tu sais te battre ! Le reste, tu le découvriras en jouant : l'Histoire contre les démons, le Classement contre d'autres joueurs et les Tournois. Si tu te perds, l'Aide (?) en haut à droite.",
+  "tutorial.done_ok": "On joue !",
+  "tutorial.replay": "Refaire le tutoriel"
 }

@@ -1,6 +1,6 @@
 # S53 — La primera partida, de verdad
 
-**Planificado:** 2026-11-25 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 📝 redactado, a la espera del dueño
+**Planificado:** 2026-11-25 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-25)
 
 ## Por qué
 
@@ -135,11 +135,60 @@ Además de esa partida, paso las listas de las skills de diseño de juego
 (`gamedev:game-ui-ux`, onboarding y escalado) antes de dar nada por
 terminado.
 
-## Preguntas para el dueño
+## Respuestas del dueño (2026-11-25)
 
-1. **Arena 2:** ¿la que ves corrupta es la del grid verde con vallas de
-   madera (la captura), o la de otra partida? ¿Cuál es tu fichero bueno?
-2. **Tutorial:** ¿te vale el orden *jefe → reclutar → combate contra el
-   muñeco → fin*, o quieres el combate antes de reclutar (con un luchador
-   prestado)?
-3. **Dispositivo del error de conexión:** ¿iPhone, iPad o Mac con Safari?
+1. **Arena 2:** el fichero bueno es el del editor; «la hierba no está tan
+   alta». Lo busco yo junto al editor (S36 fase C) y comparo con lo que
+   sirve el paquete web.
+2. **Tutorial:** sí a *jefe → reclutar → combate contra el muñeco → fin*.
+3. **Conexión:** Safari; con F5 volvió todo. A14 baja de prioridad, pero
+   el aviso con «Reconectar» se hace igual (nadie sabe que hay que pulsar F5).
+
+Orden nuevo: B1 + diálogos → B2 → A10/A11 → A14 → arte.
+
+## Hecho
+
+### Diálogos (A1–A3) — 2026-11-25
+
+- **A1 no era una línea del lobby:** el retrato de Aldebrán venía cortado
+  por arriba (los palos del sombrero se salían del lienzo de vex y la tinta
+  quedaba plana). Lo mismo con las alas del Demonio I, el cuerno del
+  Demonio III y las orejas de Nilo (a los lados). Palos más cortos, los dos
+  demonios dibujados 16 unidades más abajo, y `npc_anim.py` encaja cada
+  figura con sus capas (parpadeo, brillo, chispa) para dejar 12 px libres
+  arriba y a los lados, también con la respiración.
+- **A2:** sin «Página n de m». **A3:** las respuestas van dentro del cuadro,
+  bajo la frase (antes flotaban a la derecha, sobre el lobby).
+
+### Tutorial nuevo (B1, A12, A13) — 2026-11-25
+
+- **Fuera la guía de S47** (tarjeta con «IR» y la cruz, y sus seis pasos de
+  logros). Los logros siguen; Ayuda ofrece «Repetir el tutorial».
+- **`src/ui/spotlight.gd`:** oscurece toda la ventana menos un agujero
+  alrededor del control del paso; un clic fuera no hace nada, dentro llega
+  al control. Bocadillo al lado del agujero (o centrado sin agujero, con su
+  botón) y «Saltar tutorial» arriba a la derecha, que pregunta antes.
+- **Pasos** (`main._tutorial_step`): sin luchadores → el agujero en la
+  tarjeta de Historia, que abre Reclutar; con luchador → la misma tarjeta
+  lanza directamente la práctica de Nilo (reto 46); al volver → «¡Ya sabes
+  pelear!» centrado y fin. Hecho o saltado se guarda en `gamePreferences`;
+  un coach que ya ha peleado no lo ve (salvo si pide repetirlo).
+- **Reclutar en el tutorial (A13):** una nota dice que es para Historia, que
+  Élite y Torneos se reclutan aparte, que reclutar es gratis y qué son las
+  fichas y las pesetas; Élite queda cerrado.
+- **A12:** fuera del tutorial, al reclutar se abre Equipo en la pestaña del
+  luchador nuevo (antes volvía al lobby).
+- Textos `tutorial.*` en es/en/fr.
+
+Verificado: `run_tests.sh --headless` 26 suites, 1681 comprobaciones, 0
+fallos. `first_play_smoke` (nuevo; sustituye a `guide_smoke`) **14/0** en
+es, en y fr: el agujero rodea la tarjeta, fuera no pasa el clic, Reclutar en
+modo tutorial, de vuelta al lobby, la práctica empieza desde la tarjeta, al
+volver «¡Ya sabes pelear!», su botón lo termina, «Repetir» lo trae y
+«Saltar» lo cierra, y fuera del tutorial reclutar lleva a Equipo.
+`tutorial_smoke` 10/0, `s47_smoke` 22/0, `practice_smoke` 22/0,
+`talk_smoke` 7/0, `slots_smoke` 4/0. Capturas miradas: oscuro entero salvo
+la tarjeta, bocadillo legible a su lado.
+
+Pendiente de B1: dentro del combate la guía de Nilo parpadea lo que toca,
+pero el resto de la interfaz sigue pulsable; va con B2.

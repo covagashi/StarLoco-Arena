@@ -48,6 +48,7 @@ var _mode_tip: Label
 var _name: LineEdit
 var _go: Button
 var _status: Label
+var _tut_note: PanelContainer   # S53: the tutorial's two lines, over the drum
 var _hint: Control        # the ink ribbon under the grid: the class under the pointer
 var _hint_breed := 0
 var _picker: Control      # the whole left column (one node, for the entrance)
@@ -306,6 +307,35 @@ func _draw_pedestal(c: Control) -> void:
 ## The plinth's row: the name and "¡RECLUTAR!"; the error line between the
 ## drum and the plinth.
 func _actions() -> void:
+	# S53 (owner: "al reclutar, en el tutorial, no te indica si es para
+	# historia o para elite y torneos"; "no se indicó nada de las pesetas"):
+	# in the tutorial a note over the drum says what this fighter is for and
+	# what the two coins at the top are; Élite is shut until it is over
+	_tut_note = PanelContainer.new()
+	_tut_note.name = "TutorialNote"
+	var ns := StyleB.plate(0.98)
+	ns.border_color = UiStyle.B_CORAL
+	ns.border_width_left = 5
+	ns.content_margin_left = 18
+	ns.content_margin_right = 18
+	ns.content_margin_top = 10
+	ns.content_margin_bottom = 10
+	_tut_note.add_theme_stylebox_override("panel", ns)
+	_tut_note.position = Vector2(352, 18)
+	_tut_note.custom_minimum_size.x = 440
+	_tut_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var note := Label.new()
+	note.name = "Text"
+	note.text = I18n.t("tutorial.recruit_note")
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size.x = 404
+	note.add_theme_font_override("font", UiStyle.body_font())
+	note.add_theme_font_size_override("font_size", 16)
+	note.add_theme_color_override("font_color", UiStyle.B_INK)
+	note.add_theme_constant_override("outline_size", 0)
+	_tut_note.add_child(note)
+	_tut_note.hide()
+	stage.add_child(_tut_note)
 	_status = Label.new()
 	_status.name = "Status"
 	_status.position = Vector2(R_PLINTH.position.x, R_PLINTH.position.y + 12)
@@ -357,7 +387,9 @@ func _submit() -> void:
 		_name.grab_focus()
 		return
 	model.set_value("teamManagement", n, "editableFighter.name")
-	model.set_value("recruit", {"status": "sent", "error": ""})
+	var r: Variant = model.get_value("recruit")
+	model.set_value("recruit", {"status": "sent", "error": "",
+		"tutorial": r is Dictionary and bool(r.get("tutorial", false))})
 	send("createFighter")
 
 
@@ -383,10 +415,13 @@ func refresh() -> void:
 	_hint.queue_redraw()
 	for s in _sex_btns:
 		_sex_btns[s].set_pressed_no_signal(s == sex)
+	var r: Dictionary = data("recruit", {}) if data("recruit", {}) is Dictionary else {}
+	var tut := bool(r.get("tutorial", false))
+	_tut_note.visible = tut
 	for v in _mode_btns:
 		_mode_btns[v].set_pressed_no_signal(v == version)
+		_mode_btns[v].disabled = tut and v != 2
 	_mode_tip.text = I18n.t("recruit.mode_story_tip" if version == 2 else "recruit.mode_elite_tip")
-	var r: Dictionary = data("recruit", {}) if data("recruit", {}) is Dictionary else {}
 	var sent := str(r.get("status", "")) == "sent"
 	_go.disabled = sent
 	_status.text = str(r.get("error", ""))

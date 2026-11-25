@@ -1617,5 +1617,15 @@
   "save.err.expired": "El código caducó o se gastó. Pide otro.",
   "save.err.failed": "Algo falló en el servidor. Vuelve a probar en un rato.",
   "opt.save_progress": "Guardar mi progreso",
-  "opt.save_progress_text": "Tu partida está solo en este navegador."
+  "opt.save_progress_text": "Tu partida está solo en este navegador.",
+  "tutorial.skip": "Saltar tutorial",
+  "tutorial.skip_ask": "¿Saltar el tutorial?",
+  "tutorial.skip_yes": "Sí, saltar",
+  "tutorial.skip_no": "No",
+  "tutorial.recruit": "Primero necesitas un luchador. Pulsa Historia para reclutar el primero.",
+  "tutorial.recruit_note": "Este luchador es para Historia: crece combate a combate. Los de Élite y Torneos se reclutan aparte, más adelante. Reclutar es gratis. Arriba ves tus fichas (compran cartas) y tus pesetas (se ganan en la temporada y son para la tienda).",
+  "tutorial.fight": "¡Ya tienes luchador! Pulsa Historia: tu primer combate, con Nilo enseñándote paso a paso contra un muñeco de entrenamiento.",
+  "tutorial.done": "¡Ya sabes pelear! Lo demás lo descubres jugando: Historia contra los demonios, Ranking contra otros jugadores y Torneos. Si te pierdes, Ayuda (?) arriba a la derecha.",
+  "tutorial.done_ok": "¡A jugar!",
+  "tutorial.replay": "Repetir el tutorial"
 }

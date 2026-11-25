@@ -1097,6 +1097,9 @@ func _on_net_message(opcode: int, raw: PackedByteArray) -> void:
 			# answer with a fresh 4600 back to the overworld.
 			State.fight_result = Codec.decode(opcode, payload)
 			_fight_over = true
+			if State.tutorial_fight:   # S53: the lobby says the tutorial is done
+				State.tutorial_fight = false
+				State.tutorial_fought = true
 			if _practice != null:
 				_practice.fight_over()
 			_turn_left = -1.0

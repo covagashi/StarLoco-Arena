@@ -1125,16 +1125,24 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					{"name": d.fighter.get("name", "?")}))
 				# S47: the recruit screen closes on the server's yes
 				if _gui.is_open("fighterCreationDialog"):
+					var in_tutorial := _recruit_in_tutorial
 					_gui.close("fighterCreationDialog")
 					_toast(I18n.t("recruit.joined", {"name": d.fighter.get("name", "?"),
 						"mode": I18n.t("recruit.mode_story" if _create_fighter_evo else "recruit.mode_elite")}))
+					# S53 (owner: "¿por qué al crear un luchador vuelve a la
+					# pantalla principal?"): to Equipo, on the new fighter's mode;
+					# in the tutorial back to the lobby, where its next step is
+					if not in_tutorial:
+						_gui.model.set_value("gamePreferences",
+							0 if _create_fighter_evo else 1, "lastSelectedGameModeId")
+						_gui.open("teamManagementDialog")
 			else:
 				_log_line("[color=red]%s[/color]" % I18n.t("fighter.err",
 					{"code": int(d.result)}))
 				var err_text := I18n.t("recruit.no_slot", {"used": State.roster.size(),
 					"slots": State.fighter_slots}) if int(d.result) == 20 \
 					else I18n.t("recruit.err_server", {"code": int(d.result)})
-				_gui.model.set_value("recruit", {"status": "", "error": err_text})
+				_gui.model.set_value("recruit", {"status": "", "error": err_text, "tutorial": _recruit_in_tutorial})
 		OP_FIGHTER_DELETE_RESULT:
 			var d := Codec.decode(opcode, payload)
 			if int(d.result) == 0:
@@ -1704,7 +1712,6 @@ func _on_message(opcode: int, raw: PackedByteArray) -> void:
 					"pts": " (+%d pts)" % pts if pts > 0 else ""}))
 				_log_line("[color=yellow]%s[/color]" % I18n.t("ach.unlocked",
 					{"name": aname}))
-				_push_guide_model()   # S47: the guide moves on
 				# the tutorial scenario this achievement opens (S10)
 				if Scenarios.ACHIEVEMENT_SCRIPTS.has(aid):
 					_queue_scenario(int(Scenarios.ACHIEVEMENT_SCRIPTS[aid]))
@@ -2536,6 +2543,11 @@ func _on_new_fighter_dialog(_args: Array, _w, evo := false, breed := 1) -> void:
 	if State.roster.size() >= State.fighter_slots:
 		_toast(I18n.t("recruit.no_slot", {"used": State.roster.size(), "slots": State.fighter_slots}))
 		return
+	# S53: the tutorial's recruit is for Historia, and the screen says so
+	var tut := _tutorial_step() == "recruit"
+	_recruit_in_tutorial = tut
+	if tut:
+		evo = true
 	_create_fighter_evo = evo
 	_gui.model.set_value("teamManagement", {
 		"breedId": breed, "sex": 0, "version": 2 if evo else 1,
@@ -2545,7 +2557,7 @@ func _on_new_fighter_dialog(_args: Array, _w, evo := false, breed := 1) -> void:
 		"actorAnimation": "AnimStatique", "actorDirection": 3},
 		"editableFighter")
 	_refresh_editable_fighter()
-	_gui.model.set_value("recruit", {"status": "", "error": ""})
+	_gui.model.set_value("recruit", {"status": "", "error": "", "tutorial": tut})
 	_gui.open("fighterCreationDialog")
 
 
@@ -5426,6 +5438,10 @@ func _show_lobby_screen() -> void:
 			if id == State.my_coach_id:
 				_lobby_screen.show_bubble(text))
 	_lobby_screen.set_actions_ready(_lobby_ready)
+	if State.tutorial_fought:
+		# S53: back from the tutorial's fight — it is done, say so once
+		State.tutorial_fought = false
+		_tutorial_finish = true
 	_push_hub_model()
 	$UI/Chat.show()
 	if _story_launched != 0 and _story_loaded:
@@ -5579,9 +5595,12 @@ func _on_native_lobby_action(event: String, args: Array, item: Variant, index: i
 			_gui.open("teamManagementDialog")
 			return
 		"nativeGuideShow":
-			_gui.model.set_value("gamePreferences", false, "guideHidden")
+			# S53: «Repetir el tutorial» (from Opciones)
+			_gui.model.set_value("gamePreferences", false, "tutorialDone")
+			_gui.model.set_value("gamePreferences", false, "tutorialSkipped")
 			_gui._save_settings()
-			_push_guide_model()
+			_gui.close("tooltipDialog")
+			_push_tutorial_model()
 			return
 		"nativeLadderTab":
 			_ladder_tab = int(args[0])
@@ -5983,52 +6002,57 @@ func _on_season(season: Dictionary) -> void:
 ## teams with the one Ranking will field, and the tournament this coach can
 ## search now. Pushed whenever the roster, the presets or the tournament
 ## state change.
-## --- the guide (S47, owner point 4) -----------------------------------------
-## The tutorial is the "Primeros pasos" achievement chain (Scenarios
-## .TUTORIAL_STEPS); the lobby's guide card says the first one not done, the
-## control it uses (a ring pulses on it) and IR takes the player there.
-func _push_guide_model() -> void:
+## --- the tutorial (S53, owner 2026-11-25) ------------------------------------
+## "La guía solo debería indicar cómo pelear, con un primer combate es más
+## que suficiente": boss → recruit the first fighter (for Historia) → Nilo's
+## practice against the dummy → done. Each step lights the one control it
+## uses (the Historia tile) and darkens the rest (src/ui/spotlight.gd). It
+## replaces the S47 guide card and its six "Primeros pasos" steps; the
+## achievements themselves are untouched. Done or skipped is kept in
+## gamePreferences (this browser), and a coach who has already fought is
+## never sent through it.
+var _tutorial_finish := false   # back from it: say it is done, once
+var _recruit_in_tutorial := false   # the recruit screen is the tutorial's
+
+
+func _tutorial_step() -> String:
+	if _gui == null:
+		return ""
+	if _tutorial_finish:
+		return "finish"
+	var prefs = _gui.model.get_value("gamePreferences")
+	if prefs is Dictionary and (bool(prefs.get("tutorialDone", false)) or bool(prefs.get("tutorialSkipped", false))):
+		return ""
+	if not (prefs is Dictionary and prefs.has("tutorialDone")):   # «Repetir» sets it false
+		for fr in State.roster:
+			if int(fr.get("total_xp", 0)) > 0:
+				return ""   # has fought before: no tutorial
+	return "fight" if _has_fighters(true) else "recruit"
+
+
+func _push_tutorial_model() -> void:
 	if _gui == null:
 		return
-	var steps: Array = Scenarios.TUTORIAL_STEPS
-	var at := -1
-	for i in steps.size():
-		if not NpcDialogs.achievement_done(int(steps[i]), State.criteria, State.inventory):
-			at = i
-			break
-	var g := {"step": at, "total": steps.size(), "hidden":
-		bool(_gui.model.get_value("gamePreferences", "guideHidden") == true)}
-	if at >= 0:
-		var aid := int(steps[at])
-		g["aid"] = aid
-		g["title"] = NpcDialogs.achievement_name(aid)
-		g["text"] = I18n.t("guide.step_%d" % aid)
-		g["target"] = _guide_target(aid)
-	_gui.model.set_value("guide", g)
+	var t := {}
+	match _tutorial_step():
+		"recruit":
+			t = {"target": "Play_story", "text": "tutorial.recruit"}
+		"fight":
+			t = {"target": "Play_story", "text": "tutorial.fight"}
+		"finish":
+			t = {"target": "", "text": "tutorial.done", "button": "tutorial.done_ok"}
+	_gui.model.set_value("tutorial", t)
 
 
-func _guide_target(aid: int) -> String:
-	match aid:
-		275: return "Menu_cityDialog"
-		276: return "Play_story" if not _has_fighters(true) else "Menu_teamManagementDialog"
-	return "Play_story"
-
-
-func _guide_go() -> void:
-	var g: Variant = _gui.model.get_value("guide")
-	if not (g is Dictionary) or int(g.get("step", -1)) < 0:
-		return
-	match int(g.get("aid", 0)):
-		275:
-			_gui.open("cityDialog")   # it opens on Aprendizaje, Nilo first
-		276:
-			_on_new_fighter_dialog([], null, true)
-		_:
-			_open_story()
+func _tutorial_end(skipped: bool) -> void:
+	_tutorial_finish = false
+	_gui.model.set_value("gamePreferences", true, "tutorialSkipped" if skipped else "tutorialDone")
+	_gui._save_settings()
+	_push_tutorial_model()
 
 
 func _push_hub_model() -> void:
-	_push_guide_model()
+	_push_tutorial_model()
 	if _gui == null:
 		return
 	var titulars := 0
@@ -6075,17 +6099,20 @@ func _push_hub_model() -> void:
 func _on_lobby_action(action: String) -> void:
 	match action:
 		"cancel_search": _on_cancel_search()
-		"guide": _guide_go()
-		"guide_hide":
-			_gui.model.set_value("gamePreferences", true, "guideHidden")
-			_gui._save_settings()
-			_push_guide_model()
+		"tutorial_skip": _tutorial_end(true)
+		"tutorial_next": _tutorial_end(false)
 		"practice": _on_practice_pressed()
 		"fight": _on_fight_pressed()
 		"quick": _on_quick_search()
 		"evo": _on_evo_search()
 		# S20B hub cards
-		"story": _open_story()
+		"story":
+			if _tutorial_step() == "fight":
+				State.tutorial_fight = true   # S53: the tutorial's fight is Nilo's practice
+				_gui.model.set_value("tutorial", {})
+				_launch_challenge(BAAN_TUTORIAL, 9)
+				return
+			_open_story()
 		"ghost":
 			if _searching:
 				_on_cancel_search()

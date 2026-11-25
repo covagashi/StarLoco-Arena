@@ -127,6 +127,10 @@ static var fighter_slots := 8
 ## offers «Guardar mi progreso»; and whether it already offered it after a
 ## win this session (once per session at most).
 static var account_demo := false
+## S53: the fight under way was the tutorial's (main is a new instance when
+## the lobby comes back, so the flag lives here)
+static var tutorial_fight := false
+static var tutorial_fought := false   # …and it ended (fight_view, on 8300)
 static var save_offered := false
 
 ## Active UI locale ("es"/"en"/"fr") — set by the I18n autoload at boot and on

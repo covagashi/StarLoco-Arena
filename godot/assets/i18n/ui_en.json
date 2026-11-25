@@ -1617,5 +1617,15 @@
   "save.err.expired": "The code expired or ran out of tries. Ask for another.",
   "save.err.failed": "Something failed on the server. Try again in a while.",
   "opt.save_progress": "Save my progress",
-  "opt.save_progress_text": "Your game lives only in this browser."
+  "opt.save_progress_text": "Your game lives only in this browser.",
+  "tutorial.skip": "Skip tutorial",
+  "tutorial.skip_ask": "Skip the tutorial?",
+  "tutorial.skip_yes": "Yes, skip",
+  "tutorial.skip_no": "No",
+  "tutorial.recruit": "First you need a fighter. Press Story to recruit your first one.",
+  "tutorial.recruit_note": "This fighter is for Story: it grows fight by fight. Elite and Tournament fighters are recruited separately, later on. Recruiting is free. At the top you see your tokens (they buy cards) and your pesetas (earned in the season, for the shop).",
+  "tutorial.fight": "You have a fighter! Press Story: your first fight, with Nilo teaching you step by step against a training dummy.",
+  "tutorial.done": "You know how to fight! The rest you'll find out by playing: Story against the demons, Ranked against other players, and Tournaments. If you get lost, Help (?) at the top right.",
+  "tutorial.done_ok": "Let's play!",
+  "tutorial.replay": "Play the tutorial again"
 }

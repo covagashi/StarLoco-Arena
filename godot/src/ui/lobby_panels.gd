@@ -1268,9 +1268,8 @@ func _first_steps() -> void:
 			line.add_theme_color_override("font_color", UiStyle.BROWN)
 	if next < 0:
 		label(body, I18n.t("help.steps_done"))
-	elif bool(data("guide.hidden", false)):
-		# S47: the lobby's guide card was hidden; it comes back from here
-		button(body, I18n.t("guide.show"), func(): send("nativeGuideShow")).name = "GuideShow"
+	# S53: the lobby's tutorial (the first fight) can be played again from here
+	button(body, I18n.t("tutorial.replay"), func(): send("nativeGuideShow")).name = "GuideShow"
 
 
 func _options() -> void:
