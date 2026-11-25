@@ -33,3 +33,14 @@ eligió «paso a paso»). Detalle, desviaciones y cifras en el sprint.
 - La página 292 (fallar el blanco) en vivo: los luchadores de la base de
   pruebas solo tienen el arma y el servidor no acepta un golpe de arma a una
   casilla vacía. Probada en las unitarias.
+
+## Después: muñeco 1 contra 1
+
+El dueño, viendo las capturas, eligió «1 contra 1 con un muñeco». El reto 46
+es ahora tu primer titular contra un muñeco que no actúa, en la arena 15, a
+un turno de distancia, que cae justo al segundo golpe (cada golpe le quita
+la mitad). Figura: el saco de la Bloqueadora (look 8003); nombre `npc.316`.
+Textos 282/284/289/291–293 ajustados. De paso: la franja oscura de las
+cartas de evento (fallo de S24: las cartas antiguas guardaban el ancho del
+efecto) y la muerte súbita, apagada en la práctica. 292 en vivo sigue sin
+salir (el luchador de pruebas solo tiene el arma).

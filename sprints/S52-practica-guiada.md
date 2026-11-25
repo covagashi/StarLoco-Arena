@@ -110,3 +110,66 @@ blanco), 293 (le diste), 294 (PA y terminar turno).
   `fr-01`…`fr-28`, `en-01`…`en-08`; miradas una a una (texto legible, el
   francés cabe, lo que parpadea a la vista y en su sitio).
 
+
+## Muñeco 1 contra 1 (dueño, 2026-11-25)
+
+Viendo las capturas (todo el equipo contra 3 rivales que atacan, el paso 4
+en ~15 turnos, «un golpe más y caerá» no siempre cierto), el dueño eligió
+«1 contra 1 con un muñeco». Esto sustituye la primera desviación de arriba.
+
+### Hecho
+
+- **Servidor (`game/practice_dummy.go`, solo el reto 46):** tu primer
+  titular solo, en la arena 15 (la más pequeña, 101 casillas), contra un
+  muñeco de entrenamiento que pasa su turno sin hacer nada (`Dummy`: sin PA
+  ni PM, iniciativa −1, así que eliges tú y abres con +2 PM). Se pone a
+  3 pasos de tu casilla de salida, fuera de las zonas de salida y lo más al
+  centro: la casilla de al lado queda a 2, dentro de los PM de cualquier
+  clase. **Cae justo al segundo golpe, sea cual sea:** cada golpe que lo
+  daña le quita la mitad de su vida máxima (redondeando arriba), crítico
+  incluido; su vida es el doble del daño base de tu ataque de la lección
+  (el hechizo de daño más barato que llega a la casilla de al lado, si no el
+  golpe sin arma, 5), mínimo 10, así que el número que salta se parece al de
+  tu ataque. Sin muerte súbita en la práctica. El resto de retos, igual.
+- **Su vida en el cliente:** el cliente toma la vida máxima de la clase; para
+  el muñeco el `hpLost` del 8000 cuenta desde la de su clase y el cliente
+  (`ai_names.gd`) la convierte en la suya (mismos bytes, dos lados a la vez).
+- **Aspecto:** la figura y el retrato del saco relleno de la Bloqueadora
+  (invocación, look 8003), sin arte nuevo. **Nombre:** `npc.316` «Muñeco de
+  entrenamiento» / «Training dummy» / «Mannequin d'entraînement» (el 295 ya
+  era «Nilo»).
+- **Textos:** 282 y 284 hablan de *tu guerrero*; 289, 291 y 292 van a por
+  *el muñeco* (sin `{foe}`); 293 vuelve a decir «Un golpe más de “{spell}” y
+  caerá», cierto por construcción. Repasadas las 13 páginas contra el combate
+  nuevo. La guía hace parpadear al colocar la casilla de salida más cercana
+  al muñeco.
+- **Franja oscura con «Dios Espadachín» (es-26 de antes):** fallo de S24, no
+  de S52. Al pasar una carta de evento a «antigua» se le quitaba el texto del
+  efecto pero se le dejaba el ancho reservado (hasta 520 px) y el recorte; la
+  tira (640 px, centrada) se salía por la izquierda como una banda oscura.
+  Ahora la carta antigua recupera su ancho, la nueva se ajusta al hueco que
+  dejan las otras y lo que no cabe se va, la más antigua primero
+  (`es-strip-eventos.png`: cuatro cartas dentro de la tira).
+- **292 en vivo:** sigue solo en las unitarias. El primer titular de la base
+  de pruebas solo tiene el arma (5 PA de 6: un golpe por turno, y el servidor
+  no acepta un golpe de arma a una casilla vacía).
+
+### Verificado
+
+- `run_tests.sh --headless`: 26 suites, 1676 comprobaciones, 0 fallos (el
+  nombre del muñeco y su vida desde `hpLost`, en `practice_guide_test.gd`).
+- Go: `go vet ./...` y `go test ./...` en verde. Nuevas en
+  `practice_dummy_test.go`: el lanzamiento es 1 contra 1 en la arena 15, sin
+  muerte súbita, eliges tú, el muñeco a 3 pasos y fuera de las salidas; desde
+  cualquier salida se llega en el primer turno; cae justo al segundo golpe
+  (vidas 10/11/37/400 × golpes 1/5/7/60/5000); pasa su turno sin actuar; su
+  vida sigue al ataque de las 12 clases; su `hpLost` en el cable.
+- `practice_smoke`: es **19/0** y fr **19/0** — todo en el primer turno
+  (colocación, Listo, barra, 288/289, 290, golpe, 293/294, fin de turno) y
+  el segundo golpe del turno siguiente lo derriba («tenía 5 PV tras el
+  primero») y gana el combate. en con `--skip-at=4`: **11/0**.
+  `tutorial_smoke` 10/0, `guide_smoke` 6/0, `fight_smoke` OK.
+- Capturas nuevas en `~/codigo/capturas/s52/` (borradas las anteriores):
+  `es-01`…`es-15`, `fr-01`…`fr-15`, `en-01`…`en-08`, `es-strip-eventos`;
+  miradas: el saco se lee como muñeco, el bocadillo no tapa lo que parpadea,
+  el francés cabe.
