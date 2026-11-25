@@ -182,11 +182,26 @@ es/en/fr (`~/codigo/capturas/s51/invitado/`).
       #2499234, procesado. Butler en `~/.local/bin` (v15.32.0); la clave del
       dueño en `~/.secrets/itch_api_key` (la que guarda `butler login` en
       `~/.config/itch/butler_creds` solo sirve para subir).
-- [ ] **Dueño, en la página (la API no lo permite):** tipo HTML, marcar la
-      subida `web` como «played in the browser», 1280×720, botón de
-      pantalla completa, sin «Mobile friendly», declarar el uso de IA y
-      **borrar las subidas `windows` y `macos`** (de septiembre,
-      `demo-2026.09.13-engine`: solo va la web).
+- [x] **La página (2026-11-25, en un Chromium normal con la sesión del
+      dueño, por CDP: el de Playwright no pasa la comprobación de
+      Cloudflare):** tipo HTML, la subida `web` jugable en el navegador,
+      1280×720, botón de pantalla completa, sin «Mobile friendly» ni
+      SharedArrayBuffer; descripción, lema, género Strategy, 10 etiquetas,
+      declaración de IA (gráficos, sonido, texto, código, con frase);
+      portada 630×500, 5 capturas en inglés (en la barra lateral), tema en
+      la paleta del juego (índigo, coral, oro; Lilita One + Nunito), banner
+      con el título y la arena de hielo detrás de «Run game». Borradas las
+      subidas `windows` y `macos` de septiembre. Copia de las imágenes y el
+      texto en `~/codigo/marketing/itch/`.
+- [x] **Probado en la página en borrador:** carga dentro del iframe de
+      itch (`html-classic.itch.zone`), «Jugar como invitado» conecta con
+      oracle-2, crea el jefe y llega al lobby. Los combates, con el mismo
+      build y servidor en `fight_load_test.mjs` (arriba).
+- [x] **Perfil (dueño, «deja bonito mi perfil»):** los otros juegos
+      (Goblin Slayer 2048, La cueva) pasados a borrador, no borrados (el
+      dueño eligió ocultar); nombre «Covagashi», marcado como desarrollador,
+      bio corta con el enlace a la página, tema con la misma paleta y un
+      banner «Covagashi · Maker of Pippop Arena». El avatar, el suyo.
 - [x] **Antes de publicar** (dueño, 2026-11-24): «Guardar mi progreso» pasa
       la cuenta demo a una cuenta con correo y contraseña, sin perder nada,
       y se puede recuperar la contraseña por correo. Correo por Cloudflare
@@ -205,8 +220,7 @@ es/en/fr (`~/codigo/capturas/s51/invitado/`).
       **Volver atrás:** base en `~/arena-s52/arena.db.bak-2026-11-25`
       (copiada con el servidor parado), contenedor anterior parado como
       `deploy-arena-1-s50`, web anterior en `~/arena-s52/web-prev-s50`.
-- [ ] Probar un combate entero desde la página en borrador (Chrome y
-      Firefox), luego hacerla pública.
+- [ ] **Dueño:** hacerla pública (Edit game → Visibility → Public).
 - [ ] Poner la URL en `ITCH` del Worker y desplegarlo; en oracle-2, que
       Caddy redirija también la IP directa (`https://140.238.172.196/`)
       salvo `/ws`.
