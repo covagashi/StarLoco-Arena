@@ -14,7 +14,8 @@ extends "res://test/totems_smoke.gd"
 ## 6. Baan's "I'm new" (219), then Demon III (210): after three recruits
 ##    only challenge 29 is offered.
 ## 7. An achievement that opens a scenario (280 → 105) plays its monologue.
-## 8. Baan's lesson (200 + 201) plays before his fight, which then starts.
+## 8. Nilo's fight starts straight away: since S52 his lesson (200 + 201)
+##    plays inside it, step by step (test/practice_smoke.gd), not before.
 ## The fights themselves are the Go e2e TestTutorialChainOverTheWire.
 
 const DEMON3 := 54
@@ -193,12 +194,7 @@ func _achievement_scenario() -> void:
 func _baan() -> void:
 	_seen.clear()
 	_main._launch_challenge(46, 9)
-	await _wait(func(): return _main._gui.is_open("npcTalkDialog"), 3.0)
-	await create_timer(0.3).timeout
-	var t := _talk()
-	var ok_lesson := str(t.get("name", "")) == "Nilo" and int(t.get("pages", 0)) == 10
-	await _shot("baan-lesson")
-	await _read_through()
+	var no_lesson: bool = not _main._gui.is_open("npcTalkDialog")
 	await _wait(func(): return _seen.has(8000), 5.0)
-	_record(10, "baan", ok_lesson and _seen.has(8000),
-		"lesson %s (10 pages), then the fight (8000 %s)" % [ok_lesson, _seen.has(8000)])
+	_record(10, "baan", no_lesson and _seen.has(8000),
+		"no lesson before (%s), the fight starts (8000 %s)" % [no_lesson, _seen.has(8000)])
