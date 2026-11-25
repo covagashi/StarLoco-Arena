@@ -68,7 +68,7 @@ const MODES := [
 const _DOTS := """shader_type canvas_item;
 uniform vec4 field : source_color;
 uniform vec4 dot : source_color;
-uniform float speed = 4.0;
+uniform float speed = 8.0;
 uniform float fade = 0.0;
 void fragment() {
 	vec2 p = FRAGCOORD.xy + vec2(TIME * speed, 0.0);
@@ -698,7 +698,7 @@ func _tile_lean(id: String) -> void:
 	tw.tween_property(c.root, "position", c.base + (Vector2(-6, -3) if on else Vector2.ZERO), 0.16)
 	for f in c.figs:
 		tw.tween_property(f, "scale", Vector2.ONE * (1.05 if on else 1.0), 0.2)
-	(c.dots as ShaderMaterial).set_shader_parameter("speed", 14.0 if on else 4.0)
+	(c.dots as ShaderMaterial).set_shader_parameter("speed", 16.0 if on else 8.0)
 	play.queue_redraw()
 
 
@@ -1052,8 +1052,18 @@ func _search_mode_text() -> String:
 func _process(dt: float) -> void:
 	# the backdrop drifts, slowly (each piece on its own period)
 	_clock_t += dt
+	# S53 (owner: "las animaciones de historia, ranking, torneos solo se
+	# activan cuando se pasa el ratón por encima"): the tiles' figures sway
+	# and breathe at rest too; the pointer only makes it livelier
 	for c: Dictionary in _cards.values():
-		StyleB.sway(c.figs, _clock_t, 1.4)
+		StyleB.sway(c.figs, _clock_t, 3.0)
+		for i in c.figs.size():
+			var f: Control = c.figs[i]
+			if not is_instance_valid(f):
+				continue
+			if not f.has_meta("bob_base"):
+				f.set_meta("bob_base", f.position)
+			f.position = (f.get_meta("bob_base") as Vector2) + Vector2(0, -4.0 * absf(sin(TAU * _clock_t / (1.3 + 0.29 * i) + i)))
 	for d in _drift:
 		var phase: float = TAU * _clock_t / float(d[3])
 		d[0].position = d[1] + d[2] * sin(phase)

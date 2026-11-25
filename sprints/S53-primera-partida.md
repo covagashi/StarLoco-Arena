@@ -217,3 +217,29 @@ Es de Safari: las figuras se pintan en un SubViewport con fondo
 transparente y Safari mezcla ese alfa de otra manera. El WebKit de
 Playwright no arranca en Bazzite (le faltan bibliotecas de Ubuntu). Queda
 abierto: probar en un contenedor con WebKit o con el Safari del dueño.
+
+### Lobby vivo (A11) y conexión perdida (A14) — 2026-11-25
+
+- **A11:** las figuras de las tarjetas se balancean 3° (antes 1,4°) y
+  respiran con un bote de 4 px en reposo, y el fondo de puntos va al doble
+  (8; 16 con el puntero encima). El puntero solo lo aviva.
+- **A14:** `src/ui/lost_connection.gd`: si el socket cae con sesión
+  iniciada (no al cerrar sesión), en cualquier pantalla sale «Se perdió la
+  conexión» con «Reconectar»: en la web recarga la página (el navegador
+  guarda la llave del invitado y entra solo); fuera, vuelve al login. Si la
+  página estaba en segundo plano (cuando Safari corta), reconecta sola al
+  volver al frente. `lost_connection_smoke` **4/0** (cae → aviso; cerrar
+  sesión → nada; Reconectar → login).
+
+### A6 y A10 son de Safari
+
+En Chromium (web, contra oracle-2) la arena 36 sale como en el editor
+(hierba a ras del pavimento blanco, captura `fight-1-later.png` de
+`fight_load_test`), y los luchadores con su color. En el Safari del dueño
+la hierba sale levantada, con los lados de tierra a la vista, y las
+figuras blancas y translúcidas: es cómo Safari pinta (profundidad y alfa
+del 3D), no el mapa (los `layout` siguen como los dejó el dueño el
+2026-11-03). Para probarlo: el MacBook responde por SSH y tiene
+`safaridriver`, pero Safari pide «Permitir la automatización remota»
+(Ajustes → Avanzado → funciones de desarrollador; menú Desarrollador), que
+solo puede activar el dueño.

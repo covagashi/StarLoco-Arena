@@ -1627,5 +1627,8 @@
   "tutorial.fight": "Tu as un combattant ! Appuie sur Histoire : ton premier combat, avec Nilo qui t'apprend pas à pas contre un mannequin d'entraînement.",
   "tutorial.done": "Tu sais te battre ! Le reste, tu le découvriras en jouant : l'Histoire contre les démons, le Classement contre d'autres joueurs et les Tournois. Si tu te perds, l'Aide (?) en haut à droite.",
   "tutorial.done_ok": "On joue !",
-  "tutorial.replay": "Refaire le tutoriel"
+  "tutorial.replay": "Refaire le tutoriel",
+  "net.lost_title": "Connexion perdue",
+  "net.lost_body": "Le navigateur a coupé la connexion au serveur (souvent en changeant d'appli ou en verrouillant l'écran). Ta partie est sauvegardée : reviens-y.",
+  "net.reconnect": "Se reconnecter"
 }

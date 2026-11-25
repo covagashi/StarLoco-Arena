@@ -26,7 +26,17 @@ func _ready() -> void:
 	State.net = client
 	client.message_received.connect(func(op, p): message.emit(op, p))
 	client.connected.connect(func(): connected.emit())
-	client.disconnected.connect(func(): disconnected.emit())
+	client.disconnected.connect(_on_lost)
+
+
+## S53: a socket that drops after login says so on every screen
+## (src/ui/lost_connection.gd); before login the screens handle it.
+func _on_lost() -> void:
+	disconnected.emit()
+	if State.my_coach_id > 0 and not get_tree().root.has_node("LostConnection"):
+		var lost: CanvasLayer = load("res://src/ui/lost_connection.gd").new()
+		lost.name = "LostConnection"
+		get_tree().root.add_child.call_deferred(lost)
 
 
 func connect_to(host: String, port: int) -> int:

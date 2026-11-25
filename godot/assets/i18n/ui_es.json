@@ -1627,5 +1627,8 @@
   "tutorial.fight": "¡Ya tienes luchador! Pulsa Historia: tu primer combate, con Nilo enseñándote paso a paso contra un muñeco de entrenamiento.",
   "tutorial.done": "¡Ya sabes pelear! Lo demás lo descubres jugando: Historia contra los demonios, Ranking contra otros jugadores y Torneos. Si te pierdes, Ayuda (?) arriba a la derecha.",
   "tutorial.done_ok": "¡A jugar!",
-  "tutorial.replay": "Repetir el tutorial"
+  "tutorial.replay": "Repetir el tutorial",
+  "net.lost_title": "Se perdió la conexión",
+  "net.lost_body": "El navegador cortó la conexión con el servidor (suele pasar al cambiar de app o bloquear la pantalla). Tu partida está guardada: vuelve a entrar.",
+  "net.reconnect": "Reconectar"
 }

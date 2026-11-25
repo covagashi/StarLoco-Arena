@@ -1627,5 +1627,8 @@
   "tutorial.fight": "You have a fighter! Press Story: your first fight, with Nilo teaching you step by step against a training dummy.",
   "tutorial.done": "You know how to fight! The rest you'll find out by playing: Story against the demons, Ranked against other players, and Tournaments. If you get lost, Help (?) at the top right.",
   "tutorial.done_ok": "Let's play!",
-  "tutorial.replay": "Play the tutorial again"
+  "tutorial.replay": "Play the tutorial again",
+  "net.lost_title": "Connection lost",
+  "net.lost_body": "The browser cut the connection to the server (it often happens when you switch apps or lock the screen). Your game is saved: jump back in.",
+  "net.reconnect": "Reconnect"
 }
