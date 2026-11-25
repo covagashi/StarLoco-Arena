@@ -175,14 +175,36 @@ es/en/fr (`~/codigo/capturas/s51/invitado/`).
       viewport 1280×720; botón de pantalla completa; **sin** «Mobile
       friendly»; SharedArrayBuffer **sin** marcar; declarar el uso de IA).
       Pasar una clave de API de butler (va a `~/.secrets`).
-- [ ] Subir: `--export-release Web`, `pack_web.gd`, y `butler push
-      dist/web <usuario>/pippop-arena:web` (un solo canal).
+- [x] Subir (2026-11-25): página **covagashi.itch.io/pippop-arena**
+      (borrador, id 4994836, la creó el dueño). Export + `pack_web.gd`
+      (178 MB, 67 ficheros) y `butler push dist/web
+      covagashi/pippop-arena:web --userversion s52-6eebbd6` → build
+      #2499234, procesado. Butler en `~/.local/bin` (v15.32.0); la clave del
+      dueño en `~/.secrets/itch_api_key` (la que guarda `butler login` en
+      `~/.config/itch/butler_creds` solo sirve para subir).
+- [ ] **Dueño, en la página (la API no lo permite):** tipo HTML, marcar la
+      subida `web` como «played in the browser», 1280×720, botón de
+      pantalla completa, sin «Mobile friendly», declarar el uso de IA y
+      **borrar las subidas `windows` y `macos`** (de septiembre,
+      `demo-2026.09.13-engine`: solo va la web).
 - [x] **Antes de publicar** (dueño, 2026-11-24): «Guardar mi progreso» pasa
       la cuenta demo a una cuenta con correo y contraseña, sin perder nada,
       y se puede recuperar la contraseña por correo. Correo por Cloudflare
       (el dueño paga Workers), como el SMTP de pasaexam. Hecho (arriba);
       falta al desplegar: `auto_register: false` y la cuenta SMTP en
       `ARENA_MAIL_*` de oracle-2.
+- [x] **oracle-2 con S51 + S52 (2026-11-25):** imagen
+      `dofusarena-2.70:s52` (`~/arena-s52/build`, binario estático de
+      `6eebbd6`, `config.oracle.yaml` con `auto_register: false`),
+      contenedor `deploy-arena-1` con los mismos volúmenes, puertos y
+      variables; `/health` 200. La web de `/srv/pippop-demo`, el mismo
+      export que itch (manifiesto idéntico por las dos URLs).
+      `fight_load_test.mjs` contra `wss://alfa-pippop.covaga.dev/ws`: cuenta
+      demo, jefe, recluta y 3 combates (arenas 10, 10, 12) sin errores del
+      motor. SMTP sin poner: «Guardar mi progreso» está apagado en la alfa.
+      **Volver atrás:** base en `~/arena-s52/arena.db.bak-2026-11-25`
+      (copiada con el servidor parado), contenedor anterior parado como
+      `deploy-arena-1-s50`, web anterior en `~/arena-s52/web-prev-s50`.
 - [ ] Probar un combate entero desde la página en borrador (Chrome y
       Firefox), luego hacerla pública.
 - [ ] Poner la URL en `ITCH` del Worker y desplegarlo; en oracle-2, que
