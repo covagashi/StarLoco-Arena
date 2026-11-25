@@ -65,3 +65,4 @@ para que la siguiente sesión arranque sin tener que redescubrirlo.
 | 2026-11-17 | [S47: reorganización 1 — Reclutar como pantalla, Torneos en un solo sitio, Amigos y Buzón arriba](./2026-11-17-s47-reorganizacion.md) |
 | 2026-11-19 | [S47: W4, cabos sueltos, `material is null` y cierre](./2026-11-19-s47-cierre.md) |
 | 2026-11-24 | [S51: «Guardar mi progreso» — la cuenta demo pasa a correo y contraseña, «Ya tengo cuenta», recuperar con un código](./2026-11-24-s51-guardar-progreso.md) |
+| 2026-11-25 | [S52: la práctica guiada de Nilo — dentro del combate, paso a paso, con su bocadillo y el parpadeo](./2026-11-25-s52-practica-guiada.md) |
