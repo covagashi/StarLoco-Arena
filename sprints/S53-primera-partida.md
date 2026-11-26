@@ -273,6 +273,27 @@ Verificado: `run_tests.sh --headless` 26 suites, **1685** comprobaciones, 0
 fallos; `first_play_smoke` 14/0; `first_play_test.mjs` a las dos
 resoluciones sin salir del juego, con las capturas de cada paso.
 
+### Limpieza antes de seguir — 2026-11-26
+
+- **Fuera (en git queda el historial):** `src/util/le_reader.gd` (lector de
+  los formatos retail, sin uso), `proto/s33/` (prototipo de arte de S33),
+  `tools/map_editor/draft_from_retail.gd` (necesitaba el archivo retail de
+  S42; las arenas ya son finales), `tools/make_creation_bg.py` (sin uso),
+  `art/biomes.json` (biomas de S36 que no lee nadie), el `.uid` huérfano de
+  `guide_smoke`; en Go, `teamUps.cancelPending` y el helper de test
+  `assertCells`, que nadie llamaba.
+- **Fuera del disco (no estaban en git):** los kits de biomas del 25 de
+  octubre (`art/{cueva,fortaleza,lava,playa,pradera,ruinas}`, 453 MB, casi
+  todo `out/`; las fuentes van en `~/.local/share/limpieza-s53/`), los
+  builds de escritorio de `dist/` (macOS 3,4 GB anterior a S43 con arte
+  retail, Linux, Windows: solo hay web, S51), ficheros `._*` de macOS,
+  `__pycache__`.
+- **Se queda, a propósito:** el 2vs2 (dormido tras `Features.DUO`, no
+  muerto) y `zaap.go` en el servidor; las herramientas y smokes viejos que
+  aún funcionan (`tools/portraits`, `promo`, `reel`…).
+- Unitarias **1684** (una menos: `scripts_compile_test` ya no compila
+  `le_reader.gd`), 0 fallos; `go vet` y `go test ./...` limpios.
+
 ## Pendiente
 
 - **A6 / A10 en Safari** (figuras blancas, hierba levantada): falta un

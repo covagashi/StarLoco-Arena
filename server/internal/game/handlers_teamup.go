@@ -85,12 +85,6 @@ func (t *teamUps) takePending(invited, inviter uint) (pendingTeamUp, bool) {
 	return p, true
 }
 
-func (t *teamUps) cancelPending(invited uint) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	delete(t.pending, invited)
-}
-
 func (t *teamUps) bind(p *teamUpPair) {
 	t.mu.Lock()
 	defer t.mu.Unlock()

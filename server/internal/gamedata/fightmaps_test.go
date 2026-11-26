@@ -50,20 +50,3 @@ func TestFightMapsLoad(t *testing.T) {
 		}
 	}
 }
-
-func assertCells(t *testing.T, what string, got, want []MapPos) {
-	t.Helper()
-	if len(got) != len(want) {
-		t.Errorf("%s: %d cells, want %d", what, len(got), len(want))
-		return
-	}
-	set := map[MapPos]bool{}
-	for _, p := range got {
-		set[p] = true
-	}
-	for _, p := range want {
-		if !set[p] {
-			t.Errorf("%s: missing start cell %+v (got %+v)", what, p, got)
-		}
-	}
-}
