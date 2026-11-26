@@ -294,12 +294,28 @@ resoluciones sin salir del juego, con las capturas de cada paso.
 - Unitarias **1684** (una menos: `scripts_compile_test` ya no compila
   `le_reader.gd`), 0 fallos; `go vet` y `go test ./...` limpios.
 
+### La práctica, cerrada como el lobby (B1) — 2026-11-26
+
+- Mientras Nilo habla, un clic izquierdo o derecho solo llega a lo que
+  parpadea (el rombo de la casilla, el botón, la barra de turnos, el globo
+  de PA) y a su bocadillo; lo demás no hace nada. La rueda, el arrastre con
+  el botón central y el paso del ratón siguen llegando al combate.
+- El resto se oscurece al 45 % (el lobby, al 72 %): el tablero se sigue
+  leyendo; el hueco de una casilla es su rombo, no la caja con la figura.
+  Sin nada que señalar (turno del muñeco) no se oscurece, pero tampoco se
+  puede pulsar nada.
+- `fight_view._try_move` toma la casilla de la posición del clic, no del
+  puntero (lo mismo con un toque o con un clic de prueba).
+- `practice_smoke` hace clics reales: coloca pulsando la casilla, pulsa
+  «Listo», y un clic en «Pasar turno» mientras parpadea una casilla no hace
+  nada. **20/0** (y `--healed` 22/0, `--skip-at=4` 11/0, `--lang=fr` 20/0);
+  `first_play_smoke` 14/0; unitarias 1684/0. Capturas miradas: colocación,
+  Listo, el hechizo, el globo de PA.
+
 ## Pendiente
 
 - **A6 / A10 en Safari** (figuras blancas, hierba levantada): falta un
   Safari que se pueda controlar; el dueño puede activar «Permitir la
   automatización remota» en el MacBook.
-- **Dentro de la práctica**, la guía de Nilo parpadea lo que toca, pero el
-  resto del HUD sigue pulsable.
 - **A4 / A5:** las mallas de los coaches y los luchadores (arte, con hojas
   antes/después al dueño).

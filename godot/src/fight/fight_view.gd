@@ -3635,10 +3635,12 @@ func _preview_path() -> Array:
 	return _find_path(Vector2i(cur.x, cur.y), _hover, _current_fid)
 
 
-func _try_move() -> void:
+## `at`: the click, in world coordinates (the event's, not the pointer's:
+## the same under a touch and under a scripted click).
+func _try_move(at: Vector2) -> void:
 	if State.spectating:
 		return   # read-only viewer: clicks only pan/zoom
-	var cell: Variant = _cell_at(cam.get_global_mouse_position())
+	var cell: Variant = _cell_at(at)
 	if cell == null:
 		return
 	if _placement:
@@ -4028,7 +4030,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_dragging = false
 				# a press+release under ~6px is a click, not a camera drag
 				if event.position.distance_to(_press_pos) < 6.0:
-					_try_move()
+					_try_move(get_canvas_transform().affine_inverse() * event.position)
 		elif event.button_index == MOUSE_BUTTON_MIDDLE:
 			_dragging = event.pressed
 	elif event is InputEventMouseMotion:

@@ -11,6 +11,11 @@ extends Control
 ##   - the blink: a pulsing coral ring like the lobby guide's (S47) around a
 ##     HUD control (Ready / End turn, a spell slot, the turn bar, the AP
 ##     globe), or a pulsing coral diamond and a bouncing arrow on a cell.
+##   - the lock (S53, owner: «obligar a hacer lo que toca, apagar todo lo
+##     demás»): while the guide talks, a left or right click anywhere but on
+##     what blinks and on the bubble does nothing, and the rest of the screen
+##     dims a little (the board stays readable). The wheel, a middle-button
+##     drag and the hover still reach the fight.
 ##
 ## Since the owner's «1 contra 1 con un muñeco» (S52) the fight is our first
 ## titular against a training dummy (server practice_dummy.go); the foe is
@@ -35,6 +40,7 @@ const MARGIN := 14.0
 const TOP := 214.0      # the highest the bubble goes: under the banner, hints and event strip
 const OVERLAP := 16.0   # how far Nilo stands over the plate's edge
 const ATTACK_KINDS := ["hit", "bolt", "area"]   # spells.json fx.s that strike
+const DIM := Color(0.06, 0.07, 0.13, 0.45)     # lighter than the lobby's spotlight (0.72)
 
 var guide := PracticeGuide.new()
 var fv: Node   # the fight view
@@ -249,6 +255,8 @@ func _on_next() -> void:
 
 func _refresh() -> void:
 	bubble.visible = guide.active()
+	# PASS, not STOP: what it leaves alone (the wheel, motion) goes on to the fight
+	mouse_filter = Control.MOUSE_FILTER_PASS if guide.active() else Control.MOUSE_FILTER_IGNORE
 	if not guide.active():
 		queue_redraw()
 		return
@@ -544,6 +552,48 @@ func cell_poly(cell: Vector2i) -> PackedVector2Array:
 	return xf * fv._cell_poly(cell.x, cell.y, alt)
 
 
+## --- the lock --------------------------------------------------------------
+
+## The one place a click may land: what blinks (a cell's diamond, a
+## control's rect, the AP globe's circle); none → nowhere (the bubble's own
+## buttons sit over this node and take theirs).
+func lets_through(point: Vector2) -> bool:
+	var b := blink()
+	if b.has("rect"):
+		return (b.rect as Rect2).grow(6).has_point(point)
+	if b.has("circle"):
+		return point.distance_to(b.circle[0]) <= float(b.circle[1]) + 8.0
+	if b.has("cell"):
+		return Geometry2D.is_point_in_polygon(point, cell_poly(b.cell))
+	return false
+
+
+func _has_point(point: Vector2) -> bool:
+	return guide.active() and fv != null and not lets_through(point)
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		accept_event()   # off the target: nothing happens
+
+
+## The dim's hole on screen: what blinks, as a box (empty: no dim).
+func _hole() -> Rect2:
+	var b := blink()
+	if b.has("rect"):
+		return (b.rect as Rect2).grow(12)
+	if b.has("circle"):
+		var r := float(b.circle[1]) + 14.0
+		return Rect2(b.circle[0] - Vector2(r, r), Vector2(r, r) * 2.0)
+	if b.has("cell"):   # the diamond's box (its corners are dimmed in _draw)
+		var poly := cell_poly(b.cell)
+		var r := Rect2(poly[0], Vector2.ZERO)
+		for p in poly:
+			r = r.expand(p)
+		return r
+	return Rect2()
+
+
 ## --- per frame: pulse, and keep the bubble clear of the action --------------
 
 func _process(dt: float) -> void:
@@ -660,6 +710,25 @@ func _place_bubble() -> void:
 
 func _draw() -> void:
 	var b := blink()
+	var h := _hole()
+	if guide.active() and (h.has_area() or _next.visible):
+		var s := get_viewport_rect().size
+		if h.has_area():   # four bands round the hole
+			draw_rect(Rect2(0, 0, s.x, h.position.y), DIM)
+			draw_rect(Rect2(0, h.end.y, s.x, s.y - h.end.y), DIM)
+			draw_rect(Rect2(0, h.position.y, h.position.x, h.size.y), DIM)
+			draw_rect(Rect2(h.end.x, h.position.y, s.x - h.end.x, h.size.y), DIM)
+			if b.has("cell"):   # and the box's four corners round the diamond
+				var poly := cell_poly(b.cell)
+				var c := h.get_center()
+				for i in poly.size():
+					var a: Vector2 = poly[i]
+					var e: Vector2 = poly[(i + 1) % poly.size()]
+					var k := Vector2(a.x if absf(a.x - c.x) > absf(e.x - c.x) else e.x,
+						a.y if absf(a.y - c.y) > absf(e.y - c.y) else e.y)
+					draw_colored_polygon(PackedVector2Array([a, e, k]), DIM)
+		else:
+			draw_rect(Rect2(Vector2.ZERO, s), DIM)
 	if b.is_empty():
 		return
 	var pulse := 0.5 + 0.5 * sin(_t * 4.0)

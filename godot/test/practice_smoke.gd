@@ -89,14 +89,17 @@ func _play() -> void:
 			_ov._next.pressed.emit()
 			await create_timer(0.3).timeout
 	var cell: Vector2i = _ov.blink().get("cell", Vector2i(-9999, -9999))
-	_record(1, "place", _fv.request_place_at(cell), "our fighter → %s" % cell)
+	# S53, the lock: a real click on the cell's middle places there
+	var poly: PackedVector2Array = _ov.cell_poly(cell)
+	await _click_at((poly[0] + poly[2]) * 0.5)
+	_record(1, "place", await _wait(func(): return g.step == S.READY, 5.0),
+		"a click on the blinking cell %s places our fighter" % cell)
 	# 2. Listo
-	await _wait(func(): return g.step == S.READY, 5.0)
 	await create_timer(0.5).timeout
 	await _check(2, "rect", _fv._end_turn)
 	if await _maybe_skip(2):
 		return
-	_fv._end_turn.pressed.emit()
+	await _click_at(_fv._end_turn.get_global_rect().get_center())   # S53: a real click
 	# 3. the turn bar
 	await _wait(func(): return g.step == S.OBSERVE, 8.0)
 	await create_timer(1.0).timeout
@@ -123,6 +126,7 @@ func _play() -> void:
 		_ov._next.pressed.emit()
 		await create_timer(0.4).timeout
 		await _check(4, "cell")   # 289
+		await _locked_end_turn()
 		await _wrong_cell()
 		await _walk()
 	else:
@@ -307,6 +311,39 @@ func _check(step: int, kind: String, node: Control = null) -> void:
 		"text %s, blink %s %s, covers %s (soft %s) — '%s…'" % [shown_ok, kind, blink_ok,
 			covers, soft, want_text.left(48)])
 	await _shot_n("s%d-p%d-%d" % [g.step, g.page + 1, g.current_page()])
+
+
+## S53: while a cell blinks, a real click on End turn (on, enabled, our
+## turn) does nothing; the bubble's own buttons still work.
+func _locked_end_turn() -> void:
+	var fired := [false]
+	var f := func(): fired[0] = true
+	_fv._end_turn.pressed.connect(f)
+	var at: Vector2 = _fv._end_turn.get_global_rect().get_center()
+	var was: bool = _fv._is_my_turn()
+	await _click_at(at)
+	await create_timer(0.3).timeout
+	_fv._end_turn.pressed.disconnect(f)
+	_record(4, "lock", was and not _fv._end_turn.disabled and not fired[0] and _fv._is_my_turn()
+			and _ov._has_point(at) and not _ov._has_point(_ov.cell_poly(_ov.blink().cell)[0].lerp(
+				_ov.cell_poly(_ov.blink().cell)[2], 0.5)),
+		"a cell blinks: a click on End turn does nothing (fired %s), the cell takes clicks" % fired[0])
+
+
+## A left click at `pos` (canvas coordinates), through the window's stretch.
+func _click_at(pos: Vector2) -> void:
+	var at: Vector2 = root.get_final_transform() * pos
+	var move := InputEventMouseMotion.new()
+	move.position = at
+	Input.parse_input_event(move)
+	await process_frame
+	for pressed in [true, false]:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.position = at
+		ev.pressed = pressed
+		Input.parse_input_event(ev)
+		await process_frame
 
 
 func _shot_n(what: String) -> void:
