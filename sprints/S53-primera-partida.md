@@ -312,6 +312,31 @@ resoluciones sin salir del juego, con las capturas de cada paso.
   `first_play_smoke` 14/0; unitarias 1684/0. Capturas miradas: colocación,
   Listo, el hechizo, el globo de PA.
 
+### A4, coaches — primer paso (2026-11-26)
+
+Diagnóstico con `test/coach_sheet.gd` (nuevo: el coach entero o de cerca
+desde cuatro lados, con un color de pelo y de piel cualquiera; con piel
+magenta y pelo cian se ve la máscara), hojas en
+`~/codigo/capturas/s53/a4/`:
+
+- **Hombre, costillas:** no eran la máscara ni la malla, sino las **sombras
+  propias**: el visor de cada figura no tiene suelo, así que el mapa de
+  sombras solo caía sobre la propia figura, y el brazo dejaba en el
+  costado (y el otro brazo) esquirlas naranjas de bordes duros. Fuera:
+  `toon.gdshaderinc` ya no corta por `ATTENUATION`; los dos tonos salen solo
+  del terminador. Vale para todas las figuras (en combate, igual de color).
+  (Apagar la sombra del sol del visor dejaba la figura entera en sombra en
+  el renderer de compatibilidad: no se toca.)
+- **Mujer, codo, muslo y pelo junto a la oreja:** **no es la máscara.** Con
+  la máscara entera en piel los trazos del codo siguen (negros y blancos);
+  sin silueta, también; y las motas claras del pelo salen como piel en la
+  vista de máscara. Es **la malla**: la piel de la cabeza asoma entre los
+  mechones, y por el codo y el muslo asoman pliegues o trozos del guante y
+  de la bota. Probé a arreglarlo en la máscara (islas, vecinos, mínimo de
+  luz) y no mejoraba: deshecho. El arreglo va en Blender: meter la piel
+  cubierta (cabeza bajo el pelo, brazo bajo el guante) unos milímetros, o
+  quitar las caras tapadas, y revisar los pliegues de `lower_arms`.
+
 ## Pendiente
 
 - **A6 / A10 en Safari** (figuras blancas, hierba levantada): falta un

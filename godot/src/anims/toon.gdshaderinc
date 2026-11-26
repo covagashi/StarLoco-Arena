@@ -97,7 +97,9 @@ void fragment() {
 
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
-	// cast shadows cut as hard as the terminator: soft shadow maps read as dirt
-	float lit = smoothstep(threshold - softness, threshold + softness, ndl) * step(0.5, ATTENUATION);
+	// S53 (A4): no cast shadows. The figure's viewport holds it alone, so
+	// they only fell on itself, and an arm's on the ribs came out as orange
+	// shards (the terminator alone gives the two tones)
+	float lit = smoothstep(threshold - softness, threshold + softness, ndl);
 	DIFFUSE_LIGHT += LIGHT_COLOR / PI * mix(shadow_tint * 0.5, vec3(1.0), lit);
 }
