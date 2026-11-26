@@ -151,9 +151,44 @@ def masks(name):
                 hair_t[j] = True
                 todo.append(j)
     skin_t = (t_warm[1:] >= 0.5) & ~hair_t
+    # S53 (A4, owner: "pelo junto a la oreja"): Meshy shades the lowest
+    # lock tips warm, so they voted skin and took the skin colour (cream
+    # specks in brown hair). Skin hanging in the hair is hair: a skin patch
+    # whose border is mostly hair, and, from the neck up, a skin triangle
+    # with most of its neighbours hair (again, as the hair closes in); the
+    # eyes and their rim never (S47); so is, from the neck up, a triangle
+    # of neither (a mixed lock tip left white)
+    flipped = 0
+    seen = np.zeros(len(idx), bool)
+    for i in np.nonzero(skin_t)[0]:
+        if seen[i]:
+            continue
+        comp, st = [], [i]
+        seen[i] = True
+        while st:
+            k = st.pop()
+            comp.append(k)
+            for j in near[k]:
+                if skin_t[j] and not seen[j]:
+                    seen[j] = True
+                    st.append(j)
+        border = {j for k in comp for j in near[k] if not skin_t[j]}
+        if border and sum(hair_t[j] for j in border) >= 0.6 * len(border) and not no_hair[comp].any():
+            skin_t[comp] = False
+            hair_t[comp] = True
+            flipped += len(comp)
+    for _ in range(4):
+        grow = [i for i in np.nonzero(~hair_t & (share > EYE_BAND[0]) & ~no_hair)[0]
+                if near[i] and sum(hair_t[j] for j in near[i]) * 3 >= 2 * len(near[i])]
+        if not grow:
+            break
+        skin_t[grow] = False
+        hair_t[grow] = True
+        flipped += len(grow)
     T_hair = np.concatenate([[False], hair_t])[tri]
     T_skin = np.concatenate([[False], skin_t])[tri]
-    hair = T_hair & (pale | (sat < 0.25))
+    # (and inside a hair triangle a warm texel is hair too, not skin)
+    hair = T_hair & (pale | (sat < 0.25) | warm)
     # below the face a pale texel in a skin triangle is a highlight; in the
     # face it may be the white of an eye
     skin = (warm | (T_skin & pale & (tshare < FACE_FROM))) & ~hair
@@ -182,7 +217,8 @@ def masks(name):
             "hair_ref": float(np.percentile(lum[(m[..., 1] > 127) & covered], 80))}
     (OUT / f"{name}_mask.json").write_text(json.dumps(refs) + "\n")
     print(f"{name}: skin {int((m[..., 0] > 127).sum())} px, hair {int((m[..., 1] > 127).sum())} px "
-          f"({int(hair_t.sum())} hair triangles, {int(eye_t.sum())} eye triangles kept out), {refs}")
+          f"({int(hair_t.sum())} hair triangles, {flipped} of them out of the skin, "
+          f"{int(eye_t.sum())} eye triangles kept out), {refs}")
     return tex, img
 
 

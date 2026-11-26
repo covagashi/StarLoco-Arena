@@ -337,6 +337,49 @@ magenta y pelo cian se ve la máscara), hojas en
   cubierta (cabeza bajo el pelo, brazo bajo el guante) unos milímetros, o
   quitar las caras tapadas, y revisar los pliegues de `lower_arms`.
 
+### A4, coaches — la malla limpia (2026-11-26)
+
+La causa no era la máscara ni la textura: (1) la reducción por colapso de
+Blender deja ~1 de cada 7 triángulos en astilla (<10°) desde cualquier
+fuente, y la copia de 80k de la que partía el build estaba llena; (2) los
+trazos del codo eran sobre todo el **rig**: en la malla de 80k el corte del
+brazo cogía el borde abierto del guante como «brazo», pesaba un anillo al
+cuerpo y lo rasgaba.
+
+- `figures.json` → `hd_src` (el original de 676k, `PIPPOP_MESHY_HD`, por
+  defecto `~/codigo/capturas/s47/meshy-hd`); `meshy_fighter.py
+  --reduce=clean` lo reduce a 40k con el colapso cuádrico de MeshLab
+  (pymeshlab 2025.7 en los módulos de Blender; `art/CREDITS.md`), que no
+  acepta colapsos que dejen triángulos malos; las articulaciones se buscan
+  en esa malla. `--arm_flap=0.03` (el borde del guante cuenta como brazo).
+- UV nuevas (~120 cartas, Minimum Stretch) y el color **rehorneado** del
+  original en Cycles (`--nearest=1`: cada texel de la superficie más
+  cercana del original) a 2048², JPEG 85. La raya blanca del muslo (pintada
+  por Meshy) se tapa con la piel de alrededor en el build.
+- `coach_masks.py`: una mancha de piel rodeada de pelo es pelo (las puntas
+  de los mechones); los ojos siguen sin teñir.
+- Números (mujer / hombre): astillas 14,5 % → 0,7 % / 11,9 % → 0,3 %; ángulo
+  mínimo mediano 24° → 36° / 25,5° → 37°; GLB 2286 → 2381 KB / 2285 → 2477
+  KB (tope 2600); QA de Blender sin aristas no-manifold, caras degeneradas
+  ni partes del revés.
+- Verificado: `build.py` completo (5 min 32 s), `check.py` 0 fallos, las
+  demás figuras salen iguales, prendas reconstruidas y encajan;
+  unitarias 1684/0; `coach_look_smoke` y `coach_turn_smoke` pasan. Hojas
+  4–9 en `~/codigo/capturas/s53/a4/`, miradas.
+- Queda: una cuña oscura en la ingle del hombre y un chevrón blanco en el
+  cinturón de ella (de la textura de Meshy), una línea tenue en la espalda
+  de ella de cerca, dos líneas finas en la articulación del antebrazo de él.
+
+### A4 — nota del dueño (2026-11-26, opinión de otro gamedev)
+
+«Eso y la posición plana de los pies, siempre requiere afinarlo. Hazte un
+pipeline integrando y documentando todo, así ahorras tiempo posterior.»
+Va detrás de la malla limpia de los coach: pies planos en reposo y en las
+animaciones (las suelas a ras del suelo) como paso del pipeline, y un
+documento único del pipeline de figuras (Meshy → `figures.json` →
+`build.py` → `meshy_fighter.py` → máscaras → prendas → `check.py`), que
+hoy vive repartido entre las cabeceras de los scripts y los sprints.
+
 ## Pendiente
 
 - **A6 / A10 en Safari** (figuras blancas, hierba levantada): falta un

@@ -1,5 +1,5 @@
 {
- "_doc": "S34: how every 3D figure under out/ is built (tools/art/build.py characters). script: godot/tools/blender/characters/<script>. src: the owner's Meshy folder, <PIPPOP_MESHY>/<src>/<src>.glb (default ~/codigo/capturas/s35/meshy; the originals live in the homelab art repo pippop-arena-assets, outside git: no LFS). joints: joints/<src>.json is passed as --joints (the bone fixes reviewed in S35b). opts: the other flags, from the S35b figure table. No src: the script models the figure itself.",
+ "_doc": "S34: how every 3D figure under out/ is built (tools/art/build.py characters). script: godot/tools/blender/characters/<script>. src: the owner's Meshy folder, <PIPPOP_MESHY>/<src>/<src>.glb (default ~/codigo/capturas/s35/meshy; the originals live in the homelab art repo pippop-arena-assets, outside git: no LFS). joints: joints/<src>.json is passed as --joints (the bone fixes reviewed in S35b). opts: the other flags, from the S35b figure table. hd_src (S53): the full original the src was reduced from, <PIPPOP_MESHY_HD>/<hd_src>.glb (default ~/codigo/capturas/s47/meshy-hd), passed as --hd_src; with reduce=clean the figure's mesh and colour are made from it. No src: the script models the figure itself.",
  "figures": {
   "feca_f": {
    "script": "meshy_fighter.py",
@@ -160,22 +160,34 @@
   "coach_7000": {
    "script": "meshy_fighter.py",
    "src": "coach_7000_m_hd",
+   "hd_src": "coach_7000_m_hd",
    "opts": {
     "tris": "40000",
     "menu": "1",
     "weld_normals": "1",
-    "lower_arms": "10"
+    "lower_arms": "10",
+    "reduce": "clean",
+    "tex": "2048",
+    "arm_flap": "0.03",
+    "jpeg": "85",
+    "nearest": "1"
    }
   },
   "coach_7001": {
    "script": "meshy_fighter.py",
    "src": "coach_7001_f_hd",
+   "hd_src": "coach_7001_f_hd",
    "opts": {
     "tris": "40000",
     "arm_slack": "0.06",
     "menu": "1",
     "weld_normals": "1",
-    "lower_arms": "10"
+    "lower_arms": "10",
+    "reduce": "clean",
+    "tex": "2048",
+    "arm_flap": "0.03",
+    "jpeg": "85",
+    "nearest": "1"
    }
   },
   "summon_8001": {

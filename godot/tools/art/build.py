@@ -33,8 +33,11 @@ or a one-piece rebuild with --only never leaves an output stale.
 Tools (PATH or env): node + KILN / LOOM (default ~/.claude/skills/kiln and
 ~/.claude/skills/loom, MIT), BLENDER, GODOT, PIPPOP_MESHY (the owner's Meshy
 originals, default ~/codigo/capturas/s35/meshy; outside git, see
-art/CREDITS.md). A figure whose original is missing is skipped with a
-warning; the build still fails if its GLB is missing too.
+art/CREDITS.md), PIPPOP_MESHY_HD (the full originals a figure's "hd_src"
+names, default ~/codigo/capturas/s47/meshy-hd). A figure whose original is
+missing is skipped with a warning; the build still fails if its GLB is
+missing too. A figure with "hd_src" also needs pymeshlab in Blender's
+Python (meshy_fighter.py --reduce=clean).
 """
 import argparse
 import hashlib
@@ -312,6 +315,7 @@ def build_figures(names, a):
     with open(os.path.join(d, "figures.json")) as f:
         figs = json.load(f)["figures"]
     meshy = os.path.expanduser(os.environ.get("PIPPOP_MESHY", "~/codigo/capturas/s35/meshy"))
+    meshy_hd = os.path.expanduser(os.environ.get("PIPPOP_MESHY_HD", "~/codigo/capturas/s47/meshy-hd"))
     st = Stamp(d)
     libs = [os.path.join(CHAR_TOOLS, f) for f in FIGURE_LIBS if os.path.exists(os.path.join(CHAR_TOOLS, f))]
     blender = os.environ.get("BLENDER") or shutil.which("blender")
@@ -338,6 +342,15 @@ def build_figures(names, a):
             inputs.append(j)
             cmd.append("--joints=" + j)
         cmd += [f"--{k}={v}" for k, v in fig.get("opts", {}).items()]
+        if "hd_src" in fig:
+            # S53 (A4): the full Meshy original the src was reduced from;
+            # --reduce=clean makes the mesh and the colour from it
+            hd = os.path.join(meshy_hd, fig["hd_src"] + ".glb")
+            if not os.path.exists(hd):
+                log(f"warning: {name}: no original at {hd} (PIPPOP_MESHY_HD), kept as built")
+                continue
+            extra += f"|{os.path.getsize(hd)}"
+            cmd.append("--hd_src=" + hd)
         h = digest(*inputs, extra=extra)
         if not a.force and st.fresh("figure:" + name, h) and os.path.exists(glb):
             continue

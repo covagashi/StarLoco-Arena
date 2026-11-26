@@ -10,12 +10,21 @@ rig_anims.py.
         [--weld_normals=1]    (one normal and one weight set per position: seams stay shut)
         [--lower_arms=10]     (an A-pose original: arms brought down to this many degrees
                                from the vertical, and that becomes the rest pose)
+        [--nearest=1]         (--reduce=clean: each texel's colour from the original's nearest point
+                               where that surface faces the same way; the rays' colour elsewhere)
+        [--jpeg=90]           (the texture's JPEG quality: S53, the coaches' 2048² at 85 fits 2600 KB)
+        [--arm_flap=0.03]     (a thin piece this close outside the arm is part of it: a gauntlet's flare)
+        [--reduce=clean --hd_src=<original.glb>] [--charts=120] [--unwrap=MINIMUM_STRETCH] [--bake_margin=4] [--bake_extrusion=0.0015]
+                              (the mesh reduced from the full original with MeshLab, needs
+                               pymeshlab; fresh UVs, the original's colour baked onto them)
 
 What it does, in order:
 1. Joins the meshes, merges the seam duplicates Meshy leaves, drops
    crumbs, scales to 1.45 high, feet on z=0, centred on the feet, facing
    -Y (glTF +Z, the way the game expects it; Meshy's front already is).
-2. Decimates to --tris triangles and resizes the texture to --tex px.
+2. Decimates to --tris triangles and resizes the texture to --tex px
+   (--reduce=clean: the mesh made from --hd_src instead, with new UVs
+   and the original's colour baked at --tex px).
 3. Finds the joints on the mesh from horizontal slices (legs, crotch,
    arms hanging in the A pose, neck) and builds the skeleton there. A
    joints JSON ({"elbow.L": [x, y, z], …}) overrides any of them; --debug
@@ -39,7 +48,8 @@ sys.path.insert(0, HERE)
 import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": "", "menu": "", "weld_normals": "", "lower_arms": ""}
+OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": "", "menu": "", "weld_normals": "", "lower_arms": "",
+       "reduce": "", "hd_src": "", "arm_flap": "", "charts": "120", "unwrap": "MINIMUM_STRETCH", "jpeg": "90", "nearest": "", "bake_margin": "4", "bake_extrusion": "0.0015"}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -53,6 +63,7 @@ FPS = 30
 NAME = os.path.splitext(os.path.basename(OUT))[0]
 LOG = {}
 ARM = {}  # per side: the arm's x range per slice, the hand tip and the armpit
+PLACE = []  # clean()'s move: floor, scale, feet centre x, y
 
 
 # ---------------------------------------------------------------- clean
@@ -128,6 +139,7 @@ def clean(ob):
     bm.to_mesh(ob.data)
     bm.free()
     LOG["scale"] = round(k, 4)
+    PLACE[:] = [lo, k, cx, cy]
     LOG["non_manifold_edges"] = non_manifold(ob)
 
 
@@ -187,6 +199,617 @@ def shrink_textures(ob, px):
                     bsdf.inputs["Metallic"].default_value = 0.0
                     bsdf.inputs["Roughness"].default_value = 1.0
     LOG["textures"] = sizes
+
+
+def keep_high(ob):
+    """S53 (A4): --hd_src, the full Meshy original (~676k triangles) the
+    build's source was reduced from, moved the way clean() moved the figure."""
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.expanduser(OPT["hd_src"]))
+    new = [o for o in bpy.data.objects if o not in before]
+    meshes = [o for o in new if o.type == "MESH"]
+    for o in meshes:
+        mw = o.matrix_world.copy()
+        o.parent = None
+        o.matrix_world = mw
+    for o in new:
+        if o.type != "MESH":
+            bpy.data.objects.remove(o)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in meshes:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
+    if len(meshes) > 1:
+        bpy.ops.object.join()
+    hi = bpy.context.view_layer.objects.active
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    lo, k, cx, cy = PLACE
+    hi.data.transform(Matrix.Translation((-cx, -cy, 0)) @ Matrix.Scale(k, 4) @ Matrix.Translation((0, 0, -lo)))
+    hi.data.update()
+    zs = [v.co.z for v in hi.data.vertices]
+    LOG["hd_src"] = {"tris": tris(hi), "z": [round(min(zs), 4), round(max(zs), 4)]}
+    hi.name = NAME + "_high"
+    return hi
+
+
+def reduce_clean(ob, hi, target):
+    """S53 (A4, owner: "triángulos feos en los coaches: mujer en codo, muslo
+    y pelo junto a la oreja"): Blender's collapse leaves one triangle in
+    seven a sliver (an angle under 10 degrees), whether it starts from the
+    80k copy or the original, with or without UVs; on the toon shading the
+    slivers and the folds between them were the shards on the waist, the
+    thighs and above the gauntlets. The figure's mesh is made instead from
+    the original, welded (Meshy splits it at every UV seam; welded it is
+    closed) and reduced with MeshLab's quadric collapse, which refuses a
+    collapse that leaves a bad triangle and keeps the faces' orientation:
+    0.5 % slivers, and a sixth as many faces turned away from the
+    original's surface. (MeshLab's planar weight is lowered: the default
+    evens the triangles a little more but rounds the garments' edges.)"""
+    try:
+        import pymeshlab
+    except ImportError:
+        raise SystemExit("[meshy] --reduce=clean needs pymeshlab in Blender's Python, e.g. "
+                         "<blender>/<ver>/python/bin/python3.* -m pip install --no-deps "
+                         "--target ~/.config/blender/<ver>/scripts/addons/modules pymeshlab")
+    import numpy as np
+    bm = bmesh.new()
+    bm.from_mesh(hi.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=HEIGHT * 2e-4)
+    bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=HEIGHT * 1e-5)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    bm.verts.index_update()
+    co = np.array([v.co[:] for v in bm.verts], np.float64)
+    fa = np.array([[v.index for v in f.verts] for f in bm.faces], np.int32)
+    bm.free()
+    ms = pymeshlab.MeshSet()
+    ms.add_mesh(pymeshlab.Mesh(co, fa))
+    # crumbs, as clean() drops them
+    ms.meshing_remove_connected_component_by_face_number(mincomponentsize=int(0.002 * len(fa)))
+    ms.meshing_decimation_quadric_edge_collapse(
+        targetfacenum=target, qualitythr=0.6, preserveboundary=True, preservenormal=True,
+        preservetopology=True, optimalplacement=True, planarquadric=True, planarweight=0.0003,
+        qualityweight=False, autoclean=True)
+    m = ms.current_mesh()
+    me = bpy.data.meshes.new(NAME)
+    me.from_pydata(m.vertex_matrix().tolist(), [], m.face_matrix().tolist())
+    for mat in ob.data.materials:
+        me.materials.append(mat)
+    old = ob.data
+    ob.data = me
+    bpy.data.meshes.remove(old)
+    for p in me.polygons:
+        p.use_smooth = True
+    LOG["tris"] = tris(ob)
+
+
+def charts(bm, k, w=6.0, iters=4, minf=12):
+    """Chart ids per face: k compact, nearly flat pieces grown from seeds
+    spread over the mesh (the cost of a step grows with the turn away from
+    the seed's normal), the seeds moved to their pieces' middles a few
+    times; no face hangs on its chart by a single edge, and no piece is
+    under minf faces (each joins the neighbour it shares most border with)."""
+    import heapq
+    import numpy as np
+    bm.faces.ensure_lookup_table()
+    n = len(bm.faces)
+    cen = np.array([f.calc_center_median()[:] for f in bm.faces])
+    nrm = np.array([f.normal[:] for f in bm.faces])
+    area = np.array([f.calc_area() for f in bm.faces])
+    nbr = [[] for _ in range(n)]
+    elen = [{} for _ in range(n)]
+    for e in bm.edges:
+        if len(e.link_faces) == 2:
+            a, b = e.link_faces[0].index, e.link_faces[1].index
+            d = float(np.linalg.norm(cen[a] - cen[b]))
+            nbr[a].append((b, d))
+            nbr[b].append((a, d))
+            elen[a][b] = elen[b][a] = e.calc_length()
+    seeds = [int(np.argmax(cen[:, 2]))]   # farthest point sampling
+    dmin = np.linalg.norm(cen - cen[seeds[0]], axis=1)
+    while len(seeds) < k:
+        s = int(np.argmax(dmin))
+        seeds.append(s)
+        dmin = np.minimum(dmin, np.linalg.norm(cen - cen[s], axis=1))
+    for it in range(iters):
+        sn = nrm[seeds]
+        lab = -np.ones(n, np.int64)
+        dist = np.full(n, np.inf)
+        h = [(0.0, s, c) for c, s in enumerate(seeds)]
+        heapq.heapify(h)
+        while h:
+            d, i, c = heapq.heappop(h)
+            if lab[i] >= 0:
+                continue
+            lab[i] = c
+            for j, l in nbr[i]:
+                if lab[j] < 0:
+                    dev = 1.0 - float(np.dot(nrm[j], sn[c]))
+                    nd = d + l * (1.0 + 4 * w * dev * dev)
+                    if nd < dist[j]:
+                        dist[j] = nd
+                        heapq.heappush(h, (nd, j, c))
+        if it == iters - 1:
+            break
+        for c in range(len(seeds)):
+            idx = np.nonzero(lab == c)[0]
+            if len(idx):
+                mc = (cen[idx] * area[idx, None]).sum(0) / area[idx].sum()
+                mn = (nrm[idx] * area[idx, None]).sum(0)
+                mn /= max(np.linalg.norm(mn), 1e-12)
+                score = np.linalg.norm(cen[idx] - mc, axis=1) * (1 + w * (1 - nrm[idx] @ mn))
+                seeds[c] = int(idx[np.argmin(score)])
+    nxt = lab.max() + 1
+    for i in range(n):   # a shell no seed reached: a chart of its own
+        if lab[i] < 0:
+            st = [i]
+            lab[i] = nxt
+            while st:
+                q = st.pop()
+                for j, _ in nbr[q]:
+                    if lab[j] < 0:
+                        lab[j] = nxt
+                        st.append(j)
+            nxt += 1
+    for _ in range(50):
+        moved = 0
+        for i in range(n):
+            if sum(1 for j, _ in nbr[i] if lab[j] == lab[i]) >= 2:
+                continue
+            c = {}
+            for j, _ in nbr[i]:
+                if lab[j] != lab[i]:
+                    c[lab[j]] = c.get(lab[j], 0) + elen[i][j]
+            if c:
+                lab[i] = max(c, key=c.get)
+                moved += 1
+        if not moved:
+            break
+    reg = -np.ones(n, np.int64)
+    r = 0
+    for i in range(n):   # connected pieces
+        if reg[i] < 0:
+            st = [i]
+            reg[i] = r
+            while st:
+                q = st.pop()
+                for j, _ in nbr[q]:
+                    if reg[j] < 0 and lab[j] == lab[i]:
+                        reg[j] = r
+                        st.append(j)
+            r += 1
+    for _ in range(10):
+        size = np.bincount(reg, minlength=r)
+        if not (size < minf).any():
+            break
+        for i in range(n):
+            if size[reg[i]] < minf:
+                c = {}
+                for j, _ in nbr[i]:
+                    if reg[j] != reg[i]:
+                        c[reg[j]] = c.get(reg[j], 0) + elen[i][j] * (1 + size[reg[j]])
+                if c:
+                    reg[i] = max(c, key=c.get)
+        _, reg = np.unique(reg, return_inverse=True)
+        r = int(reg.max()) + 1
+    # every chart a disk (V - E + F = 1): a closed shell or a band round a
+    # limb can't be laid flat without crushing part of it, so it is split
+    # in two, grown from its two faces farthest apart, until it is one
+    for _ in range(8):
+        split = 0
+        for c in range(r):
+            idx = np.nonzero(reg == c)[0]
+            fs = [bm.faces[i] for i in idx]
+            verts = {v for f in fs for v in f.verts}
+            edges = {e for f in fs for e in f.edges}
+            if len(verts) - len(edges) + len(fs) == 1 or len(idx) < 2:
+                continue
+            a = idx[np.argmax(np.linalg.norm(cen[idx] - cen[idx].mean(0), axis=1))]
+            b = idx[np.argmax(np.linalg.norm(cen[idx] - cen[a], axis=1))]
+            inside = set(idx.tolist())
+            lab2 = {int(a): 0, int(b): 1}
+            h = [(0.0, int(a), 0), (0.0, int(b), 1)]
+            done = set()
+            while h:
+                d, i, s = heapq.heappop(h)
+                if i in done:
+                    continue
+                done.add(i)
+                lab2[i] = s
+                for j, l in nbr[i]:
+                    if j in inside and j not in done:
+                        heapq.heappush(h, (d + l, j, s))
+            for i, s in lab2.items():
+                if s:
+                    reg[i] = r
+            r += 1
+            split += 1
+        if not split:
+            break
+        LOG["charts_split"] = LOG.get("charts_split", 0) + split
+    return reg, r
+
+
+def unwrap_charts(ob, px):
+    """S53 (A4): fresh UVs for the reduced mesh: compact charts (charts()),
+    their borders the seams, each unwrapped (--unwrap, Minimum Stretch: Angle
+    Based crushed 770 faces to under a tenth of their texels, smeared
+    colour; it keeps 11), all at one texel density, packed --bake_margin px
+    apart. (Smart UV Project cut the mesh into 1400 islands and filled a
+    third of the texture; Meshy's own islands, carried over from the
+    original, are jagged and filled 44 %.)"""
+    me = ob.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.normal_update()
+    reg, n = charts(bm, int(OPT["charts"]))
+    for e in bm.edges:
+        e.seam = bool(len(e.link_faces) == 2 and reg[e.link_faces[0].index] != reg[e.link_faces[1].index])
+    bm.to_mesh(me)
+    bm.free()
+    while me.uv_layers:
+        me.uv_layers.remove(me.uv_layers[0])
+    me.uv_layers.new(name="UVMap")
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.unwrap(method=OPT["unwrap"], margin=0.0)
+    # a chart that is a small closed shell (no seam opens it) unwraps to a
+    # point: its faces are cut apart and unwrapped again, one by one
+    bpy.ops.mesh.select_all(action="DESELECT")
+    bm = bmesh.from_edit_mesh(me)
+    uvl = bm.loops.layers.uv.active
+    flat = [f for f in bm.faces if abs((f.loops[1][uvl].uv - f.loops[0][uvl].uv).cross(
+        f.loops[2][uvl].uv - f.loops[0][uvl].uv)) < 1e-12]
+    for f in flat:
+        f.select_set(True)
+        for e in f.edges:
+            e.seam = True
+    bmesh.update_edit_mesh(me)
+    if flat:
+        bpy.ops.uv.unwrap(method=OPT["unwrap"], margin=0.0)
+    LOG["uv_rewrapped"] = len(flat)
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.uv.pack_islands(rotate=True, rotate_method="CARDINAL", shape_method="CONCAVE",
+                            margin_method="FRACTION", margin=int(OPT["bake_margin"]) / px)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for e in me.edges:
+        e.use_seam = False
+    me.calc_loop_triangles()
+    uv = me.uv_layers[0].data
+    fill = 0.0
+    ratio = []
+    for t in me.loop_triangles:
+        a, b, c = (uv[i].uv for i in t.loops)
+        ua = abs((b - a).cross(c - a)) / 2
+        fill += ua
+        ratio.append(ua / max(t.area, 1e-12))
+    ratio.sort()
+    med = ratio[len(ratio) // 2] or 1.0
+    # faces laid out at under a tenth of the usual texels: smeared colour
+    LOG["charts"] = {"charts": n, "fill": round(fill, 3), "squashed": sum(1 for x in ratio if x < 0.1 * med)}
+
+
+def bake_colour(ob, hi, px):
+    """S53 (A4): the original's base colour, read through its own UVs,
+    baked onto the reduced mesh's (Cycles, selected to active): the colour
+    only, as emission, no light, rays from --bake_extrusion m out; then the
+    texels the rays missed or darkened (crevices()), and the charts'
+    borders run on past the margin (bleed()) so filtering never reaches a
+    neighbour's colour."""
+    ext = float(OPT["bake_extrusion"])
+    me = ob.data
+    img = bpy.data.images.new(NAME, px, px, alpha=False)
+    targets = []
+    for i, m in enumerate(me.materials):
+        m2 = m.copy()
+        me.materials[i] = m2
+        bsdf = next((x for x in m2.node_tree.nodes if x.type == "BSDF_PRINCIPLED"), None)
+        node = None
+        if bsdf:
+            todo = [l.from_node for l in bsdf.inputs["Base Color"].links]
+            while todo and not node:
+                x = todo.pop()
+                if x.type == "TEX_IMAGE":
+                    node = x
+                todo += [l.from_node for i2 in x.inputs for l in i2.links]
+        if node is None:
+            node = m2.node_tree.nodes.new("ShaderNodeTexImage")
+            if bsdf:
+                m2.node_tree.links.new(node.outputs["Color"], bsdf.inputs["Base Color"])
+        node.image = img
+        for x in m2.node_tree.nodes:
+            if x.type == "UVMAP":
+                x.uv_map = "UVMap"
+        # the target, unlinked: Cycles skips an image it also reads
+        # ("circular dependency") and the bake came out black
+        target = m2.node_tree.nodes.new("ShaderNodeTexImage")
+        target.image = img
+        m2.node_tree.nodes.active = target
+        targets.append((m2, target))
+    # the source shows its base colour as light (an emission bake): the
+    # diffuse-colour pass came out black, metal and all
+    src_img = None   # the original's albedo, for crevices()
+    for i, m in enumerate(hi.data.materials):
+        h = m.copy()
+        hi.data.materials[i] = h
+        nt = h.node_tree
+        bsdf = next((x for x in nt.nodes if x.type == "BSDF_PRINCIPLED"), None)
+        out = next((x for x in nt.nodes if x.type == "OUTPUT_MATERIAL"), None)
+        if not (bsdf and out):
+            continue
+        todo = [l.from_node for l in bsdf.inputs["Base Color"].links]
+        while todo and src_img is None:
+            x = todo.pop()
+            if x.type == "TEX_IMAGE" and x.image:
+                src_img = x.image
+            todo += [l.from_node for i2 in x.inputs for l in i2.links]
+        em = nt.nodes.new("ShaderNodeEmission")
+        em.inputs["Strength"].default_value = 1.0
+        if bsdf.inputs["Base Color"].links:
+            nt.links.new(bsdf.inputs["Base Color"].links[0].from_socket, em.inputs["Color"])
+        else:
+            em.inputs["Color"].default_value = bsdf.inputs["Base Color"].default_value
+        nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
+    sc = bpy.context.scene
+    sc.render.engine = "CYCLES"
+    sc.cycles.device = "CPU"
+    sc.cycles.samples = 16
+    bpy.ops.object.select_all(action="DESELECT")
+    hi.select_set(True)
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.bake(type="EMIT", use_selected_to_active=True,
+                        cage_extrusion=ext, max_ray_distance=2 * ext, margin=0,
+                        use_clear=True, target="IMAGE_TEXTURES")
+    for m2, target in targets:
+        m2.node_tree.nodes.remove(target)
+    crevices(ob, hi, img, src_img)
+    skin_patches(ob, img)
+    img.pack()
+    LOG["bake"] = {"px": px, "margin": int(OPT["bake_margin"]), "extrusion": ext}
+
+
+def crevices(ob, hi, img, src):
+    """S53 (A4): where the reduced mesh bridges a gap of the original (the
+    doll's shoulder ball in its socket, the man's joints), the bake's rays
+    miss the original or pass through the gap to the dark inside of the
+    crevice; the margin's fill then ran the neighbours' colour into the
+    misses: brown streaks on the shoulder. Each texel is also read at the
+    nearest point of the original's surface (across a gap: its rim); a
+    texel the rays missed (left black) or made much darker than that takes
+    the nearest point's colour; with --nearest every texel does whose
+    nearest point faces the way its face does (the man's shoulder: the
+    rays' colour streaked across the faces that bridge the ball's lip)."""
+    if src is None:
+        return
+    import numpy as np
+    from mathutils.bvhtree import BVHTree
+    px = img.size[0]
+    a = np.empty(px * px * 4, np.float32)
+    img.pixels.foreach_get(a)
+    a = a.reshape(px, px, 4)
+    sw, sh = src.size
+    s = np.empty(sw * sh * 4, np.float32)
+    src.pixels.foreach_get(s)
+    s = s.reshape(sh, sw, 4)[..., :3].copy()
+    hme = hi.data
+    hme.calc_loop_triangles()
+    hco = np.empty(len(hme.vertices) * 3)
+    hme.vertices.foreach_get("co", hco)
+    hco = hco.reshape(-1, 3)
+    htv = np.empty(len(hme.loop_triangles) * 3, np.int64)
+    hme.loop_triangles.foreach_get("vertices", htv)
+    htv = htv.reshape(-1, 3)
+    htl = np.empty(len(hme.loop_triangles) * 3, np.int64)
+    hme.loop_triangles.foreach_get("loops", htl)
+    htl = htl.reshape(-1, 3)
+    huv = np.empty(len(hme.loops) * 2)
+    hme.uv_layers.active.data.foreach_get("uv", huv)
+    huv = huv.reshape(-1, 2)
+    tree = BVHTree.FromPolygons(hco.tolist(), htv.tolist(), all_triangles=True)
+    me = ob.data
+    me.calc_loop_triangles()
+    uv = me.uv_layers.active.data
+    co = [v.co for v in me.vertices]
+    pts, pix, nrm = [], [], []
+    for t in me.loop_triangles:   # each texel's point on the reduced mesh
+        P = np.array([uv[l].uv[:] for l in t.loops]) * px - 0.5
+        x0, y0 = np.maximum(np.floor(P.min(0)).astype(int), 0)
+        x1, y1 = np.minimum(np.ceil(P.max(0)).astype(int), px - 1)
+        if x1 < x0 or y1 < y0:
+            continue
+        X, Y = np.meshgrid(np.arange(x0, x1 + 1), np.arange(y0, y1 + 1))
+        (ax, ay), (bx, by), (cx, cy) = P
+        d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+        if abs(d) < 1e-12:
+            continue
+        l1 = ((by - cy) * (X - cx) + (cx - bx) * (Y - cy)) / d
+        l2 = ((cy - ay) * (X - cx) + (ax - cx) * (Y - cy)) / d
+        l3 = 1 - l1 - l2
+        inside = (l1 >= 0) & (l2 >= 0) & (l3 >= 0)
+        if not inside.any():
+            continue
+        A, B, C = (np.array(co[v][:]) for v in t.vertices)
+        pts.append(l1[inside, None] * A + l2[inside, None] * B + l3[inside, None] * C)
+        pix.append(np.stack([Y[inside], X[inside]], 1))
+        nrm.append(np.repeat(np.array(t.normal[:])[None], int(inside.sum()), 0))
+    pts = np.concatenate(pts)
+    pix = np.concatenate(pix)
+    nrm = np.concatenate(nrm)
+    near = np.empty((len(pts), 3))
+    hn = np.empty((len(pts), 3))
+    tri = np.empty(len(pts), np.int64)
+    for i, p in enumerate(pts.tolist()):
+        loc, n, k, _ = tree.find_nearest(p)
+        near[i] = loc
+        hn[i] = n
+        tri[i] = k
+    # the nearest point's UV in the original, then its texel (bilinear)
+    T = hco[htv[tri]]
+    v0, v1, v2 = T[:, 1] - T[:, 0], T[:, 2] - T[:, 0], near - T[:, 0]
+    d00, d01, d11 = (v0 * v0).sum(1), (v0 * v1).sum(1), (v1 * v1).sum(1)
+    d20, d21 = (v2 * v0).sum(1), (v2 * v1).sum(1)
+    den = np.maximum(d00 * d11 - d01 * d01, 1e-30)
+    w1 = (d11 * d20 - d01 * d21) / den
+    w2 = (d00 * d21 - d01 * d20) / den
+    U = huv[htl[tri]]
+    q = U[:, 0] * (1 - w1 - w2)[:, None] + U[:, 1] * w1[:, None] + U[:, 2] * w2[:, None]
+    fx = np.clip(q[:, 0] * sw - 0.5, 0, sw - 1.001)
+    fy = np.clip(q[:, 1] * sh - 0.5, 0, sh - 1.001)
+    ix, iy = fx.astype(int), fy.astype(int)
+    tx, ty = (fx - ix)[:, None], (fy - iy)[:, None]
+    col = (s[iy, ix] * (1 - tx) * (1 - ty) + s[iy, ix + 1] * tx * (1 - ty)
+           + s[iy + 1, ix] * (1 - tx) * ty + s[iy + 1, ix + 1] * tx * ty)
+    w = np.array([0.299, 0.587, 0.114])
+    baked = a[pix[:, 0], pix[:, 1], :3]
+    missed = (baked == 0).all(1)
+    dark = ~missed & (baked @ w < col @ w - 0.2)
+    fix = missed | dark
+    if OPT["nearest"]:
+        # the nearest point, where its surface faces the way the texel's
+        # face does (across a groove the nearest is now the rim, now a wall)
+        fix = missed | ((hn * nrm).sum(1) > 0.5)
+    a[pix[fix, 0], pix[fix, 1], :3] = col[fix]
+    cov = np.zeros((px, px), bool)
+    cov[pix[:, 0], pix[:, 1]] = True
+    bleed(a, cov, 4 * int(OPT["bake_margin"]))
+    img.pixels.foreach_set(a.ravel())
+    LOG["crevices"] = {"texels": int(len(pts)), "missed": int(missed.sum()), "darkened": int(dark.sum())}
+
+
+def bleed(a, known, n):
+    """The charts' colour run n texels on into the empty texels around."""
+    import numpy as np
+    rgb = a[..., :3]
+    known = known.copy()
+    for _ in range(n):
+        acc = np.zeros_like(rgb)
+        cnt = np.zeros(known.shape, np.float32)
+        for sp, sq in (((slice(1, None),), (slice(None, -1),)), ((slice(None, -1),), (slice(1, None),)),
+                       ((slice(None), slice(1, None)), (slice(None), slice(None, -1))),
+                       ((slice(None), slice(None, -1)), (slice(None), slice(1, None)))):
+            k = known[sq]
+            acc[sp] += rgb[sq] * k[..., None]
+            cnt[sp] += k
+        step = ~known & (cnt > 0)
+        if not step.any():
+            break
+        rgb[step] = acc[step] / cnt[step][:, None]
+        known |= step
+
+
+def skin_patches(ob, img):
+    """S53 (A4): Meshy painted a white stripe down the woman's inner thigh
+    (and white flecks on the skin elsewhere); a dark skin showed it as a
+    white scar. Below the neck (the eyes' whites are above it), the faces
+    whose texels are mostly pale, joined over the mesh (a patch crosses
+    the charts' seams), are skin when nearly all the faces around them are
+    skin: their pale texels and those of the faces around are filled in
+    from the skin beside them, texel by texel inwards. A boot's or a
+    gauntlet's white is one big patch with straps around it, and stays."""
+    import numpy as np
+    px = img.size[0]
+    a = np.empty(px * px * 4, np.float32)
+    img.pixels.foreach_get(a)
+    a = a.reshape(px, px, 4)
+    rgb = a[..., :3]
+    me = ob.data
+    me.calc_loop_triangles()
+    uv = me.uv_layers.active.data
+    zs = [v.co.z for v in me.vertices]
+    fid = np.full((px, px), -1, np.int64)   # the face on each texel
+    for t in me.loop_triangles:
+        P = np.array([uv[l].uv[:] for l in t.loops]) * px - 0.5
+        x0, y0 = np.maximum(np.floor(P.min(0)).astype(int), 0)
+        x1, y1 = np.minimum(np.ceil(P.max(0)).astype(int), px - 1)
+        if x1 < x0 or y1 < y0:
+            continue
+        X, Y = np.meshgrid(np.arange(x0, x1 + 1), np.arange(y0, y1 + 1))
+        (ax, ay), (bx, by), (cx, cy) = P
+        d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+        if abs(d) < 1e-12:
+            continue
+        l1 = ((by - cy) * (X - cx) + (cx - bx) * (Y - cy)) / d
+        l2 = ((cy - ay) * (X - cx) + (ax - cx) * (Y - cy)) / d
+        inside = (l1 >= -0.02) & (l2 >= -0.02) & (l1 + l2 <= 1.02)
+        fid[Y[inside], X[inside]] = t.polygon_index
+    mx, mn = rgb.max(2), rgb.min(2)
+    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    # coach_masks.py's skin and pale tests; the skin here light and peach
+    # (a tan strap is warm too)
+    warm = (r > g) & (g >= b) & (sat > 0.07) & (sat < 0.62) & (mx > 0.42) & ((r - b) > 0.06) & ~((mx < 0.7) & (sat > 0.45))
+    peach = warm & (sat < 0.35) & (mx > 0.6)
+    pale = (sat < 0.16) & (mx > 0.45)
+    nf = len(me.polygons)
+    on = fid >= 0
+    f = fid[on]
+    cnt = np.bincount(f, minlength=nf)
+    f_pale = np.bincount(f, pale[on], minlength=nf) >= 0.5 * np.maximum(cnt, 1)
+    f_skin = np.bincount(f, peach[on], minlength=nf) >= 0.5 * np.maximum(cnt, 1)
+    low = np.array([max(zs[v] for v in p.vertices) <= 0.72 * HEIGHT for p in me.polygons])
+    nbr = [[] for _ in range(nf)]
+    edge_faces = {}
+    for p in me.polygons:
+        for k in p.edge_keys:
+            edge_faces.setdefault(k, []).append(p.index)
+    for fs in edge_faces.values():
+        for i in fs:
+            nbr[i] += [j for j in fs if j != i]
+    cand = f_pale & low & (cnt > 0)
+    seen = np.zeros(nf, bool)
+    take = np.zeros(nf, bool)
+    patches, biggest = 0, []
+    for i in np.nonzero(cand)[0]:
+        if seen[i]:
+            continue
+        comp, st = [], [i]
+        seen[i] = True
+        while st:
+            k = st.pop()
+            comp.append(k)
+            for j in nbr[k]:
+                if cand[j] and not seen[j]:
+                    seen[j] = True
+                    st.append(j)
+        border = {j for k in comp for j in nbr[k] if not cand[j]}
+        if border and sum(f_skin[j] for j in border) >= 0.85 * len(border) and len(comp) <= 400:
+            take[comp] = True
+            take[list(border)] = True
+            patches += 1
+            biggest.append(len(comp))
+    fill = on & take[np.maximum(fid, 0)] & pale
+    for _ in range(2):   # and its light rim, just short of pale
+        grow = fill.copy()
+        grow[1:] |= fill[:-1]
+        grow[:-1] |= fill[1:]
+        grow[:, 1:] |= fill[:, :-1]
+        grow[:, :-1] |= fill[:, 1:]
+        fill = grow & on & take[np.maximum(fid, 0)] & (sat < 0.2) & (mx > 0.45)
+    LOG["skin_patches"] = {"patches": patches, "texels": int(fill.sum()),
+                           "biggest": sorted(biggest, reverse=True)[:6]}
+    known = ~fill & (mx > 0.05)
+    while fill.any():
+        acc = np.zeros_like(rgb)
+        cnt2 = np.zeros((px, px), np.float32)
+        for sp, sq in (((slice(1, None),), (slice(None, -1),)), ((slice(None, -1),), (slice(1, None),)),
+                       ((slice(None), slice(1, None)), (slice(None), slice(None, -1))),
+                       ((slice(None), slice(None, -1)), (slice(None), slice(1, None)))):
+            k = known[sq]
+            acc[sp] += rgb[sq] * k[..., None]
+            cnt2[sp] += k
+        step = fill & (cnt2 > 0)
+        if not step.any():
+            break
+        rgb[step] = acc[step] / cnt2[step][:, None]
+        known |= step
+        fill &= ~step
+    a[..., :3] = rgb
+    img.pixels.foreach_set(a.ravel())
 
 
 # ---------------------------------------------------------------- joints
@@ -314,6 +937,8 @@ def find_joints(ob):
                     c = d
                     break
             if c["cx"] * X > 0.08 and not (c["x0"] < 0 < c["x1"]):
+                if OPT["arm_flap"]:
+                    c = arm_flap(c, side, float(OPT["arm_flap"]))
                 armrows[S].append((z, c["cx"], c["cy"], c["x0"], c["x1"]))
     for S in "LR":
         rows, runs = armrows[S], []
@@ -478,6 +1103,29 @@ def find_joints(ob):
             for z, cl in table.items():
                 f.write(f"{z:.2f} " + "  ".join(f"[{c['x0']:+.3f},{c['x1']:+.3f} y{c['cy']:+.3f}]" for c in cl) + "\n")
     return J
+
+
+def arm_flap(c, side, gap):
+    """S53 (A4, --arm_flap=<m>): a gauntlet's flared top stands off the
+    outside of the upper arm, so a slice there cuts it as a thin piece of
+    its own beside the arm, and the outermost piece was that flap: the arm
+    between it and the body went to the body, and the arm cut tore a ring
+    open around it (the strokes above the coach's gauntlets). A thin
+    outermost piece less than `gap` from a wider one just inside it is
+    one piece with it."""
+    i = side.index(c)
+    if i + 1 >= len(side):
+        return c
+    d = side[i + 1]
+    if d["x0"] < 0 < d["x1"]:
+        return c
+    apart = c["x0"] - d["x1"] if c["cx"] > 0 else d["x0"] - c["x1"]
+    if not (0 <= apart < gap and c["x1"] - c["x0"] < d["x1"] - d["x0"]):
+        return c
+    x0, x1 = min(c["x0"], d["x0"]), max(c["x1"], d["x1"])
+    LOG["arm_flaps"] = LOG.get("arm_flaps", 0) + 1
+    return {"x0": x0, "x1": x1, "cx": (x0 + x1) / 2, "cy": d["cy"],
+            "y0": min(c["y0"], d["y0"]), "y1": max(c["y1"], d["y1"]), "n": c["n"] + d["n"]}
 
 
 def extend_hand(S, J, table):
@@ -923,8 +1571,21 @@ def weight_render(ob, arm_of, cand):
 def main():
     ob = load()
     clean(ob)
-    J = find_joints(ob)  # on the full mesh: the cuts are denser
-    decimate(ob, int(OPT["tris"]))
+    if OPT["reduce"] == "clean":
+        # before the rest pose moves the arms: high and low still line up
+        high = keep_high(ob)
+        reduce_clean(ob, high, int(OPT["tris"]))
+        # S53 (A4): the joints and the arms' slices from the mesh that is
+        # skinned (the 80k source only places the figure)
+        J = find_joints(ob)
+        unwrap_charts(ob, int(OPT["tex"]))
+        bake_colour(ob, high, int(OPT["tex"]))
+        hm = high.data
+        bpy.data.objects.remove(high)
+        bpy.data.meshes.remove(hm)
+    else:
+        J = find_joints(ob)  # on the full mesh: the cuts are denser
+        decimate(ob, int(OPT["tris"]))
     shrink_textures(ob, int(OPT["tex"]))
     B = bones_from(J)
     if OPT["debug"]:
@@ -1077,7 +1738,7 @@ def export(ob, rig, J):
                               export_animations=True, export_animation_mode="NLA_TRACKS",
                               export_force_sampling=True, export_frame_step=1,
                               export_def_bones=False, export_yup=True,
-                              export_image_format="JPEG", export_image_quality=90)
+                              export_image_format="JPEG", export_image_quality=int(OPT["jpeg"]))
     LOG["bones"] = len(rig.data.bones)
     LOG["animations"] = len(rig.animation_data.nla_tracks)
     LOG["glb_kb"] = round(os.path.getsize(OUT) / 1024)

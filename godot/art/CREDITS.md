@@ -45,6 +45,7 @@ third-party and keep their own licences, listed at the end.
 | What | Where | Made by | Notes |
 |---|---|---|---|
 | The 35 Meshy figures (24 fighters, 2 coaches, 8 summons): `<folder>/<folder>.glb` | Homelab art repository `pippop-arena-assets` (`//debian/codigo/pippop-arena-assets`); local copy `~/codigo/capturas/s35/meshy` (`PIPPOP_MESHY`) | The owner: reference images in Flow, meshes and textures generated with Meshy (S35b) | Kept out of git because of their size (5–30 MB each; no Git LFS, AGENTS.md). Made on the owner's paid Meshy Pro plan as private assets (owner, 2026-11-11): they belong to the owner and are cleared for commercial use. (Meshy's free-tier assets are public under CC BY 4.0; none of ours are.) |
+| The two coaches' full Meshy originals (~676k triangles): `coach_7000_m_hd.glb`, `coach_7001_f_hd.glb` (the `hd_src` of `figures.json`) | Same homelab repository; local copy `~/codigo/capturas/s47/meshy-hd` (`PIPPOP_MESHY_HD`) | The owner, with Meshy (S47) | S53: the coaches' meshes are reduced from these and their colour baked from them; the `s35/meshy` coach folders hold an 80k copy (`tools/blender/characters/predecimate.py`) that now only places the figure. Same terms as the row above. |
 | Summon 8010 (the crystal) | none: `tools/blender/characters/crystal_8010.py` models it | Written for this project | |
 
 ## Tools (their licences, not the art's)
@@ -55,6 +56,7 @@ third-party and keep their own licences, listed at the end.
 | loom (uilianks/loom) | MIT | Textures |
 | Blender 5.2 | GPL (the program; what it outputs is ours) | Curved pieces, AO, rigging and animation |
 | Meshy | Commercial service, owner's Pro plan (private assets) | Figure meshes |
+| pymeshlab (MeshLab's Python build, in Blender's Python) | GPL-3.0 (the program; what it outputs is ours) | S53: the coaches' clean reduction (quadric collapse) |
 
 ## Still retail (leaving)
 
