@@ -385,5 +385,8 @@ hoy vive repartido entre las cabeceras de los scripts y los sprints.
 - **A6 / A10 en Safari** (figuras blancas, hierba levantada): falta un
   Safari que se pueda controlar; el dueño puede activar «Permitir la
   automatización remota» en el MacBook.
+- **A5 pasa a [S54](./S54-figuras-ligeras.md)** (2026-11-26), con los pies
+  planos y el documento del pipeline: misma receta que A4, y en los menús
+  imagen en vez de 3D si el dueño lo aprueba.
 - **A4 / A5:** las mallas de los coaches y los luchadores (arte, con hojas
   antes/después al dueño).
