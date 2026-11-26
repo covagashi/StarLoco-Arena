@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 📝 redactado (2026-11-26), a la espera del dueño
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** ⏸ aprobado (2026-11-26), sin empezar: primero el paso 0, cuando el dueño lo pida
 
 ## Por qué
 
@@ -53,7 +53,7 @@ El coach sale en 3D en cinco sitios:
    - el cuerpo, con sus **máscaras de piel y pelo** (el menú tiñe como hoy);
    - **cada prenda en su propia capa**, alineada con el cuerpo (el equipo del
      coach la pone y la quita al momento);
-   - 2–4 ángulos (frente, tres cuartos; perfil y espalda si el menú los usa);
+   - **solo de frente** (dueño, 2026-11-26);
    - un reposo animado suave (respirar, balanceo), con AniCraft o con el
      mismo truco de los retratos de NPC (`npc_anim.py`).
 
@@ -127,10 +127,10 @@ reclutar), la misma imagen renderizada.
 - Unitarias, `coach_look_smoke`, `coach_turn_smoke`, `first_play_smoke` y la
   partida entera de S53 (`first_play_test.mjs`) en el build web.
 
-## Preguntas al dueño
+## Respuestas del dueño (2026-11-26)
 
-1. ¿Te convence el híbrido (3D de 5k en combate, imagen en los menús), o
-   prefieres ilustración dibujada para los menús aunque cueste más?
-2. ¿Qué ángulos quieres ver del coach en los menús: solo de frente, o que
-   se pueda girar (frente, tres cuartos, perfil, espalda)?
-3. ¿Hago primero la prueba del paso 0 y esperamos, o sigo seguido?
+1. **Sí al híbrido:** 3D de 5k en combate, imagen renderizada en los menús.
+2. **Solo de frente:** un ángulo por figura en los menús (el paso 4 renderiza
+   solo el frente; sin girar).
+3. **Primero solo la prueba del paso 0, y no ahora:** el sprint espera; al
+   retomarlo se hace el paso 0, se enseña y se para hasta su visto bueno.
