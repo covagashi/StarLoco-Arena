@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): paso 0 aprobado, paso 1 hecho
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–2 hechos; el 2, a la espera de que el dueño mire la hoja
 
 ## Por qué
 
@@ -244,3 +244,34 @@ tobillo». Decido yo entre los dos (opinión, no orden): en el **lobby**,
 cortada a medio muslo, como la segunda foto, de frente y a la altura de
 los ojos; en **Equipo del coach**, entera (ahí se prueban las botas). La
 creación, como el lobby. Se revisa con la hoja del paso 4.
+
+### Paso 2 — pies planos (2026-11-27)
+
+- **Causa:** el pie es hijo de la espinilla y solo giraba si el clip lo
+  pedía (`foot_<S>`): al inclinarse el cuerpo, abrir una pierna o doblar
+  la rodilla, la suela se inclinaba dentro de la bota. El ajuste de suelas
+  solo bajaba la figura entera hasta el punto más bajo.
+- **Arreglo** (`rig_anims.plant()`): en cada fotograma con los pies en el
+  suelo (clave o entre claves), cada pie a menos de 3 cm del suelo vuelve a
+  su orientación de reposo, girado solo en vertical hacia donde apunta la
+  pierna; `foot_<S>` queda como inclinación sobre esa suela plana (el talón
+  al pisar al andar). Después se vuelve a apoyar la figura. El salto
+  agachado ya no necesita su `foot=-25` a mano. El GLB no crece (el
+  exportador ya muestreaba cada fotograma).
+- **Medida** (`tools/blender/characters/feet_check.py`, nuevo): peor
+  inclinación de un pie que pisa por clip, y fotogramas flotando. La mujer,
+  antes → ahora: menú 14,4° → 0°, reposo 6,4° → 0°, lanzar 23,9° → 0°,
+  golpe 30,8° → 0°, tirar 25° → 0,3°, saludo 14,2° → 0°; el hombre flotaba
+  1–2 fotogramas en `cast`, `greet`, `shoot` y `throw`, ya no. Las 33
+  figuras humanas: todos los clips ≤ 3° salvo `walk` (12° a propósito; en
+  algunas clases más, el pie de atrás despegando con el talón, que es el
+  paso natural).
+- **Hoja:** `~/codigo/capturas/s54/06-pies-mujer.png` (de lado, cámara a
+  nivel, el peor fotograma de antes y el mismo ahora, línea de suelo).
+- **Comprobado:** `build.py` entero (4 min 58 s, `check.py` 0 fallos),
+  `run_tests.sh` (1684 comprobaciones), `coach_look_smoke`,
+  `coach_turn_smoke` y `first_play_smoke` con una cuenta nueva (14/14).
+- **Queda:** la Sram f flota 2 fotogramas al andar (4–5); las invocaciones
+  criatura (pollito 8005, pangolín 8004) usan `creature_anims.py`, sin
+  plantar: flotan 1–3 fotogramas y se inclinan 8° al lanzar. Van con el
+  paso 5.

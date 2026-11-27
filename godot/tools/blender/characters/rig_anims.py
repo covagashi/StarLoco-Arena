@@ -7,7 +7,7 @@ heights of the foot bone's head and tail above the sole.
 import math
 
 import bpy
-from mathutils import Quaternion, Vector
+from mathutils import Matrix, Quaternion, Vector
 
 ANKLE, TOE = 0.075, 0.022  # fighter1's; meshy_fighter.py sets its own
 # Short arms under a big head (the Meshy chibis) can't reach over it: arms
@@ -121,9 +121,26 @@ def keys(rig, name, frames, loop):
         set_pose(rig, kw)
         if not kw.get("z") and not kw.get("fall"):  # grounded: soles on the floor
             set_pose(rig, dict(kw, z=-sole(rig)))
+            if plant(rig, kw):
+                drop(rig, -sole(rig))
         for pb in rig.pose.bones:
             pb.keyframe_insert("rotation_quaternion", frame=f)
             pb.keyframe_insert("location", frame=f)
+    # S54: between the keys the foot follows the shin again; plant it on
+    # every frame (the exporter samples every frame anyway: no bigger GLB)
+    keyed = {f for f, _ in frames}
+    for f in range(int(frames[0][0]), int(frames[-1][0]) + 1):
+        if f in keyed:
+            continue
+        kw = between(frames, f)
+        if kw.get("z") or kw.get("fall"):
+            continue
+        bpy.context.scene.frame_set(f)
+        if plant(rig, kw):
+            drop(rig, -sole(rig))
+            for S in "LR":
+                rig.pose.bones[f"foot.{S}"].keyframe_insert("rotation_quaternion", frame=f)
+            rig.pose.bones["root"].keyframe_insert("location", frame=f)
     track = rig.animation_data.nla_tracks.new()
     track.name = name + ("_loop" if loop else "")
     strip = track.strips.new(track.name, int(frames[0][0]), act)
@@ -147,6 +164,56 @@ def sole(rig):
         pb = rig.pose.bones[f"foot.{S}"]
         lo = min(lo, pb.head.z - ANKLE, pb.tail.z - TOE)
     return lo
+
+
+# S54 (owner, from another gamedev: "la posición plana de los pies siempre
+# requiere afinarlo"): a foot whose sole comes this close to the floor is
+# standing on it, and its sole goes flat.
+PLANT = 0.03
+
+
+def plant(rig, kw):
+    """Each standing foot (its lowest point within PLANT of the floor) turned
+    so its sole lies flat: its rest orientation, turned only about the
+    vertical to where the leg points; foot_<S> then tips the toes up (+) or
+    down from flat (the walk's heel strike). Without it the foot follows the
+    shin: a lean, a spread leg or a bent knee tipped the sole inside the
+    boot. True when a foot was planted."""
+    done = False
+    for S in "LR":
+        pb = rig.pose.bones[f"foot.{S}"]
+        if min(pb.head.z - ANKLE, pb.tail.z - TOE) > PLANT:
+            continue
+        rest = pb.bone.matrix_local.to_3x3()
+        cur = pb.matrix
+        a, b = rest.col[1].xy, cur.col[1].xy
+        if a.length < 1e-4 or b.length < 1e-4:
+            continue
+        yaw = math.atan2(a.x * b.y - a.y * b.x, a.dot(b))
+        R = Matrix.Rotation(yaw, 3, "Z")
+        tip = Matrix.Rotation(math.radians(-kw.get(f"foot_{S}", 0)), 3, R @ Vector(X_AX))
+        pb.matrix = Matrix.Translation(cur.translation) @ (tip @ R @ rest).to_4x4()
+        if pb.rotation_quaternion.w < 0:   # same half as the other keys: no turn the long way round
+            pb.rotation_quaternion = -pb.rotation_quaternion
+        bpy.context.view_layer.update()
+        done = True
+    return done
+
+
+def between(frames, f):
+    """The pose kwargs the clip passes through at frame f (linear, as the
+    keys are interpolated closely enough for the feet)."""
+    for (fa, a), (fb, b) in zip(frames, frames[1:]):
+        if fa <= f <= fb:
+            return mix(a, b, (f - fa) / (fb - fa))
+    return frames[-1][1]
+
+
+def drop(rig, dz):
+    """Move the whole figure dz up (the root's rest frame), keeping the pose."""
+    pb = rig.pose.bones["root"]
+    pb.location = pb.location + REST["root"].inverted() @ Vector((0, 0, dz))
+    bpy.context.view_layer.update()
 
 
 def mix(a, b, k):
@@ -231,7 +298,7 @@ def animate(rig):
                       (30, flat), (40, flat)], False)
 
     # jump (also teleport): crouch, up, land, settle; z is height in cells
-    crouch = dict(base, lean=18, bob=-0.12, leg_L=40, leg_R=40, knee_L=70, knee_R=70, foot_L=-25, foot_R=-25,
+    crouch = dict(base, lean=18, bob=-0.12, leg_L=40, leg_R=40, knee_L=70, knee_R=70,
                   arm_L=(-30, 15), arm_R=(-30, 15), elbow_L=20, elbow_R=20, head=-10)
     air = dict(base, lean=-4, z=0.45, leg_L=20, leg_R=8, knee_L=40, knee_R=30, arm_L=(70, 35), arm_R=(70, 35),
                elbow_L=20, elbow_R=20, head=5)

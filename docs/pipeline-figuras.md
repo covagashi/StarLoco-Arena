@@ -154,6 +154,7 @@ Siempre antes de enseñar nada (y la QA de Blender, skill
 | Hojas para el dueño | `anim_sheet.gd` + `python3 -I tools/art/anim_sheet.py <dir> <out.png>` (páginas del tamaño de la pantalla, nunca una tira larga; también `.mp4`) |
 | Cuatro vistas | `tools/art/four_views.sh art/characters/out/<n>.glb <out.png> <n> 400` |
 | Un coach de cerca | `xvfb-run -a godot --path . --resolution 1600x720 -s test/coach_sheet.gd -- <out.png> [--male] [--hair=r,g,b] [--skin=N] [--k=5] [--y=…] [--dirs=2,1,0,6]`; la máscara sola: `python3 tools/art/coach_masks.py --sheet=<out.png> <coach>` |
+| Pies planos | `blender -b -P tools/blender/characters/feet_check.py -- art/characters/out/<n>.glb [--json=…]`: por clip, la inclinación de los pies que pisan y los fotogramas en que flota; ≤ 3° salvo `walk` (el talón al pisar y la punta al despegar) |
 | En combate | `test/fight_ui_preview.tscn` con `FIGHT_UI_FECA` / `FIGHT_UI_FOCUS` / `FIGHT_UI_SHOT` (ver S35b, paso 6) |
 
 ## 5. Fallos que ya conocemos
@@ -167,7 +168,7 @@ Siempre antes de enseñar nada (y la QA de Blender, skill
 | piel teñida entre los mechones, o pelo teñido como piel | la máscara toma por piel la piel rodeada de pelo en las puntas | ya resuelto en `coach_masks.py` (S53); revisar con `coach_masks.py --sheet=` |
 | la costura del brazo se abre en pinchos oscuros | una normal y unos pesos por lado de la costura | `--weld_normals=1` |
 | el coach anda con los brazos abiertos | original en pose A | `--lower_arms=10` |
-| un pie se inclina dentro de la bota o gira en vez de apoyarse | el ajuste de suelas solo mueve la figura entera | S54, paso 2 (pies planos) |
+| un pie se inclina dentro de la bota o gira en vez de apoyarse | el pie seguía a la espinilla; el ajuste de suelas solo bajaba la figura entera | ya resuelto: `rig_anims.plant()` planta cada pie que pisa en cada fotograma (S54); medirlo con `feet_check.py` |
 | `can't find arm X apart from the body`, cadera en la rodilla, hombro en el bíceps, pulgares flotando, cola entre las piernas… | el ajuste de articulaciones con formas raras | la tabla completa, con el arreglo de cada clase, en [S35b](../sprints/S35b-pipeline-meshy.md#fallos-conocidos-y-qué-hacer) |
 | figura sin forma humana (alas grandes, criatura) | el ajuste busca dos brazos y dos piernas | invocaciones: `meshy_summon.py --shape=creature`; luchadores: parar y preguntar al dueño |
 
