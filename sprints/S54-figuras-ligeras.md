@@ -580,3 +580,17 @@ skillsdirectory.com/skills/arjun988-cloth-sim».
   Blender: pines, colisión, asentado y horneado a shape keys. Sirve para
   lo suelto (faldas, capas, estandartes), no para la ropa ajustada:
   pendiente de probar con una falda o una capa.
+
+## Respuestas del dueño (2026-11-27, tras el recuento)
+
+- **El hub:** «dejamos el hub 2D en los muslos»: la imagen, como el
+  lobby de hoy; la creación igual; Equipo del coach entera.
+- **Los efectos** (chispas del pelo, prendas vivas en 2D): «los
+  arreglaremos en el futuro. Todo debería ser arreglado»: no cierran S54,
+  pero quedan anotados, no olvidados.
+- **La ropa:** pasa a [S55](./S55-afinar-piezas.md), prenda a prenda.
+
+Queda en S54: la creación, Equipo del coach y la subida de nivel con la
+imagen; el 3D del coach fuera del arranque de la web y las medidas
+antes/después; las invocaciones con la reducción limpia; los pies que
+quedan (Sram f, invocaciones criatura); la partida entera de S53 en web.

@@ -59,7 +59,9 @@ ve mal son las 104 prendas del coach; las 167 rígidas están por revisar.
 6. **Las piezas rígidas:** una hoja de las 167 para que el dueño diga cuáles
    se rehacen.
 
-## Preguntas abiertas al dueño
+## Respuestas del dueño (2026-11-27)
 
-- El hub: ¿imagen del coach (la de S54) o el 3D de 5k? Mi opinión: imagen.
-- ¿Por qué empezamos: por un traje completo o por un tipo de prenda?
+- «Pues sí, dejamos el hub 2D en los muslos»: la imagen de S54, cortada a
+  medio muslo.
+- «Sobre las prendas, lo hacemos 1 por 1»: cada prenda con su hoja y su
+  visto bueno antes de la siguiente.
