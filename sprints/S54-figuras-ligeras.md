@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–2 hechos; el 2, a la espera de que el dueño mire la hoja
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–2 hechos; el 3, probado aparte (40k contra 5k), a la espera de que el dueño compare las hojas
 
 ## Por qué
 
@@ -275,3 +275,42 @@ creación, como el lobby. Se revisa con la hoja del paso 4.
   criatura (pollito 8005, pangolín 8004) usan `creature_anims.py`, sin
   plantar: flotan 1–3 fotogramas y se inclinan 8° al lanzar. Van con el
   paso 5.
+
+### Paso 3 — el coach a 5k, la comparación (2026-11-27)
+
+El dueño: «continua, comparemos los dos». Construidos aparte (la receta de
+`figures.json` no cambia todavía): los dos coaches con sus mismas opciones
+pero `tris=5000`, `tex=1024`, sin mapa de normales. Máscaras rehechas para
+las UV nuevas. Los GLB de 5k, `sheet.py` y `render.sh` en
+`~/codigo/capturas/s54/5k/`.
+
+| | 40k (hoy) | 5k |
+|---|---|---|
+| Triángulos | 40 000 | 4 999 |
+| Textura | 2048² | 1024² |
+| GLB hombre / mujer | 2477 / 2381 KB | 745 / 725 KB |
+| Construir uno | — | 44 s |
+
+Hojas (`~/codigo/capturas/s54/`): `07-coach-5k-combate.png` (los dos a
+tamaño de combate, ×1 y ×3), `08`/`10` enteros a tamaño de la creación,
+`09`/`11` de cerca (×2,4).
+
+Lo que veo:
+
+- **En combate, casi iguales.** A ×1 no se distinguen; a ×3 el pelo del
+  hombre sale algo más liso y en la mujer se pierden unos mechones finos.
+- **De cerca se nota:** la mujer pierde las cejas (eran unos téxeles finos
+  de la textura de 2048²), el pelo sale con picos más rectos y menos trazos
+  dentro, los hombros con alguna arista. El hombre aguanta mejor (sus picos
+  ya eran angulosos); una mancha rosada en el pecho de tres cuartos.
+  Como en los menús va la imagen del original (paso 4), de cerca ya no se
+  verá el 3D.
+- **Pesos de la mujer:** 1125 vértices con el respaldo de proximidad (el
+  calor de Blender no encontró solución para algún hueso); en las poses de
+  reposo no se ve, falta mirarlo en las animaciones difíciles antes de
+  adoptarlo.
+
+Lo siguiente, si el dueño da el visto bueno: probar el mapa de normales y
+las cejas (más textura en la cara, o 1024² con `--nearest`), la hoja de
+animaciones difíciles, y pasarlo a `figures.json` con las prendas
+reducidas a juego y el tope de `check.py` de los luchadores.
