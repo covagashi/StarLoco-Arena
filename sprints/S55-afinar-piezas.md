@@ -1,6 +1,6 @@
 # S55 — Afinar la ropa y las piezas, una a una
 
-**Planificado:** 2026-11-27 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** ⚪ planificado (2026-11-27)
+**Planificado:** 2026-11-27 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🟡 en curso (2026-11-27)
 
 ## Por qué
 
@@ -69,37 +69,6 @@ ve mal son las 104 prendas del coach; las 167 rígidas están por revisar.
 ## Para retomar (2026-11-27, el dueño hace /clear)
 
 El dueño: «todo ok, ahora hago clear y hacemos los ítems 1 a 1 usando el
-geoset + malla». **El método:** cada prenda como geoset (la parte del
-cuerpo que tapa, fuera) más su propia malla, prenda a prenda, con su hoja y
-el visto bueno del dueño antes de la siguiente.
-
-Lo que ya hay de las pruebas de S54 (todo en `~/codigo/capturas/s54/ropa/`,
-nada en el build):
-
-- `cloth_pose_geo.py`: posa el original de 676k y le quita las caras bajo
-  una prenda (`GEOSET=<prenda.glb>,…`: un rayo por vértice a lo largo de su
-  normal, 12 cm); también pinta tela sobre la piel (los argumentos tras la
-  máscara).
-- `hd_clothes.py`: la prenda hecha del original con `garment.py` de la
-  skill `blender-clothing` (zona, holgura 6 mm, pesos de los huesos, piel
-  tapada oculta); sin grosor (`THICK=0`: el `Solidify` explota en las caras
-  diminutas del original).
-- `subdiv.py`: la tela de una prenda subdividida una vez, los cuernos sin
-  tocar.
-- `coach_portrait_geo.gd` / `coach_portrait_hdc.gd`: el renderizador de la
-  imagen con esas prendas (`--geoset=`, `--static=`, `--paint=`).
-- Hojas: `44`–`47` (pintada, WoW + geoset, blender-clothing).
-- Lo que quedó mal en ellas: bordes de color borrosos (copiados de la
-  prenda de 5k: pintar con la receta), una rendija en la cadera, el borde
-  del top del original asomando por encima de la parte de arriba.
-
-S54 sigue abierto por lo que no es ropa: el 3D del coach fuera del
-arranque de la web y las medidas, las invocaciones con la reducción limpia,
-los pies que quedan y la partida entera en web.
-
-## Para retomar (2026-11-27, el dueño hace /clear)
-
-El dueño: «todo ok, ahora hago clear y hacemos los ítems 1 a 1 usando el
 geoset + malla … usando la skill». **El método:** cada prenda con la skill
 `blender-clothing` (`~/.claude/skills/blender-clothing/scripts/garment.py`)
 como geoset + malla: la malla de la prenda hecha del cuerpo con la skill, y
@@ -125,3 +94,52 @@ nada en el build):
 S54 sigue abierto por lo que no es ropa: el 3D del coach fuera del
 arranque de la web y las medidas, las invocaciones con la reducción limpia,
 los pies que quedan y la partida entera en web.
+
+## Prenda 1 — arriba kepika (`torso_kepika`) (2026-11-27)
+
+Script: `~/codigo/capturas/s55/ropa/hd_garment.py` (de `hd_clothes.py`;
+`run.sh <coach> <prenda>` lo pasa y pinta la imagen de hoy y la nueva,
+`sheet.py` hace las hojas). Nada en el build todavía: entra cuando el
+método quede aprobado.
+
+**El método** (geoset + malla, con `garment.py` de `blender-clothing`):
+
+- **La zona, por la receta** (`garments.json`), no por la prenda de 5k: el
+  mismo corte que `coach_garment.py` (cuello, cintura, la sisa como plano
+  en el brazo), cada vértice del original por el hueso que más lo lleva.
+- **La malla:** las caras del original en la zona (1 cm de más), soldadas
+  (Meshy parte la piel en cada costura UV: sin soldar, quitar migajas
+  dejaba agujeros), reducidas a 8 000 caras y relajadas 60 pasadas, a 6 mm
+  de la piel como mínimo, con un muelle a su sitio fuerte junto al borde
+  (el borde libre se hundía en la barriga) y flojo dentro. Así la tela pasa
+  por encima de los músculos y de los pliegues del top del original, no
+  los calca (con el original entero y 676k caras, ni 3 000 pasadas
+  bastaban: el hombre parecía pintado).
+- **Cortes limpios:** los dobladillos y los bordes de cada franja con
+  planos, las caras fuera de la receta fuera, y lo que queda dentado
+  (los bordes entre huesos) relajado a lo largo de sí mismo.
+- **Color, de la receta, antes de mover nada:** `paint()` de
+  `coach_garment.py` en el centro de cada cara: bordes nítidos.
+- **Cuernos:** `add_extras()` de `coach_garment.py`, como en la de 5k.
+- **Pesos:** los del original (`garment.py`); un trozo de cintura que el
+  original pesaba al brazo colgado (en la pose del menú salía un pincho
+  hacia la mano) toma los del tronco más cercano.
+- **El geoset:** se oculta la piel que la prenda tapa de verdad (un rayo
+  por vértice) y a 1,5 cm o más de su borde (pegado al borde, con la
+  holgura, se veía el hueco por debajo); en la pose del menú, también la
+  piel que asoma por fuera de la tela. Las caras quedan del lado de fuera
+  de su hueso (el top del original va encima de la piel: al juntarse,
+  algunas caras salían del revés).
+- 7 400–7 600 triángulos (solo para la imagen del menú).
+
+**Hojas:** `~/codigo/capturas/s55/01-torso_kepika-mujer.png` y
+`01-torso_kepika-hombre.png` (hoy, nueva entera, y las dos de cerca).
+
+**Lo que veo:** sin facetas ni dientes, franjas rectas, sin rendija en la
+cadera, los cuernos en su sitio; la tela más ceñida que la de hoy. Quedan
+el dobladillo de la mujer un poco ondulado por delante (la barriga), una
+muesca de hombro en la sisa del hombre (es la sisa: sin mangas se ve el
+hombro) y la franja oscura del cuello (la receta: 0–0,07).
+
+Pendiente del dueño: visto bueno o correcciones de la prenda 1 antes de la
+2.
