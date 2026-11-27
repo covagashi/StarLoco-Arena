@@ -22,6 +22,10 @@ Run from godot/. The steps, in order (each skips what is up to date):
              the coaches' skin and hair masks (coach_masks.py).
 5b. garments: the coach's clothes that bend (art/equipment/garments.json),
              made from each coach figure in Blender (coach_garment.py).
+5c. portraits: the menus' picture of each coach (S54): its full original
+             posed in the menu stance (coach_hd_pose.py, out/hd/), then
+             rendered in layers, the body and every piece it can wear
+             (tools/art/coach_portrait.gd, under xvfb: out/portraits/).
 6. checks:   tools/art/check.py on everything (names, scale, pivots,
              budgets, weight, credits). A failed check fails the build.
 
@@ -380,6 +384,81 @@ def build_figures(names, a):
     return built
 
 
+# ------------------------------------------------------------ portraits
+
+PORTRAIT_FRAMES = ["thigh"]
+
+
+def tree_files(folder):
+    out = []
+    for d, _, fs in os.walk(folder):
+        out += [os.path.join(d, f) for f in fs if not f.startswith(".")]
+    return sorted(out)
+
+
+def ensure_import():
+    if not os.path.exists(os.path.join(GODOT, ".godot", "global_script_class_cache.cfg")):
+        # a fresh clone: one import pass registers the class_names
+        run([godot_cmd(), "--headless", "--path", GODOT, "--import"], GODOT, "godot import (fresh checkout)")
+
+
+def build_portraits(a):
+    """S54 (paso 4): the menus' picture of each coach, from its full
+    original: posed with the built figure's skeleton and mask
+    (coach_hd_pose.py, ~40 MB, out/hd/: never shipped), then rendered in
+    layers for each frame (coach_portrait.gd, out/portraits/<coach>/<frame>/)."""
+    d = os.path.join(ART, "characters")
+    out = os.path.join(d, "out")
+    with open(os.path.join(d, "figures.json")) as f:
+        figs = json.load(f)["figures"]
+    meshy_hd = os.path.expanduser(os.environ.get("PIPPOP_MESHY_HD", "~/codigo/capturas/s47/meshy-hd"))
+    st = Stamp(d)
+    blender = os.environ.get("BLENDER") or shutil.which("blender")
+    pose = os.path.join(CHAR_TOOLS, "coach_hd_pose.py")
+    libs = [os.path.join(CHAR_TOOLS, f) for f in FIGURE_LIBS if os.path.exists(os.path.join(CHAR_TOOLS, f))]
+    script = os.path.join(HERE, "coach_portrait.gd")
+    shaders = [os.path.join(GODOT, "src", "anims", f) for f in
+               ("toon.gd", "toon.gdshader", "toon.gdshaderinc", "toon_cut.gdshader", "toon_outline.gdshader", "fighter3d.gd")]
+    for c in GARMENT_FIGS:
+        fig = figs[c]
+        glb = os.path.join(out, c + ".glb")
+        mask = os.path.join(out, c + "_mask.png")
+        hd = os.path.join(meshy_hd, fig.get("hd_src", "") + ".glb")
+        if not (os.path.exists(glb) and os.path.exists(mask) and os.path.exists(hd)):
+            log(f"warning: portraits: {c} lacks its figure, mask or original (PIPPOP_MESHY_HD), skipped")
+            continue
+        posed = os.path.join(out, "hd", c + ".glb")
+        opts = [f"--{k}={v}" for k, v in fig.get("opts", {}).items()]
+        h = digest(glb, mask, pose, *libs, extra=f"{os.path.getsize(hd)}|{opts}")
+        if a.force or not st.fresh("hdpose:" + c, h) or not os.path.exists(posed):
+            if a.dry_run:
+                log(f"stale: posed original of {c}")
+                continue
+            if not blender:
+                sys.exit("blender not found: put it on PATH or set BLENDER")
+            run([blender, "-b", "--python-exit-code", "1", "-P", pose, "--", hd, glb, mask, posed, *opts],
+                GODOT, f"posed original of {c}")
+            st.set("hdpose:" + c, h)
+        pieces = tree_files(os.path.join(EQUIPMENT, "out", "models")) + \
+            tree_files(os.path.join(EQUIPMENT, "out", "garments", c))
+        h = digest(posed, glb, script, *shaders, os.path.join(EQUIPMENT, "pieces.json"), *pieces,
+                   extra=str(PORTRAIT_FRAMES))
+        dest = os.path.join(out, "portraits")
+        if not a.force and st.fresh("portrait:" + c, h) and os.path.isdir(os.path.join(dest, c)):
+            continue
+        if a.dry_run:
+            log(f"stale: portraits of {c}")
+            continue
+        ensure_import()
+        if os.path.isdir(os.path.join(dest, c)):
+            shutil.rmtree(os.path.join(dest, c))   # a piece taken out goes too
+        for fr in PORTRAIT_FRAMES:
+            run(["xvfb-run", "-a", "-s", "-screen 0 1280x720x24", godot_cmd(), "--path", GODOT,
+                 "-s", "tools/art/coach_portrait.gd", "--", f"--coach={c}", f"--hd={posed}",
+                 f"--out={dest}", f"--frame={fr}"], GODOT, f"portraits of {c} ({fr})")
+        st.set("portrait:" + c, h)
+
+
 # ------------------------------------------------------------ after
 
 def godot_cmd():
@@ -449,6 +528,7 @@ def main():
         build_figures(set(sel_figs) if a.only else set(), a)
     if sel_equipment or set(sel_figs) & set(GARMENT_FIGS):
         build_garments(a)
+        build_portraits(a)
     if a.dry_run:
         log("[build] dry run: nothing built")
         return

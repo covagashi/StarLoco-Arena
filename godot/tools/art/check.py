@@ -57,6 +57,10 @@ EQUIP_KB = 256
 # A coach garment (coach_garment.py): the body's own faces, thickened.
 GARMENT_TRIS = 3500
 GARMENT_KB = 256
+# S54: a coach's picture for the menus (coach_portrait.gd): each frame's
+# layers, all of them at most this (only the worn pieces load).
+PORTRAIT_FRAMES = ["thigh"]
+PORTRAIT_KB = 4096
 ANIMS = ["idle_loop", "walk_loop", "cast", "melee", "hit", "die", "jump", "celebrate", "carry_loop", "throw"]
 # One arena's models as shipped (S44: ≤ 50 MB first load for the whole demo;
 # arenas load on demand, so this is per arena).
@@ -207,6 +211,8 @@ def check_figures(r):
                 r.fail(f"figure {name}: off centre ({(lo[0] + hi[0]) / 2:.2f}, {(lo[2] + hi[2]) / 2:.2f})")
         if name.startswith("coach_") and not os.path.exists(os.path.join(d, "out", name + "_mask.png")):
             r.fail(f"figure {name}: no skin/hair mask (coach_masks.py)")
+        if name.startswith("coach_"):
+            check_portrait(r, d, name)
         if stale_figure(name, fig):
             r.fail(f"figure {name}: out of date with its recipe: python3 tools/art/build.py {name}")
     src = open(os.path.join(GODOT, "src", "anims", "fighter3d.gd")).read()
@@ -218,6 +224,24 @@ def check_figures(r):
         r.fail(f"figure {name}: Fighter3D draws it but figures.json has no recipe")
     r.note(f"  figures  {len(figs):3} GLB, {size / 1048576:5.1f} MB")
     return size
+
+
+def check_portrait(r, d, name):
+    for fr in PORTRAIT_FRAMES:
+        f = os.path.join(d, "out", "portraits", name, fr)
+        ix = os.path.join(f, "index.json")
+        if not os.path.exists(ix):
+            r.fail(f"figure {name}: no {fr} portrait: python3 tools/art/build.py {name}")
+            continue
+        with open(ix) as fh:
+            index = json.load(fh)
+        names = ["body_lit", "body_light", "body_mask"] + list(index.get("pieces", {}))
+        missing = [n for n in names if not os.path.exists(os.path.join(f, n + ".webp"))]
+        if missing:
+            r.fail(f"figure {name}: {fr} portrait lacks {', '.join(missing[:5])}")
+        kb = sum(os.path.getsize(os.path.join(f, x)) for x in os.listdir(f)) // 1024
+        if kb > PORTRAIT_KB:
+            r.fail(f"figure {name}: {fr} portrait {kb} KB > {PORTRAIT_KB} KB")
 
 
 def stale_figure(name, fig):

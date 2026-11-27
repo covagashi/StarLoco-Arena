@@ -13,6 +13,8 @@ extends SceneTree
 ##   art/fight/<world>.json      the fight shapes (server/.../gamedata/arenas)
 ##   art/characters/out/*.glb    every 3D figure (Fighter3D: fighters,
 ##                               summons, coaches) and the coaches' masks
+##   art/characters/out/portraits/<coach>/<frame>/  the menus' picture of
+##                               each coach, in layers (S54)
 ##   art/equipment/pieces.json   which card shows which piece (S35c), and
 ##   art/equipment/out/models/*.glb  every piece it names (a garment,
 ##   art/equipment/garments.json: out/garments/<coach>/<piece>.glb)
@@ -37,6 +39,7 @@ func _initialize() -> void:
 	for arena in range(1, Layout.RELEASE + 1):
 		files.merge(arena_files(arena, missing))
 	files.merge(figure_files())
+	files.merge(portrait_files())
 	files.merge(equipment_files())
 	var bytes := 0
 	for src: String in files:
@@ -97,6 +100,21 @@ static func figure_files() -> Dictionary:
 			for ext: String in ["_mask.png", "_mask.json"]:
 				var m: String = src.get_basename() + ext
 				files[m] = m.trim_prefix(Layout.ART_DIR + "/")
+	return files
+
+
+## S54: the menus' picture of each coach, every layer of every frame
+## (tools/art/coach_portrait.gd; build.py makes them).
+static func portrait_files() -> Dictionary:
+	var files := {}
+	for c: String in Fighter3D.COACHES.values():
+		var base: String = Layout.ART_DIR.path_join("characters/out/portraits").path_join(c)
+		for fr in DirAccess.get_directories_at(base):
+			for f in DirAccess.get_files_at(base.path_join(fr)):
+				var src := base.path_join(fr).path_join(f)
+				files[src] = src.trim_prefix(Layout.ART_DIR + "/")
+		if not DirAccess.dir_exists_absolute(base):
+			files[base.path_join("thigh/index.json")] = ""   # missing: fails the pack
 	return files
 
 

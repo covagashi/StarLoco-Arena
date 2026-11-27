@@ -14,8 +14,8 @@ extends "res://test/world_smoke.gd"
 ## 5. The nine menus: six below, three in the top bar, each opens its panel.
 ## 6. Pad / keyboard: from Ranking's Jugar, right reaches Torneos' button and
 ##    down reaches the six panels.
-## 7. S35c: the coach's 3D figure wears the pieces of the cards it has on
-##    (5200 → localCoach.worn).
+## 7. S35c: the coach wears the pieces of the cards it has on
+##    (5200 → localCoach.worn); S54: on its picture (CoachPortrait).
 
 
 func _audit() -> void:
@@ -43,18 +43,17 @@ func _audit() -> void:
 	var lc = _main._gui.model.get_value("localCoach")
 	var worn: Array = lc.get("worn", []) if lc is Dictionary else []
 	var want: Dictionary = preload("res://src/anims/fighter3d.gd").coach_pieces(worn)
-	var m3d = lobby._spr.model3d
-	var have: Array = m3d.worn().keys() if m3d != null and m3d.has_method("worn") else []
+	var spr = lobby._spr
+	var have: Array = spr.worn().keys().filter(func(k): return spr.worn()[k] != "")
 	have.sort()
 	var wkeys := want.keys()
 	wkeys.sort()
-	_record(0, "coach dressed", m3d != null and have == wkeys,
-		"cards %s → pieces %s, the figure wears %s" % [worn.map(func(c): return int(c.id)), want, have])
+	_record(0, "coach dressed", not spr.index.is_empty() and have == wkeys,
+		"cards %s → pieces %s, the picture wears %s" % [worn.map(func(c): return int(c.id)), want, have])
 	# S37: and its hair effect cosmetic (60043)
 	var hfx := int(State.cosmetics.get("hair_fx", 0))
-	_record(0, "hair effect", m3d != null and m3d._hair_fx == hfx and (hfx == 0 or m3d._hair_node != null),
-		"60043 shows %d (owns %s), the figure shows %d" % [hfx, State.cosmetics.get("owned", []),
-			m3d._hair_fx if m3d != null else -1])
+	_record(0, "hair effect", spr.hair_fx == hfx,
+		"60043 shows %d (owns %s), the picture shows %d" % [hfx, State.cosmetics.get("owned", []), spr.hair_fx])
 	# 2. the Ranking team
 	var pick: OptionButton = c.ranked.pick
 	if pick.item_count >= 1:

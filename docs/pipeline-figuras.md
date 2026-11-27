@@ -16,7 +16,8 @@ build.py figuras             Blender: meshy_fighter.py / meshy_summon.py
    │                          brazos abajo, animaciones) → out/<nombre>.glb
    ├── coaches: coach_masks.py      máscara de piel y pelo → <nombre>_mask.png/.json
    ├── coaches: coach_garment.py    las prendas que se doblan → equipment/out/garments/
-   ├── coaches: coach_hd_pose.py    el original posado, para la imagen de los menús (S54)
+   ├── coaches: coach_hd_pose.py    el original posado en la pose del menú → out/hd/ (no se publica)
+   ├── coaches: coach_portrait.gd   la imagen de los menús en capas → out/portraits/ (S54)
    ▼
 check.py                     presupuestos, nombres, alturas, animaciones, máscaras
    │
@@ -118,11 +119,35 @@ pesos), 30 s.
   pesos de la piel de debajo, así que se doblan igual y no dejan pasar la
   piel; marcas (tatuajes) con su emblema. Una prenda por GLB en
   `art/equipment/out/garments/<coach>/`.
-- **Imagen de los menús** (S54, en construcción): `coach_hd_pose.py` pone
-  el original completo en la pose del menú con el esqueleto del coach y le
-  pasa la máscara; `test/coach_hd_trial.gd` lo renderiza en capas (color
-  con su tinta, luz, máscara) y las tiñe en 2D. Ver el paso 4 de
-  [S54](../sprints/S54-figuras-ligeras.md).
+- **Imagen de los menús** (S54): en los menús el coach no es el 3D sino
+  una imagen del original completo, de frente y a la altura de los ojos.
+  1. `coach_hd_pose.py` pone el original (676k) en el fotograma 0 del clip
+     del menú con el esqueleto de la figura construida (los mismos pasos y
+     opciones que ella, así que las articulaciones coinciden y la ropa
+     encaja) y le pasa la máscara de piel y pelo por cercanía.
+     `out/hd/<coach>.glb`, unos 40 MB: solo para el build, nunca se publica.
+     30 s.
+  2. `tools/art/coach_portrait.gd` (Godot, bajo xvfb) lo renderiza con la
+     luz y la tinta del juego (el sol girado con la cámara, como la
+     dirección de frente) en capas: `body_lit` (color sin luz, con su
+     tinta), `body_light` (la luz sola, una figura gris al 50 %),
+     `body_mask` (R piel, G pelo, sin pérdida), y **cada pieza** que el
+     coach puede ponerse, encendida, en su propia capa: se renderiza sola y
+     luego con la figura construida en negro delante, y solo queda lo que la
+     figura no tapa (con la figura construida y no con el original: las
+     piezas se hicieron para ella, y la piel del original asomaría). Las
+     prendas con vida (gelatina) se renderizan quietas. WebP, recortadas,
+     con `index.json` (lienzo, rectángulos, suelo, brillo de referencia de
+     la máscara). Encuadres (`FRAMES`): `thigh`, desde medio muslo (lobby y
+     creación); `whole`, entera (Equipo del coach). Unos 50 s y 2,1 MB por
+     coach y encuadre, las 165 piezas que caben.
+  3. En el juego, `src/anims/coach_portrait.gd` (`CoachPortrait`) las
+     compone: tiñe el cuerpo con la máscara como `toon.gdshaderinc`
+     (también el brillo de los efectos de pelo), apila las piezas por
+     ranura, respira y da un saltito donde el 3D saludaba.
+  `build.py` hace los dos pasos tras las prendas (`--frame` en
+  `PORTRAIT_FRAMES`). Para ver un coach en el lobby sin servidor:
+  `xvfb-run -a godot --path . --resolution 1920x1080 -s test/lobby_coach_sheet.gd -- --out=<png> --sex=1 --hair=3 --pieces=hat_kepika,torso_kepika`.
 
 ## 3. Comprobar: `tools/art/check.py`
 
@@ -140,7 +165,8 @@ python3 -I tools/art/check.py
 Desde S54 el coach tiene el presupuesto de los luchadores (antes 40 000, 2048² y 2600 KB): en los menús va la imagen del original.
 Además: 1,45 de alto con los pies en el suelo y centrados, las 10
 animaciones, que cada figura que dibuja `Fighter3D` tenga receta y que los
-coaches tengan máscara.
+coaches tengan máscara y su imagen de los menús en cada encuadre (todas
+sus capas, como mucho 4 MB por encuadre).
 
 ## 4. Revisar
 

@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; sigue el 4 (las imágenes de los menús)
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; el 4 en curso: el lobby con la imagen, a la espera de que el dueño mire su hoja
 
 ## Por qué
 
@@ -346,3 +346,63 @@ reducidas a juego y el tope de `check.py` de los luchadores.
   `first_play_smoke` (14/14). `feet_check.py`: los dos ≤ 3° salvo `walk`
   (el hombre 27,4°, igual que a 40k: el talón al despegar).
 - Hojas `07`–`11` rehechas con lo que va al juego.
+
+### Paso 4a — el lobby con la imagen (2026-11-27)
+
+El dueño: «ok, pasa a lo siguiente». Empiezo por el lobby, cortado a medio
+muslo, de frente y a la altura de los ojos.
+
+- **Cuánto hay que pintar:** el coach puede ponerse 196 piezas (104 prendas
+  que se doblan con el cuerpo y 92 colgadas de un hueso: sombreros, capas,
+  hombreras, brazaletes, estandartes, mascotas). Todas van en capas.
+- **Posado** (`coach_hd_pose.py`, ya del paso 0): ahora con las mismas
+  opciones que la figura de 5k, para que el esqueleto sea el mismo que
+  mueve la ropa. La máscara de la mujer tiene 1447 vértices a más de 1 cm
+  de la figura de 5k (antes 12, con la de 40k): es el flequillo, que a 5k
+  baja más; en la imagen el pelo y la frente salen teñidos bien.
+- **Render en capas** (`tools/art/coach_portrait.gd`, nuevo): el cuerpo en
+  tres capas (color con tinta, luz, máscara) y cada pieza en la suya.
+  Tropiezos:
+  - el original asomaba a través de la ropa (es un poco más ancho que la
+    figura de 5k, para la que se hicieron las prendas). Encoger el original
+    1,5 cm en la máscara no bastó; lo que funciona es usar la figura de 5k
+    como lo que tapa: las piezas tapan y quedan tapadas igual que en el
+    juego.
+  - `Fighter3D` vuelve a girar el modelo a su dirección en cada fotograma:
+    las prendas salían giradas respecto al cuerpo. Se fija la dirección de
+    frente en la propia figura.
+  - el gorro de gelatina salía con la malla dibujada: el temblor abre sus
+    caras y deja ver la tinta (en el juego pasa igual, se ve en la hoja de
+    antes). En la imagen se renderiza quieto.
+- **En el juego** (`src/anims/coach_portrait.gd`, `CoachPortrait`): compone
+  las capas, tiñe piel y pelo con la máscara como el shader toon, el brillo
+  de los efectos de pelo, apila las piezas por ranura, respira (0,6 % de
+  alto cada 3,6 s) y da un saltito donde el 3D saludaba o posaba.
+- **Lobby:** la imagen a 560 px por metro (a 1280×720), el corte por
+  debajo de la ventana; sin las flechas de girar (decidido con las
+  referencias del hub). Fuera `coach_rotated`, `_rotate` y los textos
+  `lobby.rotate*`.
+- **Build:** `build.py` posa el original y saca las capas tras las prendas
+  (2 min 40 s los dos coaches); `check.py` exige la imagen de cada coach
+  (4 MB como mucho por encuadre); `pack_arenas.gd` y `pack_web.gd` la
+  llevan (en la web, con el arranque: el lobby la dibuja desde la primera
+  pantalla).
+- **Peso:** 2,1 MB por coach con las 165 piezas que caben en el encuadre
+  (las botas quedan bajo el corte); el lobby solo carga las puestas.
+- **Pruebas:** `coach_turn_smoke` ya no gira el lobby: comprueba que no
+  tiene « » y sigue probando el ▶ de reclutar; `coach_look_smoke` y
+  `hub_smoke` comprueban que la imagen lleva las piezas de las cartas
+  puestas y el efecto de pelo. Nuevo `test/lobby_coach_sheet.gd`: el lobby
+  con el coach, el pelo y las piezas que se le digan, sin servidor.
+  Pasan: `run_tests.sh` 1685/0, `check.py`, las 52 smokes
+  (`save_account_smoke.sh` con sus fases) y el empaquetado de escritorio
+  (`pack_arenas.gd`: 338 capas de imagen).
+- **Hojas:** `~/codigo/capturas/s54/14`–`16-lobby-imagen-*.png`, el lobby a
+  1920×1080: a la izquierda hoy (el 3D a 5k), a la derecha la imagen; los
+  dos coaches sin ropa y con un traje, y la mujer con el pelo de fuego.
+
+Queda para el paso 4: las chispas de los efectos de pelo (hoy solo el
+brillo); las prendas vivas en 2D (la gelatina tiembla, el oro brilla, la
+llama del estandarte); la creación (cortada como el lobby), Equipo del
+coach (entera) y la subida de nivel; y entonces sacar el 3D del coach y
+sus prendas del arranque de la web (hoy van las dos cosas).

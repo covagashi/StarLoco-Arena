@@ -12,7 +12,8 @@ extends Control
 ## lean towards the pointer, the backdrop drifts. 1280x720 scaled, mouse,
 ## keyboard and pad (the Ally).
 ##
-## Reads `localCoach` (its `worn` cards dress the 3D coach, S35c), `hub`
+## Reads `localCoach` (its `worn` cards dress the coach, S35c; since S54 a
+## picture of it, CoachPortrait, cut at mid-thigh, front on), `hub`
 ## {story:{titulars, bench}, ranked:{teams:[{id, name}], selected},
 ## tourn:{registered, label, search_tid}}, `season` {number, ends} and
 ## `wallet` {currency type: amount} from the model; emits
@@ -21,10 +22,8 @@ extends Control
 
 signal action_requested(action: String)
 signal dialog_requested(dialog: String)
-signal coach_rotated(delta: int)
 signal team_picked(preset_id: int)
 
-const Direction8 := preload("res://src/util/direction8.gd")
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const StyleB := preload("res://src/ui/style_b.gd")
 const Features := preload("res://src/features.gd")
@@ -32,8 +31,11 @@ const REF := Vector2(1280, 720)
 const CHAT_RECT := Rect2(24, 540, 330, 150)
 const TILES := Vector2(690, 108)       # the tiles' corner (566 x 460)
 const R_SEARCH := Rect2(690, 108, 566, 460)
-const COACH_FOOT := Vector2(480, 646)
-const COACH_SCALE := 6.0
+const COACH_FOOT := Vector2(480, 646)   # where the 3D coach stood (the bubble, the smear)
+## S54: the picture's ground, below the window so the cut at mid-thigh
+## (CoachPortrait "thigh", from 0.42 m) never shows, and its size.
+const COACH_PX := 560.0                 # px per metre at REF
+const PORTRAIT_FOOT := Vector2(480, 720 + 0.42 * COACH_PX + 4)
 const TOKENS := 1                      # wallet slot of the Card Master tokens
 const PESETAS := 10                    # …and of the pesetas (domain.CurrencyPesetas)
 const INK := UiStyle.B_INK
@@ -96,9 +98,6 @@ var _spr
 var _model
 var _chat: Control
 var _look := ""
-var _hair_fx := 0     # S37: the hair effect on the figure now
-var _hair_on: Object  # …and the figure it was put on (a rebuild drops it)
-var _dir := Direction8.FRONT    # wire dir the coach sprite faces
 var _subtitle: Label            # the search card's heading
 var _menu_buttons: Array = []
 var _actions: Array[Button] = []   # every button that starts something
@@ -229,28 +228,12 @@ func _backdrop() -> void:
 	_box.add_child(lines)
 
 
-## The 3D coach, large and sharp, the chevrons that turn it (a qc_0 wire
-## dir, as in coach creation) and the bubble its emotes show.
+## The coach, large and sharp: its picture (S54: front on, no turning, the
+## owner's hub references), and the bubble its emotes show.
 func _coach() -> void:
-	_spr = preload("res://src/anims/figure.gd").new()
-	_spr.foot_pivot = true
-	_spr.position = COACH_FOOT
-	_spr.scale = Vector2(COACH_SCALE, COACH_SCALE)
+	_spr = preload("res://src/anims/coach_portrait.gd").new()
+	_spr.position = PORTRAIT_FOOT
 	_box.add_child(_spr)
-	for left in [true, false]:
-		var b := UiStyle.chevron_button(left, INK)
-		b.name = "TurnLeft" if left else "TurnRight"
-		# « » as its (hidden) text, as the old buttons had: tests find them by it
-		b.text = "«" if left else "»"
-		for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
-			b.add_theme_color_override(col, Color(0, 0, 0, 0))
-		b.add_theme_constant_override("outline_size", 0)   # or the hidden text shows as a smudge
-		b.scale = Vector2(0.42, 0.42)
-		# the left one clear of the chat, which draws over the lobby
-		b.position = COACH_FOOT + Vector2(-122 if left else 128, -60)
-		b.tooltip_text = _t("lobby.rotate.tip")
-		b.pressed.connect(_rotate.bind(-1 if left else 1))
-		_box.add_child(b)
 	_bubble = Label.new()
 	_bubble.position = COACH_FOOT + Vector2(-170, -600)
 	_bubble.size = Vector2(340, 40)
@@ -850,9 +833,9 @@ func _intro() -> void:
 	_box.add_child(smear)
 	_box.move_child(smear, _spr.get_index())
 	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	_spr.position = COACH_FOOT - Vector2(220, 0)
+	_spr.position = PORTRAIT_FOOT - Vector2(220, 0)
 	_spr.modulate.a = 0.0
-	tw.tween_property(_spr, "position", COACH_FOOT, 0.7)
+	tw.tween_property(_spr, "position", PORTRAIT_FOOT, 0.7)
 	tw.tween_property(_spr, "modulate:a", 1.0, 0.35)
 	tw.tween_property(smear, "position:x", COACH_FOOT.x - 200.0, 0.7)
 	tw.tween_property(smear, "modulate:a", 0.0, 0.8)
@@ -888,7 +871,7 @@ func _intro() -> void:
 	# and once it has arrived, the coach waves
 	t2.tween_callback(func():
 		if _lib != "":
-			Direction8.gesture(_spr, _lib, _dir, "AnimSalut")).set_delay(0.75)
+			_spr.hop()).set_delay(0.75)
 	for node in [_quick, _quick_hint]:
 		var to: Vector2 = node.position
 		node.position = to + Vector2(0, 30)
@@ -1071,7 +1054,7 @@ func _process(dt: float) -> void:
 	_next_pose -= dt
 	if _next_pose <= 0.0 and _lib != "" and not _searching:
 		_next_pose = _rng.randf_range(12.0, 20.0)
-		Direction8.gesture(_spr, _lib, _dir, "AnimPose")
+		_spr.hop(8.0)
 	if _searching:
 		_tick_clock()
 		# a ranked queue that stays empty: offer a ghost (S20B)
@@ -1206,38 +1189,19 @@ func _sync() -> void:
 	_name.text = str(coach.get("name", ""))
 	_level.text = str(int(coach.get("level", 0)))
 	_level.tooltip_text = I18n.t("lobby.level", {"n": int(coach.get("level", 0))})
-	# actorDirection is a qc_0 wire dir the rest of the client already writes
-	# (creation screen arrows). Honor it when present.
-	_dir = int(coach.get("actorDirection", _dir)) & 7
-	var look := "%s/%s/%s/%d" % [coach.get("sex", 0), coach.get("skin", 0),
-		coach.get("hair", 0), _dir]
+	var lib := preload("res://src/anims/fighter3d.gd").coach_key(int(coach.get("sex", 0)))
+	var look := "%s/%s/%s" % [lib, coach.get("skin", 0), coach.get("hair", 0)]
 	if look != _look:
 		_look = look
-		_spr.tints = Palettes.coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
-		var lib := preload("res://src/anims/fighter3d.gd").coach_key(int(coach.get("sex", 0)))
-		# the menu stance (S45), not the fight's idle
-		if not Direction8.load_idle(_spr, lib, _dir, "AnimMenu") \
-				and not Direction8.load_idle(_spr, lib, _dir):
-			Direction8.load_idle_any(_spr, lib)
+		if _spr.show_coach(lib, "thigh"):
+			var t := preload("res://src/anims/fighter3d.gd").coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
+			_spr.tint(t.skin, t.hair)
+			_spr.scale = Vector2.ONE * (COACH_PX / float(_spr.index.px))
 		_lib = lib
-	# S35c: the 3D figure wears the coach's cards (main._push_coach_worn)
-	if _spr.model3d != null and _spr.model3d.has_method("wear_coach_cards"):
-		_spr.model3d.wear_coach_cards(coach.get("worn", []))
-		# S37: its hair effect cosmetic (60043, main → localCoach.hairFx)
-		if int(coach.get("hairFx", 0)) != _hair_fx or _hair_on != _spr.model3d:
-			_hair_fx = int(coach.get("hairFx", 0))
-			_hair_on = _spr.model3d
-			_spr.model3d.set_hair_fx(_hair_fx)
-
-
-func _rotate(delta: int) -> void:
-	_dir = (_dir + delta) & 7
-	# write the model FIRST: _sync() reads actorDirection back, and calling it
-	# before the write put the old direction back, so « » did nothing (S20)
-	if _model != null and _model.get_value("localCoach") is Dictionary:
-		_model.set_value("localCoach", _dir, "actorDirection")
-	_sync()
-	coach_rotated.emit(delta)
+	# S35c: it wears the coach's cards (main._push_coach_worn); S37: its hair
+	# effect cosmetic (60043, main → localCoach.hairFx)
+	_spr.wear_coach_cards(coach.get("worn", []))
+	_spr.set_hair_fx(int(coach.get("hairFx", 0)))
 
 
 func _retranslate() -> void:

@@ -6,7 +6,7 @@ extends SceneTree
 ##   godot --headless --path godot --export-release Web ../dist/web/index.html
 ##   godot --headless --path godot -s tools/web/pack_web.gd -- ../dist/web
 ## Writes <dist>/bundles/:
-##   boot-K.<hash>.zip      assets/ (ui, i18n, audio, content), the two
+##   boot-K.<hash>.zip      assets/ (ui, i18n, audio, content), the two coaches' pictures (S54), the two
 ##                          coaches and every equipment piece: the first load
 ##   figures-K.<hash>.zip   the fighters and summons: fetched in the
 ##                          background from the login on, and awaited by
@@ -46,6 +46,9 @@ func _initialize() -> void:
 		var to: String = "art/" + figs[src]
 		# the coaches are drawn from the first screens on: they come with boot
 		(boot if to.get_file().begins_with("coach_") else figures)[src] = to
+	var pt := Pack.portrait_files()    # S54: the lobby's coach is its picture
+	for src: String in pt:
+		boot[src] = "art/" + pt[src]
 	var eq := Pack.equipment_files()   # the lobby dresses the coach at once
 	for src: String in eq:
 		boot[src] = "art/" + eq[src]

@@ -1,40 +1,19 @@
 extends "res://test/world_smoke.gd"
 
-## S20: the lobby's « » turn the coach, and the turn survives a model rebuild.
+## S20: the lobby's « » turned the coach. S54: the lobby shows a picture
+## of it, front on, so it has no « » any more; what turns is the recruit
+## screen's preview.
 ##
 ##   godot --path godot -s test/coach_turn_smoke.gd [-- --shot-dir=D]
-##
-## Before S20, _rotate() re-read the old direction before writing the new one,
-## so « » did nothing; and _local_coach_model() always reset it to 3.
 
 
 func _audit() -> void:
 	var lobby = _main._lobby_screen
-	var turn_right: Button = null
-	var turn_left: Button = null
+	var arrows := 0
 	for b in lobby.find_children("*", "Button", true, false):
-		if b.text == "»":
-			turn_right = b
-		elif b.text == "«":
-			turn_left = b
-	if turn_right == null or turn_left == null:
-		_record(0, "buttons", false, "no « » buttons in the lobby")
-		return
-	var before := int(lobby._dir)
-	turn_right.pressed.emit()
-	await create_timer(0.3).timeout
-	var after := int(lobby._dir)
-	var model_dir := int(_main._gui.model.get_value("localCoach").get("actorDirection", -1))
-	_record(0, "turn", after == ((before + 1) & 7) and model_dir == after,
-		"» : %d → %d (model says %d)" % [before, after, model_dir])
-	await _shot("coach-turned")
-	_main._push_local_coach()
-	await create_timer(0.3).timeout
-	_record(0, "kept", int(lobby._dir) == after,
-		"after a lobby model rebuild the coach still faces %d (got %d)" % [after, int(lobby._dir)])
-	turn_left.pressed.emit()
-	await create_timer(0.3).timeout
-	_record(0, "back", int(lobby._dir) == before, "« puts it back to %d (got %d)" % [before, int(lobby._dir)])
+		if b.text == "»" or b.text == "«":
+			arrows += 1
+	_record(0, "no turning", arrows == 0, "« » in the lobby: %d" % arrows)
 	await _new_fighter_turn()
 
 
