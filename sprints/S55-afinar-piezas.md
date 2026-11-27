@@ -143,3 +143,14 @@ hombro) y la franja oscura del cuello (la receta: 0–0,07).
 
 Pendiente del dueño: visto bueno o correcciones de la prenda 1 antes de la
 2.
+
+**El cuello** (el dueño: «mejora el cuello, se ve raro»): la receta sube
+el top hasta el cuello (`top: 0`), y con la sisa cortada al hombro queda
+una tira estrecha hasta la garganta con la franja oscura encima (en el
+hombre, un collar oscuro). Probé el escote recto más abajo
+(`OVERRIDE='{"top": …}'` en `hd_garment.py`, la receta sin tocar):
+hoja `~/codigo/capturas/s55/02-cuello-opciones.png` — A como estaba, B a
+5 cm bajo el cuello, C a 9 cm. B queda limpio en los dos, con la franja
+oscura como ribete del escote; C deja asomar en la mujer el borde del top
+del original. Propuesta: B (`"top": 0.05` en `torso_kepika`, que también
+cambiará la prenda de 5k cuando se reconstruya).
