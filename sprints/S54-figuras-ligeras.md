@@ -67,8 +67,8 @@ combate. La ilustración queda para retratos y splash.
 
 Una hoja con la mujer renderizada del original de 676k al lado del 3D
 actual, **en la pantalla de creación**, con dos colores de pelo y dos de
-piel. El dueño decide si merece la pena. Si no, se cierra aquí y se queda
-el 3D de 40k.
+piel. El dueño decide si merece la pena. (Quedarse con el 3D de 40k no es
+una opción: el 3D va a 5k como mucho, dueño 2026-11-27.)
 
 ### Paso 1 — El documento del pipeline de figuras (S)
 
@@ -184,5 +184,8 @@ a res 9 (a 1920×1080 la creación muestra la figura a ×1,5 de lo que se
 renderiza, igual que el 3D de hoy). Unos puntos blancos en el pelo son los
 brillos pintados en la textura del original.
 
-**Espera:** el dueño mira las hojas y decide si sigue (pasos 1–5) o se
-cierra aquí con el 3D de 40k.
+**Corrección del dueño (2026-11-27):** «al final dijimos de dejarlo
+máximo 5k». Quedarse con el 3D de 40k no es una opción: el 3D va a 5k
+como mucho, y la prueba compara la imagen con un 3D que va a perder
+detalle, no con el que se queda. **Espera:** el visto bueno para seguir
+con los pasos 1–5.
