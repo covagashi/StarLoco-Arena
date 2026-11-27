@@ -238,3 +238,9 @@ el paso 4: la imagen ya no tiene que salir con la cámara del juego, puede
 salir de frente y a la altura de los ojos, y si la figura sale más grande
 (cortada por los muslos), hay que renderizarla a más resolución.
 Preguntas abiertas al dueño: la cámara y el encuadre.
+
+**Respuesta (2026-11-27):** «mejor el 2, cortada por el muslo o
+tobillo». Decido yo entre los dos (opinión, no orden): en el **lobby**,
+cortada a medio muslo, como la segunda foto, de frente y a la altura de
+los ojos; en **Equipo del coach**, entera (ahí se prueban las botas). La
+creación, como el lobby. Se revisa con la hoja del paso 4.
