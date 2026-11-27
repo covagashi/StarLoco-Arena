@@ -484,3 +484,42 @@ hacer con la ropa». La ropa queda como está; la prueba, sin build.
 - **Comprobado:** `build.py` entero (887 s, `check.py` 0 fallos), los pies
   de los tres, `run_tests.sh` 1685/0, `fight_smoke`, `summon_smoke`,
   `coach_look_smoke`, `hub_smoke`, `first_play_smoke` (14/14).
+
+### Prueba: la ropa pintada sobre la piel, como en WoW (2026-11-27)
+
+El dueño, de otro gamedev: «WoW, por ejemplo, combina geosets y saca
+resultados aceptables. Textura + geoset … con texturas se refiere a poner
+la ropa encima de la malla. Haz una prueba rápida con la coach mujer y con
+un set».
+
+- **Cómo lo hace WoW:** la mayor parte de la ropa no es geometría: se pinta
+  en la textura del cuerpo por zonas (brazos, torso, piernas, manos, pies),
+  así que la ropa ajustada nunca la atraviesa; los **geosets** son trozos de
+  malla del cuerpo que se encienden o apagan según lo que lleve (mangas,
+  perneras, botas, falda); cascos, hombreras y armas van colgados de un
+  hueso.
+- **La prueba** (sin build, scripts en `~/codigo/capturas/s54/ropa/`): el
+  traje kepika (torso y pantalón) sobre la coach mujer, en la imagen del
+  lobby. `cloth_pose.py` (una copia de `coach_hd_pose.py`): en la pose de
+  reposo, desde cada vértice del original sale un rayo a lo largo de su
+  normal; donde da con la tela de la prenda (los materiales `cloth_*`, no
+  sus cuernos), el vértice toma su color (80 299 de 363 656 vértices, 1 s).
+  `coach_portrait_paint.gd`: el color del cuerpo lleva esa tela, la máscara
+  no la tiñe, y de la prenda solo quedan como pieza sus cuernos.
+  Tropiezos: los 363k rayos desde Python tardaban más de 30 min leyendo la
+  normal vértice a vértice (con `foreach_get`, 1 s); el exportador sacaba
+  el color de la máscara (hay que marcar la tela como color de render); y
+  el color salía oscuro (hay que pasarlo a sRGB en el shader).
+- **Hoja:** `~/codigo/capturas/s54/44-ropa-pintada-kepika.png` (hoy y
+  pintada; arriba y pantalón solos, y el traje entero).
+- **Lo que veo:** la ropa pintada sigue el cuerpo del original exactamente
+  (sin huecos, sin bultos que atraviesen, el cinturón y el top del original
+  se marcan debajo como tela ajustada) y se parece al resto de la figura.
+  Lo que falla en la prueba: los bordes de las franjas salen borrosos y
+  deshilachados (el color va por vértice y copia el borde de la prenda de
+  5k), y se pierden los parches. Se arreglaría pintando con la receta de la
+  prenda (franjas por altura, parches por ángulo) en vez de copiar la malla
+  de 5k, y horneándolo en una textura (bordes nítidos). Para el combate
+  sería lo mismo: una textura de ropa sobre la del cuerpo de 5k. Lo
+  abultado (falda, pantalón abombado, botas, cuernos) seguiría siendo
+  geometría: los geosets.
