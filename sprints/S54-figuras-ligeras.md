@@ -217,3 +217,24 @@ tabla completa de S35b) y una lista para meter una figura nueva.
   en el hub, la ropa solo se ve en Equipo del coach. Lo dejaría como
   imagen de frente, quitando las flechas de girar, con el reposo animado
   y los gestos como bocadillo y un saltito. Decide el dueño.
+
+### Referencias del dueño para el hub (2026-11-27)
+
+Tres pantallas de inicio de gacha (`~/codigo/capturas/s54/refs/hub-ref-*.jpg`).
+Lo que tienen en común:
+
+- **la figura es la protagonista:** grande, ocupa un tercio de la
+  pantalla, a la izquierda o en el centro; los menús alrededor (recursos
+  arriba, botones de sistema en una columna a la izquierda, los modos
+  grandes a la derecha);
+- **de frente y a la altura de los ojos**, no desde arriba como la cámara
+  del juego; no gira;
+- **quieta o casi:** a lo sumo respira (tipo Live2D);
+- dos de las tres **cortan la figura por los muslos o las rodillas**; la
+  primera la enseña entera.
+
+Encaja con el plan (imagen de frente, sin flechas de girar). Lo que cambia
+el paso 4: la imagen ya no tiene que salir con la cámara del juego, puede
+salir de frente y a la altura de los ojos, y si la figura sale más grande
+(cortada por los muslos), hay que renderizarla a más resolución.
+Preguntas abiertas al dueño: la cámara y el encuadre.
