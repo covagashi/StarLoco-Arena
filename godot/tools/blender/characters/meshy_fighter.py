@@ -1606,13 +1606,9 @@ def main():
     export(ob, rig, J)
 
 
-def lower_arms(ob, rig, J, deg):
-    """S47 (--lower_arms): the newer Meshy originals stand in an A-pose,
-    arms out at ~40 degrees; the clips (rig_anims) start from the rest pose,
-    so the coach walked with its arms spread. Weighted in the A-pose (the
-    arms stand clear of the body, which helps), each upper arm is turned
-    down about the front axis until shoulder → hand is `deg` from the
-    vertical, the mesh takes that pose and it becomes the new rest."""
+def claim_arm_verts(ob, rig):
+    """lower_arms' first step (S54: coach_hd_pose.py runs it before handing
+    the weights to the original)."""
     # the weighting rules expect hanging arms: in an A-pose some arm
     # vertices (finger tips, the outside of the elbow) went to the body and
     # would stay behind; a vertex whose nearest bone is an arm's and that
@@ -1634,6 +1630,18 @@ def lower_arms(ob, rig, J, deg):
         ob.vertex_groups[near].add([v.index], 1.0, "REPLACE")
         claimed += 1
     LOG["arm_verts_claimed"] = claimed
+
+
+def lower_arms(ob, rig, J, deg, others=()):
+    """S47 (--lower_arms): the newer Meshy originals stand in an A-pose,
+    arms out at ~40 degrees; the clips (rig_anims) start from the rest pose,
+    so the coach walked with its arms spread. Weighted in the A-pose (the
+    arms stand clear of the body, which helps), each upper arm is turned
+    down about the front axis until shoulder → hand is `deg` from the
+    vertical, the mesh takes that pose and it becomes the new rest.
+    `others` (S54, coach_hd_pose.py): meshes on the same rig that take the
+    pose with it."""
+    claim_arm_verts(ob, rig)
     bpy.ops.object.select_all(action="DESELECT")
     rig.select_set(True)
     bpy.context.view_layer.objects.active = rig
@@ -1652,15 +1660,17 @@ def lower_arms(ob, rig, J, deg):
         turned[S] = round(now, 1)
     bpy.ops.object.mode_set(mode="OBJECT")
     # bake the pose into the mesh, then make it the rest
-    mod = next(m for m in ob.modifiers if m.type == "ARMATURE")
-    bpy.context.view_layer.objects.active = ob
-    bpy.ops.object.modifier_apply(modifier=mod.name)
+    for o in (ob,) + tuple(others):
+        mod = next(m for m in o.modifiers if m.type == "ARMATURE")
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.modifier_apply(modifier=mod.name)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode="POSE")
     bpy.ops.pose.armature_apply(selected=False)
     bpy.ops.object.mode_set(mode="OBJECT")
-    m = ob.modifiers.new("Armature", "ARMATURE")
-    m.object = rig
+    for o in (ob,) + tuple(others):
+        m = o.modifiers.new("Armature", "ARMATURE")
+        m.object = rig
     LOG["arms_lowered_from"] = turned
 
 

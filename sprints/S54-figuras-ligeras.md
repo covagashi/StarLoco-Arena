@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** ⏸ aprobado (2026-11-26), sin empezar: primero el paso 0, cuando el dueño lo pida
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🟡 paso 0 hecho (2026-11-27), esperando el visto bueno del dueño
 
 ## Por qué
 
@@ -134,3 +134,55 @@ reclutar), la misma imagen renderizada.
    solo el frente; sin girar).
 3. **Primero solo la prueba del paso 0, y no ahora:** el sprint espera; al
    retomarlo se hace el paso 0, se enseña y se para hasta su visto bueno.
+
+## Hecho
+
+### Paso 0 — la prueba (2026-11-27)
+
+Hojas en `~/codigo/capturas/s54/` (páginas de pantalla):
+`01-creacion-imagen.png` y `02-creacion-3d.png` (la pantalla entera a
+1920×1080, la misma mujer con imagen y con 3D), `03-colores-1.png` y
+`04-colores-2.png` (piel 1 y 3 × pelo 0 y 3, el 3D y la imagen lado a
+lado) y `05-de-cerca.png` (×2: cabeza y torso).
+
+Cómo se hizo, para no repetirlo en el paso 4:
+
+- `tools/blender/characters/coach_hd_pose.py` posa el original de 676k con
+  el esqueleto del coach: los mismos pasos que `meshy_fighter.py` (limpieza,
+  reducción con MeshLab, articulaciones, pesos) hacen la figura de 40k en la
+  pose A, donde aún coincide con el original; sus pesos pasan al original
+  (cara más cercana, interpolado), los brazos bajan con ella
+  (`lower_arms(..., others=)`, nuevo parámetro; el build no cambia) y el
+  clip del menú lo pone en su fotograma 0. La máscara de piel y pelo de
+  cada vértice sale de la figura construida y su `_mask.png`, en reposo
+  (12 vértices de 363k a más de 1 cm). 30 s.
+- `test/coach_hd_trial.gd` abre la pantalla de creación de verdad, para el
+  3D de 40k en el mismo fotograma del clip, pone el original en el mismo
+  visor (misma cámara, luz y tinta) y saca tres capas: **color sin luz con
+  su tinta**, **la luz sola** (figura gris al 50 %: una blanca iluminada
+  pasa de 1 y se recorta) y **la máscara**. En 2D el color toma el tinte
+  como `toon.gdshaderinc` (con su propia referencia de brillo, el
+  percentil 80 bajo cada máscara) y se multiplica por la luz. 3,7 s.
+- Tropiezos: en Blender 5 una acción sin su *slot* no posa (la pose se lee
+  de las curvas); parchear `bpy.ops.pose.armature_apply` no sirve (cada
+  acceso a `bpy.ops.pose` es un objeto nuevo); dividir la capa iluminada
+  por la luz falla donde se recorta (pelo blanco), por eso color y luz van
+  separados.
+
+Medidas (la mujer, a la escala de hoy en la creación, res 6):
+
+| | 3D de hoy | Imagen |
+|---|---|---|
+| Descarga | GLB 2381 KB | 3 capas WebP, 59 KB |
+| Memoria de vídeo | ~21 MB | ~1,4 MB (recortadas a la figura) |
+
+Lo que se ve: el original trae mechones dibujados y brillos en el pelo, el
+ombligo, la clavícula y el borde del cinturón; la cara y el cuerpo, a esta
+distancia, casi iguales. Pendiente para el paso 4 si sigue: el reposo
+animado (hoy es un fotograma quieto), las prendas como capas, y renderizar
+a res 9 (a 1920×1080 la creación muestra la figura a ×1,5 de lo que se
+renderiza, igual que el 3D de hoy). Unos puntos blancos en el pelo son los
+brillos pintados en la textura del original.
+
+**Espera:** el dueño mira las hojas y decide si sigue (pasos 1–5) o se
+cierra aquí con el 3D de 40k.
