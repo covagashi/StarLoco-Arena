@@ -65,3 +65,34 @@ ve mal son las 104 prendas del coach; las 167 rígidas están por revisar.
   «mejor completo en el hub»: entera, como en los cuatro menús.
 - «Sobre las prendas, lo hacemos 1 por 1»: cada prenda con su hoja y su
   visto bueno antes de la siguiente.
+
+## Para retomar (2026-11-27, el dueño hace /clear)
+
+El dueño: «todo ok, ahora hago clear y hacemos los ítems 1 a 1 usando el
+geoset + malla». **El método:** cada prenda como geoset (la parte del
+cuerpo que tapa, fuera) más su propia malla, prenda a prenda, con su hoja y
+el visto bueno del dueño antes de la siguiente.
+
+Lo que ya hay de las pruebas de S54 (todo en `~/codigo/capturas/s54/ropa/`,
+nada en el build):
+
+- `cloth_pose_geo.py`: posa el original de 676k y le quita las caras bajo
+  una prenda (`GEOSET=<prenda.glb>,…`: un rayo por vértice a lo largo de su
+  normal, 12 cm); también pinta tela sobre la piel (los argumentos tras la
+  máscara).
+- `hd_clothes.py`: la prenda hecha del original con `garment.py` de la
+  skill `blender-clothing` (zona, holgura 6 mm, pesos de los huesos, piel
+  tapada oculta); sin grosor (`THICK=0`: el `Solidify` explota en las caras
+  diminutas del original).
+- `subdiv.py`: la tela de una prenda subdividida una vez, los cuernos sin
+  tocar.
+- `coach_portrait_geo.gd` / `coach_portrait_hdc.gd`: el renderizador de la
+  imagen con esas prendas (`--geoset=`, `--static=`, `--paint=`).
+- Hojas: `44`–`47` (pintada, WoW + geoset, blender-clothing).
+- Lo que quedó mal en ellas: bordes de color borrosos (copiados de la
+  prenda de 5k: pintar con la receta), una rendija en la cadera, el borde
+  del top del original asomando por encima de la parte de arriba.
+
+S54 sigue abierto por lo que no es ropa: el 3D del coach fuera del
+arranque de la web y las medidas, las invocaciones con la reducción limpia,
+los pies que quedan y la partida entera en web.
