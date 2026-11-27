@@ -523,3 +523,30 @@ un set».
   sería lo mismo: una textura de ropa sobre la del cuerpo de 5k. Lo
   abultado (falda, pantalón abombado, botas, cuernos) seguiría siendo
   geometría: los geosets.
+
+### Prueba: WoW + geoset con el traje kepika (2026-11-27)
+
+El dueño: «¿y has usado geoset?» (no: solo la textura) y «haz la prueba de
+estilo WoW + geoset … con la ropa kepika».
+
+- **Textura:** la parte de arriba pintada sobre la piel, como en la prueba
+  anterior, sin los vértices del brazo (su rayo daba con el costado del
+  top y lo manchaba).
+- **Geoset:** el pantalón y las botas. En el posado, cada cara del
+  original que queda bajo la prenda (un rayo a lo largo de su normal da con
+  ella a menos de 12 cm) se borra: 123 647 caras bajo el pantalón y 71 452
+  bajo las botas; en su lugar va la malla de la prenda, la tela subdividida
+  una vez (los cuernos sin subdividir: si no, se vuelven gotas). Lo que
+  tapa a la prenda en la imagen es el original sin piernas (las manos
+  siguen delante).
+- **Hojas:** `45-ropa-wow-geoset-entera.png` (entera: hoy y WoW + geoset,
+  solo arriba, pantalón y botas, y con el traje entero) y
+  `46-ropa-wow-geoset-lobby.png` (a medio muslo). Scripts en
+  `~/codigo/capturas/s54/ropa/` (`cloth_pose_geo.py`,
+  `coach_portrait_geo.gd`, `subdiv.py`).
+- **Lo que veo:** el pantalón y las botas como geoset salen redondos, sin
+  facetas ni piel que asome, y con sus cuernos; la parte de arriba pintada
+  sigue el cuerpo. Quedan: el borde del top del original asoma por encima
+  de la parte de arriba (su dobladillo queda más bajo), unas marcas
+  oscuras en lo alto de los brazos, y las franjas del pantalón algo
+  onduladas por la subdivisión.
