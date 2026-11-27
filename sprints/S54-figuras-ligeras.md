@@ -550,3 +550,33 @@ estilo WoW + geoset … con la ropa kepika».
   de la parte de arriba (su dobladillo queda más bajo), unas marcas
   oscuras en lo alto de los brazos, y las franjas del pantalón algo
   onduladas por la subdivisión.
+
+### Prueba: la ropa con la skill blender-clothing (2026-11-27)
+
+El dueño, tras la prueba WoW + geoset: «mmmm se ve fatal. Busca y usa
+blender-clothing». Y: «prueba también este:
+skillsdirectory.com/skills/arjun988-cloth-sim».
+
+- **blender-clothing** (`garment.py`): la prenda ajustada se hace del
+  cuerpo (extraer la zona, soltarla del cuerpo, darle grosor), con los
+  pesos del cuerpo copiados y la piel que tapa oculta. La usé sobre el
+  original de 676k, no sobre la figura de 5k: la zona de cada prenda es lo
+  que tapa la prenda de hoy (un rayo por vértice), 6 mm de holgura; el
+  color de cada cara, el de la tela de hoy más cercana. Scripts en
+  `~/codigo/capturas/s54/ropa/` (`hd_clothes.py`, `coach_portrait_hdc.gd`).
+- Tropiezos: los grupos de la prueba (la zona y la piel oculta) se
+  copiaban como pesos y quitaban sitio a los huesos (el dueño: «¿y por qué
+  no ajustas los pesos en vez de quitarlos?»: se quitan solo esos grupos,
+  los de los huesos se quedan y se normalizan); seguían saliendo pinchos de
+  cientos de metros: el grosor (`Solidify` con `use_even_offset`) explota
+  en las caras diminutas del original, así que la prueba va sin grosor; y
+  las manos, junto al pantalón, quedaban dentro de él.
+- **Hoja:** `47-ropa-blender-clothing.png`.
+- **Lo que veo:** la prenda sigue la forma del cuerpo del original (más
+  fina que la de hoy, sin facetas ni piel que asome); los bordes de color
+  siguen borrosos (copiados de la prenda de 5k) y queda una rendija clara
+  en la cadera.
+- **arjun988-cloth-sim:** una guía (sin scripts) para simular tela en
+  Blender: pines, colisión, asentado y horneado a shape keys. Sirve para
+  lo suelto (faldas, capas, estandartes), no para la ropa ajustada:
+  pendiente de probar con una falda o una capa.
