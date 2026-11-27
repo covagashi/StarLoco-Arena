@@ -2466,8 +2466,6 @@ func _open_coach_creation() -> void:
 	_create_screen = preload("res://src/ui/creation_screen.gd").new()
 	$UI.add_child(_create_screen)
 	_create_screen.bind_model(_gui.model)
-	_create_screen.dir_pressed.connect(
-		func(d): _on_coach_dir([], null, d))
 	_create_screen.random_pressed.connect(
 		func(): _on_coach_random([], null))
 	_create_screen.submit.connect(func(): _on_coach_create([], null))

@@ -3,13 +3,13 @@ extends "res://src/ui/lobby_panel.gd"
 ## the client pops when a fight's standing crosses a level (WE: aet_0.nJ of
 ## the old and the new standing). Your coach celebrating, the new level in
 ## big figures and the retail line "¡Has subido un nivel!". The retail doll
-## dances; ours jumps.
+## dances; ours jumps (S54: its picture, CoachPortrait, whole, dressed,
+## hopping).
 ##
 ## Reads `levelUp` {level} and `localCoach` (look). Read-only: no events.
 
 const SIZE := Vector2(560, 470)
-const Figure := preload("res://src/anims/figure.gd")
-const Direction8 := preload("res://src/util/direction8.gd")
+const Portrait := preload("res://src/anims/coach_portrait.gd")
 const Fighter3D := preload("res://src/anims/fighter3d.gd")
 
 
@@ -35,15 +35,19 @@ func refresh() -> void:
 	stage.custom_minimum_size = Vector2(200, 240)
 	split.add_child(stage)
 	var coach: Dictionary = data("localCoach", {})
-	var spr := Figure.new()
-	spr.foot_pivot = true
+	var spr := Portrait.new()
+	spr.name = "Coach"
 	spr.position = Vector2(100, 225)
-	spr.scale = Vector2(2.2, 2.2)
-	spr.tints = Palettes.coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
 	stage.add_child(spr)
-	var lib := Fighter3D.coach_key(int(coach.get("sex", 0)))
-	if not spr.load_action(lib, "1_AnimSaut"):
-		Direction8.load_idle_any(spr, lib)
+	if spr.show_coach(Fighter3D.coach_key(int(coach.get("sex", 0))), "whole"):
+		spr.scale = Vector2.ONE * (134.0 / float(spr.index.px))   # as tall as the 3D one was
+	var t := Fighter3D.coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
+	spr.tint(t.skin, t.hair)
+	spr.wear_coach_cards(coach.get("worn", []))
+	spr.set_hair_fx(int(coach.get("hairFx", 0)))
+	var tw := spr.create_tween().set_loops()
+	tw.tween_callback(spr.hop.bind(30.0))
+	tw.tween_interval(0.9)
 	var col := column(split)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	var lvl := label(col, str(int(data("levelUp.level", 1))), 96)

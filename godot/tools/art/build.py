@@ -396,7 +396,7 @@ def build_figures(names, a):
 
 # ------------------------------------------------------------ portraits
 
-PORTRAIT_FRAMES = ["thigh"]
+PORTRAIT_FRAMES = ["whole"]
 
 
 def tree_files(folder):

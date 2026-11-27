@@ -5,7 +5,7 @@ extends SceneTree
 ## ink (the game's sun, turned with the camera as for Direction8.FRONT).
 ##
 ##   xvfb-run -a godot --path godot -s tools/art/coach_portrait.gd -- \
-##       --coach=coach_7001 --hd=<posed.glb> --out=<dir> [--frame=thigh|whole] [--px=900]
+##       --coach=coach_7001 --hd=<posed.glb> --out=<dir> [--frame=whole|thigh] [--px=900]
 ##       [--pieces=all|<piece>,<piece>]
 ##
 ## Writes into <dir>/<coach>/<frame>/:
@@ -22,8 +22,8 @@ const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const Toon := preload("res://src/anims/toon.gd")
 
 ## The rows each framing shows, in metres (the figure is 1.45 high, feet at
-## 0): "thigh" from mid-thigh up (the lobby and the creation), "whole" the
-## lot (Equipo del coach). Both leave room for a hat and a banner on top.
+## 0): "whole" the lot (every menu: the owner, 2026-11-27), "thigh" from
+## mid-thigh up (unused). Both leave room for a hat and a banner on top.
 const FRAMES := {"thigh": [0.42, 2.05], "whole": [-0.05, 2.05]}
 const WIDTH := 1.9   # a cape's or a pet's reach on either side
 
@@ -65,7 +65,7 @@ func _run() -> void:
 	var coach := "coach_7001"
 	var hd_path := ""
 	var out := "/tmp/coach_portrait"
-	var frame := "thigh"
+	var frame := "whole"
 	var px := 900.0
 	var only := "all"
 	for a in OS.get_cmdline_user_args():

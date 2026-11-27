@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; el 4a hecho (lobby), la ropa aparcada; el 5 (luchadores) hecho
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; el 4 hecho (los cuatro menús con la imagen entera), el 5 (luchadores) hecho; quedan web, invocaciones y pies
 
 ## Por qué
 
@@ -594,3 +594,26 @@ Queda en S54: la creación, Equipo del coach y la subida de nivel con la
 imagen; el 3D del coach fuera del arranque de la web y las medidas
 antes/después; las invocaciones con la reducción limpia; los pies que
 quedan (Sram f, invocaciones criatura); la partida entera de S53 en web.
+
+### Paso 4b — los cuatro menús con la imagen entera (2026-11-27)
+
+El dueño, al verme empezar la creación cortada a medio muslo: «no, el de
+crear coach tiene que ser completo, y rodillas en hub, joder, mejor
+completo en el hub». Los cuatro menús llevan la imagen **entera**, de pie
+donde estaba el 3D y a su mismo tamaño (365 px por metro en el lobby y la
+creación, 352 en Equipo del coach, 134 en la subida de nivel):
+
+- **Lobby y creación:** el coach de pie; la creación vuelve a tener su
+  sombra en el suelo y no tiene flechas de girar (fuera `dir_pressed`).
+- **Equipo del coach:** la imagen con el borrador de cartas puesto y el
+  efecto de pelo.
+- **Subida de nivel:** la imagen, vestida, saltando (`hop` en bucle);
+  antes salía sin ropa.
+- **Build:** un solo encuadre, `whole` (2,7–2,8 MB por coach con todas sus
+  piezas); el de medio muslo queda en el script, sin usar.
+- **Nuevos:** `test/creation_coach_sheet.gd` (la creación sin servidor).
+- **Hoja:** `~/codigo/capturas/s54/48-menus-imagen-entera.png` (lobby y
+  creación por sus hojas; Equipo y subida de nivel en vivo).
+- **Comprobado:** `check.py` limpio, `run_tests.sh` 1685/0,
+  `coach_look_smoke`, `report_smoke` (subida de nivel), `hub_smoke`,
+  `coach_turn_smoke`, `first_play_smoke` (14/14).

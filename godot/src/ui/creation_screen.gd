@@ -3,24 +3,24 @@ extends Control
 ## Coach creation in style B (S45, src/ui/style_b.gd): a light studio of its
 ## own (a giant outlined COACH, a height chart behind the figure, thin
 ## lines), the back button and the title top left, the three sections as a
-## numbered list on the left, the 3D coach large in the middle with the
-## chevrons that turn it, and on the right a white form with the name and the
+## numbered list on the left, the coach large in the middle (S54: its
+## picture, CoachPortrait, whole and front on, as in the lobby; no turning),
+## and on the right a white form with the name and the
 ## section's choices (sex, the 14 hair colours, the 11 skin colours); "Al
 ## azar" and "¡CREAR!" at the bottom right. Drives the shared `localCoach`
-## model so the existing handlers (_on_localcoach_changed/_on_coach_dir/
+## model so the existing handlers (_on_localcoach_changed/
 ## _on_coach_random/_on_coach_create) keep working unchanged.
 
-signal dir_pressed(d: int)
 signal random_pressed
 signal submit
 signal closed
 
 const UiStyle := preload("res://src/ui/ui_style.gd")
 const StyleB := preload("res://src/ui/style_b.gd")
-const Direction8 := preload("res://src/util/direction8.gd")
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const REF := Vector2(1280, 720)
 const FOOT := Vector2(560, 636)
-const DOLL_SCALE := 6.0
+const COACH_PX := 365.0   # S54: the picture's px per metre, as tall as the 3D one was
 const R_FORM := Rect2(860, 118, 380, 0)
 const SECTIONS := ["body", "hair", "skin"]
 const INK := UiStyle.B_INK
@@ -29,7 +29,7 @@ const CORAL := UiStyle.B_CORAL
 var _box: Control
 var _back: Control  # the backdrop, scaled to cover the window (W4)
 var _model                   # GuiModel (GuiLayer.model) — localCoach lives here
-var _spr                     # figure.gd: the 3D coach
+var _spr                     # CoachPortrait: the coach's picture
 var name_edit: LineEdit
 var _sex_btns := {}
 var _hair_cells := {}
@@ -68,19 +68,9 @@ func _init() -> void:
 		shadow.draw_arc(Vector2.ZERO, 175, 0, TAU, 64, Color(INK, 0.35), 3.0, true)
 		shadow.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE))
 	_box.add_child(shadow)
-	_spr = preload("res://src/anims/figure.gd").new()
-	_spr.foot_pivot = true
+	_spr = preload("res://src/anims/coach_portrait.gd").new()
 	_spr.position = FOOT
-	_spr.scale = Vector2(DOLL_SCALE, DOLL_SCALE)
 	_box.add_child(_spr)
-	for left in [true, false]:
-		var b := UiStyle.chevron_button(left, INK)
-		b.name = "TurnLeft" if left else "TurnRight"
-		b.scale = Vector2(0.6, 0.6)
-		b.position = FOOT + Vector2(-230 if left else 198, -300)
-		b.tooltip_text = I18n.t("creation.rotate_left" if left else "creation.rotate_right")
-		b.pressed.connect(func(): dir_pressed.emit(-1 if left else 1))
-		_box.add_child(b)
 	_form_block()
 	_actions()
 	_show_section(_section)
@@ -418,14 +408,11 @@ func _sync() -> void:
 
 
 func _sync_doll(lc: Dictionary) -> void:
-	var lib := str(lc.get("actorDescriptorLibrary", "coach_7000"))
-	var dir: int = int(lc.get("actorDirection", 3)) & 7
-	if lc.get("actorMaterial") is Dictionary:
-		_spr.tints = lc["actorMaterial"]
-	# the same wire table as the lobby (Direction8): 1–3 face the camera
-	if not Direction8.load_idle(_spr, lib, dir, "AnimMenu") \
-			and not Direction8.load_idle(_spr, lib, dir):
-		Direction8.load_idle_any(_spr, lib)
+	var lib := Fighter3D.coach_key(int(lc.get("sex", 0)))
+	if _spr.show_coach(lib, "whole"):
+		_spr.scale = Vector2.ONE * (COACH_PX / float(_spr.index.px))
+	var t := Fighter3D.coach_tints(int(lc.get("skin", 0)), int(lc.get("hair", 0)))
+	_spr.tint(t.skin, t.hair)
 
 
 func _relayout() -> void:

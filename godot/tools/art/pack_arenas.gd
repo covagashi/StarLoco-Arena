@@ -114,7 +114,7 @@ static func portrait_files() -> Dictionary:
 				var src := base.path_join(fr).path_join(f)
 				files[src] = src.trim_prefix(Layout.ART_DIR + "/")
 		if not DirAccess.dir_exists_absolute(base):
-			files[base.path_join("thigh/index.json")] = ""   # missing: fails the pack
+			files[base.path_join("whole/index.json")] = ""   # missing: fails the pack
 	return files
 
 

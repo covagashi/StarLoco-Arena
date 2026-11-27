@@ -13,7 +13,7 @@ extends Control
 ## keyboard and pad (the Ally).
 ##
 ## Reads `localCoach` (its `worn` cards dress the coach, S35c; since S54 a
-## picture of it, CoachPortrait, cut at mid-thigh, front on), `hub`
+## picture of it, CoachPortrait, whole and front on), `hub`
 ## {story:{titulars, bench}, ranked:{teams:[{id, name}], selected},
 ## tourn:{registered, label, search_tid}}, `season` {number, ends} and
 ## `wallet` {currency type: amount} from the model; emits
@@ -31,11 +31,10 @@ const REF := Vector2(1280, 720)
 const CHAT_RECT := Rect2(24, 540, 330, 150)
 const TILES := Vector2(690, 108)       # the tiles' corner (566 x 460)
 const R_SEARCH := Rect2(690, 108, 566, 460)
-const COACH_FOOT := Vector2(480, 646)   # where the 3D coach stood (the bubble, the smear)
-## S54: the picture's ground, below the window so the cut at mid-thigh
-## (CoachPortrait "thigh", from 0.42 m) never shows, and its size.
-const COACH_PX := 560.0                 # px per metre at REF
-const PORTRAIT_FOOT := Vector2(480, 720 + 0.42 * COACH_PX + 4)
+const COACH_FOOT := Vector2(480, 646)   # where the coach stands
+## S54: its picture's size, px per metre at REF: as tall as the 3D one was
+## (the owner, 2026-11-27: "mejor completo en el hub")
+const COACH_PX := 365.0
 const TOKENS := 1                      # wallet slot of the Card Master tokens
 const PESETAS := 10                    # …and of the pesetas (domain.CurrencyPesetas)
 const INK := UiStyle.B_INK
@@ -232,7 +231,7 @@ func _backdrop() -> void:
 ## owner's hub references), and the bubble its emotes show.
 func _coach() -> void:
 	_spr = preload("res://src/anims/coach_portrait.gd").new()
-	_spr.position = PORTRAIT_FOOT
+	_spr.position = COACH_FOOT
 	_box.add_child(_spr)
 	_bubble = Label.new()
 	_bubble.position = COACH_FOOT + Vector2(-170, -600)
@@ -833,9 +832,9 @@ func _intro() -> void:
 	_box.add_child(smear)
 	_box.move_child(smear, _spr.get_index())
 	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	_spr.position = PORTRAIT_FOOT - Vector2(220, 0)
+	_spr.position = COACH_FOOT - Vector2(220, 0)
 	_spr.modulate.a = 0.0
-	tw.tween_property(_spr, "position", PORTRAIT_FOOT, 0.7)
+	tw.tween_property(_spr, "position", COACH_FOOT, 0.7)
 	tw.tween_property(_spr, "modulate:a", 1.0, 0.35)
 	tw.tween_property(smear, "position:x", COACH_FOOT.x - 200.0, 0.7)
 	tw.tween_property(smear, "modulate:a", 0.0, 0.8)
@@ -1193,7 +1192,7 @@ func _sync() -> void:
 	var look := "%s/%s/%s" % [lib, coach.get("skin", 0), coach.get("hair", 0)]
 	if look != _look:
 		_look = look
-		if _spr.show_coach(lib, "thigh"):
+		if _spr.show_coach(lib, "whole"):
 			var t := preload("res://src/anims/fighter3d.gd").coach_tints(int(coach.get("skin", 0)), int(coach.get("hair", 0)))
 			_spr.tint(t.skin, t.hair)
 			_spr.scale = Vector2.ONE * (COACH_PX / float(_spr.index.px))

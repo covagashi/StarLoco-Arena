@@ -1,7 +1,8 @@
 extends "res://src/ui/hero_panel.gd"   # a screen of its own, with the card tile helpers
 ## The coach equipment as a hero screen (S45 mockup, "Equipo del coach";
 ## tiles since S22, opened from Inventario → "Equipo del coach"): the coach
-## on its pedestal wearing the draft, the twelve wearable slots as diamonds
+## on its pedestal wearing the draft (S54: its picture, CoachPortrait, whole,
+## front on, so the boots show), the twelve wearable slots as diamonds
 ## around it with the card each holds; pick one and, on the paper at the
 ## right, what it wears (with "Quitar") and your cards for that slot — a
 ## click puts one on. Changes are a draft until "Llevar puesto" sends the
@@ -15,11 +16,11 @@ extends "res://src/ui/hero_panel.gd"   # a screen of its own, with the card tile
 ## hair effect cosmetic it owns, 0 = none; put on at once, not part of the
 ## draft).
 
-const Direction8 := preload("res://src/util/direction8.gd")
+const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const HAIR_SLOT := 2   # 5201's 0-based hair slot (main.COACH_SLOT_NAMES)
 const R_PED := Rect2(300, 594, 400, 86)
 const FOOT := Vector2(500, 632)
-const DOLL_SCALE := 5.8
+const COACH_PX := 352.0   # px per metre: the 1.45 m coach as tall as the 3D one was
 ## Where the slot diamonds sit (centres), in slot order: six at the left of
 ## the coach, six at its right.
 const SLOT_AT := [Vector2(249, 163), Vector2(203, 255), Vector2(295, 255),
@@ -48,10 +49,8 @@ func _ready() -> void:
 		ped.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE))
 	stage.add_child(ped)
 	stage.move_child(ped, pinned_actions.get_index())
-	_spr = preload("res://src/anims/figure.gd").new()
-	_spr.foot_pivot = true
+	_spr = preload("res://src/anims/coach_portrait.gd").new()
 	_spr.position = FOOT
-	_spr.scale = Vector2(DOLL_SCALE, DOLL_SCALE)
 	stage.add_child(_spr)
 	stage.move_child(_spr, pinned_actions.get_index())
 	_built = true
@@ -171,18 +170,16 @@ func _dress(slots: Array) -> void:
 	var look := "%s/%s/%s" % [lc.get("sex", 0), lc.get("skin", 0), lc.get("hair", 0)]
 	if look != _look:
 		_look = look
-		_spr.tints = Palettes.coach_tints(int(lc.get("skin", 0)), int(lc.get("hair", 0)))
-		var lib := preload("res://src/anims/fighter3d.gd").coach_key(int(lc.get("sex", 0)))
-		if not Direction8.load_idle(_spr, lib, Direction8.FRONT, "AnimMenu"):
-			Direction8.load_idle_any(_spr, lib)
-	if _spr.model3d != null and _spr.model3d.has_method("wear_coach_cards"):
-		var worn: Array = []
-		for sl in slots:
-			if int(sl.card) != 0:
-				worn.append({"slot": int(sl.slot), "id": int(sl.card)})
-		_spr.model3d.wear_coach_cards(worn)
-		if _spr.model3d.has_method("set_hair_fx"):
-			_spr.model3d.set_hair_fx(int(data("coachEquip", {}).get("hairFx", 0)))
+		if _spr.show_coach(Fighter3D.coach_key(int(lc.get("sex", 0))), "whole"):
+			_spr.scale = Vector2.ONE * (COACH_PX / float(_spr.index.px))
+		var t := Fighter3D.coach_tints(int(lc.get("skin", 0)), int(lc.get("hair", 0)))
+		_spr.tint(t.skin, t.hair)
+	var worn: Array = []
+	for sl in slots:
+		if int(sl.card) != 0:
+			worn.append({"slot": int(sl.slot), "id": int(sl.card)})
+	_spr.wear_coach_cards(worn)
+	_spr.set_hair_fx(int(data("coachEquip", {}).get("hairFx", 0)))
 
 
 ## S37: the hair effects the coach owns, on the Pelo slot above its hair

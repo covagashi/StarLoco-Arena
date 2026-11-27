@@ -59,7 +59,7 @@ GARMENT_TRIS = 3500
 GARMENT_KB = 256
 # S54: a coach's picture for the menus (coach_portrait.gd): each frame's
 # layers, all of them at most this (only the worn pieces load).
-PORTRAIT_FRAMES = ["thigh"]
+PORTRAIT_FRAMES = ["whole"]
 PORTRAIT_KB = 4096
 ANIMS = ["idle_loop", "walk_loop", "cast", "melee", "hit", "die", "jump", "celebrate", "carry_loop", "throw"]
 # One arena's models as shipped (S44: ≤ 50 MB first load for the whole demo;

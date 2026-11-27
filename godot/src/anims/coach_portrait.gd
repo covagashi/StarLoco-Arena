@@ -7,7 +7,8 @@ extends Node2D
 ##
 ## The node's origin is the ground under the feet; one unit of the figure
 ## (it is 1.45 high) is `index.px` pixels at scale 1. Frames (FRAMES in the
-## tool): "thigh" from mid-thigh up, "whole" the lot.
+## tool): "whole" the lot (every menu since the owner's 2026-11-27 call),
+## "thigh" from mid-thigh up.
 
 const Fighter3D := preload("res://src/anims/fighter3d.gd")
 const ArenaLayout := preload("res://src/maps/arena_layout.gd")
@@ -76,7 +77,7 @@ func _init() -> void:
 
 ## Show coach `key` (Fighter3D.COACHES) in `frame`; false when its pictures
 ## aren't built.
-func show_coach(key: String, frame := "thigh") -> bool:
+func show_coach(key: String, frame := "whole") -> bool:
 	if key == _key and frame == _frame:
 		return not index.is_empty()
 	_key = key

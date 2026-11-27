@@ -61,7 +61,7 @@ ve mal son las 104 prendas del coach; las 167 rígidas están por revisar.
 
 ## Respuestas del dueño (2026-11-27)
 
-- «Pues sí, dejamos el hub 2D en los muslos»: la imagen de S54, cortada a
-  medio muslo.
+- «Pues sí, dejamos el hub 2D en los muslos»: la imagen de S54; y luego
+  «mejor completo en el hub»: entera, como en los cuatro menús.
 - «Sobre las prendas, lo hacemos 1 por 1»: cada prenda con su hoja y su
   visto bueno antes de la siguiente.
