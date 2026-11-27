@@ -15,6 +15,10 @@ rig_anims.py.
         [--jpeg=90]           (the texture's JPEG quality: S53, the coaches' 2048² at 85 fits 2600 KB)
         [--head_uv=2]         (--reduce=clean: the charts above the neck get this many times the
                                texels per side: the face's brows and eyes at 1024²)
+        [--claim_hands=1]     (S54: a vertex nearest an arm bone goes to it even fused to the body:
+                               finger tips resting on a skirt or a bag, which tore into shards)
+        [--drop=x0,x1,y0,y1,z0,z1;…]  (S54: delete the original's faces with a corner in these boxes,
+                               metres on the cleaned figure: a fin Meshy left under a chin)
         [--arm_flap=0.03]     (a thin piece this close outside the arm is part of it: a gauntlet's flare)
         [--reduce=clean --hd_src=<original.glb>] [--charts=120] [--unwrap=MINIMUM_STRETCH] [--bake_margin=4] [--bake_extrusion=0.0015]
                               (the mesh reduced from the full original with MeshLab, needs
@@ -51,7 +55,7 @@ import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": "", "menu": "", "weld_normals": "", "lower_arms": "",
-       "reduce": "", "hd_src": "", "arm_flap": "", "charts": "120", "unwrap": "MINIMUM_STRETCH", "jpeg": "90", "nearest": "", "head_uv": "", "bake_margin": "4", "bake_extrusion": "0.0015"}
+       "reduce": "", "hd_src": "", "arm_flap": "", "charts": "120", "unwrap": "MINIMUM_STRETCH", "jpeg": "90", "nearest": "", "head_uv": "", "drop": "", "claim_hands": "", "bake_margin": "4", "bake_extrusion": "0.0015"}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -201,6 +205,22 @@ def shrink_textures(ob, px):
                     bsdf.inputs["Metallic"].default_value = 0.0
                     bsdf.inputs["Roughness"].default_value = 1.0
     LOG["textures"] = sizes
+
+
+def drop_boxes(ob):
+    """--drop: every face of the original with a corner inside any of the
+    boxes goes (on the cleaned figure, 1.45 high, facing -Y): a box round a
+    fin's loose tips takes the fin and leaves the chin it hangs from."""
+    boxes = [[float(x) for x in b.split(",")] for b in OPT["drop"].split(";") if b.strip()]
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    def inside(co):
+        return any(b[0] <= co.x <= b[1] and b[2] <= co.y <= b[3] and b[4] <= co.z <= b[5] for b in boxes)
+    gone = [f for f in bm.faces if any(inside(v.co) for v in f.verts)]
+    bmesh.ops.delete(bm, geom=gone, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
+    LOG["dropped_faces"] = LOG.get("dropped_faces", 0) + len(gone)
 
 
 def keep_high(ob):
@@ -1595,9 +1615,13 @@ def weight_render(ob, arm_of, cand):
 def main():
     ob = load()
     clean(ob)
+    if OPT["drop"]:
+        drop_boxes(ob)
     if OPT["reduce"] == "clean":
         # before the rest pose moves the arms: high and low still line up
         high = keep_high(ob)
+        if OPT["drop"]:
+            drop_boxes(high)   # the colour is baked from it: the same faces go
         reduce_clean(ob, high, int(OPT["tris"]))
         # S53 (A4): the joints and the arms' slices from the mesh that is
         # skinned (the 80k source only places the figure)
@@ -1616,6 +1640,11 @@ def main():
         debug_render(ob, None, J)
     rig = build_armature(B)
     skin(ob, rig, J)
+    if OPT["claim_hands"]:
+        # S54: where the original's hand rests on its skirt or a bag, Meshy
+        # fused the finger tips to the cloth: they stayed with the body and
+        # tore into shards when the hand moved. The hand takes what it holds.
+        claim_arm_verts(ob, rig)
     if OPT["lower_arms"]:
         lower_arms(ob, rig, J, float(OPT["lower_arms"]))
     # the feet-on-the-floor fix measures from the sole: heel under the

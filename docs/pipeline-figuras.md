@@ -62,8 +62,10 @@ Una entrada por figura, con el nombre de salida como clave:
   (invocaciones: también criaturas) o un script que modela la figura él
   mismo (`crystal_8010.py`, sin `src`).
 - `src`: la carpeta del original en `PIPPOP_MESHY`.
-- `hd_src`: el original completo en `PIPPOP_MESHY_HD`; con
-  `reduce=clean` la malla y el color salen de él.
+- `hd_src`: el original completo, en `PIPPOP_MESHY_HD/<hd_src>.glb` (los
+  coaches, 676k) o, si no está ahí, la carpeta `<hd_src>` de
+  `PIPPOP_MESHY` (los luchadores: su original de Meshy, 16–21k, ya es el
+  completo); con `reduce=clean` la malla y el color salen de él.
 - `joints: true`: hay correcciones de huesos en `art/characters/joints/<src>.json`.
 - `opts`: las opciones de abajo, como texto.
 
@@ -192,6 +194,8 @@ Siempre antes de enseñar nada (y la QA de Blender, skill
 | esquirlas naranjas en las costillas | sombras propias en el visor de la figura (está sola, la sombra solo caía sobre ella) | ya resuelto: las figuras no proyectan sombra (S53) |
 | una franja o mancha que no es del modelo | Meshy la pintó en la textura | pintarla fuera antes del rehorneado (S53, el muslo de la mujer) |
 | piel teñida entre los mechones, o pelo teñido como piel | la máscara toma por piel la piel rodeada de pelo en las puntas | ya resuelto en `coach_masks.py` (S53); revisar con `coach_masks.py --sheet=` |
+| una aleta fina colgando de la barbilla (Osamodas m) | Meshy la dejó en el original | `--drop=x0,x1,y0,y1,z0,z1` (caras con una esquina en la caja, en la figura limpia: 1,45 de alto, mirando a −Y); para encontrarla, renderizar la figura limpia con una cuadrícula (S54) |
+| puntas de tela bajo los dedos que asoman como astillas al mover la mano (Feca m, Anutrof f) | en el original la mano descansa sobre la falda o las bolsas y Meshy fundió los dedos con ellas | `--claim_hands=1` (S54): la mano se lleva lo que sujeta (la falda se pellizca, las bolsas van con ella) |
 | la costura del brazo se abre en pinchos oscuros | una normal y unos pesos por lado de la costura | `--weld_normals=1` |
 | el coach anda con los brazos abiertos | original en pose A | `--lower_arms=10` |
 | un pie se inclina dentro de la bota o gira en vez de apoyarse | el pie seguía a la espinilla; el ajuste de suelas solo bajaba la figura entera | ya resuelto: `rig_anims.plant()` planta cada pie que pisa en cada fotograma (S54); medirlo con `feet_check.py` |
@@ -207,8 +211,9 @@ nuevo): mejor un parámetro en la función (S54).
 
 1. El dueño deja el GLB de Meshy en `PIPPOP_MESHY/<carpeta>/` (y el
    completo en `PIPPOP_MESHY_HD` si lo hay).
-2. Una entrada en `figures.json` copiando la de una figura parecida;
-   `tris=5000`, `tex=1024` para un luchador.
+2. Una entrada en `figures.json` copiando la de una figura parecida:
+   `hd_src` igual a `src` y `reduce=clean`, `nearest=1`, `head_uv=2` (S54,
+   todos los luchadores); `tris=5000`, `tex=1024` por defecto.
 3. `python3 tools/art/build.py <nombre>` con `--debug` en las opciones la
    primera vez, y mirar huesos y pesos.
 4. Si algo cae mal: `joints/<src>.json` o la opción de la tabla de fallos;

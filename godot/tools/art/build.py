@@ -313,13 +313,23 @@ def build_garments(a):
 
 # ------------------------------------------------------------ figures
 
+def hd_original(name):
+    """The full original a figure's "hd_src" names: PIPPOP_MESHY_HD/<name>.glb
+    (the coaches' 676k), else the Meshy folder of that name in PIPPOP_MESHY
+    (S54: a fighter's own original, 16-21k, is already its full one)."""
+    hd = os.path.join(os.path.expanduser(os.environ.get("PIPPOP_MESHY_HD", "~/codigo/capturas/s47/meshy-hd")), name + ".glb")
+    if os.path.exists(hd):
+        return hd
+    meshy = os.path.expanduser(os.environ.get("PIPPOP_MESHY", "~/codigo/capturas/s35/meshy"))
+    return os.path.join(meshy, name, name + ".glb")
+
+
 def build_figures(names, a):
     d = os.path.join(ART, "characters")
     out = os.path.join(d, "out")
     with open(os.path.join(d, "figures.json")) as f:
         figs = json.load(f)["figures"]
     meshy = os.path.expanduser(os.environ.get("PIPPOP_MESHY", "~/codigo/capturas/s35/meshy"))
-    meshy_hd = os.path.expanduser(os.environ.get("PIPPOP_MESHY_HD", "~/codigo/capturas/s47/meshy-hd"))
     st = Stamp(d)
     libs = [os.path.join(CHAR_TOOLS, f) for f in FIGURE_LIBS if os.path.exists(os.path.join(CHAR_TOOLS, f))]
     blender = os.environ.get("BLENDER") or shutil.which("blender")
@@ -349,7 +359,7 @@ def build_figures(names, a):
         if "hd_src" in fig:
             # S53 (A4): the full Meshy original the src was reduced from;
             # --reduce=clean makes the mesh and the colour from it
-            hd = os.path.join(meshy_hd, fig["hd_src"] + ".glb")
+            hd = hd_original(fig["hd_src"])
             if not os.path.exists(hd):
                 log(f"warning: {name}: no original at {hd} (PIPPOP_MESHY_HD), kept as built")
                 continue
@@ -411,7 +421,6 @@ def build_portraits(a):
     out = os.path.join(d, "out")
     with open(os.path.join(d, "figures.json")) as f:
         figs = json.load(f)["figures"]
-    meshy_hd = os.path.expanduser(os.environ.get("PIPPOP_MESHY_HD", "~/codigo/capturas/s47/meshy-hd"))
     st = Stamp(d)
     blender = os.environ.get("BLENDER") or shutil.which("blender")
     pose = os.path.join(CHAR_TOOLS, "coach_hd_pose.py")
@@ -423,7 +432,7 @@ def build_portraits(a):
         fig = figs[c]
         glb = os.path.join(out, c + ".glb")
         mask = os.path.join(out, c + "_mask.png")
-        hd = os.path.join(meshy_hd, fig.get("hd_src", "") + ".glb")
+        hd = hd_original(fig.get("hd_src", ""))
         if not (os.path.exists(glb) and os.path.exists(mask) and os.path.exists(hd)):
             log(f"warning: portraits: {c} lacks its figure, mask or original (PIPPOP_MESHY_HD), skipped")
             continue

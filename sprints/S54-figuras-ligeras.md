@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; el 4 en curso: el lobby con la imagen; la ropa, en prueba (hoy contra objeto propio), a la espera del dueño
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; el 4a hecho (lobby), la ropa aparcada; el 5 (luchadores) hecho
 
 ## Por qué
 
@@ -436,3 +436,51 @@ la ropa fuera un objeto adicional?».
   sigue saliendo del cuerpo de Meshy, y por eso hereda sus bultos.
   Triángulos: 4–15k por prenda (hoy 600–1900); para el 3D de combate
   habría que reducirla.
+
+**El dueño (2026-11-27):** «no me convence nada, así que hagamos una cosa:
+pasa el coach male sin ropa y pasa a los luchadores, después hablamos de
+ropa». Y a la pregunta de qué hacer con la ropa mientras: «por ahora no
+tocamos la ropa, solo hagamos el remallado y después yo elijo/depuramos qué
+hacer con la ropa». La ropa queda como está; la prueba, sin build.
+
+### Paso 5 — los luchadores con la reducción limpia (2026-11-27)
+
+- **Antes:** el original de Meshy de cada luchador (16–21k triángulos, una
+  textura PNG de 2–4 MB) se reducía a 5k con el diezmado de Blender, el que
+  deja astillas, y se quedaba con la textura de Meshy reducida.
+- **Ahora:** los 24 con la reducción limpia (MeshLab, UV nuevas, color
+  rehorneado del original), como el coach: `figures.json`
+  `"hd_src": <su src>`, `reduce=clean`, `nearest=1`, `head_uv=2`. El build
+  busca el original completo en `PIPPOP_MESHY_HD` y, si no está, en la
+  carpeta de Meshy de ese nombre (`build.hd_original()`). Las invocaciones
+  siguen como estaban (`meshy_summon.py` no tiene la reducción limpia).
+- **Piloto:** Feca f y m (`20`/`21-luchador-feca_*.png`), luego los 24
+  (`20`–`43-luchador-*.png`: de cerca y a tamaño de combate, hoy y nuevo).
+  Revisados uno a uno: ninguno sale peor; se van las motas y rayas oscuras
+  del diezmado (el agujero negro en el pelo de la Aniripsa f, las manchas
+  en las piernas de varios, los trazos rotos de tinta en el pelo).
+- **Medidas:** 5000 triángulos cada uno; los 24 GLB, 19 → 17 MB.
+  Brazos parecidos a los dos lados salvo la Yopuka f (142/340), que ya
+  estaba así (el arma en una mano); la Anutrof f usa el respaldo de pesos
+  en 439 vértices, como antes (462).
+- **Pies:** todos ≤ 3° salvo `walk` y dos golpes a 15,5°: la Sacrogrito f
+  (ya estaba) y el Yopuka m (nuevo): el talón de atrás que se levanta en la
+  estocada, se ve natural (hoja de lado mirada).
+- **El dueño:** «osamodas_m mira la barbilla, feca_m los dedos y
+  anutrof_f las manos». Los tres ya venían del original de Meshy:
+  - Osamodas m: una aleta fina colgando de la barbilla. Nueva opción
+    `--drop` (caras con una esquina dentro de una caja, en la figura
+    limpia), con su caja en `figures.json`: 14 caras, la barbilla limpia.
+  - Feca m y Anutrof f: en el original la mano descansa sobre la falda o
+    las bolsas, y Meshy fundió los dedos con ellas; en el juego asoman
+    puntas de tela. Probé tres arreglos (menos margen en la mano, mezclar
+    los pesos alrededor, `claim_arm_verts` para que la mano se lleve lo que
+    toca: el último funciona, la mano sujeta la falda o las bolsas). El
+    dueño: «ignora el mensaje anterior … intenta arreglar esa cuña del
+    osa». Y después: «sí, el arreglo lo has hecho bien, lo único que mis
+    mensajes no llegaron a tiempo … es mejor hacerlo bien». Se quedan los
+    dos: `--drop` en Osamodas m y `--claim_hands=1` en Feca m y Anutrof f
+    (los otros dos intentos no cambiaban nada y no se quedan).
+- **Comprobado:** `build.py` entero (887 s, `check.py` 0 fallos), los pies
+  de los tres, `run_tests.sh` 1685/0, `fight_smoke`, `summon_smoke`,
+  `coach_look_smoke`, `hub_smoke`, `first_play_smoke` (14/14).

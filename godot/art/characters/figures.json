@@ -4,158 +4,273 @@
   "feca_f": {
    "script": "meshy_fighter.py",
    "src": "01_feca_f",
-   "opts": {}
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "hd_src": "01_feca_f"
   },
   "feca_m": {
    "script": "meshy_fighter.py",
    "src": "01_feca_m",
-   "opts": {}
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2",
+    "claim_hands": "1"
+   },
+   "hd_src": "01_feca_m"
   },
   "osamodas_f": {
    "script": "meshy_fighter.py",
    "src": "02_osamodas_f",
-   "opts": {}
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "hd_src": "02_osamodas_f"
   },
   "osamodas_m": {
    "script": "meshy_fighter.py",
    "src": "02_osamodas_m",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2",
+    "drop": "-0.04,-0.03,-0.075,-0.06,1.06,1.12"
+   },
+   "joints": true,
+   "hd_src": "02_osamodas_m"
   },
   "anutrof_f": {
    "script": "meshy_fighter.py",
    "src": "03_anutrof_f",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2",
+    "claim_hands": "1"
+   },
+   "joints": true,
+   "hd_src": "03_anutrof_f"
   },
   "anutrof_m": {
    "script": "meshy_fighter.py",
    "src": "03_anutrof_m",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "03_anutrof_m"
   },
   "sram_f": {
    "script": "meshy_fighter.py",
    "src": "04_sram_f",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "04_sram_f"
   },
   "sram_m": {
    "script": "meshy_fighter.py",
    "src": "04_sram_m",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "04_sram_m"
   },
   "xelor_f": {
    "script": "meshy_fighter.py",
    "src": "05_xelor_f",
    "opts": {
-    "arm_slack": "0.06"
+    "arm_slack": "0.06",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
    },
-   "joints": true
+   "joints": true,
+   "hd_src": "05_xelor_f"
   },
   "xelor_m": {
    "script": "meshy_fighter.py",
    "src": "05_xelor_m",
    "opts": {
-    "arm_slack": "0.06"
+    "arm_slack": "0.06",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
    },
-   "joints": true
+   "joints": true,
+   "hd_src": "05_xelor_m"
   },
   "zurcarak_f": {
    "script": "meshy_fighter.py",
    "src": "06_zurcarak_f",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "06_zurcarak_f"
   },
   "zurcarak_m": {
    "script": "meshy_fighter.py",
    "src": "06_zurcarak_m",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "06_zurcarak_m"
   },
   "aniripsa_f": {
    "script": "meshy_fighter.py",
    "src": "07_aniripsa_f",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "07_aniripsa_f"
   },
   "aniripsa_m": {
    "script": "meshy_fighter.py",
    "src": "07_aniripsa_m",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "07_aniripsa_m"
   },
   "yopuka_f": {
    "script": "meshy_fighter.py",
    "src": "08_yopuka_f",
    "opts": {
-    "drop_weapon": "1"
+    "drop_weapon": "1",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
    },
-   "joints": true
+   "joints": true,
+   "hd_src": "08_yopuka_f"
   },
   "yopuka_m": {
    "script": "meshy_fighter.py",
    "src": "08_yopuka_m",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "08_yopuka_m"
   },
   "ocra_f": {
    "script": "meshy_fighter.py",
    "src": "09_ocra_f",
    "opts": {
-    "arm_slack": "0.06"
+    "arm_slack": "0.06",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
    },
-   "joints": true
+   "joints": true,
+   "hd_src": "09_ocra_f"
   },
   "ocra_m": {
    "script": "meshy_fighter.py",
    "src": "09_ocra_m",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "09_ocra_m"
   },
   "sadida_f": {
    "script": "meshy_fighter.py",
    "src": "10_sadida_f",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "10_sadida_f"
   },
   "sadida_m": {
    "script": "meshy_fighter.py",
    "src": "10_sadida_m",
    "opts": {
-    "arm_slack": "0.06"
+    "arm_slack": "0.06",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
    },
-   "joints": true
+   "joints": true,
+   "hd_src": "10_sadida_m"
   },
   "sacrogrito_f": {
    "script": "meshy_fighter.py",
    "src": "11_sacrogrito_f",
-   "opts": {},
-   "joints": true
+   "opts": {
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "joints": true,
+   "hd_src": "11_sacrogrito_f"
   },
   "sacrogrito_m": {
    "script": "meshy_fighter.py",
    "src": "11_sacrogrito_m",
    "opts": {
-    "arm_slack": "0.06"
+    "arm_slack": "0.06",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
    },
-   "joints": true
+   "joints": true,
+   "hd_src": "11_sacrogrito_m"
   },
   "pandawa_f": {
    "script": "meshy_fighter.py",
    "src": "12_pandawa_f",
    "opts": {
-    "sleeve": "3.5"
-   }
+    "sleeve": "3.5",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
+   },
+   "hd_src": "12_pandawa_f"
   },
   "pandawa_m": {
    "script": "meshy_fighter.py",
    "src": "12_pandawa_m",
    "opts": {
-    "thumb": "0.01"
+    "thumb": "0.01",
+    "reduce": "clean",
+    "nearest": "1",
+    "head_uv": "2"
    },
-   "joints": true
+   "joints": true,
+   "hd_src": "12_pandawa_m"
   },
   "coach_7000": {
    "script": "meshy_fighter.py",

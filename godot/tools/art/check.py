@@ -255,8 +255,7 @@ def stale_figure(name, fig):
             return False   # can't tell without the original: kept as built
         extra += f"|{os.path.getsize(src)}"
     if "hd_src" in fig:   # as build_figures() hashes it
-        hd = os.path.join(os.path.expanduser(os.environ.get("PIPPOP_MESHY_HD", "~/codigo/capturas/s47/meshy-hd")),
-                          fig["hd_src"] + ".glb")
+        hd = build.hd_original(fig["hd_src"])
         if not os.path.exists(hd):
             return False
         extra += f"|{os.path.getsize(hd)}"
