@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🟡 paso 0 hecho (2026-11-27), esperando el visto bueno del dueño
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): paso 0 aprobado, paso 1 hecho
 
 ## Por qué
 
@@ -187,5 +187,33 @@ brillos pintados en la textura del original.
 **Corrección del dueño (2026-11-27):** «al final dijimos de dejarlo
 máximo 5k». Quedarse con el 3D de 40k no es una opción: el 3D va a 5k
 como mucho, y la prueba compara la imagen con un 3D que va a perder
-detalle, no con el que se queda. **Espera:** el visto bueno para seguir
-con los pasos 1–5.
+detalle, no con el que se queda. Visto bueno para los pasos 1–5
+(«siii», 2026-11-27).
+
+### Paso 1 — el documento (2026-11-27)
+
+[`docs/pipeline-figuras.md`](../docs/pipeline-figuras.md): el esquema de
+Meshy al juego, lo que hace falta fuera del repo, la receta de
+`figures.json`, cada paso de `meshy_fighter.py` con sus opciones, las
+máscaras, las prendas y la imagen de los menús, los presupuestos de
+`check.py`, cómo revisar (hojas), los fallos conocidos (con un enlace a la
+tabla completa de S35b) y una lista para meter una figura nueva.
+
+## Pregunta del dueño (2026-11-27): «¿y si el coach tiene ropa? ¿mejor quitamos el coach del hub?»
+
+- **La ropa en la imagen:** cada prenda se renderiza puesta sobre el
+  original posado, en su propia capa con su máscara; el cuerpo tapa lo
+  que queda detrás (una capa solo tiene lo que se ve de esa prenda), y en
+  el menú se apilan por ranura (falda, pantalón, botas, torso, marca).
+  Las prendas son las caras del propio cuerpo empujadas hacia fuera, así
+  que encajan con la imagen sin ajustes. 104 prendas por coach, cada una
+  un render de segundos y unos KB.
+- **Lo que se pierde en el lobby:** hoy el coach gira con las flechas y
+  hace gestos (saludo, pose). Con una imagen de frente, ni gira ni
+  gesticula, salvo que se rendericen esos gestos como fotogramas (y cada
+  prenda con ellos).
+- **Mi opinión:** no quitarlo. El lobby es el único sitio donde el
+  jugador ve siempre a su coach vestido, y la ropa es premio: sin el coach
+  en el hub, la ropa solo se ve en Equipo del coach. Lo dejaría como
+  imagen de frente, quitando las flechas de girar, con el reposo animado
+  y los gestos como bocadillo y un saltito. Decide el dueño.
