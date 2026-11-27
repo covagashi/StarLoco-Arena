@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–2 hechos; el 3, probado aparte (40k contra 5k), a la espera de que el dueño compare las hojas
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; sigue el 4 (las imágenes de los menús)
 
 ## Por qué
 
@@ -314,3 +314,35 @@ Lo siguiente, si el dueño da el visto bueno: probar el mapa de normales y
 las cejas (más textura en la cara, o 1024² con `--nearest`), la hoja de
 animaciones difíciles, y pasarlo a `figures.json` con las prendas
 reducidas a juego y el tope de `check.py` de los luchadores.
+
+**Visto bueno del dueño (2026-11-27):** «doy mi ok». Hecho:
+
+- **Las cejas:** no las pierde la textura sino la malla: a 5k el flequillo
+  baja hasta el ojo y tapa la frente donde estaban. Nueva opción
+  `--head_uv=2` en `meshy_fighter.py` (las piezas de la cabeza con el doble
+  de téxeles por lado, mismo peso): los ojos y la boca más nítidos; las
+  cejas siguen tapadas. De cerca solo se verá la imagen del paso 4.
+- **Mapa de normales: no.** El shader toon no lee ninguno (habría que
+  añadirlo con tangentes y otra textura) y en combate, a 100–150 px, no se
+  vería; las bandas del toon harían escalones con el relieve fino.
+- **Pesos de la mujer:** la hoja de animaciones difíciles
+  (`12`/`13-coach-5k-mujer-animaciones-*.png`: golpe, lanzar, tirar,
+  cargar, celebrar, saludo, pose, morir; 40k y 5k fila con fila) sale
+  igual; los 1125 vértices del respaldo no se notan.
+- **Receta** (`figures.json`): los dos coaches `tris=5000`, `tex=1024`,
+  `head_uv=2`, sin `jpeg=85` (vuelve al 90 de siempre). `check.py`: el
+  coach con el tope de los luchadores (5 000, 1024², 1200 KB).
+- **Prendas:** salen del cuerpo, así que bajan solas: 104 por coach,
+  11 MB → 5,5 MB por coach; la mayor, 2 490 triángulos (tope 3 500).
+
+| Por coach | 40k | 5k |
+|---|---|---|
+| GLB hombre / mujer | 2477 / 2381 KB | 826 / 787 KB |
+| Prendas (las 104) | ~11 MB | 5,5 / 5,7 MB |
+| Textura en vídeo (RGBA con mipmaps, calculado) | ~22 MB | ~5,6 MB |
+
+- **Comprobado:** `build.py` entero (70 s, `check.py` 0 fallos),
+  `run_tests.sh` 1684/0, `coach_look_smoke`, `coach_turn_smoke` y
+  `first_play_smoke` (14/14). `feet_check.py`: los dos ≤ 3° salvo `walk`
+  (el hombre 27,4°, igual que a 40k: el talón al despegar).
+- Hojas `07`–`11` rehechas con lo que va al juego.

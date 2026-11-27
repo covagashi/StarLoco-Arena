@@ -45,12 +45,12 @@ FIG_TEX = 1024
 FIG_KB = 1200
 FIG_HEIGHT = 1.45
 # S47: the two coaches, from the owner's HD Meshy originals (S53: reduced
-# from the full ones, meshy_fighter.py --reduce=clean), seen up close in menus.
-COACH_TRIS = 40000
-COACH_KB = 2600
-# S53 (A4): a coach's colour is baked from the full original onto fresh UVs,
-# half of a 2048² texture (Meshy's own atlas filled two thirds of a 1024²).
-COACH_TEX = 2048
+# from the full ones, meshy_fighter.py --reduce=clean). S54: in the menus
+# they are a picture of the full original, so the 3D is a fighter's again
+# (it was 40,000 triangles, a 2048² texture and 2600 KB).
+COACH_TRIS = FIG_TRIS
+COACH_KB = FIG_KB
+COACH_TEX = FIG_TEX
 # An equipment piece (S35c): small, flat-coloured kiln, no texture.
 EQUIP_TRIS = 1500
 EQUIP_KB = 256

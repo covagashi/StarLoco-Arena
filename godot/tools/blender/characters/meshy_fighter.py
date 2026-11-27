@@ -13,6 +13,8 @@ rig_anims.py.
         [--nearest=1]         (--reduce=clean: each texel's colour from the original's nearest point
                                where that surface faces the same way; the rays' colour elsewhere)
         [--jpeg=90]           (the texture's JPEG quality: S53, the coaches' 2048² at 85 fits 2600 KB)
+        [--head_uv=2]         (--reduce=clean: the charts above the neck get this many times the
+                               texels per side: the face's brows and eyes at 1024²)
         [--arm_flap=0.03]     (a thin piece this close outside the arm is part of it: a gauntlet's flare)
         [--reduce=clean --hd_src=<original.glb>] [--charts=120] [--unwrap=MINIMUM_STRETCH] [--bake_margin=4] [--bake_extrusion=0.0015]
                               (the mesh reduced from the full original with MeshLab, needs
@@ -49,7 +51,7 @@ import rig_anims  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OPT = {"tris": "5000", "tex": "1024", "joints": "", "arm_slack": "0.03", "thumb": "0", "sleeve": "2.2", "cut": "", "debug": "", "overhead_out": "40", "drop_weapon": "", "menu": "", "weld_normals": "", "lower_arms": "",
-       "reduce": "", "hd_src": "", "arm_flap": "", "charts": "120", "unwrap": "MINIMUM_STRETCH", "jpeg": "90", "nearest": "", "bake_margin": "4", "bake_extrusion": "0.0015"}
+       "reduce": "", "hd_src": "", "arm_flap": "", "charts": "120", "unwrap": "MINIMUM_STRETCH", "jpeg": "90", "nearest": "", "head_uv": "", "bake_margin": "4", "bake_extrusion": "0.0015"}
 POS = []
 for a in argv:
     if a.startswith("--") and "=" in a:
@@ -429,14 +431,16 @@ def charts(bm, k, w=6.0, iters=4, minf=12):
     return reg, r
 
 
-def unwrap_charts(ob, px):
+def unwrap_charts(ob, px, neck=None):
     """S53 (A4): fresh UVs for the reduced mesh: compact charts (charts()),
     their borders the seams, each unwrapped (--unwrap, Minimum Stretch: Angle
     Based crushed 770 faces to under a tenth of their texels, smeared
     colour; it keeps 11), all at one texel density, packed --bake_margin px
     apart. (Smart UV Project cut the mesh into 1400 islands and filled a
     third of the texture; Meshy's own islands, carried over from the
-    original, are jagged and filled 44 %.)"""
+    original, are jagged and filled 44 %.) S54: --head_uv=k gives the
+    charts whose middle is above the neck k times the texels per side (at
+    1024² a coach's brows were a texel wide and went)."""
     me = ob.data
     bm = bmesh.new()
     bm.from_mesh(me)
@@ -473,6 +477,26 @@ def unwrap_charts(ob, px):
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.select_all(action="SELECT")
     bpy.ops.uv.average_islands_scale()
+    if OPT["head_uv"] and neck is not None:
+        k = float(OPT["head_uv"])
+        bm = bmesh.from_edit_mesh(me)
+        bm.faces.ensure_lookup_table()
+        uvl = bm.loops.layers.uv.active
+        by = {}
+        for f in bm.faces:
+            by.setdefault(reg[f.index], []).append(f)
+        grown = 0
+        for fs in by.values():
+            z = sum(f.calc_center_median().z * f.calc_area() for f in fs) / max(sum(f.calc_area() for f in fs), 1e-12)
+            if z < neck:
+                continue
+            ls = [l for f in fs for l in f.loops]
+            c = sum((l[uvl].uv for l in ls), Vector((0.0, 0.0))) / len(ls)
+            for l in ls:
+                l[uvl].uv = c + (l[uvl].uv - c) * k
+            grown += 1
+        bmesh.update_edit_mesh(me)
+        LOG["head_charts"] = grown
     bpy.ops.uv.pack_islands(rotate=True, rotate_method="CARDINAL", shape_method="CONCAVE",
                             margin_method="FRACTION", margin=int(OPT["bake_margin"]) / px)
     bpy.ops.object.mode_set(mode="OBJECT")
@@ -1578,7 +1602,7 @@ def main():
         # S53 (A4): the joints and the arms' slices from the mesh that is
         # skinned (the 80k source only places the figure)
         J = find_joints(ob)
-        unwrap_charts(ob, int(OPT["tex"]))
+        unwrap_charts(ob, int(OPT["tex"]), J["neck"].z)
         bake_colour(ob, high, int(OPT["tex"]))
         hm = high.data
         bpy.data.objects.remove(high)

@@ -52,7 +52,7 @@ Una entrada por figura, con el nombre de salida como clave:
   "script": "meshy_fighter.py",
   "src": "coach_7001_f_hd",
   "hd_src": "coach_7001_f_hd",
-  "opts": {"tris": "40000", "reduce": "clean", "tex": "2048", "lower_arms": "10", "menu": "1", …},
+  "opts": {"tris": "5000", "reduce": "clean", "tex": "1024", "head_uv": "2", "lower_arms": "10", "menu": "1", …},
   "joints": true
 }
 ```
@@ -88,7 +88,7 @@ build falla.
 | Paso | Qué hace | Opciones |
 |---|---|---|
 | Limpiar | une las mallas, suelda las costuras que deja Meshy, quita migas, escala a **1,45** de alto, pies en z=0 y centrados, mirando a −Y | — |
-| Reducir | `--reduce=clean`: la malla sale del original completo, soldada y reducida con MeshLab (sin astillas), con **UV nuevas** y el color del original **rehorneado**; sin él, el decimado de Blender y la textura de Meshy reducida | `--tris` (5000), `--tex` (1024), `--jpeg` (90), `--nearest=1` (cada téxel toma el color del punto más cercano que mira igual), `--charts`, `--unwrap`, `--bake_margin`, `--bake_extrusion` |
+| Reducir | `--reduce=clean`: la malla sale del original completo, soldada y reducida con MeshLab (sin astillas), con **UV nuevas** y el color del original **rehorneado**; sin él, el decimado de Blender y la textura de Meshy reducida | `--tris` (5000), `--tex` (1024), `--jpeg` (90), `--nearest=1` (cada téxel toma el color del punto más cercano que mira igual), `--head_uv=2` (las piezas de la cabeza con el doble de téxeles por lado: los ojos a 1024²), `--charts`, `--unwrap`, `--bake_margin`, `--bake_extrusion` |
 | Articulaciones | busca piernas, entrepierna, brazos, axila, cuello en cortes horizontales; un JSON de `joints/` corrige las que caen mal | `--joints`, `--debug=<dir>` (cortes y radiografía de huesos) |
 | Huesos | los 20 huesos comunes (`fighter1.BONES`) | — |
 | Pesos | pesos de calor de Blender; cada vértice se queda solo con los huesos cercanos (máx. 4); por encima del cuello, con la cabeza; el brazo se corta del cuerpo en la axila | `--arm_slack` (0,03; 0,06 con armadura en el brazo), `--arm_flap` (una pieza fina pegada fuera del brazo es brazo: el borde de un guante), `--sleeve` (2,2), `--thumb`, `--cut=<z>` |
@@ -133,11 +133,11 @@ python3 -I tools/art/check.py
 | Figura | Triángulos | Huesos | Textura | GLB |
 |---|---|---|---|---|
 | luchador / invocación | 5 000 | 20 | 1024² | 1200 KB |
-| coach (hasta S54) | 40 000 | 20 | 2048² | 2600 KB |
+| coach | 5 000 | 20 | 1024² | 1200 KB |
 | prenda de coach | 3 500 | — | — | 256 KB |
 | pieza de equipo | 1 500 | — | — | 256 KB |
 
-S54 baja el coach de combate al presupuesto de los luchadores (máximo 5k).
+Desde S54 el coach tiene el presupuesto de los luchadores (antes 40 000, 2048² y 2600 KB): en los menús va la imagen del original.
 Además: 1,45 de alto con los pies en el suelo y centrados, las 10
 animaciones, que cada figura que dibuja `Fighter3D` tenga receta y que los
 coaches tengan máscara.

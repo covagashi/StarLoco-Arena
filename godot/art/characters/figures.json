@@ -162,15 +162,15 @@
    "src": "coach_7000_m_hd",
    "hd_src": "coach_7000_m_hd",
    "opts": {
-    "tris": "40000",
+    "tris": "5000",
     "menu": "1",
     "weld_normals": "1",
     "lower_arms": "10",
     "reduce": "clean",
-    "tex": "2048",
+    "tex": "1024",
     "arm_flap": "0.03",
-    "jpeg": "85",
-    "nearest": "1"
+    "nearest": "1",
+    "head_uv": "2"
    }
   },
   "coach_7001": {
@@ -178,16 +178,16 @@
    "src": "coach_7001_f_hd",
    "hd_src": "coach_7001_f_hd",
    "opts": {
-    "tris": "40000",
+    "tris": "5000",
     "arm_slack": "0.06",
     "menu": "1",
     "weld_normals": "1",
     "lower_arms": "10",
     "reduce": "clean",
-    "tex": "2048",
+    "tex": "1024",
     "arm_flap": "0.03",
-    "jpeg": "85",
-    "nearest": "1"
+    "nearest": "1",
+    "head_uv": "2"
    }
   },
   "summon_8001": {
