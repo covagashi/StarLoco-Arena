@@ -1,6 +1,6 @@
 # S54 — Figuras ligeras: 3D para jugar, imagen para mirar
 
-**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; el 4 en curso: el lobby con la imagen, a la espera de que el dueño mire su hoja
+**Planificado:** 2026-11-26 · **Hito:** M5 — Release · **Tamaño:** L · **Estado:** 🔵 en curso (2026-11-27): pasos 0–3 hechos; el 4 en curso: el lobby con la imagen; la ropa, en prueba (hoy contra objeto propio), a la espera del dueño
 
 ## Por qué
 
@@ -406,3 +406,33 @@ brillo); las prendas vivas en 2D (la gelatina tiembla, el oro brilla, la
 llama del estandarte); la creación (cortada como el lobby), Equipo del
 coach (entera) y la subida de nivel; y entonces sacar el 3D del coach y
 sus prendas del arranque de la web (hoy van las dos cosas).
+
+### Prueba: la ropa como hoy o como objeto propio (2026-11-27)
+
+El dueño, tras ver las hojas del lobby: «es verdad que la ropa se ve mal,
+¿podrías hacer la prueba de cómo lo hacemos actualmente y de cómo sería si
+la ropa fuera un objeto adicional?».
+
+- **Hoy:** cada prenda son las caras del cuerpo de 5k de su zona,
+  empujadas hacia fuera. Copia los bultos del cuerpo (el top del original
+  queda marcado debajo de la camiseta), el borde sigue los triángulos (en
+  escalera) y sale tan facetada como el cuerpo de 5k.
+- **Objeto propio (prueba, sin tocar el build):** la misma zona como punto
+  de partida, pero luego tratada como una tela aparte: sus bordes alisados
+  a lo largo, la tela entera relajada (olvida los bultos), empujada de
+  nuevo fuera del cuerpo donde se mete, subdividida, y las franjas de color
+  cortadas al final, rectas. Script en `~/codigo/capturas/s54/ropa/`
+  (`garment_object.py`, una copia de `coach_garment.py` con `tailor()`).
+  Tres intentos: el primero (relajar solo hacia fuera) salió peor; el
+  tercero es el de las hojas.
+- **Hojas:** `17-ropa-hoy-vs-objeto-mujer.png`,
+  `18-ropa-hoy-vs-objeto-hombre.png` (arriba y pantalón kepika, el traje
+  kepika entero, top de gelatina con pantalón jalabol) y
+  `19-ropa-de-cerca-mujer.png`.
+- **Lo que veo:** mejora el borde de arriba (sin escalera) y las franjas
+  salen rectas; quedan sombras de bultos en el pecho, un agujero pequeño, el
+  borde del cinturón arrugado, y el pantalón jalabol pierde su forma
+  abombada (el relajado se la come). No es una mejora clara: la prenda
+  sigue saliendo del cuerpo de Meshy, y por eso hereda sus bultos.
+  Triángulos: 4–15k por prenda (hoy 600–1900); para el 3D de combate
+  habría que reducirla.
