@@ -96,3 +96,32 @@ nada en el build):
 S54 sigue abierto por lo que no es ropa: el 3D del coach fuera del
 arranque de la web y las medidas, las invocaciones con la reducción limpia,
 los pies que quedan y la partida entera en web.
+
+## Para retomar (2026-11-27, el dueño hace /clear)
+
+El dueño: «todo ok, ahora hago clear y hacemos los ítems 1 a 1 usando el
+geoset + malla … usando la skill». **El método:** cada prenda con la skill
+`blender-clothing` (`~/.claude/skills/blender-clothing/scripts/garment.py`)
+como geoset + malla: la malla de la prenda hecha del cuerpo con la skill, y
+la parte del cuerpo que tapa, fuera (su `--hide-body`). Prenda a prenda,
+con su hoja y el visto bueno del dueño antes de la siguiente.
+
+Lo que ya hay de las pruebas de S54 (todo en `~/codigo/capturas/s54/ropa/`,
+nada en el build):
+
+- `hd_clothes.py`: la prenda hecha del original de 676k con `garment.py`
+  (la zona = lo que tapa la prenda de hoy, holgura 6 mm, pesos de los
+  huesos, la piel tapada oculta); sin grosor (`THICK=0`: el `Solidify`
+  explota en las caras diminutas del original; limpiarlas antes).
+- `cloth_pose_geo.py`: posa el original y le quita las caras bajo una
+  prenda (`GEOSET=<prenda.glb>,…`).
+- `subdiv.py`: la tela de una prenda subdividida, los cuernos sin tocar.
+- `coach_portrait_hdc.gd` / `coach_portrait_geo.gd`: el renderizador de la
+  imagen con esas prendas (`--static=`, `--geoset=`, `--paint=`).
+- Hojas: `44`–`47`. Lo que quedó mal: bordes de color borrosos (copiados
+  de la prenda de 5k: pintar con la receta de `garments.json`), una
+  rendija en la cadera, el borde del top del original asomando.
+
+S54 sigue abierto por lo que no es ropa: el 3D del coach fuera del
+arranque de la web y las medidas, las invocaciones con la reducción limpia,
+los pies que quedan y la partida entera en web.
