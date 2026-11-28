@@ -198,3 +198,18 @@ varias prendas en una pasada). Dos arreglos en `hd_garment.py`:
 Hoja: `~/codigo/capturas/s55/04-pants_kepika-{mujer,hombre}.png`. 8 300–8 600
 triángulos. Queda un poco de barriga entre el top y el pantalón en la mujer
 (el top es corto; hoy se solapan).
+
+**Prenda 2 aprobada** (el dueño: «continua»).
+
+## Prenda 3 — botas kepika (`boots_kepika`) (2026-11-28)
+
+Con el arriba y el pantalón (`run.sh <coach> torso_kepika,pants_kepika,boots_kepika`).
+Sin arreglos nuevos: la receta (hasta media espinilla), la tela relajada
+por encima de los dedos del hombre descalzo (la de 5k necesitaba su
+`smooth`; aquí lo hace el relajado sobre la piel), los cuernos en la
+espinilla, solo pesos de pierna. 8 400–8 600 triángulos.
+
+Hoja: `~/codigo/capturas/s55/05-boots_kepika-{mujer,hombre}.png`. Queda una
+línea fina oscura en la caña de la mujer (el borde de arriba). Las tres
+prendas en Blender: 5 min por coach antes, 28 min en esta pasada (la
+memoria del equipo, 11 GB; vigilarlo).
