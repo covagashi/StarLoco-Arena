@@ -176,3 +176,25 @@ de la sisa a lo largo del brazo se la comía. Para un top sin manga
 Hoja: `~/codigo/capturas/s55/03-torso_kepika-{mujer,hombre}.png`. Queda en el
 hombre una marca fina en el borde interior de los brazos (el canto de la
 tela asomando junto al brazo) y en la mujer el dobladillo algo ondulado.
+
+**Prenda 1 aprobada** (el dueño: «doy, ok, siguiente pieza»).
+
+## Prenda 2 — pantalón kepika (`pants_kepika`) (2026-11-28)
+
+Hecho junto con el arriba aprobado (`run.sh <coach> torso_kepika,pants_kepika`:
+varias prendas en una pasada). Dos arreglos en `hd_garment.py`:
+
+- **Las manos:** en reposo descansan contra los muslos, y los pesos por la
+  cara más cercana daban a las caderas algo del brazo: en la pose del menú
+  salían dos solapas hasta las manos. Pantalón, falda y botas no llevan
+  nunca pesos del brazo (se quitan; si no queda ninguno, los del vértice
+  de pierna más cercano).
+- **Una prenda tras otra:** los grupos de la primera (zona, piel oculta)
+  quedaban en el original y mandaban sobre sus huesos: los cuernos de la
+  segunda caían en otro sitio (en el hombre, a los tobillos). Ahora la
+  zona va en memoria y las máscaras se ponen al final; el hueso que manda
+  en una cara no cuenta los grupos propios.
+
+Hoja: `~/codigo/capturas/s55/04-pants_kepika-{mujer,hombre}.png`. 8 300–8 600
+triángulos. Queda un poco de barriga entre el top y el pantalón en la mujer
+(el top es corto; hoy se solapan).
