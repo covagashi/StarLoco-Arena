@@ -235,3 +235,165 @@ vértices con peso de mano, valles rellenos, sin piel atravesando.
 
 Siguiente al volver: la prenda 4 (otra de las 104; orden por decidir con el
 dueño) y pasar `hd_garment.py` al build cuando el método quede fijo.
+
+## Mini sprints: todas las prendas del tirón (2026-11-28)
+
+El dueño: «crea mini sprints de hacerlo todo con todas las prendas, un
+check list ya me vale. para que tu lo hagas del tirón y yo solo te diga que
+cosas no me han gustado». Cambia el modo: ya no hay visto bueno prenda a
+prenda; hago cada mini sprint entero, con sus hojas, y el dueño señala lo
+que no le gusta (se anota bajo el mini sprint y se rehace al final de él).
+
+**Cómo:** cada prenda sola sobre las dos coaches, con el método aprobado
+(`hd_garment.py`, ver prendas 1–3); hojas de pantalla, varias prendas por
+página (hoy | nueva, mujer y hombre), numeradas por mini sprint en
+`~/codigo/capturas/s55/<mini>/`. Lo que salga mal por mi lado lo arreglo
+antes de enseñarlo y lo anoto aquí.
+
+### S55a — Rapidez (antes de nada)
+
+Una prenda hoy = 5–30 min por coach (cargar y posar el original de 676k).
+Para 101 prendas: posar el original una vez por coach y hacer todas las
+prendas de un tipo en esa misma pasada, cada una con su propio cuerpo
+oculto (sus máscaras no se suman entre prendas de un mismo tipo).
+
+- [ ] `hd_garment.py`: una pasada, muchas prendas del mismo tipo, cada una con su `<prenda>_body.glb`
+- [ ] el renderizador: cada prenda con su cuerpo (`--static=` por pares)
+- [ ] `sheet.py`: página de varias prendas (hoy | nueva × mujer, hombre)
+- [ ] repetir el traje kepika con el nuevo camino y que salga igual
+
+### S55b — Arriba (26)
+
+- [ ] `torso_squire`
+- [ ] `torso_camisa`
+- [ ] `torso_locion`
+- [ ] `torso_jalatranki`
+- [ ] `torso_joroba`
+- [ ] `torso_delantal`
+- [ ] `torso_alamodaken`
+- [ ] `torso_justa`
+- [x] `torso_kepika`
+- [ ] `torso_gelatina`
+- [ ] `torso_sedforme`
+- [ ] `torso_rompedora`
+- [ ] `torso_wabbit`
+- [ ] `torso_grilembore`
+- [ ] `torso_lmental`
+- [ ] `torso_jalabol`
+- [ ] `torso_gosbaster`
+- [ ] `torso_guerra`
+- [ ] `torso_kamas`
+- [ ] `torso_superjefe`
+- [ ] `torso_lolomg`
+- [ ] `torso_wonejo`
+- [ ] `torso_samara`
+- [ ] `torso_lenosa`
+- [ ] `torso_nuboso`
+- [ ] `torso_zar`
+
+### S55c — Pantalones (20)
+
+- [ ] `pants_grilembore`
+- [ ] `pants_bombachos`
+- [ ] `pants_jalatranki`
+- [ ] `pants_greguescos`
+- [ ] `pants_salteadorillo`
+- [ ] `pants_ladilla`
+- [ ] `pants_tribuno`
+- [x] `pants_kepika`
+- [ ] `pants_gelatina`
+- [ ] `pants_sedforme`
+- [ ] `pants_rezina`
+- [ ] `pants_rompedor`
+- [ ] `pants_escudero`
+- [ ] `pants_wabbit`
+- [ ] `pants_lmental`
+- [ ] `pants_alucard`
+- [ ] `pants_jalabol`
+- [ ] `pants_superjefe`
+- [ ] `pants_lolomg`
+- [ ] `skirt_superjefe`
+
+### S55d — Botas (27)
+
+- [ ] `boots_squire`
+- [ ] `boots_botines`
+- [ ] `boots_botalabaza`
+- [ ] `boots_jalabotas`
+- [ ] `boots_babuchas`
+- [ ] `boots_claveteadas`
+- [ ] `boots_salteadorillo`
+- [ ] `boots_danadas`
+- [ ] `boots_aplastacampis`
+- [x] `boots_kepika`
+- [ ] `boots_gelatina`
+- [ ] `boots_sedforme`
+- [ ] `boots_rompedoras`
+- [ ] `boots_wabbit`
+- [ ] `boots_campeon`
+- [ ] `boots_campierrele`
+- [ ] `boots_grilembore`
+- [ ] `boots_lmental`
+- [ ] `boots_alucard`
+- [ ] `boots_jalabol`
+- [ ] `boots_stasis`
+- [ ] `boots_pio`
+- [ ] `boots_superjefe`
+- [ ] `boots_wonejo`
+- [ ] `boots_lenosas`
+- [ ] `boots_nubosas`
+- [ ] `boots_zar`
+
+### S55e — Faldas (18)
+
+Método nuevo: la falda de 5k es un tubo desde la cintura, no la piel (la
+receta `skirt()`); en HD, el tubo a la medida del original, sus caderas y
+muslos como colisión (simulación de tela de la skill: asentado y horneado)
+y los pesos de cadera a medio muslo como la de 5k.
+
+- [ ] el método, probado en `skirt_kepika`
+- [ ] `skirt_gobkool`
+- [ ] `skirt_pano`
+- [ ] `skirt_dentada`
+- [ ] `skirt_viento`
+- [ ] `skirt_sudario`
+- [ ] `skirt_tribuno`
+- [ ] `skirt_kepika`
+- [ ] `skirt_sedforme`
+- [ ] `skirt_wabbit_tail`
+- [ ] `skirt_campeon`
+- [ ] `skirt_campierrele`
+- [ ] `skirt_alucard`
+- [ ] `skirt_jalabol`
+- [ ] `skirt_kamas`
+- [ ] `skirt_gosbaster`
+- [ ] `skirt_wonejo`
+- [ ] `skirt_nuboso`
+- [ ] `skirt_lolomg`
+
+### S55f — Marcas / tatuajes (13)
+
+Método nuevo: un emblema sobre la piel (`mark()` en `coach_garment.py`); en
+HD, la piel del original alrededor del punto, a 3 mm, con el emblema.
+
+- [ ] el método, probado en `mark_kepika`
+- [ ] `mark_keltos`
+- [ ] `mark_jalatranki`
+- [ ] `mark_skull`
+- [ ] `mark_salteadorillo`
+- [ ] `mark_scars`
+- [ ] `mark_kepika`
+- [ ] `mark_sedforme`
+- [ ] `mark_claws`
+- [ ] `mark_mill`
+- [ ] `mark_paginas`
+- [ ] `mark_wings`
+- [ ] `mark_feather`
+- [ ] `mark_lolomg`
+
+### S55g — Al build y al combate
+
+- [ ] `hd_garment.py` a `godot/tools/blender/characters/` y `build.py` (las imágenes de los menús con estas prendas; sello por prenda)
+- [ ] las prendas del combate (5k): las de hoy con lo aprendido (cuello, sisa, pesos de piernas) o reducidas de estas
+- [ ] smokes y `check.py` en verde
+- [ ] la hoja de las 167 piezas rígidas (paso 6 del plan) para que el dueño diga cuáles se rehacen
