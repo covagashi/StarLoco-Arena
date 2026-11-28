@@ -154,3 +154,25 @@ hoja `~/codigo/capturas/s55/02-cuello-opciones.png` — A como estaba, B a
 oscura como ribete del escote; C deja asomar en la mujer el borde del top
 del original. Propuesta: B (`"top": 0.05` en `torso_kepika`, que también
 cambiará la prenda de 5k cuando se reconstruya).
+
+**El dueño eligió B** («el B pero arregla el top del hombre»): `"top": 0.05`
+en `torso_kepika` (`garments.json`; la de 5k cambiará con él cuando se
+reconstruya). El top del hombre tenía un mordisco en la sisa derecha: el
+original pesa al brazo la piel de su pecho bajo las hombreras, y el plano
+de la sisa a lo largo del brazo se la comía. Para un top sin manga
+(`sleeve` ≤ 0), en `hd_garment.py`:
+
+- la piel que el brazo lleva se queda si cae dentro del alcance del tronco
+  a esa altura y en esa dirección (`trunk_reach`: lo más lejos que llega la
+  piel del tronco, por centímetro y por 22,5°) y dentro de un corte
+  vertical junto al hombro, o si la deja el plano de antes; las dos reglas
+  solas fallaban en uno de los dos (un peto plano en el hombre, alas
+  colgando a los costados de la mujer, que lleva el brazo pegado);
+- esa piel del pecho toma solo los pesos del tronco y el hombro (con los
+  del brazo, la tela se estiraba en láminas hasta el codo);
+- la piel del propio brazo no se oculta (su cara interior mira a la tela y
+  el rayo la encontraba: agujeros en el brazo).
+
+Hoja: `~/codigo/capturas/s55/03-torso_kepika-{mujer,hombre}.png`. Queda en el
+hombre una marca fina en el borde interior de los brazos (el canto de la
+tela asomando junto al brazo) y en la mujer el dobladillo algo ondulado.
