@@ -213,3 +213,25 @@ Hoja: `~/codigo/capturas/s55/05-boots_kepika-{mujer,hombre}.png`. Queda una
 línea fina oscura en la caña de la mujer (el borde de arriba). Las tres
 prendas en Blender: 5 min por coach antes, 28 min en esta pasada (la
 memoria del equipo, 11 GB; vigilarlo).
+
+**Prenda 3 aprobada; el traje kepika entero** (el dueño: «doy por bueno y
+hagamos un descanso. crea o mejora esa skill»).
+
+## La skill `blender-clothing`, mejorada (2026-11-28)
+
+`~/.claude/skills/blender-clothing` pasa a 1.3.0 (copia de la 1.2.0 en
+`~/codigo/capturas/s55/ropa/blender-clothing-1.2.0.bak`). Lo aprendido con el
+original de Meshy, ahora en `garment.py` (opciones nuevas, apagadas por
+defecto): `--weld` (las costuras UV), `--fit N` (reducir y relajar la tela
+por encima de los bultos, a `--offset` de la piel, con el muelle junto al
+borde), `--orient-out`, `--drop-bones` (las manos sobre los muslos, la piel
+bajo las hombreras) y `--hide-inset` (ocultar la piel por rayo, lejos del
+borde); y en `SKILL.md`, una sección para cuerpos densos de IA o escaneo
+con lo que no cabe en el script (cortar por receta con planos, pintar antes
+de mover, varias prendas sin grupos en el original, la comprobación en la
+pose que se pinta). Probado en un cuerpo de ensayo (102 400 caras, costura
+abierta, una mano pegada a la cadera): 50 688 → 3 999 caras, 1 840 → 0
+vértices con peso de mano, valles rellenos, sin piel atravesando.
+
+Siguiente al volver: la prenda 4 (otra de las 104; orden por decidir con el
+dueño) y pasar `hd_garment.py` al build cuando el método quede fijo.
